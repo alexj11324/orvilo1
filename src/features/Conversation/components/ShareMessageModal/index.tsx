@@ -1,9 +1,10 @@
-import { createModal, Tabs } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { t } from 'i18next';
 import { memo, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal } from '@/components/Modal';
+import { Tabs } from '@/components/ui/tabs';
 import ShareDataProvider from '@/features/ShareModal/ShareDataProvider';
 import SharePdf from '@/features/ShareModal/SharePdf';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -58,15 +59,29 @@ const ShareMessageModalContent = memo<ShareMessageModalContentProps>(({ message 
 
   return (
     <div className="flex flex-col" style={{ gap: isMobile ? 8 : 24 }}>
-      <Tabs
-        activeKey={tab}
-        items={tabItems}
-        styles={{
-          list: { display: 'flex', width: '100%' },
-          tab: { flex: 1 },
-        }}
-        onChange={(key) => setTab(key as Tab)}
-      />
+      <Tabs value={tab} onValueChange={(key) => setTab(key as Tab)}>
+        <TabsList style={{ display: 'flex', width: '100%' }}>
+          {tabItems.map((item) => (
+            <TabsTrigger
+              disabled={item.disabled}
+              key={item.key}
+              style={{ flex: 1 }}
+              value={item.key}
+            >
+              {item.icon}
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+        {(tabItems as { children?: React.ReactNode; key: string }[]).map(
+          (item) =>
+            item.children != null && (
+              <TabsContent key={item.key} value={item.key}>
+                {item.children}
+              </TabsContent>
+            ),
+        )}
+      </Tabs>
     </div>
   );
 });

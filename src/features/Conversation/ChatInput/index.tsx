@@ -1,9 +1,8 @@
 'use client';
-
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { Alert } from '@lobehub/ui/base-ui';
 import { type VoiceMessageRecording } from '@orvilo/types';
+import { Info } from 'lucide-react';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,6 +11,8 @@ import {
   getBusinessChatInputSendAreaPrefix,
   useBusinessChatInputAlerts,
 } from '@/business/client/hooks/useBusinessChatInputSendAreaPrefix';
+import ActionIcon from '@/components/ActionIcon';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import type { ActionKeys, ChatInputFeature } from '@/features/ChatInput';
 import { ChatInputProvider, DesktopChatInput } from '@/features/ChatInput';
 import { type ActionDropdownMenu } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
@@ -454,12 +455,19 @@ const ChatInput = memo<ChatInputProps>(
         <div style={{ display: hasPendingInterventions ? 'none' : 'contents' }}>
           {sendMessageErrorMsg && (
             <div className="flex flex-col px-3" style={{ paddingBlock: '0 6px' }}>
-              <Alert
-                closable
-                title={t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}
-                type={'secondary'}
-                onClose={clearSendMessageError}
-              />
+              <Alert variant="default">
+                <Info />
+                <AlertTitle>{t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}</AlertTitle>
+                <AlertAction>
+                  <ActionIcon
+                    icon={X}
+                    size={'small'}
+                    onClick={() => {
+                      clearSendMessageError?.();
+                    }}
+                  />
+                </AlertAction>
+              </Alert>
             </div>
           )}
           {businessAlerts}

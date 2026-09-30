@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { shouldDropUnsupportedClaudeAssistantPrefill } from '@orvilo/model-runtime/providers/anthropic/modelId';
 import { t } from 'i18next';
 import type { StateCreator } from 'zustand';
 
+import { toast } from '@/components/toast';
 import { getEffectiveConversationModel } from '@/features/Conversation/store/utils/effectiveModel';
 
 import type { Store as ConversationStore } from '../../../action';

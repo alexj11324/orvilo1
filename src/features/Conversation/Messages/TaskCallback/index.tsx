@@ -1,7 +1,5 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
@@ -9,6 +7,7 @@ import { CircleAlert, CircleCheck, CircleSlash, SquareArrowOutUpRight } from 'lu
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 
 import { dataSelectors, useConversationStore } from '../../store';
@@ -73,8 +72,8 @@ const TaskCallbackMessage = memo<TaskCallbackMessageProps>(({ id }) => {
   const openTask = () => openTaskDetail(callback.identifier);
 
   const viewTaskButton = (
-    <Button icon={SquareArrowOutUpRight} size={'small'} type={'text'} onClick={openTask}>
-      {t('taskCallback.viewTask')}
+    <Button size="sm" variant="ghost" onClick={openTask}>
+      <SquareArrowOutUpRight data-icon="inline-start" /> {t('taskCallback.viewTask')}
     </Button>
   );
 
@@ -84,7 +83,7 @@ const TaskCallbackMessage = memo<TaskCallbackMessageProps>(({ id }) => {
         <div className="flex items-center gap-2 justify-between">
           <div className="flex items-center gap-2">
             {createElement(icon, { color: cssVar[color], size: 18 })}
-            <Text strong>{t(i18nKey)}</Text>
+            <div className="font-semibold">{t(i18nKey)}</div>
             <span className={styles.identifier}>{callback.identifier}</span>
           </div>
           {viewTaskButton}

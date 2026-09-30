@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { HETERO_CONTINUE_PROMPT, LOADING_FLAT } from '@orvilo/const';
 import { shouldDropUnsupportedClaudeAssistantPrefill } from '@orvilo/model-runtime/providers/anthropic/modelId';
 import type {
@@ -11,6 +10,7 @@ import { applyTopicModelToHeterogeneousProvider, resolveAgentAgencyConfig } from
 import { t } from 'i18next';
 import { type StateCreator } from 'zustand';
 
+import { toast } from '@/components/toast';
 import { MESSAGE_CANCEL_FLAT } from '@/const/index';
 import { saveDraft } from '@/features/ChatInput/draftStorage';
 import { isHeterogeneousAgentStatusGuideError } from '@/features/Conversation/Error/heterogeneous';

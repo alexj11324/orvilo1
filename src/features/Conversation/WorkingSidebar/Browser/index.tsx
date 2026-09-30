@@ -1,4 +1,3 @@
-import { ActionIcon, Button, Text, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
@@ -17,7 +16,10 @@ import {
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { BrowserIcon } from '@/components/BrowserIcon';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
@@ -452,14 +454,14 @@ const BrowserPane = memo<BrowserPaneProps>((props) => {
         <div className={cn('flex items-center gap-3', styles.importBanner)}>
           <BrowserIcon browser={'Chrome'} size={32} />
           <div className={cn('flex flex-col gap-0', styles.importCopy)}>
-            <Text strong>{t('workingPanel.browser.import.title')}</Text>
-            <Text ellipsis type={'secondary'}>
+            <div className="font-semibold">{t('workingPanel.browser.import.title')}</div>
+            <div className="truncate text-muted-foreground">
               {t('workingPanel.browser.import.desc')}
-            </Text>
+            </div>
           </div>
           <div className={cn('flex items-center gap-1', styles.importActions)}>
-            <Button icon={<Import />} loading={isImporting} onClick={handleImportChromeLoginData}>
-              {t('workingPanel.browser.import.action')}
+            <Button loading={isImporting} onClick={handleImportChromeLoginData}>
+              <Import /> {t('workingPanel.browser.import.action')}
             </Button>
             <ActionIcon
               icon={XCircle}

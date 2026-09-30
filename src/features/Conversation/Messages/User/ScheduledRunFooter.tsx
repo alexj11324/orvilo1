@@ -1,12 +1,12 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
 import { BanIcon, ClockIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
@@ -45,9 +45,9 @@ const ScheduledRunFooter = memo<ScheduledRunFooterProps>(({ id }) => {
   return (
     <div className="flex items-center gap-1 justify-end py-1">
       <ClockIcon size={14} style={{ color: cssVar.colorTextQuaternary }} />
-      <Text style={{ fontSize: 12 }} type={'secondary'}>
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('input.schedule.pending', { time: dayjs(runAt).format('MM-DD HH:mm') })}
-      </Text>
+      </div>
       <ActionIcon
         icon={BanIcon}
         size={'small'}

@@ -1,8 +1,10 @@
-import { type ContextMenuItem, ContextMenuTrigger } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import type { LucideProps } from 'lucide-react';
 import { PinIcon, XIcon } from 'lucide-react';
 import { type ComponentType, createElement, memo, type ReactNode } from 'react';
+
+import type { DropdownItem as ContextMenuItem } from '@/components/ItemsMenu';
+import { ContextMenuTrigger } from '@/components/ItemsMenu';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   close: css`

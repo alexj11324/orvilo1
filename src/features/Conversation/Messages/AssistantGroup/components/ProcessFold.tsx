@@ -1,10 +1,15 @@
-import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
 
 const PROCESS_KEY = 'process';
@@ -62,11 +67,11 @@ const ProcessFold = memo<ProcessFoldProps>(
 
     const title = (
       <div className={cn('flex items-center gap-1.5', styles.title)}>
-        <Text style={{ color: 'inherit', minWidth: 0 }}>
+        <div style={{ color: 'inherit', minWidth: 0 }}>
           {durationText
             ? t('turnProcess.ranFor', { count: stepCount, duration: durationText })
             : t('turnProcess.done', { count: stepCount })}
-        </Text>
+        </div>
         <ChevronRight
           size={14}
           style={{
@@ -81,13 +86,15 @@ const ProcessFold = memo<ProcessFoldProps>(
     return (
       <>
         <Accordion
-          hideIndicator
-          items={[{ children, key: PROCESS_KEY, title }]}
-          styles={{ content: CONTENT_STYLE, header: HEADER_STYLE, trigger: TRIGGER_STYLE }}
+          multiple
           value={value}
-          variant={'borderless'}
           onValueChange={(next) => setExpanded(next.includes(PROCESS_KEY))}
-        />
+        >
+          <AccordionItem style={HEADER_STYLE} value={PROCESS_KEY}>
+            <AccordionTrigger style={TRIGGER_STYLE}>{title}</AccordionTrigger>
+            <AccordionContent style={CONTENT_STYLE}>{children}</AccordionContent>
+          </AccordionItem>
+        </Accordion>
         <Separator style={{ marginBlock: 0 }} />
       </>
     );

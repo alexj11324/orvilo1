@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { MessageSquareText } from 'lucide-react';
@@ -95,9 +94,7 @@ const Render = memo<MarkdownElementProps>(({ children }) => {
             <MessageSquareText size={16} />
           </span>
           <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
-            <Text ellipsis weight={500}>
-              User feedback
-            </Text>
+            <div className="truncate font-medium">User feedback</div>
             <span className={styles.countBadge}>{countLabel}</span>
           </div>
         </div>

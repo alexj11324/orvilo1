@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { GitWorkingTreePatch } from '@orvilo/electron-client-ipc';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -24,6 +23,7 @@ import path from 'path-browserify-esm';
 import { Fragment, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import SidebarDropdownMenu, {

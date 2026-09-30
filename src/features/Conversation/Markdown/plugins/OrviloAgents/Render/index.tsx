@@ -1,12 +1,12 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ArrowRight } from 'lucide-react';
 import { memo, useCallback } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { type MarkdownElementProps } from '../../type';

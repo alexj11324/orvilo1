@@ -1,4 +1,3 @@
-import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import {
   AGENT_DOCUMENT_CATEGORY,
@@ -17,9 +16,12 @@ import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import { withErrorBoundary } from '@/components/ErrorBoundary';
+import { confirmModal } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { toast } from '@/components/toast';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { buildAgentDocumentPath } from '@/features/AgentDocumentPage/navigation';
 import { DocumentExplorerTree } from '@/features/AgentDocumentsExplorer';
@@ -207,9 +209,7 @@ const DocumentItem = memo<DocumentItemProps>(
         <IconComponent size={16} style={{ flexShrink: 0, marginTop: 2 }} />
         <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
           <div className="flex items-center justify-between">
-            <Text ellipsis className={styles.title}>
-              {title}
-            </Text>
+            <div className="truncate styles.title">{title}</div>
             {!hideDelete && (
               <ActionIcon
                 icon={Trash2Icon}
@@ -220,12 +220,8 @@ const DocumentItem = memo<DocumentItemProps>(
               />
             )}
           </div>
-          {description && (
-            <Text className={styles.description} ellipsis={{ rows: 2 }}>
-              {description}
-            </Text>
-          )}
-          {updatedAtLabel && <Text className={styles.meta}>{updatedAtLabel}</Text>}
+          {description && <div className="line-clamp-2 styles.description">{description}</div>}
+          {updatedAtLabel && <div className={styles.meta}>{updatedAtLabel}</div>}
         </div>
       </div>
     );

@@ -1,8 +1,8 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { Timer } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { Separator } from '@/components/ui/separator';
 
 interface HistoryDividerProps {
@@ -16,7 +16,9 @@ const HistoryDivider = memo<HistoryDividerProps>(({ enable }) => {
   return (
     <div style={{ padding: '0 20px' }}>
       <Separator style={{ margin: 0, padding: '20px 0' }}>
-        <Tag icon={<Timer />}>{t('historyRange')}</Tag>
+        <Badge>
+          <Timer /> {t('historyRange')}
+        </Badge>
       </Separator>
     </div>
   );

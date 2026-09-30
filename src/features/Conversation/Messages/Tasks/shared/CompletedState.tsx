@@ -1,13 +1,14 @@
 'use client';
 
 
-import { Tag } from '@lobehub/ui/base-ui';
 import { type TaskDetail } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import type { LucideProps } from 'lucide-react';
 import { Footprints, Timer, Wrench } from 'lucide-react';
 import { type ComponentType, createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
 
 import Markdown from '../../../Markdown';
 import { formatCost, formatDuration } from './utils';
@@ -43,14 +44,9 @@ interface MetricItemProps {
 }
 
 export const MetricItem = memo<MetricItemProps>(({ icon, label, value }) => (
-  <Tag
-    icon={icon && createElement(icon)}
-    style={{ color: cssVar.colorTextDescription, padding: 0 }}
-    variant={'borderless'}
-  >
+  <Badge className='bg-transparent border-transparent' style={{ color: cssVar.colorTextDescription, padding: 0 }} variant='secondary'>{icon && createElement(icon)} 
     {value}
-    {label}
-  </Tag>
+    {label}</Badge>
 ));
 
 MetricItem.displayName = 'MetricItem';

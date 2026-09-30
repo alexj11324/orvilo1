@@ -280,23 +280,24 @@ vi.mock('@/const/version', () => ({
     return platform.isDesktop;
   },
 }));
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ActionIcon: ({ onClick, title }: { onClick?: () => void; title?: string }) => (
+vi.mock('@/components/ActionIcon', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  default: ({ onClick, title }: { onClick?: () => void; title?: string }) => (
     <button aria-label={title} type="button" onClick={onClick} />
   ),
-  Skeleton: () => <div data-testid="params-loading" />,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
+vi.mock('@/components/ui/skeleton', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  Skeleton: () => <div />,
+}));
+
+vi.mock('@/components/ItemsMenu', async (importOriginal) => {
   const { useState } = await import('react');
   const actual = (await importOriginal()) as Record<string, unknown>;
 
   return {
     ...actual,
-    ActionIcon: ({ onClick, title }: { onClick?: () => void; title?: string }) => (
-      <button aria-label={title} type="button" onClick={onClick} />
-    ),
     ContextMenuTrigger: ({ children, items }: { children: ReactNode; items: any[] }) => {
       const [open, setOpen] = useState(false);
       const menuItems = items.filter((item) => item && item.type !== 'divider');
@@ -321,17 +322,17 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
     DropdownMenu: ({
       children,
       items,
-      onOpenChangeComplete,
+      onOpenChange,
     }: {
       children: ReactNode;
       items: any[] | (() => any[]);
-      onOpenChangeComplete?: (open: boolean) => void;
+      onOpenChange?: (open: boolean) => void;
     }) => {
       const [open, setOpen] = useState(false);
       const resolvedItems = typeof items === 'function' ? items() : items;
       const menuItems = resolvedItems.flatMap((item) => item.children ?? []);
       dropdownMenuState.items = resolvedItems;
-      dropdownMenuState.onOpenChangeComplete = onOpenChangeComplete;
+      dropdownMenuState.onOpenChangeComplete = onOpenChange;
 
       return (
         <div>
@@ -344,9 +345,6 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
             ))}
         </div>
       );
-    },
-    Skeleton: {
-      Text: () => <div data-testid="params-loading" />,
     },
   };
 });

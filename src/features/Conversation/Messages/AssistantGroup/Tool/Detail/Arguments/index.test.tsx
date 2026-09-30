@@ -7,9 +7,9 @@ import { describe, expect, it, vi } from 'vitest';
 
 import Arguments from './index';
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/ActionIcon', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  ActionIcon: ({
+  default: ({
     active,
     onClick,
     title,

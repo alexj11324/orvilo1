@@ -1,9 +1,9 @@
 'use client';
 
 
-import { Accordion } from '@lobehub/ui/base-ui';
 import { memo, useMemo, useState } from 'react';
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { type UIChatMessage } from '@/types/index';
 import { ThreadStatus } from '@/types/index';
 
@@ -45,14 +45,7 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
   ]);
 
   return (
-    <Accordion
-      keepMounted
-      indicatorPlacement="inline"
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
-      value={expanded ? [id] : []}
-      items={[
-        {
-          children: (
+    <Accordion keepMounted multiple value={expanded ? [id] : []} onValueChange={(value) => setExpanded(value.includes(id))}><AccordionItem value={id}><AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}><TaskTitle metrics={metrics} status={status} title={title} /></AccordionTrigger><AccordionContent>{(
             <div className="flex flex-col gap-4 p-3" style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}>
               {expanded && (
                 <TaskContent
@@ -65,13 +58,7 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
                 />
               )}
             </div>
-          ),
-          key: id,
-          title: <TaskTitle metrics={metrics} status={status} title={title} />,
-        },
-      ]}
-      onValueChange={(value) => setExpanded(value.includes(id))}
-    />
+          )}</AccordionContent></AccordionItem></Accordion>
   );
 }, Object.is);
 

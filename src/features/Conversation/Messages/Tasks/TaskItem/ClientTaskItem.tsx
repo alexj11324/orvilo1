@@ -1,9 +1,9 @@
 'use client';
 
 
-import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { memo, useMemo, useState } from 'react';
 
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useChatStore } from '@/store/chat';
 import { displayMessageSelectors } from '@/store/chat/selectors';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
@@ -117,20 +117,13 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
   const hasBlocks = blocks && childrenCount > 0;
 
   return (
-    <Accordion
-      keepMounted
-      indicatorPlacement="inline"
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
-      value={expanded ? [id] : []}
-      items={[
-        {
-          children: (
+    <Accordion keepMounted multiple value={expanded ? [id] : []} onValueChange={(value) => setExpanded(value.includes(id))}><AccordionItem value={id}><AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}><TaskTitle metrics={metrics} status={status} title={title} /></AccordionTrigger><AccordionContent>{(
             <div className="flex flex-col gap-4 p-3" style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}>
               {instruction && (
                 <div className="flex flex-col p-3">
-                  <Text fontSize={13} type={'secondary'}>
+                  <div className='text-[13px] text-muted-foreground'>
                     {instruction}
-                  </Text>
+                  </div>
                 </div>
               )}
 
@@ -153,13 +146,7 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
               {/* Error State */}
               {!isInitializing && isError && taskDetail && <ErrorState taskDetail={taskDetail} />}
             </div>
-          ),
-          key: id,
-          title: <TaskTitle metrics={metrics} status={status} title={title} />,
-        },
-      ]}
-      onValueChange={(value) => setExpanded(value.includes(id))}
-    />
+          )}</AccordionContent></AccordionItem></Accordion>
   );
 }, Object.is);
 

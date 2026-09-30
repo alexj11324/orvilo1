@@ -1,5 +1,4 @@
 'use client';
-
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { LayersEnum } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';

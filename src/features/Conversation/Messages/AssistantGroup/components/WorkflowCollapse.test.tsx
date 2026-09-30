@@ -26,15 +26,13 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
     ),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  ...(await import('~base-ui-stubs')).baseUiStubs,
+vi.mock('@/components/ui/accordion', () => ({
   Accordion: ({
-    items,
+    children,
     onValueChange,
     value,
   }: {
-    items?: { action?: ReactNode; children?: ReactNode; key: string; title?: ReactNode }[];
+    children?: ReactNode;
     onValueChange?: (keys: string[]) => void;
     value?: string[];
   }) => {
@@ -46,16 +44,13 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
           type="button"
           onClick={() => onValueChange?.(isExpanded ? [] : ['workflow'])}
         />
-        {items?.map((item) => (
-          <div key={item.key}>
-            <div>{item.title}</div>
-            <div>{item.action}</div>
-            <div>{item.children}</div>
-          </div>
-        ))}
+        {children}
       </div>
     );
   },
+  AccordionContent: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  AccordionItem: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  AccordionTrigger: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
 }));
 
 vi.mock('motion/react', () => ({

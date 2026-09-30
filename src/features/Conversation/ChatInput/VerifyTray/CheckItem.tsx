@@ -1,12 +1,12 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight, CircleDashed, PencilIcon } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { openCheckEditModal } from './EditModal';
@@ -68,9 +68,7 @@ const CheckItem = memo<CheckItemProps>(({ check, onRemove, onUpdate }) => {
         <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
           {/* Draft item has no verdict yet — a neutral glyph, not a false pass/fail. */}
           <CircleDashed color={cssVar.colorTextQuaternary} size={14} />
-          <Text ellipsis fontSize={13}>
-            {check.name}
-          </Text>
+          <div className="truncate text-[13px]">{check.name}</div>
         </div>
         <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
           <TooltipProvider>
@@ -102,10 +100,10 @@ const CheckItem = memo<CheckItemProps>(({ check, onRemove, onUpdate }) => {
 
       {open && (
         <div className={cn('flex flex-col', styles.detail)} style={{ gap: 5 }}>
-          <Text className={styles.secLabel}>{t('acceptance.tray.section.method')}</Text>
-          <Text className={styles.method} fontSize={12}>
+          <div className={styles.secLabel}>{t('acceptance.tray.section.method')}</div>
+          <div className="text-[12px] styles.method">
             {check.method || t('acceptance.tray.section.methodEmpty')}
-          </Text>
+          </div>
         </div>
       )}
     </div>

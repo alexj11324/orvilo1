@@ -1,11 +1,13 @@
-import { Button, Switch, Tabs } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type UIChatMessage } from '@orvilo/types';
 import { cn } from 'cn';
 import { CopyIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form, { type FormItemProps } from '@/components/GroupForm';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { useImgToClipboard } from '@/hooks/useImgToClipboard';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -24,6 +26,26 @@ const DEFAULT_FIELD_VALUE: FieldType = {
   withBackground: false,
   withFooter: true,
 };
+
+const FormTabs = ({
+  activeKey,
+  onChange,
+  options,
+}: {
+  activeKey?: string;
+  onChange?: (key: string) => void;
+  options: { key: string; label: ReactNode }[];
+}) => (
+  <Tabs value={activeKey} onValueChange={onChange}>
+    <TabsList>
+      {options.map((o) => (
+        <TabsTrigger key={o.key} value={o.key}>
+          {o.label}
+        </TabsTrigger>
+      ))}
+    </TabsList>
+  </Tabs>
+);
 
 const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: string }>(
   ({ message, uniqueId }) => {
@@ -51,11 +73,12 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
     const { loading: copyLoading, onCopy } = useImgToClipboard({ id: `#${previewId}` });
     const settings: FormItemProps[] = [
       {
-        children: <Tabs items={widthModeOptions} />,
+        children: <FormTabs options={widthModeOptions} />,
         label: t('shareModal.widthMode.label'),
         layout: 'horizontal',
         minWidth: undefined,
         name: 'widthMode',
+        trigger: 'onChange',
         valuePropName: 'activeKey',
       },
       {
@@ -64,6 +87,7 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
         layout: 'horizontal',
         minWidth: undefined,
         name: 'withBackground',
+        trigger: 'onCheckedChange',
         valuePropName: 'checked',
       },
       {
@@ -72,14 +96,16 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
         layout: 'horizontal',
         minWidth: undefined,
         name: 'withFooter',
+        trigger: 'onCheckedChange',
         valuePropName: 'checked',
       },
       {
-        children: <Tabs items={imageTypeOptions} />,
+        children: <FormTabs options={imageTypeOptions} />,
         label: t('shareModal.imageType'),
         layout: 'horizontal',
         minWidth: undefined,
         name: 'imageType',
+        trigger: 'onChange',
         valuePropName: 'activeKey',
       },
     ];
@@ -89,16 +115,15 @@ const ShareImage = memo<{ message: UIChatMessage; mobile?: boolean; uniqueId?: s
     const button = (
       <>
         <Button
-          block
-          icon={CopyIcon}
+          className="w-full"
           loading={copyLoading}
-          size={isMobile ? undefined : 'large'}
-          type={'primary'}
+          size="default"
+          variant="default"
           onClick={() => onCopy()}
         >
-          {t('copy', { ns: 'common' })}
+          <CopyIcon data-icon="inline-start" /> {t('copy', { ns: 'common' })}
         </Button>
-        <Button block loading={loading} size={isMobile ? undefined : 'large'} onClick={onDownload}>
+        <Button className="w-full" loading={loading} size="default" onClick={onDownload}>
           {t('shareModal.download')}
         </Button>
       </>

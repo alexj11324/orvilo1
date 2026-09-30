@@ -1,12 +1,15 @@
 import { type AudioPlayerProps } from '@lobehub/tts/react';
 import { AudioPlayer } from '@lobehub/tts/react';
-import { ActionIcon, Alert, Button } from '@lobehub/ui/base-ui';
 import { type ChatMessageError } from '@orvilo/types';
-import { TrashIcon } from 'lucide-react';
+import { CircleAlert, TrashIcon, X } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { CodeBlock } from '@/components/ui/code-block';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 
 interface PlayerProps extends AudioPlayerProps {
   error?: ChatMessageError;
@@ -20,27 +23,32 @@ const Player = memo<PlayerProps>(({ onRetry, error, onDelete, audio, isLoading, 
   return (
     <div className="flex items-center" style={{ minWidth: 200, width: '100%' }}>
       {error ? (
-        <Alert
-          closable
-          style={{ alignItems: 'center', width: '100%' }}
-          title={error.message}
-          type="error"
-          action={
-            <Button size={'small'} type={'primary'} onClick={onRetry}>
+        <Alert style={{ alignItems: 'center', width: '100%' }} variant="destructive">
+          <CircleAlert />
+          <AlertTitle>{error.message}</AlertTitle>
+          <AlertAction>
+            <Button size="sm" variant="default" onClick={onRetry}>
               {t('retry', { ns: 'common' })}
             </Button>
-          }
-          extra={
-            error.body && (
-              <CodeBlock
-                code={JSON.stringify(error.body, null, 2)}
-                language="json"
-                variant="ghost"
-              />
-            )
-          }
-          onClose={onDelete}
-        />
+            <ActionIcon icon={X} size="small" onClick={onDelete} />
+          </AlertAction>
+          {error.body && (
+            <Collapsible className="col-start-2">
+              <CollapsibleTrigger className="text-xs text-muted-foreground">
+                Show Details
+              </CollapsibleTrigger>
+              <CollapsibleContent>
+                <AlertDescription>
+                  <CodeBlock
+                    code={JSON.stringify(error.body, null, 2)}
+                    language="json"
+                    variant="ghost"
+                  />
+                </AlertDescription>
+              </CollapsibleContent>
+            </Collapsible>
+          )}
+        </Alert>
       ) : (
         <>
           <AudioPlayer

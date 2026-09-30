@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ScrollText } from 'lucide-react';
@@ -52,7 +51,7 @@ const History = memo(() => {
             >
               <ScrollText size={16} style={{ color: cssVar.colorTextDescription }} />
             </div>
-            <Text type={'secondary'}>{t('historySummary')}</Text>
+            <div className="text-muted-foreground">{t('historySummary')}</div>
             {model && (
               <div>
                 <ModelTag model={model} />

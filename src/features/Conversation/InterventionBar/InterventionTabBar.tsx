@@ -1,9 +1,9 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { CheckCheck } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { type PendingIntervention } from '../store/slices/data/pendingInterventions';
@@ -55,12 +55,12 @@ const InterventionTabBar = memo<InterventionTabBarProps>(
                   render={
                     <span style={{ display: 'inline-flex' }}>
                       <Button
-                        icon={CheckCheck}
                         loading={approveAll.loading}
-                        size={'small'}
-                        type={'fill'}
+                        size="sm"
+                        variant="secondary"
                         onClick={approveAll.onApprove}
                       >
+                        <CheckCheck data-icon="inline-start" />{' '}
                         {t('tool.intervention.approveAll', { count: approveAll.count })}
                       </Button>
                     </span>

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus, WorkListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -120,13 +119,12 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
         ) : (
           <TypeIcon className={styles.context} size={16} />
         )}
-        <Text className={styles.context} style={{ flexShrink: 0 }}>
+        <div className={styles.context} style={{ flexShrink: 0 }}>
           {label}
-        </Text>
+        </div>
         {title && (
-          <Text
-            ellipsis
-            className={styles.title}
+          <div
+            className="truncate styles.title"
             onClick={
               handleTitleClick &&
               ((event) => {
@@ -136,7 +134,7 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
             }
           >
             {title}
-          </Text>
+          </div>
         )}
       </div>
       {expanded && <VersionList workId={work.id} />}

@@ -1,7 +1,7 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { useCallback } from 'react';
 
+import { toast } from '@/components/toast';
 import { useClientDataSWR } from '@/libs/swr';
 import { verifyKeys } from '@/libs/swr/keys';
 // Workspace-aware mutate: applies the same `augmentKey` treatment

@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Button, DropdownMenu, Input, toast } from '@lobehub/ui/base-ui';
 import type { ProjectFileIndexEntry } from '@orvilo/electron-client-ipc';
 import type { GitStatusEntry } from '@pierre/trees';
 import { createStaticStyles } from 'antd-style';
@@ -19,8 +18,18 @@ import type { DragEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group';
 import { startWorkspaceFileDrag } from '@/features/ChatInput/InputEditor/workspaceFileDragData';
 import type { ExplorerTreeNode } from '@/features/ExplorerTree';
 import {
@@ -189,32 +198,35 @@ const FilesSearchBar = memo<FilesSearchBarProps>(({ onClose, onDebouncedChange }
   }, [onDebouncedChange, searchQuery]);
 
   return (
-    <Input
-      placeholder={t('workingPanel.files.searchPlaceholder')}
-      prefix={<SearchIcon size={13} />}
-      ref={inputRef}
-      size={'small'}
-      style={{ width: '100%' }}
-      value={searchQuery}
-      suffix={
-        <ActionIcon
-          icon={XIcon}
-          size={12}
+    <InputGroup className="h-8 w-full">
+      <InputGroupAddon align="inline-start">
+        <SearchIcon size={13} />
+      </InputGroupAddon>
+      <InputGroupInput
+        placeholder={t('workingPanel.files.searchPlaceholder')}
+        ref={inputRef}
+        value={searchQuery}
+        onChange={(e) => setSearchQuery(e.target.value)}
+        onKeyDown={(event) => {
+          event.stopPropagation();
+          if (event.key !== 'Escape') return;
+          setSearchQuery('');
+          onDebouncedChange('');
+          onClose();
+        }}
+      />
+      <InputGroupAddon align="inline-end">
+        <InputGroupButton
+          size="icon-xs"
           onClick={() => {
             if (searchQuery) setSearchQuery('');
             else onClose();
           }}
-        />
-      }
-      onChange={(e) => setSearchQuery(e.target.value)}
-      onKeyDown={(event) => {
-        event.stopPropagation();
-        if (event.key !== 'Escape') return;
-        setSearchQuery('');
-        onDebouncedChange('');
-        onClose();
-      }}
-    />
+        >
+          <XIcon size={12} />
+        </InputGroupButton>
+      </InputGroupAddon>
+    </InputGroup>
   );
 });
 
@@ -569,12 +581,16 @@ const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
           <>
             <DropdownMenu items={viewItems} placement={'bottomLeft'}>
               <Button
-                icon={viewMode === 'project' ? FolderTreeIcon : GitCompareArrowsIcon}
-                size={'small'}
+                size="sm"
                 style={{ maxWidth: 'calc(100% - 84px)' }}
                 title={t('workingPanel.files.views.title')}
-                type={'text'}
+                variant="ghost"
               >
+                {viewMode === 'project' ? (
+                  <FolderTreeIcon data-icon="inline-start" size={14} />
+                ) : (
+                  <GitCompareArrowsIcon data-icon="inline-start" size={14} />
+                )}{' '}
                 {t(
                   viewMode === 'project'
                     ? 'workingPanel.files.views.project'

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { WorkVersionItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -63,13 +62,13 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
   }
 
   if (error) {
-    return <Text className={styles.error}>{t('workingPanel.works.versionError')}</Text>;
+    return <div className={styles.error}>{t('workingPanel.works.versionError')}</div>;
   }
 
   if (data.length === 0) {
     return (
       <div className={cn('flex flex-col', styles.versionList)}>
-        <Text type={'secondary'}>{t('workingPanel.works.emptyVersions')}</Text>
+        <div className="text-muted-foreground">{t('workingPanel.works.emptyVersions')}</div>
       </div>
     );
   }
@@ -92,29 +91,23 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
           <div className={cn('flex flex-col gap-1', styles.versionRow)} key={version.id}>
             <div className="flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-                <Text code fontSize={12}>
+                <div className="font-mono rounded bg-muted px-1 text-[12px]">
                   v{version.version}
-                </Text>
-                <Text ellipsis className={styles.versionTitle}>
+                </div>
+                <div className="truncate styles.versionTitle">
                   {t(`workingPanel.works.changeType.${version.changeType}` as never)}
-                </Text>
+                </div>
               </div>
               <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                 {cost && (
-                  <Text
-                    code
-                    className={styles.versionCost}
-                    fontSize={12}
+                  <div
+                    className="font-mono rounded bg-muted px-1 text-[12px] styles.versionCost"
                     title={t('workingPanel.works.versionCost', { cost })}
                   >
                     {cost}
-                  </Text>
+                  </div>
                 )}
-                {time && (
-                  <Text className={styles.context} type={'secondary'}>
-                    {time}
-                  </Text>
-                )}
+                {time && <div className="text-muted-foreground styles.context">{time}</div>}
               </div>
             </div>
           </div>

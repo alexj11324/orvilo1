@@ -1,11 +1,11 @@
 'use client';
 
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DEFAULT_AVATAR } from '@/const/index';
 import { useSessionStore } from '@/store/session';
@@ -86,9 +86,7 @@ const Render = memo<MarkdownElementProps<MentionProps>>(({ children, node }) => 
                 style={{ flex: 'none' }}
               />
               <div className="flex flex-col" style={{ overflow: 'hidden' }}>
-                <Text ellipsis type={'secondary'}>
-                  {member.description}
-                </Text>
+                <div className="truncate text-muted-foreground">{member.description}</div>
               </div>
             </div>
           </div>

@@ -1,5 +1,4 @@
 import { SearchResultCards } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight, Globe, Images } from 'lucide-react';
@@ -8,6 +7,7 @@ import * as m from 'motion/react-m';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { useIsDark } from '@/hooks/useIsDark';
 import Image from '@/libs/next/Image';
 import { type GroundingSearch } from '@/types/search';
@@ -233,7 +233,7 @@ const SearchGrounding = memo<GroundingSearch>(
                     {t('search.grounding.searchQueries')}
                     <div className="flex gap-2">
                       {searchQueries.map((query, index) => (
-                        <Tag key={index}>{query}</Tag>
+                        <Badge key={index}>{query}</Badge>
                       ))}
                     </div>
                   </div>
@@ -254,7 +254,7 @@ const SearchGrounding = memo<GroundingSearch>(
                     {t('search.grounding.imageSearchQueries')}
                     <div className="flex gap-2 flex-wrap">
                       {imageSearchQueries.map((query, index) => (
-                        <Tag key={index}>{query}</Tag>
+                        <Badge key={index}>{query}</Badge>
                       ))}
                     </div>
                   </div>

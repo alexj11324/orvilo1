@@ -1,12 +1,13 @@
 'use client';
 
-import { Button, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Search as SearchIcon, X as XIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
@@ -120,7 +121,7 @@ export const TopicForwardContent = ({
         <div className={cn('flex flex-col gap-1', styles.list)}>
           {candidates.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-6">
-              <Text type={'secondary'}>{t('messageForward.modal.empty')}</Text>
+              <div className="text-muted-foreground">{t('messageForward.modal.empty')}</div>
             </div>
           ) : (
             candidates.map((agent) => {
@@ -141,9 +142,9 @@ export const TopicForwardContent = ({
                   <AgentAvatar
                     avatar={typeof agent.avatar === 'string' ? agent.avatar : undefined}
                   />
-                  <Text ellipsis style={{ flex: 1 }}>
+                  <div className="truncate" style={{ flex: 1 }}>
                     {agent.title || t('untitledAgent')}
-                  </Text>
+                  </div>
                   <SelectCircle checked={selected} />
                 </div>
               );
@@ -155,12 +156,10 @@ export const TopicForwardContent = ({
       <div className={styles.divider} />
 
       <div className="flex flex-col flex-1 gap-3" style={{ minWidth: 0 }}>
-        <Text type={'secondary'}>{t('messageForward.topic.context')}</Text>
+        <div className="text-muted-foreground">{t('messageForward.topic.context')}</div>
         <div className={cn('flex flex-col gap-2', styles.context)}>
-          <Text ellipsis strong>
-            {topicTitle}
-          </Text>
-          <Text type={'secondary'}>{t('messageForward.topic.description')}</Text>
+          <div className="truncate font-semibold">{topicTitle}</div>
+          <div className="text-muted-foreground">{t('messageForward.topic.description')}</div>
         </div>
         <Textarea
           placeholder={t('messageForward.modal.notePlaceholder')}
@@ -171,7 +170,7 @@ export const TopicForwardContent = ({
         />
         <div className="flex gap-2 justify-end">
           <Button onClick={close}>{t('messageForward.bar.cancel')}</Button>
-          <Button disabled={selectedIds.length === 0} type={'primary'} onClick={handleForward}>
+          <Button disabled={selectedIds.length === 0} variant="default" onClick={handleForward}>
             {selectedIds.length > 0
               ? t('messageForward.modal.sendCount', { count: selectedIds.length })
               : t('messageForward.bar.forward')}

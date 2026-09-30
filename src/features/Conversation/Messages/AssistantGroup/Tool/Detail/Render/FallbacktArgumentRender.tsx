@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -47,7 +46,7 @@ export const FallbackArgumentRender = memo<FallbackArgumentRenderProps>(
           <>
             <Separator style={{ marginBlock: 0 }} />
             <div className="flex flex-col px-4" style={{ paddingBlock: '8px 0' }}>
-              <Text>{t('debug.response')}</Text>
+              <div>{t('debug.response')}</div>
             </div>
             <CodeBlock
               code={data}

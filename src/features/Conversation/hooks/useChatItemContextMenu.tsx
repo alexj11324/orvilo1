@@ -1,10 +1,10 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import isEqual from 'fast-deep-equal';
 import { type MouseEvent, type ReactNode } from 'react';
 import { useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { MSG_CONTENT_CLASSNAME } from '@/features/Conversation/ChatItem/components/MessageContent';
 import { resolveHeteroErroredStepId } from '@/features/Conversation/Error/heterogeneous';
 import { usePermission } from '@/hooks/usePermission';

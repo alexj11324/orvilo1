@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronRightIcon, TargetIcon } from 'lucide-react';
@@ -90,9 +89,7 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
         )}
       </div>
       <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-        <Text ellipsis className={styles.title}>
-          {title ?? goal.name}
-        </Text>
+        <div className="truncate styles.title">{title ?? goal.name}</div>
         <GoalStatusLine {...progress} />
       </div>
       {isActive && <GoalElapsedTime startedAt={startedAt} />}

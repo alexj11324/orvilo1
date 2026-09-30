@@ -1,5 +1,4 @@
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
@@ -12,6 +11,8 @@ import {
   useRef,
   useState,
 } from 'react';
+
+import { Button } from '@/components/ui/button';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   button: css`
@@ -99,11 +100,12 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
         {canScrollLeft && (
           <Button
             className={cx(styles.button, styles.leftButton, 'scroll-button')}
-            icon={ChevronLeft}
-            shape={'circle'}
-            type={'default'}
+            className="rounded-full"
+            variant="outline"
             onClick={() => handleScroll('left')}
-          />
+          >
+            <ChevronLeft data-icon="inline-start" />
+          </Button>
         )}
         <ScrollAreaPrimitive.Root>
           <ScrollAreaPrimitive.Viewport
@@ -118,11 +120,12 @@ const ScrollShadowWithButton = memo<ScrollShadowWithButtonProps>(
         {canScrollRight && (
           <Button
             className={cx(styles.button, styles.rightButton, 'scroll-button')}
-            icon={ChevronRight}
-            shape={'circle'}
-            type={'default'}
+            className="rounded-full"
+            variant="outline"
             onClick={() => handleScroll('right')}
-          />
+          >
+            <ChevronRight data-icon="inline-start" />
+          </Button>
         )}
       </div>
     );

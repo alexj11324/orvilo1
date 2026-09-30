@@ -1,4 +1,3 @@
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { cssVar } from 'antd-style';
@@ -6,6 +5,8 @@ import { AlertTriangle, Copy, RotateCw } from 'lucide-react';
 import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { GITHUB_ISSUES } from '@/const/url';
 import BaseErrorForm from '@/features/Conversation/Error/BaseErrorForm';
 import { copyToClipboard } from '@/utils/clipboard';
@@ -59,13 +60,12 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
         showRetry ? (
           <Button
             disabled={!onRetry && disabled}
-            icon={<RotateCw />}
             loading={!onRetry && loading}
-            size={'small'}
-            type={'primary'}
+            size="sm"
+            variant="default"
             onClick={handleRetry}
           >
-            {t('unknownError.retry')}
+            <RotateCw /> {t('unknownError.retry')}
           </Button>
         ) : undefined
       }

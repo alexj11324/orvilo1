@@ -1,9 +1,14 @@
 import { ScrollArea as ScrollAreaPrimitive } from '@base-ui/react/scroll-area';
-import { Accordion } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import type { CSSProperties, ReactNode, RefObject } from 'react';
 import { memo, useEffect, useState } from 'react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { ScrollBar } from '@/components/ui/scroll-area';
 import MarkdownMessage from '@/features/Conversation/Markdown';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
@@ -53,13 +58,17 @@ const Thinking = memo<ThinkingProps>((props) => {
 
   return (
     <Accordion
-      gap={8}
-      indicatorPlacement="inline"
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
+      multiple
+      className="gap-2"
       value={showDetail ? ['thinking'] : []}
-      items={[
-        {
-          children: (
+      onValueChange={(keys) => setShowDetail(keys.length > 0)}
+    >
+      <AccordionItem value="thinking">
+        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+          <Title duration={duration} showDetail={showDetail} thinking={thinking} />
+        </AccordionTrigger>
+        <AccordionContent>
+          {
             <ScrollAreaPrimitive.Root className={styles.scrollRoot}>
               <ScrollAreaPrimitive.Viewport
                 className={styles.contentScroll}
@@ -84,13 +93,10 @@ const Thinking = memo<ThinkingProps>((props) => {
               <ScrollBar />
               <ScrollAreaPrimitive.Corner />
             </ScrollAreaPrimitive.Root>
-          ),
-          key: 'thinking',
-          title: <Title duration={duration} showDetail={showDetail} thinking={thinking} />,
-        },
-      ]}
-      onValueChange={(keys) => setShowDetail(keys.length > 0)}
-    />
+          }
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 });
 

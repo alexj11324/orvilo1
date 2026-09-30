@@ -1,4 +1,3 @@
-import { Accordion, Skeleton } from '@lobehub/ui/base-ui';
 import { getBuiltinRender } from '@orvilo/builtin-tools/renders';
 import { getBuiltinStreaming } from '@orvilo/builtin-tools/streamings';
 import { LOADING_FLAT } from '@orvilo/const';
@@ -6,7 +5,14 @@ import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
 
 import SafeBoundary from '@/components/ErrorBoundary';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
 import dynamic from '@/libs/next/dynamic';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
@@ -18,12 +24,12 @@ import Actions from './Actions';
 import Inspectors from './Inspector';
 
 const Debug = dynamic(() => import('./Debug'), {
-  loading: () => <Skeleton height={300} width={'100%'} />,
+  loading: () => <Skeleton style={{ height: 300, width: '100%' }} />,
   ssr: false,
 });
 
 const Detail = dynamic(() => import('./Detail'), {
-  loading: () => <Skeleton height={120} width={'100%'} />,
+  loading: () => <Skeleton style={{ height: 120, width: '100%' }} />,
   ssr: false,
 });
 
@@ -129,13 +135,27 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
 
   return (
     <Accordion
-      hideIndicator={isAlwaysExpand}
-      indicatorPlacement="inline"
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
+      multiple
       value={isToolDetailExpand ? [id] : []}
-      items={[
-        {
-          action: !disableEditing && (
+      onValueChange={(value) => handleExpand(value.includes(id))}
+    >
+      <AccordionItem value={id}>
+        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+          {
+            <Inspectors
+              apiName={apiName}
+              arguments={requestArgs}
+              identifier={identifier}
+              intervention={intervention}
+              isArgumentsStreaming={isArgumentsStreaming}
+              isExpanded={isToolDetailExpand}
+              isToolCalling={isToolCalling}
+              result={result}
+              toolCallId={id}
+              toolCallStartTime={toolCallStartTime}
+            />
+          }
+          {!disableEditing && (
             <Actions
               assistantMessageId={assistantMessageId}
               canToggleCustomToolRender={canToggleCustomToolRender}
@@ -145,8 +165,10 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
               showCustomToolRender={showCustomToolRender}
               showDebug={showDebug}
             />
-          ),
-          children: (
+          )}
+        </AccordionTrigger>
+        <AccordionContent>
+          {
             <div className="flex flex-col gap-2 py-2">
               {showDebug && (
                 <Debug
@@ -178,26 +200,10 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
               </SafeBoundary>
               <Separator dashed style={{ marginBottom: 0, marginTop: 8 }} />
             </div>
-          ),
-          key: id,
-          title: (
-            <Inspectors
-              apiName={apiName}
-              arguments={requestArgs}
-              identifier={identifier}
-              intervention={intervention}
-              isArgumentsStreaming={isArgumentsStreaming}
-              isExpanded={isToolDetailExpand}
-              isToolCalling={isToolCalling}
-              result={result}
-              toolCallId={id}
-              toolCallStartTime={toolCallStartTime}
-            />
-          ),
-        },
-      ]}
-      onValueChange={(value) => handleExpand(value.includes(id))}
-    />
+          }
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 });
 

@@ -1,4 +1,3 @@
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronUp, CircleArrowRight } from 'lucide-react';
@@ -13,6 +12,7 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { useChatStore } from '@/store/chat';
 import { selectCurrentTurnTodosFromMessages } from '@/store/chat/slices/message/selectors/dbMessage';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
@@ -229,22 +229,22 @@ const ProgressSection = memo<{ className?: string }>(({ className }) => {
             }
 
             return (
-              <Checkbox
-                backgroundColor={cssVar.colorSuccess}
-                checked={isCompleted}
-                key={item.id ?? index}
-                shape="circle"
-                style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
-                classNames={{
-                  text: cx(styles.textTodo, isCompleted && styles.textCompleted),
-                  wrapper: styles.itemRow,
-                }}
-                textProps={{
-                  type: isCompleted ? 'secondary' : undefined,
-                }}
-              >
-                {item.text}
-              </Checkbox>
+              <label className={styles.itemRow} key={item.id ?? index}>
+                <Checkbox
+                  checked={isCompleted}
+                  className="rounded-full data-checked:border-success data-checked:bg-success"
+                  style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
+                />
+                <span
+                  className={cx(
+                    styles.textTodo,
+                    isCompleted && styles.textCompleted,
+                    isCompleted && 'text-muted-foreground',
+                  )}
+                >
+                  {item.text}
+                </span>
+              </label>
             );
           })}
         </div>

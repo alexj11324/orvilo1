@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { type ChatFileChunk } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { cn } from 'cn';
@@ -34,7 +33,7 @@ const ChunkItem = memo<ChunkItemProps>(({ id, fileId, similarity, text, filename
     >
       <FileIcon fileName={filename} fileType={fileType} size={20} variant={'raw'} />
       <div className="flex gap-3 justify-between" style={{ maxWidth: 200 }}>
-        <Text ellipsis>{filename}</Text>
+        <div className="truncate">{filename}</div>
         {similarity && (
           <TooltipProvider>
             <Tooltip>

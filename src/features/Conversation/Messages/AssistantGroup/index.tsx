@@ -1,12 +1,12 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import type { AssistantContentBlock, EmojiReaction, UISignalCallbacksBlock } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import type { MouseEventHandler, ReactNode } from 'react';
 import { memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { MESSAGE_ACTION_BAR_PORTAL_ATTRIBUTES } from '@/const/messageActionPortal';
 import AgentGroupAvatar from '@/features/AgentGroupAvatar';
 import { ChatItem } from '@/features/Conversation/ChatItem';
@@ -288,7 +288,7 @@ const GroupMessage = memo<GroupMessageProps>(
         id={id}
         placement={'left'}
         time={createdAt}
-        titleAddon={isSupervisor ? <Tag>{t('supervisor.label')}</Tag> : undefined}
+        titleAddon={isSupervisor ? <Badge>{t('supervisor.label')}</Badge> : undefined}
         actionAddon={
           reactions.length > 0 || (commentCount > 0 && commentTopicId) ? (
             <>

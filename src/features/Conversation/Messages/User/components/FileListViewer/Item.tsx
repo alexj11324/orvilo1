@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { FileLock2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -27,12 +26,8 @@ const InaccessibleFileItem = memo(() => {
     >
       <FileLock2Icon size={32} style={{ opacity: 0.45 }} />
       <div className="flex flex-col" style={{ overflow: 'hidden' }}>
-        <Text ellipsis type={'secondary'}>
-          {t('inaccessibleFile.name')}
-        </Text>
-        <Text fontSize={12} type={'secondary'}>
-          {t('inaccessibleFile.desc')}
-        </Text>
+        <div className="truncate text-muted-foreground">{t('inaccessibleFile.name')}</div>
+        <div className="text-[12px] text-muted-foreground">{t('inaccessibleFile.desc')}</div>
       </div>
     </div>
   );
@@ -59,10 +54,8 @@ const FileItem = memo<ChatFileItem>(({ id, fileType, size, name, inaccessible })
     >
       <FileIcon fileName={name} fileType={fileType} size={32} />
       <div className="flex flex-col" style={{ overflow: 'hidden' }}>
-        <Text ellipsis>{name}</Text>
-        <Text fontSize={12} type={'secondary'}>
-          {formatSize(size)}
-        </Text>
+        <div className="truncate">{name}</div>
+        <div className="text-[12px] text-muted-foreground">{formatSize(size)}</div>
       </div>
     </div>
   );

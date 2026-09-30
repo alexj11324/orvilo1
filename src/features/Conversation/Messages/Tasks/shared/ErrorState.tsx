@@ -1,12 +1,13 @@
 'use client';
 
-import { Alert } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
-import { MessageSquare, Timer, Wrench } from 'lucide-react';
+import { Info,MessageSquare, Timer, Wrench } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { CodeBlock } from '@/components/ui/code-block';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { type TaskDetail } from '@/types/index';
 import { ThreadStatus } from '@/types/index';
 
@@ -99,20 +100,29 @@ const ErrorState = memo<ErrorStateProps>(({ taskDetail }) => {
   return (
     <div className="flex flex-col gap-3">
       {/* Error Content */}
-      <Alert
-        title={isCancelled ? t('task.status.cancelled') : t('task.status.failed')}
-        type={'secondary'}
-        extra={
-          errorContent && (
-            <CodeBlock
-              code={errorContent}
-              language="json"
-              style={{ padding: 8 }}
-              variant="ghost"
-            />
-          )
-        }
-      />
+      <Alert variant="default">
+        <Info />
+        <AlertTitle>
+          {isCancelled ? t('task.status.cancelled') : t('task.status.failed')}
+        </AlertTitle>
+        {errorContent && (
+          <Collapsible className="col-start-2">
+            <CollapsibleTrigger className="text-xs text-muted-foreground">
+              Show Details
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <AlertDescription>
+                <CodeBlock
+                  code={errorContent}
+                  language="json"
+                  style={{ padding: 8 }}
+                  variant="ghost"
+                />
+              </AlertDescription>
+            </CollapsibleContent>
+          </Collapsible>
+        )}
+      </Alert>
       {hasMetrics ? (
         <div className="flex items-center gap-3 flex-wrap">
           {/* Duration */}

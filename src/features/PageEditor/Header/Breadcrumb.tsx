@@ -1,5 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -64,7 +64,7 @@ const Breadcrumb = memo(() => {
   const documentTitle = title || t('pageEditor.titlePlaceholder');
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.breadcrumb} flex={1} gap={0}>
+    <div className={cn('flex items-center flex-1 gap-0', styles.breadcrumb)}>
       {/* Knowledge Base (root) */}
       {knowledgeBaseId && (
         <>
@@ -77,19 +77,19 @@ const Breadcrumb = memo(() => {
 
       {/* Folder chain */}
       {folderChain.map((folder: FolderCrumb) => (
-        <Flexbox horizontal align={'center'} gap={0} key={folder.id}>
+        <div className="flex items-center gap-0" key={folder.id}>
           <span className={styles.breadcrumbItem} style={{ cursor: 'default' }}>
             {folder.name}
           </span>
           <span className={styles.separator}>/</span>
-        </Flexbox>
+        </div>
       ))}
 
       {/* Current document title */}
       <span className={cx(styles.breadcrumbItem, styles.currentItem)} style={{ cursor: 'default' }}>
         {documentTitle}
       </span>
-    </Flexbox>
+    </div>
   );
 });
 

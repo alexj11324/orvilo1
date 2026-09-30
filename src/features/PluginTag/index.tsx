@@ -1,12 +1,12 @@
 'use client';
 
-import { Center, DropdownMenu, Icon } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { LucideToyBrick } from 'lucide-react';
 import { memo, useMemo } from 'react';
 
 import Avatar from '@/components/Plugins/PluginAvatar';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { filterToolIdsByCurrentEnv } from '@/helpers/toolAvailability';
 import { pluginHelpers, useToolStore } from '@/store/tool';
 import { pluginSelectors, toolSelectors } from '@/store/tool/selectors';
@@ -35,7 +35,7 @@ const PluginTag = memo<PluginTagProps>(({ plugins }) => {
   const count = visiblePlugins.length;
 
   return (
-    <DropdownMenu
+    <SidebarDropdownMenu
       items={() =>
         visiblePlugins.map((id) => {
           const item = list.find((i) => i.identifier === id);
@@ -45,9 +45,9 @@ const PluginTag = memo<PluginTagProps>(({ plugins }) => {
 
           return {
             icon: (
-              <Center style={{ minWidth: 24 }}>
+              <div className="flex items-center justify-center" style={{ minWidth: 24 }}>
                 <Avatar avatar={avatar} size={24} />
-              </Center>
+              </div>
             ),
             key: id,
             label: (
@@ -62,11 +62,13 @@ const PluginTag = memo<PluginTagProps>(({ plugins }) => {
       }
     >
       <Tag style={{ cursor: 'pointer' }}>
-        {<Icon icon={LucideToyBrick} />}
-        {pluginHelpers.getPluginTitle(displayPlugin) || visiblePlugins[0]}
-        {count > 1 && <div>({visiblePlugins.length - 1}+)</div>}
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+          {<LucideToyBrick />}
+          {pluginHelpers.getPluginTitle(displayPlugin) || visiblePlugins[0]}
+          {count > 1 && <div>({visiblePlugins.length - 1}+)</div>}
+        </span>
       </Tag>
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
@@ -22,13 +21,13 @@ const TagList = memo<{ tags: string[] }>(({ tags }) => {
   const showTags = Boolean(tags?.length && tags?.length > 0);
   return (
     showTags && (
-      <Flexbox horizontal gap={8} wrap={'wrap'}>
+      <div className="flex gap-2 flex-wrap">
         {tags.map((tag) => (
           <Tag className={styles.tag} key={tag}>
             {tag}
           </Tag>
         ))}
-      </Flexbox>
+      </div>
     )
   );
 });

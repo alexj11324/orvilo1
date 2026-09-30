@@ -1,6 +1,5 @@
 'use client';
 
-import { DropdownMenu } from '@lobehub/ui';
 import { ActionIcon, Avatar, Text } from '@lobehub/ui/base-ui';
 import { ArrowLeftIcon, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
@@ -10,6 +9,7 @@ import ShareButton from '@/business/client/features/PageShare/ShareButton';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { AutoSaveHint } from '@/features/EditorCanvas';
 import NavHeader from '@/features/NavHeader';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -64,18 +64,9 @@ const Header = memo(() => {
           <EditingIndicator />
           {documentId && <ShareButton documentId={documentId} />}
           {/* Three-dot menu */}
-          <DropdownMenu
-            iconSpaceMode="group"
-            items={menuItems}
-            placement="bottomRight"
-            popupProps={{
-              style: {
-                minWidth: 200,
-              },
-            }}
-          >
+          <SidebarDropdownMenu items={menuItems} placement="bottomRight">
             <ActionIcon icon={MoreHorizontal} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
-          </DropdownMenu>
+          </SidebarDropdownMenu>
           {canExpandRightPanel && (
             <ToggleRightPanelButton
               hideWhenExpanded

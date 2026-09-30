@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button, createModal } from '@lobehub/ui/base-ui';
 import { t as i18nT } from 'i18next';
 import { type RefObject } from 'react';
@@ -18,7 +17,7 @@ export const createMcpSettingsModal = ({ identifier }: McpSettingsModalOptions) 
   const modal = createModal({
     content: <Settings hideFooter identifier={identifier} ref={settingsRef} />,
     footer: (
-      <Flexbox horizontal justify="space-between" style={{ width: '100%' }}>
+      <div className="flex justify-between" style={{ width: '100%' }}>
         <Button
           onClick={() => {
             settingsRef.current?.reset();
@@ -26,7 +25,7 @@ export const createMcpSettingsModal = ({ identifier }: McpSettingsModalOptions) 
         >
           {i18nT('reset', { ns: 'common' })}
         </Button>
-        <Flexbox horizontal gap={8}>
+        <div className="flex gap-2">
           <Button onClick={() => modal.close()}>{i18nT('cancel', { ns: 'common' })}</Button>
           <Button
             type="primary"
@@ -36,8 +35,8 @@ export const createMcpSettingsModal = ({ identifier }: McpSettingsModalOptions) 
           >
             {i18nT('save', { ns: 'common' })}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     ),
     title: i18nT('dev.title.skillSettings', { ns: 'plugin' }),
     width: 600,

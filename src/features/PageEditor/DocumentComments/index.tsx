@@ -1,7 +1,7 @@
 'use client';
 
-import { Center, Flexbox } from '@lobehub/ui';
 import { Button, Skeleton, Text, toast } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { memo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -216,13 +216,12 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
   if (!workspaceId) return null;
 
   return (
-    <Flexbox
+    <div
       data-document-comments
-      className={styles.section}
-      gap={24}
+      className={cn('flex flex-col gap-6', styles.section)}
       onClick={(event) => event.stopPropagation()}
     >
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
+      <div className={cn('flex items-center gap-2', styles.header)}>
         {isHeaderLoading ? (
           <>
             <Skeleton height={28} width={48} />
@@ -240,7 +239,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
             )}
           </>
         )}
-      </Flexbox>
+      </div>
 
       {/* The pinned deep-link thread renders on its own, so a pending or failed list
           request never hides a target that was already fetched. */}
@@ -248,7 +247,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
       threads.isLoadingInitial ||
       threads.items.length > 0 ||
       pinnedThread ? (
-        <Flexbox className={styles.threadList}>
+        <div className={cn('flex flex-col', styles.threadList)}>
           {pinnedThread && (
             <Thread
               documentId={documentId}
@@ -296,7 +295,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
             />
           ) : (
             threads.hasMore && (
-              <Center paddingBlock={12}>
+              <div className="flex items-center justify-center py-3">
                 <Button
                   loading={threads.isLoadingMore}
                   type={'text'}
@@ -304,10 +303,10 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
                 >
                   {t('pageEditor.comments.loadMore')}
                 </Button>
-              </Center>
+              </div>
             )
           )}
-        </Flexbox>
+        </div>
       ) : null}
 
       {/* While the thread list is still skeleton-loading the composer would
@@ -315,7 +314,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
       {!threads.isLoadingInitial && (
         <Composer documentId={documentId} key={`root:${documentId}`} onSubmit={handleCreate} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

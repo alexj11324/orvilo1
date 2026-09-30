@@ -1,11 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { Input, Space } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDown, ChevronRight } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -104,20 +103,19 @@ const ApiItem = memo<ApiItemProps>(({ api }) => {
 
   const params = Object.entries(api.parameters.properties || {});
   return (
-    <Block gap={8} padding={16}>
+    <div className="flex flex-col gap-2 p-4">
       <div className={styles.apiHeader} onClick={() => setExpanded(!expanded)}>
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <div className={styles.apiTitle}>{api.name}</div>
           <div className={styles.apiDesc}>{api.description}</div>
-        </Flexbox>
+        </div>
 
-        <Icon icon={expanded ? ChevronDown : ChevronRight} />
+        {createElement(expanded ? ChevronDown : ChevronRight, {})}
       </div>
 
       {expanded && (
-        <Flexbox
-          gap={12}
-          padding={16}
+        <div
+          className="flex flex-col gap-3 p-4"
           style={{ background: cssVar.colorFillQuaternary, borderRadius: 6 }}
         >
           {params.length === 0 ? (
@@ -142,9 +140,9 @@ const ApiItem = memo<ApiItemProps>(({ api }) => {
               </Space>
             </>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Block>
+    </div>
   );
 });
 
@@ -163,7 +161,7 @@ const ApiVisualizer = memo<ApiVisualizerProps>(({ apis = [] }) => {
   );
 
   return (
-    <Flexbox gap={8} width={'100%'}>
+    <div className="flex flex-col gap-2" style={{ width: '100%' }}>
       <div className={styles.searchWrapper}>
         <Input.Search
           placeholder={t('dev.preview.api.searchPlaceholder')}
@@ -179,7 +177,7 @@ const ApiVisualizer = memo<ApiVisualizerProps>(({ apis = [] }) => {
           <div className={styles.emptyState}>{t('dev.preview.api.noResults')}</div>
         )}
       </Space>
-    </Flexbox>
+    </div>
   );
 });
 

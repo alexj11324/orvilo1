@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Loader2Icon, PencilIcon } from 'lucide-react';
@@ -8,6 +7,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface EditingIndicatorProps {
   /** The member currently holding the edit lock, or null/undefined when free. */
@@ -33,12 +33,12 @@ const EditingIndicator = memo<EditingIndicatorProps>(({ holderId, pending }) => 
 
     const checkingLabel = t('pageEditor.editMode.checking');
     return (
-      <Flexbox horizontal align={'center'} gap={4} style={{ color: cssVar.colorTextTertiary }}>
-        <Icon spin icon={Loader2Icon} size={14} />
+      <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
+        <Loader2Icon className="animate-spin" size={14} />
         <Text ellipsis style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}>
           {checkingLabel}
         </Text>
-      </Flexbox>
+      </div>
     );
   }
 
@@ -47,14 +47,23 @@ const EditingIndicator = memo<EditingIndicatorProps>(({ holderId, pending }) => 
     : t('pageEditor.editMode.lockedBySomeone');
 
   return (
-    <Tooltip title={label}>
-      <Flexbox horizontal align={'center'} gap={4} style={{ color: cssVar.colorTextTertiary }}>
-        <Icon icon={PencilIcon} size={14} />
-        <Text ellipsis style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}>
-          {label}
-        </Text>
-      </Flexbox>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span style={{ display: 'inline-flex' }}>
+              <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
+                <PencilIcon size={14} />
+                <Text ellipsis style={{ color: 'inherit', fontSize: 12, maxWidth: 200 }}>
+                  {label}
+                </Text>
+              </div>
+            </span>
+          }
+        />
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

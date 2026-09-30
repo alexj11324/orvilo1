@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Grid, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { InboxIcon, ServerCrash } from 'lucide-react';
@@ -72,31 +71,38 @@ const Agents = memo<AgentsProps>(({ inModal }) => {
   // Initial loading state
   if (!isInitialized && isLoading) {
     return (
-      <Grid gap={12} rows={2} width={'100%'}>
+      <div
+        className="grid gap-3"
+        style={{
+          gridTemplateColumns:
+            'repeat(auto-fill, minmax(max(240px, calc((100% - 12px) / 2)), 1fr))',
+          width: '100%',
+        }}
+      >
         {Array.from({ length: 4 }).map((_, index) => (
           <ArticleSkeleton avatar={40} key={index} rows={1} />
         ))}
-      </Grid>
+      </div>
     );
   }
 
   // Error state
   if (error) {
     return (
-      <Center gap={12} padding={40}>
-        <Icon color={cssVar.colorTextDescription} icon={ServerCrash} size={80} />
+      <div className="flex items-center justify-center gap-3 p-10">
+        <ServerCrash color={cssVar.colorTextDescription} size={80} />
         <Text type={'secondary'}>{t('mcp.details.agents.networkError')}</Text>
-      </Center>
+      </div>
     );
   }
 
   // Empty state
   if (isInitialized && items.length === 0) {
     return (
-      <Center gap={12} padding={40}>
-        <Icon color={cssVar.colorTextDescription} icon={InboxIcon} size={80} />
+      <div className="flex items-center justify-center gap-3 p-10">
+        <InboxIcon color={cssVar.colorTextDescription} size={80} />
         <Text type={'secondary'}>{t('mcp.details.agents.empty')}</Text>
-      </Center>
+      </div>
     );
   }
 

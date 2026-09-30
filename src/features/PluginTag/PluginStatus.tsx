@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Badge, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { LucideRotateCw, LucideTrash2, RotateCwIcon } from 'lucide-react';
@@ -67,12 +66,12 @@ const PluginStatus = memo<PluginStatusProps>(({ title, id, deprecated }) => {
     ) : null;
 
   return (
-    <Flexbox horizontal align={'flex-start'} gap={12} justify={'space-between'}>
-      <Flexbox gap={2}>
-        <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex items-start gap-3 justify-between">
+      <div className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-2">
           {title || id}
           {tag}
-        </Flexbox>
+        </div>
         {installError ? (
           <Text fontSize={12} type={'danger'}>
             {t(`error.${installError.message}`, {
@@ -82,7 +81,7 @@ const PluginStatus = memo<PluginStatusProps>(({ title, id, deprecated }) => {
             })}
           </Text>
         ) : null}
-      </Flexbox>
+      </div>
 
       {deprecated ? (
         <ActionIcon
@@ -95,7 +94,7 @@ const PluginStatus = memo<PluginStatusProps>(({ title, id, deprecated }) => {
           }}
         />
       ) : (
-        <Flexbox horizontal align={'center'}>
+        <div className="flex items-center">
           {isCustom ? (
             <ActionIcon
               icon={RotateCwIcon}
@@ -110,9 +109,9 @@ const PluginStatus = memo<PluginStatusProps>(({ title, id, deprecated }) => {
           <ManifestPreviewer manifest={manifest || {}} trigger={'hover'}>
             <Button icon={renderStatus} size={'small'} type={'text'} />
           </ManifestPreviewer>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

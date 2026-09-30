@@ -1,12 +1,29 @@
-import { ContextMenuTrigger, Flexbox, type GenericItemType, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { EMPTY_ARRAY } from '@orvilo/const';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon, FileIcon, FolderIcon, type LucideIcon } from 'lucide-react';
 import type React from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
+
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+
+type GenericItemType = {
+  danger?: boolean;
+  disabled?: boolean;
+  icon?: ReactNode;
+  key: string;
+  label: ReactNode;
+  onClick?: () => void;
+};
 
 export interface SkillListItem {
   description?: string;
@@ -243,26 +260,22 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
   if (node.isDirectory) {
     return (
       <>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.childItem}
-          gap={6}
+        <div
+          className={cn('flex items-center gap-1.5', styles.childItem)}
           style={{ paddingInlineStart }}
           onClick={() => onToggleFolder(node.path)}
         >
           <span className={styles.treeChevronSlot}>
-            <Icon
+            <ChevronRightIcon
               className={`${styles.chevron} ${isOpen ? styles.chevronExpanded : ''}`}
-              icon={ChevronRightIcon}
               size={12}
             />
           </span>
-          <Icon className={styles.childItemIcon} icon={FolderIcon} size={12} />
+          <FolderIcon className={styles.childItemIcon} size={12} />
           <Text ellipsis style={{ color: 'inherit', flex: 1, fontSize: 12, minWidth: 0 }}>
             {node.name}
           </Text>
-        </Flexbox>
+        </div>
         {isOpen &&
           node.children.map((child) => (
             <TreeRow
@@ -279,21 +292,18 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
   }
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.childItem}
-      gap={6}
+    <div
+      className={cn('flex items-center gap-1.5', styles.childItem)}
       style={{ paddingInlineStart }}
       title={node.path}
       onClick={() => onOpenFile(node.path)}
     >
       <span className={styles.treeChevronSlot} />
-      <Icon className={styles.childItemIcon} icon={FileIcon} size={12} />
+      <FileIcon className={styles.childItemIcon} size={12} />
       <Text ellipsis style={{ color: 'inherit', flex: 1, fontSize: 12, minWidth: 0 }}>
         {node.name}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -350,7 +360,7 @@ const SkillRow = memo<SkillRowProps>(
         actions.map((action) => ({
           danger: action.danger,
           disabled: action.disabled,
-          icon: <Icon icon={action.icon} />,
+          icon: <action.icon />,
           key: action.key,
           label: action.label,
           onClick: () => action.onClick(item),
@@ -374,41 +384,38 @@ const SkillRow = memo<SkillRowProps>(
     );
 
     const row = (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.item}
+      <div
+        className={cn('flex items-center gap-1.5', styles.item)}
         draggable={!!onSkillDragStart}
-        gap={6}
         onDragStart={onSkillDragStart ? (event) => onSkillDragStart(item, event) : undefined}
       >
         {hasFiles ? (
-          <Flexbox
-            align={'center'}
-            justify={'center'}
+          <div
+            className="flex flex-col items-center justify-center"
             style={{ cursor: 'pointer', flexShrink: 0, height: 20, width: 20 }}
             onClick={(e) => {
               e.stopPropagation();
               onToggle(item.id);
             }}
           >
-            <Icon
+            <ChevronRightIcon
               className={`${styles.chevron} ${expanded ? styles.chevronExpanded : ''}`}
-              icon={ChevronRightIcon}
               size={14}
             />
-          </Flexbox>
+          </div>
         ) : reserveChevronSlot ? (
           <span style={{ flexShrink: 0, height: 20, width: 20 }} />
         ) : null}
-        <Icon className={styles.itemIcon} icon={SkillsIcon} size={14} />
+        <SkillsIcon className={styles.itemIcon} size={14} />
         {item.description ? (
-          <Tooltip
-            placement={'left'}
-            title={<span className={styles.description}>{item.description}</span>}
-          >
-            {nameNode}
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger render={<span style={{ display: 'inline-flex' }}>{nameNode}</span>} />
+              <TooltipContent side="left">
+                <span className={styles.description}>{item.description}</span>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
           nameNode
         )}
@@ -418,32 +425,60 @@ const SkillRow = memo<SkillRowProps>(
         {hasActions && (
           <div className={cx('skill-row-actions', styles.rowActions)} draggable={false}>
             {actions.map((action) => (
-              <Tooltip key={action.key} title={action.tooltip ?? action.label}>
-                <div
-                  role={'button'}
-                  className={cx(
-                    styles.rowAction,
-                    action.danger && !action.disabled && styles.rowActionDanger,
-                    action.disabled && styles.rowActionDisabled,
-                  )}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    if (action.disabled) return;
-                    action.onClick(item);
-                  }}
-                >
-                  <Icon icon={action.icon} size={13} />
-                </div>
-              </Tooltip>
+              <TooltipProvider key={action.key}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <div
+                          role={'button'}
+                          className={cx(
+                            styles.rowAction,
+                            action.danger && !action.disabled && styles.rowActionDanger,
+                            action.disabled && styles.rowActionDisabled,
+                          )}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (action.disabled) return;
+                            action.onClick(item);
+                          }}
+                        >
+                          <action.icon size={13} />
+                        </div>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{action.tooltip ?? action.label}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ))}
           </div>
         )}
-      </Flexbox>
+      </div>
     );
 
     return (
       <>
-        {hasActions ? <ContextMenuTrigger items={contextMenuItems}>{row}</ContextMenuTrigger> : row}
+        {hasActions ? (
+          <ContextMenu>
+            <ContextMenuTrigger>{row}</ContextMenuTrigger>
+            <ContextMenuContent>
+              {contextMenuItems().map((menuItem) => (
+                <ContextMenuItem
+                  disabled={menuItem.disabled}
+                  key={menuItem.key}
+                  variant={menuItem.danger ? 'destructive' : 'default'}
+                  onClick={menuItem.onClick}
+                >
+                  {menuItem.icon}
+                  {menuItem.label}
+                </ContextMenuItem>
+              ))}
+            </ContextMenuContent>
+          </ContextMenu>
+        ) : (
+          row
+        )}
         {expanded &&
           hasFiles &&
           onOpenFile &&
@@ -483,7 +518,7 @@ const SkillsList = memo<SkillsListProps>(
     );
 
     return (
-      <Flexbox gap={2}>
+      <div className="flex flex-col gap-0.5">
         {items.map((item) => (
           <SkillRow
             expanded={expanded.has(item.id)}
@@ -497,7 +532,7 @@ const SkillsList = memo<SkillsListProps>(
             onToggle={toggle}
           />
         ))}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,11 +1,11 @@
 'use client';
 
-import { Select, toast } from '@lobehub/ui/base-ui';
-import { TagIcon } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import Select from '@/components/Select';
+import { toast } from '@/components/toast';
 import { useProjectStore } from '@/store/project';
 
 export interface ProjectLabelPickerProps {
@@ -82,10 +82,7 @@ const ProjectLabelPicker = memo<ProjectLabelPickerProps>(
         mode="multiple"
         options={options.map((label) => ({ label: label.name, value: label.id }))}
         placeholder={placeholder}
-        popupMatchSelectWidth={false}
-        prefix={TagIcon}
         size="small"
-        suffixIcon={null}
         value={[...labelIds]}
         onChange={(value) => {
           if (Array.isArray(value)) void save(value);

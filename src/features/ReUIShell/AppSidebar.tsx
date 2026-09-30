@@ -25,11 +25,7 @@ export function AppSidebar() {
 
   return (
     <>
-      <Sidebar
-        className={isDesktop && isMacOS() ? undefined : 'dark'}
-        collapsible="icon"
-        variant="inset"
-      >
+      <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader className="flex flex-row items-center justify-between in-data-[state=collapsed]:flex-col in-data-[state=collapsed]:items-start in-data-[state=collapsed]:justify-center">
           {!(isDesktop && isMacOS()) && (
             <SidebarTrigger

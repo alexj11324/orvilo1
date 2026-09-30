@@ -158,9 +158,20 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
 
     // Select popups portal to document.body — suspend the modal's
     // outside-click dismissal while one is open or the option click
-    // closes the whole dialog.
+    // closes the whole dialog. Restoring on onOpenChange would race:
+    // the same pointer event closes the Select before the modal
+    // evaluates dismissal, so re-enable only after the popup's close
+    // animation completes.
     const handleSelectOpenChange = useCallback(
-      (open: boolean) => setCanDismissByClickOutside(!open),
+      (open: boolean) => {
+        if (open) setCanDismissByClickOutside(false);
+      },
+      [setCanDismissByClickOutside],
+    );
+    const handleSelectOpenChangeComplete = useCallback(
+      (open: boolean) => {
+        if (!open) setCanDismissByClickOutside(true);
+      },
       [setCanDismissByClickOutside],
     );
 
@@ -262,6 +273,7 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
           <Select
             value={months[month.getMonth()]}
             onOpenChange={handleSelectOpenChange}
+            onOpenChangeComplete={handleSelectOpenChangeComplete}
             onValueChange={(value) => {
               const index = months.indexOf(String(value));
               if (index >= 0) setMonth((prev) => new Date(prev.getFullYear(), index, 1));
@@ -281,6 +293,7 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
           <Select
             value={String(month.getFullYear())}
             onOpenChange={handleSelectOpenChange}
+            onOpenChangeComplete={handleSelectOpenChangeComplete}
             onValueChange={(value) => {
               const year = Number.parseInt(String(value), 10);
               if (!Number.isNaN(year)) setMonth((prev) => new Date(year, prev.getMonth(), 1));

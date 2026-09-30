@@ -1,7 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { TRPCError } from '@trpc/server';
-import { and, eq, inArray, lt, sql } from 'drizzle-orm';
+import { and, eq, inArray, isNull, lt, sql } from 'drizzle-orm';
 
 import type { OrviloDatabase, Transaction } from '@/database/type';
 
@@ -381,7 +381,13 @@ export class AgentDelegationService {
           executionEpoch: sql`coalesce(${taskTopics.executionEpoch}, 0) + 1`,
           executionGrantId: params.grantId,
         })
-        .where(and(eq(taskTopics.taskId, params.taskId), eq(taskTopics.topicId, params.topicId)))
+        .where(
+          and(
+            eq(taskTopics.taskId, params.taskId),
+            eq(taskTopics.topicId, params.topicId),
+            isNull(taskTopics.executionControl),
+          ),
+        )
         .returning({ executionEpoch: taskTopics.executionEpoch });
 
       if (!row) {
@@ -403,6 +409,13 @@ export class AgentDelegationService {
    */
   assertMayCommit = async (params: {
     action?: DelegationAction | string;
+    /** Trusted Core registration only; legacy commits cannot bypass its admission hold. */
+    runtime?: {
+      registrationId: string;
+      ownerId: string;
+      leaseId: string;
+      allowRegistering?: boolean;
+    };
     epoch: number;
     grantId: string;
     taskId: string;
@@ -415,6 +428,7 @@ export class AgentDelegationService {
 
     const [row] = await this.db
       .select({
+        executionControl: taskTopics.executionControl,
         executionEpoch: taskTopics.executionEpoch,
         executionGrantId: taskTopics.executionGrantId,
         grant: executionGrants,
@@ -430,6 +444,32 @@ export class AgentDelegationService {
         message: 'Execution superseded by a newer delegation epoch',
       });
     }
+
+    const control = row.executionControl;
+    if (
+      control &&
+      (!params.runtime ||
+        control.version !== 1 ||
+        control.registrationId !== params.runtime.registrationId ||
+        control.ownerId !== params.runtime.ownerId ||
+        control.leaseId !== params.runtime.leaseId ||
+        !Number.isFinite(control.leaseExpiresAt) ||
+        control.leaseExpiresAt <= Date.now() ||
+        (control.state === 'running' &&
+          (control.activeHandoffId !== null ||
+            !control.treeId ||
+            !control.supervisorId ||
+            !control.sessionId)) ||
+        (control.state !== 'running' &&
+          !(params.runtime.allowRegistering && control.state === 'registering')))
+    ) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Core runtime admission is held or no longer owned',
+      });
+    }
+    if (params.runtime && !control)
+      throw new TRPCError({ code: 'CONFLICT', message: 'Core runtime registration missing' });
 
     const { member, verdict } = await this.evaluateGrantLiveness(row.grant, {
       action: params.action ?? 'run',

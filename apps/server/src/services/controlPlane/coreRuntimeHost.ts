@@ -1,4 +1,4 @@
-import { randomUUID } from 'node:crypto';
+import { createHash, randomUUID } from 'node:crypto';
 import { mkdir, open, readdir, readFile, rename } from 'node:fs/promises';
 import path from 'node:path';
 
@@ -8,6 +8,7 @@ import type {
   ControlResult,
   DurableReceipt,
   IsolationEvidence,
+  RuntimeEvent,
   RuntimeSession,
 } from '@orvilo/agent-execution';
 import type {
@@ -24,7 +25,8 @@ import {
   ScopedFileWriter,
 } from '@orvilo/agent-execution/controlPlane/server';
 
-import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import type { HandoffIntent } from '@/database/models/taskExecutionControl';
+import { TaskExecutionControlModel } from '@/database/models/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
 
 import type { CanonicalCompletionOutcome, CanonicalReceiptMapping } from './canonicalCompletion';
@@ -35,8 +37,11 @@ import { CanonicalRunAuthority } from './canonicalRun';
 interface HostJournal {
   binding: CanonicalRunBinding;
   containerName: string;
+  handoffId?: string;
   isolation?: IsolationEvidence;
+  receiptDirectory: string;
   recoveredTreeId?: string;
+  session?: RuntimeSession;
   stopping: boolean;
 }
 
@@ -53,6 +58,9 @@ export interface CanonicalCoreHostOptions {
   fileCommitments: Commitment[];
   /** A separately approved direct-child output capability, outside the runtime mount. */
   outputDirectory: string;
+  /** Stable private receipt namespace shared by successor registrations of this task. */
+  receiptDirectory?: string;
+  runtimeLeaseMs?: number;
   verifyArtifact: PrimeRuntimeOptions['verifyArtifact'];
 }
 
@@ -66,8 +74,9 @@ const failure = (message: string): ControlResult<never> => ({
  * All gateway effects hold CanonicalRunAuthority row locks; requestStop waits for
  * them and persists a fence advance before quiescence can be acknowledged. */
 export class CanonicalCoreRuntimeHost {
-  readonly runtime: PrimeExecutionRuntime;
+  private readonly runtime: PrimeExecutionRuntime;
   private readonly authority: CanonicalRunAuthority;
+  private readonly registration: TaskExecutionControlModel;
   private readonly supervisor: DockerProcessTreeSupervisor;
   private readonly commitments: Map<string, Commitment>;
   private journal: HostJournal;
@@ -84,8 +93,13 @@ export class CanonicalCoreRuntimeHost {
   ) {
     this.journal = journal;
     this.recovering = recovering;
-    this.receipts = path.join(options.controlDirectory, 'receipts');
+    this.receipts = options.receiptDirectory ?? path.join(options.controlDirectory, 'receipts');
     this.authority = new CanonicalRunAuthority(options.database);
+    this.registration = new TaskExecutionControlModel(
+      options.database,
+      options.binding.userId,
+      options.binding.workspaceId,
+    );
     this.commitments = new Map(
       options.fileCommitments.map((commitment) => [commitment.id, structuredClone(commitment)]),
     );
@@ -102,7 +116,10 @@ export class CanonicalCoreRuntimeHost {
       verifyArtifact: options.verifyArtifact,
       authorize: async (fence) => {
         if (this.journal.stopping || this.recovering) return failure('Host admission is closed');
-        const checked = await this.authority.withRun(this.journal.binding, async (snapshot) => {
+        const authorize = this.session
+          ? this.authority.withRun.bind(this.authority)
+          : this.authority.withRegistration.bind(this.authority);
+        const checked = await authorize(this.journal.binding, async (snapshot) => {
           if (
             Object.keys(snapshot.fence).some(
               (key) =>
@@ -144,6 +161,7 @@ export class CanonicalCoreRuntimeHost {
       docker: { ...input.docker },
       fileCommitments: structuredClone(input.fileCommitments),
       completionMappings: structuredClone(input.completionMappings ?? []),
+      receiptDirectory: input.receiptDirectory ?? path.join(input.controlDirectory, 'receipts'),
     };
     const { realpath } = await import('node:fs/promises');
     const mounted = await realpath(options.docker.workspace);
@@ -153,7 +171,17 @@ export class CanonicalCoreRuntimeHost {
       options.outputDirectory.startsWith(`${options.controlDirectory}/`)
     )
       throw new Error('Output must not overlap private control storage');
-    for (const directory of [options.controlDirectory, options.outputDirectory]) {
+    if (
+      options.receiptDirectory === options.outputDirectory ||
+      options.receiptDirectory.startsWith(`${options.outputDirectory}/`) ||
+      options.outputDirectory.startsWith(`${options.receiptDirectory}/`)
+    )
+      throw new Error('Receipt namespace must not overlap output capability');
+    for (const directory of [
+      options.controlDirectory,
+      options.outputDirectory,
+      options.receiptDirectory,
+    ]) {
       if (
         !path.isAbsolute(directory) ||
         directory === mounted ||
@@ -166,7 +194,16 @@ export class CanonicalCoreRuntimeHost {
     }
     let journal: HostJournal = {
       binding: options.binding,
-      containerName: `orvilo-core-${randomUUID()}`,
+      receiptDirectory: options.receiptDirectory,
+      containerName: `orvilo-core-${createHash('sha256')
+        .update(
+          JSON.stringify([
+            options.binding.workspaceId,
+            options.binding.taskId,
+            options.binding.runtimeRegistrationId,
+          ]),
+        )
+        .digest('hex')}`,
       stopping: false,
     };
     let recovering = false;
@@ -176,6 +213,22 @@ export class CanonicalCoreRuntimeHost {
       );
       if (JSON.stringify(journal.binding) !== JSON.stringify(options.binding))
         throw new Error('Control directory belongs to another canonical run');
+      // Recovery uses the committed lineage namespace, including handoff's
+      // internally selected shared directory. Never silently fall back to a new store.
+      const receipts = journal.receiptDirectory;
+      if (
+        !receipts ||
+        !path.isAbsolute(receipts) ||
+        receipts === mounted ||
+        receipts.startsWith(`${mounted}/`) ||
+        receipts === options.outputDirectory ||
+        receipts.startsWith(`${options.outputDirectory}/`) ||
+        options.outputDirectory.startsWith(`${receipts}/`) ||
+        (input.receiptDirectory !== undefined && input.receiptDirectory !== receipts) ||
+        (await realpath(receipts)) !== receipts
+      )
+        throw new Error('Receipt namespace registration mismatch');
+      options.receiptDirectory = receipts;
       recovering = true;
     } catch (error) {
       if (!(error instanceof Error && 'code' in error && error.code === 'ENOENT')) throw error;
@@ -183,6 +236,13 @@ export class CanonicalCoreRuntimeHost {
     const writer = await ScopedFileWriter.open(options.outputDirectory);
     const host = new CanonicalCoreRuntimeHost(options, writer, journal, recovering);
     if (!recovering) await host.persist(true);
+    try {
+      if (!recovering)
+        await host.registration.register(options.binding, options.runtimeLeaseMs ?? 60_000);
+    } catch (error) {
+      await writer.close();
+      throw error;
+    }
     return host;
   }
 
@@ -218,20 +278,75 @@ export class CanonicalCoreRuntimeHost {
       return failure('Host already started or requires recovery');
     this.starting = true;
     try {
-      const checked = await this.authority.withRun(
+      const checked = await this.authority.withRegistration(
         this.journal.binding,
-        async (snapshot) => snapshot.fence,
+        async (snapshot) => snapshot,
       );
       if (!checked.ok) return checked;
+      if (checked.value.registrationState !== 'registering' || checked.value.treeId)
+        return failure('A process is already registered');
       const result = await this.runtime.start({
-        fence: checked.value,
+        fence: checked.value.fence,
         workspace: this.options.docker.workspace,
       });
-      if (result.ok) this.session = result.value;
+      if (result.ok) {
+        if (!this.journal.isolation) return failure('Runtime isolation registration unavailable');
+        this.journal.session = result.value;
+        try {
+          await this.persist();
+          const identity = {
+            treeId: this.journal.isolation.treeId,
+            supervisorId: this.journal.isolation.supervisorId,
+            sessionId: result.value.sessionId,
+          };
+          if (checked.value.activeHandoffId) {
+            const handoff = await this.registration.read(checked.value.activeHandoffId);
+            if (!handoff || handoff.phase !== 'transferred')
+              throw new Error('Successor handoff changed');
+            await this.registration.resume(handoff.id, handoff.revision, identity);
+          } else await this.registration.activate(this.journal.binding, identity);
+          this.session = result.value;
+        } catch {
+          // A successful activation can lose its acknowledgement. Re-read the
+          // authoritative registration before stopping a correctly registered tree.
+          const reconciled = await this.authority.withRun(
+            this.journal.binding,
+            async (snapshot) => snapshot,
+          );
+          if (
+            reconciled.ok &&
+            reconciled.value.treeId === this.journal.isolation.treeId &&
+            reconciled.value.supervisorId === this.journal.isolation.supervisorId &&
+            reconciled.value.sessionId === result.value.sessionId
+          ) {
+            this.session = result.value;
+            return result;
+          }
+          const stopped = await this.supervisor.terminate(this.journal.isolation.treeId);
+          if (!stopped.ok) return stopped;
+          return failure('Runtime activation did not commit; admission remains closed');
+        }
+      }
       return result;
     } finally {
       this.starting = false;
     }
+  }
+
+  async *prompt(text: string): AsyncIterable<RuntimeEvent> {
+    if (!this.session) {
+      yield {
+        type: 'error',
+        sessionId: '',
+        error: { code: 'policy_denied', message: 'No activated runtime session', retryable: false },
+      };
+      return;
+    }
+    yield* this.runtime.prompt(this.session, text);
+  }
+
+  async shutdown() {
+    return this.session ? this.runtime.shutdown(this.session) : this.recoverStop();
   }
 
   async execute(request: ActionRequest): Promise<ControlResult<DurableReceipt>> {
@@ -251,7 +366,13 @@ export class CanonicalCoreRuntimeHost {
       authority: {
         withAdmission: async (_action, run) => {
           const admitted = await this.authority.withRun(this.journal.binding, async (snapshot) => {
-            if (this.journal.stopping || !snapshot.allowedActions.includes('file.write'))
+            if (
+              this.journal.stopping ||
+              !snapshot.allowedActions.includes('file.write') ||
+              snapshot.treeId !== isolation.treeId ||
+              snapshot.supervisorId !== isolation.supervisorId ||
+              snapshot.sessionId !== this.session?.sessionId
+            )
               throw new Error('File action is not granted');
             return run({
               fence: snapshot.fence,
@@ -282,17 +403,36 @@ export class CanonicalCoreRuntimeHost {
     this.journal.stopping = true;
     await this.persist();
     const binding = this.journal.binding;
-    const stopped = await new TaskDispatchModel(
-      this.options.database,
-      binding.workspaceId,
-    ).requestStop({
-      dispatchId: binding.dispatchId,
-      fence: binding.dispatchFence,
-      generation: binding.generation,
-      operationId: binding.operationId,
-      reason: 'core_runtime_stop',
-    });
-    if (!stopped) throw new Error('Canonical stop intent could not be established');
+    if (this.journal.handoffId) {
+      const registered = await this.registration.readControl(binding);
+      const control = registered?.control;
+      if (
+        !control ||
+        registered?.epoch !== binding.executionEpoch ||
+        control.state !== 'held' ||
+        control.activeHandoffId !== this.journal.handoffId ||
+        control.ownerId !== binding.runtimeOwnerId ||
+        control.registrationId !== binding.runtimeRegistrationId ||
+        control.leaseId !== binding.runtimeLeaseId ||
+        control.treeId !== treeId ||
+        control.supervisorId !== this.options.docker.supervisorId
+      )
+        throw new Error('Handoff source admission is not durably held');
+    } else {
+      let stopped = false;
+      for (let attempt = 0; attempt < 50; attempt++) {
+        try {
+          await this.registration.stop(binding);
+          stopped = true;
+          break;
+        } catch {
+          // NOWAIT canonical locks may be held by an already admitted effect.
+          // The local latch is closed and no zero-pending proof is returned yet.
+          if (attempt < 49) await new Promise((resolve) => setTimeout(resolve, 100));
+        }
+      }
+      if (!stopped) throw new Error('Exact process stop did not commit');
+    }
     let directories: string[];
     try {
       directories = await readdir(this.receipts);
@@ -310,6 +450,144 @@ export class CanonicalCoreRuntimeHost {
       if (!['verified', 'failed'].includes(receipt.status)) pendingActions++;
     }
     return { pendingActions };
+  }
+
+  /** Trusted server orchestration only. Recover phases from the canonical history;
+   * an already registered successor is reported without claiming ACP reconnect. */
+  async handoffTo(
+    intent: HandoffIntent,
+    successorOptions: Omit<CanonicalCoreHostOptions, 'binding' | 'database'>,
+  ): Promise<
+    ControlResult<{
+      binding: CanonicalRunBinding;
+      sessionId: string;
+      transportReady: boolean;
+      host?: CanonicalCoreRuntimeHost;
+      session?: RuntimeSession;
+    }>
+  > {
+    let successor: CanonicalCoreRuntimeHost | undefined;
+    try {
+      let record = await this.registration.read(intent.id);
+      if (!record) record = await this.registration.beginHandoff(this.journal.binding, intent);
+      const r = record.record;
+      if (
+        r.source.registrationId !== this.journal.binding.runtimeRegistrationId ||
+        r.source.ownerId !== this.journal.binding.runtimeOwnerId ||
+        r.source.leaseId !== this.journal.binding.runtimeLeaseId ||
+        r.sourceEpoch !== this.journal.binding.executionEpoch ||
+        r.successorOwnerId !== intent.successorOwnerId ||
+        r.successorRegistrationId !== intent.successorRegistrationId ||
+        r.successorLeaseId !== intent.successorLeaseId ||
+        r.leaseMs !== intent.leaseMs
+      )
+        return failure('Handoff intent conflicts with durable registration');
+      if (record.phase === 'prepared')
+        record = await this.registration.advance(record.id, record.revision, 'quiescing');
+      if (record.phase === 'quiescing') {
+        const quiescent = await this.quiesceForHandoff(record.id);
+        if (!quiescent.ok) return quiescent;
+        record = await this.registration.advance(
+          record.id,
+          record.revision,
+          'quiescent',
+          quiescent.value,
+        );
+      }
+      if (record.phase === 'quiescent') {
+        // A stored report alone cannot establish that the source is still stopped.
+        const fresh = await this.quiesceForHandoff(record.id);
+        if (!fresh.ok) return fresh;
+        record = (await this.registration.transfer(record.id, record.revision)).record;
+      }
+      const binding: CanonicalRunBinding = {
+        ...this.journal.binding,
+        executionEpoch: r.sourceEpoch + 1,
+        runtimeOwnerId: r.successorOwnerId,
+        runtimeRegistrationId: r.successorRegistrationId,
+        runtimeLeaseId: r.successorLeaseId,
+      };
+      if (record.phase === 'resumed') {
+        const registered = await this.registration.readControl(binding);
+        const control = registered?.control;
+        if (
+          !control ||
+          control.state !== 'running' ||
+          control.registrationId !== binding.runtimeRegistrationId ||
+          control.ownerId !== binding.runtimeOwnerId ||
+          control.leaseId !== binding.runtimeLeaseId ||
+          !control.sessionId ||
+          registered?.epoch !== binding.executionEpoch
+        )
+          return failure('Successor registration changed');
+        const current = await this.authority.withRun(binding, async (snapshot) => snapshot);
+        if (
+          !current.ok ||
+          current.value.treeId !== control.treeId ||
+          current.value.sessionId !== control.sessionId
+        )
+          return failure('Successor authority is no longer live');
+        return {
+          ok: true,
+          value: { binding, sessionId: control.sessionId, transportReady: false },
+        };
+      }
+      if (record.phase !== 'transferred') return failure('Handoff has no transferable successor');
+      successor = await CanonicalCoreRuntimeHost.open({
+        ...successorOptions,
+        receiptDirectory: this.receipts,
+        binding,
+        database: this.options.database,
+      });
+      const started = await successor.start();
+      if (!started.ok) {
+        // Never launch a replacement for a journaled but unacknowledged successor.
+        // Exact-name stop recovery is explicit; ACP transport reattachment is not claimed.
+        if (successor.journal.isolation) {
+          const stopped = await successor.recoverStop();
+          if (!stopped.ok) {
+            await successor.close();
+            return stopped;
+          }
+        }
+        await successor.close();
+        return started;
+      }
+      return {
+        ok: true,
+        value: {
+          binding,
+          sessionId: started.value.sessionId,
+          transportReady: true,
+          host: successor,
+          session: started.value,
+        },
+      };
+    } catch {
+      if (successor?.journal.isolation) {
+        const stopped = await successor.recoverStop();
+        await successor.close();
+        if (!stopped.ok) return stopped;
+      } else await successor?.close();
+      return failure('Handoff admission or recovery is unavailable');
+    }
+  }
+
+  /** Stops only the held source tree; it does not cancel the task dispatch. */
+  async quiesceForHandoff(handoffId: string) {
+    const source = await this.registration.readControl(this.journal.binding);
+    if (
+      !source?.control ||
+      source.control.state !== 'held' ||
+      source.control.activeHandoffId !== handoffId ||
+      !this.journal.isolation ||
+      source.control.treeId !== this.journal.isolation.treeId
+    )
+      return failure('Source handoff hold unavailable');
+    this.journal.handoffId = handoffId;
+    this.journal.stopping = true;
+    await this.persist();
+    return this.supervisor.terminate(this.journal.isolation.treeId);
   }
 
   /** Explicit trusted completion request. A runtime end_turn never calls this.

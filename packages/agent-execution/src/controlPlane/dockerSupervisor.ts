@@ -7,6 +7,10 @@ import type { ControlResult, IsolationEvidence, QuiescenceProof } from './contra
 import type { IsolatedLaunch, ProcessTreeSupervisor } from './isolation';
 
 const execute = promisify(execFile);
+// The application's ProcessEnv augmentation describes its ambient process, not
+// a child allowlist. Do not inherit ambient credentials to satisfy that type.
+const dockerClientEnvironment = () =>
+  ({ PATH: '/usr/bin:/bin', HOME: '/nonexistent' }) as NodeJS.ProcessEnv;
 const fail = (message: string): ControlResult<never> => ({
   ok: false,
   error: { code: 'isolation_unavailable', message, retryable: false },
@@ -45,7 +49,7 @@ export class DockerProcessTreeSupervisor implements ProcessTreeSupervisor {
       await execute(this.options.dockerPath ?? '/usr/local/bin/docker', args, {
         timeout: 30_000,
         maxBuffer: 1024 * 1024,
-        env: { PATH: '/usr/bin:/bin', HOME: '/nonexistent' },
+        env: dockerClientEnvironment(),
       })
     ).stdout.trim();
   }
@@ -159,7 +163,7 @@ export class DockerProcessTreeSupervisor implements ProcessTreeSupervisor {
         ['start', '--attach', '--interactive', treeId],
         {
           stdio: 'pipe',
-          env: { PATH: '/usr/bin:/bin', HOME: '/nonexistent' },
+          env: dockerClientEnvironment(),
         },
       );
       this.clients.set(treeId, client);

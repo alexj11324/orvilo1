@@ -1,56 +1,82 @@
-# Core handoff and completion integration checkpoint
+# Core runtime ownership, handoff and completion
 
-Baseline: `28dc3bbad36e4661f8d09154ff8b017cf5cadaeb`.
+The Linux cloud candidate extends canonical Orvilo execution authority. It does not create a second task runner or treat runtime `end_turn` as task completion. Initial transferred source baseline was `28dc3bbad36e4661f8d09154ff8b017cf5cadaeb`; restored original handoff and verification blobs were checked as `c495d3cefa2f5e80d109cde1c90c6e370ad8fd6c` and `caf930b6e5dce0b82dea93b5ee74d4d18ea54e31` before changes.
 
-The transferred Core sources are candidate boundary code, not a second task runner or a production completion implementation. The original handoff and verification files were restored from the supplied text after HTML entity decoding, checked using `git apply --check`, and verified against the supplied Git blob hashes:
+## Canonical authority and schema
 
-- `handoff.ts`: 126 lines, `c495d3cefa2f5e80d109cde1c90c6e370ad8fd6c`.
-- `verification.ts`: 72 lines, `caf930b6e5dce0b82dea93b5ee74d4d18ea54e31`.
+`TaskExecutionControlModel` keeps live process registration on existing `task_topics`, adding `execution_control` and `execution_control_revision`. The existing `executionEpoch` and `executionGrantId` remain the sole delegated epoch/grant. One new `task_execution_handoffs` table stores immutable transfer intent and phase history, with one active handoff per task. The existing `task_topics.handoff` LLM summary is unchanged. SQL receipt persistence is a separate previously added candidate described in `core-sql-receipts.md`.
 
-## Existing authority that must be reused
+Runtime ownership is not inferred from dispatch provisioning or reconciliation leases. Registration records an opaque runtime lease, owner, registration ID, expiry, supervisor/tree/session and admission state. Renewal admits only the exact live running owner and is bounded by the delegation grant. Held, expired and superseded owners cannot renew.
 
-| Concern                       | Existing owner                                                                                          | Integration constraint                                                                                                                                                  |
-| ----------------------------- | ------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Dispatch identity and replay  | `packages/database/src/models/taskDispatch.ts`, `request`                                               | Reuse the existing idempotency identity and generation; do not create a second dispatch for handoff replay.                                                             |
-| Provisioning lease and fence  | `TaskDispatchModel.claimForProvisioning`                                                                | Locks dispatch and task, checks workspace, requirement and policy revisions, generation, and assignee before increasing the dispatch fence.                             |
-| Uncertain execution recovery  | `TaskDispatchModel.claimForRecovery`                                                                    | Retains the same fence and marks `outcome_unknown`; reconciliation is explicitly prohibited from launching a second process. This is not a handoff transfer operation.  |
-| Delegated execution authority | `apps/server/src/services/agentDelegation/executionGrants.ts`, `claimExecutionEpoch`, `assertMayCommit` | Epoch is on the `(taskId, topicId)` run row and bound to the execution grant. It is not the dispatch fence or task execution generation.                                |
-| Runtime settlement            | `TaskDispatchModel.settle`                                                                              | Settles a dispatch, checks generation and contract, and parks stale task contracts. It does not prove deliverable acceptance.                                           |
-| Final accepted completion     | `apps/server/src/services/verify/settle.ts`, `driveTaskFromVerify`                                      | Uses the exact operation and topic, Verify verdict, task-drive lease, completion reservation and integration gate. Preserve this convergence and its recovery behavior. |
+The schema exports unnumbered candidate DDL, explicitly installed only in disposable acceptance databases. No numbered migration or journal entry has been allocated. Deployment requires a coordinated production migration before code selecting the new columns is enabled; the acceptance installer is not a production migration path.
 
-## Missing canonical binding
+## Admission and durable transfer
 
-The transferred `ExecutionFence` contains a task ID and abstract owner/lease/epoch. It does not identify the dispatch ID/fence/generation, operation ID, topic ID, or completion reservation. Those identities are independently meaningful in the current application. Treating one `epoch` value as all of them would admit stale work.
+`CanonicalRunAuthority` locks and revalidates actual task, dispatch, delegated grant, topic and workspace membership rows. It keeps dispatch fence/generation distinct from delegated epoch and runtime lease. Startup admission permits the registered startup state; action admission requires the live activated runtime. Server-owned identity is mandatory, and missing or malformed registration fails closed.
 
-Likewise, `VerificationEvidence` and `AuthoritativeVerification` introduce commitments, action receipts, accepted decisions and tombstones. No supplied adapter maps these to canonical Verify criteria/check results/run verdicts, task dependencies and existing tombstones within the required transaction. A task-ID-only `CompletionPersistence` adapter would bypass existing integration and acceptance checks.
+Handoff atomically holds mutation admission while retaining the source owner. The concrete host drains accepted actions and stops its registered supervisor-owned process tree. Database proof checks bind the source tree/supervisor, zero remaining processes/actions and observation time; these structural checks alone are not OS termination evidence. The host must recheck actual supervisor quiescence before transfer.
 
-A production adapter therefore needs an explicit, server-resolved run binding and typed receipt-to-Verify mapping before it can safely invoke the canonical settlement path. Handoff additionally requires durable mutation admission held across process-tree quiescence, atomic successor registration and owner/epoch transfer, and retry-safe process registration. No substitute authority table, synthetic task identity, migration number or alternate completed-status write was introduced in this checkpoint.
+Transfer writes successor owner, a fresh lease, canonical epoch + 1 and the durable transferred phase in one transaction. Successor registration consumes the same intent. Retries return the existing intent; repeated successor activation must match the identical tree, supervisor and session. Recovery reads persisted phases rather than inferring progress from runtime output. Lock contention and stale revisions fail before effects and require retry.
 
-## Boundary fixes
+Ordinary stop atomically retains and marks the exact owner stopped and fences the existing dispatch. Grant revocation does not prevent cleanup, but an obsolete source cannot cancel a successor sharing that dispatch. Handoff source drain preserves the dispatch. Failed successor startup remains stopped and held rather than silently launching another writer.
 
-The coordinator now rejects transfer results that change the original handoff identity, source fence, intended successor, schema version or revision progression. Successor policy and state revisions remain the responsibility of the canonical transaction, which may legitimately advance them during transfer. Completion validation now rejects a tombstoned dependency task even if its former acceptance ID remains present.
+Legacy `claimExecutionEpoch` and `TaskTopicModel.startRun` reject registered Core topics. `assertMayCommit` requires the exact server-owned runtime identity for registered runs and denies held, stopped or expired admission. Unregistered ACP execution retains its existing delegation path.
 
-The added boundary tests exercise those negative cases. They are coordinator/validator tests, not SQL recovery, live OS isolation, or production runtime evidence. At restoration time, original `contracts.ts` was missing from the available transfer and prevented module loading; no passing test claim is made here.
+## Verified completion
 
-## Canonical adapters added in the cloud
+`CanonicalVerifyCompletion` requires the actual passed and confirmed frozen Verify plan, persisted passed criteria, and explicit server-owned mappings to verified durable receipts for every required criterion. It neither creates a passed verdict nor trusts runtime output as a verdict. Receipt fences use the runtime owner and opaque runtime lease.
 
-`apps/server/src/services/controlPlane/canonicalRun.ts` now reads and locks the actual task dispatch, task, execution grant, task topic and workspace membership rows. Its trusted server binding keeps dispatch fence/generation distinct from delegated epoch and operation/topic identity. It reuses `AgentDelegationService.assertMayCommit` on the same transaction connection. It admits only explicitly bounded user-delegated running dispatches with live leases, exact assignee and contract identity; unsupported/unleased registrations deny. No production runtime ownership is inferred merely from a provisioning or reconciliation lease.
+The final authorization hook runs inside `TaskModel.updateStatusForExecutionContract` through existing `driveTaskFromVerify` and `TaskService.updateStatus`. It locks/rechecks dispatch, task, grant, topic epoch/runtime identity, membership, Verify run and result rows, including revalidation after asynchronous receipt loading. It does not hold an outer transaction over Verify convergence. Existing non-Core callers retain their prior behavior.
 
-`canonicalCompletion.ts` resolves the actual passed and confirmed Verify plan and its persisted passed checks, and requires an explicit server-owned mapping to verified durable receipts for every required criterion. It neither invents a passed verdict nor accepts runtime output as a verdict. Missing mapping denies. The final authorization is forwarded through `driveTaskFromVerify`, `TaskService.updateStatus`, and `TaskModel.updateStatusForExecutionContract` as an optional trusted `beforeMutation` hook. That hook runs in the task status CAS transaction and locks/rechecks dispatch, task, grant, topic epoch, member, Verify run and results, including a recheck after asynchronous receipt loading. It does not hold an outer transaction over Verify convergence. Existing non-Core callers retain their prior behavior.
+The adapter reads actual status after convergence. Recurring tasks that rearm are explicitly not reported completed. This guard fences the final status mutation; earlier Verify publishing/integration actions retain their existing authorization gates.
 
-The adapter reads actual task status after convergence: recurring tasks that rearm remain explicitly uncompleted. This hook fences the final completion mutation; it is not a blanket authorization wrapper around every earlier Verify integration/publishing side effect. Those actions continue to require their existing authorization and integration gates.
+## Linux acceptance evidence
 
-Linux acceptance now includes:
+The current isolated actual PostgreSQL evidence comprises:
 
-- Actual PostgreSQL canonical run admission: 12 passed, including a second connection calling the real `TaskDispatchModel.requestStop` while an admitted callback is held. Cancellation commits after the callback releases its locks, and subsequent stale-owner admission denies.
-- Actual PGlite canonical completion: 10 passed in 21.16 seconds. The public reconciliation path invokes real Verify convergence and completes a passed mapped run; a takeover during receipt loading leaves it running; capped recurring runs complete only with valid authorization, remaining scheduled on revocation. Other tests exercise the actual task-model CAS transaction, missing mapping, missing frozen plan, foreign operation and superseded dispatch.
-- The authority schema and Verify services are real. Receipt loading in completion tests supplies explicit trusted fixture receipts; SQL receipt durability is covered separately in `core-sql-receipts.md`.
-- ESLint completed without errors or warnings for the new adapters and three modified canonical files.
+- Model acceptance: 14 passed, including concurrent intents, durable phase recovery, invalid proofs, revocation/expiry/membership checks, lease renewal, old-source stop denial, successor identity replay, revoked-owner cleanup, transaction rollback, database backend termination recovery and application-process crash recovery across all five durable phases.
+- Canonical admission: 18 passed, including action-drain/cancellation serialization and actual legacy epoch, commit and start-run rejection while held.
+- Registration-aware canonical completion: 10 passed, including real Verify positive completion, receipt-loading takeover denial and capped recurring authorization paths.
+- Concrete host acceptance: 2 passed; detailed host/supervisor evidence is maintained by the host acceptance suite.
 
-## Remaining durable handoff design
+Phase recovery now runs five fresh Node processes against persistent PostgreSQL. Each commits its durable handoff stage, is terminated with SIGKILL, and is followed by a new process that recovers the next stage. Separate database backend termination during a transaction and trigger failure verify rollback and subsequent recovery. The source runtime identities and quiescence proofs in these model tests are fixtures; killing the test application does not prove termination of a supervised runtime tree. Physical runtime isolation and tree termination are exercised separately by the concrete host/supervisor acceptance tests. The final independent database rerun passed all 14 cases in 17.96 seconds.
 
-No runtime owner transfer was implemented by repurposing the dispatch recovery lease. The minimum identified schema change is two additive columns on canonical `task_topics`: a typed nullable `executionControl` record and `executionControlRevision`, plus one `task_execution_handoffs` intent/history table. The canonical record would hold process owner, opaque runtime lease/expiry, registration identity, held/running/stopped state, registered tree/supervisor/session and active handoff ID. Existing `executionEpoch` and `executionGrantId` remain the sole delegated epoch/grant. Existing `task_topics.handoff` is an LLM summary and stays untouched.
+Scoped lint and whitespace checks passed. Final broad typecheck is pending; no full-repository typecheck pass is claimed. No production data, credentials, subscription, deployment or persistent permission changes were performed by this acceptance work.
 
-Before enabling transfer, Core registration, admission, recovery, revocation and cancellation must all respect that record; older ACP writers cannot be considered fenced merely by adding a table. Successor registration must atomically consume the durable transfer identity and reconcile ambiguous launch outcomes. The present stop/drain path uses the existing dispatch cancellation fence; it proves stop, not successor transfer. No schema columns, new handoff table or numbered migration have been created in this checkpoint.
+## Real PostgreSQL recovery acceptance (2026-09-30)
 
-Independent validation subsequently ran the 10 completion cases against disposable actual PostgreSQL: all passed in 27.24 seconds. Existing Verify regressions also passed (`driveTaskFromVerify`: 28, `taskAcceptance`: 4, `lifecycle`: 3). The all-dependency strict typecheck traverses the real Verify/TaskService graph into Desktop/UI modules and does not pass in this scoped configuration: it reports missing Electron/desktop aliases and unrelated ambient/UI errors. It also found the new test fixture used operation status `completed`; that fixture was corrected to canonical operation status `done`. The adapter and modified production hook files had no reported diagnostics. This is not a full-repository typecheck pass.
+`packages/database/src/models/__tests__/taskExecutionControl.test.ts` passed **14/14**
+on disposable PostgreSQL `127.0.0.1:32770/core_handoff` at 17:29:30 UTC (exit 0,
+19.73 seconds). The full baseline migrations ran through `getTestDB`, then the
+candidate handoff DDL was installed explicitly. No production migration was applied.
+
+Coverage includes concurrent begin with one winner, persisted phase reconstruction,
+atomic owner/lease/epoch transfer, source fencing, successor resume idempotency,
+wrong/old/future/undrained proofs, revoked grant, changed membership, expired lease,
+owner-only renewal, stale source stop rejection, exact successor stop, cleanup stop
+after grant revocation, and rejection of legacy `startRun` overwrites.
+
+Two real transactional failure boundaries were exercised:
+
+- A uniquely named, handoff-ID-scoped PostgreSQL trigger raises an exception on the
+  history transition after the canonical topic update. Owner, lease, epoch, revision
+  and phase all remain unchanged; removing the trigger allows the same transfer retry.
+- A dedicated PostgreSQL connection blocks in a uniquely scoped history trigger.
+  The test observes that connection's `PgSleep` state and terminates only that
+  backend via `pg_terminate_backend`. A fresh connection observes the rollback and
+  retries successfully. Expected client termination events are collected and checked;
+  the passing run has no unhandled errors.
+
+Additionally, `fixtures/handoffCrashChild.ts` runs **five separate Node processes**.
+Each commits one durable phase (prepared, quiescing, quiescent, transferred, resumed),
+reports the committed snapshot over IPC, and is then terminated with SIGKILL by its
+parent. The next new process resumes against the same PostgreSQL database. The test
+checks epoch remains 1 until transfer, becomes exactly 2 thereafter, and duplicate
+resume cannot increment it or create another registration. Only test-owned child
+processes are signalled. This proves actual control-client process restart across
+committed phases; it does not claim those fixtures launched or killed a Prime tree.
+The fixture quiescence report remains a trusted server-boundary input, while actual
+Docker tree termination is covered separately by supervisor and Core host tests.
+
+All scoped fault triggers are dropped in `finally`; fixture rows are cleaned using
+their own workspace/user IDs. The two test files pass repository scoped lint.

@@ -32,7 +32,7 @@ it.skipIf(!process.env.CORE_DOCKER_IMAGE || process.env.TEST_SERVER_DB !== '1')(
     expect(image.Config.Labels['orvilo.prime.commit']).toBe(PRIME_RUNTIME_PIN.commit);
     expect(image.Config.Labels['orvilo.prime.version']).toBe(PRIME_RUNTIME_PIN.version);
     const db = await getTestDB();
-    const binding = await createCanonicalRunFixture(db);
+    const binding = await createCanonicalRunFixture(db, 'registering');
     const directory = await mkdtemp(path.join(tmpdir(), 'core-host-acceptance-'));
     await chmod(directory, 0o755);
     const workspace = path.join(directory, 'workspace');

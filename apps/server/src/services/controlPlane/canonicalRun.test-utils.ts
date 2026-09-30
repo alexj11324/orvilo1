@@ -1,5 +1,8 @@
 import { randomUUID } from 'node:crypto';
 
+import { sql } from 'drizzle-orm';
+
+import { TaskExecutionControlModel } from '@/database/models/taskExecutionControl';
 import {
   agents,
   taskDispatches,
@@ -9,6 +12,7 @@ import {
   workspaceMembers,
   workspaces,
 } from '@/database/schemas';
+import { TASK_EXECUTION_CONTROL_CANDIDATE_SQL } from '@/database/schemas/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
 import { createTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 import { AgentDelegationService } from '@/server/services/agentDelegation/executionGrants';
@@ -16,7 +20,11 @@ import { AgentDelegationService } from '@/server/services/agentDelegation/execut
 import type { CanonicalRunBinding } from './canonicalRun';
 
 /** Seeds actual canonical rows only in the disposable acceptance database. */
-export async function createCanonicalRunFixture(db: OrviloDatabase): Promise<CanonicalRunBinding> {
+export async function createCanonicalRunFixture(
+  db: OrviloDatabase,
+  state: 'registering' | 'running' = 'running',
+): Promise<CanonicalRunBinding> {
+  await db.execute(sql.raw(TASK_EXECUTION_CONTROL_CANDIDATE_SQL));
   const userId = await createTestUser(db);
   const [workspace] = await db
     .insert(workspaces)
@@ -58,7 +66,7 @@ export async function createCanonicalRunFixture(db: OrviloDatabase): Promise<Can
     idempotencyKey: randomUUID(),
     requestedBy: `manual:${userId}`,
     leaseOwner: 'registered-core-host',
-    leaseExpiresAt: new Date(Date.now() + 60_000),
+    leaseExpiresAt: new Date(Date.now() + 300_000),
   });
   await db.insert(taskTopics).values({
     taskId: task.id,
@@ -77,7 +85,7 @@ export async function createCanonicalRunFixture(db: OrviloDatabase): Promise<Can
   const grant = await service.createGrant({
     agentId,
     allowedActions: ['run', 'file.write'],
-    expiresAt: new Date(Date.now() + 60_000),
+    expiresAt: new Date(Date.now() + 300_000),
     task: { id: task.id, projectId: null, workspaceId: workspace.id },
   });
   const executionEpoch = await service.claimExecutionEpoch({
@@ -96,9 +104,21 @@ export async function createCanonicalRunFixture(db: OrviloDatabase): Promise<Can
     topicId,
     grantId: grant.id,
     executionEpoch,
-    leaseOwner: 'registered-core-host',
+    runtimeRegistrationId: randomUUID(),
+    runtimeOwnerId: 'registered-core-host',
+    runtimeLeaseId: randomUUID(),
     policyRevision: task.policyRevision,
     stateRevision: task.domainRevision,
   };
+  const registration = new TaskExecutionControlModel(db, userId, workspace.id);
+  await registration.register(binding, 300_000);
+  // Canonical guard fixtures only. Real host acceptance uses registering and
+  // supplies actual supervisor proof by launching pinned Prime.
+  if (state === 'running')
+    await registration.activate(binding, {
+      treeId: 'fixture-tree',
+      supervisorId: 'fixture-supervisor',
+      sessionId: 'fixture-session',
+    });
   return binding;
 }

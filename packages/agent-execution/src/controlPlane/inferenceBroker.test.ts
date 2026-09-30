@@ -186,7 +186,7 @@ describe('inference broker admission and live authority', () => {
       });
       const result = await collect(broker.infer(request()));
       expect(result).toMatchObject([{ type: 'error' }]);
-      expect(JSON.stringify(result)).not.toContain('sensitive-fixture');
+      expect(JSON.stringify(result).includes('sensitive-fixture')).toBe(false);
     }
   });
 });

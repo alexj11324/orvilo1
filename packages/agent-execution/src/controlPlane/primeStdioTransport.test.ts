@@ -23,7 +23,8 @@ it('exchanges subprocess NDJSON and denies reverse filesystem permission', async
     });
   `,
     ],
-    { env: {}, stdio: ['pipe', 'pipe', 'ignore'] },
+    // Ambient app ProcessEnv types do not apply to a credential-free child.
+    { env: {} as NodeJS.ProcessEnv, stdio: ['pipe', 'pipe', 'ignore'] },
   );
   const exit = once(child, 'close');
   const transport = new PrimeStdioTransport({ stdin: child.stdin!, stdout: child.stdout! });

@@ -149,6 +149,11 @@ export class CanonicalVerifyCompletion {
         topicId: binding.topicId,
         grantId: binding.grantId,
         epoch: binding.executionEpoch,
+        runtime: {
+          registrationId: binding.runtimeRegistrationId,
+          ownerId: binding.runtimeOwnerId,
+          leaseId: binding.runtimeLeaseId,
+        },
       });
     } catch {
       return false;
@@ -251,8 +256,8 @@ export class CanonicalVerifyCompletion {
         receipt.fence.taskId !== binding.taskId ||
         receipt.fence.grantId !== binding.grantId ||
         receipt.fence.epoch !== binding.executionEpoch ||
-        receipt.fence.ownerId !== binding.leaseOwner ||
-        receipt.fence.leaseId !== `${binding.dispatchId}:${binding.dispatchFence}` ||
+        receipt.fence.ownerId !== binding.runtimeOwnerId ||
+        receipt.fence.leaseId !== binding.runtimeLeaseId ||
         receipt.fence.policyRevision !== binding.policyRevision ||
         receipt.fence.stateRevision !== binding.stateRevision
       )

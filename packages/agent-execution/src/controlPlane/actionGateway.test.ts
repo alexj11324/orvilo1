@@ -100,8 +100,8 @@ describe('typed action admission', () => {
     const { gateway, executor } = await fixture();
     const result = await gateway.execute(input as ActionRequest);
     expect(result).toMatchObject({ ok: false, error: { code: 'invalid_request' } });
-    expect(executor.authorize).not.toHaveBeenCalled();
-    expect(executor.apply).not.toHaveBeenCalled();
+    expect(vi.mocked(executor.authorize).mock.calls).toHaveLength(0);
+    expect(vi.mocked(executor.apply).mock.calls).toHaveLength(0);
   });
 
   it.each([
@@ -122,7 +122,7 @@ describe('typed action admission', () => {
       ok: false,
       error: { code: 'stale_fence' },
     });
-    expect(executor.apply).not.toHaveBeenCalled();
+    expect(vi.mocked(executor.apply).mock.calls).toHaveLength(0);
   });
 
   it.each(['revoked', 'expired-grant', 'expired-lease', 'no-isolation', 'no-mutations'])(
@@ -136,7 +136,7 @@ describe('typed action admission', () => {
       if (condition === 'no-mutations') current.mutationEnabled = false;
       const { gateway, executor } = await fixture(current);
       expect((await gateway.execute(request())).ok).toBe(false);
-      expect(executor.apply).not.toHaveBeenCalled();
+      expect(vi.mocked(executor.apply).mock.calls).toHaveLength(0);
     },
   );
 
@@ -148,7 +148,7 @@ describe('typed action admission', () => {
       ok: false,
       error: { code: 'stale_fence' },
     });
-    expect(executor.apply).not.toHaveBeenCalled();
+    expect(vi.mocked(executor.apply).mock.calls).toHaveLength(0);
   });
 
   it.each(['grant', 'lease'] as const)(
@@ -159,7 +159,7 @@ describe('typed action admission', () => {
       else current.leaseExpiresAt = NaN;
       const { gateway, executor } = await fixture(current);
       expect((await gateway.execute(request())).ok).toBe(false);
-      expect(executor.apply).not.toHaveBeenCalled();
+      expect(vi.mocked(executor.apply).mock.calls).toHaveLength(0);
     },
   );
 
@@ -175,7 +175,7 @@ describe('typed action admission', () => {
       ok: false,
       error: { code: 'policy_denied' },
     });
-    expect(executor.apply).not.toHaveBeenCalled();
+    expect(vi.mocked(executor.apply).mock.calls).toHaveLength(0);
   });
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Avatar, Tabs, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { type LucideIcon, XIcon } from 'lucide-react';
@@ -43,33 +42,36 @@ const SettingsModalLayout = memo<SettingsModalLayoutProps>(
     const { close } = useModalContext();
 
     const tabItems = tabs?.map(({ icon, key, label }) => ({
-      icon: icon ? <Icon icon={icon} size={16} /> : undefined,
+      icon: icon ? <icon size={16} /> : undefined,
       key,
       label,
     }));
 
     return (
-      <Flexbox height={'100%'} style={{ overflow: 'hidden' }}>
-        <Flexbox horizontal align={'center'} className={styles.header} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+      <div className="flex flex-col h-full" style={{ overflow: 'hidden' }}>
+        <div className={`flex items-center justify-between ${styles.header}`}>
+          <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
             <Avatar avatar={avatar} background={background} shape={'square'} size={24} />
             <Text ellipsis weight={600}>
               {title}
             </Text>
-          </Flexbox>
+          </div>
           <ActionIcon icon={XIcon} title={t('cancel')} onClick={close} />
-        </Flexbox>
+        </div>
 
         {tabItems && tabItems.length >= 2 && (
-          <Flexbox className={styles.tabsBar}>
+          <div className={`flex flex-col ${styles.tabsBar}`}>
             <Tabs activeKey={activeTab} items={tabItems} onChange={onTabChange} />
-          </Flexbox>
+          </div>
         )}
 
-        <Flexbox flex={1} paddingInline={16} style={{ minHeight: 0, overflow: 'auto' }}>
+        <div
+          className="flex flex-col flex-1"
+          style={{ paddingInline: 16, minHeight: 0, overflow: 'auto' }}
+        >
           {children}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

@@ -1,15 +1,15 @@
 'use client';
-import { CopyButton } from '@lobehub/ui';
+
 import { type OwnCredSummary } from '@orvilo/types';
 import { useQuery } from '@tanstack/react-query';
-import { Descriptions } from 'antd';
 import { cx } from 'antd-style';
-import { Eye, EyeOff } from 'lucide-react';
+import { Copy, Eye, EyeOff } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { type CredsApi } from '../useCredsApi';
 
@@ -61,7 +61,14 @@ const KVRow: FC<KVRowProps> = ({ keyName, value }) => {
           >
             {visible ? <EyeOff size={16} /> : <Eye size={16} />}
           </Button>
-          <CopyButton content={value} size={'small'} />
+          <Button
+            size="icon-sm"
+            type="button"
+            variant="ghost"
+            onClick={() => void copyToClipboard(value)}
+          >
+            <Copy size={14} />
+          </Button>
         </div>
       </div>
     </div>
@@ -113,15 +120,16 @@ const ViewCredModalContent: FC<ViewCredModalContentProps> = ({ cred, credsApi })
       <div className="my-4 rounded-lg border border-border bg-muted/50 p-3 text-sm" role="alert">
         {t('creds.view.warning')}
       </div>
-      <Descriptions bordered column={1} size={'small'}>
-        <Descriptions.Item label={t('creds.table.name')}>{cred.name}</Descriptions.Item>
-        <Descriptions.Item label={t('creds.table.key')}>
+      <dl className="grid grid-cols-[auto_1fr] gap-x-4 rounded-lg border border-border p-3 text-sm">
+        <dt className="text-muted-foreground">{t('creds.table.name')}</dt>
+        <dd>{cred.name}</dd>
+        <dt className="text-muted-foreground">{t('creds.table.key')}</dt>
+        <dd>
           <code>{cred.key}</code>
-        </Descriptions.Item>
-        <Descriptions.Item label={t('creds.table.type')}>
-          {cred.type ? t(`creds.types.${cred.type}` as any) : '-'}
-        </Descriptions.Item>
-      </Descriptions>
+        </dd>
+        <dt className="text-muted-foreground">{t('creds.table.type')}</dt>
+        <dd>{cred.type ? t(`creds.types.${cred.type}` as any) : '-'}</dd>
+      </dl>
 
       {valueEntries.length > 0 && (
         <div className="mt-4">

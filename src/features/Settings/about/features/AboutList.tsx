@@ -1,6 +1,5 @@
 'use client';
 
-import { Grid } from '@lobehub/ui';
 import { type FC } from 'react';
 import { memo } from 'react';
 
@@ -31,9 +30,12 @@ const AboutList = memo<AboutListProps>(({ grid, items, ItemRender }) => {
     );
 
   return (
-    <Grid gap={8} maxItemWidth={160} rows={5} width={'100%'}>
+    <div
+      className="grid w-full"
+      style={{ gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}
+    >
       {content}
-    </Grid>
+    </div>
   );
 });
 

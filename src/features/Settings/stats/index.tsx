@@ -1,9 +1,9 @@
 'use client';
 
-import { FormGroup, Grid } from '@lobehub/ui';
+import { FormGroup } from '@lobehub/ui';
 import { ProviderIcon } from '@lobehub/ui/icons';
 import { type DatePickerProps } from 'antd';
-import { DatePicker, Divider } from 'antd';
+import { DatePicker } from 'antd';
 import dayjs from 'dayjs';
 import { Brain, UserIcon } from 'lucide-react';
 import { createElement } from 'react';
@@ -11,6 +11,7 @@ import { memo, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { Separator } from '@/components/ui/separator';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { useClientDataSWR } from '@/libs/swr';
@@ -93,13 +94,16 @@ const StatsSetting = memo<StatsSettingProps>(
             )
           }
         >
-          <Grid gap={8} maxItemWidth={150} rows={4}>
+          <div
+            className="grid"
+            style={{ gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))' }}
+          >
             <TotalAssistants mobile={mobile} />
             <TotalTopics mobile={mobile} />
             <TotalMessages mobile={mobile} />
             <TotalTokens />
-          </Grid>
-          <Divider dashed />
+          </div>
+          <Separator />
           <AiHeatmaps mobile={mobile} />
         </FormGroup>
         <FormGroup
@@ -157,7 +161,7 @@ const StatsSetting = memo<StatsSettingProps>(
               isLoading={isLoading}
               resolveUser={resolveUser}
             />
-            <Divider />
+            <Separator />
             <UsageTrends
               data={data}
               groupBy={groupBy}

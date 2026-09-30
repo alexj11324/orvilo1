@@ -53,6 +53,18 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
     </div>
   ),
 }));
+vi.mock('@/components/ui/tooltip', () => ({
+  Tooltip: ({ children }: { children: ReactNode }) => <>{children}</>,
+  TooltipContent: ({ children }: { children: ReactNode }) => (
+    <div
+      data-testid="author-tooltip"
+      data-title={typeof children === 'string' ? children : undefined}
+    >
+      {children}
+    </div>
+  ),
+  TooltipTrigger: ({ children }: { children: ReactNode }) => <>{children}</>,
+}));
 
 // Run selectors against controlled state (the mocked selectors ignore state).
 vi.mock('@/store/tool', () => ({

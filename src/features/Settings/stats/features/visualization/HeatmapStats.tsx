@@ -1,9 +1,8 @@
-import { Block } from '@lobehub/ui';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { Fragment, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { useClientDataSWR } from '@/libs/swr';
 import { statsKeys } from '@/libs/swr/keys';
@@ -88,14 +87,17 @@ const HeatmapStats = memo(() => {
   ];
 
   return (
-    <Block paddingBlock={16} paddingInline={8} variant={'outlined'}>
+    <div
+      className="flex flex-col rounded-md border border-border"
+      style={{ paddingBlock: 16, paddingInline: 8 }}
+    >
       <div
         className={'flex min-w-0'}
         style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}
       >
         {items.map((item, index) => (
           <Fragment key={item.label}>
-            {index > 0 && <Divider style={{ height: 32, margin: 0 }} type={'vertical'} />}
+            {index > 0 && <Separator className="h-8" orientation={'vertical'} />}
             <div
               className={'flex min-w-0'}
               style={{ flexDirection: 'column', alignItems: 'center', gap: 4, flex: 1 }}
@@ -112,7 +114,7 @@ const HeatmapStats = memo(() => {
           </Fragment>
         ))}
       </div>
-    </Block>
+    </div>
   );
 });
 

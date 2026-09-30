@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { createStaticStyles } from 'antd-style';
 import { MessageSquareHeart } from 'lucide-react';
@@ -55,10 +54,10 @@ const Footer = memo<PropsWithChildren>(() => {
       cover: (
         <GuideVideo
           height={269}
+          width={358}
           src={
             '<@985522149420855317> https://hub-apac-1.objects.aspectlylabs.com/assets/feedback.mp4'
           }
-          width={358}
         />
       ),
       desc: t('footer.feedback.desc', { appName: BRANDING_NAME }),
@@ -71,10 +70,13 @@ const Footer = memo<PropsWithChildren>(() => {
     });
 
   return hideGitHubEngagementFooter ? null : (
-    <Flexbox className={LayoutSettingsFooterClassName} justify={'flex-end'}>
-      <Center horizontal as={'footer'} className={styles} flex={'none'} padding={16} width={'100%'}>
+    <div className={`flex flex-col justify-end ${LayoutSettingsFooterClassName}`}>
+      <footer
+        className={`flex items-center justify-center flex-none w-full ${styles}`}
+        style={{ padding: 16 }}
+      >
         <div style={{ textAlign: 'center' }}>
-          <Icon icon={MessageSquareHeart} /> {`${t('footer.title')} `}
+          <MessageSquareHeart /> {`${t('footer.title')} `}
           <a
             aria-label={'star'}
             href={GITHUB}
@@ -98,8 +100,8 @@ const Footer = memo<PropsWithChildren>(() => {
           </a>
           {' !'}
         </div>
-      </Center>
-    </Flexbox>
+      </footer>
+    </div>
   );
 });
 

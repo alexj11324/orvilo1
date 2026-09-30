@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import {
   Button,
   confirmModal,
@@ -97,7 +96,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
         return {
           disabled,
           label: (
-            <Flexbox horizontal align={'center'} className={styles.optionRow} gap={8}>
+            <div className={`flex items-center gap-2 ${styles.optionRow}`}>
               {renderWorkspaceLabel(workspace)}
               {shared && (
                 <Tag size={'small'} style={{ flex: 'none', margin: 0 }}>
@@ -107,7 +106,7 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
               {!shared && isViewer && (
                 <span className={styles.optionHint}>{tSetting('devices.share.viewerHint')}</span>
               )}
-            </Flexbox>
+            </div>
           ),
           title: workspace.name,
           value: workspace.id,
@@ -138,11 +137,11 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
         ] as const
       ).map((item) => ({
         label: (
-          <Flexbox horizontal align={'center'} className={styles.optionRow} gap={8}>
-            <Icon icon={item.icon} size={14} />
+          <div className={`flex items-center gap-2 ${styles.optionRow}`}>
+            <item.icon size={14} />
             <Text style={{ fontSize: 13, fontWeight: 500 }}>{item.label}</Text>
             <span className={styles.optionHint}>{item.desc}</span>
-          </Flexbox>
+          </div>
         ),
         title: item.label,
         value: item.value,
@@ -211,37 +210,37 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
 
   if (step === 'done' && completion) {
     return (
-      <Flexbox align={'center'} gap={20} justify={'center'} padding={48}>
-        <Flexbox align={'center'} gap={12}>
-          <Icon color={cssVar.colorSuccess} icon={CircleCheck} size={32} />
+      <div className="flex flex-col items-center gap-5 justify-center" style={{ padding: 48 }}>
+        <div className="flex flex-col items-center gap-3">
+          <CircleCheck color={cssVar.colorSuccess} size={32} />
           <Text weight={500}>{tSetting('devices.share.success', { name: completion.name })}</Text>
-        </Flexbox>
-        <Flexbox horizontal gap={8}>
+        </div>
+        <div className="flex gap-2">
           <Button onClick={close}>{tSetting('devices.share.done')}</Button>
           <Button type={'primary'} onClick={goToTarget}>
             {tSetting('devices.share.goToTarget', { name: completion.name })}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox>
-      <Flexbox gap={16} padding={24}>
+    <div className="flex flex-col">
+      <div className="flex flex-col gap-4" style={{ padding: 24 }}>
         <Text style={{ fontSize: 13 }} type={'secondary'}>
           {tSetting('devices.share.modalDesc')}
         </Text>
 
         {workspaces.length === 0 ? (
-          <Flexbox align={'center'} justify={'center'} paddingBlock={24}>
+          <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 24 }}>
             <Text fontSize={12} type={'secondary'}>
               {tSetting('devices.share.empty')}
             </Text>
-          </Flexbox>
+          </div>
         ) : (
           <>
-            <Flexbox gap={6}>
+            <div className="flex flex-col gap-1.5">
               <Text style={{ fontSize: 13, fontWeight: 500 }}>
                 {tSetting('devices.share.targetLabel')}
               </Text>
@@ -254,9 +253,9 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
                 value={effectiveTargetId}
                 onChange={(value) => setTargetId(value as string)}
               />
-            </Flexbox>
+            </div>
 
-            <Flexbox gap={6}>
+            <div className="flex flex-col gap-1.5">
               <Text style={{ fontSize: 13, fontWeight: 500 }}>
                 {tSetting('workspace.general.transferScope.title')}
               </Text>
@@ -267,12 +266,12 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
                 value={visibility}
                 onChange={(value) => setVisibility(value as DeviceVisibility)}
               />
-            </Flexbox>
+            </div>
           </>
         )}
-      </Flexbox>
+      </div>
 
-      <Flexbox horizontal className={styles.footer} gap={8} justify={'space-between'}>
+      <div className={`flex gap-2 justify-between ${styles.footer}`}>
         <Button disabled={sharing} onClick={close}>
           {tSetting('cancel', { ns: 'common' })}
         </Button>
@@ -284,8 +283,8 @@ const ShareDeviceContent = memo<ShareDeviceContentProps>(({ device }) => {
         >
           {tSetting('devices.share.confirm')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

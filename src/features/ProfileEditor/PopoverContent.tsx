@@ -1,10 +1,10 @@
 import { type ItemType } from '@lobehub/ui';
-import { Flexbox, Icon, SearchBar, stopPropagation } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { ExternalLink, Settings } from 'lucide-react';
+import { ExternalLink, SearchIcon, Settings } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { ScrollSignalProvider } from '@/features/ChatInput/ActionBar/Tools/ScrollSignalContext';
 import ToolsList, { toolsListStyles } from '@/features/ChatInput/ActionBar/Tools/ToolsList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -75,18 +75,18 @@ const PopoverContent = memo<PopoverContentProps>(({ items, onClose }) => {
   const isEmpty = filteredItems.length === 0;
 
   return (
-    <Flexbox style={{ maxHeight: 500, width: '100%' }}>
-      <div className={styles.header} onClick={stopPropagation}>
-        <SearchBar
-          allowClear
-          placeholder={t('tools.search')}
-          size="small"
-          style={{ flex: 1 }}
-          value={searchKeyword}
-          variant="borderless"
-          onChange={(e) => setSearchKeyword(e.target.value)}
-          onKeyDown={stopPropagation}
-        />
+    <div className="flex flex-col" style={{ maxHeight: 500, width: '100%' }}>
+      <div className={styles.header} onClick={(e) => e.stopPropagation()}>
+        <div className="relative" style={{ flex: 1 }}>
+          <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+          <Input
+            className="pl-8"
+            placeholder={t('tools.search')}
+            value={searchKeyword}
+            onChange={(e) => setSearchKeyword(e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+          />
+        </div>
       </div>
       <ScrollSignalProvider className={styles.scroller} style={{ flex: 1 }}>
         {isEmpty ? <Empty /> : <ToolsList items={filteredItems} />}
@@ -102,13 +102,13 @@ const PopoverContent = memo<PopoverContentProps>(({ items, onClose }) => {
           }}
         >
           <div className={toolsListStyles.itemIcon}>
-            <Icon icon={Settings} size={SKILL_ICON_SIZE} />
+            <Settings size={SKILL_ICON_SIZE} />
           </div>
           <div className={toolsListStyles.itemContent}>{t('tools.plugins.management')}</div>
-          <Icon className={styles.trailingIcon} icon={ExternalLink} size={16} />
+          <ExternalLink className="styles.trailingIcon" size={16} />
         </div>
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

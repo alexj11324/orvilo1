@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
 import { Alert, Button, Switch } from '@lobehub/ui/base-ui';
 import type { AgentGraph, OrviloAgentChatConfig } from '@orvilo/types';
 import { AgentGraphSchema } from '@orvilo/types/agent/graph';
@@ -8,6 +7,8 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Textarea } from '@/components/ui/textarea';
 
 import { useStore } from '../store';
 import { selectors } from '../store/selectors';
@@ -120,12 +121,12 @@ const AgentGraphRuntime = memo(() => {
   }, [disabled, enabled, graphText, t, updateConfig]);
 
   return (
-    <Flexbox gap={16} width={'100%'}>
-      <Flexbox horizontal align={'center'} className={styles.item} gap={16}>
-        <Flexbox flex={1} gap={4}>
+    <div className="flex flex-col gap-4 w-full">
+      <div className={`flex items-center gap-4 ${styles.item}`}>
+        <div className="flex flex-col flex-1 gap-1">
           <h3 className={styles.itemTitle}>{t('settingGraphRuntime.enabled.title')}</h3>
           <p className={styles.itemDesc}>{t('settingGraphRuntime.enabled.desc')}</p>
-        </Flexbox>
+        </div>
         <Switch
           checked={enabled}
           disabled={disabled}
@@ -134,14 +135,14 @@ const AgentGraphRuntime = memo(() => {
             setError(undefined);
           }}
         />
-      </Flexbox>
+      </div>
 
-      <Flexbox className={styles.item} gap={12}>
-        <Flexbox gap={4}>
+      <div className={`flex flex-col gap-3 ${styles.item}`}>
+        <div className="flex flex-col gap-1">
           <h3 className={styles.itemTitle}>{t('settingGraphRuntime.snapshot.title')}</h3>
           <p className={styles.itemDesc}>{t('settingGraphRuntime.snapshot.desc')}</p>
-        </Flexbox>
-        <TextArea
+        </div>
+        <Textarea
           className={styles.editor}
           disabled={disabled}
           placeholder={t('settingGraphRuntime.snapshot.placeholder')}
@@ -152,11 +153,11 @@ const AgentGraphRuntime = memo(() => {
             setError(undefined);
           }}
         />
-      </Flexbox>
+      </div>
 
       {error && <Alert showIcon title={error} type="error" />}
 
-      <Flexbox horizontal className={styles.actions}>
+      <div className={`flex ${styles.actions}`}>
         <Button
           disabled={disabled || !isDirty}
           loading={saving}
@@ -165,8 +166,8 @@ const AgentGraphRuntime = memo(() => {
         >
           {t('save', { ns: 'common' })}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

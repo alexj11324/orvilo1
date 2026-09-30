@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { DOWNLOAD_URL } from '@orvilo/const';
 import type { DeviceScope, DeviceVisibility } from '@orvilo/types';
@@ -52,12 +51,12 @@ interface StepProps {
 }
 
 const Step = memo<StepProps>(({ index, title, desc, children, last }) => (
-  <Flexbox horizontal gap={16}>
-    <Flexbox align={'center'}>
+  <div className="flex gap-4">
+    <div className="flex flex-col items-center">
       <span className={styles.index}>{index}</span>
       {!last && <span className={styles.line} />}
-    </Flexbox>
-    <Flexbox flex={1} gap={4} style={{ paddingBlockEnd: last ? 0 : 24 }}>
+    </div>
+    <div className="flex flex-col flex-1 gap-1" style={{ paddingBlockEnd: last ? 0 : 24 }}>
       <Text weight={500}>{title}</Text>
       {desc && (
         <Text color={cssVar.colorTextTertiary} lineHeight={1.6}>
@@ -65,8 +64,8 @@ const Step = memo<StepProps>(({ index, title, desc, children, last }) => (
         </Text>
       )}
       {children && <div style={{ marginBlockStart: 12 }}>{children}</div>}
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 interface DeviceConnectModalProps {
@@ -109,7 +108,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
       : 'lh connect --daemon';
 
     const cliSteps = (
-      <Flexbox>
+      <div className="flex flex-col">
         <Step index={1} title={t('devices.connectWizard.cli.installTitle')}>
           <CommandLine command={'npm install -g @orvilo/cli'} />
         </Step>
@@ -128,7 +127,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
         >
           <CommandLine command={connectCommand} />
         </Step>
-      </Flexbox>
+      </div>
     );
 
     return (
@@ -147,7 +146,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
         }
         onCancel={onClose}
       >
-        <Flexbox gap={20}>
+        <div className="flex flex-col gap-5">
           {!isWorkspace && (
             <Text color={cssVar.colorTextTertiary}>{t('devices.connectWizard.subtitle')}</Text>
           )}
@@ -157,12 +156,12 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
               activeKey={active}
               items={[
                 {
-                  icon: <Icon icon={MonitorDownIcon} />,
+                  icon: <MonitorDownIcon />,
                   key: 'desktop',
                   label: t('devices.connectWizard.method.desktop'),
                 },
                 {
-                  icon: <Icon icon={TerminalIcon} />,
+                  icon: <TerminalIcon />,
                   key: 'cli',
                   label: t('devices.connectWizard.method.cli'),
                 },
@@ -176,14 +175,14 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
           )}
 
           {!isWorkspace && active === 'desktop' ? (
-            <Flexbox>
+            <div className="flex flex-col">
               <Step
                 desc={t('devices.connectWizard.desktop.step1Desc')}
                 index={1}
                 title={t('devices.connectWizard.desktop.step1')}
               >
                 <a href={DOWNLOAD_URL.default} rel="noreferrer" target="_blank">
-                  <Button icon={<Icon icon={DownloadIcon} />} type={'primary'}>
+                  <Button icon={<DownloadIcon />} type={'primary'}>
                     {t('devices.connectWizard.desktop.downloadLink')}
                   </Button>
                 </a>
@@ -199,18 +198,18 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
                 index={3}
                 title={t('devices.connectWizard.desktop.step3')}
               />
-            </Flexbox>
+            </div>
           ) : (
             cliSteps
           )}
 
-          <Flexbox horizontal align={'center'} className={styles.footer} gap={8}>
-            <Icon icon={ShieldCheckIcon} size={14} style={{ color: cssVar.colorTextTertiary }} />
+          <div className={`flex items-center gap-2 ${styles.footer}`}>
+            <ShieldCheckIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
             <Text color={cssVar.colorTextTertiary} fontSize={12}>
               {t('devices.connectWizard.footer')}
             </Text>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </ImperativeModal>
     );
   },

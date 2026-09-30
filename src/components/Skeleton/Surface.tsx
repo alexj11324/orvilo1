@@ -38,7 +38,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const HeaderSkeleton = () => (
-  <div className={'flex items-center justify-between px-4'} style={{ flex: none }}>
+  <div className={'flex items-center justify-between px-4'} style={{ flex: 'none' }}>
     <SkeletonBar height={20} width={144} />
     <SkeletonBar height={28} width={72} />
   </div>

@@ -2189,10 +2189,6 @@ function measureDataGridCellEditorStyle(viewport: HTMLElement): CSSProperties | 
     top: cellRect.top - viewportRect.top + viewport.scrollTop,
     width: cellRect.width,
     minHeight: cellRect.height,
-    // The font shorthand can serialize empty (Firefox); the longhands after
-    // it win where set and cover that case.
-    font: cellStyle.font || undefined,
-    fontFamily: cellStyle.fontFamily,
     fontSize: cellStyle.fontSize,
     fontWeight: cellStyle.fontWeight,
     fontStyle: cellStyle.fontStyle,

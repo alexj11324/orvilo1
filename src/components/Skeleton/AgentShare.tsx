@@ -27,7 +27,7 @@ const styles = createStaticStyles(({ css }) => ({
 const NavigationSkeleton = () => (
   <div
     className={cn('flex items-center px-4', styles.header)}
-    style={{ flex: none, position: 'relative' }}
+    style={{ flex: 'none', position: 'relative' }}
   >
     <div className={'flex gap-2 items-center'}>
       <SkeletonBar height={20} radius={'50%'} width={20} />

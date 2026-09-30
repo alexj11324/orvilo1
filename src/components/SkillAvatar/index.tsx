@@ -21,7 +21,7 @@ const SkillAvatar = memo<SkillAvatarProps>(({ size = 40, className, style }) => 
         overflow: 'hidden',
         width: size,
         ...style,
-        flex: none,
+        flex: 'none',
       }}
     >
       <SkillsIcon color={'#000'} size={size} style={{ transform: 'scale(0.75)' }} />

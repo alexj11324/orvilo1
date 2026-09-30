@@ -6,7 +6,7 @@ import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
 import { createStaticStyles, responsive } from 'antd-style';
 import { cn } from 'cn';
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
@@ -115,11 +115,11 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
   // mounts on the card's pointer-enter and hands its items back via ref.
   const [menuActivated, setMenuActivated] = useState(false);
   const activateMenu = useCallback(() => setMenuActivated(true), []);
-  const menuItemsRef = useRef<(() => SidebarMenuItems) | null>(null);
+  const [contextMenuItems, setContextMenuItems] = useState<SidebarMenuItems>([]);
   const handleMenuReady = useCallback((getItems: () => SidebarMenuItems) => {
-    menuItemsRef.current = getItems;
+    setContextMenuItems(getItems());
   }, []);
-  const getContextMenuItems = useCallback(() => menuItemsRef.current?.() ?? [], []);
+  const getContextMenuItems = useCallback(() => contextMenuItems, [contextMenuItems]);
 
   return (
     <ContextMenu>

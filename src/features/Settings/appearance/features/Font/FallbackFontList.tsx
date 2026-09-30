@@ -51,22 +51,22 @@ const FallbackFontList = ({
         onValueChange={(next) => reorder(next.map((item) => item.id))}
       >
         <div className={'flex flex-col'} style={{ gap: 6 }}>
-          {fallbacks.map((value) => (
+          {fallbacks.map((fallbackFont) => (
             <SortableItem
               className={styles.item}
-              key={value}
+              key={fallbackFont}
               style={{ alignItems: 'center', gap: 4, justifyContent: 'space-between' }}
-              value={value}
+              value={fallbackFont}
             >
-              <span className={'truncate'} style={{ flex: 1, fontFamily: value }}>
-                {labelOf(value)}
+              <span className={'truncate'} style={{ flex: 1, fontFamily: fallbackFont }}>
+                {labelOf(fallbackFont)}
               </span>
               <Button
                 aria-label={t('settingAppearance.font.fallback.remove')}
                 size="icon-sm"
                 title={t('settingAppearance.font.fallback.remove')}
                 variant="ghost"
-                onClick={() => remove(value)}
+                onClick={() => remove(fallbackFont)}
               >
                 {createElement(XIcon)}
               </Button>

@@ -136,11 +136,7 @@ const ListConfig = memo<ListConfigProps>(
     return (
       <Popover open={open} onOpenChange={setOpen}>
         <PopoverTrigger
-          render={
-            <span style={{ display: 'inline-flex' }}>
-              <ActionIcon icon={Settings2Icon} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
-            </span>
-          }
+          render={<ActionIcon icon={Settings2Icon} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />}
         />
         <PopoverContent align="end" side="bottom" style={{ padding: 12 }}>
           {panelContent}

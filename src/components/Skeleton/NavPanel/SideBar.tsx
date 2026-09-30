@@ -32,10 +32,10 @@ export const SideBarHeaderSkeleton = ({
 );
 
 const SkeletonNavItem = ({ width }: { width: string }) => (
-  <div className={'flex gap-2 items-center px-1'} style={{ flex: none }}>
+  <div className={'flex gap-2 items-center px-1'} style={{ flex: 'none' }}>
     <div
       className={'flex flex-col items-center justify-center'}
-      style={{ flex: none, height: 28, width: 28 }}
+      style={{ flex: 'none', height: 28, width: 28 }}
     >
       <SkeletonBar height={18} radius={cssVar.borderRadiusSM} width={18} />
     </div>
@@ -102,7 +102,7 @@ export const NavSideBarSkeleton = ({
         <div
           className={'flex flex-col px-1'}
           data-testid={'nav-sidebar-skeleton-nav'}
-          style={{ flex: none }}
+          style={{ flex: 'none' }}
         >
           <SkeletonRows count={navRows} gap={navGap} paddingBlock={0} />
         </div>
@@ -124,7 +124,7 @@ export const NavSideBarSkeleton = ({
                 <div className={'flex flex-col'} key={groupIndex}>
                   <div
                     className={'flex flex-col justify-center py-1'}
-                    style={{ flex: none, height: groupTitleHeight, paddingInline: '8px 4px' }}
+                    style={{ flex: 'none', height: groupTitleHeight, paddingInline: '8px 4px' }}
                   >
                     <SkeletonBar
                       height={12}

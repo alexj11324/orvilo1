@@ -100,7 +100,7 @@ const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, ty
 
       if (!extra)
         logoComponent = (
-          <div className={'flex items-center'} style={{ flex: none }}>
+          <div className={'flex items-center'} style={{ flex: 'none' }}>
             {logoComponent}
           </div>
         );
@@ -118,7 +118,7 @@ const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, ty
   const extraSize = Math.round((size / 3) * 1.9);
 
   return (
-    <div className={cn('flex items-center', className)} style={{ flex: none }}>
+    <div className={cn('flex items-center', className)} style={{ flex: 'none' }}>
       {logoComponent}
       <Divider size={extraSize} style={{ color: cssVar.colorFill }} />
       <div className={styles.extraTitle} style={{ fontSize: extraSize }}>

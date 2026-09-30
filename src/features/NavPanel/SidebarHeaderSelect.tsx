@@ -43,8 +43,6 @@ export const SidebarHeaderSelectPopover = memo<SidebarHeaderSelectPopoverProps>(
             maxHeight: 'min(420px, 70vh)',
             overflow: 'hidden',
             padding: 0,
-            paddingBlock: 0,
-            paddingInline: 0,
             width,
           }}
         >

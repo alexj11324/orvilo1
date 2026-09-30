@@ -7,7 +7,7 @@ import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
-import { memo, useCallback, useRef, useState } from 'react';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
@@ -108,11 +108,11 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
   // its filtered items back via ref for the ContextMenuTrigger.
   const [menuActivated, setMenuActivated] = useState(false);
   const activateMenu = useCallback(() => setMenuActivated(true), []);
-  const menuItemsRef = useRef<(() => SidebarMenuItems) | null>(null);
+  const [contextMenuItems, setContextMenuItems] = useState<SidebarMenuItems>([]);
   const handleMenuReady = useCallback((getItems: () => SidebarMenuItems) => {
-    menuItemsRef.current = getItems;
+    setContextMenuItems(getItems());
   }, []);
-  const getContextMenuItems = useCallback(() => menuItemsRef.current?.() ?? [], []);
+  const getContextMenuItems = useCallback(() => contextMenuItems, [contextMenuItems]);
 
   return (
     <ContextMenu>

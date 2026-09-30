@@ -1,6 +1,8 @@
 import { type NewUserMemoryIdentity } from '@orvilo/types';
 
-import { lambdaClient } from '@/libs/trpc/client';
+import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
+
+const lambdaClient = createWorkspaceLambdaClient(null);
 
 class MemoryCRUDService {
   // ============ Identity CRUD ============

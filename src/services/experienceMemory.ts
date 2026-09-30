@@ -1,4 +1,7 @@
-import { lambdaClient } from '@/libs/trpc/client';
+import { createWorkspaceLambdaClient } from '@/libs/trpc/client';
+
+// These records belong to the signed-in user, independent of the active workspace.
+const lambdaClient = createWorkspaceLambdaClient(null);
 
 export const experienceMemoryService = {
   list: (offset: number) => lambdaClient.experienceMemory.list.query({ offset, limit: 20 }),

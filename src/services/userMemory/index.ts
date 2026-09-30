@@ -30,11 +30,13 @@ import {
 } from '@orvilo/types';
 import { type z } from 'zod';
 
-import { lambdaClient } from '@/libs/trpc/client';
+import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
+
+const personalClient = createWorkspaceLambdaClient(null);
 
 class UserMemoryService {
   createManual = (layer: LayersEnum, content: string) =>
-    lambdaClient.userMemory.createManual.mutate({ layer, content });
+    personalClient.userMemory.createManual.mutate({ layer, content });
 
   addActivityMemory = async (
     params: z.infer<typeof ActivityMemoryItemSchema>,

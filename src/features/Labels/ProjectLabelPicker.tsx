@@ -76,7 +76,7 @@ const ProjectLabelPicker = memo<ProjectLabelPickerProps>(
 
     return (
       <div className={cn('flex items-center gap-1.5', className)}>
-        <TagIcon className="size-4 shrink-0 text-muted-foreground" />
+        <TagIcon aria-hidden className="size-4 shrink-0 text-muted-foreground" />
         <Select
           showSearch
           className="min-w-0 flex-1"

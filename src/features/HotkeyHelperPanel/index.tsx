@@ -35,7 +35,12 @@ const HotkeyHelperPanel = memo(() => {
         },
       }}
       title={
-        <Tabs value={active} onValueChange={(key) => setActive(key as HotkeyGroupId)}>
+        <Tabs
+          value={active}
+          onValueChange={(value) => {
+            if (typeof value === 'string') setActive(value as HotkeyGroupId);
+          }}
+        >
           <TabsList>
             <TabsTrigger value={HotkeyGroupEnum.Essential}>
               <Settings2 />

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
@@ -197,8 +196,8 @@ const HistorySidebarRow = memo<HistorySidebarRowProps>(
             onSelect(item.id);
           }}
         >
-          <Flexbox gap={2}>
-            <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-1">
               <Text className={styles.time}>{formatHistoryRowTime(item.savedAt)}</Text>
               {item.isCurrent && (
                 <Tag className={styles.tag} variant={'borderless'}>
@@ -206,12 +205,12 @@ const HistorySidebarRow = memo<HistorySidebarRowProps>(
                 </Tag>
               )}
               <span className={styles.source}>{saveSourceLabels[item.saveSource]}</span>
-            </Flexbox>
+            </div>
             <Text className={styles.meta} type={'secondary'}>
               {authorInfo?.fullName ? `${authorInfo.fullName} · ` : ''}
               {dayjs(item.savedAt).fromNow()}
             </Text>
-          </Flexbox>
+          </div>
         </div>
       </div>
     );
@@ -246,7 +245,7 @@ const HistorySidebar = memo<HistorySidebarProps>(
     return (
       <div className={styles.container}>
         {groups.map((group) => (
-          <Flexbox gap={0} key={group.key}>
+          <div className="flex flex-col gap-0" key={group.key}>
             <div className={styles.groupHeader}>
               <Text type={'secondary'}>{group.label}</Text>
             </div>
@@ -262,7 +261,7 @@ const HistorySidebar = memo<HistorySidebarProps>(
                 />
               ))}
             </div>
-          </Flexbox>
+          </div>
         ))}
       </div>
     );

@@ -1,4 +1,4 @@
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Accordion } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -13,7 +13,7 @@ const Overview = memo<{ inModal?: boolean }>(() => {
   const summary = overview?.summary || description;
 
   return (
-    <Flexbox gap={48}>
+    <div className="flex flex-col gap-12">
       <Accordion
         defaultValue={['summary']}
         indicatorPlacement={'end'}
@@ -27,15 +27,15 @@ const Overview = memo<{ inModal?: boolean }>(() => {
           },
         ]}
       />
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         {overview?.readme && (
           <Markdown allowHtml enableImageGallery={false} enableLatex={false}>
             {overview.readme.trimEnd()}
           </Markdown>
         )}
         <TagList tags={tags} />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

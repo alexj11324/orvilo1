@@ -1,10 +1,10 @@
-import { Block, Highlighter } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InlineTable from '@/components/InlineTable';
+import { CodeBlock } from '@/components/ui/code-block';
 
 import { useDetailContext } from '../DetailProvider';
 import { SchemaEmpty } from './SchemaList';
@@ -18,7 +18,14 @@ const Resources = memo<{ mode?: ModeType }>(({ mode }) => {
   if (!resources?.length) return <SchemaEmpty>{t('plugin:mcpEmpty.resources')}</SchemaEmpty>;
 
   return mode === ModeType.Docs ? (
-    <Block style={{ overflow: 'hidden' }} variant={'outlined'}>
+    <div
+      className="flex flex-col"
+      style={{
+        border: `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+        overflow: 'hidden',
+      }}
+    >
       <InlineTable
         dataSource={resources}
         pagination={false}
@@ -52,11 +59,9 @@ const Resources = memo<{ mode?: ModeType }>(({ mode }) => {
           },
         ]}
       />
-    </Block>
+    </div>
   ) : (
-    <Highlighter language={'json'} style={{ fontSize: 12 }} variant={'outlined'}>
-      {JSON.stringify(resources, null, 2)}
-    </Highlighter>
+    <CodeBlock code={JSON.stringify(resources, null, 2)} language="json" style={{ fontSize: 12 }} />
   );
 });
 

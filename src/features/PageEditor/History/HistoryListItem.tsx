@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Tag, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { ArrowLeftRightIcon, RotateCcwIcon } from 'lucide-react';
 import type { MouseEvent } from 'react';
@@ -10,6 +10,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import type { DocumentHistorySaveSource } from '@/server/routers/lambda/_schema/documentHistory';
 
@@ -165,17 +166,26 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
       className={cx(styles.row, item.isCurrent && styles.rowCurrent)}
       onClick={item.isCurrent ? undefined : handleCompare}
     >
-      <Flexbox align={'flex-start'} className={styles.rowMain} gap={4}>
-        <Tooltip title={formatHistoryAbsoluteTime(item.savedAt)}>
-          <span className={cx(styles.rowTime, item.isCurrent && styles.rowTimeCurrent)}>
-            {timeLabel}
-          </span>
-        </Tooltip>
+      <div className={cn('flex flex-col items-start gap-1', styles.rowMain)}>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <span className={cx(styles.rowTime, item.isCurrent && styles.rowTimeCurrent)}>
+                    {timeLabel}
+                  </span>
+                </span>
+              }
+            />
+            <TooltipContent>{formatHistoryAbsoluteTime(item.savedAt)}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <span className={styles.description}>
           {authorInfo?.fullName ? `${authorInfo.fullName} · ` : ''}
           {dayjs(item.savedAt).fromNow()}
         </span>
-      </Flexbox>
+      </div>
 
       <div className={styles.rowRight}>
         {item.isCurrent && (
@@ -200,11 +210,8 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
           </Tag>
         )}
         {!item.isCurrent && (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={cx(styles.actions, 'history-actions')}
-            gap={2}
+          <div
+            className={cn('flex items-center gap-0.5', cx(styles.actions, 'history-actions'))}
             onClick={handleStopPropagation}
           >
             <ActionIcon
@@ -220,7 +227,7 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
               title={t('pageEditor.history.restore', { ns: 'file' })}
               onClick={handleRestore}
             />
-          </Flexbox>
+          </div>
         )}
       </div>
     </div>

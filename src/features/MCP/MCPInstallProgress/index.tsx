@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Progress, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -40,7 +39,7 @@ const MCPInstallProgress = memo<{ identifier: string }>(({ identifier }) => {
             height: { duration: 0.2 },
           }}
         >
-          <Flexbox paddingBlock={4}>
+          <div className="flex flex-col py-1">
             <Progress
               percent={installProgress.progress}
               showInfo={false}
@@ -53,7 +52,7 @@ const MCPInstallProgress = memo<{ identifier: string }>(({ identifier }) => {
                 ({installProgress.progress}%) {stepText}
               </Text>
             )}
-          </Flexbox>
+          </div>
         </m.div>
       )}
 
@@ -68,9 +67,9 @@ const MCPInstallProgress = memo<{ identifier: string }>(({ identifier }) => {
             height: { duration: 0.2 },
           }}
         >
-          <Flexbox paddingBlock={8}>
+          <div className="flex flex-col py-2">
             <InstallError errorInfo={errorInfo} identifier={identifier} />
-          </Flexbox>
+          </div>
         </m.div>
       )}
 
@@ -85,12 +84,12 @@ const MCPInstallProgress = memo<{ identifier: string }>(({ identifier }) => {
             height: { duration: 0.2 },
           }}
         >
-          <Flexbox paddingInline={12}>
+          <div className="flex flex-col px-3">
             <MCPDependenciesGuide
               identifier={identifier}
               systemDependencies={installProgress.systemDependencies}
             />
-          </Flexbox>
+          </div>
         </m.div>
       )}
 

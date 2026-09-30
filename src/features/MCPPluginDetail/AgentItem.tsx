@@ -1,7 +1,7 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { itemStyles } from './style';
@@ -21,15 +21,13 @@ const AgentItem = memo<AgentItemProps>(
     if (!identifier || !title) return null;
 
     return (
-      <Block
-        horizontal
-        align={'center'}
-        className={styles.container}
-        gap={12}
-        paddingBlock={12}
-        paddingInline={12}
-        style={{ height: '100%' }}
-        variant={'outlined'}
+      <div
+        className={cn('flex items-center gap-3 py-3 px-3', styles.container)}
+        style={{
+          border: `1px solid ${cssVar.colorBorder}`,
+          borderRadius: cssVar.borderRadiusLG,
+          height: '100%',
+        }}
       >
         <Avatar
           avatar={avatar}
@@ -38,11 +36,11 @@ const AgentItem = memo<AgentItemProps>(
           size={40}
           style={{ flex: 'none' }}
         />
-        <Flexbox flex={1} gap={4} style={{ minWidth: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0, overflow: 'hidden' }}>
           <span className={styles.title}>{title}</span>
           {description && <span className={styles.description}>{description}</span>}
-        </Flexbox>
-      </Block>
+        </div>
+      </div>
     );
   },
 );

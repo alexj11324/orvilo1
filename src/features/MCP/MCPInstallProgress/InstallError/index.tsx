@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Alert, Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -19,12 +18,12 @@ const InstallError = memo<InstallErrorProps>(({ errorInfo, identifier }) => {
   const cancelInstallMCPPlugin = useToolStore((s) => s.cancelInstallMCPPlugin);
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <Alert
         type="error"
         variant={'borderless'}
         action={
-          <Flexbox>
+          <div className="flex flex-col">
             <Button
               size={'small'}
               type={'fill'}
@@ -34,7 +33,7 @@ const InstallError = memo<InstallErrorProps>(({ errorInfo, identifier }) => {
             >
               {t('common:close')}
             </Button>
-          </Flexbox>
+          </div>
         }
         title={t('mcpInstall.installError', {
           detail: t(`mcpInstall.errorTypes.${errorInfo.type}`),
@@ -43,7 +42,7 @@ const InstallError = memo<InstallErrorProps>(({ errorInfo, identifier }) => {
       {errorInfo.metadata && (
         <ErrorDetails errorInfo={errorInfo.metadata} errorMessage={errorInfo.message} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 export default InstallError;

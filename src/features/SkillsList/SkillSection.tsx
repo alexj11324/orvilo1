@@ -1,4 +1,3 @@
-import { Center, Flexbox } from '@lobehub/ui';
 import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo, type ReactNode, useState } from 'react';
@@ -62,12 +61,12 @@ interface HeaderRowProps {
 }
 
 const HeaderRow = memo<HeaderRowProps>(({ count, title }) => (
-  <Flexbox horizontal align={'center'} gap={6}>
+  <div className="flex items-center gap-1.5">
     <Text className={styles.label} type={'secondary'}>
       {title}
     </Text>
     {typeof count === 'number' && count > 0 && <span className={styles.count}>{count}</span>}
-  </Flexbox>
+  </div>
 ));
 
 HeaderRow.displayName = 'SkillSectionHeaderRow';
@@ -85,23 +84,23 @@ const Body = memo<BodyProps>(({ children, emptyText, error, isEmpty, isLoading, 
   // Error before empty: a failed scan gets its own state, never a "no skills".
   if (error && isEmpty) {
     return (
-      <Flexbox paddingBlock={4} paddingInline={4}>
+      <div className="flex flex-col py-1 px-1">
         <AsyncError error={error} variant={'inline'} onRetry={onRetry} />
-      </Flexbox>
+      </div>
     );
   }
   if (isLoading) {
     return (
-      <Center paddingBlock={12}>
+      <div className="flex items-center justify-center py-3">
         <NeuralNetworkLoading size={24} />
-      </Center>
+      </div>
     );
   }
   if (isEmpty) {
     return (
-      <Center paddingBlock={8}>
+      <div className="flex items-center justify-center py-2">
         <Text className={styles.empty}>{emptyText}</Text>
-      </Center>
+      </div>
     );
   }
   return <>{children}</>;
@@ -132,12 +131,12 @@ const SkillSection = memo<SkillSectionProps>(
 
     if (!collapsible) {
       return (
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           <div className={styles.flatHeader}>
             <HeaderRow count={count} title={title} />
           </div>
           {body}
-        </Flexbox>
+        </div>
       );
     }
 

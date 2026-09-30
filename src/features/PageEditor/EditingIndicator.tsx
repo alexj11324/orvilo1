@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Loader2Icon, PencilIcon } from 'lucide-react';
@@ -8,6 +7,7 @@ import { type CSSProperties, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
 
@@ -50,12 +50,12 @@ const EditingIndicator = memo(() => {
     if (!isLockPending) return null;
 
     return (
-      <Flexbox horizontal align={'center'} gap={4} style={{ color: cssVar.colorTextTertiary }}>
-        <Icon spin icon={Loader2Icon} size={14} />
+      <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
+        <Loader2Icon className="animate-spin" size={14} />
         <Text ellipsis style={labelStyle}>
           {t('pageEditor.editMode.checking')}
         </Text>
-      </Flexbox>
+      </div>
     );
   }
 
@@ -68,14 +68,23 @@ const EditingIndicator = memo(() => {
       : t('pageEditor.editMode.lockedBySomeone');
 
   return (
-    <Tooltip title={label}>
-      <Flexbox horizontal align={'center'} gap={4} style={{ color: cssVar.colorTextTertiary }}>
-        <Icon icon={PencilIcon} size={14} />
-        <Text ellipsis style={labelStyle}>
-          {label}
-        </Text>
-      </Flexbox>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span style={{ display: 'inline-flex' }}>
+              <div className="flex items-center gap-1" style={{ color: cssVar.colorTextTertiary }}>
+                <PencilIcon size={14} />
+                <Text ellipsis style={labelStyle}>
+                  {label}
+                </Text>
+              </div>
+            </span>
+          }
+        />
+        <TooltipContent>{label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

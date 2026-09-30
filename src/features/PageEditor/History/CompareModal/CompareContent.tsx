@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -124,7 +123,7 @@ const CompareContent = memo<CompareContentProps>(
       <div className={styles.root}>
         <div className={styles.diffArea}>
           <div className={styles.cmpbar}>
-            <Flexbox horizontal align={'center'} gap={4}>
+            <div className="flex items-center gap-1">
               <span className={styles.badgeNew}>{t('pageEditor.history.compareCurrentLabel')}</span>
               <Text className={styles.arrow}>→</Text>
               <span className={styles.badgeOld}>
@@ -139,7 +138,7 @@ const CompareContent = memo<CompareContentProps>(
                   · {authorInfo.fullName}
                 </Text>
               )}
-            </Flexbox>
+            </div>
             {canRestore && (
               <Button icon={RotateCcwIcon} size={'small'} onClick={() => onRestore(selectedItem)}>
                 {t('pageEditor.history.restore')} {formatHistoryAbsoluteTime(selectedItem.savedAt)}

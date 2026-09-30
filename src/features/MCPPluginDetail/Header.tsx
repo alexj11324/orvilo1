@@ -1,7 +1,7 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
+import { stopPropagation } from '@lobehub/ui';
 import { ActionIcon, Avatar, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import { CircleIcon, DotIcon, DownloadIcon, ScaleIcon, StarIcon } from 'lucide-react';
@@ -9,6 +9,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import OfficialIcon from '@/components/OfficialIcon';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import Scores from '@/features/MCP/Scores';
 import { getLanguageColor, getRecommendedDeployment } from '@/features/MCP/utils';
 import { useCategory } from '@/hooks/useMCPCategory';
@@ -83,31 +84,24 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
   );
 
   return (
-    <Flexbox gap={12}>
-      <Flexbox horizontal align={'flex-start'} gap={16} width={'100%'}>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-start gap-4" style={{ width: '100%' }}>
         <Avatar avatar={icon} shape={'square'} size={mobile ? 48 : 64} />
-        <Flexbox
-          flex={1}
-          gap={4}
+        <div
+          className="flex flex-col flex-1 gap-1"
           style={{
             overflow: 'hidden',
           }}
         >
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={8}
-            justify={'space-between'}
+          <div
+            className="flex items-center gap-2 justify-between"
             style={{
               overflow: 'hidden',
               position: 'relative',
             }}
           >
-            <Flexbox
-              horizontal
-              align={'center'}
-              flex={1}
-              gap={12}
+            <div
+              className="flex items-center flex-1 gap-3"
               style={{
                 overflow: 'hidden',
                 position: 'relative',
@@ -122,13 +116,22 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
                 {name}
               </Text>
               {isOfficial && (
-                <Tooltip title={t('isOfficial')}>
-                  <OfficialIcon size={24} />
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span style={{ display: 'inline-flex' }}>
+                          <OfficialIcon size={24} />
+                        </span>
+                      }
+                    />
+                    <TooltipContent>{t('isOfficial')}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
               {!mobile && scores}
-            </Flexbox>
-            <Flexbox horizontal align={'center'} gap={6}>
+            </div>
+            <div className="flex items-center gap-1.5">
               {recommendedDeployment?.installationMethod && (
                 <InstallationIcon type={recommendedDeployment.installationMethod} />
               )}
@@ -137,11 +140,11 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
                   <ActionIcon fill={cssVar.colorTextDescription} icon={Github} />
                 </a>
               )}
-            </Flexbox>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={4}>
+            </div>
+          </div>
+          <div className="flex items-center gap-1">
             <div className={styles.version}>{version}</div>
-            <Icon icon={DotIcon} />
+            <DotIcon />
             {author?.url ? (
               <a href={author?.url} rel="noreferrer" target={'_blank'}>
                 {author?.name}
@@ -150,55 +153,53 @@ const Header = memo<{ inModal?: boolean; mobile?: boolean }>(({ mobile: isMobile
               <span>{author?.name}</span>
             )}
             {isClaimed && <Tag size={'small'}>{t('isClaimed')}</Tag>}
-            <Icon icon={DotIcon} />
+            <DotIcon />
             <PublishedTime className={styles.time} date={(updatedAt || createdAt) as string} />
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={mobile ? 12 : 24}
-        wrap={'wrap'}
+          </div>
+        </div>
+      </div>
+      <div
+        className="flex items-center flex-wrap"
         style={{
+          gap: mobile ? 12 : 24,
+
           color: cssVar.colorTextSecondary,
         }}
       >
         {mobile && scores}
         {!mobile && cateButton}
-        <Flexbox horizontal align={'center'} gap={mobile ? 12 : 24} wrap={'wrap'}>
+        <div className="flex items-center flex-wrap" style={{ gap: mobile ? 12 : 24 }}>
           {Boolean(github?.language) && (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon
+            <div className="flex items-center gap-1.5">
+              <CircleIcon
                 color={cssVar.colorFillTertiary}
                 fill={getLanguageColor(github?.language)}
-                icon={CircleIcon}
                 size={12}
               />
               {github?.language}
-            </Flexbox>
+            </div>
           )}
           {Boolean(github?.license) && (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon icon={ScaleIcon} size={14} />
+            <div className="flex items-center gap-1.5">
+              <ScaleIcon size={14} />
               {github?.license}
-            </Flexbox>
+            </div>
           )}
           {Boolean(installCount) && (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon icon={DownloadIcon} size={14} />
+            <div className="flex items-center gap-1.5">
+              <DownloadIcon size={14} />
               {installCount}
-            </Flexbox>
+            </div>
           )}
           {Boolean(github?.stars) && (
-            <Flexbox horizontal align={'center'} gap={6}>
-              <Icon icon={StarIcon} size={14} />
+            <div className="flex items-center gap-1.5">
+              <StarIcon size={14} />
               {github?.stars}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

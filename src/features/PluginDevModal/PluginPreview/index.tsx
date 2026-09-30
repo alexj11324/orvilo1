@@ -1,4 +1,3 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { type ToolManifest } from '@orvilo/types';
 import { type FormInstance } from 'antd';
@@ -23,49 +22,47 @@ const PluginPreview = memo<{ form: FormInstance }>(({ form }) => {
 
   if (!manifest)
     return (
-      <Flexbox flex={2} height={'100%'} style={{ background: cssVar.colorBgLayout }}>
+      <div
+        className="flex flex-col"
+        style={{ flex: 2, height: '100%', background: cssVar.colorBgLayout }}
+      >
         <PluginEmptyState />
-      </Flexbox>
+      </div>
     );
 
   return (
-    <Flexbox
-      flex={2}
-      gap={24}
-      padding={12}
-      style={{ background: cssVar.colorBgLayout, overflowY: 'auto' }}
+    <div
+      className="flex flex-col gap-6 p-3"
+      style={{ flex: 2, background: cssVar.colorBgLayout, overflowY: 'auto' }}
     >
-      <Block
-        horizontal
-        gap={16}
-        justify={'space-between'}
-        padding={16}
+      <div
+        className="flex gap-4 justify-between p-4"
+        style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
         title={t('dev.preview.card')}
-        variant={'outlined'}
       >
-        <Flexbox horizontal gap={16}>
+        <div className="flex gap-4">
           <PluginAvatar avatar={pluginHelpers.getPluginAvatar(meta)} size={40} />
-          <Flexbox gap={2}>
-            <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-col gap-0.5">
+            <div className="flex items-center gap-2">
               {pluginHelpers.getPluginTitle(meta) || 'Plugin Title'}
               <PluginTag type={'customPlugin'} />
-            </Flexbox>
+            </div>
             <Text style={{ fontSize: 12 }} type={'secondary'}>
               {pluginHelpers.getPluginDesc(meta) || 'Plugin Description'}
             </Text>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
 
         {manifest && (
           <ManifestPreviewer manifest={manifest}>
-            <Flexbox>
-              <Button icon={<Icon icon={FileCode} />}>{t('dev.mcp.previewManifest')}</Button>
-            </Flexbox>
+            <div className="flex flex-col">
+              <Button icon={<FileCode />}>{t('dev.mcp.previewManifest')}</Button>
+            </div>
           </ManifestPreviewer>
         )}
-      </Block>
+      </div>
       {manifest && <ApiVisualizer apis={manifest.api as any} />}
-    </Flexbox>
+    </div>
   );
 });
 

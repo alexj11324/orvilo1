@@ -1,4 +1,4 @@
-import { Markdown, Snippet } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Select, Tag } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
@@ -6,6 +6,7 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { CodeBlock } from '@/components/ui/code-block';
 import { OFFICIAL_SITE } from '@/const/url';
 
 import { useDetailContext } from '../../DetailProvider';
@@ -56,9 +57,7 @@ const GithubBadge = memo(() => {
         value={selectedStyle}
         onChange={setSelectedStyle}
       />
-      <Snippet language={'md'} style={{ fontSize: 12 }} variant={'outlined'}>
-        {badgeLite}
-      </Snippet>
+      <CodeBlock code={badgeLite} language="md" style={{ fontSize: 12 }} />
       {}
       <img
         alt="MCP Badge"
@@ -72,9 +71,7 @@ const GithubBadge = memo(() => {
         value={selectedTheme}
         onChange={setSelectedTheme}
       />
-      <Snippet language={'md'} style={{ fontSize: 12 }} variant={'outlined'}>
-        {badge}
-      </Snippet>
+      <CodeBlock code={badge} language="md" style={{ fontSize: 12 }} />
       {}
       <img alt="MCP Badge" src={styledBadgeFullUrl} />
     </>

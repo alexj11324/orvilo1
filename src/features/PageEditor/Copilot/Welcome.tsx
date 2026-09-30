@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,11 +17,12 @@ const AgentBuilderWelcome = memo(() => {
 
   return (
     <>
-      <Flexbox flex={1} />
-      <Flexbox
-        gap={12}
-        width={'100%'}
+      <div className="flex flex-col flex-1" />
+      <div
+        className="flex flex-col gap-3"
         style={{
+          width: '100%',
+
           paddingBottom: 16,
         }}
       >
@@ -31,7 +31,7 @@ const AgentBuilderWelcome = memo(() => {
           {t('pageCopilot.title')}
         </Text>
         <SuggestQuestions count={3} mode="write" />
-      </Flexbox>
+      </div>
     </>
   );
 });

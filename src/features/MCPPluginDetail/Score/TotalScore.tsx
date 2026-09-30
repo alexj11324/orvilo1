@@ -1,8 +1,10 @@
-import { Block, Center, Flexbox, Popover } from '@lobehub/ui';
 import { Progress } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { type ScoreResult } from '../../MCP/calculateScore';
 import { sortItemsByPriority } from '../../MCP/calculateScore';
@@ -226,52 +228,59 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
   );
 
   return (
-    <Block gap={12} padding={16} variant={'outlined'}>
-      <Flexbox horizontal align="flex-start" justify="space-between">
-        <Flexbox>
+    <div
+      className="flex flex-col gap-3 p-4"
+      style={{ border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG }}
+    >
+      <div className="flex items-start justify-between">
+        <div className="flex flex-col">
           <h2 style={{ fontWeight: 'bold', margin: 0 }}>
             {t(`mcp.details.scoreLevel.${grade}.fullTitle`)}
           </h2>
           <div className={styles.description}>{t(`mcp.details.scoreLevel.${grade}.desc`)}</div>
-        </Flexbox>
+        </div>
         {isValidated && (
-          <Center
-            className={styles.gradeBadge}
+          <div
+            className={cn('flex items-center justify-center', styles.gradeBadge)}
             style={{
               borderColor: getGradeColor(grade),
               color: getGradeColor(grade),
             }}
           >
             {grade.toUpperCase()}
-          </Center>
+          </div>
         )}
-      </Flexbox>
+      </div>
 
       <div className={styles.progressContainer}>
-        <Popover
-          placement="bottom"
-          trigger={['hover', 'click']}
-          content={
+        <Popover>
+          <PopoverTrigger
+            openOnHover
+            render={
+              <span style={{ display: 'inline-flex' }}>
+                <Progress
+                  percent={Math.round(percentage)}
+                  showInfo={false}
+                  size={8}
+                  strokeColor={
+                    percentage < 60
+                      ? SEGMENT_COLORS.F_COLOR
+                      : percentage < 80
+                        ? SEGMENT_COLORS.B_COLOR
+                        : SEGMENT_COLORS.A_COLOR
+                  }
+                />
+              </span>
+            }
+          />
+          <PopoverContent side="bottom">
             <div>
               <div style={{ fontWeight: 'bold', marginBottom: 8 }}>
                 {t('mcp.details.totalScore.popover.title')}
               </div>
               {renderTooltipContent()}
             </div>
-          }
-        >
-          <Progress
-            percent={Math.round(percentage)}
-            showInfo={false}
-            size={8}
-            strokeColor={
-              percentage < 60
-                ? SEGMENT_COLORS.F_COLOR
-                : percentage < 80
-                  ? SEGMENT_COLORS.B_COLOR
-                  : SEGMENT_COLORS.A_COLOR
-            }
-          />
+          </PopoverContent>
         </Popover>
 
         <div className={styles.legend}>
@@ -304,7 +313,7 @@ const TotalScore = memo<TotalScoreProps>(({ scoreResult, scoreItems = [], isVali
           {totalRequiredItems} {t('mcp.details.totalScore.scoreInfo.items')}
         </span>
       </div>
-    </Block>
+    </div>
   );
 });
 

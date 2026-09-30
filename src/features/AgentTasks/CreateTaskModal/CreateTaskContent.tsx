@@ -1,7 +1,6 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { Block, Flexbox } from '@lobehub/ui';
 import { ActionIcon, Button, Select, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -300,9 +299,9 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     }, []);
 
     return (
-      <Flexbox onKeyDown={handleKeyDown}>
-        <Flexbox horizontal style={{ padding: '16px 24px 0' }}>
-          <Flexbox flex={1} style={{ minHeight: 180 }}>
+      <div className="flex flex-col" onKeyDown={handleKeyDown}>
+        <div className="flex" style={{ padding: '16px 24px 0' }}>
+          <div className="flex flex-1 flex-col" style={{ minHeight: 180 }}>
             <input
               autoFocus={canCreateTask}
               disabled={!canCreateTask}
@@ -330,8 +329,8 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
               style={{ fontSize: 14, paddingBottom: 16 }}
               onContentChange={handleContentChange}
             />
-          </Flexbox>
-          <Flexbox horizontal gap={4} style={{ flexShrink: 0 }}>
+          </div>
+          <div className="flex gap-1" style={{ flexShrink: 0 }}>
             {showInlineToggle && (
               <ActionIcon
                 icon={Minimize2}
@@ -340,26 +339,16 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
               />
             )}
             <ActionIcon icon={X} onClick={close} />
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
 
-        <Flexbox
-          horizontal
-          align={'center'}
-          justify={'space-between'}
+        <div
+          className="flex items-center justify-between"
           style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, padding: '8px 16px' }}
         >
-          <Flexbox horizontal gap={2} wrap={'wrap'}>
+          <div className="flex flex-wrap gap-0.5">
             <TaskPriorityTag priority={priority} onChange={setPriority}>
-              <Block
-                clickable
-                horizontal
-                align="center"
-                gap={6}
-                paddingBlock={4}
-                paddingInline={8}
-                variant={'borderless'}
-              >
+              <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                 <TaskPriorityTag disableDropdown priority={priority} size={14} />
                 <Text fontSize={12}>
                   {priority === 0
@@ -368,7 +357,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                         `taskDetail.priority.${(['', 'urgent', 'high', 'normal', 'low'] as const)[priority]}` as never,
                       )}
                 </Text>
-              </Block>
+              </div>
             </TaskPriorityTag>
 
             {activeWorkspaceId && (
@@ -377,15 +366,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                 taskVisibility={visibility}
                 onChange={handleMemberChange}
               >
-                <Block
-                  clickable
-                  horizontal
-                  align="center"
-                  gap={6}
-                  paddingBlock={4}
-                  paddingInline={8}
-                  variant={'borderless'}
-                >
+                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeUserId ? (
                     <>
                       <AssigneeUserAvatar size={18} userId={assigneeUserId} />
@@ -399,37 +380,22 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                       </Text>
                     </>
                   )}
-                </Block>
+                </div>
               </AssigneeMemberSelector>
             )}
 
             {lockAssignee ? (
-              <Block
-                horizontal
-                align="center"
-                gap={6}
-                paddingBlock={4}
-                paddingInline={8}
-                variant={'borderless'}
-              >
+              <div className="flex items-center gap-1.5 rounded-md px-2 py-1">
                 <AssigneeAvatar agentId={assigneeAgentId} size={18} />
                 <Text fontSize={12}>{assigneeMeta?.title}</Text>
-              </Block>
+              </div>
             ) : (
               <AssigneeAgentSelector
                 currentAgentId={assigneeAgentId}
                 taskVisibility={isOtherMemberAssignee ? 'public' : undefined}
                 onChange={handleAgentChange}
               >
-                <Block
-                  clickable
-                  horizontal
-                  align="center"
-                  gap={6}
-                  paddingBlock={4}
-                  paddingInline={8}
-                  variant={'borderless'}
-                >
+                <div className="flex cursor-pointer items-center gap-1.5 rounded-md px-2 py-1 transition-colors hover:bg-(--ant-color-fill-tertiary)">
                   {assigneeAgentId ? (
                     <>
                       <AssigneeAvatar agentId={assigneeAgentId} size={18} />
@@ -443,7 +409,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                       </Text>
                     </>
                   )}
-                </Block>
+                </div>
               </AssigneeAgentSelector>
             )}
 
@@ -484,7 +450,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
               title={t('upload.action.tooltip')}
               onClick={handleAttach}
             />
-          </Flexbox>
+          </div>
 
           <Button
             disabled={!canCreateTask || isCreating}
@@ -497,8 +463,8 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
           >
             {t('createTask.submit')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

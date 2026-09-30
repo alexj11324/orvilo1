@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { Breadcrumb as AntBreadcrumb } from 'antd';
@@ -193,7 +192,7 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
   return (
     <AntBreadcrumb
       className={styles.breadcrumb}
-      separator={<Icon icon={ChevronRight} />}
+      separator={<ChevronRight size={'1em'} />}
       items={[
         ownerCrumb ?? {
           title:

@@ -1,14 +1,14 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { LinearIssueLinkSyncState } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { CircleCheck, CircleDashed, CircleMinus, CircleX, TriangleAlert } from 'lucide-react';
-import { createContext, memo, type PropsWithChildren, use, useMemo } from 'react';
+import { createContext, createElement, memo, type PropsWithChildren, use, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useTaskStore } from '@/store/task';
@@ -127,7 +127,7 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
   const issueUrl = getIssueLinkUrl(link);
   const conflictFields = link.conflict?.fields.join(', ');
   const tooltip = (
-    <Flexbox gap={4} style={{ maxWidth: 320 }}>
+    <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
       <Text fontSize={12} type={'secondary'}>
         {t('taskDetail.linearSync.source')}: {link.linearIdentifier}
       </Text>
@@ -144,7 +144,7 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
           {t('taskDetail.linearSync.openIssue')}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 
   const tag = (
@@ -153,7 +153,7 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
       size={'small'}
       // Clickable external link — mark it so peek-mode row click capture
       // (My issues) lets it through instead of selecting the row.
-      icon={<Icon color={meta.color} icon={meta.icon} size={12} />}
+      icon={createElement(meta.icon, { color: meta.color, size: 12 })}
       style={{ cursor: issueUrl ? 'pointer' : undefined, flexShrink: 0 }}
       onClick={
         issueUrl
@@ -168,7 +168,14 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
     </Tag>
   );
 
-  return <Tooltip title={tooltip}>{tag}</Tooltip>;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={<span className="inline-flex">{tag}</span>} />
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 });
 
 LinearTaskSyncStatus.displayName = 'LinearTaskSyncStatus';

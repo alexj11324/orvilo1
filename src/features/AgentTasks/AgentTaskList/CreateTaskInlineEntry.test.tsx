@@ -321,16 +321,14 @@ describe('CreateTaskInlineEntry', () => {
     expect(editor).toHaveAttribute('data-padding-bottom', '12');
 
     const assigneeControl = screen.getByText('createTask.assignee').parentElement;
-    expect(assigneeControl?.style.getPropertyValue('--lobe-flex-height')).toBe('24px');
-    expect(assigneeControl?.style.getPropertyValue('--lobe-flex-padding-block')).toBe('3px');
+    expect(assigneeControl).toHaveClass('h-6');
+    expect(assigneeControl).toHaveClass('py-[3px]');
 
     const attachmentAction = container
       .querySelector('svg.lucide-paperclip')
       ?.closest<HTMLElement>('button');
     expect(attachmentAction).toHaveStyle({ height: '24px', width: '24px' });
-    expect(attachmentAction?.parentElement?.style.getPropertyValue('--lobe-flex-align')).toBe(
-      'center',
-    );
+    expect(attachmentAction?.parentElement).toHaveClass('items-center');
 
     const visibilityTrigger = screen.getByTestId('visibility-trigger');
     expect(visibilityTrigger.nextElementSibling).toHaveTextContent('createTask.submit');

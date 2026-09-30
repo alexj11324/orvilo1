@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
 import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { OptionCard } from '@orvilo/shared-tool-ui/components';
 import type { TaskIntentAnalysis } from '@orvilo/types';
@@ -8,6 +7,8 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowLeft, Check, Sparkles, Target } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Textarea } from '@/components/ui/textarea';
 
 import type { ClarificationAnswers } from './taskIntent';
 
@@ -192,41 +193,41 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
 
   return (
     <>
-      <Flexbox className={styles.head} gap={6}>
-        <Flexbox horizontal align={'center'} gap={6}>
-          <Icon color={cssVar.colorTextDescription} icon={Sparkles} size={13} />
+      <div className={`flex flex-col gap-1.5 ${styles.head}`}>
+        <div className="flex items-center gap-1.5">
+          <Sparkles color={cssVar.colorTextDescription} size={13} />
           <Text fontSize={12} type={'secondary'}>
             {t('taskIntent.reviewStep')}
           </Text>
-        </Flexbox>
+        </div>
         <input
           className={styles.title}
           placeholder={t('createTask.titlePlaceholder')}
           value={title}
           onChange={(e) => onTitleChange(e.target.value)}
         />
-      </Flexbox>
+      </div>
 
-      <Flexbox className={styles.body} gap={16}>
+      <div className={`flex flex-col gap-4 ${styles.body}`}>
         <Text fontSize={13} type={'secondary'}>
           {analysis.summary}
         </Text>
 
         {showGoalExit && (
-          <Flexbox horizontal align={'center'} className={styles.goalCallout} gap={12}>
-            <Icon color={cssVar.colorTextSecondary} icon={Target} size={16} />
-            <Flexbox flex={1} gap={2}>
+          <div className={`flex items-center gap-3 ${styles.goalCallout}`}>
+            <Target color={cssVar.colorTextSecondary} size={16} />
+            <div className="flex flex-1 flex-col gap-0.5">
               <Text fontSize={13} weight={500}>
                 {t('taskIntent.goalCallout.title')}
               </Text>
               <Text fontSize={12} type={'secondary'}>
                 {analysis.kindReason || t('taskIntent.goalCallout.desc')}
               </Text>
-            </Flexbox>
+            </div>
             <Button size={'small'} type={'fill'} onClick={onSwitchToGoal}>
               {t('taskIntent.goalCallout.action')}
             </Button>
-          </Flexbox>
+          </div>
         )}
 
         {clarifications.length > 0 && (
@@ -238,10 +239,10 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
               ...clarifications.map((_, index) => ({
                 key: String(index),
                 label: (
-                  <Flexbox horizontal align={'center'} gap={6}>
+                  <span className="inline-flex items-center gap-1.5">
                     <Text>{`Q${index + 1}`}</Text>
-                    {isAnswered(index) && <Icon icon={Check} size={12} />}
-                  </Flexbox>
+                    {isAnswered(index) && <Check size={12} />}
+                  </span>
                 ),
               })),
             ]}
@@ -260,17 +261,17 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
             const custom = picked === undefined ? (answers[index] ?? '') : '';
 
             return (
-              <Flexbox gap={10} key={active.question}>
-                <Flexbox gap={2}>
+              <div className="flex flex-col gap-2.5" key={active.question}>
+                <div className="flex flex-col gap-0.5">
                   <Text strong>{active.question}</Text>
                   {active.impact && (
                     <Text fontSize={12} type={'secondary'}>
                       {active.impact}
                     </Text>
                   )}
-                </Flexbox>
+                </div>
 
-                <Flexbox gap={4} role={'listbox'}>
+                <div className="flex flex-col gap-1" role={'listbox'}>
                   {options.map((option, optionIndex) => (
                     <OptionCard
                       index={optionIndex + 1}
@@ -280,24 +281,24 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
                       onToggle={() => pickOption(index, option)}
                     />
                   ))}
-                  <Flexbox horizontal align={'center'} className={styles.customRow} gap={12}>
+                  <div className={`flex items-center gap-3 ${styles.customRow}`}>
                     <span className={styles.customIndex}>{options.length + 1}</span>
-                    <TextArea
-                      autoSize={{ maxRows: 4, minRows: 1 }}
+                    <Textarea
+                      className="min-h-0"
                       placeholder={t('taskIntent.answerPlaceholder')}
-                      style={{ flex: 1 }}
+                      rows={1}
+                      style={{ flex: 1, maxHeight: 116 }}
                       value={custom}
-                      variant={'filled'}
                       onChange={(e) => onAnswerChange(index, e.target.value)}
                     />
-                  </Flexbox>
-                </Flexbox>
-              </Flexbox>
+                  </div>
+                </div>
+              </div>
             );
           })()}
-      </Flexbox>
+      </div>
 
-      <Flexbox horizontal align={'center'} className={styles.footer} justify={'space-between'}>
+      <div className={`flex items-center justify-between ${styles.footer}`}>
         <Button icon={ArrowLeft} size={'small'} type={'text'} onClick={onBack}>
           {t('taskIntent.back')}
         </Button>
@@ -311,7 +312,7 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
         >
           {primary.label}
         </Button>
-      </Flexbox>
+      </div>
     </>
   );
 });

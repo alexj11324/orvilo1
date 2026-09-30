@@ -1,14 +1,14 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type StatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface TaskWorkflowBadgeProps {
   executionStatus: string;
@@ -36,7 +36,7 @@ export const useTaskWorkflowGlyph = ({
   return {
     ...WORKFLOW_CATEGORY_VISUALS[workflowCategory],
     label: (
-      <Flexbox gap={4} style={{ maxWidth: 320 }}>
+      <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
         <Text fontSize={12} type={'secondary'}>
           {t('taskDetail.workflow.businessStatus')}: {categoryLabel}
         </Text>
@@ -48,7 +48,7 @@ export const useTaskWorkflowGlyph = ({
             {t('taskDetail.workflow.deliveryPendingHelp')}
           </Text>
         )}
-      </Flexbox>
+      </div>
     ),
   };
 };
@@ -70,16 +70,25 @@ const TaskWorkflowBadge = memo<TaskWorkflowBadgeProps>((props) => {
       : categoryLabel;
 
   return (
-    <Tooltip title={glyph.label}>
-      <Tag
-        data-task-workflow-state={workflowCategory}
-        icon={<Icon color={glyph.color} icon={glyph.icon} size={12} />}
-        size={'small'}
-        style={{ flexShrink: 0 }}
-      >
-        {label}
-      </Tag>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex">
+              <Tag
+                data-task-workflow-state={workflowCategory}
+                icon={createElement(glyph.icon, { color: glyph.color, size: 12 })}
+                size={'small'}
+                style={{ flexShrink: 0 }}
+              >
+                {label}
+              </Tag>
+            </span>
+          }
+        />
+        <TooltipContent>{glyph.label}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

@@ -1,12 +1,17 @@
 'use client';
 
-import { type DropdownItem, DropdownMenu, Icon, type MenuInfo } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
-import { memo, useMemo, useState } from 'react';
+import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
@@ -46,36 +51,40 @@ const TaskListVisibilityFilter = memo(() => {
   const currentOption = FILTER_OPTIONS.find((opt) => opt.key === visibility) ?? FILTER_OPTIONS[0];
   const CurrentIcon = TASK_VISIBILITY_ICONS[currentOption.key];
 
-  const menuItems = useMemo<DropdownItem[]>(
-    () =>
-      FILTER_OPTIONS.map((option) => {
-        const OptionIcon = TASK_VISIBILITY_ICONS[option.key];
-        return {
-          extra: renderMenuCheck(option.key === visibility),
-          icon: <Icon color={cssVar.colorTextSecondary} icon={OptionIcon} size={16} />,
-          key: option.key,
-          label: t(option.labelKey as never),
-          onClick: ({ domEvent }: MenuInfo) => {
-            domEvent.stopPropagation();
-            setListVisibility(option.key);
-          },
-        };
-      }),
-    [setListVisibility, t, visibility],
-  );
-
   if (!activeWorkspaceId) return null;
 
   const currentLabel = t(currentOption.labelKey as never);
 
   return (
-    <DropdownMenu items={menuItems} open={open} onOpenChange={setOpen}>
-      <ActionIcon
-        icon={CurrentIcon}
-        size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-        style={{ borderRadius: 9999 }}
-        title={`${t('taskList.visibility.label', { defaultValue: 'Visibility' })}: ${currentLabel}`}
+    <DropdownMenu open={open} onOpenChange={setOpen}>
+      <DropdownMenuTrigger
+        render={
+          <ActionIcon
+            icon={CurrentIcon}
+            size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            style={{ borderRadius: 9999 }}
+            title={`${t('taskList.visibility.label', { defaultValue: 'Visibility' })}: ${currentLabel}`}
+          />
+        }
       />
+      <DropdownMenuContent align={'end'} className="min-w-40">
+        {FILTER_OPTIONS.map((option) => {
+          const OptionIcon = TASK_VISIBILITY_ICONS[option.key];
+          return (
+            <DropdownMenuItem
+              key={option.key}
+              onClick={(e) => {
+                e.stopPropagation();
+                setListVisibility(option.key);
+              }}
+            >
+              <OptionIcon color={cssVar.colorTextSecondary} size={16} />
+              <span className="flex-1">{t(option.labelKey as never)}</span>
+              {renderMenuCheck(option.key === visibility)}
+            </DropdownMenuItem>
+          );
+        })}
+      </DropdownMenuContent>
     </DropdownMenu>
   );
 });

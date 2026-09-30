@@ -1,6 +1,7 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   FilePlus2Icon,
   FileTextIcon,

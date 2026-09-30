@@ -39,7 +39,7 @@ const ManifestRow = ({ icon, text, warning }: Omit<RenderRow, 'id'>) => (
         fill: 'transparent',
       })}
     </span>
-    <div className="text-[12px]" type={warning ? 'warning' : 'secondary'}>
+    <div className={warning ? 'text-[12px] text-warning' : 'text-[12px] text-muted-foreground'}>
       {text}
     </div>
   </div>

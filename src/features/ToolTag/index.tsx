@@ -152,7 +152,10 @@ const ToolTag = memo<ToolTagProps>(({ identifier, variant = 'default' }) => {
   };
 
   return (
-    <Badge className={isCompact ? styles.compact : styles.tag} variant="secondary">
+    <Badge
+      className={isCompact ? styles.compact : styles.tag}
+      variant={isCompact ? 'outline' : 'secondary'}
+    >
       {renderIcon()}
       {displayTitle}
     </Badge>

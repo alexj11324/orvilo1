@@ -5,7 +5,7 @@ import { t } from 'i18next';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import type { createModal, ModalInstance, useModalContext } from '@/components/Modal';
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 

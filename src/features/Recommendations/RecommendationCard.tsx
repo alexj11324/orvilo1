@@ -62,10 +62,7 @@ export const RecommendationCard = memo<RecommendationCardProps>(
             <div className="flex flex-col flex-none py-[2px]">
               {renderIcon(RECOMMENDATION_ICON_SIZE.compact)}
             </div>
-            <div
-              className={cn(cx(homeType.itemTitleProse, styles.compactTitle))}
-              style={{ flex: 1 }}
-            >
+            <div className={cx(homeType.itemTitleProse, styles.compactTitle)} style={{ flex: 1 }}>
               {title}
             </div>
           </div>
@@ -74,7 +71,6 @@ export const RecommendationCard = memo<RecommendationCardProps>(
 
     return (
       <div
-        className={cx(briefStyles.card, styles.card)}
         style={{ borderRadius: cssVar.borderRadiusLG }}
         className={cx(
           briefStyles.card,
@@ -103,8 +99,7 @@ export const RecommendationCard = memo<RecommendationCardProps>(
           </div>
           <div className="flex flex-row items-center gap-2">
             <Button
-              className={briefStyles.actionBtnPrimary}
-              className="rounded-full"
+              className={cx(briefStyles.actionBtnPrimary, 'rounded-full')}
               loading={loading}
               onClick={handleClick}
             >

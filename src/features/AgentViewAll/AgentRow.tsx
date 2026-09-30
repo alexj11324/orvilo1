@@ -1,15 +1,21 @@
 'use client';
 
-import { ContextMenuTrigger, Flexbox, type MenuProps, Tooltip } from '@lobehub/ui';
 import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  renderSidebarMenuItems,
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import AgentAvatar from './AgentAvatar';
@@ -102,92 +108,99 @@ const AgentRow = memo<AgentRowProps>(({ author, item, showAuthor }) => {
   // its filtered items back via ref for the ContextMenuTrigger.
   const [menuActivated, setMenuActivated] = useState(false);
   const activateMenu = useCallback(() => setMenuActivated(true), []);
-  const menuItemsRef = useRef<(() => MenuProps['items']) | null>(null);
-  const handleMenuReady = useCallback((getItems: () => MenuProps['items']) => {
+  const menuItemsRef = useRef<(() => SidebarMenuItems) | null>(null);
+  const handleMenuReady = useCallback((getItems: () => SidebarMenuItems) => {
     menuItemsRef.current = getItems;
   }, []);
   const getContextMenuItems = useCallback(() => menuItemsRef.current?.() ?? [], []);
 
   return (
-    <ContextMenuTrigger items={getContextMenuItems}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.row}
-        gap={12}
-        ref={setAnchor}
-        onPointerEnter={activateMenu}
-      >
-        <WorkspaceLink
-          aria-label={displayTitle}
-          className={styles.identity}
-          to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div
+          className={cn('flex items-center gap-3', styles.row)}
+          ref={setAnchor}
+          onPointerEnter={activateMenu}
         >
-          <AgentAvatar item={item} size={28} />
-          <Flexbox flex={1} style={{ minWidth: 0 }}>
-            {/* Single-line row (Linear-style density) — the description only
-                renders in card mode, where there is room to browse. */}
-            <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
-              <Text ellipsis className={'agent-row-title'} weight={500}>
-                {displayTitle}
-              </Text>
-              {roleTag ? (
-                <Tag size={'small'} style={{ flex: 'none' }}>
-                  {roleTag}
-                </Tag>
-              ) : null}
-            </Flexbox>
-          </Flexbox>
-        </WorkspaceLink>
-        {/* Trailing cluster (Task-list-style): label pills + author avatar +
-            update time as one tight right-aligned group. */}
-        <Flexbox
-          horizontal
-          align={'center'}
-          flex={'none'}
-          gap={8}
-          justify={'flex-end'}
-          style={{ maxWidth: 420, overflow: 'hidden' }}
-        >
-          <LabelTags labels={item.labels} />
-          {showAuthor && (
-            // The slot is reserved even without an author, so an unknown
-            // author doesn't shift the row's label pills sideways.
-            <Flexbox flex={'none'} style={{ width: AUTHOR_COL_WIDTH }}>
-              {author && (
-                <Tooltip title={author.name}>
-                  <Avatar avatar={author.avatar || DEFAULT_AVATAR} size={AUTHOR_COL_WIDTH} />
-                </Tooltip>
-              )}
-            </Flexbox>
-          )}
-          <Text
-            className={styles.updatedAt}
-            fontSize={12}
-            title={updatedAt ? dayjs(updatedAt).format('YYYY-MM-DD HH:mm') : undefined}
+          <WorkspaceLink
+            aria-label={displayTitle}
+            className={styles.identity}
+            to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
           >
-            {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
-          </Text>
-        </Flexbox>
-        <Flexbox
-          horizontal
-          align={'center'}
-          flex={'none'}
-          gap={4}
-          style={{ width: ACTION_COL_WIDTH }}
-        >
-          {/* Visible "…" trigger AND right-click open the same menu — the
+            <AgentAvatar item={item} size={28} />
+            <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+              {/* Single-line row (Linear-style density) — the description only
+                renders in card mode, where there is room to browse. */}
+              <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                <Text ellipsis className={'agent-row-title'} weight={500}>
+                  {displayTitle}
+                </Text>
+                {roleTag ? (
+                  <Tag size={'small'} style={{ flex: 'none' }}>
+                    {roleTag}
+                  </Tag>
+                ) : null}
+              </div>
+            </div>
+          </WorkspaceLink>
+          {/* Trailing cluster (Task-list-style): label pills + author avatar +
+            update time as one tight right-aligned group. */}
+          <div
+            className="flex items-center gap-2 justify-end"
+            style={{ flex: 'none', maxWidth: 420, overflow: 'hidden' }}
+          >
+            <LabelTags labels={item.labels} />
+            {showAuthor && (
+              // The slot is reserved even without an author, so an unknown
+              // author doesn't shift the row's label pills sideways.
+              <div className="flex flex-col" style={{ flex: 'none', width: AUTHOR_COL_WIDTH }}>
+                {author && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <span style={{ display: 'inline-flex' }}>
+                            <Avatar
+                              avatar={author.avatar || DEFAULT_AVATAR}
+                              size={AUTHOR_COL_WIDTH}
+                            />
+                          </span>
+                        }
+                      />
+                      <TooltipContent>{author.name}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+              </div>
+            )}
+            <Text
+              className={styles.updatedAt}
+              fontSize={12}
+              title={updatedAt ? dayjs(updatedAt).format('YYYY-MM-DD HH:mm') : undefined}
+            >
+              {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
+            </Text>
+          </div>
+          <div
+            className="flex items-center gap-1"
+            style={{ flex: 'none', width: ACTION_COL_WIDTH }}
+          >
+            {/* Visible "…" trigger AND right-click open the same menu — the
               context menu alone proved undiscoverable (users assumed rows had
               no actions). */}
-          <ItemActions
-            anchor={anchor}
-            forceActivated={menuActivated}
-            item={item}
-            onMenuReady={handleMenuReady}
-          />
-        </Flexbox>
-      </Flexbox>
-    </ContextMenuTrigger>
+            <ItemActions
+              anchor={anchor}
+              forceActivated={menuActivated}
+              item={item}
+              onMenuReady={handleMenuReady}
+            />
+          </div>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {renderSidebarMenuItems(getContextMenuItems(), [], 'context')}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 });
 

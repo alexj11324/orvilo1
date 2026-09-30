@@ -1,5 +1,3 @@
-import { type DropdownMenuCheckboxItem } from '@lobehub/ui';
-import { DropdownMenu, Flexbox } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
@@ -7,6 +5,12 @@ import { Clock3Icon, PlusIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import NavHeader from '@/features/NavHeader';
 import { useFetchAgentChatTopics } from '@/hooks/useFetchChatTopics';
@@ -52,7 +56,7 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
     [topics, activeTopicId],
   );
 
-  const items = useMemo<DropdownMenuCheckboxItem[]>(
+  const items = useMemo(
     () =>
       (topics || []).map((topic) => {
         const displayTime =
@@ -60,26 +64,25 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
             ? dayjs(topic.updatedAt).fromNow()
             : dayjs(topic.updatedAt).format('YYYY-MM-DD');
 
-        return {
-          checked: topic.id === activeTopicId,
-          closeOnClick: true,
-          key: topic.id,
-          label: (
-            <Flexbox horizontal align="center" gap={4} justify="space-between" width="100%">
+        return (
+          <DropdownMenuCheckboxItem
+            checked={topic.id === activeTopicId}
+            key={topic.id}
+            onCheckedChange={(checked) => {
+              if (disabled) return;
+              if (checked) {
+                switchTopic(topic.id);
+              }
+            }}
+          >
+            <div className="flex items-center gap-1 justify-between" style={{ width: '100%' }}>
               <span className={styles.title}>{topic.title}</span>
               <span className={styles.time}>{displayTime}</span>
-            </Flexbox>
-          ),
-          onCheckedChange: (checked) => {
-            if (disabled) return;
-            if (checked) {
-              switchTopic(topic.id);
-            }
-          },
-          type: 'checkbox',
-        };
+            </div>
+          </DropdownMenuCheckboxItem>
+        );
       }),
-    [topics, switchTopic, styles, activeTopicId],
+    [topics, switchTopic, styles, activeTopicId, disabled],
   );
   const isEmpty = !topics || topics.length === 0;
 
@@ -107,17 +110,26 @@ const TopicSelector = memo<TopicSelectorProps>(({ agentId, disabled }) => {
               switchTopic();
             }}
           />
-          <DropdownMenu
-            items={items}
-            placement="bottomRight"
-            popupProps={{ style: { maxHeight: 400, minWidth: 280, overflowY: 'auto' } }}
-            triggerProps={{ disabled: disabled || isEmpty }}
-          >
-            <ActionIcon
+          <DropdownMenu>
+            <DropdownMenuTrigger
               disabled={disabled || isEmpty}
-              icon={Clock3Icon}
-              size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <ActionIcon
+                    disabled={disabled || isEmpty}
+                    icon={Clock3Icon}
+                    size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                  />
+                </span>
+              }
             />
+            <DropdownMenuContent
+              align="end"
+              side="bottom"
+              style={{ maxHeight: 400, minWidth: 280, overflowY: 'auto' }}
+            >
+              {items}
+            </DropdownMenuContent>
           </DropdownMenu>
         </>
       }

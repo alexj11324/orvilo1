@@ -1,6 +1,5 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { GitPullRequestDraftIcon, PencilLineIcon, RefreshCwIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -46,31 +45,31 @@ const ReviewSubmitPanel = memo<{
   const { body, busy, setBody, submitting, unknownIntent, verifying } = composer;
 
   return (
-    <Flexbox className={styles.card} gap={8}>
-      <Flexbox horizontal align={'center'} gap={8}>
-        <Icon color={cssVar.colorTextSecondary} icon={PencilLineIcon} size={14} />
+    <div className={cx('flex flex-col gap-2', styles.card)}>
+      <div className="flex items-center gap-2">
+        <PencilLineIcon color={cssVar.colorTextSecondary} size={14} />
         <Text weight={500}>{t('reviews.submitReviewTitle')}</Text>
-      </Flexbox>
+      </div>
       {pendingReviewId ? (
-        <Flexbox className={styles.banner} role={'status'}>
-          <Icon color={cssVar.colorWarning} icon={GitPullRequestDraftIcon} size={14} />
+        <div className={cx('flex items-center gap-2', styles.banner)} role={'status'}>
+          <GitPullRequestDraftIcon color={cssVar.colorWarning} size={14} />
           <Text fontSize={12}>{t('reviews.pendingDraftBanner')}</Text>
-        </Flexbox>
+        </div>
       ) : null}
       {unknownIntent ? (
-        <Flexbox className={styles.banner} role={'alert'}>
-          <Icon color={cssVar.colorWarning} icon={RefreshCwIcon} size={14} />
+        <div className={cx('flex items-center gap-2', styles.banner)} role={'alert'}>
+          <RefreshCwIcon color={cssVar.colorWarning} size={14} />
           <Text fontSize={12}>{t('reviews.outcomeUnknown')}</Text>
-          <Flexbox flex={1} />
+          <div className="flex-1" />
           <Button loading={verifying} size={'small'} onClick={() => void composer.verifyAndRetry()}>
             {t('reviews.outcomeUnknownAction')}
           </Button>
-        </Flexbox>
+        </div>
       ) : null}
       {stale ? (
-        <Flexbox className={styles.banner} role={'alert'}>
+        <div className={cx('flex items-center gap-2', styles.banner)} role={'alert'}>
           <Text fontSize={12}>{t('reviews.headDrifted')}</Text>
-        </Flexbox>
+        </div>
       ) : null}
       <TextArea
         disabled={disabled || stale}
@@ -81,7 +80,7 @@ const ReviewSubmitPanel = memo<{
       />
       {/* One write intent in flight at a time — a second click would send a
           different operationId and land two submissions. */}
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex justify-end gap-2">
         <Button
           disabled={disabled || stale || busy || !body.trim()}
           loading={submitting === 'COMMENT'}
@@ -106,8 +105,8 @@ const ReviewSubmitPanel = memo<{
         >
           {t('reviews.submitRequestChanges')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

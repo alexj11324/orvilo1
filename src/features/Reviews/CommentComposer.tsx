@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 
@@ -20,7 +19,7 @@ const CommentComposer = memo<{
   // retry replays the same intent-derived operationId instead of double-posting.
   const [unconfirmed, setUnconfirmed] = useState(false);
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <TextArea
         disabled={disabled}
         placeholder={placeholder}
@@ -33,7 +32,7 @@ const CommentComposer = memo<{
           {unknownHint}
         </Text>
       ) : null}
-      <Flexbox horizontal justify={'flex-end'}>
+      <div className="flex justify-end">
         <Button
           disabled={disabled || !body.trim()}
           loading={submitting}
@@ -48,8 +47,8 @@ const CommentComposer = memo<{
         >
           {submitLabel}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

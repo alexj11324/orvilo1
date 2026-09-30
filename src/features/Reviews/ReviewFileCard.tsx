@@ -1,6 +1,6 @@
-import { Flexbox, Icon, PatchDiff } from '@lobehub/ui';
+import { PatchDiff } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDownIcon, FileDiffIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -60,29 +60,29 @@ const ReviewFileCard = memo<{
   const [commentAt, setCommentAt] = useState<{ line: number; side: 'LEFT' | 'RIGHT' } | null>(null);
 
   return (
-    <Flexbox className={styles.card} id={`file-${encodeURIComponent(file.filename)}`}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.cardHeader}
+    <div
+      className={cx('flex flex-col', styles.card)}
+      id={`file-${encodeURIComponent(file.filename)}`}
+    >
+      <div
+        className={cx('flex items-center', styles.cardHeader)}
         onClick={() => setCollapsed((current) => !current)}
       >
-        <Icon
-          icon={ChevronDownIcon}
+        <ChevronDownIcon
           size={14}
           style={{ transform: collapsed ? 'rotate(-90deg)' : undefined }}
         />
-        <Icon color={cssVar.colorTextSecondary} icon={FileDiffIcon} size={14} />
+        <FileDiffIcon color={cssVar.colorTextSecondary} size={14} />
         <Text className={styles.threadHeader} weight={500}>
           {file.status === 'renamed' && file.previousFilename
             ? `${file.previousFilename} → ${file.filename}`
             : file.filename}
         </Text>
-        <Flexbox flex={1} />
+        <div className="flex-1" />
         <Text fontSize={12} type={'secondary'}>
           +{file.additions} −{file.deletions}
         </Text>
-      </Flexbox>
+      </div>
       {collapsed ? null : file.patch ? (
         <>
           <PatchDiff
@@ -103,7 +103,7 @@ const ReviewFileCard = memo<{
             }}
           />
           {commentAt ? (
-            <Flexbox className={styles.commentBox} gap={8}>
+            <div className={cx('flex flex-col gap-2', styles.commentBox)}>
               <Text className={styles.threadHeader}>
                 {file.filename}:{commentAt.line} ·{' '}
                 {commentAt.side === 'LEFT'
@@ -126,17 +126,17 @@ const ReviewFileCard = memo<{
                   return outcome;
                 }}
               />
-            </Flexbox>
+            </div>
           ) : null}
         </>
       ) : (
-        <Flexbox padding={12}>
+        <div className="flex flex-col p-3">
           <Text fontSize={12} type={'secondary'}>
             {t('reviews.diffUnavailable')}
           </Text>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

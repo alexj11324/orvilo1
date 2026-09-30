@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import {
   Button,
   Checkbox,
@@ -38,12 +37,12 @@ const WorkspaceDeleteAllModalContent = memo<WorkspaceDeleteAllModalContentProps>
     }, [acknowledged, close, loading, onConfirm]);
 
     return (
-      <Flexbox gap={20}>
+      <div className="flex flex-col gap-5">
         <Text type={'secondary'}>{description}</Text>
         <Checkbox checked={acknowledged} onChange={setAcknowledged}>
           {acknowledgeText}
         </Checkbox>
-        <Flexbox horizontal gap={8} justify={'flex-end'}>
+        <div className="flex justify-end gap-2">
           <Button disabled={loading} onClick={close}>
             {cancelText}
           </Button>
@@ -56,8 +55,8 @@ const WorkspaceDeleteAllModalContent = memo<WorkspaceDeleteAllModalContentProps>
           >
             {confirmText}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

@@ -1,12 +1,11 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Columns3Icon, ListIcon, ListTodoIcon } from 'lucide-react';
-import { memo, type ReactNode, useMemo, useState } from 'react';
+import { createElement, memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
@@ -120,7 +119,7 @@ interface SavedViewDetailsPanelProps {
 }
 
 const DetailRow = memo<{ label: string; value: ReactNode }>(({ label, value }) => (
-  <Flexbox horizontal align="center" className={styles.metaRow} gap={16} justify="space-between">
+  <div className={cx('flex items-center justify-between gap-4', styles.metaRow)}>
     <Text fontSize={12} type="secondary">
       {label}
     </Text>
@@ -131,7 +130,7 @@ const DetailRow = memo<{ label: string; value: ReactNode }>(({ label, value }) =
     ) : (
       value
     )}
-  </Flexbox>
+  </div>
 ));
 
 DetailRow.displayName = 'SavedViewDetailRow';
@@ -186,14 +185,14 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
     const restrictedCount = facetData?.data.restrictedCount ?? 0;
 
     return (
-      <Flexbox gap={10}>
-        <Flexbox className={styles.card}>
-          <Flexbox horizontal align="center" className={styles.cardHeader} gap={10}>
-            <Icon className={styles.titleIcon} icon={ListTodoIcon} size={16} />
+      <div className="flex flex-col gap-2.5">
+        <div className={cx('flex flex-col', styles.card)}>
+          <div className={cx('flex items-center gap-2.5', styles.cardHeader)}>
+            <ListTodoIcon className={styles.titleIcon} size={16} />
             <Text ellipsis fontSize={14} weight={600}>
               {title}
             </Text>
-          </Flexbox>
+          </div>
           <DetailRow
             label={t('savedViews.visibility', { ns: 'common' })}
             value={t(
@@ -244,15 +243,15 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
             label={t('savedViews.results', { ns: 'common' })}
             value={t('savedViews.resultCount', { count: summary.total, ns: 'common' })}
           />
-        </Flexbox>
+        </div>
 
         {/* Projects/Teams facet tabs — the two entity tabs the server facet
             contract supports. Counts come from the complete evaluated query,
             not just the loaded page; restricted buckets stay aggregated so
             unreadable names never leak. */}
         {facetsSupported ? (
-          <Flexbox className={styles.card}>
-            <Flexbox horizontal align="center" className={styles.cardHeader} gap={6}>
+          <div className={cx('flex flex-col', styles.card)}>
+            <div className={cx('flex items-center gap-1.5', styles.cardHeader)}>
               {(['projects', 'teams'] as const).map((tab) => (
                 <button
                   aria-pressed={facetTab === tab}
@@ -266,7 +265,7 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                   })}
                 </button>
               ))}
-            </Flexbox>
+            </div>
             <div className={styles.facetList}>
               {facetBuckets.length === 0 && restrictedCount === 0 ? (
                 <Text fontSize={12} style={{ paddingBlock: 4, paddingInline: 8 }} type="secondary">
@@ -275,11 +274,8 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
               ) : (
                 <>
                   {facetBuckets.map((bucket) => (
-                    <Flexbox
-                      horizontal
-                      align="center"
-                      className={styles.facetRow}
-                      justify="space-between"
+                    <div
+                      className={cx('flex items-center justify-between', styles.facetRow)}
                       key={bucket.key ?? 'none'}
                     >
                       <Text ellipsis fontSize={13}>
@@ -296,36 +292,31 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                       <Text fontSize={12} type="secondary">
                         {bucket.count}
                       </Text>
-                    </Flexbox>
+                    </div>
                   ))}
                   {restrictedCount > 0 ? (
-                    <Flexbox
-                      horizontal
-                      align="center"
-                      className={styles.facetRow}
-                      justify="space-between"
-                    >
+                    <div className={cx('flex items-center justify-between', styles.facetRow)}>
                       <Text fontSize={13} type="secondary">
                         {t('savedViews.facetRestricted', { ns: 'common' })}
                       </Text>
                       <Text fontSize={12} type="secondary">
                         {restrictedCount}
                       </Text>
-                    </Flexbox>
+                    </div>
                   ) : null}
                 </>
               )}
             </div>
-          </Flexbox>
+          </div>
         ) : null}
 
         {summary.groups.length > 0 ? (
-          <Flexbox className={styles.card}>
-            <Flexbox className={styles.cardHeader}>
+          <div className={cx('flex flex-col', styles.card)}>
+            <div className={cx('flex flex-col', styles.cardHeader)}>
               <Text fontSize={12} type="secondary" weight={500}>
                 {t('savedViews.groupCounts', { ns: 'common' })}
               </Text>
-            </Flexbox>
+            </div>
             {summary.groups.map((group) => {
               const labelKey = COLUMN_I18N_KEYS[group.key];
               const groupLabel =
@@ -335,30 +326,26 @@ const SavedViewDetailsPanel = memo<SavedViewDetailsPanelProps>(
                     ? t(labelKey as never, { ns: 'chat' })
                     : group.key;
               return (
-                <Flexbox
-                  horizontal
-                  align="center"
-                  className={styles.groupRow}
-                  justify="space-between"
+                <div
+                  className={cx('flex items-center justify-between', styles.groupRow)}
                   key={group.key}
                 >
-                  <Flexbox horizontal align="center" gap={8}>
-                    <Icon
-                      color={cssVar.colorTextTertiary}
-                      icon={layout === 'board' ? Columns3Icon : ListIcon}
-                      size={14}
-                    />
+                  <div className="flex items-center gap-2">
+                    {createElement(layout === 'board' ? Columns3Icon : ListIcon, {
+                      color: cssVar.colorTextTertiary,
+                      size: 14,
+                    })}
                     <Text fontSize={13}>{groupLabel}</Text>
-                  </Flexbox>
+                  </div>
                   <Text fontSize={12} type="secondary">
                     {group.total}
                   </Text>
-                </Flexbox>
+                </div>
               );
             })}
-          </Flexbox>
+          </div>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

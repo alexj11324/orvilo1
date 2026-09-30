@@ -1,13 +1,18 @@
 import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
-import { Breadcrumb as AntBreadcrumb } from 'antd';
-import { ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import { useShallow } from 'zustand/react/shallow';
 
 import Avatar from '@/components/Avatar';
+import {
+  Breadcrumb as UiBreadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useClientDataSWR } from '@/libs/swr';
 import { projectService } from '@/services/project';
@@ -189,24 +194,35 @@ const Breadcrumb = memo<BreadcrumbProps>(({ taskId }) => {
       }
     : undefined;
 
+  const crumbs = [
+    ownerCrumb ?? {
+      title:
+        taskId || agentCrumbNode ? (
+          <WorkspaceLink to={'/tasks'}>{allTasksLabel}</WorkspaceLink>
+        ) : (
+          allTasksLabel
+        ),
+    },
+    ...(agentCrumbNode ? [agentCrumbNode] : []),
+    ...ancestorCrumbs,
+    ...(currentTaskCrumb ? [currentTaskCrumb] : []),
+  ];
+
   return (
-    <AntBreadcrumb
-      className={styles.breadcrumb}
-      separator={<ChevronRight size={'1em'} />}
-      items={[
-        ownerCrumb ?? {
-          title:
-            taskId || agentCrumbNode ? (
-              <WorkspaceLink to={'/tasks'}>{allTasksLabel}</WorkspaceLink>
+    <UiBreadcrumb className={styles.breadcrumb}>
+      <BreadcrumbList>
+        {crumbs.map((crumb, index) => (
+          <BreadcrumbItem key={crumb.key ?? index}>
+            {index > 0 && <BreadcrumbSeparator />}
+            {index === crumbs.length - 1 ? (
+              <BreadcrumbPage>{crumb.title}</BreadcrumbPage>
             ) : (
-              allTasksLabel
-            ),
-        },
-        ...(agentCrumbNode ? [agentCrumbNode] : []),
-        ...ancestorCrumbs,
-        ...(currentTaskCrumb ? [currentTaskCrumb] : []),
-      ]}
-    />
+              crumb.title
+            )}
+          </BreadcrumbItem>
+        ))}
+      </BreadcrumbList>
+    </UiBreadcrumb>
   );
 });
 

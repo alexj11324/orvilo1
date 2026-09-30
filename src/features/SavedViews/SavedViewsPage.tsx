@@ -1,12 +1,12 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, SearchBar } from '@lobehub/ui';
+import { Empty, SearchBar } from '@lobehub/ui';
 import { ActionIcon, Button, Popover, Select, Switch, Text } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { ListTodoIcon, PlusIcon, SearchXIcon, Settings2Icon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
 
@@ -303,7 +303,7 @@ const SavedViewsPage = memo(() => {
         listSlot: 'title',
         render: (view) => (
           <div className={styles.nameCell}>
-            <Icon color={cssVar.colorTextSecondary} icon={viewIcon(view)} size={16} />
+            {createElement(viewIcon(view), { color: cssVar.colorTextSecondary, size: 16 })}
             {/* A real anchor keeps open-in-new-tab and middle-click working;
                 stopPropagation keeps the row's own onRowClick from
                 double-navigating. */}
@@ -362,7 +362,7 @@ const SavedViewsPage = memo(() => {
       placement="bottomRight"
       trigger="click"
       content={
-        <Flexbox className={styles.displayPopover} gap={10}>
+        <div className={cx('flex flex-col gap-2.5', styles.displayPopover)}>
           <Text fontSize={12} type="secondary" weight={500}>
             {t('savedViews.ordering')}
           </Text>
@@ -408,16 +408,16 @@ const SavedViewsPage = memo(() => {
               ['showUpdated', 'savedViews.column.updated'],
             ] as const
           ).map(([key, labelKey]) => (
-            <Flexbox horizontal align="center" justify="space-between" key={key}>
+            <div className="flex items-center justify-between" key={key}>
               <Text fontSize={13}>{t(labelKey)}</Text>
               <Switch
                 checked={prefs[key]}
                 size="small"
                 onChange={(checked) => updatePrefs({ [key]: checked })}
               />
-            </Flexbox>
+            </div>
           ))}
-        </Flexbox>
+        </div>
       }
     >
       <ActionIcon
@@ -439,7 +439,7 @@ const SavedViewsPage = memo(() => {
         }
         right={
           <Button
-            icon={<Icon icon={PlusIcon} size={16} />}
+            icon={<PlusIcon size={16} />}
             size={'small'}
             type="primary"
             onClick={() => setCreating(true)}
@@ -451,7 +451,7 @@ const SavedViewsPage = memo(() => {
       <WorkSurfaceCollection
         toolbar={
           <WorkSurfaceToolbar>
-            <Flexbox horizontal align="center" gap={6}>
+            <div className="flex items-center gap-1.5">
               <WorkspaceLink
                 aria-current={entityType === 'task' ? 'page' : undefined}
                 className={`${styles.entityTab} ${entityType === 'task' ? styles.entityTabActive : ''}`}
@@ -466,7 +466,7 @@ const SavedViewsPage = memo(() => {
               >
                 {t('savedViews.entityProject')}
               </WorkspaceLink>
-            </Flexbox>
+            </div>
             <SearchBar
               allowClear
               placeholder={t('savedViews.searchPlaceholder')}
@@ -484,17 +484,17 @@ const SavedViewsPage = memo(() => {
           <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />
         ) : filteredViews.length === 0 ? (
           keyword.trim() ? (
-            <Center flex={1} padding={48}>
+            <div className="flex flex-1 items-center justify-center p-12">
               <Empty description={t('savedViews.searchEmpty')} icon={SearchXIcon} />
-            </Center>
+            </div>
           ) : (
             /* Reference empty state: left-aligned block, 340px wide,
                horizontally centered. The ⌥V shortcut line is intentionally
                absent — Orvilo has no such hotkey (honest UI over copied
                chrome). */
-            <Center flex={1} padding={48}>
+            <div className="flex flex-1 items-center justify-center p-12">
               <div className={styles.emptyBlock}>
-                <Icon color={cssVar.colorTextTertiary} icon={ListTodoIcon} size={56} />
+                <ListTodoIcon color={cssVar.colorTextTertiary} size={56} />
                 <Text fontSize={15} weight={600}>
                   {t('tab.views')}
                 </Text>
@@ -505,9 +505,9 @@ const SavedViewsPage = memo(() => {
                       : 'teams.viewDirectoryDescriptionIssues',
                   )}
                 </Text>
-                <Flexbox horizontal gap={8}>
+                <div className="flex gap-2">
                   <Button
-                    icon={<Icon icon={PlusIcon} size={14} />}
+                    icon={<PlusIcon size={14} />}
                     size="small"
                     type="primary"
                     onClick={() => setCreating(true)}
@@ -520,9 +520,9 @@ const SavedViewsPage = memo(() => {
                   >
                     {t('teams.viewDocumentation')}
                   </Button>
-                </Flexbox>
+                </div>
               </div>
-            </Center>
+            </div>
           )
         ) : (
           <LiteTable

@@ -1,7 +1,7 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, DropdownMenu, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
+import { Empty, SearchBar } from '@lobehub/ui';
+import { ActionIcon, Button, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { MoreHorizontal, RefreshCw, Settings2, Trash2, UserPlus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -13,6 +13,13 @@ import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCa
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
@@ -350,48 +357,56 @@ const MembersPage = memo(() => {
           if (row.kind === 'person') {
             const canManage = capabilities.canManageMembers && row.value.userId !== callerUserId;
             return canManage ? (
-              <DropdownMenu
-                items={[
-                  {
-                    icon: <Icon icon={Settings2} size={14} />,
-                    key: 'manage',
-                    label: t('members.manageInSettings', { ns: 'common' }),
-                    onClick: () => navigate(settingsPath),
-                  },
-                ]}
-              >
-                <ActionIcon
-                  aria-label={t('members.manageInSettings', { ns: 'common' })}
-                  icon={MoreHorizontal}
-                  size={'small'}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <ActionIcon
+                      aria-label={t('members.manageInSettings', { ns: 'common' })}
+                      icon={MoreHorizontal}
+                      size={'small'}
+                    />
+                  }
                 />
+                <DropdownMenuContent align={'end'} className="min-w-40">
+                  <DropdownMenuItem onClick={() => navigate(settingsPath)}>
+                    <Settings2 size={16} />
+                    <span className="flex-1">
+                      {t('members.manageInSettings', { ns: 'common' })}
+                    </span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
               </DropdownMenu>
             ) : null;
           }
           if (row.kind === 'invitation' && capabilities.canInvite) {
             return (
-              <DropdownMenu
-                items={[
-                  {
-                    icon: <Icon icon={RefreshCw} size={14} />,
-                    key: 'resend',
-                    label: t('members.resendInvitation', { ns: 'common' }),
-                    onClick: () => void resendInvitation(row.value.id),
-                  },
-                  {
-                    danger: true,
-                    icon: <Icon icon={Trash2} size={14} />,
-                    key: 'revoke',
-                    label: t('members.revokeInvitation', { ns: 'common' }),
-                    onClick: () => void revokeInvitation(row.value.id),
-                  },
-                ]}
-              >
-                <ActionIcon
-                  aria-label={t('inbox.moreActions', { ns: 'notification' })}
-                  icon={MoreHorizontal}
-                  size={'small'}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={
+                    <ActionIcon
+                      aria-label={t('inbox.moreActions', { ns: 'notification' })}
+                      icon={MoreHorizontal}
+                      size={'small'}
+                    />
+                  }
                 />
+                <DropdownMenuContent align={'end'} className="min-w-40">
+                  <DropdownMenuItem onClick={() => void resendInvitation(row.value.id)}>
+                    <RefreshCw size={16} />
+                    <span className="flex-1">
+                      {t('members.resendInvitation', { ns: 'common' })}
+                    </span>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    variant={'destructive'}
+                    onClick={() => void revokeInvitation(row.value.id)}
+                  >
+                    <Trash2 size={16} />
+                    <span className="flex-1">
+                      {t('members.revokeInvitation', { ns: 'common' })}
+                    </span>
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
               </DropdownMenu>
             );
           }
@@ -417,20 +432,27 @@ const MembersPage = memo(() => {
           </Text>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex items-center gap-2">
             {capabilities.canManageMembers ? (
-              <Tooltip title={t('members.manageInSettings', { ns: 'common' })}>
-                <ActionIcon
-                  aria-label={t('members.manageInSettings', { ns: 'common' })}
-                  icon={Settings2}
-                  size={'small'}
-                  onClick={() => navigate(settingsPath)}
-                />
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <ActionIcon
+                        aria-label={t('members.manageInSettings', { ns: 'common' })}
+                        icon={Settings2}
+                        size={'small'}
+                        onClick={() => navigate(settingsPath)}
+                      />
+                    }
+                  />
+                  <TooltipContent>{t('members.manageInSettings', { ns: 'common' })}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : null}
             {capabilities.canInvite ? (
               <Button
-                icon={<Icon icon={UserPlus} size={16} />}
+                icon={<UserPlus size={16} />}
                 size={'small'}
                 type="primary"
                 onClick={() => openInviteTeammateModal()}
@@ -438,7 +460,7 @@ const MembersPage = memo(() => {
                 {t('workspaceSetting.members.inviteButton', { ns: 'setting' })}
               </Button>
             ) : null}
-          </Flexbox>
+          </div>
         }
       />
       <WorkSurfaceCollection
@@ -471,13 +493,13 @@ const MembersPage = memo(() => {
         }
       >
         {!workspace ? (
-          <Center padding={48}>
+          <div className="flex items-center justify-center p-12">
             <Empty description={t('workspaceSetting.members.noWorkspace', { ns: 'setting' })} />
-          </Center>
+          </div>
         ) : loadError ? (
           /* The directory joins three queries — retry revalidates all of them,
              matching every other surface's AsyncError+retry contract. */
-          <Center padding={48}>
+          <div className="flex items-center justify-center p-12">
             <AsyncError
               error={loadError}
               onRetry={() => {
@@ -486,11 +508,11 @@ const MembersPage = memo(() => {
                 void invitationsQuery.mutate();
               }}
             />
-          </Center>
+          </div>
         ) : loading ? (
           <LiteTable loading columns={columns} dataSource={[]} rowKey={() => 'loading'} />
         ) : sections.length === 0 ? (
-          <Center padding={48}>
+          <div className="flex items-center justify-center p-12">
             <Empty
               description={
                 needle || groupFilter !== 'all'
@@ -498,7 +520,7 @@ const MembersPage = memo(() => {
                   : t('workspaceSetting.members.empty', { ns: 'setting' })
               }
             />
-          </Center>
+          </div>
         ) : (
           <LiteTable
             className={styles.directoryTable}

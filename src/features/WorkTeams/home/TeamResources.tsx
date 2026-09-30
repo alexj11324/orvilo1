@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import {
   confirmModal,
   DropdownMenuItem,
@@ -257,7 +256,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
             type="button"
             onClick={() => createDocumentModal(resource.document.id, () => void refresh())}
           >
-            <Icon icon={FileTextIcon} size={16} />
+            <FileTextIcon size={16} />
             <span className={styles.text}>
               {resource.document.title || t('teams.resources.untitled')}
             </span>
@@ -270,7 +269,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
             style={{ flex: 1 }}
             target="_blank"
           >
-            <Icon icon={Link2Icon} size={16} />
+            <Link2Icon size={16} />
             <span className={styles.text}>{resource.title || resource.url}</span>
           </a>
         )}
@@ -285,7 +284,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                   className={styles.iconButton}
                   type="button"
                 >
-                  <Icon icon={MoreHorizontalIcon} size={16} />
+                  <MoreHorizontalIcon size={16} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuPortal>
@@ -348,7 +347,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                   disabled={pending}
                   type="button"
                 >
-                  <Icon icon={PlusIcon} size={16} />
+                  <PlusIcon size={16} />
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuPortal>
@@ -357,7 +356,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                     {canCreateDocument && (
                       <DropdownMenuItem onClick={() => void createDocument()}>
                         <span className={styles.action}>
-                          <Icon icon={FilePlus2Icon} size={16} />
+                          <FilePlus2Icon size={16} />
                           {t('teams.resources.newDocument')}
                         </span>
                       </DropdownMenuItem>
@@ -369,7 +368,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                         }
                       >
                         <span className={styles.action}>
-                          <Icon icon={FileTextIcon} size={16} />
+                          <FileTextIcon size={16} />
                           {t('teams.resources.existingDocuments')}
                         </span>
                       </DropdownMenuItem>
@@ -381,7 +380,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                           onClick={() => openTeamLinkDialog({ onChanged: refresh, teamId })}
                         >
                           <span className={styles.action}>
-                            <Icon icon={Link2Icon} size={16} />
+                            <Link2Icon size={16} />
                             {t('teams.resources.newLink')}
                           </span>
                         </DropdownMenuItem>
@@ -399,7 +398,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
               type="button"
               onClick={() => openTeamSectionDialog({ onChanged: refresh, teamId })}
             >
-              <Icon icon={FolderPlusIcon} size={16} />
+              <FolderPlusIcon size={16} />
             </button>
           )}
         </div>
@@ -441,7 +440,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                     type="button"
                     onClick={() => void createDocument(section.id)}
                   >
-                    <Icon icon={PlusIcon} size={14} />
+                    <PlusIcon size={14} />
                   </button>
                 )}
                 {canWrite && (
@@ -452,7 +451,7 @@ export default function TeamResources({ documentsOnly = false, teamId }: TeamRes
                         className={styles.iconButton}
                         type="button"
                       >
-                        <Icon icon={MoreHorizontalIcon} size={14} />
+                        <MoreHorizontalIcon size={14} />
                       </button>
                     </DropdownMenuTrigger>
                     <DropdownMenuPortal>

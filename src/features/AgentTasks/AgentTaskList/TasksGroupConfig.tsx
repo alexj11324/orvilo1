@@ -1,6 +1,5 @@
-import { Form, type FormItemProps } from '@lobehub/ui';
 import { ActionIcon, Button, Select, Switch, Tabs } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { cssVar } from 'antd-style';
 import {
   ArrowDownWideNarrow,
   ArrowUpNarrowWide,
@@ -8,9 +7,10 @@ import {
   LayoutList,
   Settings2Icon,
 } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Field, FieldGroup, FieldLabel } from '@/components/ui/field';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
@@ -47,17 +47,6 @@ interface TasksHeaderProps {
    */
   viewMode: TaskViewMode;
 }
-
-const styles = createStaticStyles(({ css, cssVar }) => {
-  return {
-    form: css`
-      label {
-        font-size: 13px !important;
-        color: ${cssVar.colorTextSecondary} !important;
-      }
-    `,
-  };
-});
 
 const TasksGroupConfig = memo<TasksHeaderProps>(
   ({ milestones, options, pinnedOptions, setOptions, viewMode }) => {
@@ -125,6 +114,11 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         ? 'none'
         : options.subGroupBy;
 
+    interface ConfigItem {
+      children: ReactNode;
+      label: string;
+    }
+
     const groupingFormItem = {
       children: (
         <Select
@@ -142,7 +136,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         />
       ),
       label: viewMode === 'kanban' ? t('taskList.form.columns') : t('taskList.form.grouping'),
-    } satisfies FormItemProps;
+    } satisfies ConfigItem;
 
     const showCompletedFormItem = {
       children: (
@@ -154,11 +148,10 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
           }}
         />
       ),
-      minWidth: undefined,
       label: t('taskList.form.showCompleted'),
-    } satisfies FormItemProps;
+    } satisfies ConfigItem;
 
-    const formItems: FormItemProps[] = [
+    const formItems: ConfigItem[] = [
       groupingFormItem,
       ...(isSubGroupingEnabled
         ? [
@@ -175,7 +168,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                 />
               ),
               label: t('taskList.form.subGrouping'),
-            } satisfies FormItemProps,
+            } satisfies ConfigItem,
           ]
         : []),
       ...(isPinned('ordering')
@@ -209,7 +202,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                 </div>
               ),
               label: t('taskList.form.ordering'),
-            } satisfies FormItemProps,
+            } satisfies ConfigItem,
           ]),
       {
         children: (
@@ -221,7 +214,6 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
             }}
           />
         ),
-        minWidth: undefined,
         label: t('taskList.form.orderCompletedByRecency'),
       },
       showCompletedFormItem,
@@ -238,9 +230,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                   }}
                 />
               ),
-              minWidth: undefined,
               label: t('taskList.form.showSubTasks'),
-            } satisfies FormItemProps,
+            } satisfies ConfigItem,
           ]),
       // Only meaningful once sub-tasks are on the list — otherwise the toggle
       // would sit there controlling nothing.
@@ -256,9 +247,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                   }}
                 />
               ),
-              minWidth: undefined,
               label: t('taskList.form.nestedSubTasks'),
-            } satisfies FormItemProps,
+            } satisfies ConfigItem,
           ]
         : []),
       // Linear's "Milestones" display property — the row's milestone chip.
@@ -275,9 +265,8 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
                   }}
                 />
               ),
-              minWidth: undefined,
               label: t('taskList.form.milestones'),
-            } satisfies FormItemProps,
+            } satisfies ConfigItem,
           ]
         : []),
     ];
@@ -303,16 +292,16 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
             updateSystemStatus({ taskListViewMode: key as TaskViewMode }, 'updateTaskListViewMode')
           }
         />
-        <Form
-          className={styles.form}
-          items={viewMode === 'kanban' ? boardFormItems : formItems}
-          itemsType={'flat'}
-          size={'small'}
-          variant={'borderless'}
-          styles={{
-            item: { padding: 0 },
-          }}
-        />
+        <FieldGroup className="gap-3">
+          {(viewMode === 'kanban' ? boardFormItems : formItems).map((item) => (
+            <Field key={item.label} orientation={'horizontal'}>
+              <FieldLabel style={{ color: cssVar.colorTextSecondary, fontSize: 13 }}>
+                {item.label}
+              </FieldLabel>
+              {item.children}
+            </Field>
+          ))}
+        </FieldGroup>
         <div
           className="flex justify-between"
           style={{ borderTop: `1px solid ${cssVar.colorBorderSecondary}`, paddingTop: 8 }}

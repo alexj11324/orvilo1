@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { ActionIcon, Avatar, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailActivity } from '@orvilo/types';
 import { MessageCircle, MessagesSquare } from 'lucide-react';
@@ -58,13 +58,13 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
   if (!body) return null;
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       {/* Who is reporting, at the top where a report names its author — not a
           footnote under the text it wrote. */}
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex items-center gap-2">
         <Avatar avatar={activity.author?.avatar || DEFAULT_AVATAR} size={24} />
         <Text weight={500}>{activity.author?.name ?? t('taskDetail.reportedByAgent')}</Text>
-      </Flexbox>
+      </div>
       <Markdown style={{ overflow: 'unset' }} variant={'chat'}>
         {body}
       </Markdown>
@@ -79,7 +79,7 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
           }}
         />
       ) : (
-        <Flexbox horizontal align={'center'} gap={4} justify={'flex-end'}>
+        <div className="flex items-center justify-end gap-1">
           <ActionIcon
             icon={MessagesSquare}
             size={'small'}
@@ -94,9 +94,9 @@ const TaskRunReport = memo<TaskRunReportProps>(({ activity }) => {
               onClick={() => setCommenting(true)}
             />
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

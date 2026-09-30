@@ -1,9 +1,9 @@
-import { Image } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskTemplateConnectorReference } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { getProviderMeta } from './providerMeta';
 import {
@@ -44,7 +44,7 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
     <div className="flex flex-row items-center gap-2 justify-between">
       <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
         {typeof meta.icon === 'string' ? (
-          <Image alt={meta.label} height={16} src={meta.icon} style={{ flex: 'none' }} width={16} />
+          <img alt={meta.label} height={16} src={meta.icon} style={{ flex: 'none' }} width={16} />
         ) : (
           <span className="anticon" role="img">
             <meta.icon
@@ -56,15 +56,13 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
             />
           </span>
         )}
-        <Text ellipsis fontSize={13}>
-          {meta.label}
-        </Text>
+        <span className="truncate text-[13px]">{meta.label}</span>
       </div>
       <Button
         disabled={disabled}
         loading={isConnecting}
-        size={'small'}
-        type={'text'}
+        size="sm"
+        variant="ghost"
         onClick={handleConnect}
       >
         {t('taskTemplate.action.connect.short')}

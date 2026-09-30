@@ -1,4 +1,3 @@
-import { Image } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -32,7 +31,7 @@ export const TemplateBriefIcon = memo<TemplateBriefIconProps>(
         }}
       >
         {spec.kind === 'url' ? (
-          <Image
+          <img
             alt={''}
             height={glyphSize}
             src={spec.src}

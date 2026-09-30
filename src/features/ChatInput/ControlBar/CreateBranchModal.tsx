@@ -1,17 +1,12 @@
 'use client';
 
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface CreateBranchContentProps {
@@ -67,13 +62,13 @@ const CreateBranchContent = memo<CreateBranchContentProps>(({ onSubmit }) => {
             if (e.key === 'Enter') handleSubmit();
           }}
         />
-        {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
+        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
       </div>
       <div className="flex flex-row gap-2 justify-end">
         <Button disabled={loading} onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button disabled={!value.trim()} loading={loading} type={'primary'} onClick={handleSubmit}>
+        <Button disabled={!value.trim()} loading={loading} variant="default" onClick={handleSubmit}>
           {tDevice('workingDirectory.checkoutAction')}
         </Button>
       </div>

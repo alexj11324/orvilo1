@@ -1,4 +1,3 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -7,6 +6,7 @@ import { Bot, Lock, MessageSquareText, Users, Wrench } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import type { SidebarAgentItem } from '@/database/repositories/home';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';

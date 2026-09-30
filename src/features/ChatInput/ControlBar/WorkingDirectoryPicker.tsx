@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import type { WorkingDirEntry } from '@orvilo/types';
 import { getWorkingDirSourcePath } from '@orvilo/types';
@@ -18,6 +17,8 @@ import {
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useConversationStore } from '@/features/Conversation/store';

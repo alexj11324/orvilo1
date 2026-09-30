@@ -1,14 +1,4 @@
 import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
-import {
   ArrowDownIcon,
   ArrowUpIcon,
   EyeOffIcon,
@@ -21,7 +11,9 @@ import { memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { openCustomizeSidebarModal } from '@/features/HomeSidebar/Body/CustomizeSidebarModal';
 import type { SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
@@ -138,31 +130,27 @@ const Recents = memo<RecentsProps>(({ itemKey }) => {
     <AccordionItem value={itemKey}>
       <ContextMenu>
         <ContextMenuTrigger>
-          <AccordionHeader>
-            <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-              <div className="flex items-center gap-1">
-                <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-                  {t('recents')}
-                </Text>
-                {syncStatus?.isValidating && query && <NeuralNetworkLoading size={14} />}
-              </div>
-            </AccordionTrigger>
-            <div
-              className={cx(
-                'accordion-action',
-                accordionStyles.action,
-                accordionStyles.actionBorderless,
-              )}
-            >
+          <div className="flex items-center">
+            <div className="min-w-0 flex-1">
+              <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
+                <div className="flex items-center gap-1">
+                  <div className="truncate text-[12px] text-muted-foreground font-medium">
+                    {t('recents')}
+                  </div>
+                  {syncStatus?.isValidating && query && <NeuralNetworkLoading size={14} />}
+                </div>
+              </AccordionTrigger>
+            </div>
+            <div className="flex shrink-0 items-center">
               <SidebarDropdownMenu items={dropdownMenu}>
                 <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
               </SidebarDropdownMenu>
             </div>
-          </AccordionHeader>
+          </div>
         </ContextMenuTrigger>
         <ContextMenuContent>{renderSidebarMenuItems(dropdownMenu)}</ContextMenuContent>
       </ContextMenu>
-      <AccordionPanel>
+      <AccordionContent>
         <Suspense fallback={<SkeletonList rows={3} />}>
           <RecentsList
             error={syncStatus?.error}
@@ -170,7 +158,7 @@ const Recents = memo<RecentsProps>(({ itemKey }) => {
             onRetry={() => void refreshRecents(scope)}
           />
         </Suspense>
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

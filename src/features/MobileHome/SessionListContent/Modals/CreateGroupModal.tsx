@@ -1,8 +1,10 @@
-import { Button, createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { t as translate } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
@@ -62,7 +64,7 @@ const CreateGroupContent = memo<CreateGroupContentProps>(({ id }) => {
       </div>
       <ModalFooter>
         <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-        <Button disabled={!canCreate} loading={loading} type={'primary'} onClick={handleCreate}>
+        <Button disabled={!canCreate} loading={loading} variant="default" onClick={handleCreate}>
           {t('ok', { defaultValue: 'OK', ns: 'common' })}
         </Button>
       </ModalFooter>

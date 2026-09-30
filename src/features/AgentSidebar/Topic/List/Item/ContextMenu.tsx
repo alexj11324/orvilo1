@@ -1,5 +1,6 @@
-import { ContextMenuTrigger } from '@lobehub/ui/base-ui';
 import { memo, type PropsWithChildren, useCallback, useEffect, useRef } from 'react';
+
+import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 
 import { type TopicItemDropdownMenuProps, useTopicItemDropdownMenu } from './useDropdownMenu';
 
@@ -23,9 +24,13 @@ const TopicItemContextMenu = memo<PropsWithChildren<TopicItemDropdownMenuProps>>
       menuRef.current = dropdownMenu;
     }, [dropdownMenu]);
 
-    const items = useCallback(() => menuRef.current(), []);
+    const items = useCallback(() => {
+      const dropdownMenu = menuRef.current;
 
-    return <ContextMenuTrigger items={items}>{children}</ContextMenuTrigger>;
+      return typeof dropdownMenu === 'function' ? dropdownMenu() : dropdownMenu;
+    }, []);
+
+    return <SidebarContextMenu items={items}>{children}</SidebarContextMenu>;
   },
 );
 

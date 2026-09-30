@@ -1,7 +1,8 @@
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckIcon } from 'lucide-react';
 import { memo } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 import type { SwitcherItem } from './switcherItems';
 
@@ -40,21 +41,19 @@ const SwitcherRow = memo<SwitcherRowProps>(({ active, item, onSelect, privateLab
     onClick={() => onSelect(item.id)}
   >
     <Avatar avatar={item.avatar} background={item.background} shape={'square'} size={28} />
-    <Text
-      ellipsis
-      color={active ? cssVar.colorText : cssVar.colorTextSecondary}
-      style={{ flex: 1 }}
-      weight={active ? 500 : undefined}
+    <div
+      className="truncate font-[active ? 500 : undefined]"
+      style={{ flex: 1, color: active ? cssVar.colorText : cssVar.colorTextSecondary }}
     >
       {item.title}
       {item.subtitle && (
         <span style={{ fontSize: 12, marginInlineStart: 6, opacity: 0.6 }}>{item.subtitle}</span>
       )}
-    </Text>
+    </div>
     {item.private && privateLabel && (
-      <Text color={cssVar.colorTextTertiary} fontSize={12}>
+      <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
         {privateLabel}
-      </Text>
+      </div>
     )}
     {active && <CheckIcon color={cssVar.colorText} size={14} />}
   </div>

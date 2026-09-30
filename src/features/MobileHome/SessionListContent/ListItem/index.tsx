@@ -1,9 +1,9 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { useHover } from 'ahooks';
 import { createStaticStyles, cx } from 'antd-style';
 import type { ComponentProps, ReactNode } from 'react';
 import { memo, useMemo, useRef } from 'react';
 
+import Avatar from '@/components/Avatar';
 import GroupAvatar from '@/features/GroupAvatar';
 import { useServerConfigStore } from '@/store/serverConfig';
 

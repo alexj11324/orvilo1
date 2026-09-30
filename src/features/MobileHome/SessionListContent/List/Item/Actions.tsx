@@ -1,4 +1,3 @@
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import {
   Check,
@@ -14,7 +13,10 @@ import {
 import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { type ItemType } from '@/components/Menu';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/index';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';

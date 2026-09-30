@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import type { DeviceExecutionTarget } from '@orvilo/types';
@@ -19,6 +18,8 @@ import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InstantSwitch from '@/components/InstantSwitch';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DOWNLOAD_URL } from '@/const/url';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
@@ -727,18 +728,16 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
               <Button
                 className={styles.reconnectButton}
                 loading={reconnectingDeviceId === d.deviceId}
-                size={'small'}
-                type={'text'}
-                icon={
-                  <span className="anticon" role="img">
-                    <RefreshCwIcon fill={'transparent'} height={10} size={10} width={10} />
-                  </span>
-                }
+                size="sm"
+                variant="ghost"
                 onClick={(event) => {
                   event.stopPropagation();
                   void handleReconnectDevice(d.deviceId);
                 }}
               >
+                <span className="anticon" data-icon="inline-start" role="img">
+                  <RefreshCwIcon fill={'transparent'} height={10} size={10} width={10} />
+                </span>
                 {t('heteroAgent.executionTarget.reconnect')}
               </Button>
             )}
@@ -853,7 +852,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
               <>
                 <InstantSwitch
                   enabled={localSandboxNetwork}
-                  size={'small'}
+                  size="sm"
                   onChange={handleToggleSandboxNetwork}
                 />
                 <SimpleTooltip title={t('heteroAgent.executionTarget.localSandboxNetworkTip')}>
@@ -867,7 +866,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
             ) : sandboxCapability?.canInstall ? (
               // The backend is missing but we can provision it — a dead-end row
               // would leave the user to discover a CLI incantation on their own.
-              <Button loading={isInstallingSandbox} size={'small'} onClick={handleInstallSandbox}>
+              <Button loading={isInstallingSandbox} size="sm" onClick={handleInstallSandbox}>
                 {t('heteroAgent.executionTarget.localSandboxSetUp')}
               </Button>
             ) : undefined

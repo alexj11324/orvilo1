@@ -1,10 +1,11 @@
-import { ActionIcon, Progress, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleAlertIcon, CircleCheckIcon, Loader2Icon, RotateCwIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
+import ActionIcon from '@/components/ActionIcon';
+import { Progress } from '@/components/ui/progress';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import { useFileStore } from '@/store/file';
 import { type UploadFileItem } from '@/types/files/upload';
@@ -104,13 +105,15 @@ const ContextItem = memo<FileItemProps>((props) => {
   );
 
   return (
-    <Tag
-      closable
-      aria-busy={busy}
+    <Badge
+      TODO_closable
+      aria
+      TODO_onClose={handleClose}
+      busy={busy}
       className={styles.chip}
       size={'large'}
+      variant="secondary"
       onClick={canPreview ? handleClick : undefined}
-      onClose={handleClose}
     >
       <SimpleTooltip title={detail}>
         <div className={cx('flex flex-row items-center', styles.content)}>
@@ -186,7 +189,7 @@ const ContextItem = memo<FileItemProps>((props) => {
           )}
         </div>
       )}
-    </Tag>
+    </Badge>
   );
 });
 

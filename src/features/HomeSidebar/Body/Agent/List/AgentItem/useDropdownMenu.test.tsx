@@ -40,9 +40,12 @@ vi.mock('antd', async (importOriginal) => {
   };
 });
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: mocks.confirmModal,
+}));
+vi.mock('@/components/toast', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   toast: { error: mocks.toastError, success: vi.fn() },
 }));
 

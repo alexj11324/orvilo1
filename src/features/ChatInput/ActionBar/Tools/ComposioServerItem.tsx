@@ -1,9 +1,9 @@
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { Loader2, SquareArrowOutUpRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -323,8 +323,8 @@ const ComposioServerItem = memo<ComposioServerItemProps>(
             <Checkbox
               checked={checked}
               disabled={!canEdit}
-              onClick={(e) => {
-                e.stopPropagation();
+              onClick={(e) => e.stopPropagation()}
+              onCheckedChange={() => {
                 if (!canEdit) return;
                 handleToggle();
               }}

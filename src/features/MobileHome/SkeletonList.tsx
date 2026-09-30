@@ -1,8 +1,9 @@
 'use client';
 
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const prefixCls = 'ant';
 
@@ -57,8 +58,8 @@ const SkeletonList = memo<SkeletonListProps>(({ count = 4 }) => {
           />
           <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
             <div className="flex flex-col gap-4 w-full">
-              <Skeleton.Text className={styles.title} width={'60%'} />
-              <Skeleton.Text className={styles.paragraph} width={'80%'} />
+              <Skeleton style={{ height: 18, marginBlock: 2, width: '60%' }} />
+              <Skeleton style={{ height: 18, marginBlock: 2, width: '80%' }} />
             </div>
           </div>
         </div>

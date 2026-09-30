@@ -1,4 +1,3 @@
-import { confirmModal, createModal, toast, Upload } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { css, cx } from 'antd-style';
 import { Archive, HardDriveDownload, Hash, Import, LucideCheck, Trash } from 'lucide-react';
@@ -8,6 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useIsWorkspaceOwner } from '@/business/client/hooks/useIsWorkspaceOwner';
 import { type DropdownItem } from '@/components/ItemsMenu';
+import { confirmModal, createModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Upload } from '@/components/Upload';
 import { openHeteroSessionImportModal } from '@/features/HeteroSessionImport';
 import { openWorkspaceDeleteAllModal } from '@/features/WorkspaceDeleteAllModal';
 import { usePermission } from '@/hooks/usePermission';

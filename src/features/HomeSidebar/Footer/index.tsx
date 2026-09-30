@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import {
@@ -16,6 +15,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
+import ActionIcon from '@/components/ActionIcon';
 import { openChangelogModal } from '@/components/ChangelogModal';
 import { openFeedbackModal } from '@/components/FeedbackModal';
 import { DOCUMENTS_REFER_URL, GITHUB } from '@/const/url';

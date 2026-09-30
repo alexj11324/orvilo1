@@ -1,9 +1,9 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type { NavigationFavoriteTargetType } from '@orvilo/types';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';

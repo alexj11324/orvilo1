@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { PlusIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -24,9 +23,7 @@ const EmptyNavItem = memo<EmptyStatusProps>(({ title, onClick, className, disabl
       <div className="flex flex-col items-center justify-center flex-none h-[28px] w-[28px]">
         <PlusIcon size={16} />
       </div>
-      <Text align={'center'} type={'secondary'}>
-        {title}
-      </Text>
+      <div className="text-center text-muted-foreground">{title}</div>
     </div>
   );
 });

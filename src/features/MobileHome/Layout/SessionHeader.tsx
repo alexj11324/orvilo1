@@ -1,12 +1,12 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { cx } from 'antd-style';
 import { MessageSquarePlus } from 'lucide-react';
 import { memo } from 'react';
 import { useNavigate } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import { ProductLogo } from '@/components/Branding';
 import { MOBILE_HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import UserAvatar from '@/features/User/UserAvatar';

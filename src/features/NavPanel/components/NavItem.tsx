@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -168,7 +167,8 @@ const NavItem = memo<NavItemProps>(
 
     const { titlePrefix, iconPostfix } = slots || {};
     // Render a real anchor so cmd+click can open in a new tab
-    const Tag: ElementType = href ? 'a' : 'div';
+    // Render a real anchor so cmd+click can open in a new tab
+    const RootElement: ElementType = href ? 'a' : 'div';
 
     const mergedStyle =
       href || disabled || style
@@ -182,7 +182,7 @@ const NavItem = memo<NavItemProps>(
         : undefined;
 
     const Content = (
-      <Tag
+      <RootElement
         className={cx(
           cx(styles.container, className),
           'flex items-center gap-2 px-1',
@@ -237,28 +237,23 @@ const NavItem = memo<NavItemProps>(
           {titlePrefix}
           {description ? (
             <div className="flex flex-col flex-1 gap-[3px]" style={{ overflow: 'hidden' }}>
-              <Text
-                color={textColor}
-                ellipsis={{ tooltipWhenOverflow: true }}
-                fontSize={13}
-                weight={500}
+              <div
+                className="truncate font-medium text-[13px]"
+                style={{ color: textColor }}
+                title={typeof title === 'string' ? title : undefined}
               >
                 {title}
-              </Text>
+              </div>
               {description}
             </div>
           ) : (
-            <Text
-              color={textColor}
-              fontSize={13}
-              style={{ flex: 1 }}
-              weight={500}
-              ellipsis={{
-                tooltipWhenOverflow: true,
-              }}
+            <div
+              className="flex-1 truncate font-medium text-[13px]"
+              style={{ color: textColor }}
+              title={typeof title === 'string' ? title : undefined}
             >
               {title}
-            </Text>
+            </div>
           )}
           {extra && (
             <div
@@ -283,7 +278,7 @@ const NavItem = memo<NavItemProps>(
             {renderedActions}
           </div>
         )}
-      </Tag>
+      </RootElement>
     );
     if (!contextMenuItems) return Content;
     return (

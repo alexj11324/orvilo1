@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { PinIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR } from '@/const/meta';
@@ -52,9 +52,7 @@ interface AgentListProps {
 // Same spec as the agent-detail SwitchPanel's section header.
 const SectionHeader = memo<{ children: ReactNode }>(({ children }) => (
   <div className={cx(styles.sectionHeader, 'flex flex-col')}>
-    <Text fontSize={12} type={'secondary'} weight={500}>
-      {children}
-    </Text>
+    <div className="text-[12px] text-muted-foreground font-medium">{children}</div>
   </div>
 ));
 
@@ -86,14 +84,12 @@ const AgentList = memo<AgentListProps>(
             shape={'square'}
             size={24}
           />
-          <Text
-            ellipsis
-            color={isActive ? cssVar.colorText : cssVar.colorTextSecondary}
-            style={{ flex: 1 }}
-            weight={isActive ? 600 : 500}
+          <div
+            className="truncate font-[isActive ? 600 : 500]"
+            style={{ flex: 1, color: isActive ? cssVar.colorText : cssVar.colorTextSecondary }}
           >
             {row.title}
-          </Text>
+          </div>
           {row.pinned && (
             <ActionIcon icon={PinIcon} size={12} style={{ opacity: 0.5, pointerEvents: 'none' }} />
           )}

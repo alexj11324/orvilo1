@@ -2,13 +2,14 @@
 
 import { type ChatInputProps } from '@lobehub/editor/react';
 import { ChatInput, ChatInputActionBar } from '@lobehub/editor/react';
-import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type ReactNode, use } from 'react';
 import { memo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import ChatInputNotice from '@/features/ChatInput/ChatInputNotice';
 import ComposerExpandButton from '@/features/ChatInput/components/ComposerExpandButton';
 import { useChatInputStore } from '@/features/ChatInput/store';
@@ -205,12 +206,12 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
 
     const loadingLeftSlot = isConfigLoading ? (
       <div className="flex flex-row items-center gap-1.5 px-1">
-        <Skeleton height={28} radius={'50%'} width={28} />
-        <Skeleton height={28} radius={'50%'} width={28} />
+        <Skeleton style={{ height: 28, borderRadius: '50%', width: 28 }} />
+        <Skeleton style={{ height: 28, borderRadius: '50%', width: 28 }} />
       </div>
     ) : null;
     const loadingRightSlot = isConfigLoading ? (
-      <Skeleton radius={999} style={{ height: 32, minWidth: 64, width: 64 }} />
+      <Skeleton style={{ height: 32, minWidth: 64, width: 64, borderRadius: 999 }} />
     ) : null;
     const noticeNode = !isConfigLoading && <ChatInputNotice />;
     // The action bar is `width: 100%`, so a sibling placed *inside* its
@@ -316,9 +317,9 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
             className="flex flex-col items-center justify-center"
             style={{ pointerEvents: 'none', zIndex: 100 }}
           >
-            <Text className={styles.footnote} type={'secondary'}>
+            <div className={cn('text-muted-foreground', styles.footnote)}>
               {t('input.disclaimer')}
-            </Text>
+            </div>
           </div>
         )}
       </div>

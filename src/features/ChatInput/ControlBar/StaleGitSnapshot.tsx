@@ -1,17 +1,15 @@
-import {
-  DropdownMenuItem,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-} from '@lobehub/ui/base-ui';
 import type { WorkingDirGitState } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { GitBranchIcon, GitForkIcon, GitPullRequest, RotateCcwIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { electronSystemService } from '@/services/electron/system';
 
 import { gitChipStyles } from './gitChipStyles';
@@ -121,35 +119,33 @@ const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
     return (
       <>
         <div className={gitChipStyles.separator} />
-        <DropdownMenuRoot open={open} onOpenChange={setOpen}>
+        <DropdownMenu open={open} onOpenChange={setOpen}>
           <DropdownMenuTrigger>
             <div>{trigger}</div>
           </DropdownMenuTrigger>
-          <DropdownMenuPortal>
-            <DropdownMenuPositioner placement="topLeft" sideOffset={8}>
-              <DropdownMenuPopup className={styles.popup}>
-                <div className={styles.explanation}>
-                  {t(explanation.key, explanation.values)}
-                  <span className={styles.path}>{worktreePath}</span>
-                </div>
-                {reset && (
-                  <DropdownMenuItem
-                    aria-disabled={resetting}
-                    closeOnClick={false}
-                    onClick={handleReset}
-                  >
-                    <div className={styles.action}>
-                      <span className="anticon" role="img">
-                        <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
-                      </span>
-                      <span>{t('workingDirectory.staleResetToSource', { name: reset.name })}</span>
-                    </div>
-                  </DropdownMenuItem>
-                )}
-              </DropdownMenuPopup>
-            </DropdownMenuPositioner>
-          </DropdownMenuPortal>
-        </DropdownMenuRoot>
+          <DropdownMenuContent align="start" className={styles.popup} side="top" sideOffset={8}>
+            <div>
+              <div className={styles.explanation}>
+                {t(explanation.key, explanation.values)}
+                <span className={styles.path}>{worktreePath}</span>
+              </div>
+              {reset && (
+                <DropdownMenuItem
+                  aria-disabled={resetting}
+                  closeOnClick={false}
+                  onClick={handleReset}
+                >
+                  <div className={styles.action}>
+                    <span className="anticon" role="img">
+                      <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
+                    </span>
+                    <span>{t('workingDirectory.staleResetToSource', { name: reset.name })}</span>
+                  </div>
+                </DropdownMenuItem>
+              )}
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
         {pullRequest && (
           <>
             <div className={gitChipStyles.separator} />

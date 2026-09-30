@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
@@ -54,9 +54,7 @@ const RailCard = memo<RailCardProps>(
   ({ action, children, collapsed = false, count, onCollapsedChange, title }) => {
     const heading = (
       <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
-        <Text ellipsis className={homeType.sectionLabel}>
-          {title}
-        </Text>
+        <div className={cn('truncate', homeType.sectionLabel)}>{title}</div>
         {count !== undefined && <CountBadge count={count} />}
         {onCollapsedChange &&
           createElement(collapsed ? ChevronRightIcon : ChevronDownIcon, {

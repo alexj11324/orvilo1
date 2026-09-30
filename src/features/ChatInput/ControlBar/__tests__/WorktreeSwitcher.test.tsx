@@ -24,21 +24,26 @@ vi.mock('@/services/git', () => ({
   },
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   confirmModal: confirmModalMock,
+}));
+
+vi.mock('@/components/ui/dropdown-menu', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuItem: ({ children, onClick }: { children: ReactNode; onClick?: () => void }) => (
     <button onClick={onClick}>{children}</button>
   ),
-  DropdownMenuPopup: ({ children }: { children: ReactNode }) => <div>{children}</div>,
-  DropdownMenuPortal: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DropdownMenuPositioner: ({ children }: { children: ReactNode }) => <>{children}</>,
-  DropdownMenuRoot: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   DropdownMenuTrigger: ({ children, className }: { children: ReactNode; className?: string }) => (
     <div className={className} data-testid="worktree-dropdown-trigger">
       {children}
     </div>
   ),
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: {
     error: messageErrorMock,
     info: vi.fn(),

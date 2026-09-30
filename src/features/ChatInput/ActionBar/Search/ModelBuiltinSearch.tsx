@@ -1,9 +1,9 @@
 import { Exa, Google } from '@lobehub/icons';
-import { Switch } from '@lobehub/ui/base-ui';
 import { Search } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Switch } from '@/components/ui/switch';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
 import { aiModelSelectors, useAiInfraStore } from '@/store/aiInfra';
@@ -72,7 +72,7 @@ const ModelBuiltinSearch = memo<ModelBuiltinSearchProps>(({ disabled }) => {
         <SearchEngineIcon icon={modelCard?.settings?.searchProvider} />
         {t('search.mode.useModelBuiltin')}
       </div>
-      <Switch checked={checked} disabled={disabled} loading={isLoading} size={'small'} />
+      <Switch checked={checked} disabled={disabled || isLoading} size="sm" />
     </div>
   );
 });

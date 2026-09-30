@@ -1,9 +1,9 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { Maximize2, Minimize2 } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useTopicGroupCollapse } from '@/hooks/useTopicGroupCollapse';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';

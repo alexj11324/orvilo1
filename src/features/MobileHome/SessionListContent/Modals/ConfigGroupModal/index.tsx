@@ -13,7 +13,6 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Plus } from 'lucide-react';
@@ -21,6 +20,7 @@ import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useSessionStore } from '@/store/session';
 import { sessionGroupSelectors } from '@/store/session/selectors';
@@ -111,9 +111,8 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel }) => {
           </SortableContext>
         </DndContext>
         <Button
-          block
+          className="w-full"
           disabled={!canCreate}
-          icon={<Plus size={14} />}
           loading={loading}
           title={createReason}
           onClick={async () => {
@@ -123,6 +122,7 @@ const ConfigGroupModal = memo<ConfigGroupModalProps>(({ open, onCancel }) => {
             setLoading(false);
           }}
         >
+          <Plus data-icon="inline-start" size={14} />
           {t('sessionGroup.createGroup')}
         </Button>
       </div>

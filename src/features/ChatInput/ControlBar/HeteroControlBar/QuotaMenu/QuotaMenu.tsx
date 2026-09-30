@@ -1,14 +1,16 @@
 'use client';
 
-import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { HeteroQuotaWindow } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, GaugeIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { SimpleTooltip } from '../../../SimpleTooltip';
 
@@ -625,9 +627,9 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
           cx(styles.window, exhausted && styles.windowExhausted),
         )}
       >
-        <Text ellipsis className={styles.windowLabel} style={{ fontSize: 12 }}>
+        <div className={cn('truncate', styles.windowLabel)} style={{ fontSize: 12 }}>
           {label}
-        </Text>
+        </div>
         <div className={styles.progressTrack}>
           <div
             className={cx(styles.progressFill, lowQuota && styles.progressFillWarning)}
@@ -635,16 +637,13 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
             style={{ width: `${leftPercent}%` }}
           />
         </div>
-        <Text
-          className={cx(styles.value, lowQuota && styles.valueWarning)}
-          style={{ fontSize: 12 }}
-        >
+        <div className={cx(styles.value, lowQuota && styles.valueWarning)} style={{ fontSize: 12 }}>
           {exhausted ? t('heteroAgent.quota.exhausted') : `${leftPercent}%`}
-        </Text>
+        </div>
         {resetShort && (
-          <Text className={styles.resetShort} style={{ fontSize: 12 }} type="secondary">
+          <div className={cn('text-muted-foreground', styles.resetShort)} style={{ fontSize: 12 }}>
             {resetShort}
-          </Text>
+          </div>
         )}
       </div>
     );
@@ -654,13 +653,13 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
     <div className={cx('flex flex-col gap-2.5', styles.popover)} style={{ width: contentWidth }}>
       <div className={cx('flex flex-row items-center gap-2 justify-between', styles.header)}>
         <div className="flex flex-row items-baseline gap-1.5" style={{ minWidth: 0 }}>
-          <Text strong style={{ fontSize: 13 }}>
+          <div className="font-semibold" style={{ fontSize: 13 }}>
             {title}
-          </Text>
+          </div>
           {quota?.updatedAt && (
-            <Text ellipsis style={{ fontSize: 11 }} type="secondary">
+            <div className="truncate text-muted-foreground" style={{ fontSize: 11 }}>
               {formatUpdatedAt(quota.updatedAt)}
-            </Text>
+            </div>
           )}
         </div>
         <SimpleTooltip title={t('heteroAgent.quota.refresh')}>
@@ -675,9 +674,9 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
 
       {loading && !hasQuotaData ? (
         <div className="flex flex-col gap-2">
-          <Skeleton height={18} />
-          <Skeleton height={18} />
-          <Skeleton height={18} />
+          <Skeleton style={{ height: 18 }} />
+          <Skeleton style={{ height: 18 }} />
+          <Skeleton style={{ height: 18 }} />
         </div>
       ) : quota?.status === 'unavailable' ? (
         <div className={styles.emptyState}>

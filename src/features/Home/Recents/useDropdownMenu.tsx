@@ -1,4 +1,3 @@
-import { confirmModal } from '@lobehub/ui/base-ui';
 import type { RecentItem } from '@orvilo/types';
 import { PencilLineIcon, Trash } from 'lucide-react';
 import { createElement, useCallback } from 'react';
@@ -6,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useDocumentTransferMenuItem } from '@/business/client/hooks/useDocumentTransferMenuItem';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import { confirmModal } from '@/components/Modal';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
 import { FAVORITE_MARK, FAVORITE_MARK_OFF } from '@/features/HomeSidebar/Body/favoriteIcons';
 import { useWorkFavoriteToggle } from '@/features/HomeSidebar/Body/useWorkFavoriteToggle';

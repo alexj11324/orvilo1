@@ -1,9 +1,11 @@
-import { Button, createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { t as translate } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/store/session';
 import { sessionGroupSelectors } from '@/store/session/selectors';
@@ -52,7 +54,7 @@ const RenameGroupContent = memo<RenameGroupContentProps>(({ id }) => {
       </div>
       <ModalFooter>
         <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-        <Button loading={loading} type={'primary'} onClick={handleRename}>
+        <Button loading={loading} variant="default" onClick={handleRename}>
           {t('ok', { defaultValue: 'OK', ns: 'common' })}
         </Button>
       </ModalFooter>

@@ -1,6 +1,5 @@
 'use client';
 
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import {
   type HeterogeneousAgentRuntimeState,
@@ -13,6 +12,7 @@ import { ActivityIcon, CircleAlertIcon, RadioTowerIcon, TimerResetIcon } from 'l
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import HeteroDeviceSwitcher from '@/features/ChatInput/ControlBar/HeteroDeviceSwitcher';
 import WorkspaceControls from '@/features/ChatInput/ControlBar/WorkspaceControls';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';

@@ -1,5 +1,4 @@
 import { CheckCircleFilled } from '@ant-design/icons';
-import { Progress, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CircleAlertIcon, Loader2Icon } from 'lucide-react';
 import { memo } from 'react';
@@ -15,6 +14,29 @@ interface UploadStateProps {
   uploadState?: FileUploadState;
 }
 
+const ProgressRing = ({ percent }: { percent: number }) => {
+  const r = 5.5;
+  const circumference = 2 * Math.PI * r;
+
+  return (
+    <svg aria-hidden height={14} viewBox="0 0 14 14" width={14}>
+      <circle className="stroke-muted" cx={7} cy={7} fill="none" r={r} strokeWidth={2} />
+      <circle
+        className="stroke-primary"
+        cx={7}
+        cy={7}
+        fill="none"
+        r={r}
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference * (1 - Math.min(Math.max(percent, 0), 100) / 100)}
+        strokeLinecap="round"
+        strokeWidth={2}
+        transform="rotate(-90 7 7)"
+      />
+    </svg>
+  );
+};
+
 const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState }) => {
   const { t } = useTranslation('chat');
 
@@ -26,9 +48,9 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
           <span className="anticon animate-spin" role="img">
             <Loader2Icon fill={'transparent'} height={12} size={12} width={12} />
           </span>
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {t('upload.preview.status.pending')}
-          </Text>
+          </div>
         </div>
       );
     }
@@ -36,10 +58,10 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
     case 'uploading': {
       return (
         <div className="flex flex-row items-center gap-1">
-          <Progress percent={uploadState?.progress ?? 0} size={14} type="circle" />
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <ProgressRing percent={uploadState?.progress ?? 0} />
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {formatSize(size * ((uploadState?.progress || 0) / 100), 0)}
-          </Text>
+          </div>
         </div>
       );
     }
@@ -47,10 +69,10 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
     case 'processing': {
       return (
         <div className="flex flex-row items-center gap-1">
-          <Progress percent={uploadState?.progress ?? 0} size={14} type="circle" />
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <ProgressRing percent={uploadState?.progress ?? 0} />
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {formatSize(size)}
-          </Text>
+          </div>
         </div>
       );
     }
@@ -59,9 +81,9 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
       return (
         <div className="flex flex-row items-center gap-1">
           <CheckCircleFilled style={{ color: cssVar.colorSuccess, fontSize: 12 }} />
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {formatSize(size)}
-          </Text>
+          </div>
         </div>
       );
     }
@@ -72,21 +94,21 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
           <span className="anticon" role="img" style={{ color: cssVar.colorError }}>
             <CircleAlertIcon fill={'transparent'} height={12} size={12} width={12} />
           </span>
-          <Text
-            ellipsis={{ tooltip: error }}
+          <div
+            className="truncate"
             style={{ color: cssVar.colorError, fontSize: 12, maxWidth: 110 }}
           >
             {error || t('upload.preview.status.error')}
-          </Text>
+          </div>
         </div>
       );
     }
 
     case 'cancelled': {
       return (
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {t('upload.preview.status.cancelled')}
-        </Text>
+        </div>
       );
     }
   }

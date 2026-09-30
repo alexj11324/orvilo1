@@ -1,10 +1,10 @@
 import { Image } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { RotateCw, Trash } from 'lucide-react';
 import { memo } from 'react';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
+import ActionIcon from '@/components/ActionIcon';
 
 import { MIN_IMAGE_SIZE } from './style';
 

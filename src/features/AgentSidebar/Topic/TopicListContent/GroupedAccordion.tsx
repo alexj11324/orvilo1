@@ -1,11 +1,11 @@
 'use client';
 
-import { AccordionRoot } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal } from 'lucide-react';
 import { type ComponentType, memo, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Accordion } from '@/components/ui/accordion';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useTopicGroupCollapse } from '@/hooks/useTopicGroupCollapse';
@@ -87,16 +87,16 @@ const GroupedAccordion = memo<GroupedAccordionProps>(({ GroupItem }) => {
 
   return (
     <div className="flex flex-col gap-0.5" ref={listRef}>
-      <AccordionRoot
-        indicatorPlacement="inline"
-        style={{ gap: 2 }}
+      <Accordion
+        multiple
+        style={{ display: 'flex', flexDirection: 'column', gap: 2 }}
         value={expandedKeys}
         onValueChange={(next) => setExpandedKeys(next as string[])}
       >
         {groupTopics.map((group) => (
           <GroupItem expanded={expandedKeys.includes(group.id)} group={group} key={group.id} />
         ))}
-      </AccordionRoot>
+      </Accordion>
       {isExpandingPageSize && <SkeletonList rows={3} />}
       {hasMore && !isExpandingPageSize && (
         <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />

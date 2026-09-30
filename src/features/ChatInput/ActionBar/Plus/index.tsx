@@ -1,7 +1,6 @@
 'use client';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
-import { Tag, toast, Upload } from '@lobehub/ui/base-ui';
 import { GlobeOffIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { validateVideoFileSize } from '@orvilo/utils/client';
 import { css, cssVar, cx } from 'antd-style';
@@ -25,7 +24,9 @@ import type { ComponentType, ReactNode } from 'react';
 import { createElement, memo, Suspense, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
+import { Upload } from '@/components/Upload';
 import { openAttachKnowledgeModal } from '@/features/LibraryModal';
 import { useIsDark } from '@/hooks/useIsDark';
 import { useMediaUploadAbility } from '@/hooks/useMediaUploadAbility';
@@ -498,9 +499,9 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
       <span className={cx(gatewayModeLabel)}>
         {/* Brand name — same in every language, so no i18n. */}
         <span className="title">Agent Gateway</span>
-        <Tag color={'info'} size={'small'} variant={'filled'}>
+        <Badge size="sm" variant="secondary">
           {t('gatewayMode.beta')}
-        </Tag>
+        </Badge>
       </span>
     );
 

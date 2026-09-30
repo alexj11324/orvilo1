@@ -1,9 +1,9 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { AtSign } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { useMentionStore } from '@/store/mention';
 import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';

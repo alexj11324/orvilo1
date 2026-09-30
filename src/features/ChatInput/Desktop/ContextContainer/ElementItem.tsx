@@ -1,7 +1,5 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import type { ChatContextContent } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { SquareDashedMousePointer } from 'lucide-react';
 import { memo } from 'react';
 
 import { useChatInputStore } from '@/features/ChatInput/store';
@@ -89,13 +87,18 @@ const ElementItem = memo<ChatContextContent>(({ element, id, preview }) => {
   );
 
   return (
-    <Tag
-      closable
-      icon={<SquareDashedMousePointer size={16} />}
+    <Badge
+      TODO_closable
+      TODO_onClose
+      contextKey
+      contextSelectionKey
+      contextSelectionKey
+      id
+      if
+      removeSelection
+      data-icon="inline-start"
       size={'large'}
-      onClose={() => {
-        if (contextSelectionKey) removeSelection({ contextKey: contextSelectionKey, id });
-      }}
+      variant="secondary"
     >
       <SimpleTooltip title={tooltip}>
         <span>
@@ -103,7 +106,7 @@ const ElementItem = memo<ChatContextContent>(({ element, id, preview }) => {
           <span className={styles.name}>{preview}</span>
         </span>
       </SimpleTooltip>
-    </Tag>
+    </Badge>
   );
 });
 

@@ -1,10 +1,11 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { LucideCopy, Pen, PictureInPicture2Icon, Pin, PinOff, Trash } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAgentGroupTransferMenuItem } from '@/business/client/hooks/useAgentGroupTransferMenuItem';
 import { useAgentGroupTransferToMemberMenuItem } from '@/business/client/hooks/useAgentGroupTransferToMemberMenuItem';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { openEditingPopover } from '@/features/EditingPopover/store';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';

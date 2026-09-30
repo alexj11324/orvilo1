@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon, DrawerPopup, DrawerPortal, DrawerRoot, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, Suspense, useEffect, useState } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 
 import SkeletonList from './components/SkeletonList';
@@ -81,14 +81,12 @@ const SideBarDrawer = memo<SideBarDrawerProps>(
                 showBack={false}
                 left={
                   typeof title === 'string' ? (
-                    <Text
-                      ellipsis
-                      fontSize={14}
+                    <div
+                      className="truncate text-[14px] font-[400]"
                       style={{ fontWeight: 600, paddingLeft: 8 }}
-                      weight={400}
                     >
                       {title}
-                    </Text>
+                    </div>
                   ) : (
                     title
                   )

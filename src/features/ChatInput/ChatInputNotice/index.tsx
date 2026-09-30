@@ -1,9 +1,10 @@
 'use client';
 
-import { Alert } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Alert, AlertTitle } from '@/components/ui/alert';
 
 import { useChatInputNotice } from './useChatInputNotice';
 
@@ -64,12 +65,12 @@ const ChatInputNotice = memo(() => {
 
   return (
     <Alert
-      classNames={{ alert: cx(styles.alert), title: styles.title }}
+      className={styles.alert}
       style={alertStyle}
-      title={t(notice.key)}
-      type={notice.type}
-      variant={'borderless'}
-    />
+      variant={notice.type === 'error' ? 'destructive' : notice.type}
+    >
+      <AlertTitle className={styles.title}>{t(notice.key)}</AlertTitle>
+    </Alert>
   );
 });
 

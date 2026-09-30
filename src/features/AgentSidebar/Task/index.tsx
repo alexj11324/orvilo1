@@ -1,21 +1,12 @@
 'use client';
 
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionRoot,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
-import { cx } from 'antd-style';
 import { ArrowRight } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Accordion, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useClientDataSWR } from '@/libs/swr';
@@ -77,14 +68,8 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
 
   const titleNode = (
     <div className="flex items-center gap-1">
-      <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-        {t('tab.tasks')}
-      </Text>
-      {totalTasks > 0 && (
-        <Text fontSize={11} type="secondary">
-          {totalTasks}
-        </Text>
-      )}
+      <div className="truncate text-[12px] text-muted-foreground font-medium">{t('tab.tasks')}</div>
+      {totalTasks > 0 && <div className="text-[11px] text-muted-foreground">{totalTasks}</div>}
     </div>
   );
 
@@ -98,25 +83,23 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
   );
 
   const header = (
-    <AccordionHeader>
-      <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-        {titleNode}
-      </AccordionTrigger>
-      <div
-        className={cx('accordion-action', accordionStyles.action, accordionStyles.actionBorderless)}
-      >
-        {actionNode}
+    <div className="flex items-center">
+      <div className="min-w-0 flex-1">
+        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
+          {titleNode}
+        </AccordionTrigger>
       </div>
-    </AccordionHeader>
+      <div className="flex shrink-0 items-center">{actionNode}</div>
+    </div>
   );
 
   if (isLoading && taskGroups.length === 0) {
     return (
       <AccordionItem value={itemKey}>
         {header}
-        <AccordionPanel contentStyle={{ padding: 0 }}>
+        <AccordionContent className="[&>div]:p-0">
           <SkeletonList />
-        </AccordionPanel>
+        </AccordionContent>
       </AccordionItem>
     );
   }
@@ -124,23 +107,23 @@ const TaskList = memo<TaskListProps>(({ itemKey }) => {
   return (
     <AccordionItem value={itemKey}>
       {header}
-      <AccordionPanel contentStyle={{ padding: 0 }}>
+      <AccordionContent className="[&>div]:p-0">
         {orderedGroups.length === 0 ? (
-          <Text fontSize={12} style={{ padding: '8px 12px' }} type="secondary">
+          <div className="text-[12px] text-muted-foreground" style={{ padding: '8px 12px' }}>
             {t('taskList.kanban.emptyColumn')}
-          </Text>
+          </div>
         ) : (
-          <AccordionRoot
+          <Accordion
+            multiple
             defaultValue={orderedGroups.map((g) => g.key)}
-            indicatorPlacement="inline"
-            style={{ gap: 2 }}
+            style={{ display: 'flex', flexDirection: 'column', gap: 2 }}
           >
             {orderedGroups.map((group) => (
               <StatusGroup group={group} key={group.key} />
             ))}
-          </AccordionRoot>
+          </Accordion>
         )}
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

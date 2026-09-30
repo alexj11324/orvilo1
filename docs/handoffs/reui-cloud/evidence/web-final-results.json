@@ -1,0 +1,24 @@
+{
+  "collapsedPersistsReload": true,
+  "drawers": [
+    {
+      "desktopExpanded": true,
+      "openCloseReopen": true,
+      "settingsContent": true,
+      "restored": true
+    },
+    {
+      "desktopExpanded": false,
+      "openCloseReopen": true,
+      "settingsContent": true,
+      "restored": true
+    }
+  ],
+  "keyboardExpandFocusType": true,
+  "platform": "web",
+  "revision": "15466979a6320f531071a6eca272bae4962d3d90",
+  "url": "http://localhost:32457/settings/profile",
+  "workspaceMenu": "Organizations\nA\nAgent Testing User's workspace\nAccount\nAccount\nDocumentation\nWorkspace Settings\nGet App\nTheme\nSign Out",
+  "workspaceReloadRoute": "http://localhost:32457/tasks",
+  "workspaceSelectedRoute": "http://localhost:32457/ws-useragenttes"
+}

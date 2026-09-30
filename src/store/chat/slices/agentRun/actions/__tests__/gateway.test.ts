@@ -785,6 +785,63 @@ describe('GatewayActionImpl', () => {
       });
     });
 
+    it.each([null, 'another-topic', 'topic-created'])(
+      'preserves the current topic %s when creation reconciliation finishes late',
+      async (currentTopicId) => {
+        const {
+          action,
+          state,
+          internalReplaceTopicId,
+          switchTopic,
+          refreshTopic,
+          replaceMessages,
+        } = createExecuteTestAction();
+        state.activeTopicId = 'tmp-topic';
+        internalReplaceTopicId.mockImplementation(({ previousId, nextId }) => {
+          if (state.activeTopicId === previousId) state.activeTopicId = nextId;
+        });
+        vi.mocked(aiAgentService.execAgentTask).mockResolvedValue({
+          agentId: 'agent-1',
+          assistantMessageId: 'ast-1',
+          autoStarted: true,
+          createdAt: new Date().toISOString(),
+          message: 'ok',
+          operationId: 'server-op-1',
+          status: 'created',
+          success: true,
+          timestamp: new Date().toISOString(),
+          token: 'test-token',
+          topicId: 'topic-created',
+          userMessageId: 'usr-1',
+        });
+        let finishMessages!: (messages: []) => void;
+        vi.mocked(messageService.getMessages).mockReturnValueOnce(
+          new Promise((resolve) => {
+            finishMessages = resolve;
+          }),
+        );
+        const request = action.executeGatewayAgent({
+          context: { agentId: 'agent-1', topicId: null, threadId: null, scope: 'main' },
+          message: 'Hello',
+          optimisticTopic: { id: 'tmp-topic', title: 'Hello' },
+        });
+        await vi.waitFor(() => expect(internalReplaceTopicId).toHaveBeenCalled());
+        state.activeTopicId = currentTopicId;
+        finishMessages([]);
+        await request;
+        if (currentTopicId === 'topic-created') {
+          expect(switchTopic).toHaveBeenCalledWith('topic-created', {
+            clearNewKey: true,
+            skipRefreshMessage: true,
+          });
+        } else {
+          expect(switchTopic).not.toHaveBeenCalled();
+        }
+        expect(replaceMessages).toHaveBeenCalled();
+        expect(refreshTopic).toHaveBeenCalled();
+      },
+    );
+
     it('should replace the optimistic topic placeholder with the server topic id', async () => {
       const { action, internalReplaceTopicId } = createExecuteTestAction();
 

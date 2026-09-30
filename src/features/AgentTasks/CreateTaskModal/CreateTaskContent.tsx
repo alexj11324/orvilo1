@@ -229,7 +229,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     }, [editor]);
 
     const handleSubmit = useCallback(async () => {
-      if (!canCreateTask) return;
+      if (!canCreateTask || useTaskStore.getState().isCreatingTask) return;
       const instruction = instructionRef.current.trim();
       const hasFiles = getAttachmentFileIdsFromEditor(editor).length > 0;
       if (!instruction && !title.trim() && !hasFiles) return;
@@ -283,6 +283,8 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
       t,
       pickedTeamId,
       title,
+      status,
+      workflowCategory,
       visibility,
     ]);
 

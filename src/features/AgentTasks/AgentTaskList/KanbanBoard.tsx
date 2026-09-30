@@ -63,6 +63,7 @@ import {
   kanbanColumnCreatePreset,
   type KanbanColumnDefinition,
   kanbanColumnMoveScope,
+  kanbanColumnPagingAction,
   kanbanCreateTaskProjectId,
   kanbanStatusColumnsExcludedBy,
   makeKanbanCollision,
@@ -204,6 +205,7 @@ interface KanbanBoardProps {
    * to agents (active execution grant) — My Work's Delegated tab.
    */
   myTaskScope?: 'assigned' | 'created' | 'delegated';
+  onViewAll?: () => void;
   options: TaskListViewOptions;
   /** `null` narrows to tasks with no project — My Work's "No project" chip. */
   projectId?: string | null;
@@ -217,6 +219,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     emptyDescription,
     external,
     myTaskScope,
+    onViewAll,
     options,
     projectId,
     routeScope,
@@ -874,6 +877,11 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           // A failed column page keeps its cards — the retry lives in that
           // column's footer where the load-more button would sit.
           const columnLoadError = external?.loadMoreGroupError?.(col.key);
+          const pagingAction = kanbanColumnPagingAction({
+            atLimit:
+              (boardGroupLimits[col.key] ?? KANBAN_GROUP_PAGE_SIZE) >= kanbanGroupLimitCap(groupBy),
+            external: Boolean(external),
+          });
           return (
             <KanbanColumn
               columnKey={col.key}
@@ -899,18 +907,19 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
                   <button
                     data-no-board-pan
                     className={styles.loadMore}
+                    disabled={pagingAction === 'viewAll' && !onViewAll}
                     type="button"
-                    disabled={
-                      !external &&
-                      (boardGroupLimits[col.key] ?? KANBAN_GROUP_PAGE_SIZE) >=
-                        kanbanGroupLimitCap(groupBy)
-                    }
-                    onClick={() => loadMoreGroup(col.key)}
+                    onClick={pagingAction === 'viewAll' ? onViewAll : () => loadMoreGroup(col.key)}
                   >
-                    {t('taskList.kanban.loadMore', {
-                      shown: columnTasks.length,
-                      total: group.total,
-                    })}
+                    {t(
+                      pagingAction === 'viewAll'
+                        ? 'taskList.kanban.viewAllInList'
+                        : 'taskList.kanban.loadMore',
+                      {
+                        shown: columnTasks.length,
+                        total: group.total,
+                      },
+                    )}
                   </button>
                 ) : undefined
               }

@@ -1,15 +1,28 @@
 /**
  * @vitest-environment happy-dom
  */
-import { fireEvent, render, screen } from '@testing-library/react';
+import { toast } from '@lobehub/ui/base-ui';
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import type * as React from 'react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Nav from './Nav';
 
+vi.mock('react', async (importOriginal) => {
+  const actual = await importOriginal<typeof React>();
+  return { ...actual, memo: (component: unknown) => component };
+});
+
+vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
+  const actual = await importOriginal<{ toast: Record<string, unknown> }>();
+  return { ...actual, toast: { ...actual.toast, error: vi.fn() } };
+});
+
 const mutateMock = vi.hoisted(() => vi.fn());
 const openNewTopicOrSaveTopicMock = vi.hoisted(() => vi.fn());
 const pushMock = vi.hoisted(() => vi.fn());
+const chatState = vi.hoisted(() => ({ activeTopicId: undefined as string | undefined }));
 const switchTopicMock = vi.hoisted(() => vi.fn());
 const toggleCommandMenuMock = vi.hoisted(() => vi.fn());
 const useParamsMock = vi.hoisted(() => vi.fn());
@@ -85,16 +98,15 @@ vi.mock('@/store/agent', () => ({
 }));
 
 vi.mock('@/store/chat', () => ({
-  useChatStore: (
-    selector: (state: {
-      openNewTopicOrSaveTopic: () => void;
-      switchTopic: (topicId: string | null, options?: unknown) => void;
-    }) => unknown,
-  ) =>
-    selector({
-      openNewTopicOrSaveTopic: openNewTopicOrSaveTopicMock,
-      switchTopic: switchTopicMock,
-    }),
+  useChatStore: Object.assign(
+    (selector: (state: Record<string, unknown>) => unknown) =>
+      selector({
+        ...chatState,
+        openNewTopicOrSaveTopic: openNewTopicOrSaveTopicMock,
+        switchTopic: switchTopicMock,
+      }),
+    { getState: () => chatState },
+  ),
 }));
 
 vi.mock('@/store/global', () => ({
@@ -126,7 +138,8 @@ vi.mock('@/store/user/selectors', () => ({
 
 describe('Agent sidebar header nav', () => {
   beforeEach(() => {
-    mutateMock.mockReset();
+    chatState.activeTopicId = undefined;
+    mutateMock.mockReset().mockImplementation((data) => data);
     openNewTopicOrSaveTopicMock.mockReset();
     pushMock.mockReset();
     switchTopicMock.mockReset();
@@ -141,7 +154,7 @@ describe('Agent sidebar header nav', () => {
     useParamsMock.mockReturnValue({ aid: 'agt_eH4zL98zBx5u', topicId: 'tpc_2FCHvjS7d4CA' });
   });
 
-  it('returns to the agent chat route before opening a new topic from a topic page document route', () => {
+  it('returns to the agent chat route after opening a new topic from a topic page document route', async () => {
     usePathnameMock.mockReturnValue(
       '/agent/agt_eH4zL98zBx5u/tpc_2FCHvjS7d4CA/page/docs_9B8hFkmEOZyPZb60',
     );
@@ -150,19 +163,94 @@ describe('Agent sidebar header nav', () => {
 
     fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
 
-    expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u');
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u'));
     expect(mutateMock).toHaveBeenCalledTimes(1);
   });
 
-  it('pushes the agent chat route even when already on it', () => {
+  it('pushes the agent chat route even when already on it', async () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
     render(<Nav />);
 
     fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
 
-    expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u');
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u'));
     expect(mutateMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('waits for the topic action before navigating away from its source conversation', async () => {
+    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tpc_old');
+    let complete!: () => void;
+    const pending = new Promise<void>((resolve) => {
+      complete = resolve;
+    });
+    mutateMock.mockReturnValue(pending);
+    openNewTopicOrSaveTopicMock.mockReturnValue(pending);
+    render(<Nav />);
+    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
+    expect(pushMock).not.toHaveBeenCalled();
+    await act(async () => {
+      complete();
+    });
+    await waitFor(() => expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u'));
+  });
+
+  it('does not overwrite a newer topic started while the blank-topic refresh is pending', async () => {
+    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tpc_old');
+    let complete!: () => void;
+    openNewTopicOrSaveTopicMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        complete = resolve;
+      }),
+    );
+    render(<Nav />);
+    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
+    chatState.activeTopicId = 'tpc_new_send';
+    await act(async () => {
+      complete();
+    });
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('does not overwrite a newer navigation while the topic action is pending', async () => {
+    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tpc_old');
+    let complete!: () => void;
+    openNewTopicOrSaveTopicMock.mockReturnValue(
+      new Promise<void>((resolve) => {
+        complete = resolve;
+      }),
+    );
+    const { rerender } = render(<Nav />);
+    fireEvent.click(screen.getByRole('button', { name: 'actions.addNewTopic' }));
+    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tasks');
+    rerender(<Nav />);
+    await act(async () => {
+      complete();
+    });
+    expect(pushMock).not.toHaveBeenCalled();
+  });
+
+  it('keeps the source route on failure and allows retry without duplicating pending actions', async () => {
+    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u/tpc_old');
+    let reject!: (error: Error) => void;
+    const pending = new Promise<void>((_, fail) => {
+      reject = fail;
+    });
+    openNewTopicOrSaveTopicMock.mockReturnValueOnce(pending);
+    render(<Nav />);
+    const button = screen.getByRole('button', { name: 'actions.addNewTopic' });
+    fireEvent.click(button);
+    fireEvent.click(button);
+    expect(openNewTopicOrSaveTopicMock).toHaveBeenCalledTimes(1);
+    await act(async () => {
+      reject(new Error('offline'));
+    });
+    expect(pushMock).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith('unknownError');
+    expect(button).not.toBeDisabled();
+    fireEvent.click(button);
+    await waitFor(() => expect(pushMock).toHaveBeenCalledTimes(1));
+    expect(openNewTopicOrSaveTopicMock).toHaveBeenCalledTimes(2);
   });
 
   it('disables starting a new topic for workspace viewers', () => {

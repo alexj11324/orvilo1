@@ -7,7 +7,10 @@ import { RotateCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Link from '@/components/Link';
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
+
+import { recoverAuthentication } from './recoverAuthentication';
 
 /**
  * The error counterpart to the loading family (`NeuralNetworkLoading`,
@@ -79,9 +82,43 @@ const AsyncError = memo<AsyncErrorProps>(
     // Status-specific copy when we recovered a status, else the generic reason.
     const reason =
       description ??
-      (status ? t(`response.${status}` as any, t('asyncState.desc')) : t('asyncState.desc'));
-    const heading = title ?? t('asyncState.title');
+      (status === 401
+        ? t('asyncState.signInDesc')
+        : status === 403
+          ? t('forbidden.desc')
+          : status
+            ? t(`response.${status}` as any, t('asyncState.desc'))
+            : t('asyncState.desc'));
+    const heading =
+      title ??
+      (status === 401
+        ? t('asyncState.signInRequired')
+        : status === 403
+          ? t('forbidden.title')
+          : t('asyncState.title'));
     const showRetry = !!onRetry && retryable;
+    const recoveryAction =
+      action ??
+      (status === 401 ? (
+        <Button size={'small'} onClick={recoverAuthentication}>
+          {t('asyncState.signIn')}
+        </Button>
+      ) : status === 403 ? (
+        <Link href={'/'}>{t('forbidden.backHome')}</Link>
+      ) : showRetry ? (
+        <Button
+          disabled={retrying}
+          loading={retrying}
+          size={'small'}
+          type={variant === 'inline' || variant === 'metric' ? 'text' : undefined}
+          icon={
+            variant === 'block' || variant === 'page' ? <Icon icon={RotateCwIcon} /> : undefined
+          }
+          onClick={onRetry}
+        >
+          {t('error.retry')}
+        </Button>
+      ) : null);
 
     // ─── metric: a failed marker where a number would render (never a fake $0) ───
     if (variant === 'metric') {
@@ -91,17 +128,7 @@ const AsyncError = memo<AsyncErrorProps>(
           <Text color={cssVar.colorTextQuaternary} fontSize={13}>
             {t('asyncState.metricLabel')}
           </Text>
-          {showRetry && (
-            <Button
-              disabled={retrying}
-              loading={retrying}
-              size={'small'}
-              type={'text'}
-              onClick={onRetry}
-            >
-              {t('error.retry')}
-            </Button>
-          )}
+          {recoveryAction}
         </Flexbox>
       );
     }
@@ -114,17 +141,7 @@ const AsyncError = memo<AsyncErrorProps>(
           <Text color={cssVar.colorTextSecondary} fontSize={13}>
             {heading}
           </Text>
-          {showRetry && (
-            <Button
-              disabled={retrying}
-              loading={retrying}
-              size={'small'}
-              type={'text'}
-              onClick={onRetry}
-            >
-              {t('error.retry')}
-            </Button>
-          )}
+          {recoveryAction}
         </Flexbox>
       );
     }
@@ -150,18 +167,7 @@ const AsyncError = memo<AsyncErrorProps>(
             {reason}
           </Text>
         </Flexbox>
-        {action ??
-          (showRetry && (
-            <Button
-              disabled={retrying}
-              icon={<Icon icon={RotateCwIcon} />}
-              loading={retrying}
-              size={'small'}
-              onClick={onRetry}
-            >
-              {t('error.retry')}
-            </Button>
-          ))}
+        {recoveryAction}
       </Center>
     );
   },

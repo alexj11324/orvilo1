@@ -2350,6 +2350,7 @@ export default {
   'taskList.kanban.hideColumn': 'Hide column',
   'taskList.kanban.inProgress': 'In progress',
   'taskList.kanban.inReview': 'In review',
+  'taskList.kanban.viewAllInList': 'View all in list ({{shown}}/{{total}} shown)',
   'taskList.kanban.loadMore': 'Load more ({{shown}}/{{total}})',
   'taskList.kanban.paused': 'Paused',
   'taskList.kanban.needsInput': 'Pending review',

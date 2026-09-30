@@ -146,9 +146,7 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
           currentAgentId={task.assignee?.id ?? null}
           taskIdentifier={task.identifier}
           taskVisibility={task.visibility}
-          onHandoff={
-            isRunning ? (agentId) => void handoffTask(task.identifier, agentId) : undefined
-          }
+          onHandoff={isRunning ? (agentId) => handoffTask(task.identifier, agentId) : undefined}
         >
           <span
             style={{

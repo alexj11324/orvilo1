@@ -30,6 +30,8 @@ import {
   sweepAuthoritativeMcpEventInbox,
   sweepMcpEventInbox,
 } from '@/server/services/mcpEvents/runtime';
+import { McpEventWorker } from '@/server/services/mcpEvents/worker';
+import { SqlMcpEventWorkRepository } from '@/server/services/mcpEvents/workerRepository';
 
 const isolation = {
   credentialsExcluded: true,
@@ -243,6 +245,85 @@ describe('authoritative MCP event sweep', () => {
       .from(mcpEventTriggerRuns)
       .where(eq(mcpEventTriggerRuns.tenantId, tenantId));
     expect(runs).toEqual([{ reason: 'revoked', status: 'denied' }]);
+  });
+
+  it('does not let an expired lease settle or create a second dispatch', async () => {
+    let clock = Date.now();
+    const real = createCoreEventDispatchAdmission({ db, isolation, now: () => clock });
+    const sql = createMcpEventsSql(db);
+    const expired = await new McpEventWorker({
+      admission: {
+        async admit(request) {
+          const result = await real.admit(request);
+          clock += 10_000;
+          return result;
+        },
+      },
+      inbox: new SqlMcpEventInbox(sql),
+      leaseMs: 1_000,
+      now: () => clock,
+      repository: new SqlMcpEventWorkRepository(sql),
+    }).pump();
+    expect(expired).toMatchObject({ claimed: 1, completed: 0, retried: 0 });
+    const created = await db
+      .select({ id: taskDispatches.id })
+      .from(taskDispatches)
+      .where(eq(taskDispatches.taskId, taskId));
+    expect(created).toHaveLength(1);
+    expect(await inboxStatus()).toMatchObject({ status: 'processing' });
+
+    const resumed = await new McpEventWorker({
+      admission: real,
+      inbox: new SqlMcpEventInbox(sql),
+      now: () => clock,
+      repository: new SqlMcpEventWorkRepository(sql),
+    }).pump();
+    expect(resumed).toMatchObject({ claimed: 1, completed: 1, retried: 0 });
+    expect(
+      await db
+        .select({ id: taskDispatches.id })
+        .from(taskDispatches)
+        .where(eq(taskDispatches.taskId, taskId)),
+    ).toEqual(created);
+    expect(await db.select().from(taskTopics).where(eq(taskTopics.taskId, taskId))).toEqual([]);
+  });
+
+  it('keeps one dispatch and the receipt when a lost acknowledgement exhausts retries', async () => {
+    const real = createCoreEventDispatchAdmission({ db, isolation });
+    const sql = createMcpEventsSql(db);
+    const exhausted = await new McpEventWorker({
+      admission: {
+        async admit(request) {
+          await real.admit(request);
+          throw new Error('admission acknowledgement lost');
+        },
+      },
+      inbox: new SqlMcpEventInbox(sql),
+      maxAttempts: 1,
+      repository: new SqlMcpEventWorkRepository(sql),
+    }).pump();
+    expect(exhausted).toMatchObject({ claimed: 1, completed: 0, retried: 1 });
+    expect(await inboxStatus()).toMatchObject({ status: 'dead' });
+    expect(
+      await db
+        .select({ id: taskDispatches.id })
+        .from(taskDispatches)
+        .where(eq(taskDispatches.taskId, taskId)),
+    ).toHaveLength(1);
+    expect(
+      await db
+        .select({ status: mcpEventTriggerRuns.status })
+        .from(mcpEventTriggerRuns)
+        .where(eq(mcpEventTriggerRuns.tenantId, tenantId)),
+    ).toEqual([{ status: 'pending' }]);
+    expect(
+      await new McpEventWorker({
+        admission: real,
+        inbox: new SqlMcpEventInbox(sql),
+        repository: new SqlMcpEventWorkRepository(sql),
+      }).pump(),
+    ).toMatchObject({ claimed: 0, completed: 0, retried: 0 });
+    expect(await db.select().from(taskTopics).where(eq(taskTopics.taskId, taskId))).toEqual([]);
   });
 });
 

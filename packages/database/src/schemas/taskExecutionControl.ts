@@ -70,7 +70,7 @@ export const taskExecutionHandoffs = pgTable(
   ],
 );
 
-/** Isolated acceptance DDL, not an installed production migration. */
+/** Same shape as journal 0199. Fixtures still apply it explicitly; production startup does not. */
 export const TASK_EXECUTION_CONTROL_CANDIDATE_SQL = `
 ALTER TABLE task_topics ADD COLUMN IF NOT EXISTS execution_control jsonb;
 ALTER TABLE task_topics ADD COLUMN IF NOT EXISTS execution_control_revision integer NOT NULL DEFAULT 0;

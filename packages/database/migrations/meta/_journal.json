@@ -1392,6 +1392,13 @@
       "when": 1790794374893,
       "tag": "0198_mcp_events",
       "breakpoints": true
+    },
+    {
+      "idx": 199,
+      "version": "7",
+      "when": 1790795715648,
+      "tag": "0199_core_execution_authority",
+      "breakpoints": true
     }
   ]
 }

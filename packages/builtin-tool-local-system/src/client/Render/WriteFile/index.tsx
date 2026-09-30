@@ -1,4 +1,4 @@
-import { Markdown, PatchDiff } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -7,6 +7,7 @@ import path from 'path-browserify-esm';
 import { memo } from 'react';
 
 import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
+import { CodeBlock } from '@/components/ui/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 import { LocalFile, LocalFolder } from '@/features/LocalFile';
 
@@ -20,18 +21,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     background: ${cssVar.colorFillTertiary};
   `,
 }));
-
-const buildNewFilePatch = (filePath: string, content: string) => {
-  const hasTrailingNewline = content.endsWith('\n');
-  const lines = content.split('\n');
-  const bodyLines = hasTrailingNewline ? lines.slice(0, -1) : lines;
-  const lineCount = bodyLines.length;
-  const header = `--- /dev/null\n+++ b/${filePath}\n@@ -0,0 +1,${lineCount} @@\n`;
-  const body = bodyLines.map((line) => `+${line}`).join('\n');
-  return hasTrailingNewline
-    ? `${header}${body}\n`
-    : `${header}${body}\n\\ No newline at end of file\n`;
-};
 
 type WriteFileArgs = WriteLocalFileParams & {
   file_path?: string;
@@ -55,18 +44,18 @@ const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
   const isHtml = isHtmlFile({ path: filePath });
   const isMarkdown = ext === 'md' || ext === 'mdx';
 
-  // Code-type files render as a "new file" unified diff so the visual is
-  // consistent with EditLocalFile's PatchDiff. Markdown keeps its rendered
+  // Code-type files render as a "new file" diff so the visual is
+  // consistent with EditLocalFile. Markdown keeps its rendered
   // preview because a rendered doc reads better than an all-green diff.
   if (!isMarkdown && !isHtml && args.content) {
+    const code = args.content.replace(/\n$/, '');
     return (
-      <PatchDiff
-        fileName={base}
+      <CodeBlock
+        showLineNumbers
+        code={code}
+        diff={{ added: `1-${code.split('\n').length}` }}
         language={ext || undefined}
-        patch={buildNewFilePatch(filePath, args.content)}
-        showHeader={false}
-        variant={'borderless'}
-        viewMode={'unified'}
+        variant="ghost"
       />
     );
   }

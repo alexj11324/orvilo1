@@ -1,4 +1,4 @@
-import { and, eq, isNull, lte } from 'drizzle-orm';
+import { and, eq, isNull, lte, or } from 'drizzle-orm';
 
 import type { NewTaskReminder, TaskReminderItem } from '../schemas/taskReminder';
 import { taskReminders } from '../schemas/taskReminder';
@@ -29,7 +29,9 @@ export class TaskReminderModel {
       .onConflictDoUpdate({
         set: {
           // A re-set is a fresh fire time — delivery state resets with it.
+          attemptCount: 0,
           deliveredAt: null,
+          nextAttemptAt: null,
           remindAt,
           updatedAt: new Date(),
           workspaceId: this.workspaceId ?? null,
@@ -52,7 +54,13 @@ export class TaskReminderModel {
     const [row] = await this.db
       .select()
       .from(taskReminders)
-      .where(and(eq(taskReminders.taskId, taskId), eq(taskReminders.userId, this.userId)))
+      .where(
+        and(
+          eq(taskReminders.taskId, taskId),
+          eq(taskReminders.userId, this.userId),
+          isNull(taskReminders.deliveredAt),
+        ),
+      )
       .limit(1);
     return row ?? null;
   };
@@ -72,7 +80,13 @@ export const claimDueTaskReminders = async (
   const rows = await executor
     .select()
     .from(taskReminders)
-    .where(and(isNull(taskReminders.deliveredAt), lte(taskReminders.remindAt, options.now)))
+    .where(
+      and(
+        isNull(taskReminders.deliveredAt),
+        lte(taskReminders.remindAt, options.now),
+        or(isNull(taskReminders.nextAttemptAt), lte(taskReminders.nextAttemptAt, options.now)),
+      ),
+    )
     .orderBy(taskReminders.remindAt)
     .limit(options.limit ?? REMINDER_SWEEP_BATCH)
     .for('update', { skipLocked: true });
@@ -86,6 +100,18 @@ export const markTaskReminderDelivered = async (
   await executor
     .update(taskReminders)
     .set({ deliveredAt: new Date(), updatedAt: new Date() })
+    .where(eq(taskReminders.id, id));
+};
+
+export const recordTaskReminderAttempt = async (
+  executor: Transaction | OrviloDatabase,
+  id: string,
+  attemptCount: number,
+  nextAttemptAt: Date,
+): Promise<void> => {
+  await executor
+    .update(taskReminders)
+    .set({ attemptCount, nextAttemptAt, updatedAt: new Date() })
     .where(eq(taskReminders.id, id));
 };
 

@@ -1,0 +1,2 @@
+ALTER TABLE "task_reminders" ADD COLUMN IF NOT EXISTS "attempt_count" integer DEFAULT 0 NOT NULL;--> statement-breakpoint
+ALTER TABLE "task_reminders" ADD COLUMN IF NOT EXISTS "next_attempt_at" timestamp with time zone;

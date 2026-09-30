@@ -3,7 +3,11 @@ import debug from 'debug';
 import { NotificationModel } from '@/database/models/notification';
 import { allocateFeedRevision } from '@/database/models/notificationFeed';
 import { TaskModel } from '@/database/models/task';
-import { claimDueTaskReminders, markTaskReminderDelivered } from '@/database/models/taskReminder';
+import {
+  claimDueTaskReminders,
+  markTaskReminderDelivered,
+  recordTaskReminderAttempt,
+} from '@/database/models/taskReminder';
 import { getServerDB } from '@/database/server';
 import type { OrviloDatabase } from '@/database/type';
 
@@ -27,19 +31,34 @@ const log = debug('orvilo-server:task-reminder:sweep');
  *
  * Each row runs inside a nested savepoint so a poisoned row (bad notification
  * payload, constraint violation, ...) rolls back only its own writes, not the
- * batch's other deliveries. The failed row is then stamped `deliveredAt` in
- * the outer transaction — a reminder that throws every sweep must leave the
- * pending index instead of retrying forever at the head of `remindAt ASC`
- * ordering and starving every row queued behind it.
+ * batch's other deliveries. A thrown row is rescheduled on a bounded
+ * exponential backoff (`attemptCount`/`nextAttemptAt`) so transient failures
+ * retry without holding up the batch; once it exhausts MAX_ATTEMPTS it is
+ * stamped `deliveredAt` — a permanently bad row must leave the pending index
+ * instead of retrying forever at the head of `remindAt ASC` ordering and
+ * starving every row queued behind it.
  */
+const MAX_ATTEMPTS = 8;
+const RETRY_BASE_MS = 60_000;
+const RETRY_MAX_DELAY_MS = 30 * 60_000;
+
+const retryDelayMs = (attempt: number) =>
+  Math.min(RETRY_BASE_MS * 2 ** (attempt - 1), RETRY_MAX_DELAY_MS);
 export const runTaskReminderSweep = async (
   options: { now?: Date } = {},
-): Promise<{ claimed: number; delivered: number; skipped: number; failed: number }> => {
+): Promise<{
+  claimed: number;
+  delivered: number;
+  skipped: number;
+  failed: number;
+  retrying: number;
+}> => {
   const db = await getServerDB();
   const now = options.now ?? new Date();
   let delivered = 0;
   let skipped = 0;
   let failed = 0;
+  let retrying = 0;
 
   const claimed = await db.transaction(async (tx) => {
     const executor = tx as OrviloDatabase;
@@ -92,20 +111,45 @@ export const runTaskReminderSweep = async (
           if (notification) delivered += 1;
         });
       } catch (error) {
-        // Poisoned row: the savepoint already rolled back its partial writes.
-        // Stamp it delivered in the outer transaction — a row that throws
-        // every sweep must not retry forever and starve the rows queued
-        // behind it (claims order by remindAt ASC, so the oldest pending row
-        // is always processed first).
-        failed += 1;
-        log('sweep: reminder %s delivery failed; stamping delivered: %o', row.id, error);
-        await markTaskReminderDelivered(executor, row.id);
+        // The savepoint already rolled back this row's writes. Reschedule on
+        // a bounded backoff; after the attempt cap the row is stamped
+        // delivered so it leaves the pending index rather than starving the
+        // rows queued behind it (claims order by remindAt ASC).
+        const attempt = row.attemptCount + 1;
+        if (attempt >= MAX_ATTEMPTS) {
+          failed += 1;
+          log(
+            'sweep: reminder %s gave up after %d attempts; stamping delivered: %o',
+            row.id,
+            attempt,
+            error,
+          );
+          await markTaskReminderDelivered(executor, row.id);
+        } else {
+          retrying += 1;
+          const nextAttemptAt = new Date(now.getTime() + retryDelayMs(attempt));
+          log(
+            'sweep: reminder %s attempt %d failed; next attempt at %s: %o',
+            row.id,
+            attempt,
+            nextAttemptAt.toISOString(),
+            error,
+          );
+          await recordTaskReminderAttempt(executor, row.id, attempt, nextAttemptAt);
+        }
       }
     }
 
     return rows.length;
   });
 
-  log('sweep: claimed=%d delivered=%d skipped=%d failed=%d', claimed, delivered, skipped, failed);
-  return { claimed, delivered, skipped, failed };
+  log(
+    'sweep: claimed=%d delivered=%d skipped=%d retrying=%d failed=%d',
+    claimed,
+    delivered,
+    skipped,
+    retrying,
+    failed,
+  );
+  return { claimed, delivered, skipped, failed, retrying };
 };

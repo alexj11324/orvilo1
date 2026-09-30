@@ -80,3 +80,11 @@ Docker tree termination is covered separately by supervisor and Core host tests.
 
 All scoped fault triggers are dropped in `finally`; fixture rows are cleaned using
 their own workspace/user IDs. The two test files pass repository scoped lint.
+
+## Canonical session observations
+
+`CanonicalSessionSnapshots` captures an immutable server-owned observation under serializable `CanonicalRunAuthority.withSnapshot` admission. Its separate unnumbered candidate `core_session_snapshots` table stores the identity, capture time, digest and observation; it is additional to the two runtime-control columns, handoff history table and receipt table described above. The table is not installed automatically in production.
+
+The observation binds the current runtime fence/registration, trusted typed-action commitments, frozen Verify plan and persisted checks, raw canonical decision/detail, scoped acceptance aggregate, dependency edges and prerequisite task revisions/deletion state, relevant recycle-bin records, explicit receipt mappings and every private durable receipt. Unmapped pending or ambiguous receipts are retained; a receipt from an unsupported foreign/source fence blocks capture instead of being dropped. A missing canonical plan or required trusted mapping returns an explicit unavailable result. Verify criteria are not silently converted into action commitments or invented acceptance decisions.
+
+Recovery re-reads canonical authority and content and compares their digest with the saved observation. A changed receipt, decision, dependency, owner/lease/epoch, policy or trusted commitment invalidates the observation and requires explicit recapture. Task or topic soft deletion denies canonical admission. An optional SHA-256 history-content hash is validated and must match on recovery, but its contents never provide authority. The API returns an observation, not permission to resume a runtime, replay an action or complete a task. Durable-store receipt reads are checked twice around asynchronous IO; no cross-store transaction is claimed, and future use still requires current admission.

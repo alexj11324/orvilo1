@@ -1,12 +1,12 @@
 # Core full dependency-graph typecheck comparison
 
-Both complete root-project compiler runs finished on Linux on 2026-09-30. **Neither passed:** both exited 2 with 7,854 diagnostics. The final candidate adds no diagnostic sites under this identical environment and configuration. This is a measured baseline comparison, not a full-repository typecheck pass or a substitute for CI.
+The exact baseline and recovery-stage candidate complete root-project compiler runs finished on Linux on 2026-09-30. **Neither passed:** both exited 2 with 7,854 diagnostics. The final candidate adds no diagnostic sites under this identical environment and configuration. This is a measured baseline comparison, not a full-repository typecheck pass or a substitute for CI.
 
 ## Exact source and environment
 
 - Baseline commit: `28dc3bbad36e4661f8d09154ff8b017cf5cadaeb`.
-- Final candidate commit: `84c4d4c9205ce6611fc9832e2fe6355984c7b49f`.
-- Candidate tree: `5a6d045d9b694d229f5e79546884518912c5a294`.
+- Final candidate commit: `3e7b9f0dea82e4f869aadec3c5c32ba2db16da6b`.
+- Candidate tree: `f1af4c14390f6faccf27dbe7a7f702a1063c8724`.
 - Node: `v24.19.0`; TypeScript: `6.0.3` (repository-pinned version).
 - Compiler implementation SHA-256: `1c59e77a54b186ec43fa7f3e0d3c4bb15ca5eb5ba43e96b1d3a267139eddd3e3`.
 - Root `tsconfig.json` is byte-identical in both snapshots: SHA-256 `870ad95a4a7649adddd560bbc44fcc924c4898422b5d18f82d6d8bc2404d5d12`.
@@ -46,7 +46,11 @@ These are paired old/new messages at unchanged sites, caused by the two additive
 
 ## Repairs and limits
 
+The previous source checkpoint `84c4d4c9205ce6611fc9832e2fe6355984c7b49f` also measured 7,854 diagnostics with the same three message-only pairs and no added sites. Its logs, differences and manifest remain under `stage84/`. The recovery stage adds the canonical session snapshot and durable receipt reconciliation implementation/tests. The unchanged baseline output is reused: compiler, installed dependency files, all 99 dependency mirrors and both configuration hashes were rechecked unchanged before compiling this exact new candidate.
+
 An earlier complete-install candidate tree `c033ab06570b77a154e94d3823ba495f2ad0ee18` produced 7,887 diagnostics: 33 genuinely new candidate diagnostics plus the same three changed-message pairs. Those 33 were repaired before the final run: explicit nullable-state control flow in the canonical handoff model/tests, callback-updated isolation state reads in the host, and the deliberate child-environment type boundary. No runtime admission checks were removed, strictness was not disabled, and child processes did not inherit ambient credentials. Owners reran the affected PostgreSQL and real host acceptance tests separately; this report concerns compiler evidence.
+
+Recovery checkpoint `139f5de99379073d3c15326d374f42f95ed2d520` produced 7,856 diagnostics. Its two added sites were test fixtures: the Verify run status `pending` was corrected to the existing `planned` value, and unsupported `decisionDetail.reason` to the existing `comment` field. Production recovery source is unchanged by these two corrections. PostgreSQL execution evidence belongs to the earlier fixture version at `139f5de9`; the corrected fixtures were linted and typechecked, without another database execution. The failing checkpoint evidence is retained under `stage139-before-fixture-repairs/`.
 
 An initial attempt against checkpoint `097a909f` omitted package-local dependency mirrors. Its logs are explicitly named `*-incomplete-install.log` and are **not** the final baseline comparison. The corrected full baseline was rerun after all package-level links were restored, then compared with the final exact source commit above.
 
@@ -63,5 +67,8 @@ Local evidence directory: `/workspace/scratch/core-validation/`.
 - `compare-tsc.py`, `mirror-dependencies.py`: comparison and dependency-mirroring helpers.
 - `latest-tree-files.txt`: candidate Git path/blob manifest.
 - `tsc-candidate-c033-before-final-repairs.log`: preserved failing candidate evidence.
+- `stage84/`: preserved previous source-checkpoint compiler output, multiset differences and manifest.
+- `stage139-before-fixture-repairs/`: preserved recovery candidate with two test-fixture diagnostics before repair.
+- `tsc-recovery-imported-first.log`: earlier recovery-stage scoped real-import check; it is not the final full-root evidence.
 
 Raw thousands-line diagnostics are deliberately retained outside the repository; this document contains the complete normalized difference summary.

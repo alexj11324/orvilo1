@@ -1,9 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Icon, Markdown } from '@lobehub/ui';
+import {Markdown} from '@lobehub/ui';
 import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { type AssistantContentBlock, type UIChatMessage } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ScrollText, Workflow } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -52,35 +53,22 @@ const InstructionAccordion = memo<{ childrenCount: number; instruction: string }
         items={[
           {
             children: (
-              <Block
-                className={styles.instructionContent}
-                padding={12}
-                style={{ marginBlock: 8 }}
-                variant={'outlined'}
+              <div className={cn('flex flex-col p-3', styles.instructionContent)} style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}
               >
                 <Markdown variant={'chat'}>{instruction}</Markdown>
-              </Block>
+              </div>
             ),
             key: 'instruction',
             title: (
-              <Flexbox horizontal align="center" gap={8}>
-                <Block
-                  horizontal
-                  align="center"
-                  flex="none"
-                  gap={4}
-                  height={24}
-                  justify="center"
-                  style={{ fontSize: 12 }}
-                  variant="outlined"
-                  width={24}
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
                 >
-                  <Icon color={cssVar.colorTextSecondary} icon={ScrollText} />
-                </Block>
+                  <ScrollText color={cssVar.colorTextSecondary} />
+                </div>
                 <Text as="span" type="secondary">
                   {t('task.instruction')}
                 </Text>
-              </Flexbox>
+              </div>
             ),
           },
         ]}
@@ -162,22 +150,13 @@ const ProcessingView = memo<{
   }, [startTime]);
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal align="center" gap={8} paddingInline={4}>
-        <Block
-          horizontal
-          align="center"
-          flex="none"
-          gap={4}
-          height={24}
-          justify="center"
-          style={{ fontSize: 12 }}
-          variant="outlined"
-          width={24}
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center gap-2 px-1">
+        <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
         >
           <NeuralNetworkLoading size={16} />
-        </Block>
-        <Flexbox horizontal align="center" gap={4}>
+        </div>
+        <div className="flex items-center gap-1">
           <Text as="span" type="secondary" weight={500}>
             <AnimatedNumber
               duration={500}
@@ -193,8 +172,8 @@ const ProcessingView = memo<{
               ({formatElapsedTime(elapsedTime)})
             </Text>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       <ContentBlocksScroll
         disableEditing
         messages={messages}
@@ -207,7 +186,7 @@ const ProcessingView = memo<{
       {isDevMode && model && provider && (
         <Usage model={model} provider={provider} usage={accumulatedUsage} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -243,21 +222,12 @@ const CompletedView = memo<{
   if (!finalBlock) return null;
 
   const title = (
-    <Flexbox horizontal align="center" gap={8}>
-      <Block
-        horizontal
-        align="center"
-        flex="none"
-        gap={4}
-        height={24}
-        justify="center"
-        style={{ fontSize: 12 }}
-        variant="outlined"
-        width={24}
+    <div className="flex items-center gap-2">
+      <div className="flex items-center gap-1 justify-center" style={{flex: "none", height: 24, border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG, width: 24,  fontSize: 12 }}
       >
-        <Icon color={cssVar.colorTextSecondary} icon={Workflow} />
-      </Block>
-      <Flexbox horizontal align="center" gap={4}>
+        <Workflow color={cssVar.colorTextSecondary} />
+      </div>
+      <div className="flex items-center gap-1">
         <Text as="span" type="secondary" weight={500}>
           {totalToolCalls}
         </Text>
@@ -270,12 +240,12 @@ const CompletedView = memo<{
             {t('task.metrics.duration', { duration: formatDuration(duration) })}
           </Text>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {/* Intermediate steps - collapsed by default */}
       {intermediateBlocks.length > 0 && (
         <Accordion
@@ -286,7 +256,7 @@ const CompletedView = memo<{
           items={[
             {
               children: (
-                <Flexbox gap={8} paddingInline={4} style={{ marginTop: 8 }}>
+                <div className="flex flex-col gap-2 px-1" style={{ marginTop: 8 }}>
                   {intermediateBlocks.map((block) => (
                     <ContentBlock
                       {...block}
@@ -295,7 +265,7 @@ const CompletedView = memo<{
                       key={block.id}
                     />
                   ))}
-                </Flexbox>
+                </div>
               ),
               key: 'intermediate',
               title,
@@ -311,7 +281,7 @@ const CompletedView = memo<{
       {isDevMode && model && provider && (
         <Usage model={model} provider={provider} usage={{ cost: totalCost, totalTokens }} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -342,7 +312,7 @@ const TaskMessages = memo<TaskMessagesProps>(
     const accumulatedUsage = useMemo(() => accumulateUsage(blocks), [blocks]);
 
     return (
-      <Flexbox gap={4}>
+      <div className="flex flex-col gap-1">
         {/* Instruction accordion */}
         {instruction && (
           <InstructionAccordion childrenCount={blocks.length} instruction={instruction} />
@@ -370,7 +340,7 @@ const TaskMessages = memo<TaskMessagesProps>(
             totalToolCalls={totalToolCalls}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,7 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus, WorkListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 
@@ -106,12 +106,9 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
   })();
 
   return (
-    <Flexbox className={styles.workCard}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.header}
-        gap={8}
+    <div className={cn('flex flex-col', styles.workCard)}>
+      <div
+        className={cn('flex items-center gap-2', styles.header)}
         onClick={() => setExpanded((value) => !value)}
       >
         <ToggleIcon className={styles.toggle} size={16} />
@@ -141,9 +138,9 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
             {title}
           </Text>
         )}
-      </Flexbox>
+      </div>
       {expanded && <VersionList workId={work.id} />}
-    </Flexbox>
+    </div>
   );
 });
 

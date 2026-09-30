@@ -1,4 +1,3 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { FileLock2Icon } from 'lucide-react';
 import { memo } from 'react';
@@ -18,24 +17,24 @@ const InaccessibleFileItem = memo(() => {
   const { t } = useTranslation('chat');
 
   return (
-    <Block
-      horizontal
-      align={'center'}
-      gap={12}
-      paddingBlock={8}
-      paddingInline={'12px 16px'}
-      variant={'outlined'}
+    <div
+      className="flex items-center gap-3 py-2"
+      style={{
+        paddingInline: '12px 16px',
+        border: `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+      }}
     >
-      <Icon icon={FileLock2Icon} size={32} style={{ opacity: 0.45 }} />
-      <Flexbox style={{ overflow: 'hidden' }}>
+      <FileLock2Icon size={32} style={{ opacity: 0.45 }} />
+      <div className="flex flex-col" style={{ overflow: 'hidden' }}>
         <Text ellipsis type={'secondary'}>
           {t('inaccessibleFile.name')}
         </Text>
         <Text fontSize={12} type={'secondary'}>
           {t('inaccessibleFile.desc')}
         </Text>
-      </Flexbox>
-    </Block>
+      </div>
+    </div>
   );
 });
 
@@ -45,27 +44,27 @@ const FileItem = memo<ChatFileItem>(({ id, fileType, size, name, inaccessible })
   if (inaccessible) return <InaccessibleFileItem />;
 
   return (
-    <Block
-      clickable
-      horizontal
-      align={'center'}
-      gap={12}
+    <div
+      className="flex items-center gap-3 py-2"
       key={id}
-      paddingBlock={8}
-      paddingInline={'12px 16px'}
-      variant={'outlined'}
+      style={{
+        cursor: 'pointer',
+        paddingInline: '12px 16px',
+        border: `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+      }}
       onClick={() => {
         openFilePreview({ fileId: id });
       }}
     >
       <FileIcon fileName={name} fileType={fileType} size={32} />
-      <Flexbox style={{ overflow: 'hidden' }}>
+      <div className="flex flex-col" style={{ overflow: 'hidden' }}>
         <Text ellipsis>{name}</Text>
         <Text fontSize={12} type={'secondary'}>
           {formatSize(size)}
         </Text>
-      </Flexbox>
-    </Block>
+      </div>
+    </div>
   );
 });
 export default FileItem;

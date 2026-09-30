@@ -1,7 +1,8 @@
-import { Center, Empty, Flexbox } from '@lobehub/ui';
+import { Empty } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { WorkListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ClipboardListIcon, HistoryIcon, ListIcon } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
@@ -48,7 +49,7 @@ const WorksModeToolbar = memo<{
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox horizontal className={styles.modeToolbar} gap={4}>
+    <div className={cn('flex gap-1', styles.modeToolbar)}>
       <ActionIcon
         active={mode === 'summary'}
         icon={ListIcon}
@@ -63,7 +64,7 @@ const WorksModeToolbar = memo<{
         title={t('workingPanel.works.viewMode.history')}
         onClick={() => setMode('history')}
       />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -159,25 +160,25 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
   const content = (() => {
     if (isLoading) {
       return (
-        <Center flex={1}>
+        <div className="flex items-center justify-center flex-1">
           <NeuralNetworkLoading size={24} />
-        </Center>
+        </div>
       );
     }
 
     if (error) {
       return (
-        <Center flex={1}>
+        <div className="flex items-center justify-center flex-1">
           <Empty description={t('workingPanel.works.error')} icon={ClipboardListIcon} />
-        </Center>
+        </div>
       );
     }
 
     if (data.length === 0) {
       return (
-        <Center flex={1}>
+        <div className="flex items-center justify-center flex-1">
           <Empty description={t('workingPanel.works.empty')} icon={ClipboardListIcon} />
-        </Center>
+        </div>
       );
     }
 
@@ -189,10 +190,10 @@ const WorksSection = memo<WorksSectionProps>(({ active = true }) => {
   })();
 
   return (
-    <Flexbox className={styles.container} flex={1} gap={12}>
+    <div className={cn('flex flex-col flex-1 gap-3', styles.container)}>
       <WorksModeToolbar mode={mode} setMode={setMode} />
       {content}
-    </Flexbox>
+    </div>
   );
 });
 

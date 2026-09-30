@@ -1,6 +1,6 @@
 import { type AudioPlayerProps } from '@lobehub/tts/react';
 import { AudioPlayer } from '@lobehub/tts/react';
-import { Flexbox, Highlighter } from '@lobehub/ui';
+import { Highlighter } from '@lobehub/ui';
 import { ActionIcon, Alert, Button } from '@lobehub/ui/base-ui';
 import { type ChatMessageError } from '@orvilo/types';
 import { TrashIcon } from 'lucide-react';
@@ -17,7 +17,7 @@ const Player = memo<PlayerProps>(({ onRetry, error, onDelete, audio, isLoading, 
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox horizontal align={'center'} style={{ minWidth: 200, width: '100%' }}>
+    <div className="flex items-center" style={{ minWidth: 200, width: '100%' }}>
       {error ? (
         <Alert
           closable
@@ -53,7 +53,7 @@ const Player = memo<PlayerProps>(({ onRetry, error, onDelete, audio, isLoading, 
           <ActionIcon icon={TrashIcon} size={'small'} title={t('tts.clear')} onClick={onDelete} />
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

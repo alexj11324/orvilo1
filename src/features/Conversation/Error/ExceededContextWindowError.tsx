@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { Minimize2 } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -30,7 +29,7 @@ const ExceededContextWindowError = memo<ExceededContextWindowErrorProps>(({ id }
 
   return (
     <BaseErrorForm
-      avatar={<Icon icon={Minimize2} size={24} />}
+      avatar={<Minimize2 size={24} />}
       desc={t('exceededContext.desc')}
       title={t('exceededContext.title')}
       action={

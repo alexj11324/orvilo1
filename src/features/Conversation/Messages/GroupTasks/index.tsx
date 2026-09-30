@@ -1,6 +1,6 @@
 'use client';
 
-import { Block, Flexbox, GroupAvatar, Icon } from '@lobehub/ui';
+import { GroupAvatar } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -29,7 +29,10 @@ interface GroupTasksMessageProps {
 const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string }[] }>(
   ({ avatars }) => {
     return (
-      <Flexbox flex={'none'} height={28} style={{ position: 'relative' }} width={28}>
+      <div
+        className="flex flex-col"
+        style={{ flex: 'none', height: 28, width: 28, position: 'relative' }}
+      >
         <GroupAvatar
           avatarShape={'square'}
           cornerShape={'square'}
@@ -39,23 +42,24 @@ const GroupTasksAvatar = memo<{ avatars: { avatar?: string; background?: string 
             background: a.background,
           }))}
         />
-        <Block
-          align={'center'}
-          flex={'none'}
-          height={16}
-          justify={'center'}
-          variant={'outlined'}
-          width={16}
+        <div
+          className="flex flex-col items-center justify-center"
           style={{
+            flex: 'none',
+            height: 16,
+            border: `1px solid ${cssVar.colorBorder}`,
+            borderRadius: cssVar.borderRadiusLG,
+            width: 16,
+
             borderRadius: 4,
             position: 'absolute',
             right: -4,
             top: -4,
           }}
         >
-          <Icon color={cssVar.colorTextDescription} icon={ListTodo} size={10} />
-        </Block>
-      </Flexbox>
+          <ListTodo color={cssVar.colorTextDescription} size={10} />
+        </div>
+      </div>
     );
   },
 );
@@ -135,11 +139,11 @@ const GroupTasksMessage = memo<GroupTasksMessageProps>(({ id }) => {
       time={createdAt}
       titleAddon={<Tag>{t('task.groupTasks', { count: tasks.length })}</Tag>}
     >
-      <Flexbox gap={8} width={'100%'}>
+      <div className="flex flex-col gap-2" style={{ width: '100%' }}>
         {tasks.map((task) => (
           <TaskItem item={task} key={task.id} />
         ))}
-      </Flexbox>
+      </div>
     </ChatItem>
   );
 }, isEqual);

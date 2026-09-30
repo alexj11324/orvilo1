@@ -1,9 +1,10 @@
-import { Tooltip } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { CheckCheck } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { type PendingIntervention } from '../store/slices/data/pendingInterventions';
 import { styles } from './style';
@@ -48,17 +49,28 @@ const InterventionTabBar = memo<InterventionTabBarProps>(
               button beside it would just add a decision the user doesn't have
               to make. */}
           {approveAll && (
-            <Tooltip title={t('tool.intervention.approveAllTooltip', { count: approveAll.count })}>
-              <Button
-                icon={CheckCheck}
-                loading={approveAll.loading}
-                size={'small'}
-                type={'fill'}
-                onClick={approveAll.onApprove}
-              >
-                {t('tool.intervention.approveAll', { count: approveAll.count })}
-              </Button>
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span style={{ display: 'inline-flex' }}>
+                      <Button
+                        icon={CheckCheck}
+                        loading={approveAll.loading}
+                        size={'small'}
+                        type={'fill'}
+                        onClick={approveAll.onApprove}
+                      >
+                        {t('tool.intervention.approveAll', { count: approveAll.count })}
+                      </Button>
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {t('tool.intervention.approveAllTooltip', { count: approveAll.count })}
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
         </div>
       </div>

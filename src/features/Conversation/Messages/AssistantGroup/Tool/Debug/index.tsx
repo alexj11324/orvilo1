@@ -1,4 +1,4 @@
-import { Block, Highlighter, Icon } from '@lobehub/ui';
+import { Highlighter } from '@lobehub/ui';
 import { Tabs, type TabsProps } from '@lobehub/ui/base-ui';
 import { type ToolIntervention } from '@orvilo/types';
 import {
@@ -59,7 +59,7 @@ const Debug = memo<DebugProps>(
               {params}
             </Highlighter>
           ),
-          icon: <Icon icon={MessageSquareCodeIcon} />,
+          icon: <MessageSquareCodeIcon />,
           key: 'arguments',
           label: t('debug.arguments'),
         },
@@ -73,7 +73,7 @@ const Debug = memo<DebugProps>(
               {isJsonResult ? JSON.stringify(result?.content, null, 2) : result?.content || ''}
             </Highlighter>
           ),
-          icon: <Icon icon={SquareArrowDownIcon} />,
+          icon: <SquareArrowDownIcon />,
           key: 'response',
           label: t('debug.response'),
         },
@@ -87,7 +87,7 @@ const Debug = memo<DebugProps>(
               {JSON.stringify(functionCall, null, 2)}
             </Highlighter>
           ),
-          icon: <Icon icon={FunctionSquareIcon} />,
+          icon: <FunctionSquareIcon />,
           key: 'function_call',
           label: t('debug.function_call'),
         },
@@ -101,7 +101,7 @@ const Debug = memo<DebugProps>(
               {JSON.stringify(result?.state, null, 2)}
             </Highlighter>
           ),
-          icon: <Icon icon={BracesIcon} />,
+          icon: <BracesIcon />,
           key: 'pluginState',
           label: t('debug.pluginState'),
         },
@@ -115,7 +115,7 @@ const Debug = memo<DebugProps>(
               {JSON.stringify(intervention, null, 2)}
             </Highlighter>
           ),
-          icon: <Icon icon={HandIcon} />,
+          icon: <HandIcon />,
           key: 'intervention',
           label: t('debug.intervention'),
         },
@@ -131,7 +131,7 @@ const Debug = memo<DebugProps>(
                     {JSON.stringify(result.error, null, 2)}
                   </Highlighter>
                 ),
-                icon: <Icon icon={CircleAlertIcon} />,
+                icon: <CircleAlertIcon />,
                 key: 'error',
                 label: t('debug.error'),
               },
@@ -151,7 +151,14 @@ const Debug = memo<DebugProps>(
     );
 
     return (
-      <Block style={{ overflow: 'hidden' }} variant={'outlined'}>
+      <div
+        className="flex flex-col"
+        style={{
+          border: `1px solid ${cssVar.colorBorder}`,
+          borderRadius: cssVar.borderRadiusLG,
+          overflow: 'hidden',
+        }}
+      >
         <Tabs
           items={items}
           orientation={'vertical'}
@@ -173,7 +180,7 @@ const Debug = memo<DebugProps>(
             },
           }}
         />
-      </Block>
+      </div>
     );
   },
 );

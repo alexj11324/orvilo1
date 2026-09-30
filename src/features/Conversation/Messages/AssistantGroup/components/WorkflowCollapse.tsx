@@ -1,4 +1,3 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
 import { Accordion, ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { type ChatToolPayloadWithResult } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -364,24 +363,25 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
 
     const renderStatusBlock = (): React.ReactNode => {
       const wrapInBlock = (inner: React.ReactNode) => (
-        <Block
-          horizontal
-          align="center"
-          flex="none"
-          height={24}
-          justify="center"
-          style={{ fontSize: 12 }}
-          variant="outlined"
-          width={24}
+        <div
+          className="flex items-center justify-center"
+          style={{
+            flex: 'none',
+            height: 24,
+            border: `1px solid ${cssVar.colorBorder}`,
+            borderRadius: cssVar.borderRadiusLG,
+            width: 24,
+            fontSize: 12,
+          }}
         >
           {inner}
-        </Block>
+        </div>
       );
 
       if (streaming) {
         return wrapInBlock(
           pendingInterventionPresent ? (
-            <Icon color={cssVar.colorInfo} icon={HandIcon} />
+            <HandIcon color={cssVar.colorInfo} />
           ) : (
             <NeuralNetworkLoading size={16} />
           ),
@@ -390,13 +390,13 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
 
       switch (completionStatus) {
         case 'error': {
-          return wrapInBlock(<Icon color={cssVar.colorError} icon={X} />);
+          return wrapInBlock(<X color={cssVar.colorError} />);
         }
         case 'partial': {
-          return wrapInBlock(<Icon color={cssVar.colorSuccess} icon={Check} />);
+          return wrapInBlock(<Check color={cssVar.colorSuccess} />);
         }
         default: {
-          return wrapInBlock(<Icon color={cssVar.colorSuccess} icon={Check} />);
+          return wrapInBlock(<Check color={cssVar.colorSuccess} />);
         }
       }
     };
@@ -438,13 +438,11 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
     );
 
     const title = (
-      <Flexbox horizontal align="center" gap={6} style={{ minWidth: 0 }}>
+      <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
         {renderStatusBlock()}
         {streaming ? (
-          <Flexbox
-            horizontal
-            align="center"
-            gap={6}
+          <div
+            className="flex items-center gap-1.5"
             style={{
               minHeight: WORKFLOW_STREAMING_TITLE_MIN_HEIGHT_PX,
               minWidth: 0,
@@ -485,9 +483,9 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
                 ({formatReasoningDuration(workingElapsedSeconds * TIME_MS_PER_SECOND)})
               </span>
             )}
-          </Flexbox>
+          </div>
         ) : (
-          <Flexbox horizontal align="center" gap={6} style={{ minWidth: 0 }}>
+          <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
             <Text
               type="secondary"
               style={{
@@ -505,9 +503,9 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
                 {durationText}
               </span>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
 
     return (

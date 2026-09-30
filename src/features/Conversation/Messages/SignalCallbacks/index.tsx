@@ -1,9 +1,10 @@
 'use client';
 
-import { Block, Flexbox, Icon, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { type UISignalCallbacksBlock } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Radio } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,59 +45,55 @@ const SignalCallbacks = memo<{ block: UISignalCallbacksBlock }>(({ block }) => {
       items={[
         {
           children: (
-            <Block
-              className={styles.callbackBody}
-              padding={12}
-              style={{ marginBlock: 8 }}
-              variant={'outlined'}
+            <div
+              className={cn('flex flex-col p-3', styles.callbackBody)}
+              style={{
+                border: `1px solid ${cssVar.colorBorder}`,
+                borderRadius: cssVar.borderRadiusLG,
+                marginBlock: 8,
+              }}
             >
               {block.callbacks.length === 0 ? (
                 <Text type="secondary">{t('signalCallbacks.empty')}</Text>
               ) : (
-                <Flexbox gap={4}>
+                <div className="flex flex-col gap-1">
                   {block.callbacks.map((cb) => (
-                    <Flexbox
-                      horizontal
-                      align="flex-start"
-                      className={styles.callbackItem}
-                      gap={8}
-                      key={cb.id}
-                    >
+                    <div className={cn('flex items-start gap-2', styles.callbackItem)} key={cb.id}>
                       {typeof cb.sequence === 'number' && (
                         <span className={styles.sequence}>#{cb.sequence}</span>
                       )}
-                      <Flexbox flex={1}>
+                      <div className="flex flex-col flex-1">
                         <Markdown variant="chat">{cb.content}</Markdown>
-                      </Flexbox>
-                    </Flexbox>
+                      </div>
+                    </div>
                   ))}
-                </Flexbox>
+                </div>
               )}
-            </Block>
+            </div>
           ),
           key: 'signal-callbacks',
           title: (
-            <Flexbox horizontal align="center" gap={8}>
-              <Block
-                horizontal
-                align="center"
-                flex="none"
-                gap={4}
-                height={24}
-                justify="center"
-                style={{ fontSize: 12 }}
-                variant="outlined"
-                width={24}
+            <div className="flex items-center gap-2">
+              <div
+                className="flex items-center gap-1 justify-center"
+                style={{
+                  flex: 'none',
+                  height: 24,
+                  border: `1px solid ${cssVar.colorBorder}`,
+                  borderRadius: cssVar.borderRadiusLG,
+                  width: 24,
+                  fontSize: 12,
+                }}
               >
-                <Icon color={cssVar.colorTextSecondary} icon={Radio} />
-              </Block>
+                <Radio color={cssVar.colorTextSecondary} />
+              </div>
               <Text as="span" type="secondary">
                 {t('signalCallbacks.title', {
                   count: block.callbacks.length,
                   tool: block.sourceToolName,
                 })}
               </Text>
-            </Flexbox>
+            </div>
           ),
         },
       ]}

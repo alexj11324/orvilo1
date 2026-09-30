@@ -1,11 +1,13 @@
 'use client';
 
-import { Center, Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { FileText } from 'lucide-react';
 import type { KeyboardEvent, MouseEvent, ReactNode } from 'react';
 import { memo } from 'react';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   actionable: css`
@@ -138,21 +140,24 @@ const PortalResourceCard = memo<PortalResourceCardProps>(
 
     // Mirrors the inline artifact card shell, while keeping portal-open behavior owned by callers.
     const card = (
-      <Flexbox horizontal align={'center'} className={cx(styles.container, className)}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={cx(styles.trigger, onOpen && styles.actionable)}
-          flex={1}
+      <div className={cn('flex items-center', cx(styles.container, className))}>
+        <div
           role={onOpen ? 'button' : undefined}
           tabIndex={onOpen ? 0 : undefined}
+          className={cn(
+            'flex items-center flex-1',
+            cx(styles.trigger, onOpen && styles.actionable),
+          )}
           onClick={onOpen}
           onKeyDown={onOpen ? handleKeyDown : undefined}
         >
-          <Center horizontal className={styles.avatar} width={64}>
-            {icon ?? <Icon icon={FileText} size={28} />}
-          </Center>
-          <Flexbox className={styles.content} flex={1} gap={4} paddingInline={12}>
+          <div
+            className={cn('flex items-center justify-center', styles.avatar)}
+            style={{ width: 64 }}
+          >
+            {icon ?? <FileText size={28} />}
+          </div>
+          <div className={cn('flex flex-col flex-1 gap-1 px-3', styles.content)}>
             <Text ellipsis className={styles.title}>
               {title}
             </Text>
@@ -161,17 +166,17 @@ const PortalResourceCard = memo<PortalResourceCardProps>(
                 {description}
               </Text>
             )}
-          </Flexbox>
+          </div>
           {onOpen && openLabel && (
-            <Flexbox flex={'none'} style={{ paddingInlineEnd: 10 }}>
+            <div className="flex flex-col" style={{ flex: 'none', paddingInlineEnd: 10 }}>
               <div aria-hidden className={styles.openLabel}>
                 {openLabel}
               </div>
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
         {(secondaryAction || secondaryActionLabel) && (
-          <Flexbox flex={'none'} style={{ paddingInlineEnd: 10 }}>
+          <div className="flex flex-col" style={{ flex: 'none', paddingInlineEnd: 10 }}>
             {secondaryAction ?? (
               <>
                 {onSecondaryAction ? (
@@ -189,15 +194,20 @@ const PortalResourceCard = memo<PortalResourceCardProps>(
                 )}
               </>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
 
     return tooltip ? (
-      <Tooltip placement={'topLeft'} title={tooltip}>
-        {card}
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger render={<span style={{ display: 'inline-flex' }}>{card}</span>} />
+          <TooltipContent align="start" side="top">
+            {tooltip}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     ) : (
       card
     );

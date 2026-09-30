@@ -2,13 +2,14 @@
 
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { Flexbox, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Popover } from '@lobehub/ui/base-ui';
 import { createStaticStyles, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { type FC, memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
@@ -104,7 +105,7 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
       onEmojiSelect={(emoji: any) => handleSelect(emoji.native)}
     />
   ) : (
-    <Flexbox horizontal className={styles.pickerContainer} gap={4} wrap="wrap">
+    <div className={cn('flex gap-1 flex-wrap', styles.pickerContainer)}>
       {QUICK_REACTIONS.map((emoji) => (
         <div className={styles.emojiButton} key={emoji} onClick={() => handleSelect(emoji)}>
           {emoji}
@@ -113,7 +114,7 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
       <div className={styles.moreButton} onClick={() => setShowFullPicker(true)}>
         <PlusIcon size={16} />
       </div>
-    </Flexbox>
+    </div>
   );
 
   return (
@@ -128,9 +129,18 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
     >
       {trigger || (
         <span {...(open ? { 'data-popup-open': '' } : {})}>
-          <Tooltip title={t('messageAction.reaction')}>
-            <ActionIcon icon={SmilePlus} size="small" />
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span style={{ display: 'inline-flex' }}>
+                    <ActionIcon icon={SmilePlus} size="small" />
+                  </span>
+                }
+              />
+              <TooltipContent>{t('messageAction.reaction')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </span>
       )}
     </Popover>

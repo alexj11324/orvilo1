@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { createModal, Tabs } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { t } from 'i18next';
@@ -58,7 +57,7 @@ const ShareMessageModalContent = memo<ShareMessageModalContentProps>(({ message 
   }, [context, isMobile, message, uniqueId, t]);
 
   return (
-    <Flexbox gap={isMobile ? 8 : 24}>
+    <div className="flex flex-col" style={{ gap: isMobile ? 8 : 24 }}>
       <Tabs
         activeKey={tab}
         items={tabItems}
@@ -68,7 +67,7 @@ const ShareMessageModalContent = memo<ShareMessageModalContentProps>(({ message 
         }}
         onChange={(key) => setTab(key as Tab)}
       />
-    </Flexbox>
+    </div>
   );
 });
 

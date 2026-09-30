@@ -2,7 +2,7 @@
 
 import { type SlashOptions } from '@lobehub/editor';
 import { type ChatInputActionsProps } from '@lobehub/editor/react';
-import { Flexbox, type MenuProps } from '@lobehub/ui';
+import { type MenuProps } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import { type VoiceMessageRecording } from '@orvilo/types';
 import { type ReactNode } from 'react';
@@ -453,18 +453,18 @@ const ChatInput = memo<ChatInputProps>(
             unmounting would wipe the Lexical editor's in-memory document. */}
         <div style={{ display: hasPendingInterventions ? 'none' : 'contents' }}>
           {sendMessageErrorMsg && (
-            <Flexbox paddingBlock={'0 6px'} paddingInline={12}>
+            <div className="flex flex-col px-3" style={{ paddingBlock: '0 6px' }}>
               <Alert
                 closable
                 title={t('input.errorMsg', { errorMsg: sendMessageErrorMsg })}
                 type={'secondary'}
                 onClose={clearSendMessageError}
               />
-            </Flexbox>
+            </div>
           )}
           {businessAlerts}
-          <Flexbox
-            paddingInline={12}
+          <div
+            className="flex flex-col px-3"
             ref={overlayRef}
             style={{
               bottom: '100%',
@@ -481,7 +481,7 @@ const ChatInput = memo<ChatInputProps>(
             <GoalTray
               topAttached={(!disableQueue && hasQueuedMessages) || hasTodos || hasOpStatus}
             />
-          </Flexbox>
+          </div>
           {/* Append the armed-goal chip to every composer's action bar. While armed,
               the next message becomes the goal and the placeholder explains that state. */}
           <DesktopChatInput

@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowDownToLine } from 'lucide-react';
 import { memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -67,18 +67,11 @@ const SelectToHereButton = memo(() => {
   if (!isSelectionMode) return null;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.wrap}
-      gap={12}
-      paddingInline={16}
-      ref={wrapRef}
-    >
+    <div className={cn('flex items-center gap-3 px-4', styles.wrap)} ref={wrapRef}>
       <div className={styles.line} />
       <Button
         className={styles.button}
-        icon={<Icon icon={ArrowDownToLine} />}
+        icon={<ArrowDownToLine />}
         shape={'round'}
         size={'small'}
         onClick={handleClick}
@@ -86,7 +79,7 @@ const SelectToHereButton = memo(() => {
         {t('messageForward.bar.selectToHere')}
       </Button>
       <div className={styles.line} />
-    </Flexbox>
+    </div>
   );
 });
 

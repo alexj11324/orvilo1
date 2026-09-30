@@ -1,4 +1,4 @@
-import { Block, Highlighter } from '@lobehub/ui';
+import { Highlighter } from '@lobehub/ui';
 import { type AlertProps, Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
@@ -73,18 +73,19 @@ const getErrorDetails = (error?: ChatMessageError | null) => {
 };
 
 const loading = () => (
-  <Block
-    align={'center'}
-    padding={16}
-    variant={'outlined'}
+  <div
+    className="flex flex-col items-center p-4"
     style={{
+      border: `1px solid ${cssVar.colorBorder}`,
+      borderRadius: cssVar.borderRadiusLG,
+
       overflow: 'hidden',
       position: 'relative',
       width: '100%',
     }}
   >
     <Skeleton height={36} />
-  </Block>
+  </div>
 );
 
 const ExceededContextWindowError = dynamic(() => import('./ExceededContextWindowError'), {

@@ -1,4 +1,4 @@
-import { Block, Flexbox, Highlighter } from '@lobehub/ui';
+import { Highlighter } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { memo, useMemo } from 'react';
@@ -32,14 +32,22 @@ export const FallbackArgumentRender = memo<FallbackArgumentRenderProps>(
 
     // Default render: show arguments and result
     return (
-      <Block id={toolCallId} variant={'outlined'} width={'100%'}>
+      <div
+        className="flex flex-col"
+        id={toolCallId}
+        style={{
+          border: `1px solid ${cssVar.colorBorder}`,
+          borderRadius: cssVar.borderRadiusLG,
+          width: '100%',
+        }}
+      >
         <Arguments arguments={requestArgs} />
         {content && (
           <>
             <Divider style={{ marginBlock: 0 }} />
-            <Flexbox paddingBlock={'8px 0'} paddingInline={16}>
+            <div className="flex flex-col px-4" style={{ paddingBlock: '8px 0' }}>
               <Text>{t('debug.response')}</Text>
-            </Flexbox>
+            </div>
             <Highlighter
               language={language}
               variant={'filled'}
@@ -54,7 +62,7 @@ export const FallbackArgumentRender = memo<FallbackArgumentRenderProps>(
             </Highlighter>
           </>
         )}
-      </Block>
+      </div>
     );
   },
 );

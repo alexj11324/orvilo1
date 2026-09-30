@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { EmojiReaction } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { usePermission } from '@/hooks/usePermission';
@@ -66,7 +66,7 @@ const ReactionDisplay = memo<ReactionDisplayProps>(({ reactions, onReactionClick
   if (reactions.length === 0) return null;
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.container}>
+    <div className={cn('flex items-center', styles.container)}>
       {reactions.map((reaction) => (
         <div
           className={cx(styles.reactionTag, isActive?.(reaction.emoji) && styles.active)}
@@ -78,7 +78,7 @@ const ReactionDisplay = memo<ReactionDisplayProps>(({ reactions, onReactionClick
           {reaction.count > 1 && <span className={styles.count}>{reaction.count}</span>}
         </div>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

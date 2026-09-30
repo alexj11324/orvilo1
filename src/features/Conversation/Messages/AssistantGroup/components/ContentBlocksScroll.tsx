@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, ScrollArea } from '@lobehub/ui';
+import { ScrollArea } from '@lobehub/ui';
 import type { UIChatMessage } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import type { RefObject } from 'react';
@@ -67,7 +67,7 @@ const ContentBlocksScroll = memo<ContentBlocksScrollProps>((props) => {
   }, [assistantIdFromProps, blocksFromProps, messagesList]);
 
   const list = (
-    <Flexbox gap={variant === 'workflow' ? 8 : undefined}>
+    <div className="flex flex-col" style={{ gap: variant === 'workflow' ? 8 : undefined }}>
       {blocks.map((block) => (
         <ContentBlock
           key={block.renderKey ?? block.id}
@@ -76,10 +76,17 @@ const ContentBlocksScroll = memo<ContentBlocksScrollProps>((props) => {
           disableEditing={disableEditing}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 
-  const body = variant === 'workflow' ? <Flexbox paddingBlock={'4px 8px'}>{list}</Flexbox> : list;
+  const body =
+    variant === 'workflow' ? (
+      <div className="flex flex-col" style={{ paddingBlock: '4px 8px' }}>
+        {list}
+      </div>
+    ) : (
+      list
+    );
 
   if (!scroll) {
     return body;

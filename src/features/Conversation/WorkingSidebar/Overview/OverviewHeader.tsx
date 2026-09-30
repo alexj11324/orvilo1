@@ -1,8 +1,8 @@
 import { Github } from '@lobehub/icons';
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { FolderGit2Icon, FolderIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -87,11 +87,8 @@ const OverviewHeader = memo<OverviewHeaderProps>(
     const dotColor = error ? cssVar.colorError : deviceId ? cssVar.colorInfo : undefined;
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.header}
-        gap={10}
+      <div
+        className={cn('flex items-center gap-2.5', styles.header)}
         role={'button'}
         title={path}
         onClick={onClick}
@@ -100,7 +97,7 @@ const OverviewHeader = memo<OverviewHeaderProps>(
           {repoType === 'github' ? (
             <Github size={18} />
           ) : (
-            <Icon icon={repoType ? FolderGit2Icon : FolderIcon} size={18} />
+            createElement(repoType ? FolderGit2Icon : FolderIcon, { size: 18 })
           )}
         </span>
         <span className={styles.identity}>
@@ -118,7 +115,7 @@ const OverviewHeader = memo<OverviewHeaderProps>(
             </span>
           </span>
         </span>
-      </Flexbox>
+      </div>
     );
   },
 );

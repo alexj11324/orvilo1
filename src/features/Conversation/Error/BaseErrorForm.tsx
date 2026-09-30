@@ -1,4 +1,3 @@
-import { Block, Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
@@ -11,30 +10,28 @@ interface BaseErrorFormProps {
 }
 const BaseErrorForm = memo<BaseErrorFormProps>(({ title, desc, action, avatar }) => {
   return (
-    <Block
-      horizontal
-      align={'center'}
-      gap={8}
-      justify={'space-between'}
-      padding={16}
-      variant={'outlined'}
+    <div
+      className="flex items-center gap-2 justify-between p-4"
       style={{
+        border: `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+
         overflow: 'hidden',
         position: 'relative',
         width: '100%',
       }}
     >
-      <Flexbox horizontal align="center" gap={12}>
+      <div className="flex items-center gap-3">
         {avatar}
-        <Flexbox gap={2}>
+        <div className="flex flex-col gap-0.5">
           <Text weight={500}>{title}</Text>
           <Text fontSize={12} type={'secondary'}>
             {desc}
           </Text>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {action}
-    </Block>
+    </div>
   );
 });
 

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Alert, Button } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -33,7 +32,7 @@ const ToolMessage = memo<ToolMessageProps>(({ disableEditing, id, index }) => {
   };
 
   return (
-    <Flexbox gap={4} paddingBlock={12}>
+    <div className="flex flex-col gap-1 py-3">
       {canEdit && !disableEditing && (
         <Alert
           title={t('inspector.orphanedToolCall')}
@@ -54,7 +53,7 @@ const ToolMessage = memo<ToolMessageProps>(({ disableEditing, id, index }) => {
           toolCallId={item.tool_call_id!}
         />
       )}
-    </Flexbox>
+    </div>
   );
 }, isEqual);
 

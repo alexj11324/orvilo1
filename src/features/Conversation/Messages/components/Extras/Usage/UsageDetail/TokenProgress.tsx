@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { formatUsageValue } from '@orvilo/utils';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -19,12 +18,13 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon }) => {
   const total = data.reduce((acc, item) => acc + item.value, 0);
 
   return (
-    <Flexbox gap={8} style={{ position: 'relative' }} width={'100%'}>
-      <Flexbox
-        horizontal
-        height={6}
-        width={'100%'}
+    <div className="flex flex-col gap-2" style={{ width: '100%', position: 'relative' }}>
+      <div
+        className="flex"
         style={{
+          height: 6,
+          width: '100%',
+
           background: total === 0 ? cssVar.colorFill : undefined,
           borderRadius: 3,
           overflow: 'hidden',
@@ -32,17 +32,17 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon }) => {
         }}
       >
         {data.map((item) => (
-          <Flexbox
-            height={'100%'}
+          <div
+            className="flex flex-col"
             key={item.id}
-            style={{ background: item.color, flex: item.value }}
+            style={{ height: '100%', background: item.color, flex: item.value }}
           />
         ))}
-      </Flexbox>
-      <Flexbox>
+      </div>
+      <div className="flex flex-col">
         {data.map((item) => (
-          <Flexbox horizontal align={'center'} gap={4} justify={'space-between'} key={item.id}>
-            <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex items-center gap-1 justify-between" key={item.id}>
+            <div className="flex items-center gap-1">
               {showIcon && (
                 <div
                   style={{
@@ -55,12 +55,12 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon }) => {
                 />
               )}
               <div style={{ color: cssVar.colorTextSecondary }}>{item.title}</div>
-            </Flexbox>
+            </div>
             <div style={{ fontWeight: 500 }}>{formatUsageValue(item.value)}</div>
-          </Flexbox>
+          </div>
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

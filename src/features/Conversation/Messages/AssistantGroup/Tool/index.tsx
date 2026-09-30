@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Accordion, Skeleton } from '@lobehub/ui/base-ui';
 import { getBuiltinRender } from '@orvilo/builtin-tools/renders';
 import { getBuiltinStreaming } from '@orvilo/builtin-tools/streamings';
@@ -148,7 +147,7 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
             />
           ),
           children: (
-            <Flexbox gap={8} paddingBlock={8}>
+            <div className="flex flex-col gap-2 py-2">
               {showDebug && (
                 <Debug
                   apiName={apiName}
@@ -178,7 +177,7 @@ const Tool = memo<GroupToolProps>(({ assistantMessageId, disableEditing, id }) =
                 />
               </SafeBoundary>
               <Divider dashed style={{ marginBottom: 0, marginTop: 8 }} />
-            </Flexbox>
+            </div>
           ),
           key: id,
           title: (

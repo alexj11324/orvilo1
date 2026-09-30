@@ -1,8 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { BRANDING_URL } from '@orvilo/business-const';
 import { ChatErrorType, Plans } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -130,7 +130,7 @@ const PlanLimitCard = memo<PlanLimitCardProps>(({ errorBody, errorType, onRetry 
     <ErrorActionContainer>
       <FormAction animation avatar={'💰'} description={description} title={title}>
         {facts.length > 0 && (
-          <Flexbox className={styles.budgetFacts} gap={8}>
+          <div className={cn('flex flex-col gap-2', styles.budgetFacts)}>
             {facts.map((fact) => (
               <div className={styles.budgetFact} key={fact.label}>
                 <span className={styles.budgetFactLabel}>{fact.label}</span>
@@ -145,10 +145,10 @@ const PlanLimitCard = memo<PlanLimitCardProps>(({ errorBody, errorType, onRetry 
                 </span>
               </div>
             ))}
-          </Flexbox>
+          </div>
         )}
 
-        <Flexbox gap={8} width={'100%'}>
+        <div className="flex flex-col gap-2" style={{ width: '100%' }}>
           {BRANDING_URL.subscription && (
             <a
               href={BRANDING_URL.subscription}
@@ -164,7 +164,7 @@ const PlanLimitCard = memo<PlanLimitCardProps>(({ errorBody, errorType, onRetry 
           <Button block size={'large'} onClick={onRetry}>
             {t('limitation.insufficientBudget.retry')}
           </Button>
-        </Flexbox>
+        </div>
       </FormAction>
     </ErrorActionContainer>
   );

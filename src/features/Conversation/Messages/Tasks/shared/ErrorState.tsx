@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
+import {Highlighter} from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { MessageSquare, Timer, Wrench } from 'lucide-react';
@@ -97,7 +97,7 @@ const ErrorState = memo<ErrorStateProps>(({ taskDetail }) => {
   const hasMetrics = !!(formattedDuration || totalToolCalls || totalMessages || formattedCost);
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       {/* Error Content */}
       <Alert
         title={isCancelled ? t('task.status.cancelled') : t('task.status.failed')}
@@ -116,7 +116,7 @@ const ErrorState = memo<ErrorStateProps>(({ taskDetail }) => {
         }
       />
       {hasMetrics ? (
-        <Flexbox horizontal align="center" gap={12} wrap="wrap">
+        <div className="flex items-center gap-3 flex-wrap">
           {/* Duration */}
           {formattedDuration && <MetricItem icon={Timer} value={formattedDuration} />}
 
@@ -151,9 +151,9 @@ const ErrorState = memo<ErrorStateProps>(({ taskDetail }) => {
               <MetricItem value={formattedCost} />
             </>
           )}
-        </Flexbox>
+        </div>
       ) : null}
-    </Flexbox>
+    </div>
   );
 });
 

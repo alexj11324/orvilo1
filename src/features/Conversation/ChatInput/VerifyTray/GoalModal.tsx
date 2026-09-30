@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
 import {
   Button,
   createModal,
@@ -11,6 +10,8 @@ import {
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Textarea } from '@/components/ui/textarea';
 
 interface GoalContentProps {
   initialGoal?: string;
@@ -61,17 +62,17 @@ export const GoalContent = memo<GoalContentProps>(({ initialGoal, onDelete, onSu
   };
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       <Text fontSize={13} type={'secondary'}>
         {tv('acceptance.tray.goalModal.hint')}
       </Text>
-      <TextArea
-        autoSize={{ maxRows: 5, minRows: 3 }}
+      <Textarea
         placeholder={tv('acceptance.tray.goalModal.placeholder')}
+        rows={3}
         value={goal}
         onChange={(e) => setGoal(e.target.value)}
       />
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
+      <div className="flex items-center justify-between">
         {onDelete ? (
           <Button danger disabled={busy} loading={deleting} type={'text'} onClick={handleDelete}>
             {tv('acceptance.tray.goalModal.delete')}
@@ -79,7 +80,7 @@ export const GoalContent = memo<GoalContentProps>(({ initialGoal, onDelete, onSu
         ) : (
           <span />
         )}
-        <Flexbox horizontal gap={8}>
+        <div className="flex gap-2">
           <Button disabled={busy} onClick={close}>
             {tv('acceptance.actions.cancel')}
           </Button>
@@ -91,9 +92,9 @@ export const GoalContent = memo<GoalContentProps>(({ initialGoal, onDelete, onSu
           >
             {tv('acceptance.tray.goalModal.save')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

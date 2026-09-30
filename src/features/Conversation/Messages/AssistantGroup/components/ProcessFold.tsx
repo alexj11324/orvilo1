@@ -1,7 +1,7 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -60,14 +60,13 @@ const ProcessFold = memo<ProcessFoldProps>(
     const value = useMemo(() => (expanded ? [PROCESS_KEY] : []), [expanded]);
 
     const title = (
-      <Flexbox horizontal align={'center'} className={styles.title} gap={6}>
+      <div className={cn('flex items-center gap-1.5', styles.title)}>
         <Text style={{ color: 'inherit', minWidth: 0 }}>
           {durationText
             ? t('turnProcess.ranFor', { count: stepCount, duration: durationText })
             : t('turnProcess.done', { count: stepCount })}
         </Text>
-        <Icon
-          icon={ChevronRight}
+        <ChevronRight
           size={14}
           style={{
             flex: 'none',
@@ -75,7 +74,7 @@ const ProcessFold = memo<ProcessFoldProps>(
             transition: 'transform 200ms',
           }}
         />
-      </Flexbox>
+      </div>
     );
 
     return (

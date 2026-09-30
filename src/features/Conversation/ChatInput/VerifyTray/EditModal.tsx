@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Input, TextArea } from '@lobehub/ui';
 import {
   Button,
   createModal,
@@ -11,6 +10,9 @@ import {
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 
 import type { TrayCheck } from './types';
 
@@ -44,8 +46,8 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
   };
 
   return (
-    <Flexbox gap={16}>
-      <Flexbox gap={6}>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={12} type={'secondary'}>
           {tv('acceptance.tray.editModal.nameLabel')}
         </Text>
@@ -54,21 +56,21 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
-      </Flexbox>
+      </div>
 
-      <Flexbox gap={6}>
+      <div className="flex flex-col gap-1.5">
         <Text fontSize={12} type={'secondary'}>
           {tv('acceptance.tray.editModal.methodLabel')}
         </Text>
-        <TextArea
-          autoSize={{ maxRows: 4, minRows: 2 }}
+        <Textarea
           placeholder={tv('acceptance.tray.editModal.methodPlaceholder')}
+          rows={2}
           value={method}
           onChange={(e) => setMethod(e.target.value)}
         />
-      </Flexbox>
+      </div>
 
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
+      <div className="flex items-center justify-between">
         {onRemove ? (
           <Button
             danger
@@ -83,7 +85,7 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
         ) : (
           <span />
         )}
-        <Flexbox horizontal gap={8}>
+        <div className="flex gap-2">
           <Button disabled={saving} onClick={close}>
             {tv('acceptance.actions.cancel')}
           </Button>
@@ -95,9 +97,9 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
           >
             {tv('acceptance.tray.editModal.save')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

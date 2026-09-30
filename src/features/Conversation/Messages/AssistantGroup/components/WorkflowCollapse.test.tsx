@@ -428,9 +428,8 @@ describe('WorkflowCollapse', () => {
       } as AssistantContentBlock,
     ];
 
-    render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
-    const icon = screen.getByTestId('icon');
-    expect(icon).toHaveAttribute('data-icon', 'Check');
+    const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
+    expect(container.querySelector('svg.lucide-check')).not.toBeNull();
   });
 
   it('shows only a check when some tools fail after completion', () => {
@@ -460,11 +459,9 @@ describe('WorkflowCollapse', () => {
       } as AssistantContentBlock,
     ];
 
-    render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
-    const icons = screen.getAllByTestId('icon');
-    const iconNames = icons.map((node) => node.getAttribute('data-icon'));
-    expect(iconNames).toContain('Check');
-    expect(iconNames).not.toContain('TriangleAlert');
+    const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
+    expect(container.querySelector('svg.lucide-check')).not.toBeNull();
+    expect(container.querySelector('svg.lucide-triangle-alert')).toBeNull();
   });
 
   it('shows red x when all tools fail after completion', () => {
@@ -494,8 +491,7 @@ describe('WorkflowCollapse', () => {
       } as AssistantContentBlock,
     ];
 
-    render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
-    const icon = screen.getByTestId('icon');
-    expect(icon).toHaveAttribute('data-icon', 'X');
+    const { container } = render(<WorkflowCollapse assistantMessageId="msg-1" blocks={blocks} />);
+    expect(container.querySelector('svg.lucide-x')).not.toBeNull();
   });
 });

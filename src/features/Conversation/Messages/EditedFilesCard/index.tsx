@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, Flexbox, PatchDiff } from '@lobehub/ui';
+import { PatchDiff } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { EditedFileEntry } from '@orvilo/builtin-tools/fileEditScan';
 import {
@@ -12,6 +12,7 @@ import {
   LineStats,
 } from '@orvilo/shared-tool-ui/components';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import {
   ArrowUpRightIcon,
   ChevronDownIcon,
@@ -209,13 +210,10 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
   const clickable = !!handleRowClick;
 
   return (
-    <Flexbox className={cx(styles.row, clickable && styles.rowClickable)}>
-      <Flexbox
-        horizontal
-        align={'center'}
+    <div className={cn('flex flex-col', cx(styles.row, clickable && styles.rowClickable))}>
+      <div
         aria-expanded={onOpen ? undefined : hasDiff ? expanded : undefined}
-        className={styles.rowMain}
-        gap={10}
+        className={cn('flex items-center gap-2.5', styles.rowMain)}
         role={clickable ? 'button' : undefined}
         tabIndex={clickable ? 0 : undefined}
         onClick={handleRowClick}
@@ -260,7 +258,7 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
           ) : (
             <ChevronRightIcon className={styles.chevron} size={14} />
           ))}
-      </Flexbox>
+      </div>
       {hasDiff && expanded && (
         <div className={styles.patch}>
           {entry.diffTexts.map((patch, index) => (
@@ -276,7 +274,7 @@ const EditedFileRow = memo<{ entry: EditedFileEntry; onOpen?: () => void }>(({ e
           ))}
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 EditedFileRow.displayName = 'EditedFileRow';
@@ -303,14 +301,14 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
     const language = getFileLanguage(entry.path);
 
     return (
-      <Flexbox className={styles.card}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={cx(styles.singleHeader, onOpen && styles.singleHeaderClickable)}
-          gap={10}
+      <div className={cn('flex flex-col', styles.card)}>
+        <div
           role={onOpen ? 'button' : undefined}
           tabIndex={onOpen ? 0 : undefined}
+          className={cn(
+            'flex items-center gap-2.5',
+            cx(styles.singleHeader, onOpen && styles.singleHeaderClickable),
+          )}
           onClick={onOpen}
           onKeyDown={onOpen ? toggleOnKey(onOpen) : undefined}
         >
@@ -318,7 +316,7 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
             fileName={getEditedFileIconName(entry.path)}
             size={SINGLE_EDITED_FILE_ICON_SIZE}
           />
-          <Flexbox flex={1} gap={2}>
+          <div className="flex flex-col flex-1 gap-0.5">
             <Text ellipsis className={styles.singleTitle}>
               {t('editedFiles.singleTitle', { path: displayPath })}
             </Text>
@@ -328,7 +326,7 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
               linesAdded={entry.linesAdded}
               linesDeleted={entry.linesDeleted}
             />
-          </Flexbox>
+          </div>
           {hasDiff && (
             <div
               data-view-changes
@@ -353,7 +351,7 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
               </Button>
             </div>
           )}
-        </Flexbox>
+        </div>
         {hasDiff && showDiff && (
           <div className={styles.patch}>
             {entry.diffTexts.map((patch, index) => (
@@ -369,7 +367,7 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
             ))}
           </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -398,12 +396,12 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
   const toggleShowAll = () => setShowAll((prev) => !prev);
 
   return (
-    <Flexbox className={styles.card}>
-      <Flexbox horizontal align={'center'} className={styles.header} gap={10}>
-        <Center className={styles.headerIcon}>
+    <div className={cn('flex flex-col', styles.card)}>
+      <div className={cn('flex items-center gap-2.5', styles.header)}>
+        <div className={cn('flex items-center justify-center', styles.headerIcon)}>
           <FilePenLineIcon size={20} />
-        </Center>
-        <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
+        </div>
+        <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
           <Text ellipsis className={styles.title}>
             {t('editedFiles.title', { count: entries.length })}
           </Text>
@@ -413,19 +411,16 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
             linesAdded={totals.linesAdded}
             linesDeleted={totals.linesDeleted}
           />
-        </Flexbox>
-      </Flexbox>
-      <Flexbox className={styles.list}>
+        </div>
+      </div>
+      <div className={cn('flex flex-col', styles.list)}>
         {visible.map((entry) => (
           <EditedFileRow entry={entry} key={entry.path} onOpen={getOpenAction(entry)} />
         ))}
         {hiddenCount > 0 && (
-          <Flexbox
-            horizontal
-            align={'center'}
+          <div
             aria-expanded={showAll}
-            className={styles.showMore}
-            gap={6}
+            className={cn('flex items-center gap-1.5', styles.showMore)}
             role={'button'}
             tabIndex={0}
             onClick={toggleShowAll}
@@ -439,10 +434,10 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
             ) : (
               <ChevronDownIcon className={styles.chevron} size={14} />
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

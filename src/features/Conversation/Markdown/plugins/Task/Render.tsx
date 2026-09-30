@@ -1,6 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ClipboardList } from 'lucide-react';
 import { memo, useMemo } from 'react';
 
@@ -103,10 +103,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const FieldRow = memo<{ label: string; value?: string }>(({ label, value }) => {
   if (!value) return null;
   return (
-    <Flexbox horizontal className={styles.fieldRow} gap={8}>
+    <div className={cn('flex gap-2', styles.fieldRow)}>
       <span className={styles.fieldKey}>{label}</span>
       <span className={styles.fieldValue}>{value}</span>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -142,53 +142,53 @@ const Render = memo<TaskRenderProps>(({ children }) => {
   const titleText = parsed.name || parsed.identifier || '';
 
   return (
-    <Flexbox gap={12}>
-      <Flexbox horizontal align={'center'} gap={12}>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3">
         <span className={styles.headerIcon}>
           <ClipboardList size={16} />
         </span>
-        <Flexbox flex={1} gap={4} style={{ minWidth: 0 }}>
-          <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+        <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
+          <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
             {parsed.identifier && <span className={styles.identifier}>{parsed.identifier}</span>}
             <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
               {titleText}
             </Text>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
 
       {parsed.instruction && (
         <>
           <div className={styles.divider} />
-          <Flexbox gap={4}>
+          <div className="flex flex-col gap-1">
             <Text fontSize={12} type={'secondary'}>
               Instruction
             </Text>
             <div className={styles.instruction}>{parsed.instruction}</div>
-          </Flexbox>
+          </div>
         </>
       )}
 
       {(parsed.description || parsed.dependencies || parsed.review) && (
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           <FieldRow label="Description" value={parsed.description} />
           <FieldRow label="Dependencies" value={parsed.dependencies} />
           <FieldRow label="Review" value={parsed.review} />
-        </Flexbox>
+        </div>
       )}
 
       {(parsed.subtasks?.length ||
         parsed.activities?.length ||
         parsed.workspace?.length ||
         parsed.reviewRubrics?.length) && (
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           <RawSection items={parsed.subtasks ?? []} label="Subtasks" />
           <RawSection items={parsed.activities ?? []} label="Activities" />
           <RawSection items={parsed.workspace ?? []} label="Workspace" />
           <RawSection items={parsed.reviewRubrics ?? []} label="Review rubrics" />
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

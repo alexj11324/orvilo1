@@ -1,7 +1,7 @@
 'use client';
 
-import { Center, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo } from 'react';
 
@@ -36,9 +36,14 @@ interface SelectCircleProps {
  * multi-select rows.
  */
 const SelectCircle = memo<SelectCircleProps>(({ checked, className }) => (
-  <Center className={cx(styles.circle, checked && styles.checked, className)}>
-    {checked && <Icon icon={Check} size={14} />}
-  </Center>
+  <div
+    className={cn(
+      'flex items-center justify-center',
+      cx(styles.circle, checked && styles.checked, className),
+    )}
+  >
+    {checked && <Check size={14} />}
+  </div>
 ));
 
 SelectCircle.displayName = 'SelectCircle';

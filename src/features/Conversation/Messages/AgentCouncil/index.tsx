@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Tabs } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -32,20 +31,13 @@ const AgentCouncilMessage = memo<AgentCouncilMessageProps>(({ id }) => {
   return (
     <>
       <WideScreenContainer>
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          height={48}
-          justify={'space-between'}
-          paddingBlock={8}
-        >
+        <div className="flex items-center gap-2 justify-between py-2" style={{ height: 48 }}>
           {displayMode === 'tab' ? (
             <Tabs
               activeKey={String(activeTab)}
               size="small"
               items={members.map((_, idx) => ({
-                icon: <Icon icon={BotIcon} size={14} />,
+                icon: <BotIcon size={14} />,
                 key: String(idx),
                 label: null,
               }))}
@@ -58,12 +50,12 @@ const AgentCouncilMessage = memo<AgentCouncilMessageProps>(({ id }) => {
             activeKey={displayMode}
             size="small"
             items={[
-              { icon: <Icon icon={Columns2} />, key: 'horizontal', label: null },
-              { icon: <Icon icon={Layers} />, key: 'tab', label: null },
+              { icon: <Columns2 />, key: 'horizontal', label: null },
+              { icon: <Layers />, key: 'tab', label: null },
             ]}
             onChange={(key) => setDisplayMode(key as DisplayMode)}
           />
-        </Flexbox>
+        </div>
       </WideScreenContainer>
       <CouncilList activeTab={activeTab} displayMode={displayMode} members={members} />
     </>

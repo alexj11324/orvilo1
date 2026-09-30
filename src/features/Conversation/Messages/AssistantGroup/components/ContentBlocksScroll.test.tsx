@@ -64,6 +64,6 @@ describe('ContentBlocksScroll', () => {
     );
 
     const [firstBlock] = screen.getAllByTestId('content-block');
-    expect(firstBlock.parentElement!.style.getPropertyValue('--lobe-flex-gap')).toBe('8px');
+    expect(firstBlock.parentElement!).toHaveStyle({ gap: '8px' });
   });
 });

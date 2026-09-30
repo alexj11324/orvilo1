@@ -1,4 +1,4 @@
-import { Flexbox, MaskShadow } from '@lobehub/ui';
+import { MaskShadow } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -17,11 +17,11 @@ export const CollapsedMessage = memo<CollapsedMessageProps>(({ id, content }) =>
   const toggleMessageCollapsed = useConversationStore((s) => s.toggleMessageCollapsed);
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       <MaskShadow>
         <MarkdownMessage variant={'chat'}>{content?.slice(0, 300)}</MarkdownMessage>
       </MaskShadow>
-      <Flexbox padding={4}>
+      <div className="flex flex-col p-1">
         <Button
           block
           size={'small'}
@@ -32,7 +32,7 @@ export const CollapsedMessage = memo<CollapsedMessageProps>(({ id, content }) =>
         >
           {t('chatList.expandMessage')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });

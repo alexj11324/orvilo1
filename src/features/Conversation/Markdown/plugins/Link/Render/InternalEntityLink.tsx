@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import { createStaticStyles } from 'antd-style';
@@ -12,7 +11,7 @@ import {
   FileTextIcon,
 } from 'lucide-react';
 import type { MouseEvent } from 'react';
-import { memo, useCallback } from 'react';
+import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -222,7 +221,7 @@ export const InternalEntityLink = memo<InternalEntityLinkProps>(({ href, label, 
       target="_blank"
       onClick={handleClick}
     >
-      {icon && <Icon className={styles.icon} icon={icon} size={14} />}
+      {icon && createElement(icon, { className: styles.icon, size: 14 })}
       {displayLabel}
     </a>
   );

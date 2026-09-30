@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Alert, Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -24,19 +23,19 @@ export const InputCompletionErrorAlertContent = memo<{
   });
 
   const action = businessAlert.action ?? (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex items-center gap-2">
       <Button size={'small'} type={'primary'} onClick={clearInputCompletionError}>
         {t('input.inputCompletionError.retry')}
       </Button>
       <Link to={'/settings/agent'}>
         <Button size={'small'}>{t('input.inputCompletionError.settings')}</Button>
       </Link>
-    </Flexbox>
+    </div>
   );
 
   return (
     <>
-      <Flexbox paddingBlock={'0 6px'}>
+      <div className="flex flex-col" style={{ paddingBlock: '0 6px' }}>
         <Alert
           closable
           showIcon
@@ -45,7 +44,7 @@ export const InputCompletionErrorAlertContent = memo<{
           type={'warning'}
           onClose={dismissInputCompletionError}
         />
-      </Flexbox>
+      </div>
       {businessAlert.extra}
     </>
   );

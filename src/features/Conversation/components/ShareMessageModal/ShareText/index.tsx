@@ -1,6 +1,7 @@
-import { copyToClipboard, Flexbox } from '@lobehub/ui';
+import { copyToClipboard } from '@lobehub/ui';
 import { Button, toast } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CopyIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -60,17 +61,11 @@ const ShareText = memo<ShareTextProps>(({ item }) => {
 
   return (
     <>
-      <Flexbox className={styles.body} gap={16} horizontal={!isMobile}>
+      <div className={cn('flex gap-4', styles.body)}>
         <Preview content={content} />
-        <Flexbox className={styles.sidebar} gap={12}>
-          {!isMobile && button}
-        </Flexbox>
-      </Flexbox>
-      {isMobile && (
-        <Flexbox horizontal className={styles.footer} gap={8}>
-          {button}
-        </Flexbox>
-      )}
+        <div className={cn('flex flex-col gap-3', styles.sidebar)}>{!isMobile && button}</div>
+      </div>
+      {isMobile && <div className={cn('flex gap-2', styles.footer)}>{button}</div>}
     </>
   );
 });

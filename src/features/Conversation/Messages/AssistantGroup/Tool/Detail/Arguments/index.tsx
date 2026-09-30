@@ -1,4 +1,4 @@
-import { Flexbox, Highlighter } from '@lobehub/ui';
+import { Highlighter } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { Divider } from 'antd';
 import { cssVar, cx } from 'antd-style';
@@ -67,7 +67,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
     }));
 
     contentNode = (
-      <Flexbox paddingBlock={4} paddingInline={16}>
+      <div className="flex flex-col py-1 px-4">
         <Descriptions
           bordered={false}
           items={items}
@@ -83,22 +83,15 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
               : {},
           }}
         />
-      </Flexbox>
+      </div>
     );
   }
 
   return (
     <>
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={4}
-        justify={'space-between'}
-        paddingBlock={8}
-        paddingInline={16}
-      >
+      <div className="flex items-center gap-1 justify-between py-2 px-4">
         <Text>{t('arguments.title')}</Text>
-        <Flexbox horizontal gap={4}>
+        <div className="flex gap-1">
           <ActionIcon
             active={wrap}
             icon={WrapText}
@@ -110,8 +103,8 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
             onClick={() => setWrap((value) => !value)}
           />
           {actions}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       <Divider style={{ marginBlock: 0 }} />
       {contentNode}
     </>

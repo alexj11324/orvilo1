@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import { DEFAULT_SECURITY_BLACKLIST, InterventionChecker } from '@orvilo/agent-execution';
 import { memo, useMemo } from 'react';
@@ -25,9 +24,9 @@ const SecurityBlacklistWarning = memo<SecurityBlacklistWarningProps>(({ args }) 
       type="error"
       variant="borderless"
       description={
-        <Flexbox gap={4} style={{ fontSize: 12 }}>
+        <div className="flex flex-col gap-1" style={{ fontSize: 12 }}>
           <div>{securityCheck.reason ? t(securityCheck.reason as any) : undefined}</div>
-        </Flexbox>
+        </div>
       }
     />
   );

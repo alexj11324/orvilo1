@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
@@ -44,12 +43,12 @@ const VerifyMessage = memo<VerifyMessageProps>(({ id }) => {
   if (!operationId) return null;
 
   return (
-    <Flexbox paddingBlock={8}>
+    <div className="flex flex-col py-2">
       <div className={styles.card} style={{ background: phaseCardBackground(phase, cssVar) }}>
         <RunResult embedded operationId={operationId} round={ordinal} />
         <CheckerDock embedded operationId={operationId} />
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,7 +1,6 @@
-import type { DivProps, FlexboxProps } from '@lobehub/ui';
 import { type AlertProps, type AvatarProps } from '@lobehub/ui/base-ui';
 import type { EditableMessageProps, MetaData } from '@lobehub/ui/chat';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 
 /**
  * `MetaData` from `@lobehub/ui/chat` predates the agent's `name`/`title` split, so
@@ -10,7 +9,7 @@ import type { ReactNode } from 'react';
  */
 export type ChatItemAvatarMeta = MetaData & { name?: string | null };
 
-export interface ChatItemProps extends Omit<FlexboxProps, 'children' | 'onChange'> {
+export interface ChatItemProps extends Omit<ComponentProps<'div'>, 'children' | 'onChange'> {
   aboveMessage?: ReactNode;
   actionAddon?: ReactNode;
   actions?: ReactNode;
@@ -51,7 +50,7 @@ export interface ChatItemProps extends Omit<FlexboxProps, 'children' | 'onChange
    * Avatar click handler
    */
   onAvatarClick?: () => void;
-  onDoubleClick?: DivProps['onDoubleClick'];
+  onDoubleClick?: ComponentProps<'div'>['onDoubleClick'];
   /**
    * @default "..."
    */

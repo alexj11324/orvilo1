@@ -1,7 +1,7 @@
-import { Center, Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { WorkVersionItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -56,9 +56,9 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
 
   if (isLoading) {
     return (
-      <Center height={56}>
+      <div className="flex items-center justify-center" style={{ height: 56 }}>
         <NeuralNetworkLoading size={18} />
-      </Center>
+      </div>
     );
   }
 
@@ -68,9 +68,9 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
 
   if (data.length === 0) {
     return (
-      <Flexbox className={styles.versionList}>
+      <div className={cn('flex flex-col', styles.versionList)}>
         <Text type={'secondary'}>{t('workingPanel.works.emptyVersions')}</Text>
-      </Flexbox>
+      </div>
     );
   }
 
@@ -79,7 +79,7 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
   const costDeltas = computeWorkVersionCostDeltas(data);
 
   return (
-    <Flexbox className={styles.versionList}>
+    <div className={cn('flex flex-col', styles.versionList)}>
       {data.map((version) => {
         const cost = formatWorkVersionCost(costDeltas.get(version.id));
         const time = formatTaskItemDate(version.createdAt, {
@@ -89,17 +89,17 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
         });
 
         return (
-          <Flexbox className={styles.versionRow} gap={4} key={version.id}>
-            <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-              <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+          <div className={cn('flex flex-col gap-1', styles.versionRow)} key={version.id}>
+            <div className="flex items-center gap-2 justify-between">
+              <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
                 <Text code fontSize={12}>
                   v{version.version}
                 </Text>
                 <Text ellipsis className={styles.versionTitle}>
                   {t(`workingPanel.works.changeType.${version.changeType}` as never)}
                 </Text>
-              </Flexbox>
-              <Flexbox horizontal align={'center'} gap={8} style={{ flexShrink: 0 }}>
+              </div>
+              <div className="flex items-center gap-2" style={{ flexShrink: 0 }}>
                 {cost && (
                   <Text
                     code
@@ -115,12 +115,12 @@ const VersionList = memo<{ workId: string }>(({ workId }) => {
                     {time}
                   </Text>
                 )}
-              </Flexbox>
-            </Flexbox>
-          </Flexbox>
+              </div>
+            </div>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,7 +1,8 @@
-import { Alert, Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { useToolStore } from '@/store/tool';
 import { type MCPErrorInfo } from '@/types/plugins';
 
@@ -25,8 +26,8 @@ const InstallError = memo<InstallErrorProps>(({ errorInfo, identifier }) => {
         action={
           <div className="flex flex-col">
             <Button
-              size={'small'}
-              type={'fill'}
+              size={'sm'}
+              variant="outline"
               onClick={() => {
                 cancelInstallMCPPlugin(identifier);
               }}

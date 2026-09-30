@@ -1,16 +1,17 @@
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const DetailsLoading = memo(() => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-4" style={{ width: '100%' }}>
-          <Skeleton.Avatar shape={'square'} size={64} />
-          <Skeleton height={36} width={200} />
+          <Skeleton style={{ height: 64, width: 64 }} />
+          <Skeleton style={{ height: 36, width: 200 }} />
         </div>
-        <Skeleton height={28} width={200} />
+        <Skeleton style={{ height: 28, width: 200 }} />
       </div>
       <div
         className="flex gap-3"
@@ -20,8 +21,8 @@ const DetailsLoading = memo(() => {
           borderBottom: `1px solid ${cssVar.colorBorder}`,
         }}
       >
-        <Skeleton height={36} />
-        <Skeleton height={36} />
+        <Skeleton style={{ height: 36 }} />
+        <Skeleton style={{ height: 36 }} />
       </div>
       <div
         className="flex flex-col flex-1 gap-4"
@@ -31,9 +32,31 @@ const DetailsLoading = memo(() => {
           overflow: 'hidden',
         }}
       >
-        <Skeleton.Text rows={3} />
-        <Skeleton.Text rows={8} />
-        <Skeleton.Text rows={8} />
+        <div className="flex flex-col gap-2">
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '66%' }} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '66%' }} />
+        </div>
+        <div className="flex flex-col gap-2">
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '100%' }} />
+          <Skeleton style={{ height: 18, marginBlock: 2, width: '66%' }} />
+        </div>
       </div>
     </div>
   );

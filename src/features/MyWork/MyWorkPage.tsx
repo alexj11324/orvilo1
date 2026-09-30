@@ -1,5 +1,5 @@
 'use client';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
+
 import { type MyWorkMode, type TaskStatus, type WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
@@ -14,8 +14,10 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import IssueRowChip from '@/components/IssueRowChip';
+import { confirmModal } from '@/components/Modal';
 import { PriorityIcon } from '@/components/PriorityIcon';
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tabs as TabsRoot, TabsList, TabsTrigger as TabsTab } from '@/components/ui/tabs';
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
@@ -962,7 +964,8 @@ const MyWorkPage = memo(() => {
           <Badge variant="secondary">
             {t('myWork.noProject')}
             <Button
-              aria-label={t('close')}
+              aria={true}
+              label={t('close')}
               size="icon-xs"
               variant="ghost"
               onClick={() => writeParams({ noProject: false })}
@@ -975,7 +978,8 @@ const MyWorkPage = memo(() => {
           <Badge variant="secondary">
             {t('myWork.delegated')}
             <Button
-              aria-label={t('close')}
+              aria={true}
+              label={t('close')}
               size="icon-xs"
               variant="ghost"
               onClick={() => writeParams({ delegated: false })}
@@ -988,7 +992,8 @@ const MyWorkPage = memo(() => {
           <Badge variant="secondary">
             {t('myWork.filtersActive', { count: activeFilterCount })}
             <Button
-              aria-label={t('close')}
+              aria={true}
+              label={t('close')}
               size="icon-xs"
               variant="ghost"
               onClick={() => setBuilder(EMPTY_FILTER_BUILDER)}

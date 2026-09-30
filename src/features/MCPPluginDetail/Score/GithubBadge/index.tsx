@@ -1,11 +1,17 @@
 import { Markdown } from '@lobehub/ui';
-import { Select, Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { OFFICIAL_SITE } from '@/const/url';
 
@@ -51,12 +57,21 @@ const GithubBadge = memo(() => {
     <>
       <Markdown>{t('mcp.details.githubBadge.desc')}</Markdown>
 
-      <Select
-        options={styleOptions}
-        prefix={<Tag style={{ marginRight: 4 }}>style</Tag>}
-        value={selectedStyle}
-        onChange={setSelectedStyle}
-      />
+      <Select value={selectedStyle} onValueChange={(v) => setSelectedStyle(v as BadgeStyle)}>
+        <SelectTrigger>
+          <Badge style={{ marginRight: 4 }} variant="secondary">
+            style
+          </Badge>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {styleOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <CodeBlock code={badgeLite} language={'markdown'} style={{ fontSize: 12 }} />
       {}
       <img
@@ -69,12 +84,21 @@ const GithubBadge = memo(() => {
         <span style={{ color: cssVar.colorTextDescription, fontSize: 12 }}>OR</span>
         <Separator className="flex-1" />
       </div>
-      <Select
-        options={themeOptions}
-        prefix={<Tag style={{ marginRight: 4 }}>theme</Tag>}
-        value={selectedTheme}
-        onChange={setSelectedTheme}
-      />
+      <Select value={selectedTheme} onValueChange={(v) => setSelectedTheme(v as BadgeTheme)}>
+        <SelectTrigger>
+          <Badge style={{ marginRight: 4 }} variant="secondary">
+            theme
+          </Badge>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent>
+          {themeOptions.map((option) => (
+            <SelectItem key={option.value} value={option.value}>
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
       <CodeBlock code={badge} language={'markdown'} style={{ fontSize: 12 }} />
       {}
       <img alt="MCP Badge" src={styledBadgeFullUrl} />

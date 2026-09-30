@@ -1,4 +1,3 @@
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import { Form as AForm } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -8,6 +7,8 @@ import { useTranslation } from 'react-i18next';
 
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ArgsInput from '@/features/PluginDevModal/MCPManifestForm/ArgsInput';
 import { useToolStore } from '@/store/tool';
@@ -245,11 +246,11 @@ const Settings = ({
             {!isEditingConnection && (
               <Button
                 className={styles.editButton}
-                icon={<EditIcon size={12} />}
-                size="small"
-                type="text"
+                size="sm"
+                variant="ghost"
                 onClick={() => setIsEditingConnection(true)}
               >
+                <EditIcon size={12} />
                 {t('settings.edit')}
               </Button>
             )}
@@ -262,9 +263,9 @@ const Settings = ({
                 <span className={styles.previewLabel}>{t('settings.connection.type')}</span>
                 <div className="flex">
                   <TerminalIcon />
-                  <Text className={styles.previewValue}>
+                  <div className={styles.previewValue}>
                     {customParams?.type?.toUpperCase() || 'Unknown'}
-                  </Text>
+                  </div>
                 </div>
               </div>
 
@@ -344,7 +345,7 @@ const Settings = ({
                   </>
                 )}
                 <div className={cn('flex gap-2', styles.footer)}>
-                  <Button htmlType="submit" loading={connectionLoading} type="primary">
+                  <Button loading={connectionLoading} type="submit" variant="default">
                     {t('common:save')}
                   </Button>
                   <Button onClick={handleCancelEdit}>{t('common:cancel')}</Button>
@@ -361,9 +362,9 @@ const Settings = ({
               <Settings2Icon size={16} />
               {t('settings.configuration.title')}
             </div>
-            <Text style={{ fontSize: 12 }} type="secondary">
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {t('settings.envConfigDescription')}
-            </Text>
+            </div>
             <AForm
               form={envForm}
               initialValues={{ env: pluginSettings }}
@@ -378,7 +379,7 @@ const Settings = ({
               </AForm.Item>
               {!hideFooter && (
                 <div className={cn('flex gap-2', styles.footer)}>
-                  <Button htmlType="submit" loading={loading} type="primary">
+                  <Button loading={loading} type="submit" variant="default">
                     {t('common:save')}
                   </Button>
                   <Button onClick={() => envForm.resetFields()}>{t('common:reset')}</Button>
@@ -396,7 +397,7 @@ const Settings = ({
               {t('settings.configuration.title')}
             </div>
             <div className={styles.emptyState}>
-              <Text type="secondary">{t('settings.httpTypeNotice')}</Text>
+              <div className="text-muted-foreground">{t('settings.httpTypeNotice')}</div>
             </div>
           </div>
         )}

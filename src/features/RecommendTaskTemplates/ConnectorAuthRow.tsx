@@ -1,9 +1,10 @@
 import { Image } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { TaskTemplateConnectorReference } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { getProviderMeta } from './providerMeta';
 import {
@@ -56,15 +57,13 @@ export const ConnectorAuthRow = memo<ConnectorAuthRowProps>(({ disabled, spec, o
             />
           </span>
         )}
-        <Text ellipsis fontSize={13}>
-          {meta.label}
-        </Text>
+        <div className="truncate text-[13px]">{meta.label}</div>
       </div>
       <Button
         disabled={disabled}
         loading={isConnecting}
-        size={'small'}
-        type={'text'}
+        size={'sm'}
+        variant="outline"
         onClick={handleConnect}
       >
         {t('taskTemplate.action.connect.short')}

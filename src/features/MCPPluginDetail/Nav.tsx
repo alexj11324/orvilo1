@@ -1,6 +1,5 @@
 'use client';
 
-import { Tabs, type TabsItem, Tag } from '@lobehub/ui/base-ui';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -9,6 +8,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
 import { McpNavKey } from '@/types/discover';
@@ -61,11 +61,12 @@ const Nav = memo<NavProps>(
 
     const nav = (
       <Tabs
-        activeKey={activeTab}
         className={styles.tabs}
-        variant="square"
-        items={
-          [
+        value={activeTab}
+        onValueChange={(key) => setActiveTab?.(key as McpNavKey)}
+      >
+        <TabsList>
+          {[
             // Only show the settings tab for installed plugins
             !noSettings &&
               installedPlugin && {
@@ -90,7 +91,7 @@ const Nav = memo<NavProps>(
                     }}
                   >
                     {t('mcp.details.deployment.title')}
-                    <Tag>{deploymentCount}</Tag>
+                    <Badge variant="secondary">{deploymentCount}</Badge>
                   </div>
                 ) : (
                   t('mcp.details.deployment.title')
@@ -108,7 +109,7 @@ const Nav = memo<NavProps>(
                     }}
                   >
                     {t('mcp.details.schema.title')}
-                    <Tag>{schemaCount}</Tag>
+                    <Badge variant="secondary">{schemaCount}</Badge>
                   </div>
                 ) : (
                   t('mcp.details.schema.title')
@@ -119,10 +120,16 @@ const Nav = memo<NavProps>(
               key: McpNavKey.Score,
               label: t('mcp.details.score.title'),
             },
-          ].filter(Boolean) as TabsItem[]
-        }
-        onChange={(key) => setActiveTab?.(key as McpNavKey)}
-      />
+          ]
+            .filter(Boolean)
+            .map((item) => (
+              <TabsTrigger key={item.key} value={item.key}>
+                {item.icon}
+                {item.label}
+              </TabsTrigger>
+            ))}
+        </TabsList>
+      </Tabs>
     );
 
     return mobile ? (

@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Button, DropdownMenu, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { MoreHorizontal, RefreshCw, Settings2, Trash2, UserPlus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -9,11 +8,15 @@ import { useNavigate } from 'react-router';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import LiteTable, { type LiteTableColumn, type LiteTableSection } from '@/components/LiteTable';
 import SearchBar from '@/components/SearchBar';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -243,9 +246,9 @@ const MembersPage = memo(() => {
                 ? row.value.email
                 : null;
           return (
-            <Text fontSize={13} type={'secondary'}>
+            <div className="text-[13px] text-muted-foreground">
               <span className={styles.ellipsis}>{email || '—'}</span>
-            </Text>
+            </div>
           );
         },
         title: t('members.column.email', { ns: 'common' }),
@@ -261,32 +264,46 @@ const MembersPage = memo(() => {
           if (row.kind === 'person') {
             const status = memberStatus(row.value);
             if (status === 'suspended') {
-              return <Tag color="orange">{t('members.statusSuspended', { ns: 'common' })}</Tag>;
+              return (
+                <Badge style={{ color: 'orange' }} variant="secondary">
+                  {t('members.statusSuspended', { ns: 'common' })}
+                </Badge>
+              );
             }
             if (status === 'removed') {
-              return <Tag>{t('members.statusRemoved', { ns: 'common' })}</Tag>;
+              return (
+                <Badge variant="secondary">{t('members.statusRemoved', { ns: 'common' })}</Badge>
+              );
             }
             return (
-              <Tag color={roleColor[row.value.role]}>
+              <Badge style={{ color: roleColor[row.value.role] }} variant="secondary">
                 {t(`workspaceSetting.members.role.${row.value.role}`, {
                   defaultValue: row.value.role,
                   ns: 'setting',
                 })}
-              </Tag>
+              </Badge>
             );
           }
           if (row.kind === 'agent') {
             return row.value.status === 'disabled' ? (
-              <Tag color="orange">{t('members.statusDisabled', { ns: 'common' })}</Tag>
+              <Badge style={{ color: 'orange' }} variant="secondary">
+                {t('members.statusDisabled', { ns: 'common' })}
+              </Badge>
             ) : (
-              <Text type={'secondary'}>{t('members.agentLabel', { ns: 'common' })}</Text>
+              <div className="text-muted-foreground">
+                {t('members.agentLabel', { ns: 'common' })}
+              </div>
             );
           }
           if (row.value.status === 'expired') {
-            return <Tag color="orange">{t('members.statusExpired', { ns: 'common' })}</Tag>;
+            return (
+              <Badge style={{ color: 'orange' }} variant="secondary">
+                {t('members.statusExpired', { ns: 'common' })}
+              </Badge>
+            );
           }
           return (
-            <Tag color={roleColor[row.value.role]}>
+            <Badge style={{ color: roleColor[row.value.role] }} variant="secondary">
               {t('members.roleInvited', {
                 ns: 'common',
                 role: t(`workspaceSetting.members.role.${row.value.role}`, {
@@ -294,7 +311,7 @@ const MembersPage = memo(() => {
                   ns: 'setting',
                 }),
               })}
-            </Tag>
+            </Badge>
           );
         },
         title: t('members.column.status', { ns: 'common' }),
@@ -314,9 +331,9 @@ const MembersPage = memo(() => {
                 ? row.value.projects?.length
                 : undefined;
           return (
-            <Text fontSize={13} type={'secondary'}>
+            <div className="text-[13px] text-muted-foreground">
               {count === undefined ? '—' : t('members.projectCount', { count, ns: 'common' })}
-            </Text>
+            </div>
           );
         },
         title: t('members.column.projects', { ns: 'common' }),
@@ -325,7 +342,7 @@ const MembersPage = memo(() => {
       {
         key: 'joined',
         render: (row) => (
-          <Text fontSize={13} type={'secondary'}>
+          <div className="text-[13px] text-muted-foreground">
             {formatMemberDate(
               row.kind === 'person'
                 ? row.value.joinedAt
@@ -333,7 +350,7 @@ const MembersPage = memo(() => {
                   ? row.value.createdAt
                   : undefined,
             )}
-          </Text>
+          </div>
         ),
         title: t('members.column.joined', { ns: 'common' }),
         width: 110,
@@ -341,7 +358,7 @@ const MembersPage = memo(() => {
       {
         // No presence source exists; `—` rather than a fake "Online".
         key: 'lastSeen',
-        render: () => <Text type={'secondary'}>—</Text>,
+        render: () => <div className="text-muted-foreground">—</div>,
         title: t('members.column.lastSeen', { ns: 'common' }),
         width: 110,
       },
@@ -426,9 +443,9 @@ const MembersPage = memo(() => {
     <WorkSurface>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
             {t('members.title', { ns: 'common' })}
-          </Text>
+          </div>
         }
         right={
           <div className="flex flex-row items-center gap-2">
@@ -443,16 +460,10 @@ const MembersPage = memo(() => {
               </SimpleTooltip>
             ) : null}
             {capabilities.canInvite ? (
-              <Button
-                size={'small'}
-                type="primary"
-                icon={
-                  <span className="anticon" role="img">
-                    <UserPlus fill={'transparent'} height={16} size={16} width={16} />
-                  </span>
-                }
-                onClick={() => openInviteTeammateModal()}
-              >
+              <Button size={'sm'} variant="default" onClick={() => openInviteTeammateModal()}>
+                <span className="anticon" role="img">
+                  <UserPlus fill={'transparent'} height={16} size={16} width={16} />
+                </span>
                 {t('workspaceSetting.members.inviteButton', { ns: 'setting' })}
               </Button>
             ) : null}
@@ -464,18 +475,24 @@ const MembersPage = memo(() => {
           <WorkSurfaceToolbar
             asideLabel={t('members.filter', { ns: 'common' })}
             aside={
-              <Segmented
-                block
-                size={'small'}
+              <ToggleGroup
+                className="w-full"
+                size={'sm'}
+                type={'single'}
                 value={groupFilter}
-                options={[
+                onValueChange={(value) => value && setGroupFilter(value as DirectoryFilter)}
+              >
+                {[
                   { label: t('members.filterAll', { ns: 'common' }), value: 'all' },
                   { label: t('members.groupPeople', { ns: 'common' }), value: 'person' },
                   { label: t('members.groupAgents', { ns: 'common' }), value: 'agent' },
                   { label: t('members.groupInvitations', { ns: 'common' }), value: 'invitation' },
-                ]}
-                onChange={(value) => setGroupFilter(value as DirectoryFilter)}
-              />
+                ].map((opt) => (
+                  <ToggleGroupItem key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </ToggleGroupItem>
+                ))}
+              </ToggleGroup>
             }
           >
             <SearchBar

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -19,9 +18,9 @@ const Meta = memo<{
       <PluginAvatar identifier={id} size={40} />
       <div className="flex flex-col gap-0.5">
         <div>{pluginHelpers.getPluginTitle(pluginMeta)}</div>
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {pluginHelpers.getPluginDesc(pluginMeta)}
-        </Text>
+        </div>
       </div>
     </div>
   );

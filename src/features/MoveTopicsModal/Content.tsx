@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -8,7 +7,10 @@ import { CircleCheck } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useModalContext } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import AgentItem from '@/features/PageEditor/Copilot/AgentSelector/AgentItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -134,9 +136,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
           <SkeletonList rows={6} />
         ) : filteredAgents.length === 0 ? (
           <div className="flex flex-col items-center justify-center p-6">
-            <Text fontSize={12} type={'secondary'}>
-              {t('moveModal.empty')}
-            </Text>
+            <div className="text-[12px] text-muted-foreground">{t('moveModal.empty')}</div>
           </div>
         ) : (
           <div
@@ -170,10 +170,10 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
   if (step === 'confirm') {
     return (
       <div className="flex flex-col gap-5 p-6">
-        <Text>{t('moveModal.confirmContent', { count, title: target?.title })}</Text>
+        <div>{t('moveModal.confirmContent', { count, title: target?.title })}</div>
         <div className="flex gap-2 justify-end">
           <Button onClick={() => setStep('pick')}>{t('moveModal.back')}</Button>
-          <Button type={'primary'} onClick={handleConfirm}>
+          <Button variant="outline" onClick={handleConfirm}>
             {t('moveModal.confirmOk')}
           </Button>
         </div>
@@ -185,7 +185,7 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
     return (
       <div className="flex flex-col items-center gap-4 justify-center p-12">
         <NeuralNetworkLoading size={48} />
-        <Text type={'secondary'}>{t('moveModal.moving')}</Text>
+        <div className="text-muted-foreground">{t('moveModal.moving')}</div>
       </div>
     );
   }
@@ -195,13 +195,13 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
     <div className="flex flex-col items-center gap-5 justify-center p-12">
       <div className="flex flex-col items-center gap-3">
         <CircleCheck color={cssVar.colorSuccess} size={32} />
-        <Text weight={500}>{t('moveModal.done', { count })}</Text>
+        <div className="font-medium">{t('moveModal.done', { count })}</div>
       </div>
       <div className="flex gap-2">
         <Button onClick={close}>{t('moveModal.doneOk')}</Button>
         {target && (
           <Button
-            type={'primary'}
+            variant="outline"
             onClick={() => {
               navigate(AGENT_CHAT_URL(target.id));
               close();

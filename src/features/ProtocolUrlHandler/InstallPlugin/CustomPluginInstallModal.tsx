@@ -1,12 +1,13 @@
 'use client';
 
-import { Alert, Text, toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import PluginTag from '@/components/Plugins/PluginTag';
+import { toast } from '@/components/toast';
+import { Alert } from '@/components/ui/alert';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { useToolStore } from '@/store/tool';
@@ -205,9 +206,9 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
                   {schema.name}
                   <PluginTag type={'customPlugin'} />
                 </div>
-                <Text style={{ fontSize: 12 }} type={'secondary'}>
+                <div className="text-muted-foreground" style={{ fontSize: 12 }}>
                   {schema.description}
-                </Text>
+                </div>
               </div>
             </div>
           </div>

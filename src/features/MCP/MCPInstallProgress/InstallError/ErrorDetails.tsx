@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
@@ -33,9 +32,7 @@ const ErrorDetails = memo<{
           {errorInfo.params && (
             <div className="flex flex-col gap-1">
               <div>
-                <Tag color="blue" variant={'filled'}>
-                  {t('mcpInstall.errorDetails.connectionParams')}
-                </Tag>
+                <Badge variant="secondary">{t('mcpInstall.errorDetails.connectionParams')}</Badge>
               </div>
               <div style={{ marginTop: 4, wordBreak: 'break-all' }}>
                 {errorInfo.params.command && (
@@ -55,9 +52,7 @@ const ErrorDetails = memo<{
           {errorInfo.errorLog && (
             <div className="flex flex-col gap-1">
               <div>
-                <Tag color="red" variant={'filled'}>
-                  {t('mcpInstall.errorDetails.errorOutput')}
-                </Tag>
+                <Badge variant="secondary">{t('mcpInstall.errorDetails.errorOutput')}</Badge>
               </div>
               <CodeBlock
                 code={errorInfo.errorLog}
@@ -72,7 +67,9 @@ const ErrorDetails = memo<{
 
           {errorInfo.originalError && errorInfo.originalError !== errorMessage && (
             <div>
-              <Tag color="orange">{t('mcpInstall.errorDetails.originalError')}</Tag>
+              <Badge style={{ color: 'orange' }} variant="secondary">
+                {t('mcpInstall.errorDetails.originalError')}
+              </Badge>
               <div style={{ marginTop: 4, wordBreak: 'break-all' }}>{errorInfo.originalError}</div>
             </div>
           )}

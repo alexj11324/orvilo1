@@ -1,8 +1,9 @@
-import { Alert, Button } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { isDesktop } from '@/const/version';
 import { useToolStore } from '@/store/tool';
@@ -96,9 +97,16 @@ const QuickImportSection = ({
     return (
       <div>
         <Button
-          block // Make button full width
-          style={{ marginBottom: 16 }} // Add some spacing
-          type="dashed"
+          Add={true}
+          Make={true}
+          button={true}
+          className="w-full border-dashed"
+          full={true}
+          some={true}
+          spacing={true}
+          style={{ marginBottom: 16 }}
+          variant="outline"
+          width={true}
           onClick={() => {
             setImportError(null); // Clear previous errors when opening
             setIsImportModalVisible(true);
@@ -140,14 +148,14 @@ const QuickImportSection = ({
       <div className="flex flex-row justify-between">
         <Button
           className={electronStylish.nodrag}
-          size={'small'}
+          size={'sm'}
           onClick={() => {
             setIsImportModalVisible(false);
           }}
         >
           {t('common:cancel')}
         </Button>
-        <Button size={'small'} type={'primary'} onClick={handleImportConfirm}>
+        <Button size={'sm'} variant="outline" onClick={handleImportConfirm}>
           {t('common:import')}
         </Button>
       </div>

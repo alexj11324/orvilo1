@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { Puzzle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -61,10 +60,8 @@ export default function PluginEmptyState() {
           <Puzzle fill={'transparent'} height={32} size={32} width={32} />
         </span>
       </div>
-      <Text as={'h4'} className={styles.title}>
-        {t('dev.preview.empty.title')}
-      </Text>
-      <Text className={styles.description}>{t('dev.preview.empty.desc')}</Text>
+      <h4 className={styles.title}>{t('dev.preview.empty.title')}</h4>
+      <div className={styles.description}>{t('dev.preview.empty.desc')}</div>
       <div className="flex flex-col items-center gap-2">
         <div className={styles.line} style={{ width: 128 }} />
         <div className={styles.line} style={{ width: 96 }} />

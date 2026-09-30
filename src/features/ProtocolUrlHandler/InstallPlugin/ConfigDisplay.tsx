@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { type McpInstallSchema } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cx } from 'antd-style';
 import { LinkIcon, Settings2Icon } from 'lucide-react';
@@ -137,9 +136,9 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
           <div className={styles.previewItem}>
             <span className={styles.previewLabel}>{t('protocolInstall.config.type.label')}</span>
             <div className={styles.typeValue}>
-              <Text className={styles.previewValue}>
+              <div className={styles.previewValue}>
                 {schema.config.type === 'stdio' ? 'STDIO' : 'HTTP'}
-              </Text>
+              </div>
             </div>
           </div>
 

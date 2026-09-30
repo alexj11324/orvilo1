@@ -1,13 +1,22 @@
-import { Alert, Button, RadioGroup } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
 import isEqual from 'fast-deep-equal';
-import { type ComponentProps, type ReactNode, useEffect, useState } from 'react';
+import {
+  type ComponentProps,
+  type CSSProperties,
+  type ReactNode,
+  useEffect,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form from '@/components/GroupForm';
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import ErrorDetails from '@/features/MCP/MCPInstallProgress/InstallError/ErrorDetails';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -19,6 +28,33 @@ import ArgsInput from './ArgsInput';
 import CollapsibleSection from './CollapsibleSection';
 import MCPTypeSelect from './MCPTypeSelect';
 import QuickImportSection from './QuickImportSection';
+
+interface AuthTypeOption {
+  label: ReactNode;
+  value: string;
+}
+
+// Form.Item injects value/onChange; bridge them to ui/radio-group's value/onValueChange.
+const AuthTypeRadioGroup = ({
+  value,
+  onChange,
+  options,
+  style,
+}: {
+  onChange?: (value: string) => void;
+  options: AuthTypeOption[];
+  style?: CSSProperties;
+  value?: string;
+}) => (
+  <RadioGroup className="flex flex-row gap-4" style={style} value={value} onValueChange={onChange}>
+    {options.map((opt) => (
+      <div className="flex items-center gap-2" key={opt.value}>
+        <RadioGroupItem value={opt.value} />
+        <Label>{opt.label}</Label>
+      </div>
+    ))}
+  </RadioGroup>
+);
 
 interface MCPManifestFormProps {
   /**
@@ -288,7 +324,7 @@ const MCPManifestForm = ({
                 label={t('dev.mcp.auth.label')}
                 name={AUTH_TYPE}
               >
-                <RadioGroup
+                <AuthTypeRadioGroup
                   style={{ width: '100%' }}
                   options={[
                     {

@@ -1,15 +1,16 @@
 'use client';
 
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import type { ComposioAppType, OrviloSkillProviderType } from '@orvilo/const';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { AlertCircle, Loader2, Square, SquareCheckBig, SquareMinus, X } from 'lucide-react';
+import { AlertCircle, Loader2, Square, SquareCheckBig, SquareMinus } from 'lucide-react';
 import React, { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import ClosableBadge from '@/components/ClosableBadge';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useIsDark } from '@/hooks/useIsDark';
@@ -388,43 +389,43 @@ const PluginTag = memo<PluginTagProps>(
     const showErrorState = !meta.isInstalled && !isLoading;
 
     return (
-      <Tag
+      <ClosableBadge
         className={styles.tag}
-        closable={removable && !disabled && !selectable}
-        closeIcon={<X size={12} />}
-        color={showErrorState ? 'error' : undefined}
+        closeLabel={t('close', { ns: 'common' })}
         style={selectable ? { cursor: 'pointer' } : undefined}
-        variant={isDarkMode ? 'filled' : 'outlined'}
-        icon={
-          selectable ? (
-            <div className="flex items-center gap-1.5">
-              {selected ? (
-                indeterminate ? (
-                  <SquareMinus size={14} style={{ color: cssVar.colorPrimary }} />
-                ) : (
-                  <SquareCheckBig size={14} style={{ color: cssVar.colorPrimary }} />
-                )
-              ) : (
-                <Square size={14} style={{ color: cssVar.colorTextQuaternary }} />
-              )}
-              {renderIcon()}
-            </div>
-          ) : (
-            renderIcon()
-          )
-        }
+        variant={isDarkMode ? 'secondary' : 'outline'}
         title={
           showErrorState
             ? t('tools.notInstalledWarning', { defaultValue: 'This tool is not installed' })
             : undefined
         }
         onClick={selectable ? onSelect : undefined}
-        onClose={(e) => {
-          if (disabled) return;
+        onClose={
+          removable && !disabled && !selectable
+            ? () => {
+                if (disabled) return;
 
-          onRemove?.(e);
-        }}
+                onRemove?.();
+              }
+            : undefined
+        }
       >
+        {selectable ? (
+          <div className="flex items-center gap-1.5">
+            {selected ? (
+              indeterminate ? (
+                <SquareMinus size={14} style={{ color: cssVar.colorPrimary }} />
+              ) : (
+                <SquareCheckBig size={14} style={{ color: cssVar.colorPrimary }} />
+              )
+            ) : (
+              <Square size={14} style={{ color: cssVar.colorTextQuaternary }} />
+            )}
+            {renderIcon()}
+          </div>
+        ) : (
+          renderIcon()
+        )}
         {author ? (
           <div className="flex items-center gap-1">
             {getDisplayText()}
@@ -445,7 +446,7 @@ const PluginTag = memo<PluginTagProps>(
         ) : (
           getDisplayText()
         )}
-      </Tag>
+      </ClosableBadge>
     );
   },
 );

@@ -1,12 +1,12 @@
 'use client';
 
-import { Tabs } from '@lobehub/ui/base-ui';
 import { HotkeyGroupEnum } from '@orvilo/const/hotkeys';
 import { MessageSquare, Settings2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGlobalStore } from '@/store/global';
 import { type HotkeyGroupId } from '@/types/hotkey';
 
@@ -35,22 +35,27 @@ const HotkeyHelperPanel = memo(() => {
         },
       }}
       title={
-        <Tabs
-          activeKey={active}
-          items={[
-            {
-              icon: <Settings2 />,
-              key: HotkeyGroupEnum.Essential,
-              label: t('hotkey.group.essential'),
-            },
-            {
-              icon: <MessageSquare />,
-              key: HotkeyGroupEnum.Conversation,
-              label: t('hotkey.group.conversation'),
-            },
-          ]}
-          onChange={(key) => setActive(key as HotkeyGroupId)}
-        />
+        <Tabs value={active} onValueChange={(key) => setActive(key as HotkeyGroupId)}>
+          <TabsList>
+            {[
+              {
+                icon: <Settings2 />,
+                key: HotkeyGroupEnum.Essential,
+                label: t('hotkey.group.essential'),
+              },
+              {
+                icon: <MessageSquare />,
+                key: HotkeyGroupEnum.Conversation,
+                label: t('hotkey.group.conversation'),
+              },
+            ].map((item) => (
+              <TabsTrigger key={item.key} value={item.key}>
+                {item.icon}
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       }
       onCancel={handleClose}
     >

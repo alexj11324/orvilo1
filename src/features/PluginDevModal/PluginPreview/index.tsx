@@ -1,4 +1,3 @@
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { type ToolManifest } from '@orvilo/types';
 import { type FormInstance } from 'antd';
 import { cssVar } from 'antd-style';
@@ -10,6 +9,7 @@ import AForm from '@/components/GroupForm';
 import ManifestPreviewer from '@/components/ManifestPreviewer';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import PluginTag from '@/components/Plugins/PluginTag';
+import { Button } from '@/components/ui/button';
 import { pluginHelpers } from '@/store/tool';
 
 import ApiVisualizer from './ApiVisualizer';
@@ -42,22 +42,19 @@ const PluginPreview = memo<{ form: FormInstance }>(({ form }) => {
                 {pluginHelpers.getPluginTitle(meta) || 'Plugin Title'}
                 <PluginTag type={'customPlugin'} />
               </div>
-              <Text style={{ fontSize: 12 }} type={'secondary'}>
+              <div className="text-muted-foreground" style={{ fontSize: 12 }}>
                 {pluginHelpers.getPluginDesc(meta) || 'Plugin Description'}
-              </Text>
+              </div>
             </div>
           </div>
 
           {manifest && (
             <ManifestPreviewer manifest={manifest}>
               <div className="flex flex-col">
-                <Button
-                  icon={
-                    <span className="anticon" role="img">
-                      <FileCode fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                    </span>
-                  }
-                >
+                <Button>
+                  <span className="anticon" role="img">
+                    <FileCode fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  </span>
                   {t('dev.mcp.previewManifest')}
                 </Button>
               </div>

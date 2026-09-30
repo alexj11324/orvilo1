@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -44,7 +43,11 @@ const Resources = memo<{ mode?: ModeType }>(({ mode }) => {
           {
             dataIndex: 'mimeType',
             key: 'mimeType',
-            render: (_, record) => <Tag className={styles.code}>{record.mimeType}</Tag>,
+            render: (_, record) => (
+              <Badge className={styles.code} variant="secondary">
+                {record.mimeType}
+              </Badge>
+            ),
             title: t('mcp.details.schema.resources.table.mineType'),
           },
           {

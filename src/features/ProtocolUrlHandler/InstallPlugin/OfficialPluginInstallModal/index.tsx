@@ -1,10 +1,10 @@
 'use client';
 
-import { Text, toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { toast } from '@/components/toast';
 import DetailLoading from '@/features/MCP/MCPDetail/Loading';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
@@ -82,7 +82,7 @@ const OfficialPluginInstallModal = memo<OfficialPluginInstallModalProps>(
       if (!data) {
         return (
           <div className="flex flex-col">
-            <Text type="danger">{t('protocolInstall.messages.manifestError')}</Text>
+            <div className="text-destructive">{t('protocolInstall.messages.manifestError')}</div>
           </div>
         );
       }

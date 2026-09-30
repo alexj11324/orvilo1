@@ -1,12 +1,12 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { getActivePluginIds } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Button } from '@/components/ui/button';
 import type { AgentToolProps } from '@/features/ProfileEditor/AgentTool';
 import SharedAgentTool from '@/features/ProfileEditor/AgentTool';
 import PluginTag from '@/features/ProfileEditor/PluginTag';
@@ -86,18 +86,18 @@ const UserToolsSection = memo<Props>(
       return (
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between">
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {t('settingAgent.agentTools.copyPick')}
-            </Text>
+            </div>
             <div className="flex gap-2">
-              <Button disabled={copying} size={'small'} type={'text'} onClick={onCancelCopy}>
+              <Button disabled={copying} size={'sm'} variant="outline" onClick={onCancelCopy}>
                 {t('cancel', { ns: 'common' })}
               </Button>
               <Button
                 disabled={selected.size === 0 || copying}
                 loading={copying}
-                size={'small'}
-                type={'primary'}
+                size={'sm'}
+                variant="outline"
                 onClick={onConfirmCopy}
               >
                 {t('settingAgent.agentTools.copyConfirm', { count: selected.size })}
@@ -106,9 +106,9 @@ const UserToolsSection = memo<Props>(
           </div>
           <div className="flex items-center gap-2 flex-wrap">
             {copyable.length === 0 && (
-              <Text style={{ fontSize: 12 }} type={'secondary'}>
+              <div className="text-muted-foreground" style={{ fontSize: 12 }}>
                 {t('settingAgent.agentTools.pickerEmpty')}
-              </Text>
+              </div>
             )}
             {copyable.map((c) => (
               <PluginTag
@@ -126,9 +126,9 @@ const UserToolsSection = memo<Props>(
 
     return (
       <div className="flex flex-col gap-2">
-        <Text style={{ fontSize: 12, fontWeight: 500 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 12, fontWeight: 500 }}>
           {baseToolsLabel} · {userToolCount}
-        </Text>
+        </div>
         <SharedAgentTool
           {...toolProps}
           excludeAgentConnectors

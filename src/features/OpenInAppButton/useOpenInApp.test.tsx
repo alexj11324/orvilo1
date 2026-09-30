@@ -9,8 +9,7 @@ const wrapper = ({ children }: { children: ReactNode }) => (
   <SWRConfig value={{ dedupingInterval: 0, provider: () => new Map() }}>{children}</SWRConfig>
 );
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/toast', async () => ({
   ...(await import('~base-ui-stubs')).baseUiStubs,
 }));
 
@@ -95,7 +94,7 @@ describe('useOpenInApp', () => {
   const importModules = async () => {
     const hookMod = await import('./useOpenInApp');
     const svc = await import('@/services/electron/openInApp');
-    const { toast } = await import('@lobehub/ui/base-ui');
+    const { toast } = await import('@/components/toast');
     return {
       service: svc.electronOpenInAppService,
       toast,

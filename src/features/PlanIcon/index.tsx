@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { Plans } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Atom, Box, CircleSlash, Sparkle, Zap } from 'lucide-react';
@@ -77,9 +76,9 @@ const PlanIcon = memo<PlanIconProps>(
 
     if (isTag) {
       return (
-        <Tag
+        <Badge
           className={className}
-          variant={'filled'}
+          variant="secondary"
           style={{
             ...(theme || { background: cssVar.colorFillSecondary, color: cssVar.colorText }),
             border: 'none',
@@ -92,7 +91,7 @@ const PlanIcon = memo<PlanIconProps>(
           onClick={onClick}
         >
           {t(`plans.plan.${plan}.title`)}
-        </Tag>
+        </Badge>
       );
     }
 

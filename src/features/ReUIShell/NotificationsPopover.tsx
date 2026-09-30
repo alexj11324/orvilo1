@@ -1,11 +1,11 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import { BellIcon, CheckCheckIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { ScrollArea } from '@/components/ui/scroll-area';
@@ -95,9 +95,10 @@ function NotificationsPanel() {
             <TooltipTrigger
               render={
                 <Button
-                  aria-label={t('reuiShell9.markAllRead')}
+                  aria={true}
                   className="opacity-60 hover:opacity-100"
                   disabled={unreadCount === 0}
+                  label={t('reuiShell9.markAllRead')}
                   size="icon-xs"
                   variant="ghost"
                   onClick={() => void markAllRead()}
@@ -152,8 +153,9 @@ export function NotificationsPopover() {
   const { unreadCount } = useInboxUnreadCount();
   const trigger = (
     <Button
-      aria-label={t('reuiShell9.notifications')}
+      aria={true}
       className="relative"
+      label={t('reuiShell9.notifications')}
       size="icon-sm"
       variant="ghost"
     />

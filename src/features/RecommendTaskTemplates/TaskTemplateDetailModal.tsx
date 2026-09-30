@@ -1,19 +1,14 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import type { TaskTemplate } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { Clock, X } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 
 import { ConnectorAuthRow } from './ConnectorAuthRow';
@@ -63,9 +58,7 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
           <div className="flex flex-row items-center gap-3" style={{ flex: 1, minWidth: 0 }}>
             <TemplateBriefIcon spec={iconSpec} tileSize={36} />
             <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
-              <Text ellipsis fontSize={18} weight={600}>
-                {title}
-              </Text>
+              <div className="truncate text-[18px] font-semibold">{title}</div>
               <div className="flex flex-row items-center gap-1">
                 <span className="anticon" role="img">
                   <Clock
@@ -76,16 +69,16 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
                     width={12}
                   />
                 </span>
-                <Text fontSize={12} type={'secondary'}>
-                  {scheduleText}
-                </Text>
+                <div className="text-[12px] text-muted-foreground">{scheduleText}</div>
               </div>
             </div>
           </div>
           <ActionIcon icon={X} size={'small'} onClick={close} />
         </div>
 
-        {description.trim().length > 0 && <Text type={'secondary'}>{description}</Text>}
+        {description.trim().length > 0 && (
+          <div className="text-muted-foreground">{description}</div>
+        )}
 
         {instruction.trim().length > 0 && (
           <>
@@ -112,7 +105,7 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
             disabled={disabled}
             loading={loading || pendingCreate}
             shape={'round'}
-            type={'primary'}
+            variant="outline"
             onClick={handleAddTask}
           >
             {primaryButtonLabel}

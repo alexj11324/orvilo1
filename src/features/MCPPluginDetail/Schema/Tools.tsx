@@ -1,5 +1,4 @@
 import { Markdown } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CheckIcon, MinusIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
@@ -74,7 +73,11 @@ const Tools = memo<ToolsProps>(({ mode, activeKey = [], setActiveKey }) => {
                     },
                     {
                       dataIndex: 'type',
-                      render: (_, record) => <Tag className={styles.code}>{record.type}</Tag>,
+                      render: (_, record) => (
+                        <Badge className={styles.code} variant="secondary">
+                          {record.type}
+                        </Badge>
+                      ),
                       title: t('mcp.details.schema.tools.table.type'),
                     },
                     {

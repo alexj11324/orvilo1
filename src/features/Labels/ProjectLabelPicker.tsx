@@ -1,11 +1,12 @@
 'use client';
 
-import { Select, toast } from '@lobehub/ui/base-ui';
 import { TagIcon } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { toast } from '@/components/toast';
+import { Select } from '@/components/ui/select';
 import { useProjectStore } from '@/store/project';
 
 export interface ProjectLabelPickerProps {

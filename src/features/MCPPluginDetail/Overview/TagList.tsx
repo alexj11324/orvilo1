@@ -1,6 +1,5 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
@@ -23,9 +22,9 @@ const TagList = memo<{ tags: string[] }>(({ tags }) => {
     showTags && (
       <div className="flex gap-2 flex-wrap">
         {tags.map((tag) => (
-          <Tag className={styles.tag} key={tag}>
+          <Badge className={styles.tag} key={tag} variant="secondary">
             {tag}
-          </Tag>
+          </Badge>
         ))}
       </div>
     )

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CheckIcon, RouterIcon, TerminalIcon } from 'lucide-react';
@@ -163,9 +162,9 @@ const MCPTypeSelect = ({ value, onChange }: MCPTypeSelectProps) => {
               ))}
             </div>
             {disabled && (
-              <Text style={{ fontSize: 12, marginTop: 8 }} type="warning">
+              <div className="text-warning" style={{ fontSize: 12, marginTop: 8 }}>
                 {t('dev.mcp.type.stdioNotAvailable')}
-              </Text>
+              </div>
             )}
           </div>
         );

@@ -1,12 +1,7 @@
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  AccordionRoot,
-  AccordionTrigger,
-} from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
+
+import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
 import { styles } from './style';
 

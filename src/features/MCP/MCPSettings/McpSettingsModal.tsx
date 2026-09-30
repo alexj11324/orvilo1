@@ -1,8 +1,10 @@
 'use client';
 
-import { Button, createModal } from '@lobehub/ui/base-ui';
 import { t as i18nT } from 'i18next';
 import { type RefObject } from 'react';
+
+import { createModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 
 import { type SettingsRef } from './index';
 import Settings from './index';
@@ -28,7 +30,7 @@ export const createMcpSettingsModal = ({ identifier }: McpSettingsModalOptions) 
         <div className="flex gap-2">
           <Button onClick={() => modal.close()}>{i18nT('cancel', { ns: 'common' })}</Button>
           <Button
-            type="primary"
+            variant="default"
             onClick={() => {
               settingsRef.current?.save();
             }}

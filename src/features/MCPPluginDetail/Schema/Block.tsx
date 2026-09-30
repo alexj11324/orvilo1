@@ -1,7 +1,8 @@
-import { Tabs, Tag } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { styles } from './style';
 import { ModeType } from './types';
@@ -25,23 +26,30 @@ const Block = memo<BlockProps>(({ title, count, desc, children, mode, setMode, i
           <h2 className={styles.sectionTitle} id={id}>
             {title}
           </h2>
-          <Tag>{count}</Tag>
+          <Badge variant="secondary">{count}</Badge>
         </div>
         <Tabs
-          activeKey={mode}
           style={{ flex: 'none', width: 'auto' }}
-          items={[
-            {
-              key: ModeType.Docs,
-              label: t('mcp.details.schema.mode.docs'),
-            },
-            {
-              key: ModeType.JSON,
-              label: 'JSON',
-            },
-          ]}
-          onChange={(key) => setMode?.(key as ModeType)}
-        />
+          value={mode}
+          onValueChange={(key) => setMode?.(key as ModeType)}
+        >
+          <TabsList>
+            {[
+              {
+                key: ModeType.Docs,
+                label: t('mcp.details.schema.mode.docs'),
+              },
+              {
+                key: ModeType.JSON,
+                label: 'JSON',
+              },
+            ].map((item) => (
+              <TabsTrigger key={item.key} value={item.key}>
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       </div>
       <p className={styles.sectionDesc} style={{ marginTop: -6 }}>
         {desc}

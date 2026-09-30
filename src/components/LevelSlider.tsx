@@ -157,10 +157,12 @@ function LevelSlider<T extends string = string>({
         ].join(' ')
       : 'minmax(0, 1fr)';
 
-  const handleChange = (index: number) => {
+  const handleChange = (index: number | readonly number[]) => {
     if (disabled) return;
+    const next = Array.isArray(index) ? index[0] : index;
+    if (typeof next !== 'number') return;
 
-    const newLevel = levels[index];
+    const newLevel = levels[next];
     if (newLevel !== undefined) {
       setCurrentLevel(newLevel);
     }

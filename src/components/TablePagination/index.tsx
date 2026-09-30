@@ -118,17 +118,19 @@ const TablePagination = memo<TablePaginationProps>(
           <Button
             aria-label={t('table.pagination.prev')}
             disabled={page <= 1}
-            icon={ChevronLeft}
-            size={'small'}
-            type={'text'}
+            size="icon-sm"
+            variant="ghost"
             onClick={() => goTo(page - 1)}
-          />
+          >
+            <ChevronLeft />
+          </Button>
           {getPageItems(page, totalPages).map((item) =>
             typeof item === 'number' ? (
               <Button
+                aria-current={item === page ? 'page' : undefined}
                 key={item}
-                size={'small'}
-                type={item === page ? 'fill' : 'text'}
+                size="icon-sm"
+                variant={item === page ? 'secondary' : 'ghost'}
                 onClick={() => goTo(item)}
               >
                 {item}
@@ -142,11 +144,12 @@ const TablePagination = memo<TablePaginationProps>(
           <Button
             aria-label={t('table.pagination.next')}
             disabled={page >= totalPages}
-            icon={ChevronRight}
-            size={'small'}
-            type={'text'}
+            size="icon-sm"
+            variant="ghost"
             onClick={() => goTo(page + 1)}
-          />
+          >
+            <ChevronRight />
+          </Button>
         </div>
       </div>
     );

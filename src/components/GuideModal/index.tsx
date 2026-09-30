@@ -56,11 +56,7 @@ const GuideModalContent = memo<GuideModalContentProps>(
         {(okText || cancelText) && (
           <div className={'flex gap-2 justify-end py-4 px-4'} style={{ paddingTop: 0 }}>
             {cancelText ? <Button onClick={handleCancel}>{cancelText}</Button> : null}
-            {okText ? (
-              <Button type={'primary'} onClick={handleOk}>
-                {okText}
-              </Button>
-            ) : null}
+            {okText ? <Button onClick={handleOk}>{okText}</Button> : null}
           </div>
         )}
       </div>

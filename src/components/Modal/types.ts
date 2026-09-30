@@ -40,7 +40,7 @@ interface ModalContextValue {
 
 interface ModalInstance extends ModalContextValue {
   destroy: () => void;
-  update: (nextProps: Partial<BaseModalProps>) => void;
+  update: (nextProps: Partial<ImperativeModalProps>) => void;
 }
 
 type ImperativeModalProps = BaseModalProps & {
@@ -89,7 +89,7 @@ interface ModalProps {
   maskClosable?: boolean;
   okButtonProps?: ModalButtonProps;
   okText?: ReactNode;
-  onCancel?: (e: MouseEvent<HTMLButtonElement>) => void;
+  onCancel?: () => void;
   onOk?: (e: MouseEvent<HTMLButtonElement>) => void;
   open?: boolean;
   style?: CSSProperties;

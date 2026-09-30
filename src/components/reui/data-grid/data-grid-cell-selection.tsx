@@ -1525,7 +1525,9 @@ function DataGridCellSelection<TData extends object>({
           if (direction === 'down' && !event.shiftKey) {
             const focused = table.getFocusedCell();
             const renderedRows = viewport.querySelectorAll('tbody tr[data-row-id]');
-            const lastRenderedId = renderedRows.at(-1)?.getAttribute('data-row-id');
+            const lastRenderedId = renderedRows
+              .item(renderedRows.length - 1)
+              ?.getAttribute('data-row-id');
             if (
               focused &&
               lastRenderedId &&

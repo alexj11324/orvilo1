@@ -27,7 +27,6 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
   const hasStack = !!error?.stack;
   const defaultExpandedKeys: string[] = typeof __CI__ !== 'undefined' && __CI__ ? ['stack'] : [];
   const [expandedKeys, setExpandedKeys] = useState<string[]>(defaultExpandedKeys);
-  const isExpanded = expandedKeys.includes('stack');
 
   return (
     <div
@@ -53,14 +52,18 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
       </h2>
       <p style={{ marginBottom: '2em' }}>{t('error.desc')}</p>
       <div className={'flex gap-3'} style={{ marginBottom: '2em' }}>
-        <Button onClick={() => window.location.reload()}>{t('error.retry')}</Button>
-        <Button type={'primary'} onClick={() => (window.location.href = resetPath)}>
-          {t('error.backHome')}
+        <Button variant="outline" onClick={() => window.location.reload()}>
+          {t('error.retry')}
         </Button>
+        <Button onClick={() => (window.location.href = resetPath)}>{t('error.backHome')}</Button>
       </div>
       {hasStack && (
         <div
-          variant={isExpanded ? 'outlined' : 'filled'}
+          className={
+            expandedKeys.includes('stack')
+              ? 'rounded-lg border border-border'
+              : 'rounded-lg bg-secondary'
+          }
           style={{
             marginBottom: '1em',
             maxWidth: '90vw',

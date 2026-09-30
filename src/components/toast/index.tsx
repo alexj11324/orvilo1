@@ -103,9 +103,10 @@ const isOptionsObject = (input: unknown): input is Omit<ToastOptions, 'type'> =>
 
 const issue = (options: ToastOptions): ToastInstance => {
   const { type = 'default', title } = options;
+  const { actions } = options;
 
   let id: string | number;
-  if (options.actions && options.actions.length > 2) {
+  if (actions && actions.length > 2) {
     // sonner only supports action+cancel; render all actions in a custom toast
     id = sonnerToast.custom(
       () => (
@@ -115,7 +116,7 @@ const issue = (options: ToastOptions): ToastInstance => {
             <div className="text-sm text-muted-foreground">{options.description}</div>
           ) : null}
           <div className="flex gap-2">
-            {options.actions.map((action: ToastAction, i: number) => (
+            {actions.map((action: ToastAction, i: number) => (
               <button key={i} type="button" {...action.props} onClick={action.onClick}>
                 {action.label}
               </button>

@@ -65,12 +65,23 @@ export interface DiscreteSliderOption {
 
 export interface DiscreteSliderProps extends Omit<
   ComponentProps<typeof Slider>,
-  'defaultValue' | 'max' | 'min' | 'onValueChange' | 'onValueCommitted' | 'step' | 'value'
+  | 'className'
+  | 'defaultValue'
+  | 'max'
+  | 'min'
+  | 'onChange'
+  | 'onValueChange'
+  | 'onValueCommitted'
+  | 'step'
+  | 'style'
+  | 'value'
 > {
+  className?: string;
   formatTooltip?: (value: number) => ReactNode;
   onChange?: (value: number) => void;
   onChangeComplete?: (value: number) => void;
   options: readonly DiscreteSliderOption[];
+  style?: CSSProperties;
   value: number;
 }
 
@@ -107,11 +118,11 @@ const DiscreteSlider = memo<DiscreteSliderProps>(
           step={1}
           value={currentIndex}
           onValueChange={(index) => {
-            const option = options[index];
+            const option = options[typeof index === 'number' ? index : index[0]];
             if (option) onChange?.(option.value);
           }}
           onValueCommitted={(index) => {
-            const option = options[index];
+            const option = options[typeof index === 'number' ? index : index[0]];
             if (option) onChangeComplete?.(option.value);
           }}
         />

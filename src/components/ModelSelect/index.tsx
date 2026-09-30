@@ -7,6 +7,7 @@ import {
   AudioLines,
   Infinity as InfinityIcon,
   LucideEye,
+  type LucideIcon,
   LucideImage,
   LucidePaperclip,
   Video,
@@ -20,7 +21,7 @@ import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
-import { Badge } from '@/components/reui/badge';
+import { Badge, type BadgeProps } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type AiProviderSourceType } from '@/types/aiProvider';
 import { formatTokenNumber } from '@/utils/format';
@@ -76,34 +77,27 @@ interface FeatureTagsProps extends Pick<
 
 interface FeatureTagItemProps {
   className: string;
-  color: Parameters<typeof Tag>[0]['color'];
+  color: 'success' | 'magenta' | 'gold' | 'info';
   disableTooltip?: boolean;
   enabled: boolean | undefined;
-  icon: Parameters<typeof Icon>[0]['icon'];
+  icon: LucideIcon;
   placement: 'top' | 'right';
   title: string;
 }
+
+const featureTagVariants: Record<FeatureTagItemProps['color'], BadgeProps['variant']> = {
+  gold: 'warning',
+  info: 'info',
+  magenta: 'focus',
+  success: 'success',
+};
 
 const FeatureTagItem = memo<FeatureTagItemProps>(
   ({ className, color, disableTooltip, enabled, icon, placement, title }) => {
     if (!enabled) return null;
 
     const tag = (
-      <Badge
-        className={className}
-        size="sm"
-        variant={
-          (color as
-            | 'info'
-            | 'success'
-            | 'warning'
-            | 'destructive'
-            | 'default'
-            | 'secondary'
-            | 'primary'
-            | undefined) ?? 'secondary'
-        }
-      >
+      <Badge className={className} size="sm" variant={featureTagVariants[color]}>
         {createElement(icon, { size: 16 })}
       </Badge>
     );
@@ -239,7 +233,7 @@ export const ModelInfoTags = memo<ModelInfoTagsProps>(
           gap: 2,
           marginLeft: 'auto',
           ...style,
-          flexDirection: directionReverse ? 'horizontal-reverse' : 'row',
+          flexDirection: directionReverse ? 'row-reverse' : 'row',
           width: 'fit-content',
         }}
       >
@@ -267,7 +261,7 @@ export const ModelInfoTags = memo<ModelInfoTagsProps>(
   },
 );
 
-interface ModelItemRenderProps extends ChatModelCard, Pick<HTMLAttributes<HTMLDivElement>> {
+interface ModelItemRenderProps extends ChatModelCard, Omit<HTMLAttributes<HTMLDivElement>, 'id'> {
   abilities?: ModelAbilities;
   audio?: boolean;
   newBadgeLabel?: string;

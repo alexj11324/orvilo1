@@ -17,7 +17,7 @@ import {
 import { popoverPlacement } from './placement';
 
 export type DropdownItem = ActionMenuItem;
-export type { ActionIconGroupItemType, MenuInfo };
+export type { ActionIconGroupItemType, ActionMenuItem, MenuInfo };
 
 export interface MenuProps {
   items?: DropdownItem[];

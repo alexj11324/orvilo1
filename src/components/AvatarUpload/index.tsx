@@ -1,11 +1,11 @@
 'use client';
 
 import { createStaticStyles, cssVar } from 'antd-style';
-import { Loader2, PencilIcon, X } from 'lucide-react';
+import { PencilIcon, X } from 'lucide-react';
 import { createElement, memo, useMemo } from 'react';
 
 import Avatar from '@/components/Avatar';
-import { Spinner as Spin } from '@/components/ui/spinner';
+import { Spinner } from '@/components/ui/spinner';
 import { Upload } from '@/components/Upload';
 import { imageToBase64 } from '@/utils/imageToBase64';
 import { createUploadImageHandler } from '@/utils/uploadFIle';
@@ -112,7 +112,7 @@ const AvatarUpload = memo<AvatarUploadProps>(
 
     return (
       <Upload beforeUpload={handleUpload} maxCount={1}>
-        <Spin indicator={createElement(Loader2, { size: 16 })} spinning={!!loading}>
+        <div className="relative">
           <div className={styles.wrapper}>
             <Avatar avatar={value} shape={shape} size={size} title={title} />
             <div className={`${styles.overlay} avatar-edit-overlay`}>
@@ -133,7 +133,12 @@ const AvatarUpload = memo<AvatarUploadProps>(
               </div>
             )}
           </div>
-        </Spin>
+          {loading && (
+            <div className="absolute inset-0 z-10 flex items-center justify-center bg-background/50">
+              <Spinner />
+            </div>
+          )}
+        </div>
       </Upload>
     );
   },

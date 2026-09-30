@@ -65,6 +65,10 @@ const isGroup = <Value,>(
   option: SelectOption<Value> | SelectOptionGroup<Value>,
 ): option is SelectOptionGroup<Value> => 'options' in option;
 
+const isScalarValue = <Value extends string | number>(
+  value: Value | Value[] | null | undefined,
+): value is Value => typeof value === 'string' || typeof value === 'number';
+
 /**
  * Thin adapter exposing the lobehub base-ui Select surface (`options` +
  * `value` + `onChange(value)`) on top of `@/components/ui/select`.
@@ -173,7 +177,7 @@ const Select = <Value extends string | number = string>({
       defaultValue={defaultValue ?? undefined}
       disabled={disabled || loading}
       items={items}
-      value={value ?? undefined}
+      value={isScalarValue(value) ? value : undefined}
       onOpenChange={(open) => onOpenChange?.(open)}
       onValueChange={(v) => onChange?.(v as Value | null | undefined)}
     >
@@ -181,9 +185,7 @@ const Select = <Value extends string | number = string>({
         aria-label={ariaLabel}
         className={className}
         id={id}
-        size={
-          size === 'small' ? 'sm' : size === 'middle' ? 'default' : size === 'large' ? 'lg' : size
-        }
+        size={size === 'small' || size === 'sm' ? 'sm' : 'default'}
         style={style}
       >
         <SelectValue placeholder={placeholder} />

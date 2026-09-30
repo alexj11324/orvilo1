@@ -44,9 +44,7 @@ const NotFound = memo<{
         <div style={{ marginTop: '0.5em' }}>{t('notFound.check')}</div>
       </div>
       {extra || (
-        <Button type={'primary'} onClick={() => (window.location.href = '/')}>
-          {t('notFound.backHome')}
-        </Button>
+        <Button onClick={() => (window.location.href = '/')}>{t('notFound.backHome')}</Button>
       )}
     </div>
   );

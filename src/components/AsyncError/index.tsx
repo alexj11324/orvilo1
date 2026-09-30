@@ -95,8 +95,8 @@ const AsyncError = memo<AsyncErrorProps>(
             <Button
               disabled={retrying}
               loading={retrying}
-              size={'small'}
-              type={'text'}
+              size="sm"
+              variant="ghost"
               onClick={onRetry}
             >
               {t('error.retry')}
@@ -118,8 +118,8 @@ const AsyncError = memo<AsyncErrorProps>(
             <Button
               disabled={retrying}
               loading={retrying}
-              size={'small'}
-              type={'text'}
+              size="sm"
+              variant="ghost"
               onClick={onRetry}
             >
               {t('error.retry')}
@@ -151,13 +151,8 @@ const AsyncError = memo<AsyncErrorProps>(
         </div>
         {action ??
           (showRetry && (
-            <Button
-              disabled={retrying}
-              icon={createElement(RotateCwIcon, { size: 16 })}
-              loading={retrying}
-              size={'small'}
-              onClick={onRetry}
-            >
+            <Button disabled={retrying} loading={retrying} size="sm" onClick={onRetry}>
+              {createElement(RotateCwIcon, { size: 16 })}
               {t('error.retry')}
             </Button>
           ))}

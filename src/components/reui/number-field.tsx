@@ -6,7 +6,7 @@ import { cva } from 'class-variance-authority';
 import { cn } from 'cn';
 import { MinusIcon, PlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { createContext, useId } from 'react';
+import { createContext, use, useId } from 'react';
 
 import { Label } from '@/components/ui/label';
 

@@ -66,7 +66,7 @@ const RenameModalContent = memo<RenameModalContentProps>(
           <Button disabled={loading} onClick={close}>
             {tCommon('cancel')}
           </Button>
-          <Button loading={loading} type={'primary'} onClick={handleSave}>
+          <Button loading={loading} onClick={handleSave}>
             {tCommon('save')}
           </Button>
         </div>

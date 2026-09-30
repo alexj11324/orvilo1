@@ -42,7 +42,7 @@ import {
 } from '@tanstack/react-table';
 import { cn } from 'cn';
 import type { ReactNode } from 'react';
-import { createContext, useEffect, useId, useMemo, useRef } from 'react';
+import { createContext, use, useEffect, useId, useMemo, useRef } from 'react';
 
 import {
   type DataGridI18nConfig,

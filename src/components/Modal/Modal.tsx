@@ -2,7 +2,7 @@
 
 import { Dialog } from '@base-ui/react/dialog';
 import { t } from 'i18next';
-import { type FC, memo, type MouseEvent, useCallback, useMemo } from 'react';
+import { type FC, memo, type MouseEvent, type ReactNode, useCallback, useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
@@ -28,17 +28,18 @@ interface OkBtnProps {
 }
 
 const OkBtn = ({ confirmLoading, okButtonProps, okText, onOk }: OkBtnProps) => {
-  const { onClick: userOnClick, ...restOk } = okButtonProps ?? {};
+  const { danger, disabled, loading, onClick: userOnClick, style } = okButtonProps ?? {};
   return (
     <Button
-      disabled={restOk.disabled || confirmLoading}
-      variant={restOk.danger ? 'destructive' : 'default'}
+      disabled={disabled}
+      loading={confirmLoading || loading}
+      style={style}
+      variant={danger ? 'destructive' : 'default'}
       onClick={(e: MouseEvent<HTMLButtonElement>) => {
         onOk?.(e);
         userOnClick?.(e);
       }}
     >
-      {confirmLoading && <Spinner data-icon="inline-start" />}
       {okText}
     </Button>
   );
@@ -47,17 +48,19 @@ const OkBtn = ({ confirmLoading, okButtonProps, okText, onOk }: OkBtnProps) => {
 interface CancelBtnProps {
   cancelButtonProps?: ModalButtonProps;
   cancelText: React.ReactNode;
-  onCancel?: (e: MouseEvent<HTMLButtonElement>) => void;
+  onCancel?: () => void;
 }
 
 const CancelBtn = ({ cancelButtonProps, cancelText, onCancel }: CancelBtnProps) => {
-  const { onClick: userOnClick, ...restCancel } = cancelButtonProps ?? {};
+  const { disabled, loading, onClick: userOnClick, style } = cancelButtonProps ?? {};
   return (
     <Button
+      disabled={disabled}
+      loading={loading}
+      style={style}
       variant="outline"
-      {...restCancel}
       onClick={(e: MouseEvent<HTMLButtonElement>) => {
-        onCancel?.(e);
+        onCancel?.();
         userOnClick?.(e);
       }}
     >
@@ -98,7 +101,7 @@ const Modal = memo<ModalProps>(
         if (!isOpen) return;
         if (!nextOpen && keyboard === false && eventDetails?.reason === 'escape-key') return;
         if (!nextOpen && !maskClosable && eventDetails?.reason === 'outside-press') return;
-        if (!nextOpen) onCancel?.(new MouseEvent('click') as MouseEvent<HTMLButtonElement>);
+        if (!nextOpen) onCancel?.();
       },
       [isOpen, keyboard, maskClosable, onCancel],
     );
@@ -158,10 +161,7 @@ const Modal = memo<ModalProps>(
 
     const showTitle = title !== undefined && title !== false && title !== null;
     const showHeader = showTitle || closable;
-    const close = useCallback(
-      () => onCancel?.(new MouseEvent('click') as MouseEvent<HTMLButtonElement>),
-      [onCancel],
-    );
+    const close = useCallback(() => onCancel?.(), [onCancel]);
 
     return (
       <ModalContext value={{ close, setCanDismissByClickOutside: () => void 0 }}>

@@ -9,10 +9,19 @@ import { cssVar, cx } from 'antd-style';
 import { mergeWith } from 'es-toolkit/compat';
 import isEqual from 'fast-deep-equal';
 import { Info, type LucideIcon } from 'lucide-react';
-import { createElement, type CSSProperties, memo, type ReactNode, useEffect, useMemo } from 'react';
+import {
+  type ComponentProps,
+  createElement,
+  type CSSProperties,
+  isValidElement,
+  memo,
+  type ReactNode,
+  useEffect,
+  useMemo,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Button, type ButtonProps } from '@/components/ui/button';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useSingleton } from '@/hooks/useSingleton';
 
@@ -47,8 +56,15 @@ const variantClassName: Record<FormVariant, string> = {
   outlined: 'border border-border rounded-2xl',
 };
 
-interface FormGroupProps extends React.HTMLAttributes<HTMLElement> {
-  children?: ReactNode;
+const isFormItemArray = (children: FormItemProps[] | ReactNode): children is FormItemProps[] =>
+  Array.isArray(children) &&
+  children.every(
+    (child) =>
+      child !== null && typeof child === 'object' && !isValidElement(child) && !('then' in child),
+  );
+
+interface FormGroupProps extends Omit<React.HTMLAttributes<HTMLElement>, 'children' | 'title'> {
+  children?: FormItemProps[] | ReactNode;
   className?: string;
   collapsible?: boolean;
   defaultActive?: boolean;
@@ -109,7 +125,7 @@ const FormGroupItems = ({
               </div>
               {desc ? <div className="text-[12px] text-muted-foreground">{desc}</div> : null}
             </div>
-            {hasBinding ? (
+            {hasBinding || typeof children === 'function' ? (
               <AntdForm.Item style={{ marginBottom: 0 }} {...binding}>
                 {children}
               </AntdForm.Item>
@@ -163,7 +179,7 @@ export const FormGroup = memo<FormGroupProps>(
           variant !== 'borderless' && 'p-4',
         )}
       >
-        {Array.isArray(children) ? (
+        {isFormItemArray(children) ? (
           <FormGroupItems
             itemMinWidth={itemMinWidth}
             itemVariant={itemVariant}
@@ -273,15 +289,15 @@ interface FormSubmitFooterTexts {
 }
 
 export interface FormSubmitFooterProps {
-  buttonProps?: ButtonProps;
+  buttonProps?: ComponentProps<typeof Button>;
   children?: ReactNode;
   className?: string;
   enableReset?: boolean;
   enableUnsavedWarning?: boolean;
   float?: boolean;
   onReset?: (value: unknown, preValue: unknown) => void;
-  resetButtonProps?: ButtonProps;
-  saveButtonProps?: ButtonProps;
+  resetButtonProps?: ComponentProps<typeof Button>;
+  saveButtonProps?: ComponentProps<typeof Button>;
   texts?: FormSubmitFooterTexts;
 }
 
@@ -361,8 +377,8 @@ const FormSubmitFooter = memo<FormSubmitFooterProps>(
         {children}
         {enableReset && (float || hasUnsavedChanges) && (
           <Button
-            htmlType="button"
-            variant="filled"
+            type="button"
+            variant="secondary"
             onClick={() => {
               onReset?.(v, initialV);
               form.resetFields();
@@ -373,7 +389,7 @@ const FormSubmitFooter = memo<FormSubmitFooterProps>(
             {resetText}
           </Button>
         )}
-        <Button htmlType="submit" type="primary" {...buttonProps} {...saveButtonProps}>
+        <Button type="submit" {...buttonProps} {...saveButtonProps}>
           {submitText}
         </Button>
       </div>

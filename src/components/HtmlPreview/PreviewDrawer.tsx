@@ -63,7 +63,8 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
           </TabsTrigger>
         </TabsList>
       </Tabs>
-      <Button icon={<Download size={16} />} type={'fill'} onClick={onDownload}>
+      <Button onClick={onDownload}>
+        <Download size={16} />
         {t('HtmlPreview.actions.download')}
       </Button>
     </div>

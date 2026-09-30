@@ -505,12 +505,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
         footer={
           <div className={'flex gap-2 justify-end'}>
             <Button onClick={handleCancel}>{t('cancel', { ns: 'common' })}</Button>
-            <Button
-              disabled={confirmDisabled}
-              loading={confirmLoading}
-              type="primary"
-              onClick={handleConfirm}
-            >
+            <Button disabled={confirmDisabled} loading={confirmLoading} onClick={handleConfirm}>
               {t('groupWizard.createGroup')}
             </Button>
           </div>
@@ -622,14 +617,14 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
               <div className={cn('flex gap-3 items-center', styles.hostCard)}>
                 <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
                   <div
+                    className={isHostRemoved ? 'text-muted-foreground' : undefined}
                     style={{ fontSize: 14, fontWeight: 500 }}
-                    type={isHostRemoved ? 'secondary' : undefined}
                   >
                     {t('groupWizard.host.title')}
                   </div>
                   <div
-                    style={{ color: '#999', fontSize: 12 }}
-                    type={isHostRemoved ? 'secondary' : undefined}
+                    className={isHostRemoved ? 'text-muted-foreground' : undefined}
+                    style={{ color: isHostRemoved ? undefined : '#999', fontSize: 12 }}
                   >
                     {t('groupWizard.host.description')}
                   </div>
@@ -674,8 +669,11 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                             <Tooltip>
                               <TooltipTrigger render={<span />}>
                                 <div
-                                  className={cn('line-clamp-1', memberDescriptionClass)}
-                                  type={member.isRemoved ? 'secondary' : undefined}
+                                  className={cn(
+                                    'line-clamp-1',
+                                    memberDescriptionClass,
+                                    member.isRemoved && 'text-muted-foreground',
+                                  )}
                                 >
                                   {member.systemRole}
                                 </div>
@@ -686,7 +684,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                           key: member.key,
                           showAction: true,
                           title: (
-                            <div type={member.isRemoved ? 'secondary' : undefined}>
+                            <div className={member.isRemoved ? 'text-muted-foreground' : undefined}>
                               {member.title}
                             </div>
                           ),

@@ -14,6 +14,7 @@ import {
   createContext,
   isValidElement,
   memo,
+  use,
   useCallback,
   useDeferredValue,
   useEffect,
@@ -350,7 +351,7 @@ function computeFoldRegions(lines: CodeBlockLine[]): CodeBlockFoldRegion[] {
     if (blank(line.text)) continue;
     const own = indent(line.text);
 
-    while (stack.length && own <= stack.at(-1).indent) {
+    while (stack.length && own <= stack.at(-1)!.indent) {
       const open = stack.pop()!;
       if (open.last > open.start) {
         regions.push({ start: open.start, end: open.last });

@@ -321,12 +321,7 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
         footer={
           <div className={'flex gap-2 justify-end'}>
             <Button onClick={handleCancel}>{t('cancel', { ns: 'common' })}</Button>
-            <Button
-              disabled={isConfirmDisabled}
-              loading={isAdding}
-              type="primary"
-              onClick={handleConfirm}
-            >
+            <Button disabled={isConfirmDisabled} loading={isAdding} onClick={handleConfirm}>
               {confirmButtonText} ({totalMemberCount})
             </Button>
           </div>
@@ -389,14 +384,14 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
                 <div className={cn('flex gap-3 items-center', styles.hostCard)}>
                   <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
                     <div
+                      className={isHostRemoved ? 'text-muted-foreground' : undefined}
                       style={{ fontSize: 14, fontWeight: 500 }}
-                      type={isHostRemoved ? 'secondary' : undefined}
                     >
                       {t('groupWizard.host.title')}
                     </div>
                     <div
-                      style={{ color: '#999', fontSize: 12 }}
-                      type={isHostRemoved ? 'secondary' : undefined}
+                      className={isHostRemoved ? 'text-muted-foreground' : undefined}
+                      style={{ color: isHostRemoved ? undefined : '#999', fontSize: 12 }}
                     >
                       {t('groupWizard.host.description')}
                     </div>

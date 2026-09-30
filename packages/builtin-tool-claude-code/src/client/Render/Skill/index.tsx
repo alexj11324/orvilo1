@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { Sparkles } from 'lucide-react';
@@ -37,7 +36,7 @@ const Skill = memo<BuiltinRenderProps<SkillArgs>>(({ args, content }) => {
         <span className="anticon" role="img">
           <Sparkles fill={'transparent'} height={'14'} size={'14'} width={'14'} />
         </span>
-        <Text strong>{skillName || 'Skill'}</Text>
+        <div className="font-semibold">{skillName || 'Skill'}</div>
       </div>
 
       {content && (

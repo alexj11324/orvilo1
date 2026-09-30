@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { RunCommandParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
@@ -30,11 +29,11 @@ const RunCommand = memo<BuiltinInterventionProps<RunCommandParams>>(({ args }) =
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-row justify-between">
-        {description && <Text>{description}</Text>}
+        {description && <div>{description}</div>}
         {timeout && (
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             timeout: {formatTimeout(timeout)}
-          </Text>
+          </div>
         )}
       </div>
       {command && (

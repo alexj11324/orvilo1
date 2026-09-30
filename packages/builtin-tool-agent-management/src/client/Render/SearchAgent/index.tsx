@@ -1,12 +1,13 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx, useTheme } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import Avatar from '@/components/Avatar';
 
 import type { AgentSearchItem, SearchAgentParams, SearchAgentState } from '../../../types';
 

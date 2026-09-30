@@ -1,5 +1,4 @@
 import { Markdown, PatchDiff } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -8,6 +7,7 @@ import path from 'path-browserify-esm';
 import { memo } from 'react';
 
 import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
+import { Skeleton } from '@/components/ui/skeleton';
 import { LocalFile, LocalFolder } from '@/features/LocalFile';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({

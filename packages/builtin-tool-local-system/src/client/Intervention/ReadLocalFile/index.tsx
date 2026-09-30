@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { LocalReadFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { ChevronRight } from 'lucide-react';
@@ -25,9 +24,9 @@ const ReadLocalFile = memo<BuiltinInterventionProps<LocalReadFileParams>>(({ arg
         <LocalFile name={base} path={args.path} />
       </div>
       {args.loc && (
-        <Text style={{ fontSize: 12 }} type="secondary">
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {t('localFiles.readFile.lineRange', { end: args.loc[1], start: args.loc[0] })}
-        </Text>
+        </div>
       )}
     </div>
   );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -57,9 +56,9 @@ const ExecuteTaskRender = memo<BuiltinRenderProps<ExecuteTaskParams, ExecuteTask
 
         {/* Instruction content (read-only) */}
         {args?.instruction && (
-          <Text className={styles.taskContent} style={{ margin: 0 }}>
+          <div className={cn(styles.taskContent)} style={{ margin: 0 }}>
             {args.instruction}
-          </Text>
+          </div>
         )}
       </div>
     );

@@ -1,8 +1,8 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
@@ -137,8 +137,8 @@ const WebSearch = memo<BuiltinRenderProps<WebSearchArgs, WebSearchPluginState>>(
               <a href={result.link} rel={'noreferrer'} target={'_blank'}>
                 <span className={styles.title}>{title}</span>
               </a>
-              <Text className={styles.hostname}>{hostname || result.link}</Text>
-              {result.snippet && <Text className={styles.snippet}>{result.snippet}</Text>}
+              <div className={cn(styles.hostname)}>{hostname || result.link}</div>
+              {result.snippet && <div className={cn(styles.snippet)}>{result.snippet}</div>}
             </div>
           );
         })}

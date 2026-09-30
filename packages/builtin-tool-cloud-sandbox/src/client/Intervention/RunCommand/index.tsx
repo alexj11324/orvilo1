@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 
@@ -25,17 +24,17 @@ const RunCommand = memo<BuiltinInterventionProps<RunCommandParams>>(({ args }) =
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-row justify-between">
-        <Text>Execute command in cloud sandbox</Text>
+        <div>Execute command in cloud sandbox</div>
         <div className="flex flex-row gap-2">
           {background && (
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               background
-            </Text>
+            </div>
           )}
           {timeout && (
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               timeout: {formatTimeout(timeout)}
-            </Text>
+            </div>
           )}
         </div>
       </div>

@@ -1,10 +1,11 @@
 'use client';
 
 import { CheckCircleFilled, CloseCircleFilled, DownloadOutlined } from '@ant-design/icons';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useCallback } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import type { ExportFileState } from '../../../types';
 
@@ -62,11 +63,11 @@ const ExportFile = memo<BuiltinRenderProps<ExportFileParams, ExportFileState>>(
           ) : (
             <CloseCircleFilled className={styles.statusIcon} style={{ color: cssVar.colorError }} />
           )}
-          <Text code as={'span'} fontSize={12}>
+          <span className="font-mono rounded bg-muted px-1 text-[12px]">
             {isSuccess
               ? `Exported: ${pluginState?.filename || args.path}`
               : `Failed to export ${args.path}`}
-          </Text>
+          </span>
           {isSuccess && pluginState?.downloadUrl && (
             <ActionIcon
               icon={DownloadOutlined}

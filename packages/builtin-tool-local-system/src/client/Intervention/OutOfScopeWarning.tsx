@@ -1,8 +1,9 @@
-import { Alert } from '@lobehub/ui/base-ui';
 import { isPathWithinScope } from '@orvilo/tool-runtime';
+import { TriangleAlert } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -41,30 +42,30 @@ const OutOfScopeWarning = memo<OutOfScopeWarningProps>(({ paths }) => {
   }
 
   return (
-    <Alert
-      showIcon
-      title={t('localFiles.outOfScope.warning')}
-      type="warning"
-      variant="borderless"
-      description={
-        <div className="flex flex-col gap-1" style={{ fontSize: 12 }}>
-          <div>
-            <strong>{t('localFiles.outOfScope.workingDirectory')}:</strong>{' '}
-            <code>{workingDirectory}</code>
+    <Alert variant="warning">
+      <TriangleAlert />
+      <AlertTitle>{t('localFiles.outOfScope.warning')}</AlertTitle>
+      <AlertDescription>
+        {
+          <div className="flex flex-col gap-1" style={{ fontSize: 12 }}>
+            <div>
+              <strong>{t('localFiles.outOfScope.workingDirectory')}:</strong>{' '}
+              <code>{workingDirectory}</code>
+            </div>
+            <div>
+              <strong>{t('localFiles.outOfScope.requestedPaths')}:</strong>
+            </div>
+            <ul style={{ margin: 0, paddingLeft: 20 }}>
+              {outsidePaths.map((p, i) => (
+                <li key={i}>
+                  <code>{p}</code>
+                </li>
+              ))}
+            </ul>
           </div>
-          <div>
-            <strong>{t('localFiles.outOfScope.requestedPaths')}:</strong>
-          </div>
-          <ul style={{ margin: 0, paddingLeft: 20 }}>
-            {outsidePaths.map((p, i) => (
-              <li key={i}>
-                <code>{p}</code>
-              </li>
-            ))}
-          </ul>
-        </div>
-      }
-    />
+        }
+      </AlertDescription>
+    </Alert>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx, useTheme } from 'antd-style';
@@ -8,6 +7,7 @@ import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { highlightTextStyles, shinyTextStyles } from '@/styles';

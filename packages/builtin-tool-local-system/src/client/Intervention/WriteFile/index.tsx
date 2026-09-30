@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { ChevronRight } from 'lucide-react';
@@ -51,10 +50,10 @@ const WriteFile = memo<BuiltinInterventionProps<WriteLocalFileParams>>(({ args }
 
       <div className="flex flex-col gap-1">
         <div className="flex flex-row justify-between">
-          <Text type="secondary">{t('localFiles.writeFile.preview')}</Text>
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <div className="text-muted-foreground">{t('localFiles.writeFile.preview')}</div>
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {contentLength.toLocaleString()} {t('localFiles.writeFile.characters')}
-          </Text>
+          </div>
         </div>
 
         {args.content && (

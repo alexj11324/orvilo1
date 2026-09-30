@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -75,23 +74,24 @@ export const UpdateGroupPromptInspector = memo<
       </span>
       {/* Show length diff when completed */}
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
-        <Text
-          code
-          as="span"
-          color={lengthDiff >= 0 ? cssVar.colorSuccess : cssVar.colorError}
-          fontSize={12}
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          style={{ color: lengthDiff >= 0 ? cssVar.colorSuccess : cssVar.colorError }}
         >
           {lengthDiff >= 0 ? '+' : ''}
           {lengthDiff}
           {t('builtins.orvilo-agent-builder.inspector.chars')}
-        </Text>
+        </span>
       )}
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
-        <Text code as="span" color={cssVar.colorTextDescription} fontSize={12}>
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          style={{ color: cssVar.colorTextDescription }}
+        >
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})
-        </Text>
+        </span>
       )}
     </div>
   );

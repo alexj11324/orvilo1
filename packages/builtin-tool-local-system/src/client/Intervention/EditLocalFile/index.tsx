@@ -1,13 +1,14 @@
 import { CodeDiff } from '@lobehub/ui';
-import { Alert, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { EditLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { ChevronRight } from 'lucide-react';
+import { ChevronRight, TriangleAlert } from 'lucide-react';
 import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Skeleton } from '@/components/ui/skeleton';
 import { LocalFile, LocalFolder } from '@/features/LocalFile';
 import { localFileService } from '@/services/electron/localFileService';
 
@@ -68,18 +69,19 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
       ) : (
         <div className="flex flex-col gap-2">
           {isAmbiguous ? (
-            <Alert
-              showIcon
-              description={t('localFiles.editFile.ambiguous', { times: matchCount })}
-              type="warning"
-            />
+            <Alert variant="warning">
+              <TriangleAlert />
+              <AlertDescription>
+                {t('localFiles.editFile.ambiguous', { times: matchCount })}
+              </AlertDescription>
+            </Alert>
           ) : (
             <>
-              <Text type="secondary">
+              <div className="text-muted-foreground">
                 {args.replace_all
                   ? t('localFiles.editFile.replaceAll')
                   : t('localFiles.editFile.replaceFirst')}
-              </Text>
+              </div>
               {oldContent && (
                 <CodeDiff
                   fileName={args.file_path}

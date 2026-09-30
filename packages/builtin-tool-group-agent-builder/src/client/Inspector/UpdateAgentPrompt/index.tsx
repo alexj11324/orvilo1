@@ -1,12 +1,12 @@
 'use client';
 
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
@@ -95,36 +95,31 @@ export const UpdateAgentPromptInspector = memo<
       {agent && !isSupervisor && (
         <>
           <Avatar avatar={agent.avatar ?? undefined} size={18} title={agent.title ?? undefined} />
-          <Text
-            className={styles.agentName}
-            ellipsis={{
-              tooltipWhenOverflow: true,
-            }}
-          >
+          <div className={cn('truncate', 'block', styles.agentName)} title={agent.title}>
             {agent.title}
-          </Text>
+          </div>
         </>
       )}
       {/* Show length diff when completed */}
       {!isLoading && !isArgumentsStreaming && lengthDiff !== null && (
-        <Text
-          code
-          noWrap
-          as="span"
-          color={lengthDiff >= 0 ? cssVar.colorSuccess : cssVar.colorError}
-          fontSize={12}
+        <span
+          className="font-mono rounded bg-muted px-1 whitespace-nowrap text-[12px]"
+          style={{ color: lengthDiff >= 0 ? cssVar.colorSuccess : cssVar.colorError }}
         >
           {lengthDiff >= 0 ? '+' : ''}
           {lengthDiff}
           {t('builtins.orvilo-agent-builder.inspector.chars')}
-        </Text>
+        </span>
       )}
       {/* Show streaming length */}
       {(isArgumentsStreaming || isLoading) && streamingLength > 0 && (
-        <Text code as="span" color={cssVar.colorTextDescription} fontSize={12}>
+        <span
+          className="font-mono rounded bg-muted px-1 text-[12px]"
+          style={{ color: cssVar.colorTextDescription }}
+        >
           ({streamingLength}
           {t('builtins.orvilo-agent-builder.inspector.chars')})
-        </Text>
+        </span>
       )}
     </div>
   );

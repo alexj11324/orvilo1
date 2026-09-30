@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -8,6 +7,7 @@ import { Users } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import ToolTag from '@/features/ToolTag';
 
 import type { BatchCreateAgentsParams, BatchCreateAgentsState } from '../../types';

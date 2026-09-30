@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 
@@ -24,10 +23,10 @@ const ExecuteCode = memo<BuiltinInterventionProps<ExecuteCodeParams>>(({ args })
   return (
     <div className="flex flex-col gap-2">
       <div className="flex flex-row justify-between">
-        <Text>Execute code in cloud sandbox</Text>
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div>Execute code in cloud sandbox</div>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {displayLanguage}
-        </Text>
+        </div>
       </div>
       {code && (
         <CodeBlock

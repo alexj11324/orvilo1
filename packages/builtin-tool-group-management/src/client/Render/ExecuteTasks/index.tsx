@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, useTheme } from 'antd-style';
@@ -9,6 +8,7 @@ import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import {
   Accordion,
   AccordionContent,
@@ -101,9 +101,9 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
                 <AccordionTrigger>
                   <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
                     <span className={styles.index}>{index + 1}.</span>
-                    <Text className={styles.taskTitle} weight={500}>
+                    <div className={cn('font-medium', styles.taskTitle)}>
                       {task.title || 'Task'}
-                    </Text>
+                    </div>
                   </div>
                   <div className={styles.assignee}>
                     <Avatar
@@ -125,7 +125,7 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
                         borderRadius: cssVar.borderRadius,
                       }}
                     >
-                      <Text className={styles.instruction}>{task.instruction}</Text>
+                      <div className={cn(styles.instruction)}>{task.instruction}</div>
                     </div>
                   )}
                 </AccordionContent>
@@ -136,9 +136,9 @@ const ExecuteTasksRender = memo<BuiltinRenderProps<ExecuteTasksParams, unknown, 
 
         {resultContent && (
           <div className="flex flex-col gap-1">
-            <Text className={styles.resultLabel}>
+            <div className={cn(styles.resultLabel)}>
               {t('agentGroupManagement.executeTasks.results')}
-            </Text>
+            </div>
             <div
               className={cn('p-3', styles.resultBox)}
               style={{ background: cssVar.colorFillTertiary, borderRadius: cssVar.borderRadius }}

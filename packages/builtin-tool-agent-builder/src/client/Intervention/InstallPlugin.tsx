@@ -1,12 +1,12 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { resolveConnectorCatalogItem } from '@orvilo/const';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { CheckCircle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useToolStore } from '@/store/tool';
 import {

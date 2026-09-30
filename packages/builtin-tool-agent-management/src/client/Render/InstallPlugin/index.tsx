@@ -1,10 +1,11 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 import type { InstallPluginParams, InstallPluginState } from '../../../types';
 

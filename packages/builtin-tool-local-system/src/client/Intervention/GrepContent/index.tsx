@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { type GrepContentParams } from '@orvilo/electron-client-ipc';
 import { type BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
@@ -18,18 +17,18 @@ const GrepContent = memo<BuiltinInterventionProps<GrepContentParams>>(({ args })
       <OutOfScopeWarning paths={scope ? [scope] : []} />
       {scope && <LocalFolder path={scope} />}
       <div className="flex flex-col gap-1">
-        <Text type="secondary">{t('localFiles.grepContent.pattern')}</Text>
+        <div className="text-muted-foreground">{t('localFiles.grepContent.pattern')}</div>
         <CodeBlock code={pattern} language="regex" variant={'default'} />
       </div>
       {glob && (
-        <Text style={{ fontSize: 12 }} type="secondary">
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {t('localFiles.grepContent.glob')}: {glob}
-        </Text>
+        </div>
       )}
       {type && (
-        <Text style={{ fontSize: 12 }} type="secondary">
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {t('localFiles.grepContent.type')}: {type}
-        </Text>
+        </div>
       )}
     </div>
   );

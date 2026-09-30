@@ -1,10 +1,11 @@
 'use client';
 
 import { CodeDiff } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface EditArgs {
   file_path?: string;

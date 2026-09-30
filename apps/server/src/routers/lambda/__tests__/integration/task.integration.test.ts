@@ -76,6 +76,17 @@ vi.mock('@/server/featureFlags/caidAdmission', () => ({
   isCaidDispatchAllowed: vi.fn(async () => true),
 }));
 
+// `task.update` requires `expectedDomainRevision` on any assignee write; real
+// clients resolve it from the row before mutating. Tests do the same.
+const revisionOf = async (id: string) =>
+  (
+    await testDB
+      .select({ revision: tasks.domainRevision })
+      .from(tasks)
+      .where(eq(tasks.id, id))
+      .limit(1)
+  )[0]?.revision;
+
 // Mock the assignment-notification business slot (default impl is a no-op;
 // the router must fire it only on an actual assignee change to someone else).
 const mockNotifyTaskAssigned = vi.fn().mockResolvedValue(undefined);
@@ -240,6 +251,7 @@ describe('Task Router Integration', () => {
       await expect(
         caller.update({
           assigneeAgentId: otherAgentId,
+          expectedDomainRevision: await revisionOf(task.data.id),
           id: task.data.id,
         }),
       ).rejects.toThrow('Assignee agent not found');
@@ -444,15 +456,27 @@ describe('Task Router Integration', () => {
       const { wsAgentId, wsCaller } = await setupWorkspace();
       const task = await wsCaller.create({ assigneeAgentId: wsAgentId, instruction: 'Sides' });
 
-      const withMember = await wsCaller.update({ assigneeUserId: otherUserId, id: task.data.id });
+      const withMember = await wsCaller.update({
+        assigneeUserId: otherUserId,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+      });
       expect(withMember.data.assigneeAgentId).toBe(wsAgentId);
       expect(withMember.data.assigneeUserId).toBe(otherUserId);
 
-      const agentCleared = await wsCaller.update({ assigneeAgentId: null, id: task.data.id });
+      const agentCleared = await wsCaller.update({
+        assigneeAgentId: null,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+      });
       expect(agentCleared.data.assigneeAgentId).toBeNull();
       expect(agentCleared.data.assigneeUserId).toBe(otherUserId);
 
-      const memberCleared = await wsCaller.update({ assigneeUserId: null, id: task.data.id });
+      const memberCleared = await wsCaller.update({
+        assigneeUserId: null,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+      });
       expect(memberCleared.data.assigneeUserId).toBeNull();
       expect(memberCleared.data.assigneeAgentId).toBeNull();
     });
@@ -1933,6 +1957,7 @@ describe('Task Router Integration', () => {
 
       const memberCleared = await caller.update({
         assigneeUserId: null,
+        expectedDomainRevision: await revisionOf(created.data.id),
         id: created.data.id,
       });
       expect(memberCleared.data.assigneeAgentId).toBe(testAgentId);
@@ -1940,10 +1965,12 @@ describe('Task Router Integration', () => {
 
       const memberRestored = await caller.update({
         assigneeUserId: userId,
+        expectedDomainRevision: await revisionOf(created.data.id),
         id: created.data.id,
       });
       const agentCleared = await caller.update({
         assigneeAgentId: null,
+        expectedDomainRevision: await revisionOf(memberRestored.data.id),
         id: memberRestored.data.id,
       });
       expect(agentCleared.data.assigneeAgentId).toBeNull();
@@ -1971,7 +1998,11 @@ describe('Task Router Integration', () => {
       await flushAfterResponse();
       expect(mockNotifyTaskAssigned).not.toHaveBeenCalled();
 
-      await wsCaller.update({ assigneeUserId: otherUserId, id: task.data.id });
+      await wsCaller.update({
+        assigneeUserId: otherUserId,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+      });
       await flushAfterResponse();
       expect(mockNotifyTaskAssigned).toHaveBeenCalledTimes(1);
       expect(mockNotifyTaskAssigned).toHaveBeenCalledWith({
@@ -1984,17 +2015,29 @@ describe('Task Router Integration', () => {
       });
 
       // Re-saving the same assignee is a no-op → no second notification.
-      await wsCaller.update({ assigneeUserId: otherUserId, id: task.data.id });
+      await wsCaller.update({
+        assigneeUserId: otherUserId,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+      });
       await flushAfterResponse();
       expect(mockNotifyTaskAssigned).toHaveBeenCalledTimes(1);
 
       // Self-assignment never notifies.
-      await wsCaller.update({ assigneeUserId: userId, id: task.data.id });
+      await wsCaller.update({
+        assigneeUserId: userId,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+      });
       await flushAfterResponse();
       expect(mockNotifyTaskAssigned).toHaveBeenCalledTimes(1);
 
       // Clearing the assignee never notifies.
-      await wsCaller.update({ assigneeUserId: null, id: task.data.id });
+      await wsCaller.update({
+        assigneeUserId: null,
+        expectedDomainRevision: await revisionOf(task.data.id),
+        id: task.data.id,
+      });
       await flushAfterResponse();
       expect(mockNotifyTaskAssigned).toHaveBeenCalledTimes(1);
 
@@ -2022,7 +2065,11 @@ describe('Task Router Integration', () => {
       });
       expect(created.data.assigneeUserId).toBe(userId);
 
-      const cleared = await caller.update({ assigneeUserId: null, id: created.data.id });
+      const cleared = await caller.update({
+        assigneeUserId: null,
+        expectedDomainRevision: await revisionOf(created.data.id),
+        id: created.data.id,
+      });
       expect(cleared.data.assigneeUserId).toBeNull();
     });
 
@@ -2035,7 +2082,11 @@ describe('Task Router Integration', () => {
 
       const task = await caller.create({ instruction: 'Reassign target' });
       await expect(
-        caller.update({ assigneeUserId: otherUserId, id: task.data.id }),
+        caller.update({
+          assigneeUserId: otherUserId,
+          expectedDomainRevision: await revisionOf(task.data.id),
+          id: task.data.id,
+        }),
       ).rejects.toThrow('Assignee user not found');
     });
 
@@ -2069,7 +2120,11 @@ describe('Task Router Integration', () => {
       ).rejects.toThrow('Assignee user is not a member of this workspace');
 
       await expect(
-        wsCaller.update({ assigneeUserId: removedId, id: assigned.data.id }),
+        wsCaller.update({
+          assigneeUserId: removedId,
+          expectedDomainRevision: await revisionOf(assigned.data.id),
+          id: assigned.data.id,
+        }),
       ).rejects.toThrow('Assignee user is not a member of this workspace');
 
       try {
@@ -2098,6 +2153,10 @@ describe('Task Router Integration', () => {
       ]);
       const wsCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
       const existingTask = await wsCaller.create({ instruction: 'Concurrent update target' });
+      // Fetch the CAS before `removal` grabs the pool connection: resolving it
+      // inside the update call below would wait on the held connection and
+      // deadlock the test.
+      const existingTaskRevision = await revisionOf(existingTask.data.id);
 
       let signalMemberLocked: () => void = () => {};
       const memberLocked = new Promise<void>((resolve) => {
@@ -2125,7 +2184,11 @@ describe('Task Router Integration', () => {
 
       let updateSettled = false;
       const update = wsCaller
-        .update({ assigneeUserId: memberId, id: existingTask.data.id })
+        .update({
+          assigneeUserId: memberId,
+          expectedDomainRevision: existingTaskRevision,
+          id: existingTask.data.id,
+        })
         .then(
           (value) => ({ error: null, value }),
           (error: Error) => ({ error, value: null }),
@@ -2207,7 +2270,11 @@ describe('Task Router Integration', () => {
       });
       expect(privateTask.data.assigneeUserId).toBe(userId);
       await expect(
-        wsCaller.update({ assigneeUserId: otherUserId, id: privateTask.data.id }),
+        wsCaller.update({
+          assigneeUserId: otherUserId,
+          expectedDomainRevision: await revisionOf(privateTask.data.id),
+          id: privateTask.data.id,
+        }),
       ).rejects.toThrow('A private task can only be assigned to its creator');
 
       // Demoting a member-assigned public task to private is rejected until unassigned.
@@ -2219,7 +2286,11 @@ describe('Task Router Integration', () => {
       await expect(
         wsCaller.updateVisibility({ id: publicTask.data.id, visibility: 'private' }),
       ).rejects.toThrow('A private task can only be assigned to its creator');
-      await wsCaller.update({ assigneeUserId: null, id: publicTask.data.id });
+      await wsCaller.update({
+        assigneeUserId: null,
+        expectedDomainRevision: await revisionOf(publicTask.data.id),
+        id: publicTask.data.id,
+      });
       const demoted = await wsCaller.updateVisibility({
         id: publicTask.data.id,
         visibility: 'private',
@@ -2244,6 +2315,7 @@ describe('Task Router Integration', () => {
       });
       const assignedAutomated = await caller.update({
         assigneeUserId: userId,
+        expectedDomainRevision: await revisionOf(automated.data.id),
         id: automated.data.id,
       });
       expect(assignedAutomated.data.assigneeUserId).toBe(userId);
@@ -2283,7 +2355,11 @@ describe('Task Router Integration', () => {
         assigneeUserId: userId,
         instruction: 'Inbox-and-member-assigned task',
       });
-      await caller.update({ assigneeAgentId: inboxAgentId, id: dualAssignedTask.data.id });
+      await caller.update({
+        assigneeAgentId: inboxAgentId,
+        expectedDomainRevision: await revisionOf(dualAssignedTask.data.id),
+        id: dualAssignedTask.data.id,
+      });
       await caller.run({ id: dualAssignedTask.data.id });
 
       const afterDualAssignedRun = await caller.find({ id: dualAssignedTask.data.id });

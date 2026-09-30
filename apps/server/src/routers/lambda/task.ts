@@ -1944,6 +1944,19 @@ export const taskRouter = router({
         ...data
       } = input;
       try {
+        // Assignee edits are domain-critical: without a revision CAS a stale
+        // client silently overwrites a concurrent reassignment (lost update).
+        // Every first-party caller resolves `expectedDomainRevision` before
+        // writing; anything else must fetch the task and retry.
+        if (
+          (data.assigneeAgentId !== undefined || data.assigneeUserId !== undefined) &&
+          expectedDomainRevision === undefined
+        ) {
+          throw new TRPCError({
+            code: 'BAD_REQUEST',
+            message: 'expectedDomainRevision is required when changing a task assignee',
+          });
+        }
         const model = ctx.taskModel;
         const actor = await resolveActivityActor(ctx, actorAgentId);
         await assertAssigneeAgentBelongsToUser(

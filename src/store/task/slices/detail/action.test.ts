@@ -16,7 +16,9 @@ vi.mock('@/services/task', () => ({
     addDependency: vi.fn(),
     create: vi.fn(),
     delete: vi.fn(),
+    find: vi.fn(),
     getDetail: vi.fn(),
+    handoff: vi.fn(),
     pinDocument: vi.fn(),
     removeDependency: vi.fn(),
     removeIssueRelation: vi.fn(),
@@ -285,6 +287,21 @@ describe('TaskDetailSliceAction', () => {
 
       release();
       await pending;
+    });
+
+    it('attaches the row domainRevision as the CAS on assignee updates', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { domainRevision: 7, id: 'task-uuid-1' },
+      } as any);
+      vi.mocked(taskService.update).mockResolvedValue({ success: true } as any);
+
+      await useTaskStore.getState().updateTask('T-1', { assigneeAgentId: 'agt_1' });
+
+      expect(taskService.find).toHaveBeenCalledWith('T-1');
+      expect(taskService.update).toHaveBeenCalledWith(
+        'T-1',
+        expect.objectContaining({ assigneeAgentId: 'agt_1', expectedDomainRevision: 7 }),
+      );
     });
 
     it('should clear stale editorData for instruction-only optimistic updates', async () => {
@@ -623,6 +640,63 @@ describe('TaskDetailSliceAction', () => {
       // Returning to T-1 still reflects its own failed save.
       useTaskStore.getState().setActiveTaskId('T-1');
       expect(taskDetailSelectors.taskSaveStatus(useTaskStore.getState())).toBe('failed');
+    });
+  });
+
+  describe('handoffTask', () => {
+    it('forwards the row id and domainRevision to taskService.handoff, then refreshes', async () => {
+      useTaskStore.setState({
+        taskDetailMap: {
+          'T-1': {
+            agentId: 'agt_A',
+            identifier: 'T-1',
+            instruction: 'x',
+            status: 'running',
+          },
+        },
+      });
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { domainRevision: 9, id: 'task-uuid-1' },
+      } as any);
+      vi.mocked(taskService.handoff).mockResolvedValue({} as any);
+
+      await useTaskStore.getState().handoffTask('T-1', 'agt_B');
+
+      expect(taskService.handoff).toHaveBeenCalledWith({
+        expectedDomainRevision: 9,
+        fromAgentId: 'agt_A',
+        taskId: 'task-uuid-1',
+        toAgentId: 'agt_B',
+      });
+      const { mutate } = await import('@/libs/swr');
+      expect(mutate).toHaveBeenCalled();
+    });
+
+    it('resolves the incumbent agent from the row when the detail record is not loaded', async () => {
+      // Subtask-row selectors hand off while only the parent's detail is in
+      // the map — fromAgentId must come from the fetched row, not null.
+      useTaskStore.setState({ taskDetailMap: {} });
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { assigneeAgentId: 'agt_incumbent', domainRevision: 4, id: 'task-uuid-2' },
+      } as any);
+      vi.mocked(taskService.handoff).mockResolvedValue({} as any);
+
+      await useTaskStore.getState().handoffTask('T-sub', 'agt_B');
+
+      expect(taskService.handoff).toHaveBeenCalledWith(
+        expect.objectContaining({ fromAgentId: 'agt_incumbent' }),
+      );
+    });
+
+    it('resolves without refreshing when the handoff CAS is rejected', async () => {
+      vi.mocked(taskService.find).mockResolvedValue({
+        data: { domainRevision: 3, id: 'task-uuid-1' },
+      } as any);
+      vi.mocked(taskService.handoff).mockRejectedValue(new Error('TASK_REVISION_CONFLICT'));
+
+      await expect(useTaskStore.getState().handoffTask('T-1', 'agt_B')).resolves.toBeUndefined();
+      const { mutate } = await import('@/libs/swr');
+      expect(mutate).not.toHaveBeenCalled();
     });
   });
 

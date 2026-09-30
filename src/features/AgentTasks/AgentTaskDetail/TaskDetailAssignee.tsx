@@ -7,6 +7,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/comp
 import HeterogeneousTag from '@/features/HeterogeneousTag';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
+import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
 import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
@@ -22,6 +23,7 @@ const TaskDetailAssignee = memo(() => {
   const assigneeAgentId = useTaskDetailSelector(taskDetailSelectors.taskAgentId);
   const visibility = useTaskDetailSelector(taskDetailSelectors.taskVisibility);
   const assigneeMeta = useAgentDisplayMeta(assigneeAgentId);
+  const handoffTask = useTaskStore((s) => s.handoffTask);
   // Same source as the home list so the runtime tag stays consistent.
   const assigneeHeterogeneousType = useHomeStore(
     (s) => homeAgentListSelectors.getAgentById(assigneeAgentId ?? '')(s)?.heterogeneousType,
@@ -63,9 +65,14 @@ const TaskDetailAssignee = memo(() => {
   return (
     <AssigneeAgentSelector
       currentAgentId={assigneeAgentId}
-      disabled={status === 'running'}
       taskIdentifier={taskId}
       taskVisibility={visibility}
+      onHandoff={
+        // A running task's agent is its incumbent executor — changing it is
+        // an execution-ownership handoff (confirmed in the selector), not a
+        // bare assignee edit.
+        status === 'running' ? (agentId) => void handoffTask(taskId, agentId) : undefined
+      }
     >
       {assigneeAgentId ? (
         chip

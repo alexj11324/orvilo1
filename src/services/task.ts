@@ -171,6 +171,11 @@ class TaskService {
       context?: Record<string, unknown>;
       description?: string;
       editorData?: unknown;
+      /**
+       * Optimistic-concurrency CAS — REQUIRED by the server whenever
+       * assignee fields change; supply the task's current `domainRevision`.
+       */
+      expectedDomainRevision?: number;
       // heartbeatInterval: periodic execution interval (seconds), controls how often the task auto-executes
       heartbeatInterval?: number;
       // heartbeatTimeout: watchdog timeout threshold (seconds), used to detect if a running task is stuck
@@ -205,6 +210,20 @@ class TaskService {
       workflowCategory?: TaskWorkflowCategory;
     },
   ) => lambdaClient.task.update.mutate({ id, ...data });
+
+  /**
+   * First-class execution-ownership transfer: fences the incumbent's
+   * dispatch, CASes the assignee under `expectedDomainRevision`, then starts
+   * the successor (`toAgentId: null` parks the task instead). Required for
+   * every agent change on a RUNNING task — plain `update` rejects those
+   * with `HANDOFF_REQUIRED`.
+   */
+  handoff = async (params: {
+    expectedDomainRevision: number;
+    fromAgentId?: string | null;
+    taskId: string;
+    toAgentId: string | null;
+  }) => lambdaClient.task.handoff.mutate(params);
 
   delete = async (id: string) => lambdaClient.task.delete.mutate({ id });
 

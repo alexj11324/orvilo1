@@ -560,7 +560,11 @@ const MyWorkPage = memo(() => {
   const bulkSetAssignee = useCallback(
     (userId: string | null) =>
       void runBulk(
-        (task) => taskService.update(task.id, { assigneeUserId: userId }),
+        (task) =>
+          taskService.update(task.id, {
+            assigneeUserId: userId,
+            expectedDomainRevision: task.domainRevision,
+          }),
         'myWork.bulk.updated',
       ),
     [runBulk],

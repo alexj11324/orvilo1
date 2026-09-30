@@ -1,7 +1,5 @@
 'use client';
 
-import { type FormItemProps } from '@lobehub/ui';
-import { Flexbox, Form, Icon, Popover } from '@lobehub/ui';
 import { ActionIcon, Select, Tabs } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import {
@@ -14,6 +12,8 @@ import {
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form, { type FormItemProps } from '@/components/GroupForm';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 
 import type { AgentGroupBy, AgentListViewOptions, AgentOrderBy } from './listViewOptions';
@@ -83,7 +83,7 @@ const ListConfig = memo<ListConfigProps>(
       },
       {
         children: (
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex items-center gap-2">
             <ActionIcon
               icon={options.orderDirection === 'asc' ? ArrowUpNarrowWide : ArrowDownWideNarrow}
               size={'small'}
@@ -103,19 +103,19 @@ const ListConfig = memo<ListConfigProps>(
                 setOptions((prev) => ({ ...prev, orderBy: value }));
               }}
             />
-          </Flexbox>
+          </div>
         ),
         label: t('agentViewAll.form.ordering'),
       },
     ];
 
     const panelContent = (
-      <Flexbox gap={12} width={280}>
+      <div className="flex flex-col gap-3" style={{ width: 280 }}>
         <Tabs
           activeKey={viewMode}
           items={[
-            { icon: <Icon icon={LayoutList} />, key: 'list', label: t('agentViewAll.view.list') },
-            { icon: <Icon icon={LayoutGrid} />, key: 'card', label: t('agentViewAll.view.card') },
+            { icon: <LayoutList />, key: 'list', label: t('agentViewAll.view.list') },
+            { icon: <LayoutGrid />, key: 'card', label: t('agentViewAll.view.card') },
           ]}
           styles={{
             list: { display: 'flex', width: '100%' },
@@ -129,23 +129,22 @@ const ListConfig = memo<ListConfigProps>(
           itemsType={'flat'}
           size={'small'}
           variant={'borderless'}
-          styles={{
-            item: { padding: 0 },
-          }}
         />
-      </Flexbox>
+      </div>
     );
 
     return (
-      <Popover
-        arrow={false}
-        content={panelContent}
-        open={open}
-        placement={'bottomRight'}
-        trigger={['click']}
-        onOpenChange={setOpen}
-      >
-        <ActionIcon icon={Settings2Icon} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <span style={{ display: 'inline-flex' }}>
+              <ActionIcon icon={Settings2Icon} size={DESKTOP_HEADER_ICON_SMALL_SIZE} />
+            </span>
+          }
+        />
+        <PopoverContent align="end" side="bottom" style={{ padding: 12 }}>
+          {panelContent}
+        </PopoverContent>
       </Popover>
     );
   },

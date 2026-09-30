@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Input, TextArea } from '@lobehub/ui';
 import {
   Button,
   createModal,
@@ -8,13 +7,14 @@ import {
   Text,
   useModalContext,
 } from '@lobehub/ui/base-ui';
-import { type InputRef } from 'antd';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { Sparkles } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { useClientDataSWR } from '@/libs/swr';
 
 const GENERATE_SWR_KEY = 'document-to-skill-meta';
@@ -95,7 +95,7 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
     const [description, setDescription] = useState(defaultDescription);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<string>();
-    const nameRef = useRef<InputRef>(null);
+    const nameRef = useRef<HTMLInputElement>(null);
     // The last generation's prefilled values + tracing id, used on save to
     // record whether the user edited the generation (implicit feedback).
     const generatedRef = useRef<{ tracingId: string; values: ConvertSkillMeta } | undefined>(
@@ -192,9 +192,9 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
     }, [busy, canSubmit, close, onSubmit, trimmedDescription, trimmedName, trimmedTitle]);
 
     return (
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         {onGenerate ? (
-          <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+          <div className="flex items-center gap-2 justify-between">
             <Text style={{ fontSize: 12 }} type={'secondary'}>
               {generating
                 ? tChat('workingPanel.skills.convert.generating')
@@ -203,9 +203,9 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
             <Button icon={Sparkles} loading={generating} size={'small'} onClick={handleRegenerate}>
               {tChat('workingPanel.skills.convert.regenerate')}
             </Button>
-          </Flexbox>
+          </div>
         ) : null}
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text type={'secondary'}>{tChat('workingPanel.skills.convert.nameLabel')}</Text>
           <Input
             disabled={generating}
@@ -226,8 +226,8 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
               {tChat('workingPanel.skills.convert.nameHint')}
             </Text>
           )}
-        </Flexbox>
-        <Flexbox gap={6}>
+        </div>
+        <div className="flex flex-col gap-1.5">
           <Text type={'secondary'}>{tChat('workingPanel.skills.convert.titleLabel')}</Text>
           <Input
             disabled={generating}
@@ -238,22 +238,22 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
               setError(undefined);
             }}
           />
-        </Flexbox>
-        <Flexbox gap={6}>
+        </div>
+        <div className="flex flex-col gap-1.5">
           <Text type={'secondary'}>{tChat('workingPanel.skills.convert.descriptionLabel')}</Text>
-          <TextArea
-            autoSize={{ maxRows: 4, minRows: 2 }}
+          <Textarea
             disabled={generating}
             placeholder={tChat('workingPanel.skills.convert.descriptionPlaceholder')}
+            rows={2}
             value={description}
             onChange={(e) => {
               setDescription(e.target.value);
               setError(undefined);
             }}
           />
-        </Flexbox>
+        </div>
         {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
-        <Flexbox horizontal gap={8} justify={'flex-end'}>
+        <div className="flex gap-2 justify-end">
           <Button disabled={busy} onClick={close}>
             {tCommon('cancel')}
           </Button>
@@ -265,8 +265,8 @@ const ConvertToSkillContent = memo<ConvertToSkillContentProps>(
           >
             {tChat('workingPanel.skills.convert.action')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

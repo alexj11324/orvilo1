@@ -1,8 +1,7 @@
 'use client';
 
-import { Block, Flexbox, FormGroup, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +9,7 @@ import { Link } from 'react-router';
 import urlJoin from 'url-join';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { FormGroup } from '@/components/GroupForm';
 import { useExpertiseOverview } from '@/features/SelfLearning/hooks';
 import { useAgentStore } from '@/store/agent';
 
@@ -51,49 +51,57 @@ const AgentRules = memo(() => {
   const openPath = activeAgentId ? urlJoin('/agent', activeAgentId, 'self-evolving') : undefined;
 
   return (
-    <FormGroup collapsible={false} gap={16} title={t('agentTab.rules')} variant={'borderless'}>
-      {/* A failed fetch is not "no rules" — surface it with a retry instead of
-          folding it into the empty copy. */}
-      <AsyncBoundary
-        data={data}
-        empty={<Text type={'secondary'}>{t('agentRules.empty')}</Text>}
-        error={error}
-        errorVariant={'block'}
-        isEmpty={!error && domains.length === 0}
-        isLoading={isLoading}
-        loading={<Text type={'secondary'}>{t('agentRules.loading')}</Text>}
-        onRetry={() => mutate()}
-      >
-        <Block padding={0} variant={'outlined'}>
-          {domains.map((domain) => (
-            <div className={styles.row} key={domain.id}>
-              <Flexbox gap={2} style={{ minWidth: 0 }}>
-                <Text weight={500}>{domain.title}</Text>
-                {/* Scope and size, in counts — the same facts the rules page leads with. */}
-                <Text fontSize={12} type={'secondary'}>
-                  {t('agentRules.domainMeta', {
-                    habits: domain.lessons.length,
-                    runs: domain.runCount,
-                  })}
-                </Text>
-              </Flexbox>
-              <Icon icon={ChevronRightIcon} size={14} style={{ opacity: 0.4 }} />
-            </div>
-          ))}
-        </Block>
-      </AsyncBoundary>
-      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
-        <Text fontSize={12} type={'secondary'}>
-          {t('agentRules.summary', { count: ruleCount })}
-        </Text>
-        {openPath && (
-          <Link to={openPath}>
-            <Button size={'small'} type={'text'}>
-              {t('agentRules.open')}
-            </Button>
-          </Link>
-        )}
-      </Flexbox>
+    <FormGroup gap={16} title={t('agentTab.rules')} variant={'borderless'}>
+      <>
+        {/* A failed fetch is not "no rules" — surface it with a retry instead of
+            folding it into the empty copy. */}
+        <AsyncBoundary
+          data={data}
+          empty={<Text type={'secondary'}>{t('agentRules.empty')}</Text>}
+          error={error}
+          errorVariant={'block'}
+          isEmpty={!error && domains.length === 0}
+          isLoading={isLoading}
+          loading={<Text type={'secondary'}>{t('agentRules.loading')}</Text>}
+          onRetry={() => mutate()}
+        >
+          <div
+            className="flex flex-col p-0"
+            style={{
+              border: `1px solid ${cssVar.colorBorder}`,
+              borderRadius: cssVar.borderRadiusLG,
+            }}
+          >
+            {domains.map((domain) => (
+              <div className={styles.row} key={domain.id}>
+                <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
+                  <Text weight={500}>{domain.title}</Text>
+                  {/* Scope and size, in counts — the same facts the rules page leads with. */}
+                  <Text fontSize={12} type={'secondary'}>
+                    {t('agentRules.domainMeta', {
+                      habits: domain.lessons.length,
+                      runs: domain.runCount,
+                    })}
+                  </Text>
+                </div>
+                <ChevronRightIcon size={14} style={{ opacity: 0.4 }} />
+              </div>
+            ))}
+          </div>
+        </AsyncBoundary>
+        <div className="flex items-center gap-2 justify-between flex-wrap">
+          <Text fontSize={12} type={'secondary'}>
+            {t('agentRules.summary', { count: ruleCount })}
+          </Text>
+          {openPath && (
+            <Link to={openPath}>
+              <Button size={'small'} type={'text'}>
+                {t('agentRules.open')}
+              </Button>
+            </Link>
+          )}
+        </div>
+      </>
     </FormGroup>
   );
 });

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, Result } from '@lobehub/ui/base-ui';
 import { Table } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -36,7 +35,7 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
   };
   return (
     <Result
-      icon={<Icon icon={CheckCircle} />}
+      icon={<CheckCircle />}
       status={'success'}
       style={{ paddingBlock: 24, paddingInline: 0 }}
       title={t('importModal.finish.title')}
@@ -50,7 +49,7 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
         !dataSource ? (
           t('importModal.finish.onlySettings')
         ) : (
-          <Flexbox gap={16} width={500}>
+          <div className="flex flex-col gap-4" style={{ width: 500 }}>
             {t('importModal.finish.subTitle', { duration: (duration / 1000).toFixed(2) })}
             <Table
               bordered
@@ -66,7 +65,7 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
                 { dataIndex: 'updated', render: cellRender, title: t('importModal.result.update') },
               ]}
             />
-          </Flexbox>
+          </div>
         )
       }
     />

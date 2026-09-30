@@ -1,4 +1,4 @@
-import { Flexbox, MaskShadow } from '@lobehub/ui';
+import { MaskShadow } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { useSize } from 'ahooks';
 import { ChevronsDownUpIcon, ChevronsUpDownIcon } from 'lucide-react';
@@ -40,7 +40,7 @@ const BriefCardSummary = memo<BriefCardSummaryProps>(({ summary }) => {
   );
 
   return (
-    <Flexbox gap={4}>
+    <div className="flex flex-col gap-1">
       {isOverflow && !expanded ? (
         <MaskShadow
           size={32}
@@ -67,7 +67,7 @@ const BriefCardSummary = memo<BriefCardSummaryProps>(({ summary }) => {
           {expanded ? t('brief.collapse') : t('brief.expandAll')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

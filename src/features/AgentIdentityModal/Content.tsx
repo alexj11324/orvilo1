@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
 import { ActionIcon, Button, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { randomAgentName } from '@orvilo/const';
 import { cssVar } from 'antd-style';
@@ -8,6 +7,12 @@ import { DicesIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupInput,
+  InputGroupText,
+} from '@/components/ui/input-group';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
@@ -22,11 +27,11 @@ interface FieldProps {
 }
 
 const Field = memo<FieldProps>(({ label, hint, children }) => (
-  <Flexbox gap={6}>
+  <div className="flex flex-col gap-1.5">
     <Text type={'secondary'}>{label}</Text>
     {children}
     {hint}
-  </Flexbox>
+  </div>
 ));
 
 interface AgentIdentityContentProps {
@@ -60,25 +65,27 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
   }, [agentId, locale, setName]);
 
   return (
-    <Flexbox gap={20} padding={20}>
+    <div className="flex flex-col gap-5 p-5">
       <Field label={t('settingAgent.personalName.label', { ns: 'setting' })}>
-        <Input
-          autoFocus
-          placeholder={t('settingAgent.personalName.placeholder', { ns: 'setting' })}
-          value={form.name}
-          suffix={
+        <InputGroup>
+          <InputGroupInput
+            autoFocus
+            placeholder={t('settingAgent.personalName.placeholder', { ns: 'setting' })}
+            value={form.name}
+            onChange={(e) => form.setName(e.target.value)}
+          />
+          <InputGroupAddon align="inline-end">
             <ActionIcon
               icon={DicesIcon}
               size={'small'}
               title={t('settingAgent.personalName.roll', { ns: 'setting' })}
               onClick={rollName}
             />
-          }
-          onChange={(e) => form.setName(e.target.value)}
-        />
+          </InputGroupAddon>
+        </InputGroup>
       </Field>
       <Field label={t('settingAgent.role.label', { ns: 'setting' })}>
-        <Input
+        <InputGroupInput
           placeholder={t('settingAgent.role.placeholder', { ns: 'setting' })}
           value={form.title}
           onChange={(e) => form.setTitle(e.target.value)}
@@ -114,16 +121,20 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
             </Text>
           }
         >
-          <Input
-            placeholder={t('settingAgent.slug.placeholder', { ns: 'setting' })}
-            prefix={'@'}
-            status={form.error ? 'error' : undefined}
-            value={form.slug}
-            onChange={(e) => form.setSlug(e.target.value)}
-          />
+          <InputGroup>
+            <InputGroupAddon align="inline-start">
+              <InputGroupText>@</InputGroupText>
+            </InputGroupAddon>
+            <InputGroupInput
+              aria-invalid={form.error ? true : undefined}
+              placeholder={t('settingAgent.slug.placeholder', { ns: 'setting' })}
+              value={form.slug}
+              onChange={(e) => form.setSlug(e.target.value)}
+            />
+          </InputGroup>
         </Field>
       )}
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <Button disabled={form.saving} onClick={() => close()}>
           {t('cancel', { ns: 'common' })}
         </Button>
@@ -137,8 +148,8 @@ const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
         >
           {t('save', { ns: 'common' })}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

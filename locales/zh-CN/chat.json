@@ -2022,6 +2022,8 @@
   "taskList.orderBy.title": "标题",
   "taskList.orderBy.updatedAt": "更新时间",
   "taskList.schedule.inOneWeek": "一周后",
+  "taskList.schedule.nextMonth": "下个月",
+  "taskList.schedule.previousMonth": "上个月",
   "taskList.schedule.remindInHour": "1 小时后",
   "taskList.schedule.remindInThreeHours": "3 小时后",
   "taskList.schedule.remindInWeek": "一周后",

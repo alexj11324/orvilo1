@@ -21,25 +21,23 @@ const CalendarChevron = ({
   className,
   orientation,
   ...props
-}: React.ComponentProps<'svg'> & { orientation?: 'left' | 'right' | 'down' | 'up' }) => {
+}: React.ComponentProps<typeof ChevronLeftIcon> & { orientation?: string }) => {
   if (orientation === 'left') {
     return <ChevronLeftIcon className={cn('size-4', className)} {...props} />;
   }
+
   if (orientation === 'right') {
     return <ChevronRightIcon className={cn('size-4', className)} {...props} />;
   }
+
   return <ChevronDownIcon className={cn('size-4', className)} {...props} />;
 };
 
-const CalendarDayButtonWithLocale = (props: React.ComponentProps<typeof DayButton>) => {
-  const locale = React.use(CalendarLocaleContext);
-  return <CalendarDayButton locale={locale} {...props} />;
-};
+const CalendarDayButtonWithLocale = (
+  props: Omit<React.ComponentProps<typeof CalendarDayButton>, 'locale'>,
+) => <CalendarDayButton locale={React.use(CalendarLocaleContext)} {...props} />;
 
-const CalendarWeekNumber = ({
-  children,
-  ...props
-}: React.TdHTMLAttributes<HTMLTableCellElement>) => (
+const CalendarWeekNumber = ({ children, ...props }: React.ComponentProps<'td'>) => (
   <td {...props}>
     <div className="flex size-(--cell-size) items-center justify-center text-center">
       {children}
@@ -153,9 +151,9 @@ function Calendar({
           ...classNames,
         }}
         components={{
+          Root: CalendarRoot,
           Chevron: CalendarChevron,
           DayButton: CalendarDayButtonWithLocale,
-          Root: CalendarRoot,
           WeekNumber: CalendarWeekNumber,
           ...components,
         }}

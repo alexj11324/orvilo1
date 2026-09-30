@@ -2240,6 +2240,8 @@ export default {
   'taskList.mine.title': 'My tasks',
   'taskList.noMilestone': 'No milestone',
   'taskList.schedule.inOneWeek': 'In one week',
+  'taskList.schedule.nextMonth': 'Next month',
+  'taskList.schedule.previousMonth': 'Previous month',
   'taskList.schedule.remindInHour': 'In 1 hour',
   'taskList.schedule.remindInThreeHours': 'In 3 hours',
   'taskList.schedule.remindInWeek': 'In one week',

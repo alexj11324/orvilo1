@@ -1,14 +1,19 @@
-import { PatchDiff } from '@lobehub/ui';
 import type { EditLocalFileState } from '@orvilo/builtin-tool-local-system';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { CircleAlert } from 'lucide-react';
-import React, { memo } from 'react';
+import { memo, useMemo } from 'react';
 
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CodeBlock, parseUnifiedDiff } from '@/components/ui/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 
 const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
   ({ args, pluginState, pluginError }) => {
+    const diffFiles = useMemo(
+      () => parseUnifiedDiff(pluginState?.diffText ?? ''),
+      [pluginState?.diffText],
+    );
+
     if (!args)
       return (
         <div className="flex flex-col gap-2">
@@ -19,9 +24,6 @@ const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
         </div>
       );
 
-    // Support both IPC format (file_path) and ComputerRuntime format (path)
-    const filePath = args.file_path || args.path || '';
-
     return (
       <div className="flex flex-col gap-3">
         {pluginError ? (
@@ -31,13 +33,13 @@ const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
             <AlertDescription>{pluginError.message || 'Unknown error occurred'}</AlertDescription>
           </Alert>
         ) : pluginState?.diffText ? (
-          <PatchDiff
-            fileName={filePath}
-            patch={pluginState.diffText}
-            showHeader={false}
-            variant="borderless"
-            viewMode="unified"
-          />
+          diffFiles.length > 0 ? (
+            diffFiles.map((file) => (
+              <CodeBlock showLineNumbers key={file.file} lines={file.lines} variant="ghost" />
+            ))
+          ) : (
+            <CodeBlock code={pluginState.diffText} language="diff" variant="ghost" />
+          )
         ) : null}
       </div>
     );

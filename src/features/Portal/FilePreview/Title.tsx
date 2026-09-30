@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { ArrowLeft } from 'lucide-react';
 
@@ -18,7 +17,7 @@ const Title = () => {
   const { data, isLoading } = useFetchFileItem(previewFileId);
 
   return (
-    <Flexbox horizontal align={'center'} gap={4}>
+    <div className="flex flex-row items-center gap-1">
       <ActionIcon icon={ArrowLeft} size={'small'} onClick={() => closeFilePreview()} />
 
       {isLoading ? (
@@ -28,7 +27,7 @@ const Title = () => {
           {data?.name}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

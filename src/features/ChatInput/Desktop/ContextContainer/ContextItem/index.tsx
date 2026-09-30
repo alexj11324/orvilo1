@@ -1,6 +1,5 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Progress, Tag } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleAlertIcon, CircleCheckIcon, Loader2Icon, RotateCwIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +10,7 @@ import { useFileStore } from '@/store/file';
 import { type UploadFileItem } from '@/types/files/upload';
 
 import UploadDetail from '../../../components/UploadDetail';
+import { SimpleTooltip } from '../../../SimpleTooltip';
 import Content from './Content';
 import { openFilePreviewModal } from './FilePreviewModal.loader';
 import { useUploadCompletion } from './useUploadCompletion';
@@ -86,19 +86,21 @@ const ContextItem = memo<FileItemProps>((props) => {
   });
 
   const detail = (
-    <Flexbox gap={4}>
+    <div className="flex flex-col gap-1">
       <span>{file.name}</span>
       {status === 'error' && error ? (
-        <Flexbox horizontal align={'flex-start'} gap={4} style={{ color: cssVar.colorError }}>
-          <Flexbox align={'center'} justify={'center'} style={{ height: '1lh' }}>
-            <Icon icon={CircleAlertIcon} size={12} />
-          </Flexbox>
+        <div className="flex flex-row items-start gap-1" style={{ color: cssVar.colorError }}>
+          <div className="flex flex-col items-center justify-center" style={{ height: '1lh' }}>
+            <span className="anticon" role="img">
+              <CircleAlertIcon fill={'transparent'} height={12} size={12} width={12} />
+            </span>
+          </div>
           <span>{error}</span>
-        </Flexbox>
+        </div>
       ) : (
         <UploadDetail size={file.size} status={status} tasks={tasks} uploadState={uploadState} />
       )}
-    </Flexbox>
+    </div>
   );
 
   return (
@@ -110,26 +112,27 @@ const ContextItem = memo<FileItemProps>((props) => {
       onClick={canPreview ? handleClick : undefined}
       onClose={handleClose}
     >
-      <Tooltip title={detail}>
-        <Flexbox horizontal align={'center'} className={styles.content}>
-          <Flexbox className={styles.thumbnail}>
+      <SimpleTooltip title={detail}>
+        <div className={cx('flex flex-row items-center', styles.content)}>
+          <div className={cx('flex flex-col', styles.thumbnail)}>
             <Content {...props} />
-          </Flexbox>
+          </div>
           <span className={styles.name}>{basename}</span>
           {(indicator !== 'file' || showCompletion) && (
-            <Flexbox className={styles.statusIcon}>
+            <div className={cx('flex flex-col', styles.statusIcon)}>
               {showCompletion ? (
-                <Icon
+                <span
                   aria-label={t('upload.preview.status.success')}
-                  icon={CircleCheckIcon}
-                  size={12}
+                  className="anticon"
+                  role="img"
                   style={{ color: cssVar.colorSuccess }}
-                />
+                >
+                  <CircleCheckIcon fill={'transparent'} height={12} size={12} width={12} />
+                </span>
               ) : indicator === 'loading' ? (
-                <Icon
-                  spin
-                  icon={Loader2Icon}
-                  size={12}
+                <span
+                  className="anticon animate-spin"
+                  role="img"
                   aria-label={t(
                     status === 'processing'
                       ? 'upload.preview.status.processing'
@@ -137,7 +140,9 @@ const ContextItem = memo<FileItemProps>((props) => {
                         ? 'upload.preview.status.pending'
                         : 'upload.preview.status.uploading',
                   )}
-                />
+                >
+                  <Loader2Icon fill={'transparent'} height={12} size={12} width={12} />
+                </span>
               ) : indicator === 'progress' ? (
                 <span
                   aria-label={t('upload.preview.status.uploading')}
@@ -156,15 +161,17 @@ const ContextItem = memo<FileItemProps>((props) => {
                   />
                 </span>
               ) : (
-                <Icon icon={CircleAlertIcon} size={12} style={{ color: cssVar.colorError }} />
+                <span className="anticon" role="img" style={{ color: cssVar.colorError }}>
+                  <CircleAlertIcon fill={'transparent'} height={12} size={12} width={12} />
+                </span>
               )}
-            </Flexbox>
+            </div>
           )}
           {sizeLabel && <span className={styles.size}>{sizeLabel}</span>}
-        </Flexbox>
-      </Tooltip>
+        </div>
+      </SimpleTooltip>
       {canRetry && (
-        <Flexbox horizontal onClick={(event) => event.stopPropagation()}>
+        <div className="flex flex-row" onClick={(event) => event.stopPropagation()}>
           {errorCode ? (
             <FileUploadErrorActions compact code={errorCode} />
           ) : (
@@ -177,7 +184,7 @@ const ContextItem = memo<FileItemProps>((props) => {
               }}
             />
           )}
-        </Flexbox>
+        </div>
       )}
     </Tag>
   );

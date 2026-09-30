@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import {
   AGENT_CHAT_TOPIC_PAGE_URL,
@@ -42,7 +41,7 @@ const Header = memo<{
       showTogglePanelButton={false}
       style={{ paddingBlock: 8, paddingInline, width: '100%' }}
       left={
-        <Flexbox horizontal align="center" flex={1} gap={4} style={{ minWidth: 0 }}>
+        <div className="flex flex-row items-center flex-1 gap-1" style={{ minWidth: 0 }}>
           {canGoBack && (
             <ActionIcon
               aria-label={t('back')}
@@ -53,7 +52,7 @@ const Header = memo<{
             />
           )}
           {title}
-        </Flexbox>
+        </div>
       }
       right={
         <Fragment>

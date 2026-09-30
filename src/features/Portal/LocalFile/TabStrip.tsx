@@ -1,19 +1,33 @@
 'use client';
 
-import { ContextMenuTrigger, type GenericItemType, Icon } from '@lobehub/ui';
 import { confirmModal, ScrollArea } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import {
+  ContextMenu,
+  ContextMenuContent,
+  ContextMenuItem,
+  ContextMenuSeparator,
+  ContextMenuTrigger,
+} from '@/components/ui/context-menu';
 import { localFileService } from '@/services/electron/localFileService';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { getLocalFileTabId } from '@/store/chat/slices/portal/helpers';
+
+interface TabContextMenuItem {
+  disabled?: boolean;
+  key?: string;
+  label?: string;
+  onClick?: () => void;
+  type?: 'divider';
+}
 
 const SKILL_PATH_RE = /\/\.(?:agents|claude)\/skills\/([^/]+)\/SKILL\.md$/;
 
@@ -188,7 +202,7 @@ const TabStrip = memo(() => {
   );
 
   const getContextMenuItems = useCallback(
-    (id: string, filePath: string, index: number): GenericItemType[] => [
+    (id: string, filePath: string, index: number): TabContextMenuItem[] => [
       {
         disabled: index === 0,
         key: 'closeLeft',
@@ -259,46 +273,63 @@ const TabStrip = memo(() => {
         const isActive = id === activeLocalFileId;
 
         return (
-          <ContextMenuTrigger items={() => getContextMenuItems(id, filePath, index)} key={id}>
-            <div
-              aria-selected={isActive}
-              className={`${styles.tabItem} ${isActive ? styles.tabItemActive : ''}`}
-              role="tab"
-              tabIndex={0}
-              title={filePath}
-              onClick={() => setActiveLocalFile(id)}
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  setActiveLocalFile(id);
-                }
-              }}
-            >
-              {skillName ? (
-                <Icon className={styles.tabIcon} icon={SkillsIcon} size={12} />
-              ) : (
-                <span className={styles.tabIcon}>
-                  <FileIcon fileName={filename} size={14} variant={'raw'} />
-                </span>
+          <ContextMenu key={id}>
+            <ContextMenuTrigger
+              render={
+                <div
+                  aria-selected={isActive}
+                  className={`${styles.tabItem} ${isActive ? styles.tabItemActive : ''}`}
+                  role="tab"
+                  tabIndex={0}
+                  title={filePath}
+                  onClick={() => setActiveLocalFile(id)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' || e.key === ' ') {
+                      e.preventDefault();
+                      setActiveLocalFile(id);
+                    }
+                  }}
+                >
+                  {skillName ? (
+                    <span className={cx('anticon', styles.tabIcon)} role="img">
+                      <SkillsIcon fill={'transparent'} height={12} size={12} width={12} />
+                    </span>
+                  ) : (
+                    <span className={styles.tabIcon}>
+                      <FileIcon fileName={filename} size={14} variant={'raw'} />
+                    </span>
+                  )}
+                  <span className={styles.tabLabel}>{label}</span>
+                  <button
+                    aria-label={`Close ${filename}`}
+                    className={styles.tabClose}
+                    data-dirty={id in dirtyContents ? 'true' : 'false'}
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      confirmClose(id, filePath, () => closeLocalFileTab(id));
+                    }}
+                  >
+                    <span className={'cm-tab-close-x'}>
+                      <XIcon size={12} />
+                    </span>
+                    <span className={'cm-tab-close-dot'} />
+                  </button>
+                </div>
+              }
+            />
+            <ContextMenuContent>
+              {getContextMenuItems(id, filePath, index).map((item) =>
+                item.type === 'divider' ? (
+                  <ContextMenuSeparator key={item.key ?? 'divider'} />
+                ) : (
+                  <ContextMenuItem disabled={item.disabled} key={item.key} onClick={item.onClick}>
+                    {item.label}
+                  </ContextMenuItem>
+                ),
               )}
-              <span className={styles.tabLabel}>{label}</span>
-              <button
-                aria-label={`Close ${filename}`}
-                className={styles.tabClose}
-                data-dirty={id in dirtyContents ? 'true' : 'false'}
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  confirmClose(id, filePath, () => closeLocalFileTab(id));
-                }}
-              >
-                <span className={'cm-tab-close-x'}>
-                  <XIcon size={12} />
-                </span>
-                <span className={'cm-tab-close-dot'} />
-              </button>
-            </div>
-          </ContextMenuTrigger>
+            </ContextMenuContent>
+          </ContextMenu>
         );
       })}
     </ScrollArea>

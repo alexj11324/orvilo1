@@ -1,7 +1,6 @@
 'use client';
 
-import { Icon, Tooltip } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { LoaderCircle, Mic, RotateCcw, X } from 'lucide-react';
 import type { MouseEvent } from 'react';
 import { memo, useCallback, useEffect } from 'react';
@@ -10,6 +9,7 @@ import { useTranslation } from 'react-i18next';
 import { useServerConfigStore } from '@/store/serverConfig';
 
 import { ChatInputAction } from '../ActionBar/components/ChatInputAction';
+import { SimpleTooltip } from '../SimpleTooltip';
 import { useChatInputStore, useStoreApi } from '../store';
 import { isOtherAudioInputModeActive } from './mutualExclusion';
 import { getDictationControlMode } from './presentation';
@@ -218,7 +218,7 @@ const Dictation = memo(() => {
         : t('voiceDictation.action');
 
     return disabled ? (
-      <Tooltip title={title}>
+      <SimpleTooltip title={title}>
         <ChatInputAction
           disabled
           aria-label={t('voiceDictation.action')}
@@ -228,7 +228,7 @@ const Dictation = memo(() => {
           showTooltip={false}
           title={title}
         />
-      </Tooltip>
+      </SimpleTooltip>
     ) : (
       <ChatInputAction
         aria-label={t('voiceDictation.action')}
@@ -322,7 +322,9 @@ const Dictation = memo(() => {
             onKeyDown={(event) => handleKeyboardActivation(event, start)}
           />
         ) : status !== 'error' ? (
-          <Icon aria-hidden className={styles.spin} icon={LoaderCircle} size={18} />
+          <span aria-hidden className={cx('anticon', styles.spin)} role="img">
+            <LoaderCircle fill={'transparent'} height={18} size={18} width={18} />
+          </span>
         ) : null}
       </div>
       <ChatInputAction

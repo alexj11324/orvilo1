@@ -1,6 +1,9 @@
-import { Popover } from '@lobehub/ui';
+import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
+import { cn } from 'cn';
 import type { ReactNode } from 'react';
 import { memo, useRef } from 'react';
+
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 
 import { useDetailPopoverState } from '../components/useDetailPopoverState';
 
@@ -54,19 +57,33 @@ const SkillRow = memo<SkillRowProps>(
         }
       >
         {detailContent ? (
-          <Popover
-            arrow={false}
-            content={detailContent}
-            disabled={detailDisabled}
-            mouseEnterDelay={0.3}
-            open={open}
-            placement={'rightTop'}
-            positionerProps={{ anchor: rowRef, sideOffset: 8 }}
-            styles={{ content: { padding: 0 }, root: { pointerEvents: 'none' } }}
-            onOpenChange={onOpenChange}
-          >
-            {labelCell}
-          </Popover>
+          <PopoverPrimitive.Root open={!detailDisabled && open} onOpenChange={onOpenChange}>
+            <PopoverPrimitive.Trigger
+              openOnHover
+              delay={300}
+              disabled={detailDisabled}
+              render={labelCell}
+            />
+            <PopoverPrimitive.Portal>
+              <PopoverPrimitive.Positioner
+                align={'start'}
+                anchor={rowRef}
+                className={cn('isolate', POPUP_Z_CLASS)}
+                side={'right'}
+                sideOffset={8}
+                style={{ pointerEvents: 'none' }}
+              >
+                <PopoverPrimitive.Popup
+                  className={cn(
+                    POPUP_Z_CLASS,
+                    'flex origin-(--transform-origin) flex-col gap-2.5 rounded-lg bg-popover p-0 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10 outline-hidden',
+                  )}
+                >
+                  {detailContent}
+                </PopoverPrimitive.Popup>
+              </PopoverPrimitive.Positioner>
+            </PopoverPrimitive.Portal>
+          </PopoverPrimitive.Root>
         ) : (
           labelCell
         )}

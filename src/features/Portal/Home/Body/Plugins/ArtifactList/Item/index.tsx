@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import { type ChatPluginPayload } from '@orvilo/types';
 import { cx } from 'antd-style';
@@ -32,41 +31,40 @@ const ArtifactItem = memo<ArtifactItemProps>(({ payload, messageId, identifier =
   const pluginTitle = pluginHelpers.getPluginTitle(pluginMeta) ?? identifier;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.container}
-      gap={8}
+    <div
+      className={cx('flex flex-row items-center gap-2', styles.container)}
       onClick={() => {
         if (!isToolHasUI || !identifier) return;
 
         openToolUI(messageId, identifier);
       }}
     >
-      <Flexbox horizontal align={'center'} distribution={'space-between'} gap={24}>
-        <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-row items-center justify-between gap-6">
+        <div className="flex flex-row items-center gap-2">
           <PluginAvatar identifier={identifier} />
-          <Flexbox gap={4}>
-            <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-col gap-1">
+            <div className="flex flex-row items-center gap-2">
               <div>{pluginTitle}</div>
               <Tag>{payload?.apiName}</Tag>
-            </Flexbox>
+            </div>
             <div>
               <Text ellipsis style={{ fontSize: 12 }} type={'secondary'}>
                 {args}
               </Text>
             </div>
-          </Flexbox>
-        </Flexbox>
-        <Flexbox>
+          </div>
+        </div>
+        <div className="flex flex-col">
           {isToolHasUI && (
             <div className={cx(styles.tag, styles.tagBlue)} style={{ cursor: 'pointer' }} title="">
-              <Icon icon={CircuitBoard} />
+              <span className="anticon" role="img">
+                <CircuitBoard fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
             </div>
           )}
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

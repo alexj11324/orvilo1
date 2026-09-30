@@ -3,9 +3,8 @@
 import 'react-pdf/dist/Page/AnnotationLayer.css';
 import 'react-pdf/dist/Page/TextLayer.css';
 
-import { Center, Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -273,14 +272,14 @@ const DocumentPreview = memo<DocumentPreviewProps>(
     }
 
     return (
-      <Center gap={16} height={'100%'} width={'100%'}>
-        <Center className={styles.fallbackIcon}>
+      <div className="flex flex-col items-center justify-center gap-4 h-[100%] w-[100%]">
+        <div className={cx('flex flex-col items-center justify-center', styles.fallbackIcon)}>
           <FileIcon fileName={filename} size={40} />
-        </Center>
-        <Flexbox align={'center'} gap={4}>
+        </div>
+        <div className="flex flex-col items-center gap-1">
           <Text style={{ fontWeight: 500 }}>{filename}</Text>
           <Text type={'secondary'}>{t('workingPanel.localFile.document.unsupported')}</Text>
-        </Flexbox>
+        </div>
         {isLocalFile ? (
           <Button onClick={() => localFileService.openLocalFile({ path: filePath })}>
             {t('workingPanel.localFile.document.openWithDefaultApp')}
@@ -288,7 +287,7 @@ const DocumentPreview = memo<DocumentPreviewProps>(
         ) : (
           <Button onClick={handleDownload}>{t('workingPanel.localFile.document.download')}</Button>
         )}
-      </Center>
+      </div>
     );
   },
 );

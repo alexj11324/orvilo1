@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ArrowLeftRight, XIcon } from 'lucide-react';
@@ -24,7 +23,7 @@ const Header = memo(() => {
       paddingInline={8}
       showTogglePanelButton={false}
       right={
-        <Flexbox horizontal gap={4}>
+        <div className="flex flex-row gap-1">
           {hasPortal && (
             <ActionIcon
               icon={ArrowLeftRight}
@@ -38,7 +37,7 @@ const Header = memo(() => {
             />
           )}
           <ActionIcon icon={XIcon} size={'small'} onClick={closeThreadPortal} />
-        </Flexbox>
+        </div>
       }
       style={{
         borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,

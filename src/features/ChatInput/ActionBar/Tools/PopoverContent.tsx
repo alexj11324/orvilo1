@@ -1,12 +1,13 @@
-import { type ItemType } from '@lobehub/ui';
-import { Flexbox, Icon, SearchBar, stopPropagation, usePopoverContext } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { Pin, Settings, Zap } from 'lucide-react';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { Pin, Search, Settings, X, Zap } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
+import type { ActionMenuItem } from '../../menuItems';
+import { usePopoverClose } from '../components/ActionPopover';
 import { ScrollSignalProvider } from './ScrollSignalContext';
 import SkillActivateMode from './SkillActivateMode';
 import ToolsList from './ToolsList';
@@ -63,7 +64,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-const filterItems = (items: ItemType[], keyword: string): ItemType[] => {
+const filterItems = (items: ActionMenuItem[], keyword: string): ActionMenuItem[] => {
   const lower = keyword.toLowerCase();
 
   return items
@@ -85,13 +86,13 @@ const filterItems = (items: ItemType[], keyword: string): ItemType[] => {
       const key = String('key' in item ? item.key : '').toLowerCase();
       return key.includes(lower) ? item : null;
     })
-    .filter(Boolean) as ItemType[];
+    .filter(Boolean) as ActionMenuItem[];
 };
 
 interface PopoverContentProps {
   autoCount: number;
   detailPopoverDisabled?: boolean;
-  items: ItemType[];
+  items: ActionMenuItem[];
   pinnedCount: number;
 }
 
@@ -101,7 +102,7 @@ const PopoverContent = memo<PopoverContentProps>(
     const navigate = useWorkspaceAwareNavigate();
     const [searchKeyword, setSearchKeyword] = useState('');
 
-    const { close: closePopover } = usePopoverContext();
+    const closePopover = usePopoverClose();
 
     const filteredItems = useMemo(
       () => (searchKeyword ? filterItems(items, searchKeyword) : items),
@@ -109,20 +110,32 @@ const PopoverContent = memo<PopoverContentProps>(
     );
 
     return (
-      <Flexbox gap={0}>
-        <Flexbox horizontal align="center" className={styles.header} gap={4}>
-          <SearchBar
-            allowClear
-            placeholder={t('tools.search')}
-            size="small"
-            style={{ flex: 1 }}
-            value={searchKeyword}
-            variant="borderless"
-            onChange={(e) => setSearchKeyword(e.target.value)}
-            onKeyDown={stopPropagation}
-          />
+      <div className="flex flex-col gap-0">
+        <div className={cx('flex flex-row items-center gap-1', styles.header)}>
+          <div className="flex flex-1 flex-row items-center gap-1.5 px-1.5">
+            <span className="flex items-center" style={{ color: cssVar.colorTextTertiary }}>
+              <Search size={14} />
+            </span>
+            <Input
+              className="h-7 flex-1 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0"
+              placeholder={t('tools.search')}
+              value={searchKeyword}
+              onChange={(e) => setSearchKeyword(e.target.value)}
+              onKeyDown={(event) => event.stopPropagation()}
+            />
+            {searchKeyword ? (
+              <button
+                aria-label={t('tools.search')}
+                className={styles.iconButton}
+                type="button"
+                onClick={() => setSearchKeyword('')}
+              >
+                <X size={12} />
+              </button>
+            ) : null}
+          </div>
           <SkillActivateMode />
-        </Flexbox>
+        </div>
         <ScrollSignalProvider
           style={{
             height: 480,
@@ -133,14 +146,18 @@ const PopoverContent = memo<PopoverContentProps>(
         </ScrollSignalProvider>
         <div className={styles.footer}>
           <span className={styles.statsItem}>
-            <Icon icon={Pin} size={12} />
+            <span className="anticon" role="img">
+              <Pin fill={'transparent'} height={12} size={12} width={12} />
+            </span>
             {pinnedCount}
           </span>
           <span className={styles.statsItem}>
-            <Icon icon={Zap} size={12} />
+            <span className="anticon" role="img">
+              <Zap fill={'transparent'} height={12} size={12} width={12} />
+            </span>
             {autoCount}
           </span>
-          <Flexbox horizontal align="center" gap={2} style={{ marginInlineStart: 'auto' }}>
+          <div className="flex flex-row items-center gap-0.5" style={{ marginInlineStart: 'auto' }}>
             <button
               aria-label={t('tools.plugins.management')}
               className={styles.iconButton}
@@ -150,11 +167,13 @@ const PopoverContent = memo<PopoverContentProps>(
                 navigate('/settings/connector');
               }}
             >
-              <Icon icon={Settings} size={14} />
+              <span className="anticon" role="img">
+                <Settings fill={'transparent'} height={14} size={14} width={14} />
+              </span>
             </button>
-          </Flexbox>
+          </div>
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );

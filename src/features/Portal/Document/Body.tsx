@@ -1,9 +1,8 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
 import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { EDITOR_DEBOUNCE_TIME, EDITOR_MAX_WAIT } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { debounce } from 'es-toolkit/compat';
 import { CheckIcon, PencilIcon, XIcon } from 'lucide-react';
 import type { ChangeEvent } from 'react';
@@ -11,6 +10,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CodeEditorPane from '@/components/CodeEditorPane';
+import { Textarea } from '@/components/ui/textarea';
 import FloatingChatPanel from '@/features/FloatingChatPanel';
 import { useDocumentChatTopic } from '@/features/FloatingChatPanel/useDocumentChatTopic';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -152,11 +152,11 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
   }, [currentName, documentId, draft, performSave, t, updateSkillFrontmatter]);
 
   return (
-    <Flexbox className={styles.frontmatter}>
-      <Flexbox horizontal align="center" className={styles.sectionHeader} justify="space-between">
+    <div className={cx('flex flex-col', styles.frontmatter)}>
+      <div className={cx('flex flex-row items-center justify-between', styles.sectionHeader)}>
         <Text type="secondary">{t('skillFrontmatter.title')}</Text>
         {editing ? (
-          <Flexbox horizontal gap={8}>
+          <div className="flex flex-row gap-2">
             <Button icon={XIcon} size="small" onClick={handleCancel}>
               {t('cancel')}
             </Button>
@@ -169,7 +169,7 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
             >
               {t('confirm')}
             </Button>
-          </Flexbox>
+          </div>
         ) : (
           <ActionIcon
             icon={PencilIcon}
@@ -178,35 +178,38 @@ const SkillFrontmatterBlock = memo<SkillFrontmatterBlockProps>(({ documentId, fr
             onClick={handleEdit}
           />
         )}
-      </Flexbox>
+      </div>
       {editing ? (
-        <Flexbox gap={8} padding={12}>
+        <div className="flex flex-col gap-2 p-3">
           {/* Raw YAML is only exposed in edit mode so users can keep advanced frontmatter syntax. */}
-          <TextArea
-            autoSize={{ maxRows: 12, minRows: 4 }}
-            className={styles.textArea}
+          <Textarea
+            rows={4}
+            style={{ maxHeight: '19em' }}
             value={draft}
-            variant="borderless"
+            className={cx(
+              'border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0',
+              styles.textArea,
+            )}
             onChange={(event: ChangeEvent<HTMLTextAreaElement>) => {
               setDraft(event.target.value);
               setError(undefined);
             }}
           />
           {error && <Text type="danger">{error}</Text>}
-        </Flexbox>
+        </div>
       ) : metadata.length > 0 ? (
         metadata.map((item) => (
-          <Flexbox horizontal align="flex-start" className={styles.metadataRow} key={item.key}>
+          <div className={cx('flex flex-row items-start', styles.metadataRow)} key={item.key}>
             <Text className={styles.metadataKey}>{item.key}</Text>
             <Text className={styles.metadataValue}>{item.value}</Text>
-          </Flexbox>
+          </div>
         ))
       ) : (
-        <Flexbox className={styles.metadataRow}>
+        <div className={cx('flex flex-col', styles.metadataRow)}>
           <Text type="secondary">{t('skillFrontmatter.empty')}</Text>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -376,7 +379,7 @@ const DocumentBody = memo(() => {
   );
 
   return (
-    <Flexbox flex={1} height={'100%'} style={{ overflow: 'hidden' }}>
+    <div className="flex flex-col flex-1 h-[100%]" style={{ overflow: 'hidden' }}>
       <div className={fullPage ? styles.contentFull : styles.content}>
         {fullPage ? <WideScreenContainer>{editorContent}</WideScreenContainer> : editorContent}
       </div>
@@ -394,7 +397,7 @@ const DocumentBody = memo(() => {
           topicId={docChatTopicId}
         />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

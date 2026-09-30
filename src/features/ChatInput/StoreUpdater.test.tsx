@@ -1,10 +1,10 @@
-import { type MenuProps } from '@lobehub/ui';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { type PropsWithChildren, useEffect } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useSingleton } from '@/hooks/useSingleton';
 
+import type { ActionDropdownMenu } from './ActionBar/components/ActionDropdown';
 import { createStore, Provider, useChatInputStore } from './store';
 import StoreUpdater from './StoreUpdater';
 import VoiceMessage from './VoiceMessage';
@@ -44,8 +44,8 @@ vi.mock('./VoiceMessage/useVoiceMessageRecorder', () => ({
 }));
 
 interface TestHarnessProps {
-  onSendMenuChange: (menu: MenuProps | undefined) => void;
-  sendMenu?: MenuProps;
+  onSendMenuChange: (menu: ActionDropdownMenu | undefined) => void;
+  sendMenu?: ActionDropdownMenu;
 }
 
 const Probe = ({
@@ -87,7 +87,9 @@ beforeEach(() => {
 
 describe('ChatInput StoreUpdater', () => {
   it('clears sendMenu when the prop becomes undefined', () => {
-    const initialSendMenu = { items: [{ key: 'test', label: 'Test' }] } satisfies MenuProps;
+    const initialSendMenu = {
+      items: [{ key: 'test', label: 'Test' }],
+    } satisfies ActionDropdownMenu;
     const onSendMenuChange = vi.fn();
 
     const { rerender } = render(

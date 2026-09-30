@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { getBuiltinPortalTitle } from '@orvilo/builtin-tools/portals';
 import type { BuiltinPortalTitle } from '@orvilo/types';
@@ -38,12 +37,12 @@ const Title = () => {
   }
 
   return (
-    <Flexbox horizontal align={'center'} gap={8}>
+    <div className="flex flex-row items-center gap-2">
       <PluginAvatar identifier={toolUIIdentifier} size={28} />
       <Text style={{ fontSize: 16 }} type={'secondary'}>
         {pluginTitle}
       </Text>
-    </Flexbox>
+    </div>
   );
 };
 

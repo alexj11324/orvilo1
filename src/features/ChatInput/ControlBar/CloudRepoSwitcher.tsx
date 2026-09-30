@@ -1,18 +1,20 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckIcon, ChevronDownIcon, SquircleDashed } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { getPendingTopicRepos, setPendingTopicRepos } from '@/store/chat/pendingTopicRepos';
 import { topicSelectors } from '@/store/chat/selectors';
+
+import { SimpleTooltip } from '../SimpleTooltip';
 
 const styles = createStaticStyles(({ css }) => ({
   button: css`
@@ -203,62 +205,67 @@ const CloudRepoSwitcher = memo<CloudRepoSwitcherProps>(({ agentId }) => {
         : t('heteroAgent.cloudRepo.multiSelected', { count: displayRepos.length });
 
   const content = (
-    <Flexbox gap={4} style={{ minWidth: 280 }}>
+    <div className="flex flex-col gap-1" style={{ minWidth: 280 }}>
       <div className={styles.sectionTitle}>{t('heteroAgent.cloudRepo.sectionTitle')}</div>
       <div className={styles.scrollContainer}>
         {availableRepos.map((repo) => {
           const isChecked = displayRepos.includes(repo);
           return (
-            <Flexbox
-              horizontal
-              align="center"
-              className={styles.repoItem}
-              gap={8}
+            <div
+              className={cx('flex flex-row items-center gap-2', styles.repoItem)}
               key={repo}
               onClick={() => toggleRepo(repo)}
             >
               <div
                 className={`${styles.checkIndicator} ${isChecked ? styles.checkIndicatorChecked : ''}`}
               >
-                {isChecked && <Icon icon={CheckIcon} size={12} />}
+                {isChecked && (
+                  <span className="anticon" role="img">
+                    <CheckIcon fill={'transparent'} height={12} size={12} width={12} />
+                  </span>
+                )}
               </div>
               <Github size={16} style={{ color: cssVar.colorTextTertiary, flex: 'none' }} />
-              <Flexbox flex={1} style={{ minWidth: 0 }}>
+              <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
                 <div className={styles.repoName}>{getRepoName(repo)}</div>
                 <div className={styles.repoUrl}>{repo}</div>
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           );
         })}
       </div>
-    </Flexbox>
+    </div>
   );
 
   const button = (
     <div className={cx(styles.button, !canCreateContent && styles.buttonDisabled)}>
-      {displayRepos.length > 0 ? <Github size={14} /> : <Icon icon={SquircleDashed} size={14} />}
+      {displayRepos.length > 0 ? (
+        <Github size={14} />
+      ) : (
+        <span className="anticon" role="img">
+          <SquircleDashed fill={'transparent'} height={14} size={14} width={14} />
+        </span>
+      )}
       <span>{buttonLabel}</span>
-      <Icon icon={ChevronDownIcon} size={12} />
+      <span className="anticon" role="img">
+        <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+      </span>
     </div>
   );
 
   if (!canCreateContent)
     return (
-      <Tooltip title={reason}>
+      <SimpleTooltip title={reason}>
         <div>{button}</div>
-      </Tooltip>
+      </SimpleTooltip>
     );
 
   return (
-    <Popover
-      content={content}
-      open={canCreateContent && open}
-      placement="bottomLeft"
-      styles={{ content: { padding: 4 } }}
-      trigger="click"
-      onOpenChange={handleOpenChange}
-    >
-      {button}
+    <Popover open={canCreateContent && open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger render={button} />
+      <PopoverContent align={'start'} className={'w-auto'} side={'bottom'} style={{ padding: 4 }}>
+        {content}
+      </PopoverContent>
     </Popover>
   );
 });

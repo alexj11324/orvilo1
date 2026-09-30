@@ -1,8 +1,9 @@
-import { Flexbox, PreviewGroup, ScrollShadow } from '@lobehub/ui';
+import { PreviewGroup } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { filesSelectors, useFileStore } from '@/store/file';
 
@@ -21,21 +22,18 @@ const FilePreview = memo(() => {
   if (!list || list?.length === 0) return null;
 
   return (
-    <ScrollShadow
-      hideScrollBar
-      horizontal
-      className={styles.container}
+    <ScrollArea
+      className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}
       orientation={'horizontal'}
-      size={8}
     >
-      <Flexbox horizontal gap={6} paddingBlock={8} paddingInline={expand ? 0 : 12}>
+      <div className="flex flex-row gap-1.5 py-2" style={{ paddingInline: expand ? 0 : 12 }}>
         <PreviewGroup>
           {list.map((i) => (
             <FileItem {...i} key={i.id} loading={i.status === 'pending'} />
           ))}
         </PreviewGroup>
-      </Flexbox>
-    </ScrollShadow>
+      </div>
+    </ScrollArea>
   );
 });
 

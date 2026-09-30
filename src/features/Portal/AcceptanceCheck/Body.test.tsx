@@ -1,5 +1,4 @@
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import Body from './Body';
@@ -7,27 +6,6 @@ import Body from './Body';
 const mocks = vi.hoisted(() => ({
   bundleError: undefined as Error | undefined,
   mutate: vi.fn(),
-}));
-
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Flexbox: ({
-    children,
-    className,
-    horizontal,
-  }: {
-    children: ReactNode;
-    className?: string;
-    horizontal?: boolean;
-  }) => (
-    <div
-      className={className}
-      data-testid={className ? 'detail-surface' : horizontal ? 'horizontal-flex' : undefined}
-    >
-      {children}
-    </div>
-  ),
-  Icon: () => <span data-testid={'check-state-icon'} />,
 }));
 
 vi.mock('@/store/chat', () => ({
@@ -81,18 +59,18 @@ describe('AcceptanceCheck Portal Body', () => {
   it('renders the expanded check directly on a borderless detail surface', () => {
     render(<Body />);
 
-    const surface = screen.getByTestId('detail-surface');
     const checkDetails = screen.getByTestId('check-details');
+    const surface = checkDetails.parentElement;
 
-    expect(checkDetails.parentElement).toBe(surface);
-    expect(surface.querySelector('[class*="block"]')).toBeNull();
+    expect(surface?.className).toContain('flex-col');
+    expect(surface?.querySelector('[class*="block"]')).toBeNull();
   });
 
   it('keeps the selected check identity visible above its details', () => {
     render(<Body />);
 
     expect(screen.getByText('C3 · The result keeps its title')).toBeInTheDocument();
-    expect(screen.getByTestId('check-state-icon')).toBeInTheDocument();
+    expect(document.querySelector('span.anticon')).toBeInTheDocument();
   });
 
   it('shows how the task check is verified and which evidence media it requires', () => {
@@ -104,15 +82,11 @@ describe('AcceptanceCheck Portal Body', () => {
     expect(screen.getByText('taskDetail.acceptance.requiredEvidence')).toBeInTheDocument();
     expect(screen.getByText('report.evidence.medium.markdown')).toBeInTheDocument();
     expect(screen.getByText('report.evidence.medium.screenshot')).toBeInTheDocument();
-    expect(
-      screen
-        .getAllByTestId('horizontal-flex')
-        .some(
-          (element) =>
-            element.textContent?.includes('taskDetail.acceptance.verifier') &&
-            element.textContent.includes('taskDetail.acceptance.requiredEvidence'),
-        ),
-    ).toBe(true);
+    const verifierLabel = screen.getByText('taskDetail.acceptance.verifier');
+    const evidenceLabel = screen.getByText('taskDetail.acceptance.requiredEvidence');
+    expect(verifierLabel.parentElement?.parentElement).toBe(
+      evidenceLabel.parentElement?.parentElement,
+    );
   });
 
   it('offers an in-place retry when loading the selected check fails', () => {

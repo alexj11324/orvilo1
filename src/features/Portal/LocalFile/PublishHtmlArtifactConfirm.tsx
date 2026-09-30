@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import {
   Accordion,
   Button,
@@ -16,13 +15,13 @@ import { WORKSPACE_HTML_ARTIFACT_INLINE_MAX_BYTES } from './readWorkspaceAsset';
 const CONFIRM_BODY_MAX_HEIGHT = 'min(52vh, 360px)';
 
 const PathList = ({ items }: { items: string[] }) => (
-  <Flexbox gap={4}>
+  <div className="flex flex-col gap-1">
     {items.map((item) => (
       <Text key={item} style={{ wordBreak: 'break-all' }} type={'secondary'}>
         {item}
       </Text>
     ))}
-  </Flexbox>
+  </div>
 );
 
 interface PublishHtmlArtifactConfirmContentProps {
@@ -56,7 +55,7 @@ const PublishHtmlArtifactConfirmContent = ({
       style={{ maxHeight: CONFIRM_BODY_MAX_HEIGHT, overflow: 'hidden' }}
       viewportProps={{ style: { height: 'auto', maxHeight: CONFIRM_BODY_MAX_HEIGHT } }}
     >
-      <Flexbox gap={8} style={{ paddingBlock: 12, paddingInline: 16 }}>
+      <div className="flex flex-col gap-2" style={{ paddingBlock: 12, paddingInline: 16 }}>
         <Text>{t('workingPanel.localFile.publish.privacy')}</Text>
         {showDetails && (
           <Accordion
@@ -65,7 +64,7 @@ const PublishHtmlArtifactConfirmContent = ({
             items={[
               {
                 children: (
-                  <Flexbox gap={8} paddingBlock={'4px 0'}>
+                  <div className="flex flex-col gap-2" style={{ paddingBlock: '4px 0' }}>
                     {inlinedPaths.length > 0 && (
                       <>
                         <Text>
@@ -113,7 +112,7 @@ const PublishHtmlArtifactConfirmContent = ({
                       </>
                     )}
                     <Text type={'secondary'}>{t('workingPanel.localFile.publish.dynamic')}</Text>
-                  </Flexbox>
+                  </div>
                 ),
                 key: 'details',
                 title: (
@@ -126,7 +125,7 @@ const PublishHtmlArtifactConfirmContent = ({
           />
         )}
         <Text type={'secondary'}>{t('workingPanel.localFile.publish.note')}</Text>
-      </Flexbox>
+      </div>
     </ScrollArea>
   );
 };
@@ -142,10 +141,8 @@ const PublishHtmlArtifactConfirmFooter = ({
   const { close } = useModalContext();
 
   return (
-    <Flexbox
-      horizontal
-      gap={8}
-      justify={'flex-end'}
+    <div
+      className="flex flex-row gap-2 justify-end"
       style={{ paddingBlock: 12, paddingInline: 16 }}
     >
       <Button
@@ -164,7 +161,7 @@ const PublishHtmlArtifactConfirmFooter = ({
       >
         {okText}
       </Button>
-    </Flexbox>
+    </div>
   );
 };
 

@@ -1,7 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { type ChatFileItem } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
 import FileIcon from '@/components/FileIcon';
@@ -31,21 +30,18 @@ const FileItem = memo<ChatFileItem>(({ name, fileType, size, id }) => {
   const openFilePreview = useChatStore((s) => s.openFilePreview);
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.container}
-      gap={8}
+    <div
+      className={cx('flex flex-row items-center gap-2', styles.container)}
       onClick={() => {
         openFilePreview({ fileId: id });
       }}
     >
       <FileIcon fileName={name} fileType={fileType} />
-      <Flexbox>
+      <div className="flex flex-col">
         <Text ellipsis={{ tooltip: true }}>{name}</Text>
         <Text type={'secondary'}>{formatSize(size)}</Text>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

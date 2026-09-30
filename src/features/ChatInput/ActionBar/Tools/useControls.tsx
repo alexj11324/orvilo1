@@ -1,5 +1,3 @@
-import type { ItemType } from '@lobehub/ui';
-import { Icon, Popover, SearchBar, stopPropagation, Tooltip } from '@lobehub/ui';
 import { Avatar, confirmModal, Switch, Tag } from '@lobehub/ui/base-ui';
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog, RECOMMENDED_SKILLS, RecommendedSkillType } from '@orvilo/const';
@@ -21,9 +19,10 @@ import {
   Zap,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { createElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { openConnectorEditDrawer } from '@/features/Connectors/CustomConnectorModal/imperative';
 import { openPluginEditDrawer } from '@/features/PluginDevModal/imperative';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -47,7 +46,9 @@ import { OrviloSkillStatus } from '@/store/tool/slices/orviloSkillStore/types';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
+import type { ActionMenuItem } from '../../menuItems';
 import { closeToolDetailPopovers } from '../components/useDetailPopoverState';
+import { SimpleTooltip } from '../SimpleTooltip';
 import ComposioServerItem from './ComposioServerItem';
 import ComposioSkillIcon from './ComposioSkillIcon';
 import { SKILL_ICON_GAP, SKILL_ICON_SIZE, SKILL_TRAILING_CONTROL_SIZE } from './constants';
@@ -58,9 +59,17 @@ import ToolItem from './ToolItem';
 import ToolItemDetailPopover from './ToolItemDetailPopover';
 
 const officialTag = (
-  <Tooltip placement={'top'} title={'Orvilo'}>
-    <Tag color={'success'} icon={<Icon icon={BadgeCheck} />} size={'small'} />
-  </Tooltip>
+  <SimpleTooltip side={'top'} title={'Orvilo'}>
+    <Tag
+      color={'success'}
+      size={'small'}
+      icon={
+        <span className="anticon" role="img">
+          <BadgeCheck fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
+      }
+    />
+  </SimpleTooltip>
 );
 
 type SkillPolicyMode = AgentPluginMode;
@@ -74,7 +83,7 @@ interface SkillConfigureConfig {
   onConfigure: () => void;
 }
 
-type SkillMenuItem = NonNullable<ItemType> & {
+type SkillMenuItem = NonNullable<ActionMenuItem> & {
   extra?: ReactNode;
   popoverContent?: ReactNode;
   searchText?: string;
@@ -528,7 +537,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       const renderCheck = (value: SkillPolicyMode) =>
         mode === value ? (
           <span className={cx(styles.policyCheck)}>
-            <Icon icon={Check} size={14} />
+            <span className="anticon" role="img">
+              <Check fill={'transparent'} height={14} size={14} width={14} />
+            </span>
           </span>
         ) : (
           <span className={cx(styles.policyCheck)} />
@@ -571,31 +582,43 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
             supportedModes.includes('pinned') &&
             renderPolicyItem(
               'pinned',
-              <Icon
-                className={cx(mode === 'pinned' ? styles.iconPinned : styles.iconDefault)}
-                icon={Pin}
-                size={15}
-              />,
+              <span
+                role="img"
+                className={cx(
+                  'anticon',
+                  cx(mode === 'pinned' ? styles.iconPinned : styles.iconDefault),
+                )}
+              >
+                <Pin fill={'transparent'} height={15} size={15} width={15} />
+              </span>,
             )}
           {!deleteOnly &&
             supportedModes.includes('auto') &&
             renderPolicyItem(
               'auto',
-              <Icon
-                className={cx(mode === 'auto' ? styles.iconAuto : styles.iconDefault)}
-                icon={Zap}
-                size={15}
-              />,
+              <span
+                role="img"
+                className={cx(
+                  'anticon',
+                  cx(mode === 'auto' ? styles.iconAuto : styles.iconDefault),
+                )}
+              >
+                <Zap fill={'transparent'} height={15} size={15} width={15} />
+              </span>,
             )}
           {!deleteOnly &&
             supportedModes.includes('disabled') &&
             renderPolicyItem(
               'disabled',
-              <Icon
-                className={cx(mode === 'disabled' ? styles.iconDisabled : styles.iconDefault)}
-                icon={Ban}
-                size={15}
-              />,
+              <span
+                role="img"
+                className={cx(
+                  'anticon',
+                  cx(mode === 'disabled' ? styles.iconDisabled : styles.iconDefault),
+                )}
+              >
+                <Ban fill={'transparent'} height={15} size={15} width={15} />
+              </span>,
             )}
           {!deleteOnly && (configureConfig || deleteConfig) && (
             <div className={cx(styles.deleteDivider)} />
@@ -613,7 +636,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               }}
             >
               <span className={cx(styles.policyItemIcon)}>
-                <Icon icon={Wrench} size={15} />
+                <span className="anticon" role="img">
+                  <Wrench fill={'transparent'} height={15} size={15} width={15} />
+                </span>
               </span>
               <span className={cx(styles.policyText)}>{t('tools.builtins.configure')}</span>
             </button>
@@ -642,7 +667,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               }}
             >
               <span className={cx(styles.policyItemIcon)}>
-                <Icon className={cx(styles.deleteIcon)} icon={Trash2} size={15} />
+                <span className={cx('anticon', cx(styles.deleteIcon))} role="img">
+                  <Trash2 fill={'transparent'} height={15} size={15} width={15} />
+                </span>
               </span>
               <span className={cx(styles.policyText)}>{t('tools.builtins.uninstall')}</span>
             </button>
@@ -652,37 +679,40 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
 
       return (
         <Popover
-          arrow={false}
-          content={content}
           open={policyOpenId === id}
-          placement="rightTop"
-          positionerProps={{ sideOffset: 8 }}
-          styles={{ content: { padding: 0 } }}
-          trigger="click"
           onOpenChange={(open) => (open ? openSkillPolicyMenu(id) : setPolicyOpenId(null))}
         >
-          <button
-            aria-label={t('tools.skillActivateMode.title')}
-            className={cx(styles.policyButton)}
-            disabled={!canEdit}
-            type="button"
-            onPointerEnter={closeToolDetailPopovers}
-            onClick={(event) => {
-              event.stopPropagation();
-              closeToolDetailPopovers();
-            }}
-            onContextMenu={(event) => {
-              event.preventDefault();
-              event.stopPropagation();
-              openSkillPolicyMenu(id);
-            }}
-            onPointerDown={(event) => {
-              event.stopPropagation();
-              closeToolDetailPopovers();
-            }}
-          >
-            <Icon icon={MoreHorizontal} size={15} />
-          </button>
+          <PopoverTrigger
+            render={
+              <button
+                aria-label={t('tools.skillActivateMode.title')}
+                className={cx(styles.policyButton)}
+                disabled={!canEdit}
+                type="button"
+                onPointerEnter={closeToolDetailPopovers}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  closeToolDetailPopovers();
+                }}
+                onContextMenu={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  openSkillPolicyMenu(id);
+                }}
+                onPointerDown={(event) => {
+                  event.stopPropagation();
+                  closeToolDetailPopovers();
+                }}
+              >
+                <span className="anticon" role="img">
+                  <MoreHorizontal fill={'transparent'} height={15} size={15} width={15} />
+                </span>
+              </button>
+            }
+          />
+          <PopoverContent align={'start'} className={'w-auto p-0'} side={'right'} sideOffset={8}>
+            {content}
+          </PopoverContent>
         </Popover>
       );
     },
@@ -961,7 +991,11 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
 
             if (server?.status === ComposioServerStatus.ACTIVE) {
               return createManagedSkillItem({
-                badge: <Icon icon={McpIcon} size={12} />,
+                badge: (
+                  <span className="anticon" role="img">
+                    <McpIcon fill={'transparent'} height={12} size={12} width={12} />
+                  </span>
+                ),
                 deleteConfig: {
                   displayName: type.label,
                   onDelete: () => removeComposioServer(server.identifier),
@@ -1068,7 +1102,11 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
 
             if (server?.status === OrviloSkillStatus.CONNECTED || server?.isConnected) {
               return createManagedSkillItem({
-                badge: <Icon icon={McpIcon} size={12} />,
+                badge: (
+                  <span className="anticon" role="img">
+                    <McpIcon fill={'transparent'} height={12} size={12} width={12} />
+                  </span>
+                ),
                 extraTag: provider.author === 'Orvilo' ? officialTag : undefined,
                 icon,
                 id: server.identifier,
@@ -1113,7 +1151,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         const icon = item.meta?.avatar ? (
           <Avatar avatar={item.meta.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
         ) : (
-          <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />
+          <span className="anticon" role="img">
+            <SkillsIcon
+              fill={'transparent'}
+              height={SKILL_ICON_SIZE}
+              size={SKILL_ICON_SIZE}
+              width={SKILL_ICON_SIZE}
+            />
+          </span>
         );
         const popoverContent = (
           <ToolItemDetailPopover
@@ -1132,14 +1177,20 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                   style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
-                <Icon icon={SkillsIcon} size={36} />
+                <span className="anticon" role="img">
+                  <SkillsIcon fill={'transparent'} height={36} size={36} width={36} />
+                </span>
               )
             }
           />
         );
 
         return createManagedSkillItem({
-          badge: <Icon icon={Wrench} size={12} />,
+          badge: (
+            <span className="anticon" role="img">
+              <Wrench fill={'transparent'} height={12} size={12} width={12} />
+            </span>
+          ),
           deleteConfig: {
             displayName: title,
             onDelete: () => uninstallBuiltinTool(item.identifier),
@@ -1166,7 +1217,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         const icon = item.meta?.avatar ? (
           <Avatar avatar={item.meta.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
         ) : (
-          <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />
+          <span className="anticon" role="img">
+            <SkillsIcon
+              fill={'transparent'}
+              height={SKILL_ICON_SIZE}
+              size={SKILL_ICON_SIZE}
+              width={SKILL_ICON_SIZE}
+            />
+          </span>
         );
         const popoverContent = (
           <ToolItemDetailPopover
@@ -1185,14 +1243,20 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                   style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
-                <Icon icon={SkillsIcon} size={36} />
+                <span className="anticon" role="img">
+                  <SkillsIcon fill={'transparent'} height={36} size={36} width={36} />
+                </span>
               )
             }
           />
         );
 
         return createManagedSkillItem({
-          badge: <Icon icon={Wrench} size={12} />,
+          badge: (
+            <span className="anticon" role="img">
+              <Wrench fill={'transparent'} height={12} size={12} width={12} />
+            </span>
+          ),
           defaultMode: 'pinned',
           extraTag: officialTag,
           icon,
@@ -1216,7 +1280,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         const icon = skill.avatar ? (
           <Avatar avatar={skill.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
         ) : (
-          <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />
+          <span className="anticon" role="img">
+            <SkillsIcon
+              fill={'transparent'}
+              height={SKILL_ICON_SIZE}
+              size={SKILL_ICON_SIZE}
+              width={SKILL_ICON_SIZE}
+            />
+          </span>
         );
         const popoverContent = (
           <ToolItemDetailPopover
@@ -1235,14 +1306,20 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                   style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
-                <Icon icon={SkillsIcon} size={36} />
+                <span className="anticon" role="img">
+                  <SkillsIcon fill={'transparent'} height={36} size={36} width={36} />
+                </span>
               )
             }
           />
         );
 
         return createManagedSkillItem({
-          badge: <Icon icon={SkillsIcon} size={12} />,
+          badge: (
+            <span className="anticon" role="img">
+              <SkillsIcon fill={'transparent'} height={12} size={12} width={12} />
+            </span>
+          ),
           extraTag: officialTag,
           icon,
           id: skill.identifier,
@@ -1261,19 +1338,36 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     () =>
       customConnectors.map((connector) => {
         const title = connector.name || connector.identifier;
-        const icon = <Icon icon={McpIcon} size={SKILL_ICON_SIZE} />;
+        const icon = (
+          <span className="anticon" role="img">
+            <McpIcon
+              fill={'transparent'}
+              height={SKILL_ICON_SIZE}
+              size={SKILL_ICON_SIZE}
+              width={SKILL_ICON_SIZE}
+            />
+          </span>
+        );
         const popoverContent = (
           <ToolItemDetailPopover
             description={connector.mcpServerUrl ?? ''}
-            icon={<Icon icon={McpIcon} size={36} />}
             identifier={connector.identifier}
             sourceLabel={t('skillStore.tabs.custom')}
             title={title}
+            icon={
+              <span className="anticon" role="img">
+                <McpIcon fill={'transparent'} height={36} size={36} width={36} />
+              </span>
+            }
           />
         );
 
         return createManagedSkillItem({
-          badge: <Icon icon={McpIcon} size={12} />,
+          badge: (
+            <span className="anticon" role="img">
+              <McpIcon fill={'transparent'} height={12} size={12} width={12} />
+            </span>
+          ),
           configureConfig: { onConfigure: () => openConnectorEditDrawer(connector.id) },
           deleteConfig: {
             displayName: title,
@@ -1353,7 +1447,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     const icon = hasRealAvatar ? (
       <Avatar avatar={item.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
     ) : (
-      <Icon icon={McpIcon} size={SKILL_ICON_SIZE} />
+      <span className="anticon" role="img">
+        <McpIcon
+          fill={'transparent'}
+          height={SKILL_ICON_SIZE}
+          size={SKILL_ICON_SIZE}
+          width={SKILL_ICON_SIZE}
+        />
+      </span>
     );
     const popoverContent = (
       <ToolItemDetailPopover
@@ -1370,14 +1471,20 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
               style={{ flex: 'none', marginInlineEnd: 0 }}
             />
           ) : (
-            <Icon icon={McpIcon} size={36} />
+            <span className="anticon" role="img">
+              <McpIcon fill={'transparent'} height={36} size={36} width={36} />
+            </span>
           )
         }
       />
     );
 
     return createManagedSkillItem({
-      badge: isMcp ? <Icon icon={McpIcon} size={12} /> : undefined,
+      badge: isMcp ? (
+        <span className="anticon" role="img">
+          <McpIcon fill={'transparent'} height={12} size={12} width={12} />
+        </span>
+      ) : undefined,
       configureConfig: isCustom
         ? { onConfigure: () => openPluginEditDrawer(item.identifier) }
         : undefined,
@@ -1386,7 +1493,15 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         onDelete: () => uninstallPlugin(item.identifier),
       },
       extraTag: isCustom ? (
-        <Tag color={'warning'} icon={<Icon icon={Package} />} size={'small'}>
+        <Tag
+          color={'warning'}
+          size={'small'}
+          icon={
+            <span className="anticon" role="img">
+              <Package fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          }
+        >
           {t('store.customPlugin', { ns: 'plugin' })}
         </Tag>
       ) : item.author === 'Orvilo' ? (
@@ -1401,7 +1516,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   };
 
   // Build Orvilo group children (including Builtin Agent Skills, builtin tools, and Orvilo Skill/Composio)
-  const orviloGroupChildren: ItemType[] = [
+  const orviloGroupChildren: ActionMenuItem[] = [
     // 1. Builtin Agent Skills
     ...builtinAgentSkillItems,
     // 2. Builtin tools
@@ -1411,10 +1526,10 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
   ];
 
   // Build Community group children (community plugins)
-  const communityGroupChildren: ItemType[] = communityPlugins.map(mapPluginToItem);
+  const communityGroupChildren: ActionMenuItem[] = communityPlugins.map(mapPluginToItem);
 
   // Build Custom group children (custom plugins + custom connectors)
-  const customGroupChildren: ItemType[] = [
+  const customGroupChildren: ActionMenuItem[] = [
     ...customPlugins.map(mapPluginToItem),
     ...customConnectorItems,
   ];
@@ -1521,7 +1636,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           </span>
         )}
         <div className={cx(styles.activationGroupChevron)}>
-          <Icon icon={open ? ChevronDown : ChevronRight} size={13} />
+          <span className="anticon" role="img">
+            {createElement(open ? ChevronDown : ChevronRight, {
+              size: 13,
+              width: 13,
+              height: 13,
+              fill: 'transparent',
+            })}
+          </span>
         </div>
       </div>
     </div>
@@ -1537,8 +1659,8 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       value={searchKeyword}
       variant="borderless"
       onChange={(event) => setSearchKeyword(event.target.value)}
-      onClick={stopPropagation}
-      onKeyDown={stopPropagation}
+      onClick={(event) => event.stopPropagation()}
+      onKeyDown={(event) => event.stopPropagation()}
     />
   );
 
@@ -1555,13 +1677,20 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
             navigate('/settings/connector');
           }}
         >
-          <Icon icon={Settings} size={SKILL_ICON_SIZE} />
+          <span className="anticon" role="img">
+            <Settings
+              fill={'transparent'}
+              height={SKILL_ICON_SIZE}
+              size={SKILL_ICON_SIZE}
+              width={SKILL_ICON_SIZE}
+            />
+          </span>
           <span className={cx(styles.addSkillLabel)}>{t('tools.plugins.management')}</span>
         </button>
       </>
     ) : undefined;
 
-  const marketItems: ItemType[] = [
+  const marketItems: ActionMenuItem[] = [
     ...(pinnedItems.length > 0
       ? [
           {
@@ -1569,13 +1698,17 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
             key: 'pinned',
             label: renderActivationGroupLabel({
               count: fixedPinnedItems.length + allPinnedItems.length,
-              icon: <Icon icon={Pin} size={14} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <Pin fill={'transparent'} height={14} size={14} width={14} />
+                </span>
+              ),
               open: pinnedOpen,
               title: t('tools.activation.pinned'),
               onToggle: () => setPinnedOpen((open) => !open),
             }),
             type: 'group' as const,
-          } as ItemType,
+          } as ActionMenuItem,
         ]
       : []),
     ...(pinnedItems.length > 0 && autoItems.length > 0
@@ -1583,7 +1716,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           {
             key: 'skill-activation-divider',
             type: 'divider' as const,
-          } as ItemType,
+          } as ActionMenuItem,
         ]
       : []),
     ...(autoItems.length > 0
@@ -1594,13 +1727,17 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
             label: renderActivationGroupLabel({
               autoSwitch: true,
               count: allAutoItems.length,
-              icon: <Icon icon={Zap} size={14} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <Zap fill={'transparent'} height={14} size={14} width={14} />
+                </span>
+              ),
               open: autoOpen,
               title: t('tools.activation.auto'),
               onToggle: () => setAutoOpen((open) => !open),
             }),
             type: 'group' as const,
-          } as ItemType,
+          } as ActionMenuItem,
         ]
       : []),
     ...(disabledItems.length > 0 && (pinnedItems.length > 0 || autoItems.length > 0)
@@ -1608,7 +1745,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           {
             key: 'skill-disabled-divider',
             type: 'divider' as const,
-          } as ItemType,
+          } as ActionMenuItem,
         ]
       : []),
     ...(disabledItems.length > 0
@@ -1618,20 +1755,24 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
             key: 'disabled',
             label: renderActivationGroupLabel({
               count: fixedDisabledItems.length + allDisabledItems.length,
-              icon: <Icon icon={Ban} size={14} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <Ban fill={'transparent'} height={14} size={14} width={14} />
+                </span>
+              ),
               open: disabledOpen,
               title: t('tools.activation.disabled'),
               onToggle: () => setDisabledOpen((open) => !open),
             }),
             type: 'group' as const,
-          } as ItemType,
+          } as ActionMenuItem,
         ]
       : []),
   ];
 
   // Items for the installed tab - only show installed plugins
-  const installedPluginItems: ItemType[] = useMemo(() => {
-    const installedItems: ItemType[] = [];
+  const installedPluginItems: ActionMenuItem[] = useMemo(() => {
+    const installedItems: ActionMenuItem[] = [];
 
     // Installed builtin tools
     const enabledBuiltinItems = filteredBuiltinList
@@ -1640,7 +1781,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         icon: item.meta?.avatar ? (
           <Avatar avatar={item.meta.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
         ) : (
-          <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />
+          <span className="anticon" role="img">
+            <SkillsIcon
+              fill={'transparent'}
+              height={SKILL_ICON_SIZE}
+              size={SKILL_ICON_SIZE}
+              width={SKILL_ICON_SIZE}
+            />
+          </span>
         ),
         key: item.identifier,
         label: (
@@ -1671,7 +1819,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                   style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
-                <Icon icon={SkillsIcon} size={36} />
+                <span className="anticon" role="img">
+                  <SkillsIcon fill={'transparent'} height={36} size={36} width={36} />
+                </span>
               )
             }
             title={t(`tools.builtins.${item.identifier}.title` as any, {
@@ -1701,7 +1851,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         icon: skill.avatar ? (
           <Avatar avatar={skill.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
         ) : (
-          <Icon icon={SkillsIcon} size={SKILL_ICON_SIZE} />
+          <span className="anticon" role="img">
+            <SkillsIcon
+              fill={'transparent'}
+              height={SKILL_ICON_SIZE}
+              size={SKILL_ICON_SIZE}
+              width={SKILL_ICON_SIZE}
+            />
+          </span>
         ),
         key: skill.identifier,
         label: (
@@ -1732,7 +1889,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                   style={{ flex: 'none', marginInlineEnd: 0 }}
                 />
               ) : (
-                <Icon icon={SkillsIcon} size={36} />
+                <span className="anticon" role="img">
+                  <SkillsIcon fill={'transparent'} height={36} size={36} width={36} />
+                </span>
               )
             }
             title={t(`tools.builtins.${skill.identifier}.title` as any, {
@@ -1743,7 +1902,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       }));
 
     // Build builtin tools group children (including Builtin Agent Skills, builtin tools, and Orvilo Skill/Composio)
-    const allBuiltinItems: ItemType[] = [
+    const allBuiltinItems: ActionMenuItem[] = [
       // 1. Builtin Agent Skills
       ...enabledBuiltinAgentSkillItems,
       // 2. Builtin tools
@@ -1774,7 +1933,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           icon: hasRealAvatar ? (
             <Avatar avatar={item.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
           ) : (
-            <Icon icon={McpIcon} size={SKILL_ICON_SIZE} />
+            <span className="anticon" role="img">
+              <McpIcon
+                fill={'transparent'}
+                height={SKILL_ICON_SIZE}
+                size={SKILL_ICON_SIZE}
+                width={SKILL_ICON_SIZE}
+              />
+            </span>
           ),
           key: item.identifier,
           label: (
@@ -1804,7 +1970,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                     style={{ flex: 'none', marginInlineEnd: 0 }}
                   />
                 ) : (
-                  <Icon icon={McpIcon} size={36} />
+                  <span className="anticon" role="img">
+                    <McpIcon fill={'transparent'} height={36} size={36} width={36} />
+                  </span>
                 )
               }
             />
@@ -1821,7 +1989,14 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           icon: hasRealAvatar ? (
             <Avatar avatar={item.avatar} shape={'square'} size={SKILL_ICON_SIZE} />
           ) : (
-            <Icon icon={McpIcon} size={SKILL_ICON_SIZE} />
+            <span className="anticon" role="img">
+              <McpIcon
+                fill={'transparent'}
+                height={SKILL_ICON_SIZE}
+                size={SKILL_ICON_SIZE}
+                width={SKILL_ICON_SIZE}
+              />
+            </span>
           ),
           key: item.identifier,
           label: (
@@ -1851,7 +2026,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
                     style={{ flex: 'none', marginInlineEnd: 0 }}
                   />
                 ) : (
-                  <Icon icon={McpIcon} size={36} />
+                  <span className="anticon" role="img">
+                    <McpIcon fill={'transparent'} height={36} size={36} width={36} />
+                  </span>
                 )
               }
             />
@@ -1860,7 +2037,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       });
 
     // Community group (community plugins)
-    const allCommunityItems: ItemType[] = enabledCommunityPlugins;
+    const allCommunityItems: ActionMenuItem[] = enabledCommunityPlugins;
     if (allCommunityItems.length > 0) {
       installedItems.push({
         children: allCommunityItems,
@@ -1871,7 +2048,7 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
     }
 
     // Custom group (custom plugins)
-    const allCustomItems: ItemType[] = enabledCustomPlugins;
+    const allCustomItems: ActionMenuItem[] = enabledCustomPlugins;
     if (allCustomItems.length > 0) {
       installedItems.push({
         children: allCustomItems,

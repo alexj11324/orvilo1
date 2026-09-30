@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { memo } from 'react';
@@ -17,7 +16,7 @@ const Title = memo(() => {
   const displayName = agentDisplayName(meta, agentId ?? '');
 
   return (
-    <Flexbox horizontal align="center" gap={8} style={{ minWidth: 0 }}>
+    <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
       <Avatar
         avatar={meta.avatar}
         background={meta.backgroundColor}
@@ -28,7 +27,7 @@ const Title = memo(() => {
       <Text ellipsis weight={500}>
         {displayName}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 

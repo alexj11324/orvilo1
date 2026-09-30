@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 
@@ -46,10 +45,10 @@ const SendArea = memo<SendAreaProps>(({ hideContextWindow = true }) => {
 
   return (
     /** The model label must yield space before the footer clips Send on narrow panels. */
-    <Flexbox horizontal align={'center'} flex={'0 1 auto'} gap={12} style={{ minWidth: 0 }}>
+    <div className="flex flex-row items-center gap-3" style={{ minWidth: 0, flex: '0 1 auto' }}>
       {items}
       {!audioInputActive && <SendButton />}
-    </Flexbox>
+    </div>
   );
 });
 

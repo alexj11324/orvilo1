@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { memo, Suspense } from 'react';
 
@@ -16,7 +15,7 @@ const ToolItem = memo<CheckboxItemProps>(({ id, onUpdate, label, checked, disabl
         hasPadding={false}
         id={id}
         label={
-          <Flexbox allowShrink horizontal align={'center'} gap={8}>
+          <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
             <Text
               style={{ lineHeight: 1.4, paddingBlock: 1 }}
               ellipsis={{
@@ -25,7 +24,7 @@ const ToolItem = memo<CheckboxItemProps>(({ id, onUpdate, label, checked, disabl
             >
               {label || id}
             </Text>
-          </Flexbox>
+          </div>
         }
         onUpdate={onUpdate}
       />

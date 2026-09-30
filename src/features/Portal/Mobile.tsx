@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Modal } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { type ReactNode } from 'react';
@@ -26,15 +25,17 @@ const MobilePortal = () => {
   const { t } = useTranslation('portal');
 
   const renderBody = (body: ReactNode) => (
-    <Flexbox gap={8} height={'calc(100% - 52px)'} padding={'0 8px'} style={{ overflow: 'hidden' }}>
-      <Flexbox
-        height={'100%'}
+    <div
+      className="flex flex-col gap-2 h-[calc(100%_-_52px)]"
+      style={{ overflow: 'hidden', padding: '0 8px' }}
+    >
+      <div
+        className="flex flex-col h-[100%] w-[calc(100%_+_16px)]"
         style={{ marginInline: -8, overflow: 'hidden', position: 'relative' }}
-        width={'calc(100% + 16px)'}
       >
         {body}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 
   return (

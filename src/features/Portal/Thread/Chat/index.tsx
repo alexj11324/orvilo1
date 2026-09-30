@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { type IThreadType, type UIChatMessage } from '@orvilo/types';
 import { memo, Suspense, useCallback, useMemo } from 'react';
 
@@ -103,18 +102,17 @@ const ThreadChatContent = memo<ThreadChatContentProps>(
       <>
         <Suspense
           fallback={
-            <Flexbox flex={1} height={'100%'}>
+            <div className="flex flex-col flex-1 h-[100%]">
               <SkeletonList />
-            </Flexbox>
+            </div>
           }
         >
-          <Flexbox
-            flex={1}
+          <div
+            className="flex flex-col flex-1 w-[100%]"
             style={{ overflowX: 'hidden', overflowY: 'auto', position: 'relative' }}
-            width={'100%'}
           >
             <ChatList filterItem={filterItem} itemContent={itemContent} />
-          </Flexbox>
+          </div>
         </Suspense>
         {composerWritable && inputMode === 'heterogeneous' && <HeterogeneousChatInput />}
         {composerWritable && inputMode === 'default' && (

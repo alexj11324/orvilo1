@@ -1,11 +1,10 @@
-import { type FormItemProps } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
 import { SliderWithInput, Switch } from '@lobehub/ui/base-ui';
-import { Form as AntdForm } from 'antd';
+import { Form } from 'antd';
 import { debounce } from 'es-toolkit/compat';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { FieldLabel } from '@/components/ui/field';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
 
@@ -14,7 +13,7 @@ import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
 
 const Controls = () => {
   const { t } = useTranslation('setting');
-  const [form] = AntdForm.useForm();
+  const [form] = Form.useForm();
   const [updating, setUpdating] = useState(false);
   const agentId = useAgentId();
   const { updateAgentChatConfig } = useUpdateAgentConfig();
@@ -47,17 +46,24 @@ const Controls = () => {
 
   useEffect(() => () => handleValuesChange.cancel(), [handleValuesChange]);
 
-  const items: FormItemProps[] = [
-    {
-      children: <Switch loading={updating} size={'small'} />,
-      label: t('settingChat.enableHistoryCount.title'),
-      layout: 'horizontal',
-      minWidth: undefined,
-      name: 'enableHistoryCount',
-      valuePropName: 'checked',
-    },
-    {
-      children: (
+  return (
+    <Form
+      form={form}
+      initialValues={{
+        enableHistoryCount,
+        historyCount,
+      }}
+      onValuesChange={handleValuesChange}
+    >
+      <div className="flex flex-row items-center justify-between gap-2">
+        <FieldLabel htmlFor="enableHistoryCount">
+          {t('settingChat.enableHistoryCount.title')}
+        </FieldLabel>
+        <Form.Item name="enableHistoryCount" style={{ marginBlockEnd: 0 }} valuePropName="checked">
+          <Switch loading={updating} size={'small'} />
+        </Form.Item>
+      </div>
+      <Form.Item noStyle name="historyCount">
         <SliderWithInput
           disabled={!enableHistoryCount}
           max={20}
@@ -72,28 +78,8 @@ const Controls = () => {
             },
           }}
         />
-      ),
-      name: 'historyCount',
-      noStyle: true,
-    },
-  ];
-
-  return (
-    <Form
-      form={form}
-      items={items}
-      itemsType={'flat'}
-      initialValues={{
-        enableHistoryCount,
-        historyCount,
-      }}
-      styles={{
-        group: {
-          background: 'transparent',
-        },
-      }}
-      onValuesChange={handleValuesChange}
-    />
+      </Form.Item>
+    </Form>
   );
 };
 

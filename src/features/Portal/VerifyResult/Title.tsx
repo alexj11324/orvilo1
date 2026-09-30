@@ -1,6 +1,5 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckCircle2, Circle, CircleAlert, LoaderCircle, XCircle } from 'lucide-react';
 
 import type { VerifyCheckResultItem } from '@/database/schemas/verify';
@@ -60,7 +59,7 @@ const Title = () => {
   const label = result?.verdict ?? result?.status;
 
   return (
-    <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+    <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
       <Text className={oneLineEllipsis} style={{ fontSize: 16 }} type={'secondary'}>
         {item?.title}
       </Text>
@@ -72,11 +71,16 @@ const Title = () => {
             color: cssVar[sIcon.text],
           }}
         >
-          <Icon icon={sIcon.icon} size={13} spin={result?.status === 'running'} />
+          <span
+            className={cx('anticon', result?.status === 'running' && 'animate-spin')}
+            role="img"
+          >
+            <sIcon.icon fill={'transparent'} height={13} size={13} width={13} />
+          </span>
           {label}
         </span>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

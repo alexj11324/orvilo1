@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Avatar } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -30,7 +29,7 @@ const Header = memo(() => {
       paddingInline={8}
       showTogglePanelButton={false}
       left={
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex flex-row items-center gap-2">
           <Avatar
             avatar={currentAgent?.avatar || DEFAULT_AVATAR}
             background={currentAgent?.backgroundColor ?? undefined}
@@ -40,12 +39,12 @@ const Header = memo(() => {
           <div style={{ fontWeight: 600 }}>
             {agentDisplayName(currentAgent, t('defaultSession', { ns: 'common' }))}
           </div>
-        </Flexbox>
+        </div>
       }
       right={
-        <Flexbox horizontal gap={4}>
+        <div className="flex flex-row gap-1">
           <ActionIcon icon={XIcon} size={'small'} onClick={close} />
-        </Flexbox>
+        </div>
       }
       style={{
         background: cssVar.colorBgContainer,

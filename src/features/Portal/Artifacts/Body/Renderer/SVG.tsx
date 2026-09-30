@@ -1,4 +1,3 @@
-import { Center, DropdownMenu, Flexbox, Tooltip } from '@lobehub/ui';
 import { Button, toast } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { copyImageToClipboard, sanitizeSVGContent } from '@orvilo/utils/client';
@@ -8,8 +7,16 @@ import { CopyIcon, DownloadIcon } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
+
+import { SimpleTooltip } from '../../../SimpleTooltip';
 
 const svgContainer = css`
   width: 100%;
@@ -84,35 +91,28 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
   };
 
   return (
-    <Flexbox
-      align={'center'}
-      className="svg-renderer"
-      height={'100%'}
+    <div
+      className="flex flex-col items-center h-[100%] svg-renderer"
       style={{ position: 'relative' }}
     >
-      <Center
-        className={cx(svgContainer)}
+      <div
+        className={cx('flex flex-col items-center justify-center', cx(svgContainer))}
         dangerouslySetInnerHTML={{ __html: sanitizedContent }}
         id={DOM_ID}
       />
-      <Flexbox horizontal className={cx(actions)} gap={4}>
-        <DropdownMenu
-          items={[
-            {
-              key: 'png',
-              label: t('artifacts.svg.download.png'),
-              onClick: () => downloadImage('png'),
-            },
-            {
-              key: 'svg',
-              label: t('artifacts.svg.download.svg'),
-              onClick: () => downloadImage('svg'),
-            },
-          ]}
-        >
-          <Button icon={DownloadIcon} />
+      <div className={cx('flex flex-row gap-1', cx(actions))}>
+        <DropdownMenu>
+          <DropdownMenuTrigger render={<Button icon={DownloadIcon} />} />
+          <DropdownMenuContent align={'end'} className={'w-auto'} side={'bottom'}>
+            <DropdownMenuItem onClick={() => downloadImage('png')}>
+              {t('artifacts.svg.download.png')}
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => downloadImage('svg')}>
+              {t('artifacts.svg.download.svg')}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
         </DropdownMenu>
-        <Tooltip title={t('artifacts.svg.copyAsImage')}>
+        <SimpleTooltip title={t('artifacts.svg.copyAsImage')}>
           <Button
             icon={CopyIcon}
             onClick={async () => {
@@ -125,9 +125,9 @@ const SVGRenderer = ({ content }: SVGRendererProps) => {
               }
             }}
           />
-        </Tooltip>
-      </Flexbox>
-    </Flexbox>
+        </SimpleTooltip>
+      </div>
+    </div>
   );
 };
 

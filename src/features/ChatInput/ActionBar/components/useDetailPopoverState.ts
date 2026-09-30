@@ -38,8 +38,15 @@ export const useDetailPopoverState = (disabled?: boolean) => {
     if (disabled) setOpen(false);
   }, [disabled]);
 
+  // Hover-only trigger: base-ui Trigger always wires useClick, so a press on a
+  // hover-open (or opening) row would re-open with reason 'trigger-press' and
+  // stick the card. Cancel press-driven opens to keep hover close semantics.
   const onOpenChange = useCallback(
-    (nextOpen: boolean) => {
+    (nextOpen: boolean, eventDetails?: { cancel?: () => void; reason?: string }) => {
+      if (nextOpen && eventDetails?.reason === 'trigger-press') {
+        eventDetails.cancel?.();
+        return;
+      }
       if (nextOpen && (disabled || Date.now() < suppressUntilRef.current)) return;
 
       setOpen(nextOpen);

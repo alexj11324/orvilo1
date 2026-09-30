@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -24,7 +23,7 @@ const Title = memo(() => {
   // then what this run is about.
   if (liveRun)
     return (
-      <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ minWidth: 0 }}>
+      <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
         <AssigneeAvatar agentId={liveRun.agentId} size={20} />
         <Text fontSize={14} style={{ flexShrink: 0 }} weight={500}>
           {agentMeta?.title ?? liveRun.activity.author?.name}
@@ -36,11 +35,11 @@ const Title = memo(() => {
         >
           {liveRun.activity.title}
         </Text>
-      </Flexbox>
+      </div>
     );
 
   return (
-    <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ minWidth: 0 }}>
+    <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
       <Text fontSize={14} weight={500}>
         {t('goalDetail.taskResult')}
       </Text>
@@ -53,7 +52,7 @@ const Title = memo(() => {
           {[detail.identifier, detail.name].filter(Boolean).join(' · ')}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

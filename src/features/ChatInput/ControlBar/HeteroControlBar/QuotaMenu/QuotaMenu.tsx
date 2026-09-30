@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
 import type { HeteroQuotaWindow } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -8,6 +7,10 @@ import { ChevronDownIcon, GaugeIcon, RefreshCwIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+
+import { SimpleTooltip } from '../../../SimpleTooltip';
 
 const QUOTA_STALE_MS = 60_000;
 const QUOTA_RETRY_COOLDOWN_MS = 60_000;
@@ -615,12 +618,12 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
     // One compact row per window: label · bar · NN% · short reset. The bar fill
     // already reads as "remaining", so the percent stands alone without "left".
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={cx(styles.window, exhausted && styles.windowExhausted)}
-        gap={8}
+      <div
         key={key}
+        className={cx(
+          'flex flex-row items-center gap-2',
+          cx(styles.window, exhausted && styles.windowExhausted),
+        )}
       >
         <Text ellipsis className={styles.windowLabel} style={{ fontSize: 12 }}>
           {label}
@@ -643,20 +646,14 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
             {resetShort}
           </Text>
         )}
-      </Flexbox>
+      </div>
     );
   };
 
   const content = (
-    <Flexbox className={styles.popover} gap={10} style={{ width: contentWidth }}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.header}
-        gap={8}
-        justify={'space-between'}
-      >
-        <Flexbox horizontal align={'baseline'} gap={6} style={{ minWidth: 0 }}>
+    <div className={cx('flex flex-col gap-2.5', styles.popover)} style={{ width: contentWidth }}>
+      <div className={cx('flex flex-row items-center gap-2 justify-between', styles.header)}>
+        <div className="flex flex-row items-baseline gap-1.5" style={{ minWidth: 0 }}>
           <Text strong style={{ fontSize: 13 }}>
             {title}
           </Text>
@@ -665,23 +662,23 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
               {formatUpdatedAt(quota.updatedAt)}
             </Text>
           )}
-        </Flexbox>
-        <Tooltip title={t('heteroAgent.quota.refresh')}>
+        </div>
+        <SimpleTooltip title={t('heteroAgent.quota.refresh')}>
           <ActionIcon
             disabled={loading}
             icon={RefreshCwIcon}
             size={'small'}
             onClick={() => void loadQuota({ manual: true })}
           />
-        </Tooltip>
-      </Flexbox>
+        </SimpleTooltip>
+      </div>
 
       {loading && !hasQuotaData ? (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <Skeleton height={18} />
           <Skeleton height={18} />
           <Skeleton height={18} />
-        </Flexbox>
+        </div>
       ) : quota?.status === 'unavailable' ? (
         <div className={styles.emptyState}>
           {getUnavailableText?.(quota) || quota.error || t('heteroAgent.quota.unavailable')}
@@ -693,7 +690,9 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       ) : hasQuotaData ? (
         <>
           {quota && renderHeader?.(quota, { applyQuota, formatDuration, now })}
-          <Flexbox gap={10}>{windows.map((item) => renderQuotaWindow(item))}</Flexbox>
+          <div className="flex flex-col gap-2.5">
+            {windows.map((item) => renderQuotaWindow(item))}
+          </div>
           {quota && renderFooter?.(quota, { applyQuota, formatDuration, now })}
           {refreshErrorText && <div className={styles.refreshNotice}>{refreshErrorText}</div>}
           {noticeText && <div className={styles.refreshNotice}>{noticeText}</div>}
@@ -701,7 +700,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
       ) : (
         <div className={styles.emptyState}>{t('heteroAgent.quota.noData')}</div>
       )}
-    </Flexbox>
+    </div>
   );
 
   const trigger = (
@@ -719,7 +718,9 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
           : undefined
       }
     >
-      <Icon icon={GaugeIcon} size={14} />
+      <span className="anticon" role="img">
+        <GaugeIcon fill={'transparent'} height={14} size={14} width={14} />
+      </span>
       {compactItems.length > 0 && (
         <span className={styles.compactItems}>
           {compactItems.map((item, index) => (
@@ -748,19 +749,22 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
           ))}
         </span>
       )}
-      <Icon icon={ChevronDownIcon} size={12} />
+      <span className="anticon" role="img">
+        <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+      </span>
     </button>
   );
 
   return (
-    <Popover
-      content={content}
-      open={open}
-      placement="topRight"
-      trigger="click"
-      onOpenChange={handleOpenChange}
-    >
-      <div>{open ? trigger : <Tooltip title={tooltip}>{trigger}</Tooltip>}</div>
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
+        render={
+          <div>{open ? trigger : <SimpleTooltip title={tooltip}>{trigger}</SimpleTooltip>}</div>
+        }
+      />
+      <PopoverContent align={'end'} className={'w-auto'} side={'top'}>
+        {content}
+      </PopoverContent>
     </Popover>
   );
 };

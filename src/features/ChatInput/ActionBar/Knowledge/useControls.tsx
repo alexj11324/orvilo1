@@ -1,5 +1,3 @@
-import { type ItemType } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { LibraryBig } from 'lucide-react';
@@ -12,6 +10,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
 import { useAgentId } from '../../hooks/useAgentId';
+import type { ActionMenuItem } from '../../menuItems';
 import CheckboxItem from '../components/CheckboxWithLoading';
 
 // Cap so the widest library/file row (icon + label + checkbox + paddings) stays within the
@@ -61,7 +60,7 @@ const styles = createStaticStyles(({ css }) => ({
 export interface KnowledgeControls {
   enabledCount: number;
   footer: ReactNode;
-  items: ItemType[];
+  items: ActionMenuItem[];
 }
 
 export const useControls = ({
@@ -121,7 +120,7 @@ export const useControls = ({
   }));
 
   // Flat list (no "Libraries" / "Files" group headers): libraries first, then files.
-  const relatedGroups: ItemType[] = [
+  const relatedGroups: ActionMenuItem[] = [
     ...libraryItems,
     ...(libraryItems.length > 0 && fileItems.length > 0 ? [{ type: 'divider' as const }] : []),
     ...fileItems,
@@ -139,7 +138,15 @@ export const useControls = ({
         openAttachKnowledgeModal();
       }}
     >
-      <Icon color={cssVar.colorTextSecondary} icon={LibraryBig} size={14} />
+      <span className="anticon" role="img">
+        <LibraryBig
+          color={cssVar.colorTextSecondary}
+          fill={'transparent'}
+          height={14}
+          size={14}
+          width={14}
+        />
+      </span>
       <span className={cx(styles.viewMoreLabel)}>
         {relatedGroups.length > 0 ? t('knowledgeBase.viewMore') : t('knowledgeBase.related.browse')}
       </span>

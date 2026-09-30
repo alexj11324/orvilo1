@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Switch, Text } from '@lobehub/ui/base-ui';
 import { GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -14,12 +13,14 @@ const NewThreadHeader = () => {
   const [newThreadMode] = useChatStore((s) => [portalThreadSelectors.newThreadMode(s)]);
 
   return (
-    <Flexbox horizontal align={'center'} gap={8} style={{ marginInlineStart: 4 }}>
-      <Icon icon={GitBranch} size={18} />
+    <div className="flex flex-row items-center gap-2" style={{ marginInlineStart: 4 }}>
+      <span className="anticon" role="img">
+        <GitBranch fill={'transparent'} height={18} size={18} width={18} />
+      </span>
       <Text ellipsis className={oneLineEllipsis} style={{ fontSize: 14 }}>
         {t('newPortalThread.title')}
       </Text>
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-row items-center gap-2">
         <Switch
           checked={newThreadMode === ThreadType.Continuation}
           size={'small'}
@@ -31,8 +32,8 @@ const NewThreadHeader = () => {
           }}
         />
         {t('newPortalThread.includeContext')}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

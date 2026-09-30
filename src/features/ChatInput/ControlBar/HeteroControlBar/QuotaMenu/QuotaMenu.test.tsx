@@ -5,7 +5,7 @@ import type * as OrvilochatConstModule from '@orvilo/const';
 import type * as ElectronClientIpcModule from '@orvilo/electron-client-ipc';
 import type { HeterogeneousProviderConfig } from '@orvilo/types';
 import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { createContext, type ReactNode, use } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import HeteroControlBar from '..';
@@ -176,6 +176,32 @@ vi.mock('@lobehub/ui', async (importOriginal) => {
     Skeleton: { Button: () => <div data-testid="skeleton" /> },
     Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
     Tooltip: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  };
+});
+
+vi.mock('@/components/ui/popover', () => {
+  const PopoverContext = createContext<((open: boolean) => void) | undefined>(undefined);
+  return {
+    // Render the popover content unconditionally so window rows are assertable
+    // without driving the open/close interaction.
+    Popover: ({
+      children,
+      onOpenChange,
+    }: {
+      children?: ReactNode;
+      onOpenChange?: (open: boolean) => void;
+    }) => <PopoverContext value={onOpenChange}>{children}</PopoverContext>,
+    PopoverContent: ({ children }: { children?: ReactNode }) => (
+      <div data-testid="popover-content">{children}</div>
+    ),
+    PopoverTrigger: ({ render }: { render?: ReactNode }) => {
+      const onOpenChange = use(PopoverContext);
+      return (
+        <span data-testid="quota-trigger" onClick={() => onOpenChange?.(true)}>
+          {render}
+        </span>
+      );
+    },
   };
 });
 

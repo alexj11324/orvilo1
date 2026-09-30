@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { type IThreadType, ThreadType } from '@orvilo/types';
 import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
@@ -22,17 +21,17 @@ const ThreadDivider = memo<ThreadDividerProps>(({ threadType }) => {
   return (
     <div style={{ padding: '0 20px' }}>
       <Divider style={{ margin: 0, padding: '20px 0' }}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={6}
+        <div
+          className="flex flex-row items-center gap-1.5"
           style={{ color: cssVar.colorTextDescription, fontSize: 12 }}
         >
-          <Icon icon={GitBranch} size={12} />
+          <span className="anticon" role="img">
+            <GitBranch fill={'transparent'} height={12} size={12} width={12} />
+          </span>
           {threadType === ThreadType.Standalone
             ? t('thread.dividerStandalone')
             : t('thread.dividerContinuation')}
-        </Flexbox>
+        </div>
       </Divider>
     </div>
   );

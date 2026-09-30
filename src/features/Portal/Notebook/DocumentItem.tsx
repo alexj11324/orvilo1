@@ -1,7 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Text } from '@lobehub/ui/base-ui';
 import { type NotebookDocument } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { FileTextIcon, Trash2Icon } from 'lucide-react';
 import { type MouseEvent } from 'react';
 import { memo, useState } from 'react';
@@ -65,10 +64,10 @@ const DocumentItem = memo<DocumentItemProps>(({ document, topicId }) => {
   };
 
   return (
-    <Flexbox horizontal className={styles.container} gap={8} onClick={handleClick}>
+    <div className={cx('flex flex-row gap-2', styles.container)} onClick={handleClick}>
       <FileTextIcon size={16} />
-      <Flexbox gap={4} style={{ flex: 1, minWidth: 0 }}>
-        <Flexbox horizontal align={'center'} distribution={'space-between'}>
+      <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex flex-row items-center justify-between">
           <Text ellipsis className={styles.title}>
             {document.title}
           </Text>
@@ -79,14 +78,14 @@ const DocumentItem = memo<DocumentItemProps>(({ document, topicId }) => {
             title={t('notebook.delete')}
             onClick={handleDelete}
           />
-        </Flexbox>
+        </div>
         {document.description && (
           <Text className={styles.description} ellipsis={{ rows: 2 }}>
             {document.description}
           </Text>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

@@ -1,7 +1,6 @@
 'use client';
 
 import { ChatInput, ChatInputActionBar } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 
@@ -53,11 +52,12 @@ const DesktopChatInput = memo(() => {
   return (
     <>
       {!expand && fileNode}
-      <Flexbox
-        className={cx(styles.container, expand && styles.fullscreen)}
-        gap={8}
-        paddingBlock={'0 12px'}
-        paddingInline={12}
+      <div
+        style={{ paddingBlock: '0 12px' }}
+        className={cx(
+          'flex flex-col gap-2 px-3',
+          cx(styles.container, expand && styles.fullscreen),
+        )}
       >
         <ChatInput
           fullscreen={expand}
@@ -74,15 +74,15 @@ const DesktopChatInput = memo(() => {
           header={
             <ChatInputActionBar
               left={
-                <Flexbox horizontal align={'center'} className={styles.leftSlot} gap={4}>
-                  <Flexbox horizontal align={'center'} flex={'none'} gap={2}>
-                    <Flexbox horizontal align={'center'} className={styles.leftActions}>
+                <div className={cx('flex flex-row items-center gap-1', styles.leftSlot)}>
+                  <div className="flex flex-row items-center flex-none gap-0.5">
+                    <div className={cx('flex flex-row items-center', styles.leftActions)}>
                       <ActionBar disableCollapse />
-                    </Flexbox>
+                    </div>
                     <ComposerExpandButton />
-                  </Flexbox>
+                  </div>
                   <ChatInputNotice />
-                </Flexbox>
+                </div>
               }
             />
           }
@@ -90,7 +90,7 @@ const DesktopChatInput = memo(() => {
           {expand && fileNode}
           <InputEditor defaultRows={1} />
         </ChatInput>
-      </Flexbox>
+      </div>
     </>
   );
 });

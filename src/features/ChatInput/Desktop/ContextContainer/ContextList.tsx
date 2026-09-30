@@ -1,7 +1,7 @@
-import { Flexbox, ScrollShadow } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { fileChatSelectors, useFileStore } from '@/store/file';
 
@@ -38,14 +38,11 @@ const ContextList = memo(() => {
   if (inputFilesList.length === 0 && !hasSelections) return null;
 
   return (
-    <ScrollShadow
-      hideScrollBar
-      horizontal
-      className={styles.container}
+    <ScrollArea
+      className={`${styles.container} [&_[data-slot=scroll-area-scrollbar]]:hidden`}
       orientation={'horizontal'}
-      size={8}
     >
-      <Flexbox horizontal gap={4} paddingInline={0} style={{ paddingBlockStart: 8 }} wrap={'wrap'}>
+      <div className="flex flex-row gap-1 px-0 flex-wrap" style={{ paddingBlockStart: 8 }}>
         {selectionList.map((item) =>
           item.source === 'element' ? (
             <ElementItem key={item.id} {...item} />
@@ -56,8 +53,8 @@ const ContextList = memo(() => {
         {inputFilesList.map((item) => (
           <ContextItem key={item.id} {...item} />
         ))}
-      </Flexbox>
-    </ScrollShadow>
+      </div>
+    </ScrollArea>
   );
 });
 

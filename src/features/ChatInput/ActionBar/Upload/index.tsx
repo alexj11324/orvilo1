@@ -1,4 +1,3 @@
-import { Icon, Tooltip } from '@lobehub/ui';
 import { toast, Upload } from '@lobehub/ui/base-ui';
 import { validateVideoFileSize } from '@orvilo/utils/client';
 import { css, cx } from 'antd-style';
@@ -16,6 +15,7 @@ import { preferenceSelectors } from '@/store/user/selectors';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useEffectiveModel } from '../../hooks/useEffectiveModel';
+import { SimpleTooltip } from '../../SimpleTooltip';
 import { useChatInputStore } from '../../store';
 import { type ActionDropdownMenuItems } from '../components/ActionDropdown';
 import { ChatInputAction } from '../components/ChatInputAction';
@@ -68,14 +68,14 @@ const FileUpload = memo(() => {
 
   if (!canUpload) {
     return (
-      <Tooltip title={reason}>
+      <SimpleTooltip title={reason}>
         <ChatInputAction
           disabled
           icon={Paperclip}
           showTooltip={false}
           title={t('upload.action.tooltip')}
         />
-      </Tooltip>
+      </SimpleTooltip>
     );
   }
 
@@ -83,7 +83,16 @@ const FileUpload = memo(() => {
     {
       closeOnClick: false,
       disabled: !canUploadImage,
-      icon: <Icon icon={ImageUp} size={MENU_ICON_SIZE} />,
+      icon: (
+        <span className="anticon" role="img">
+          <ImageUp
+            fill={'transparent'}
+            height={MENU_ICON_SIZE}
+            size={MENU_ICON_SIZE}
+            width={MENU_ICON_SIZE}
+          />
+        </span>
+      ),
       key: 'upload-image',
       label: canUploadImage ? (
         <Upload
@@ -101,14 +110,23 @@ const FileUpload = memo(() => {
           <div className={cx(hotArea)}>{t('upload.action.imageUpload')}</div>
         </Upload>
       ) : (
-        <Tooltip placement={'right'} title={t('upload.action.imageDisabled')}>
+        <SimpleTooltip side={'right'} title={t('upload.action.imageDisabled')}>
           <div className={cx(hotArea)}>{t('upload.action.imageUpload')}</div>
-        </Tooltip>
+        </SimpleTooltip>
       ),
     },
     {
       closeOnClick: false,
-      icon: <Icon icon={FileUp} size={MENU_ICON_SIZE} />,
+      icon: (
+        <span className="anticon" role="img">
+          <FileUp
+            fill={'transparent'}
+            height={MENU_ICON_SIZE}
+            size={MENU_ICON_SIZE}
+            width={MENU_ICON_SIZE}
+          />
+        </span>
+      ),
       key: 'upload-file',
       label: (
         <Upload
@@ -147,7 +165,16 @@ const FileUpload = memo(() => {
     },
     {
       closeOnClick: false,
-      icon: <Icon icon={FolderUp} size={MENU_ICON_SIZE} />,
+      icon: (
+        <span className="anticon" role="img">
+          <FolderUp
+            fill={'transparent'}
+            height={MENU_ICON_SIZE}
+            size={MENU_ICON_SIZE}
+            width={MENU_ICON_SIZE}
+          />
+        </span>
+      ),
       key: 'upload-folder',
       label: (
         <Upload

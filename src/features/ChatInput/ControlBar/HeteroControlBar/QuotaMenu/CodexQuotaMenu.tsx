@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Accordion, Button, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import type {
   CodexQuotaSnapshot,
@@ -8,7 +7,7 @@ import type {
   CodexRateLimitResetCredit,
 } from '@orvilo/electron-client-ipc';
 import { uuid } from '@orvilo/utils';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { RotateCcwIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -318,14 +317,16 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
 
       if (!resetCredits) {
         return (
-          <Flexbox className={styles.resetCredits} gap={4}>
-            <Flexbox horizontal align={'center'} gap={4}>
-              <Icon icon={RotateCcwIcon} size={14} />
+          <div className={cx('flex flex-col gap-1', styles.resetCredits)}>
+            <div className="flex flex-row items-center gap-1">
+              <span className="anticon" role="img">
+                <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
+              </span>
               <Text style={{ fontSize: 12 }} type="secondary">
                 {t('heteroAgent.codexQuota.resetCreditsUnavailable')}
               </Text>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         );
       }
 
@@ -341,7 +342,7 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
       }));
 
       return (
-        <Flexbox className={styles.resetCredits}>
+        <div className={cx('flex flex-col', styles.resetCredits)}>
           <Accordion
             className={styles.creditCollapse}
             defaultValue={[]}
@@ -350,9 +351,9 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
             items={[
               {
                 children: (
-                  <Flexbox gap={8}>
+                  <div className="flex flex-col gap-2">
                     {resetCreditItems.length > 0 && (
-                      <Flexbox className={styles.creditList}>
+                      <div className={cx('flex flex-col', styles.creditList)}>
                         {resetCreditItems.map(({ credit, index }) => {
                           const fallbackExpiry =
                             index === 1 ? resetCredits.nextExpiresAt : undefined;
@@ -360,11 +361,8 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
                           const expiresIn = expiresAt ? formatDuration(expiresAt - now) : undefined;
 
                           return (
-                            <Flexbox
-                              horizontal
-                              align={'center'}
-                              className={styles.credit}
-                              gap={8}
+                            <div
+                              className={cx('flex flex-row items-center gap-2', styles.credit)}
                               key={credit?.id ?? `reset-credit-${index}`}
                             >
                               <Text className={styles.creditIndex} style={{ fontSize: 12 }}>
@@ -388,10 +386,10 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
                                     ? t('heteroAgent.codexQuota.doesNotExpire')
                                     : t('heteroAgent.codexQuota.resetCreditDetailsUnavailable')}
                               </Text>
-                            </Flexbox>
+                            </div>
                           );
                         })}
-                      </Flexbox>
+                      </div>
                     )}
 
                     {resetFeedback && (
@@ -419,18 +417,20 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
                           : t('heteroAgent.codexQuota.resetNow')}
                       </Button>
                     )}
-                  </Flexbox>
+                  </div>
                 ),
                 disabled: !(resetCreditCount > 0 || !!resetFeedback),
                 key: 'reset-credits',
                 title: (
-                  <Flexbox gap={2}>
-                    <Flexbox horizontal align={'center'} gap={4}>
-                      <Icon icon={RotateCcwIcon} size={14} />
+                  <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-row items-center gap-1">
+                      <span className="anticon" role="img">
+                        <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
                       <Text strong style={{ fontSize: 12 }}>
                         {t('heteroAgent.codexQuota.resetCredits', { count: resetCreditCount })}
                       </Text>
-                    </Flexbox>
+                    </div>
                     {resetCredits.totalEarnedCount !== undefined && (
                       <Text color={cssVar.colorTextTertiary} style={{ fontSize: 12 }}>
                         {t('heteroAgent.codexQuota.totalEarned', {
@@ -438,12 +438,12 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
                         })}
                       </Text>
                     )}
-                  </Flexbox>
+                  </div>
                 ),
               },
             ]}
           />
-        </Flexbox>
+        </div>
       );
     },
     [confirmReset, resetFeedback, resetting, t],

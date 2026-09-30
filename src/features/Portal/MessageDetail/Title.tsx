@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { useTranslation } from 'react-i18next';
 
@@ -8,11 +7,11 @@ const Title = () => {
   const { t } = useTranslation('portal');
 
   return (
-    <Flexbox horizontal align={'center'} gap={4}>
+    <div className="flex flex-row items-center gap-1">
       <Text className={oneLineEllipsis} style={{ fontSize: 16 }} type={'secondary'}>
         {t('messageDetail')}
       </Text>
-    </Flexbox>
+    </div>
   );
 };
 

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,12 +22,12 @@ const Title = memo(() => {
   }, [snapshot, view]);
 
   return (
-    <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ minWidth: 0 }}>
+    <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
       {node && <KindIcon kind={node.kind} />}
       <Text className={oneLineEllipsis} style={{ flex: 1, fontSize: 14, minWidth: 0 }}>
         {node?.title ?? t('goalProcess.node.detailTitle')}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 

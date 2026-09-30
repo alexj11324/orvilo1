@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,14 +22,6 @@ vi.mock('@/services/git', () => ({
   gitService: {
     removeGitWorktree: removeGitWorktreeMock,
   },
-}));
-
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Icon: ({ icon }: any) => <span data-icon={icon?.displayName ?? icon?.name} data-testid="icon" />,
-  Tooltip: ({ children }: { children: ReactNode }) => (
-    <span data-testid="worktree-tooltip">{children}</span>
-  ),
 }));
 
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
@@ -74,9 +66,10 @@ beforeEach(() => {
 });
 
 const triggerIconName = () =>
-  within(screen.getByTestId('worktree-dropdown-trigger'))
-    .getAllByTestId('icon')[0]
-    .getAttribute('data-icon');
+  screen
+    .getByTestId('worktree-dropdown-trigger')
+    .querySelector('.anticon svg')
+    ?.getAttribute('class') ?? '';
 
 /** Text of the worktree row owning `el` — rows render as `<button>` (mocked DropdownMenuItem). */
 const rowTextOf = (el: HTMLElement) => el.closest('button')?.textContent ?? '';
@@ -109,7 +102,7 @@ describe('WorktreeSwitcher', () => {
 
     const trigger = screen.getByTestId('worktree-dropdown-trigger');
     expect(trigger.firstElementChild?.tagName).toBe('DIV');
-    expect(within(trigger).getByTestId('worktree-tooltip')).toBeTruthy();
+    expect(trigger.querySelector('[data-base-ui-tooltip-trigger]')).toBeTruthy();
   });
 
   it('shows a branch icon on the main worktree and a fork icon on a linked one', () => {
@@ -129,7 +122,7 @@ describe('WorktreeSwitcher', () => {
         worktrees={worktrees}
       />,
     );
-    expect(triggerIconName()).toBe('GitBranch');
+    expect(triggerIconName()).toContain('lucide-git-branch');
 
     // The user picked the linked worktree directly as the working directory, so
     // `sourcePath` is the worktree itself — the icon must still read "worktree".
@@ -146,7 +139,7 @@ describe('WorktreeSwitcher', () => {
         ]}
       />,
     );
-    expect(triggerIconName()).toBe('GitFork');
+    expect(triggerIconName()).toContain('lucide-git-fork');
   });
 
   it('treats every checkout of a bare repository as a linked worktree', () => {
@@ -165,7 +158,7 @@ describe('WorktreeSwitcher', () => {
       />,
     );
 
-    expect(triggerIconName()).toBe('GitFork');
+    expect(triggerIconName()).toContain('lucide-git-fork');
   });
 
   it('renders dirty stats and omits clean labels in the worktree list', () => {

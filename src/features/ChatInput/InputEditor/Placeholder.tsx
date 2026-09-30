@@ -1,4 +1,4 @@
-import { combineKeys, Flexbox, Hotkey } from '@lobehub/ui';
+import { combineKeys, Hotkey } from '@lobehub/ui';
 import { KeyEnum } from '@orvilo/const/hotkeys';
 import { memo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -49,7 +49,7 @@ const Placeholder = memo<PlaceholderProps>(
           : 'sendPlaceholderChat';
 
     return (
-      <Flexbox horizontal align={'center'} as={'span'} gap={4} wrap={'wrap'}>
+      <span className="flex flex-row items-center gap-1 flex-wrap">
         <Trans
           i18nKey={i18nKey}
           ns={'chat'}
@@ -75,7 +75,7 @@ const Placeholder = memo<PlaceholderProps>(
           }}
         />
         {!showAgentAssignmentHint && !isHeterogeneous && '...'}
-      </Flexbox>
+      </span>
     );
   },
 );

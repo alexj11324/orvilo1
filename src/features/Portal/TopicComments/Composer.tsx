@@ -1,6 +1,6 @@
 import { ChatInput, ChatInputActionBar, SendButton } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
+import { cx } from 'antd-style';
 import { memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -69,7 +69,7 @@ const Composer = memo<ComposerProps>(
     if (!workspaceId || !canUseResource) return null;
 
     return (
-      <Flexbox className={styles.composer}>
+      <div className={cx('flex flex-col', styles.composer)}>
         <ChatInput
           resize={false}
           styles={{ body: { padding: 8 } }}
@@ -107,7 +107,7 @@ const Composer = memo<ComposerProps>(
             }
           />
         </ChatInput>
-      </Flexbox>
+      </div>
     );
   },
 );

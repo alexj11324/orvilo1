@@ -1,5 +1,5 @@
-import { Center, Empty, Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
+import { cx } from 'antd-style';
 import { MessageCircle } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,6 +16,7 @@ import { topicCommentKeys } from '@/libs/swr/keys';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 
+import SimpleEmpty from '../SimpleEmpty';
 import CommentCard from './CommentCard';
 import Composer from './Composer';
 import { styles } from './styles';
@@ -91,16 +92,16 @@ const ThreadBody = memo(() => {
   if (state === 'hidden') return null;
   if (state === 'notFound') {
     return (
-      <Center className={styles.empty}>
-        <Empty description={t('topicComment.notFound')} icon={MessageCircle} />
-      </Center>
+      <div className={cx('flex flex-col items-center justify-center', styles.empty)}>
+        <SimpleEmpty description={t('topicComment.notFound')} icon={MessageCircle} />
+      </div>
     );
   }
   if (state === 'error') {
     return (
-      <Flexbox className={styles.body}>
+      <div className={cx('flex flex-col', styles.body)}>
         <AsyncError error={root.error} variant={'page'} onRetry={() => void root.mutate()} />
-      </Flexbox>
+      </div>
     );
   }
   if (state === 'loading') {
@@ -109,8 +110,8 @@ const ThreadBody = memo(() => {
   if (!root.data) return null;
 
   return (
-    <Flexbox className={styles.body}>
-      <Flexbox className={styles.list} ref={listRef}>
+    <div className={cx('flex flex-col', styles.body)}>
+      <div className={cx('flex flex-col', styles.list)} ref={listRef}>
         <CommentCard
           comment={root.data}
           replyCount={replyCount}
@@ -143,7 +144,7 @@ const ThreadBody = memo(() => {
           />
         ) : (
           replies.hasMore && (
-            <Center paddingBlock={12}>
+            <div className="flex flex-col items-center justify-center py-3">
               <Button
                 loading={replies.isLoadingMore}
                 type={'text'}
@@ -151,17 +152,17 @@ const ThreadBody = memo(() => {
               >
                 {t('topicComment.loadMore')}
               </Button>
-            </Center>
+            </div>
           )
         )}
-      </Flexbox>
+      </div>
       <Composer
         parentCommentId={root.data.id}
         rootReplyCount={replyCount}
         topicId={view.topicId}
         onCreated={() => void replies.reload()}
       />
-    </Flexbox>
+    </div>
   );
 });
 

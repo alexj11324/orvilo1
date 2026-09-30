@@ -1,10 +1,9 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { GlobeOffIcon } from '@lobehub/ui/icons';
 import { Divider } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { SparkleIcon } from 'lucide-react';
-import { memo, useEffect } from 'react';
+import { createElement, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { usePermission } from '@/hooks/usePermission';
@@ -73,12 +72,12 @@ const Item = memo<NetworkOption>(({ value, description, icon, label }) => {
   const { allowed: canCreate } = usePermission('create_content');
 
   return (
-    <Flexbox
-      horizontal
-      align={'flex-start'}
-      className={cx(styles.option, mode === value && styles.active)}
-      gap={12}
+    <div
       key={value}
+      className={cx(
+        'flex flex-row items-start gap-3',
+        cx(styles.option, mode === value && styles.active),
+      )}
       style={{
         cursor: canCreate ? undefined : 'not-allowed',
         opacity: canCreate ? undefined : 0.5,
@@ -88,14 +87,21 @@ const Item = memo<NetworkOption>(({ value, description, icon, label }) => {
         await updateAgentChatConfig({ searchMode: value });
       }}
     >
-      <Center className={styles.icon} flex={'none'} height={32} width={32}>
-        <Icon icon={icon} />
-      </Center>
-      <Flexbox flex={1}>
+      <div
+        className={cx(
+          'flex flex-col items-center justify-center flex-none h-[32px] w-[32px]',
+          styles.icon,
+        )}
+      >
+        <span className="anticon" role="img">
+          {createElement(icon, { size: '1em', width: '1em', height: '1em', fill: 'transparent' })}
+        </span>
+      </div>
+      <div className="flex flex-col flex-1">
         <div className={styles.title}>{label}</div>
         <div className={styles.description}>{description}</div>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -171,14 +177,14 @@ const Controls = memo(() => {
   const showDivider = showModelBuiltinSearch || showFCSearchModel;
 
   return (
-    <Flexbox gap={4}>
+    <div className="flex flex-col gap-1">
       {options.map((option) => (
         <Item {...option} key={option.value} />
       ))}
       {showDivider && <Divider style={{ margin: 0 }} />}
       {showModelBuiltinSearch && <ModelBuiltinSearch disabled={!canCreate} />}
       {showFCSearchModel && <FCSearchModel disabled={!canCreate} />}
-    </Flexbox>
+    </div>
   );
 });
 

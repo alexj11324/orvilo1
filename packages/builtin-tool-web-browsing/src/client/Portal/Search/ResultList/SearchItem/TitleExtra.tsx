@@ -23,7 +23,7 @@ const TitleExtra = memo<TitleExtraProps>(({ category, score, highlight, engines 
       {typeof score === 'number' && (
         <SimpleTooltip title={t(highlight ? 'search.includedTooltip' : 'search.scoreTooltip')}>
           {highlight ? (
-            <Badge style={{ marginInlineEnd: 0 }} variant="info" variant="secondary">
+            <Badge style={{ marginInlineEnd: 0 }} variant="info">
               {score.toFixed(1)}
             </Badge>
           ) : (

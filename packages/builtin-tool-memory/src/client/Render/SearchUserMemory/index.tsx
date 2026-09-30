@@ -137,10 +137,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
               <AccordionTrigger>
                 <div className={styles.sectionHeader}>
                   <span>Activities</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({activities.length})
-                  </Text>
+                  <span className="text-muted-foreground"> ({activities.length})</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
@@ -165,10 +162,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
               <AccordionTrigger>
                 <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.contexts')}</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({contexts.length})
-                  </Text>
+                  <span className="text-muted-foreground"> ({contexts.length})</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
@@ -193,10 +187,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
               <AccordionTrigger>
                 <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.experiences')}</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({experiences.length})
-                  </Text>
+                  <span className="text-muted-foreground"> ({experiences.length})</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
@@ -221,10 +212,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
               <AccordionTrigger>
                 <div className={styles.sectionHeader}>
                   <span>Identities</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({identities.length})
-                  </Text>
+                  <span className="text-muted-foreground"> ({identities.length})</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>
@@ -248,10 +236,7 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
               <AccordionTrigger>
                 <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.preferences')}</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({preferences.length})
-                  </Text>
+                  <span className="text-muted-foreground"> ({preferences.length})</span>
                 </div>
               </AccordionTrigger>
               <AccordionContent>

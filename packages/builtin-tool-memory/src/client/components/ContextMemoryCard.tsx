@@ -110,7 +110,7 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
                         key={index}
                         style={{
                           background:
-                            index < Math.round((item.percent * 5) / 100)
+                            index < Math.round(((item.percent ?? 0) * 5) / 100)
                               ? item.strokeColor || 'var(--primary)'
                               : 'var(--muted)',
                         }}

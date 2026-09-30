@@ -1,5 +1,3 @@
-import type { ActionIconProps, FormProps } from '@lobehub/ui';
-
 export const HEADER_HEIGHT = 64;
 export const MOBILE_NABBAR_HEIGHT = 44;
 export const MOBILE_TABBAR_HEIGHT = 48;
@@ -31,13 +29,13 @@ export const CONVERSATION_KEEP_WIDTH = 420;
 export const MARKET_SIDEBAR_WIDTH = 400;
 export const FOLDER_WIDTH = 270;
 export const MAX_WIDTH = 1024;
-export const FORM_STYLE: FormProps = {
+export const FORM_STYLE = {
   itemMinWidth: 'max(34%, 240px)',
   style: { maxWidth: MAX_WIDTH, width: '100%' },
 };
-export const MOBILE_HEADER_ICON_SIZE: ActionIconProps['size'] = { blockSize: 36, size: 22 };
-export const DESKTOP_HEADER_ICON_SIZE: ActionIconProps['size'] = { blockSize: 32, size: 20 };
-export const DESKTOP_HEADER_ICON_SMALL_SIZE: ActionIconProps['size'] = { blockSize: 28, size: 16 };
+export const MOBILE_HEADER_ICON_SIZE = { blockSize: 36, size: 22 } as const;
+export const DESKTOP_HEADER_ICON_SIZE = { blockSize: 32, size: 20 } as const;
+export const DESKTOP_HEADER_ICON_SMALL_SIZE = { blockSize: 28, size: 16 } as const;
 
 export const HEADER_ICON_SIZE = (mobile?: boolean) =>
   mobile ? MOBILE_HEADER_ICON_SIZE : DESKTOP_HEADER_ICON_SIZE;

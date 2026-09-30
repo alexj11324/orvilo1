@@ -1,10 +1,9 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { confirmModal } from '@lobehub/ui/base-ui';
 import { PencilLine, Trash } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 
@@ -16,7 +15,7 @@ interface ThreadItemDropdownMenuProps {
 export const useThreadItemDropdownMenu = ({
   id,
   toggleEditing,
-}: ThreadItemDropdownMenuProps): (() => MenuProps['items']) => {
+}: ThreadItemDropdownMenuProps): (() => SidebarMenuItemData[]) => {
   const { t } = useTranslation(['thread', 'common']);
   const { allowed: canEditThread } = usePermission('edit_own_content');
 
@@ -26,7 +25,7 @@ export const useThreadItemDropdownMenu = ({
     return [
       {
         disabled: !canEditThread,
-        icon: <Icon icon={PencilLine} />,
+        icon: <PencilLine />,
         key: 'rename',
         label: t('rename', { ns: 'common' }),
         onClick: () => {
@@ -40,7 +39,7 @@ export const useThreadItemDropdownMenu = ({
       {
         danger: true,
         disabled: !canEditThread,
-        icon: <Icon icon={Trash} />,
+        icon: <Trash />,
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: () => {
@@ -57,6 +56,6 @@ export const useThreadItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as MenuProps['items'];
+    ].filter(Boolean) as SidebarMenuItemData[];
   }, [id, canEditThread, removeThread, toggleEditing, t]);
 };

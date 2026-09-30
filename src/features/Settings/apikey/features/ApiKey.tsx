@@ -1,18 +1,6 @@
 'use client';
-
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  confirmModal,
-  DropdownMenu,
-  Tag,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { useMutation } from '@tanstack/react-query';
-import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import { BookOpen, Eye, MoreHorizontal, Trash } from 'lucide-react';
@@ -23,6 +11,15 @@ import urlJoin from 'url-join';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { type LiteTableColumn } from '@/components/LiteTable';
 import LiteTable from '@/components/LiteTable';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button, buttonVariants } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { isFullAccessApiKey } from '@/const/apiKeyScope';
 import { usePermission } from '@/hooks/usePermission';
 import { useClientDataSWR } from '@/libs/swr';
@@ -36,40 +33,6 @@ import { isForbiddenError } from '@/utils/forbiddenError';
 import { useWorkspaceApiKeyPolicy } from '../WorkspaceApiKeyPolicyContext';
 import ApiKeyDetail from './ApiKeyDetail';
 import { ApiKeyDisplay, createApiKeyModal } from './index';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  container: css`
-    overflow: hidden;
-    padding-block: 16px;
-    border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorBgContainer};
-  `,
-  expired: css`
-    color: ${cssVar.colorError};
-  `,
-  header: css`
-    display: flex;
-    gap: 16px;
-    align-items: flex-start;
-    justify-content: space-between;
-
-    padding-block-end: 16px;
-    padding-inline: 24px;
-  `,
-  /* Dates and "never used / never expires" placeholders read as metadata, not
-     content — keep them quieter than the name and key. */
-  muted: css`
-    color: ${cssVar.colorTextTertiary};
-  `,
-  /* The name doubles as the entry point into the detail drawer. */
-  nameLink: css`
-    font-weight: 500;
-
-    tr:hover & {
-      color: ${cssVar.colorLink};
-    }
-  `,
-}));
 
 dayjs.extend(relativeTime);
 
@@ -170,10 +133,14 @@ const ApiKey: FC = () => {
       // The name is the affordance into the detail drawer — styled as a link so
       // the row reads as navigable rather than inert.
       render: (apiKey) => (
-        <Flexbox horizontal align={'center'} gap={8}>
-          <span className={styles.nameLink}>{apiKey.name}</span>
-          {apiKey.enabled === false && <Tag>{t('apikey.status.disabled')}</Tag>}
-        </Flexbox>
+        <div className="flex flex-col gap-1">
+          <span className="font-medium group-hover:text-primary">{apiKey.name}</span>
+          {apiKey.enabled === false && (
+            <span className="inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs">
+              {t('apikey.status.disabled')}
+            </span>
+          )}
+        </div>
       ),
       title: t('apikey.list.columns.name'),
     },
@@ -202,11 +169,11 @@ const ApiKey: FC = () => {
     {
       key: 'scopes',
       render: (apiKey) => (
-        <Tag>
+        <span className="inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs">
           {isFullAccessApiKey(apiKey.scopes)
             ? t('apikey.scopes.fullAccess')
             : t('apikey.scopes.count', { count: apiKey.scopes?.length ?? 0 })}
-        </Tag>
+        </span>
       ),
       title: t('apikey.list.columns.scopes'),
       width: 110,
@@ -226,13 +193,13 @@ const ApiKey: FC = () => {
       render: (apiKey) =>
         apiKey.expiresAt ? (
           <span
-            className={isExpired(apiKey) ? styles.expired : undefined}
+            className={isExpired(apiKey) ? 'text-destructive' : undefined}
             title={apiKey.expiresAt.toLocaleString()}
           >
             {isExpired(apiKey) ? t('apikey.status.expired') : apiKey.expiresAt.toLocaleDateString()}
           </span>
         ) : (
-          <span className={styles.muted}>{t('apikey.display.neverExpires')}</span>
+          <span className="text-muted-foreground">{t('apikey.display.neverExpires')}</span>
         ),
       title: t('apikey.list.columns.expiresAt'),
       width: 130,
@@ -247,7 +214,7 @@ const ApiKey: FC = () => {
             {dayjs(apiKey.lastUsedAt).fromNow()}
           </span>
         ) : (
-          <span className={styles.muted}>{t('apikey.display.neverUsed')}</span>
+          <span className="text-muted-foreground">{t('apikey.display.neverUsed')}</span>
         ),
       title: t('apikey.list.columns.lastUsedAt'),
     },
@@ -259,30 +226,28 @@ const ApiKey: FC = () => {
       listSlot: 'extra',
       render: (apiKey) => (
         <span onClick={(e) => e.stopPropagation()}>
-          <DropdownMenu
-            placement={'bottomRight'}
-            items={[
-              {
-                icon: Eye,
-                key: 'view',
-                label: t('apikey.list.actions.viewDetails'),
-                onClick: () => setDetailId(apiKey.id),
-              },
-              {
-                danger: true,
-                disabled: !canDeleteRow(apiKey),
-                icon: Trash,
-                key: 'delete',
-                label: t('apikey.list.actions.delete'),
-                onClick: () => confirmDelete(apiKey),
-              },
-            ]}
-          >
-            <ActionIcon
-              icon={MoreHorizontal}
-              size={'small'}
-              title={t('apikey.list.actions.more')}
-            />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button aria-label={t('apikey.list.actions.more')} size="icon-sm" variant="ghost" />
+              }
+            >
+              <MoreHorizontal />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuItem onClick={() => setDetailId(apiKey.id)}>
+                <Eye />
+                {t('apikey.list.actions.viewDetails')}
+              </DropdownMenuItem>
+              <DropdownMenuItem
+                disabled={!canDeleteRow(apiKey)}
+                variant="destructive"
+                onClick={() => confirmDelete(apiKey)}
+              >
+                <Trash />
+                {t('apikey.list.actions.delete')}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
           </DropdownMenu>
         </span>
       ),
@@ -292,29 +257,35 @@ const ApiKey: FC = () => {
   ];
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <Flexbox gap={4}>
-          <Text as={'h3'} style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>
+    <div className="overflow-hidden rounded-xl bg-card py-4">
+      <div className="flex items-start justify-between gap-4 px-6 pb-4">
+        <div className="flex flex-col gap-1">
+          <span className="text-sm" style={{ fontSize: 16, fontWeight: 500, margin: 0 }}>
             {t('apikey.list.title')}
-          </Text>
-          <Text style={{ fontSize: 13 }} type={'secondary'}>
+          </span>
+          <span className="text-sm text-muted-foreground" style={{ fontSize: 13 }}>
             {t('apikey.list.desc')}
-          </Text>
-        </Flexbox>
-        <Flexbox horizontal gap={8}>
-          <Button href={docsHref} icon={BookOpen} target="_blank" type="text">
+          </span>
+        </div>
+        <div className="flex items-center gap-2">
+          <a
+            className={buttonVariants({ variant: 'ghost' })}
+            href={docsHref}
+            rel="noopener noreferrer"
+            target="_blank"
+          >
+            <BookOpen />
             {t('apikey.list.actions.viewDocs')}
-          </Button>
+          </a>
           <Button
             disabled={!canCreate}
             title={canCreate ? undefined : createTooltip}
-            type="primary"
+            type="button"
             onClick={handleCreate}
           >
             {t('apikey.list.actions.create')}
           </Button>
-        </Flexbox>
+        </div>
       </div>
       <LiteTable
         columns={columns}
@@ -322,18 +293,18 @@ const ApiKey: FC = () => {
         loading={isLoading}
         rowKey={(apiKey) => apiKey.id}
         emptyText={
-          <Center height={240} width={'100%'}>
-            <Empty
-              description={t(
+          <div className="flex min-h-60 w-full items-center justify-center">
+            <div className="flex min-h-40 flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
+              <span className="font-medium text-foreground">
+                {isMemberCreationRestricted ? t('apikey.list.restrictedEmpty.title') : undefined}
+              </span>
+              {t(
                 isMemberCreationRestricted
                   ? 'apikey.list.restrictedEmpty.desc'
                   : 'apikey.list.empty',
               )}
-              title={
-                isMemberCreationRestricted ? t('apikey.list.restrictedEmpty.title') : undefined
-              }
-            />
-          </Center>
+            </div>
+          </div>
         }
         onRowClick={(apiKey) => setDetailId(apiKey.id)}
       />

@@ -1,10 +1,8 @@
 'use client';
 
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
-import { type ReactNode } from 'react';
+import { cn } from 'cn';
+import { type ComponentProps, type ReactNode } from 'react';
 import { memo } from 'react';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -24,7 +22,7 @@ const styles = createStaticStyles(({ css }) => ({
 
 export type AuthCardVariant = 'auth16' | 'default';
 
-export interface AuthCardProps extends Omit<FlexboxProps, 'title'> {
+export interface AuthCardProps extends Omit<ComponentProps<'div'>, 'title'> {
   footer?: ReactNode;
   subtitle?: ReactNode;
   title?: ReactNode;
@@ -34,48 +32,57 @@ export interface AuthCardProps extends Omit<FlexboxProps, 'title'> {
 export const AuthCard = memo<AuthCardProps>(
   ({ children, title, subtitle, footer, variant = 'default', ...rest }) => {
     const isAuth16 = variant === 'auth16';
+    const TitleTag = isAuth16 ? 'h1' : 'div';
+    const SubtitleTag = isAuth16 ? 'p' : 'div';
     const { className, ...flexboxProps } = rest;
 
     return (
-      <Flexbox
-        className={cx(isAuth16 && styles.auth16Root, className)}
-        gap={isAuth16 ? 24 : undefined}
-        width={isAuth16 ? 'min(100%,384px)' : 'min(100%,440px)'}
+      <div
+        className={cx(cx(isAuth16 && styles.auth16Root, className), 'flex flex-col')}
+        style={{
+          gap: isAuth16 ? 24 : undefined,
+          width: isAuth16 ? 'min(100%,384px)' : 'min(100%,440px)',
+        }}
         {...flexboxProps}
       >
-        <Flexbox gap={isAuth16 ? 8 : 16}>
+        <div className="flex flex-col" style={{ gap: isAuth16 ? 8 : 16 }}>
           {title && (
-            <Text
-              align={isAuth16 ? 'center' : undefined}
-              as={isAuth16 ? 'h1' : undefined}
-              className={isAuth16 ? styles.auth16Title : undefined}
-              fontSize={isAuth16 ? 27 : 28}
-              style={isAuth16 ? { margin: 0 } : { lineHeight: 1.4 }}
-              weight={'bold'}
+            <TitleTag
+              className={cn('font-bold', isAuth16 && 'text-center', isAuth16 && styles.auth16Title)}
+              style={{
+                fontSize: isAuth16 ? 27 : 28,
+                ...(isAuth16 ? { margin: 0 } : { lineHeight: 1.4 }),
+              }}
             >
               {title}
-            </Text>
+            </TitleTag>
           )}
           {subtitle && (
-            <Text
-              align={isAuth16 ? 'center' : undefined}
-              as={isAuth16 ? 'p' : undefined}
-              className={isAuth16 ? styles.auth16Subtitle : undefined}
-              color={isAuth16 ? 'var(--muted-foreground)' : undefined}
-              fontSize={isAuth16 ? 14 : 18}
-              style={isAuth16 ? { margin: 0 } : { lineHeight: 1.4 }}
-              type={'secondary'}
-              weight={isAuth16 ? 400 : 500}
+            <SubtitleTag
+              className={cn(
+                'text-muted-foreground',
+                isAuth16 && 'text-center font-normal',
+                !isAuth16 && 'font-medium',
+                isAuth16 && styles.auth16Subtitle,
+              )}
+              style={{
+                color: isAuth16 ? 'var(--muted-foreground)' : undefined,
+                fontSize: isAuth16 ? 14 : 18,
+                ...(isAuth16 ? { margin: 0 } : { lineHeight: 1.4 }),
+              }}
             >
               {subtitle}
-            </Text>
+            </SubtitleTag>
           )}
-        </Flexbox>
-        <Flexbox gap={isAuth16 ? 12 : 4} paddingBlock={isAuth16 ? 0 : 32}>
+        </div>
+        <div
+          className="flex flex-col"
+          style={{ gap: isAuth16 ? 12 : 4, paddingBlock: isAuth16 ? 0 : 32 }}
+        >
           {children}
-        </Flexbox>
+        </div>
         {footer}
-      </Flexbox>
+      </div>
     );
   },
 );

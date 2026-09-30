@@ -1,13 +1,11 @@
 'use client';
-
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
-import { type InputRef } from 'antd';
 import { Loader2Icon } from 'lucide-react';
 import { type ChangeEvent } from 'react';
 import { useCallback, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -20,7 +18,7 @@ const UsernameRow = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const usernameRegex = /^\w+$/;
 
@@ -33,7 +31,7 @@ const UsernameRow = () => {
   };
 
   const handleSave = useCallback(async () => {
-    const value = inputRef.current?.input?.value?.trim();
+    const value = inputRef.current?.value?.trim();
     if (!value || value === username) {
       setError('');
       return;
@@ -77,13 +75,13 @@ const UsernameRow = () => {
   };
 
   const handleCancel = useCallback(() => {
-    if (inputRef.current?.input) {
+    if (inputRef.current) {
       const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
         HTMLInputElement.prototype,
         'value',
       )?.set;
-      nativeInputValueSetter?.call(inputRef.current.input, username || '');
-      inputRef.current.input.dispatchEvent(new Event('input', { bubbles: true }));
+      nativeInputValueSetter?.call(inputRef.current, username || '');
+      inputRef.current.dispatchEvent(new Event('input', { bubbles: true }));
     }
     setError('');
     setDirty(false);
@@ -96,16 +94,18 @@ const UsernameRow = () => {
       description={t('profile.usernameDescription')}
       label={t('profile.username')}
     >
-      <Flexbox horizontal align="center" gap={8}>
-        {saving && <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />}
+      <div className="flex items-center gap-2">
+        {saving && <Loader2Icon className="animate-spin" size={16} style={{ opacity: 0.5 }} />}
         {error && (
-          <Text style={{ fontSize: 12, whiteSpace: 'nowrap' }} type="danger">
+          <span className="text-sm text-destructive" style={{ fontSize: 12, whiteSpace: 'nowrap' }}>
             {error}
-          </Text>
+          </span>
         )}
         {dirty && !saving && (
           <Button
-            size="small"
+            size="sm"
+            type="button"
+            variant="outline"
             onMouseDown={(e) => {
               e.preventDefault();
               handleCancel();
@@ -115,26 +115,26 @@ const UsernameRow = () => {
           </Button>
         )}
         <Input
+          aria-invalid={error ? true : undefined}
           aria-label={t('profile.username')}
           defaultValue={username || ''}
           disabled={saving}
           key={username}
           placeholder={t('profile.usernamePlaceholder')}
           ref={inputRef}
-          size={'small'}
-          status={error ? 'error' : undefined}
           style={{ width: 180, maxWidth: '100%' }}
           onBlur={handleSave}
           onChange={handleChange}
-          onPressEnter={handleSave}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') {
+            if (e.key === 'Enter' && !e.nativeEvent.isComposing) {
+              void handleSave();
+            } else if (e.key === 'Escape') {
               e.preventDefault();
               handleCancel();
             }
           }}
         />
-      </Flexbox>
+      </div>
     </ProfileRow>
   );
 };

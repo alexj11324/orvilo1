@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
@@ -18,13 +17,13 @@ const AgentHome = memo(() => {
 
   return (
     <>
-      <Flexbox flex={1} />
-      <Flexbox gap={32} style={{ paddingBottom: 'max(4vh, 16px)' }} width={'100%'}>
+      <div className="flex flex-col flex-1" />
+      <div className="flex flex-col gap-8 w-full" style={{ paddingBottom: 'max(4vh, 16px)' }}>
         <AgentInfo />
         {extra}
         {openingQuestions.length > 0 && <OpeningQuestions questions={openingQuestions} />}
         <ToolAuthAlert />
-      </Flexbox>
+      </div>
     </>
   );
 });

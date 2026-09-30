@@ -1,11 +1,22 @@
 'use client';
 
-import { Flexbox, SortableList } from '@lobehub/ui';
-import { ActionIcon, Button, Select, type SelectOption, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { PlusIcon, XIcon } from 'lucide-react';
-import { useState } from 'react';
+import { createElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Sortable, SortableItem, SortableItemHandle } from '@/components/reui/sortable';
+import type { SelectOption } from '@/components/SelectOptions';
+import { Button } from '@/components/ui/button';
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
+import { Spinner } from '@/components/ui/spinner';
 
 import { MAX_FALLBACK_FONTS } from './fontStack';
 import { useFontFallbackStack } from './useFontFallbackStack';
@@ -39,66 +50,90 @@ const FallbackFontList = ({
   const { add, atLimit, candidates, fallbacks, labelOf, primary, remove, reorder } =
     useFontFallbackStack({ onChange, options, stack });
 
-  if (!primary) return <Text type={'secondary'}>{needPrimaryHint}</Text>;
+  if (!primary) return <span className={'text-muted-foreground'}>{needPrimaryHint}</span>;
 
   return (
-    <Flexbox gap={6} style={width}>
-      <SortableList
-        gap={6}
-        items={fallbacks.map((value) => ({ id: value }))}
-        renderItem={(item) => (
-          <SortableList.Item
-            horizontal
-            align={'center'}
-            className={styles.item}
-            gap={4}
-            id={item.id}
-            justify={'space-between'}
-            variant={'filled'}
-          >
-            <Text ellipsis style={{ flex: 1, fontFamily: item.id }}>
-              {labelOf(item.id)}
-            </Text>
-            <ActionIcon
-              aria-label={t('settingAppearance.font.fallback.remove')}
-              icon={XIcon}
-              size={'small'}
-              title={t('settingAppearance.font.fallback.remove')}
-              onClick={() => remove(item.id)}
-            />
-            <SortableList.DragHandle />
-          </SortableList.Item>
-        )}
-        onChange={(next) => reorder(next.map((item) => item.id))}
-      />
+    <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 6, ...width }}>
+      <Sortable
+        getItemValue={(item: { id: string }) => item.id}
+        value={fallbacks.map((value) => ({ id: value }))}
+        onValueChange={(next) => reorder(next.map((item) => item.id))}
+      >
+        <div className={'flex flex-col'} style={{ gap: 6 }}>
+          {fallbacks.map((fallbackFont) => (
+            <SortableItem
+              className={styles.item}
+              key={fallbackFont}
+              style={{ alignItems: 'center', gap: 4, justifyContent: 'space-between' }}
+              value={fallbackFont}
+            >
+              <span className={'truncate'} style={{ flex: 1, fontFamily: fallbackFont }}>
+                {labelOf(fallbackFont)}
+              </span>
+              <Button
+                aria-label={t('settingAppearance.font.fallback.remove')}
+                size="icon-sm"
+                title={t('settingAppearance.font.fallback.remove')}
+                variant="ghost"
+                onClick={() => remove(fallbackFont)}
+              >
+                {createElement(XIcon)}
+              </Button>
+              <SortableItemHandle />
+            </SortableItem>
+          ))}
+        </div>
+      </Sortable>
       {adding ? (
-        <Select
-          autoFocus
+        <Combobox
           defaultOpen
-          showSearch
-          aria-label={ariaLabel}
-          loading={loading}
-          options={candidates}
-          placeholder={t('settingAppearance.font.fallback.placeholder')}
-          onChange={(value: string) => add(value)}
+          items={candidates.map((option) => option.value)}
+          itemToStringLabel={(value) => {
+            const label = labelOf(String(value));
+            return typeof label === 'string' ? label : String(value);
+          }}
           onOpenChange={(open) => {
             if (!open) setAdding(false);
           }}
-        />
+          onValueChange={(value) => {
+            if (typeof value === 'string') add(value);
+          }}
+        >
+          <ComboboxInput
+            autoFocus
+            aria-label={ariaLabel}
+            placeholder={t('settingAppearance.font.fallback.placeholder')}
+            showTrigger={false}
+          />
+          <ComboboxContent>
+            {loading && (
+              <ComboboxEmpty>
+                <Spinner className="size-4" />
+              </ComboboxEmpty>
+            )}
+            <ComboboxList>
+              {(value: string) => (
+                <ComboboxItem key={value} value={value}>
+                  {labelOf(value)}
+                </ComboboxItem>
+              )}
+            </ComboboxList>
+          </ComboboxContent>
+        </Combobox>
       ) : (
         <Button
-          block
+          className="w-full"
           disabled={atLimit}
-          icon={PlusIcon}
-          type={'dashed'}
+          variant="outline"
           onClick={() => setAdding(true)}
         >
+          {createElement(PlusIcon)}
           {atLimit
             ? t('settingAppearance.font.fallback.limit', { count: MAX_FALLBACK_FONTS })
             : t('settingAppearance.font.fallback.add')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

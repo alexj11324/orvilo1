@@ -1,8 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import type { SelectOptions } from '@lobehub/ui/base-ui';
-import { Select } from '@lobehub/ui/base-ui';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import type { DeviceExecutionTarget, DeviceListItem, OrviloAgentAgencyConfig } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -11,6 +8,9 @@ import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import type { SelectOptions } from '@/components/SelectOptions';
+import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/components/SelectOptions';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import {
   ExecutionTargetDeviceStatus,
@@ -146,10 +146,10 @@ const ExecutionTargetLabel = memo<ExecutionTargetLabelProps>(
         <span aria-hidden className={styles.optionIcon}>
           {icon}
         </span>
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
+        <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
           <span className={styles.optionName}>{label}</span>
           <span className={styles.optionDescription}>{secondary}</span>
-        </Flexbox>
+        </div>
       </span>
     );
   },
@@ -328,31 +328,10 @@ const WorkspaceAgentDevicePolicy = memo<WorkspaceAgentDevicePolicyProps>(
       >
         {showDevicePicker ? (
           <Select
-            optionRender={(option) => option.label}
-            options={targetOptions}
-            placeholder={t('settingAgent.devicePolicy.selectTarget')}
-            popupMatchSelectWidth={true}
+            items={selectItems(targetOptions)}
             value={selectedValue}
-            classNames={{
-              item: styles.selectItem,
-              popup: styles.selectPopup,
-              value: styles.selectValue,
-            }}
-            labelRender={(option) => {
-              if (typeof option.value !== 'string') return option.label;
-              const selection = parseExecutionTargetValue(option.value);
-              if (!selection) return option.label;
-              if (selection.target === 'device') {
-                const device = publicWorkspaceDevices.find(
-                  (item) => item.deviceId === selection.deviceId,
-                );
-                return device ? renderDeviceLabel(device, true) : option.label;
-              }
-              if (selection.target === 'local') return option.label;
-              return renderTargetLabel(selection.target, true);
-            }}
-            onChange={(value) => {
-              if (typeof value !== 'string') return;
+            onValueChange={(value) => {
+              if (!value) return;
               const selection = parseExecutionTargetValue(value);
               if (!selection) return;
 
@@ -361,7 +340,31 @@ const WorkspaceAgentDevicePolicy = memo<WorkspaceAgentDevicePolicyProps>(
                 executionTarget: selection.target,
               });
             }}
-          />
+          >
+            <SelectTrigger className={styles.selectValue}>
+              <SelectValue placeholder={t('settingAgent.devicePolicy.selectTarget')}>
+                {(value: string) => {
+                  const option = flattenSelectOptions(targetOptions).find(
+                    (item) => item.value === value,
+                  );
+                  if (!option) return value;
+                  const selection = parseExecutionTargetValue(value);
+                  if (!selection) return option.label;
+                  if (selection.target === 'device') {
+                    const device = publicWorkspaceDevices.find(
+                      (item) => item.deviceId === selection.deviceId,
+                    );
+                    return device ? renderDeviceLabel(device, true) : option.label;
+                  }
+                  if (selection.target === 'local') return option.label;
+                  return renderTargetLabel(selection.target, true);
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent className={styles.selectPopup}>
+              <SelectOptionItems itemClassName={styles.selectItem} options={targetOptions} />
+            </SelectContent>
+          </Select>
         ) : null}
 
         {error ? (

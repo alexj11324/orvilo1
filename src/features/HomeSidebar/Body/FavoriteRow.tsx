@@ -2,18 +2,20 @@
 
 import { useSortable } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import type { GenericItemType } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { NavigationFavorite, NavigationFavoriteTargetType } from '@orvilo/types';
-import { PinOff } from 'lucide-react';
+import { ChevronDown, ChevronUp, MoreHorizontalIcon, PinOff } from 'lucide-react';
 import { type MouseEventHandler, type RefObject } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import NavItem from '@/features/NavPanel/components/NavItem';
+import { SidebarMenuAction } from '@/components/ui/sidebar';
+import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
+import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import { FAVORITE_TARGET_ICONS } from './favoriteIcon';
 import { favoriteLabel } from './favoriteLabel';
+import { isFavoriteReorderDownDisabled, isFavoriteReorderUpDisabled } from './favoriteOverflow';
 import { favoriteKey } from './favoriteReorder';
 import { useFavoritePointerDragGuard } from './useFavoritePointerDragGuard';
 import { workTargetPath } from './workTargetPath';
@@ -39,52 +41,53 @@ const FavoriteRow = ({
   showReorder = true,
 }: FavoriteRowProps) => {
   const { t } = useTranslation('common');
-  const unpinAction = (
-    <ActionIcon
-      icon={PinOff}
-      size="small"
-      title={t('pinOff')}
-      onClick={() => onUnpin(item.targetId, item.targetType)}
-    />
-  );
-  const reorderItems: GenericItemType[] = showReorder
-    ? [
-        {
-          disabled: index === 0,
-          key: 'move-up',
-          label: t('navPanel.moveUp'),
-          onClick: () => onMove(index, 'up'),
-        },
-        {
-          disabled: index === itemCount - 1,
-          key: 'move-down',
-          label: t('navPanel.moveDown'),
-          onClick: () => onMove(index, 'down'),
-        },
-        { type: 'divider' },
-      ]
-    : [];
+  const menuItems: SidebarMenuItems = [
+    {
+      key: 'unpin',
+      icon: <PinOff size={14} />,
+      label: t('pinOff'),
+      onClick: () => onUnpin(item.targetId, item.targetType),
+    },
+    ...(showReorder
+      ? [
+          {
+            key: 'up',
+            icon: <ChevronUp size={14} />,
+            label: t('navPanel.moveUp'),
+            disabled: isFavoriteReorderUpDisabled(index),
+            onClick: () => onMove(index, 'up'),
+          },
+          {
+            key: 'down',
+            icon: <ChevronDown size={14} />,
+            label: t('navPanel.moveDown'),
+            disabled: isFavoriteReorderDownDisabled(index, itemCount),
+            onClick: () => onMove(index, 'down'),
+          },
+        ]
+      : []),
+  ];
 
   return (
-    <WorkspaceLink
-      draggable={false}
-      to={workTargetPath(item.targetType, item.targetId, item.title)}
-      onClick={onClick}
-    >
-      <NavItem
-        actions={unpinAction}
-        icon={FAVORITE_TARGET_ICONS[item.targetType]}
-        title={favoriteLabel(item.targetType, item.title, t, item.targetId)}
-        contextMenuItems={[
-          ...reorderItems,
-          {
-            key: 'unpin',
-            label: t('pinOff'),
-            onClick: () => onUnpin(item.targetId, item.targetType),
-          },
-        ]}
-      />
-    </WorkspaceLink>
+    <SidebarNavItem
+      contextMenuItems={menuItems}
+      icon={FAVORITE_TARGET_ICONS[item.targetType]}
+      title={favoriteLabel(item.targetType, item.title, t, item.targetId)}
+      actions={
+        <SidebarDropdownMenu items={menuItems}>
+          <SidebarMenuAction showOnHover aria-label={t('navPanel.more')}>
+            <MoreHorizontalIcon />
+          </SidebarMenuAction>
+        </SidebarDropdownMenu>
+      }
+      render={
+        <WorkspaceLink
+          draggable={false}
+          to={workTargetPath(item.targetType, item.targetId, item.title)}
+          onClick={onClick}
+        />
+      }
+    />
   );
 };
 

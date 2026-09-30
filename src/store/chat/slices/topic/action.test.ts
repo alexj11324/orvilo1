@@ -21,7 +21,7 @@ import { type ChatTopic, type CreateTopicParams } from '@/types/topic';
 
 import { useChatStore } from '../../store';
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
+vi.mock('@/components/toast', async (importOriginal) => {
   const actual = await importOriginal<{ toast: Record<string, unknown> }>();
   return { ...actual, toast: { ...actual.toast, error: vi.fn() } };
 });

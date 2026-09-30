@@ -1,13 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { ClaudeCodeQuotaSnapshot } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CalendarDaysIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { openQuotaCalendarModal } from '@/features/AgentQuotaCalendar';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -41,23 +40,22 @@ const QuotaAccountIdentity = memo<{
     : t('heteroAgent.claudeQuota.unknownIdentity');
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={placement === 'top' ? styles.top : styles.bottom}
-      gap={8}
-      justify={'space-between'}
+    <div
+      className={cx(
+        'flex flex-row items-center gap-2 justify-between',
+        placement === 'top' ? styles.top : styles.bottom,
+      )}
     >
-      <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
-        <Text ellipsis style={{ fontSize: 12 }} type={identity ? undefined : 'secondary'}>
+      <div className="flex flex-row items-center gap-1.5" style={{ minWidth: 0 }}>
+        <div className="truncate text-muted-foreground" style={{ fontSize: 12 }}>
           {label}
-        </Text>
+        </div>
         {identity?.planTier && (
-          <Text style={{ flex: 'none', fontSize: 12 }} type={'secondary'}>
+          <div className="text-muted-foreground" style={{ flex: 'none', fontSize: 12 }}>
             {identity.planTier}
-          </Text>
+          </div>
         )}
-      </Flexbox>
+      </div>
       {identity?.externalAccountId && (
         <ActionIcon
           icon={CalendarDaysIcon}
@@ -67,7 +65,7 @@ const QuotaAccountIdentity = memo<{
           onClick={() => openQuotaCalendarModal({ externalAccountId: identity.externalAccountId })}
         />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

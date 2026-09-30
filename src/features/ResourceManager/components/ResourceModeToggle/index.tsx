@@ -1,13 +1,13 @@
 'use client';
 
-import { type DropdownItem, DropdownMenu, Icon, type MenuInfo } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CheckIcon, LockIcon, UsersIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { type DropdownItem, DropdownMenu, type MenuInfo } from '@/components/ItemsMenu';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import type { ResourceListVisibilityFilter } from '@/features/ResourceManager/store/initialState';
@@ -65,9 +65,27 @@ const ResourceModeToggle = memo(() => {
         return {
           extra:
             option.key === listVisibility ? (
-              <Icon color={cssVar.colorTextSecondary} icon={CheckIcon} size={14} />
+              <span className="anticon" role="img">
+                <CheckIcon
+                  color={cssVar.colorTextSecondary}
+                  fill={'transparent'}
+                  height={14}
+                  size={14}
+                  width={14}
+                />
+              </span>
             ) : undefined,
-          icon: <Icon color={cssVar.colorTextSecondary} icon={OptionIcon} size={16} />,
+          icon: (
+            <span className="anticon" role="img">
+              <OptionIcon
+                color={cssVar.colorTextSecondary}
+                fill={'transparent'}
+                height={16}
+                size={16}
+                width={16}
+              />
+            </span>
+          ),
           key: option.key,
           label: t(option.labelKey as never),
           onClick: ({ domEvent }: MenuInfo) => {

@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Check } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { shinyTextStyles } from '@/styles';
 
 import type { InviteAgentParams, InviteAgentState } from '../../../types';
@@ -53,7 +53,7 @@ export const InviteAgentInspector = memo<
   const isSuccess = pluginState?.success;
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
+    <div className={cn('flex', 'items-center', 'gap-2', styles.root)}>
       <span
         className={cx(
           styles.title,
@@ -69,7 +69,7 @@ export const InviteAgentInspector = memo<
       {!isLoading && isSuccess && (
         <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

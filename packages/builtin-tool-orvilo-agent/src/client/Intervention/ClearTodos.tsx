@@ -1,12 +1,12 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { RadioGroup } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Trash2 } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 
 import type { ClearTodosParams } from '../../types';
 
@@ -51,42 +51,30 @@ const ClearTodosIntervention = memo<BuiltinInterventionProps<ClearTodosParams>>(
     );
 
     return (
-      <Flexbox gap={12}>
-        <Flexbox horizontal align="center" className={styles.header} gap={8}>
+      <div className="flex flex-col gap-3">
+        <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
           <Trash2 size={16} />
           <span style={{ fontSize: 14, fontWeight: 500 }}>
             {t('orvilo-agent.clearTodos.header')}
           </span>
-        </Flexbox>
+        </div>
 
-        <Flexbox className={styles.container} gap={8}>
+        <div className={cn('flex', 'flex-col', 'gap-2', styles.container)}>
           <span className={styles.label}>{t('orvilo-agent.clearTodos.label')}</span>
-          <RadioGroup
-            gap={8}
-            horizontal={false}
-            value={mode}
-            options={[
-              {
-                label: (
-                  <span className={styles.normalText}>
-                    {t('orvilo-agent.clearTodos.option.completed')}
-                  </span>
-                ),
-                value: 'completed',
-              },
-              {
-                label: (
-                  <span className={styles.dangerText}>
-                    {t('orvilo-agent.clearTodos.option.all')}
-                  </span>
-                ),
-                value: 'all',
-              },
-            ]}
-            onChange={handleModeChange}
-          />
-        </Flexbox>
-      </Flexbox>
+          <RadioGroup className="flex flex-col gap-2" value={mode} onValueChange={handleModeChange}>
+            <label className="flex flex-row items-center gap-2">
+              <RadioGroupItem value="completed" />
+              <span className={styles.normalText}>
+                {t('orvilo-agent.clearTodos.option.completed')}
+              </span>
+            </label>
+            <label className="flex flex-row items-center gap-2">
+              <RadioGroupItem value="all" />
+              <span className={styles.dangerText}>{t('orvilo-agent.clearTodos.option.all')}</span>
+            </label>
+          </RadioGroup>
+        </div>
+      </div>
     );
   },
 );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -37,7 +36,7 @@ const RecentWorks = memo(() => {
   if (!isLoadingInitial && !error && recent.length === 0) return null;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <SectionTitle title={t('work.group')} viewAllUrl={'/resource/works'} />
       {error && recent.length === 0 ? (
         <AsyncError error={error} variant={'inline'} onRetry={reload} />
@@ -53,7 +52,7 @@ const RecentWorks = memo(() => {
           ))}
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

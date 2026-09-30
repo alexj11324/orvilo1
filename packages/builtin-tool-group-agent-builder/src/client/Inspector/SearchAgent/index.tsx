@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
 import { memo } from 'react';
@@ -47,14 +46,12 @@ export const SearchAgentInspector = memo<
         (hasResults ? (
           <span style={{ marginInlineStart: 4 }}>({resultCount})</span>
         ) : (
-          <Text
-            as={'span'}
-            color={cssVar.colorTextDescription}
-            fontSize={12}
-            style={{ marginInlineStart: 4 }}
+          <span
+            className="text-[12px]"
+            style={{ marginInlineStart: 4, color: cssVar.colorTextDescription }}
           >
             ({t('builtins.orvilo-group-agent-builder.inspector.noResults')})
-          </Text>
+          </span>
         ))}
     </div>
   );

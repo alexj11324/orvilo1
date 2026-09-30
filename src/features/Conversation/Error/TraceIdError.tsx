@@ -1,14 +1,15 @@
-import { copyToClipboard, Icon } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { DiscordIcon, GithubIcon } from '@lobehub/ui/icons';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { cssVar } from 'antd-style';
 import { AlertTriangle, Copy, RotateCw } from 'lucide-react';
-import { memo, useCallback } from 'react';
+import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { GITHUB_ISSUES } from '@/const/url';
 import BaseErrorForm from '@/features/Conversation/Error/BaseErrorForm';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useRetryParentMessage } from './useRetryParentMessage';
 
@@ -53,19 +54,18 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
 
   return (
     <BaseErrorForm
-      avatar={<Icon icon={AlertTriangle} size={24} />}
+      avatar={<AlertTriangle size={24} />}
       title={t(showRetry ? 'unknownError.title' : 'unknownError.sharedTitle')}
       action={
         showRetry ? (
           <Button
             disabled={!onRetry && disabled}
-            icon={<Icon icon={RotateCw} />}
             loading={!onRetry && loading}
-            size={'small'}
-            type={'primary'}
+            size="sm"
+            variant="default"
             onClick={handleRetry}
           >
-            {t('unknownError.retry')}
+            <RotateCw /> {t('unknownError.retry')}
           </Button>
         ) : undefined
       }
@@ -84,7 +84,7 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
               verticalAlign: 'middle',
             }}
           >
-            <Icon icon={hasDiscord ? DiscordIcon : GithubIcon} size={14} />
+            {createElement(hasDiscord ? DiscordIcon : GithubIcon, { size: 14 })}
             {hasDiscord ? 'Discord' : 'GitHub'}
           </a>
           {traceId && (
@@ -103,7 +103,7 @@ const TraceIdError = memo<TraceIdErrorProps>(({ id, onRetry, showRetry = true, t
                 onClick={handleCopyTraceId}
               >
                 {traceId}
-                <Icon icon={Copy} size={11} style={{ marginLeft: 3, verticalAlign: 'middle' }} />
+                <Copy size={11} style={{ marginLeft: 3, verticalAlign: 'middle' }} />
               </code>
             </>
           )}

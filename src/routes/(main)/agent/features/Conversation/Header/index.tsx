@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { AgentMigrationBadge, useAgentTransferJob } from '@/features/AgentTransferMigration';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
 import NavHeader from '@/features/NavHeader';
@@ -152,13 +152,7 @@ const Header = memo(() => {
     <div className={headerStyles.container}>
       <NavHeader
         left={
-          <Flexbox
-            allowShrink
-            horizontal
-            align={'center'}
-            className={headerStyles.leftContent}
-            gap={4}
-          >
+          <div className={cn('flex items-center gap-1', headerStyles.leftContent)}>
             {splitView && agentMeta && (
               <Avatar
                 alt={agentMeta.title}
@@ -175,10 +169,10 @@ const Header = memo(() => {
                 → toolbar. The toggle self-hides on the new-chat surface. */}
             <FavoriteToggle />
             <HeaderActions />
-          </Flexbox>
+          </div>
         }
         right={
-          <Flexbox horizontal align={'center'} className={headerStyles.rightContent} gap={4}>
+          <div className={cn('flex items-center gap-1', headerStyles.rightContent)}>
             {transferJob && agentId && (
               <div className={headerStyles.migrationChipInline}>
                 <AgentMigrationBadge agentId={agentId} />
@@ -191,7 +185,7 @@ const Header = memo(() => {
             <TopicCommentButton />
             <ShareButton />
             <WorkingPanelToggle />
-          </Flexbox>
+          </div>
         }
         slotClassNames={{
           left: headerStyles.slotLeft,

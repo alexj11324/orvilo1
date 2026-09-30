@@ -1,8 +1,9 @@
-import { type AlertProps, Skeleton } from '@lobehub/ui/base-ui';
 import { type ChatMessageError } from '@orvilo/types';
 import { memo } from 'react';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import ErrorContent from '@/features/Conversation/ChatItem/components/ErrorContent';
+import type { ErrorAlertProps } from '@/features/Conversation/components/ErrorAlert';
 import dynamic from '@/libs/next/dynamic';
 
 const loading = () => <Skeleton style={{ width: 300 }} />;
@@ -21,7 +22,7 @@ interface OllamaErrorResponse {
 }
 
 interface OllamaBizErrorProps {
-  alertError?: AlertProps;
+  alertError?: ErrorAlertProps;
   error?: ChatMessageError | null;
   id: string;
 }

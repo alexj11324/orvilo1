@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Checkbox, Tag } from '@lobehub/ui/base-ui';
 import { AGENT_PLAN_FILE_TYPE } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDown, ChevronUp, ListTodo } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useNotebookStore } from '@/store/notebook';
@@ -148,51 +148,67 @@ const TodoList = memo(() => {
     <div className={styles.root}>
       <div className={styles.container} onClick={toggleExpanded}>
         {/* Header */}
-        <Flexbox horizontal align="center" gap={8} justify="space-between">
-          <Flexbox horizontal align="center" gap={8} style={{ flex: 1, minWidth: 0 }}>
-            <Icon icon={ListTodo} size={16} style={{ color: cssVar.colorPrimary, flexShrink: 0 }} />
+        <div className="flex flex-row items-center gap-2 justify-between">
+          <div className="flex flex-row items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
+            <span
+              className="anticon"
+              role="img"
+              style={{ color: cssVar.colorPrimary, flexShrink: 0 }}
+            >
+              <ListTodo fill={'transparent'} height={16} size={16} width={16} />
+            </span>
             <span className={styles.header}>
               {currentPendingTask?.text || t('document.todos.allCompleted')}
             </span>
-            <Tag size="small" style={{ flexShrink: 0 }}>
+            <Badge size="sm" style={{ flexShrink: 0 }} variant="secondary">
               <span className={styles.count}>
                 {completed}/{total}
               </span>
-            </Tag>
-          </Flexbox>
-          <Icon
-            icon={expanded ? ChevronUp : ChevronDown}
-            size={16}
+            </Badge>
+          </div>
+          <span
+            className="anticon"
+            role="img"
             style={{ color: cssVar.colorTextTertiary, flexShrink: 0 }}
-          />
-        </Flexbox>
+          >
+            {createElement(expanded ? ChevronUp : ChevronDown, {
+              size: 16,
+              width: 16,
+              height: 16,
+              fill: 'transparent',
+            })}
+          </span>
+        </div>
 
         {/* Progress Bar */}
-        <Flexbox horizontal gap={8} style={{ marginTop: 8 }}>
+        <div className="flex flex-row gap-2" style={{ marginTop: 8 }}>
           <div className={styles.progress}>
             <div className={styles.progressFill} style={{ width: `${progressPercent}%` }} />
           </div>
-        </Flexbox>
+        </div>
 
         {/* Expandable Todo List */}
         <div className={cx(styles.listContainer, expanded ? styles.expanded : styles.collapsed)}>
           {items.map((item, index) => (
-            <Checkbox
-              backgroundColor={cssVar.colorSuccess}
-              checked={item.completed}
-              key={index}
-              shape="circle"
-              style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
-              classNames={{
-                text: item.completed ? styles.textChecked : undefined,
-                wrapper: styles.itemRow,
-              }}
-              textProps={{
-                type: item.completed ? 'secondary' : undefined,
-              }}
-            >
-              {item.text}
-            </Checkbox>
+            <div className={cx('flex items-center gap-2', styles.itemRow)} key={index}>
+              <Checkbox
+                checked={item.completed}
+                className="rounded-full"
+                style={{
+                  backgroundColor: item.completed ? cssVar.colorSuccess : undefined,
+                  borderWidth: 1.5,
+                  cursor: 'default',
+                  pointerEvents: 'none',
+                }}
+              />
+              <div
+                className={
+                  item.completed ? cx('text-muted-foreground', styles.textChecked) : undefined
+                }
+              >
+                {item.text}
+              </div>
+            </div>
           ))}
         </div>
       </div>

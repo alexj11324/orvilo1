@@ -3,17 +3,17 @@
 import type { IEditor } from '@lobehub/editor';
 import { ReactMentionPlugin, ReactTablePlugin, ReactToolbarPlugin } from '@lobehub/editor';
 import { Editor } from '@lobehub/editor/react';
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, toast } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { CodeXmlIcon, LetterTextIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import CodeEditorPane from '@/components/CodeEditorPane';
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import InfoTooltip from '@/components/InfoTooltip';
+import { toast } from '@/components/toast';
 import { createChatInputRichPlugins } from '@/features/ChatInput/InputEditor/plugins';
 import { EditingIndicator } from '@/features/EditLock';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
@@ -426,18 +426,18 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
   ]);
 
   return (
-    <Flexbox className={styles.root} gap={16}>
-      <Flexbox gap={4}>
-        <Flexbox horizontal align={'center'} distribution={'space-between'} gap={8}>
-          <Flexbox horizontal align={'center'} gap={6}>
+    <div className={cx('flex flex-col gap-4', styles.root)}>
+      <div className="flex flex-col gap-1">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-1.5">
             <div className={styles.title}>{t('settingAgent.prompt.title')}</div>
             <InfoTooltip
               iconStyle={{ cursor: 'help' }}
-              size={'small'}
+              size={14}
               title={t('settingAgent.prompt.desc')}
             />
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={4}>
+          </div>
+          <div className="flex items-center gap-1">
             {promptSaveStatus !== 'idle' && (
               <AutoSaveHint
                 lastUpdatedTime={promptLastUpdatedTime}
@@ -445,9 +445,8 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
                 onRetry={editable ? () => void retryPromptSave() : undefined}
               />
             )}
-            <Flexbox
-              horizontal
-              gap={2}
+            <div
+              className="flex gap-0.5"
               // The profile content wrapper focuses the prompt editor on any
               // bubbled click, and Lexical's focus() moves the caret to the
               // document end when there is no selection — scrolling the page to
@@ -459,7 +458,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
                 aria-label={t('settingAgent.prompt.mode.visual')}
                 aria-pressed={activeEditorMode === 'visual'}
                 icon={LetterTextIcon}
-                size={'small'}
+                size={14}
                 title={t('settingAgent.prompt.mode.visual')}
                 onClick={() => setEditorMode('visual')}
               />
@@ -468,14 +467,14 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
                 aria-label={t('settingAgent.prompt.mode.source')}
                 aria-pressed={activeEditorMode === 'source'}
                 icon={CodeXmlIcon}
-                size={'small'}
+                size={14}
                 title={t('settingAgent.prompt.mode.source')}
                 onClick={() => setEditorMode('source')}
               />
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+            </div>
+          </div>
+        </div>
+      </div>
       <div
         className={styles.editorShell}
         style={
@@ -523,7 +522,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
           />
         )}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

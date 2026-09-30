@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo, useState } from 'react';
 
 import MCPInstallProgress from '@/features/MCP/MCPInstallProgress';
@@ -24,18 +23,18 @@ const OfficialDetail = memo<OfficialDetailProps>(({ data, identifier }) => {
 
   return (
     <DetailProvider config={data}>
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         <Header inModal />
         <MCPInstallProgress identifier={identifier} />
 
         <Nav inModal noSettings activeTab={activeTab as McpNavKey} setActiveTab={setActiveTab} />
-        <Flexbox gap={24}>
+        <div className="flex flex-col gap-6">
           {activeTab === McpNavKey.Overview && <Overview inModal />}
           {activeTab === McpNavKey.Deployment && <Deployment />}
           {activeTab === McpNavKey.Schema && <Schema />}
           {activeTab === McpNavKey.Score && <Score />}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </DetailProvider>
   );
 });

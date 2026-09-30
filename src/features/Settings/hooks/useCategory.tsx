@@ -1,4 +1,3 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
@@ -20,10 +19,12 @@ import {
   PaletteIcon,
   TagIcon,
   TerminalSquare,
+  User,
 } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { isSettingsTabOffered } from '@/config/routes/settings';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
@@ -98,7 +99,7 @@ export const useCategory = () => {
       {
         items: [
           {
-            icon: avatarUrl ? <Avatar avatar={avatarUrl} shape={'square'} size={26} /> : undefined,
+            icon: avatarUrl ? <Avatar avatar={avatarUrl} shape={'square'} size={16} /> : User,
             key: SettingsTabs.Profile,
             label: username || tAuth('tab.profile'),
           },
@@ -273,7 +274,7 @@ export const useCategory = () => {
         key: SettingsGroupKey.Developer,
         title: t('group.developer'),
       },
-    ];
+    ].filter((group) => group.items.length > 0);
   }, [t, tAuth, tLabs, tSubscription, capabilityContext, avatarUrl, username]);
 
   return categoryGroups;

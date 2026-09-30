@@ -1,5 +1,3 @@
-import { Flexbox, Icon, Popover } from '@lobehub/ui';
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { LexicalEditor } from 'lexical';
@@ -10,6 +8,9 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClientDataSWR } from '@/libs/swr';
 import { localFileKeys } from '@/libs/swr/keys';
 import { localFileService } from '@/services/electron/localFileService';
@@ -207,9 +208,15 @@ const LocalFileTagTrigger = memo<LocalFileTagTriggerProps>(
     }, [editor, nodeKey, onClick]);
 
     return (
-      <Tag {...rest} className={cx(styles.tag, className)} ref={setSpanRef} title={title}>
+      <Badge
+        {...rest}
+        className={cx(styles.tag, className)}
+        ref={setSpanRef}
+        title={title}
+        variant="secondary"
+      >
         {children}
-      </Tag>
+      </Badge>
     );
   },
 );
@@ -295,7 +302,10 @@ export const LocalFileTag = memo<LocalFileTagProps>(({ className, editor, file, 
   );
 
   const content = (
-    <Flexbox className={styles.popover} gap={10} onClick={(event) => event.stopPropagation()}>
+    <div
+      className={cx('flex flex-col gap-2.5', styles.popover)}
+      onClick={(event) => event.stopPropagation()}
+    >
       {imageSrc && (
         <div className={styles.previewFrame}>
           <img
@@ -307,51 +317,68 @@ export const LocalFileTag = memo<LocalFileTagProps>(({ className, editor, file, 
           />
         </div>
       )}
-      <Text className={styles.path}>{file.path}</Text>
+      <div className={styles.path}>{file.path}</div>
       {isDesktop && (
-        <Flexbox horizontal className={styles.actionBar} gap={6}>
+        <div className={cx('flex flex-row gap-1.5', styles.actionBar)}>
           {canPreview && (
-            <Button icon={<Icon icon={EyeIcon} />} size={'small'} onClick={handlePreview}>
+            <Button size={'sm'} variant="outline" onClick={handlePreview}>
+              <span className="anticon" data-icon="inline-start" role="img">
+                <EyeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
               {t('workingPanel.documents.preview')}
             </Button>
           )}
-          <Button icon={<Icon icon={ExternalLink} />} size={'small'} onClick={handleOpen}>
+          <Button size={'sm'} variant="outline" onClick={handleOpen}>
+            <span className="anticon" data-icon="inline-start" role="img">
+              <ExternalLink fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
             {t('workingPanel.files.open')}
           </Button>
-          <Button icon={<Icon icon={FolderOpen} />} size={'small'} onClick={handleReveal}>
+          <Button size={'sm'} variant="outline" onClick={handleReveal}>
+            <span className="anticon" data-icon="inline-start" role="img">
+              <FolderOpen fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
             {t('workingPanel.files.showInSystem')}
           </Button>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 
   return (
-    <Popover content={content} styles={{ content: { padding: 8 } }} trigger={'hover'}>
-      <LocalFileTagTrigger
-        className={className}
-        editor={editor}
-        nodeKey={nodeKey}
-        title={file.path}
-      >
-        {imageSrc ? (
-          <img
-            alt=""
-            className={styles.thumbnail}
-            data-testid="local-file-image-preview"
-            draggable={false}
-            src={imageSrc}
-          />
-        ) : (
-          <FileIcon
-            fileName={file.name}
-            isDirectory={!!file.isDirectory}
-            size={16}
-            variant={'raw'}
-          />
-        )}
-        <span className={styles.label}>{file.name}</span>
-      </LocalFileTagTrigger>
+    <Popover>
+      <PopoverTrigger
+        openOnHover
+        render={
+          <LocalFileTagTrigger
+            className={className}
+            editor={editor}
+            nodeKey={nodeKey}
+            title={file.path}
+          >
+            {imageSrc ? (
+              <img
+                alt=""
+                className={styles.thumbnail}
+                data-testid="local-file-image-preview"
+                draggable={false}
+                src={imageSrc}
+              />
+            ) : (
+              <FileIcon
+                fileName={file.name}
+                isDirectory={!!file.isDirectory}
+                size={16}
+                variant={'raw'}
+              />
+            )}
+            <span className={styles.label}>{file.name}</span>
+          </LocalFileTagTrigger>
+        }
+      />
+      <PopoverContent side={'top'} style={{ padding: 8 }}>
+        {content}
+      </PopoverContent>
     </Popover>
   );
 });

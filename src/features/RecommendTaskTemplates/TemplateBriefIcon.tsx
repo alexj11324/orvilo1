@@ -1,4 +1,3 @@
-import { Block, Icon, Image } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -22,15 +21,17 @@ export const TemplateBriefIcon = memo<TemplateBriefIconProps>(
   ({ spec, tileSize = RECOMMENDATION_ICON_SIZE.regular }) => {
     const glyphSize = Math.round(tileSize * 0.6);
     return (
-      <Block
-        align={'center'}
-        height={tileSize}
-        justify={'center'}
-        style={{ background: cssVar.colorFillSecondary, flexShrink: 0 }}
-        width={tileSize}
+      <div
+        className="flex items-center justify-center"
+        style={{
+          background: cssVar.colorFillSecondary,
+          flexShrink: 0,
+          height: tileSize,
+          width: tileSize,
+        }}
       >
         {spec.kind === 'url' ? (
-          <Image
+          <img
             alt={''}
             height={glyphSize}
             src={spec.src}
@@ -38,14 +39,17 @@ export const TemplateBriefIcon = memo<TemplateBriefIconProps>(
             width={glyphSize}
           />
         ) : (
-          <Icon
-            color={cssVar.colorTextSecondary}
-            fill={cssVar.colorTextSecondary}
-            icon={spec.Comp}
-            size={glyphSize}
-          />
+          <span className="anticon" role="img">
+            <spec.Comp
+              color={cssVar.colorTextSecondary}
+              fill={cssVar.colorTextSecondary}
+              height={glyphSize}
+              size={glyphSize}
+              width={glyphSize}
+            />
+          </span>
         )}
-      </Block>
+      </div>
     );
   },
 );

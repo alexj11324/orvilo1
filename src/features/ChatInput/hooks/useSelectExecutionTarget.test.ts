@@ -24,7 +24,7 @@ vi.mock('@orvilo/const', () => ({
     return state.desktop;
   },
 }));
-vi.mock('@lobehub/ui/base-ui', () => ({ toast: { error: state.toast } }));
+vi.mock('@/components/toast', () => ({ toast: { error: state.toast } }));
 vi.mock('i18next', () => ({ t: (key: string) => key }));
 vi.mock('@/hooks/useTopicAgencyConfig', () => ({ useTopicAgencyConfig: () => state.config }));
 vi.mock('@/store/chat', () => ({

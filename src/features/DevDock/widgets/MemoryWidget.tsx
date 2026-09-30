@@ -1,8 +1,9 @@
 'use client';
 
-import { Popover } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useState } from 'react';
+
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import { DOCK_Z_INDEX } from '../const';
 import { barButtonStyles } from './BarButton';
@@ -41,34 +42,37 @@ const MemoryWidget = memo(() => {
   const high = isMemoryHigh(percent, renderer?.privateBytes);
 
   return (
-    <Popover
-      arrow={false}
-      content={<MemoryPopover />}
-      open={open}
-      placement={'topRight'}
-      positionerProps={{ sideOffset: 6 }}
-      styles={{ content: { padding: 0 } }}
-      trigger={'click'}
-      zIndex={DOCK_Z_INDEX + 1}
-      onOpenChange={setOpen}
-    >
-      <button
-        type={'button'}
-        className={cx(
-          barButtonStyles.button,
-          styles.text,
-          high ? styles.high : percent >= 70 ? styles.mid : undefined,
-          open && styles.active,
-        )}
-        title={
-          renderer
-            ? 'R = Renderer private footprint (red at 1 GiB) · J = JS heap used — click for the full breakdown'
-            : 'J = JS heap used — click for the full breakdown'
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <button
+            type={'button'}
+            className={cx(
+              barButtonStyles.button,
+              styles.text,
+              high ? styles.high : percent >= 70 ? styles.mid : undefined,
+              open && styles.active,
+            )}
+            title={
+              renderer
+                ? 'R = Renderer private footprint (red at 1 GiB) · J = JS heap used — click for the full breakdown'
+                : 'J = JS heap used — click for the full breakdown'
+            }
+          >
+            {renderer && `R${formatCompactSize(renderer.privateBytes)} · `}J
+            {formatCompactSize(jsHeapUsedBytes)}
+          </button>
         }
+      />
+      <PopoverContent
+        align="end"
+        className="w-auto p-0"
+        side="top"
+        sideOffset={6}
+        style={{ zIndex: DOCK_Z_INDEX + 1 }}
       >
-        {renderer && `R${formatCompactSize(renderer.privateBytes)} · `}J
-        {formatCompactSize(jsHeapUsedBytes)}
-      </button>
+        <MemoryPopover />
+      </PopoverContent>
     </Popover>
   );
 });

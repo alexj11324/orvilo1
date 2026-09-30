@@ -1,7 +1,7 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import { useTreeStore } from '@/store/tree';
 

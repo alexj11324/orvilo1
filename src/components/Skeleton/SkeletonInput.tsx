@@ -1,5 +1,5 @@
 'use client';
 
-import { Skeleton } from '@lobehub/ui/base-ui';
+import { Skeleton } from '@/components/ui/skeleton';
 
-export const SkeletonInput = () => <Skeleton height={36} />;
+export const SkeletonInput = () => <Skeleton style={{ height: 36 }} />;

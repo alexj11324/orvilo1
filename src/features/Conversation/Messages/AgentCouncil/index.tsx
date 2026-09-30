@@ -1,12 +1,11 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { BotIcon, Columns2, Layers } from 'lucide-react';
 import { memo, useState } from 'react';
 
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WideScreenContainer from '@/features/WideScreenContainer';
 
 import { dataSelectors, useConversationStore } from '../../store';
@@ -32,38 +31,40 @@ const AgentCouncilMessage = memo<AgentCouncilMessageProps>(({ id }) => {
   return (
     <>
       <WideScreenContainer>
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          height={48}
-          justify={'space-between'}
-          paddingBlock={8}
-        >
+        <div className="flex items-center gap-2 justify-between py-2" style={{ height: 48 }}>
           {displayMode === 'tab' ? (
-            <Tabs
-              activeKey={String(activeTab)}
-              size="small"
-              items={members.map((_, idx) => ({
-                icon: <Icon icon={BotIcon} size={14} />,
-                key: String(idx),
-                label: null,
-              }))}
-              onChange={(key) => setActiveTab(Number(key))}
-            />
+            <Tabs value={String(activeTab)} onValueChange={(key) => setActiveTab(Number(key))}>
+              <TabsList>
+                {members
+                  .map((_, idx) => ({
+                    icon: <BotIcon size={14} />,
+                    key: String(idx),
+                    label: null,
+                  }))
+                  .map((item) => (
+                    <TabsTrigger key={item.key} value={item.key}>
+                      {item.icon}
+                      {item.label}
+                    </TabsTrigger>
+                  ))}
+              </TabsList>
+            </Tabs>
           ) : (
             <div />
           )}
-          <Tabs
-            activeKey={displayMode}
-            size="small"
-            items={[
-              { icon: <Icon icon={Columns2} />, key: 'horizontal', label: null },
-              { icon: <Icon icon={Layers} />, key: 'tab', label: null },
-            ]}
-            onChange={(key) => setDisplayMode(key as DisplayMode)}
-          />
-        </Flexbox>
+          <Tabs value={displayMode} onValueChange={(key) => setDisplayMode(key as DisplayMode)}>
+            <TabsList>
+              <TabsTrigger value={'horizontal'}>
+                <Columns2 />
+                {null}
+              </TabsTrigger>
+              <TabsTrigger value={'tab'}>
+                <Layers />
+                {null}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
       </WideScreenContainer>
       <CouncilList activeTab={activeTab} displayMode={displayMode} members={members} />
     </>

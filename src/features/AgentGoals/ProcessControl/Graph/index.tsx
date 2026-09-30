@@ -2,8 +2,6 @@
 
 import '@xyflow/react/dist/style.css';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Segmented, Text } from '@lobehub/ui/base-ui';
 import type { GoalGraphEdge } from '@orvilo/types';
 import { experimentMembers } from '@orvilo/utils/goalGraph';
 import {
@@ -24,6 +22,9 @@ import { ChevronRight, Maximize2, X } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { PortalContent } from '@/features/Portal/router';
 import { usePortalPanelWidth } from '@/features/Portal/usePortalPanelWidth';
 import RightPanel from '@/features/RightPanel';
@@ -605,14 +606,18 @@ const Canvas = memo<
             Both views support drag, pinch, double-click and zoom controls;
             fullscreen also uses two-finger scrolling to pan. */}
         {graph.nodes.length === 0 && !planning && (
-          <Flexbox
-            align={'center'}
-            justify={'center'}
-            padding={24}
-            style={{ position: 'absolute', inset: 0, pointerEvents: 'none', zIndex: 1 }}
+          <div
+            className="flex flex-col items-center justify-center"
+            style={{
+              padding: 24,
+              position: 'absolute',
+              inset: 0,
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
           >
-            <Text type={'secondary'}>{t('goalExperiment.emptyGraph')}</Text>
-          </Flexbox>
+            <div className="text-muted-foreground">{t('goalExperiment.emptyGraph')}</div>
+          </div>
         )}
         <ReactFlow
           fitView
@@ -714,69 +719,65 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
     } else props.onSelect(nodeId);
   };
   const overview = experiments.length > 0 && (
-    <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-      <Text fontSize={12} type={'secondary'}>
+    <div className="flex items-center gap-2 flex-wrap">
+      <div className="text-[12px] text-muted-foreground">
         {t('goalExperiment.overviewCount', {
           count: experiments.length,
           nodes: props.graph.nodes.length,
         })}
-      </Text>
-      <Button size={'small'} onClick={() => navigation.expandAll(true)}>
+      </div>
+      <Button size="sm" onClick={() => navigation.expandAll(true)}>
         {t(scopeId ? 'goalExperiment.expandScope' : 'goalExperiment.expandAll')}
       </Button>
-      <Button size={'small'} onClick={() => navigation.expandAll(false)}>
+      <Button size="sm" onClick={() => navigation.expandAll(false)}>
         {t(scopeId ? 'goalExperiment.collapseScope' : 'goalExperiment.collapseAll')}
       </Button>
-    </Flexbox>
+    </div>
   );
   const breadcrumbs = scopeId && (
-    <Flexbox
-      horizontal
-      align={'center'}
+    <div
       aria-label={t('goalExperiment.location')}
-      gap={4}
+      className="flex items-center gap-1 flex-wrap"
       role={'navigation'}
-      wrap={'wrap'}
     >
-      <Button size={'small'} onClick={() => navigation.backTo(0)}>
+      <Button size="sm" onClick={() => navigation.backTo(0)}>
         {t('goalExperiment.root')}
       </Button>
       {navigation.path.map((id, index) => (
-        <Flexbox horizontal align={'center'} gap={4} key={id}>
+        <div className="flex items-center gap-1" key={id}>
           <ChevronRight size={14} />
           {index === navigation.path.length - 1 ? (
-            <Text aria-current={'page'} fontSize={12}>
+            <div aria-current={'page'} className="text-[12px]">
               {props.graph.byId[id]?.node.title}
-            </Text>
+            </div>
           ) : (
-            <Button size={'small'} onClick={() => navigation.backTo(index + 1)}>
+            <Button size="sm" onClick={() => navigation.backTo(index + 1)}>
               {props.graph.byId[id]?.node.title}
             </Button>
           )}
-        </Flexbox>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
   const titleAndViews = (
     <>
-      <Text fontSize={16} weight={600}>
-        {t('goalProcess.graph.title')}
-      </Text>
+      <div className="text-[16px] font-semibold">{t('goalProcess.graph.title')}</div>
       {experiments.length === 0 && (
-        <Segmented
-          size={'small'}
-          value={view}
-          options={[
-            { label: t('goalProcess.graph.view.stage'), value: 'stage' },
-            { label: t('goalProcess.graph.view.all'), value: 'all' },
-          ]}
-          onChange={(value) => setView(value as GraphViewMode)}
-        />
+        <ToggleGroup
+          size="sm"
+          value={[view]}
+          onValueChange={(value) => {
+            if (value.length > 0) setView(value[0] as GraphViewMode);
+          }}
+        >
+          <ToggleGroupItem value="stage">{t('goalProcess.graph.view.stage')}</ToggleGroupItem>
+          <ToggleGroupItem value="all">{t('goalProcess.graph.view.all')}</ToggleGroupItem>
+        </ToggleGroup>
       )}
     </>
   );
   const legend = (
-    <Flexbox horizontal align={'center'} className={styles.legend} gap={10}>
+    <div className={`flex items-center gap-2.5 ${styles.legend}`}>
       {(
         [
           'problem',
@@ -790,12 +791,9 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
       ).map((kind) => {
         const off = hiddenKinds.has(kind);
         return (
-          <Flexbox
-            horizontal
-            align={'center'}
+          <div
             aria-pressed={!off}
-            className={cx(styles.legendItem, off && styles.legendOff)}
-            gap={4}
+            className={`flex items-center gap-1 ${cx(styles.legendItem, off && styles.legendOff)}`}
             key={kind}
             role={'button'}
             tabIndex={0}
@@ -810,10 +808,10 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
           >
             <KindDot kind={kind} />
             <span>{t(`goalProcess.kind.${kind}` as const)}</span>
-          </Flexbox>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
   const toggle = (
     <ActionIcon
@@ -844,14 +842,12 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
               refitKey={showPortal}
               view={scopeId ? 'all' : view}
               navigation={
-                <Flexbox gap={8}>
+                <div className="flex flex-col gap-2">
                   {/* Title and view switch share one row, as in the inline header. */}
-                  <Flexbox horizontal align={'center'} gap={12}>
-                    {titleAndViews}
-                  </Flexbox>
+                  <div className="flex items-center gap-3">{titleAndViews}</div>
                   {overview}
                   {breadcrumbs}
-                </Flexbox>
+                </div>
               }
               onEnter={navigation.enter}
               onInspect={(id) => openNode(props.graph.goal.id, id)}
@@ -884,17 +880,15 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
     );
 
   return (
-    <Flexbox gap={4}>
+    <div className="flex flex-col gap-1">
       {overview}
-      <Flexbox horizontal align={'center'} justify={'space-between'} paddingBlock={4}>
-        <Flexbox horizontal align={'center'} gap={12}>
-          {titleAndViews}
-        </Flexbox>
-        <Flexbox horizontal align={'center'} gap={12}>
+      <div className="flex items-center justify-between" style={{ paddingBlock: 4 }}>
+        <div className="flex items-center gap-3">{titleAndViews}</div>
+        <div className="flex items-center gap-3">
           {legend}
           {toggle}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       <ReactFlowProvider>
         <Canvas
           {...props}
@@ -912,7 +906,7 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
           onSelect={selectNode}
         />
       </ReactFlowProvider>
-    </Flexbox>
+    </div>
   );
 });
 

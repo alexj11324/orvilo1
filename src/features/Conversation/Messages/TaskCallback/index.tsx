@@ -1,13 +1,13 @@
 'use client';
-
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { CircleAlert, CircleCheck, CircleSlash, SquareArrowOutUpRight } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 
 import { dataSelectors, useConversationStore } from '../../store';
@@ -72,25 +72,25 @@ const TaskCallbackMessage = memo<TaskCallbackMessageProps>(({ id }) => {
   const openTask = () => openTaskDetail(callback.identifier);
 
   const viewTaskButton = (
-    <Button icon={SquareArrowOutUpRight} size={'small'} type={'text'} onClick={openTask}>
-      {t('taskCallback.viewTask')}
+    <Button size="sm" variant="ghost" onClick={openTask}>
+      <SquareArrowOutUpRight data-icon="inline-start" /> {t('taskCallback.viewTask')}
     </Button>
   );
 
   return (
-    <Flexbox paddingBlock={8}>
-      <Flexbox className={styles.card} gap={8}>
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Icon color={cssVar[color]} icon={icon} size={18} />
-            <Text strong>{t(i18nKey)}</Text>
+    <div className="flex flex-col py-2">
+      <div className={cn('flex flex-col gap-2', styles.card)}>
+        <div className="flex items-center gap-2 justify-between">
+          <div className="flex items-center gap-2">
+            {createElement(icon, { color: cssVar[color], size: 18 })}
+            <div className="font-semibold">{t(i18nKey)}</div>
             <span className={styles.identifier}>{callback.identifier}</span>
-          </Flexbox>
+          </div>
           {viewTaskButton}
-        </Flexbox>
+        </div>
         {content ? <Markdown variant={'chat'}>{content}</Markdown> : null}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

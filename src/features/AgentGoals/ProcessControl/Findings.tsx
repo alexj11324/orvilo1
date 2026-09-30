@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -62,54 +62,42 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
     const answered = view.answers[0];
 
     return (
-      <Flexbox gap={0}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.row}
-          gap={8}
-          onClick={() => setOpen(!open)}
-        >
-          <Icon
-            className={cx(styles.arrow, open && styles.arrowOpen)}
-            icon={ChevronRight}
-            size={14}
-          />
+      <div className="flex flex-col gap-0">
+        <div className={cn('flex items-center gap-2', styles.row)} onClick={() => setOpen(!open)}>
+          <ChevronRight className={cx(styles.arrow, open && styles.arrowOpen)} size={14} />
           <KindDot kind={'finding'} />
           {/* The title takes the slack so the attribution and the timestamp
               line up as columns, matching the deliverables list directly
               above — otherwise the two adjacent sections read as different
               layouts of the same row. */}
-          <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
+          <div className="truncate min-w-0 font-medium" style={{ flex: 1, minWidth: 0 }}>
             {view.node.title}
-          </Text>
-          <Text ellipsis className={styles.source} fontSize={12} type={'secondary'}>
+          </div>
+          <div className={cn('truncate min-w-0 text-[12px] text-muted-foreground', styles.source)}>
             {answered
               ? t('goalProcess.findings.answers', { title: answered.title })
               : view.producedBy
                 ? t('goalProcess.findings.from', { title: view.producedBy.title })
                 : ''}
-          </Text>
-          <Text className={styles.time} fontSize={12} title={title} type={'secondary'}>
+          </div>
+          <div className={cn('text-[12px] text-muted-foreground', styles.time)} title={title}>
             {text}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
         {open && (
-          <Flexbox className={styles.body} gap={8}>
+          <div className={cn('flex flex-col gap-2', styles.body)}>
             {view.answers.map((problem) => (
-              <Flexbox
-                horizontal
-                align={'center'}
-                gap={6}
+              <div
+                className="flex items-center gap-1.5"
                 key={problem.id}
                 style={{ cursor: 'pointer' }}
                 onClick={() => onSelect(problem.id)}
               >
                 <KindDot kind={'problem'} />
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('goalProcess.findings.answers', { title: problem.title })}
-                </Text>
-              </Flexbox>
+                </div>
+              </div>
             ))}
             {/* The description is the producing run's handoff — actual Markdown
                 (tables, code blocks), not plain text. Render it as such. */}
@@ -119,22 +107,20 @@ const FindingRow = memo<{ onSelect: (nodeId: string) => void; view: GoalNodeView
               </Markdown>
             )}
             {view.producedBy && (
-              <Flexbox
-                horizontal
-                align={'center'}
-                gap={6}
+              <div
+                className="flex items-center gap-1.5"
                 style={{ cursor: 'pointer' }}
                 onClick={() => onSelect(view.producedBy!.id)}
               >
                 <KindDot kind={'task'} />
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('goalProcess.findings.from', { title: view.producedBy.title })}
-                </Text>
-              </Flexbox>
+                </div>
+              </div>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -152,17 +138,15 @@ const Findings = memo<{ graph: GoalGraphView; onSelect: (nodeId: string) => void
 
     if (findings.length === 0)
       return (
-        <Text fontSize={13} type={'secondary'}>
-          {t('goalProcess.findings.empty')}
-        </Text>
+        <div className="text-[13px] text-muted-foreground">{t('goalProcess.findings.empty')}</div>
       );
 
     return (
-      <Flexbox gap={0}>
+      <div className="flex flex-col gap-0">
         {findings.map((view) => (
           <FindingRow key={view.node.id} view={view} onSelect={onSelect} />
         ))}
-      </Flexbox>
+      </div>
     );
   },
 );

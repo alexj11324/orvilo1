@@ -1,17 +1,22 @@
 'use client';
 
-import { Flexbox, List, SearchBar, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, Checkbox, Switch, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { useHover } from 'ahooks';
-import { List as AntdList } from 'antd';
 import { createStaticStyles, cx } from 'antd-style';
-import { X } from 'lucide-react';
+import { cn } from 'cn';
+import { SearchIcon, X } from 'lucide-react';
 import { type ChangeEvent } from 'react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import ImperativeModal from '@/components/ImperativeModal';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import AgentSelectionEmpty from '@/features/AgentSelectionEmpty';
 import { useSessionStore } from '@/store/session';
@@ -38,32 +43,28 @@ const AvailableAgentItem = memo<{
   if (!_agentId) return null;
 
   return (
-    <AntdList.Item className={cx(styles.listItem)} ref={ref} onClick={() => onToggle(_agentId)}>
-      <Flexbox horizontal align="center" gap={12} width="100%">
+    <div className={cx(styles.listItem)} ref={ref} onClick={() => onToggle(_agentId)}>
+      <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
-          onChange={() => {
+          onCheckedChange={() => {
             onToggle(_agentId);
           }}
           onClick={(e) => {
             e.stopPropagation();
           }}
         />
-        <Flexbox style={{ flexShrink: 0 }}>
+        <div className={'flex flex-col'} style={{ flexShrink: 0 }}>
           <Avatar animation={isHovering} avatar={avatar} background={avatarBackground} size={40} />
-        </Flexbox>
-        <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-          <Text className={styles.title} weight={500}>
-            {title}
-          </Text>
+        </div>
+        <div className={'flex flex-1 flex-col'} style={{ gap: 2, minWidth: 0 }}>
+          <div className={cn('font-medium', styles.title)}>{title}</div>
           {description && (
-            <Text ellipsis className={styles.description}>
-              {description}
-            </Text>
+            <div className={cn('truncate min-w-0', styles.description)}>{description}</div>
           )}
-        </Flexbox>
-      </Flexbox>
-    </AntdList.Item>
+        </div>
+      </div>
+    </div>
   );
 });
 
@@ -318,42 +319,41 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
         title={modalTitle}
         width={800}
         footer={
-          <Flexbox horizontal gap={8} justify="end">
+          <div className={'flex gap-2 justify-end'}>
             <Button onClick={handleCancel}>{t('cancel', { ns: 'common' })}</Button>
-            <Button
-              disabled={isConfirmDisabled}
-              loading={isAdding}
-              type="primary"
-              onClick={handleConfirm}
-            >
+            <Button disabled={isConfirmDisabled} loading={isAdding} onClick={handleConfirm}>
               {confirmButtonText} ({totalMemberCount})
             </Button>
-          </Flexbox>
+          </div>
         }
         onCancel={handleCancel}
       >
-        <Flexbox horizontal className={styles.container}>
+        <div className={cn('flex', styles.container)}>
           {/* Left Column - Available Agents */}
-          <Flexbox className={styles.leftColumn} flex={1} gap={12}>
-            <SearchBar
-              allowClear
-              placeholder={t('memberSelection.searchAgents')}
-              value={searchTerm}
-              variant="filled"
-              onChange={handleSearchChange}
-            />
+          <div className={cn('flex flex-col gap-3 flex-1', styles.leftColumn)}>
+            <div className={'relative'}>
+              <SearchIcon
+                className={
+                  'text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2'
+                }
+              />
+              <Input
+                className={'pl-8'}
+                placeholder={t('memberSelection.searchAgents')}
+                value={searchTerm}
+                onChange={handleSearchChange}
+              />
+            </div>
 
-            <Flexbox flex={1} style={{ overflowY: 'auto' }}>
+            <div className={'flex flex-1 flex-col'} style={{ overflowY: 'auto' }}>
               {filteredAvailableAgents.length === 0 ? (
                 <AgentSelectionEmpty
                   search={Boolean(searchTerm)}
                   variant={searchTerm ? 'empty' : 'noAvailable'}
                 />
               ) : (
-                <AntdList
-                  dataSource={filteredAvailableAgents}
-                  split={false}
-                  renderItem={(agent) => {
+                <div>
+                  {filteredAvailableAgents.map((agent) => {
                     const agentId = agent.config?.id;
                     if (!agentId) return null;
 
@@ -370,55 +370,69 @@ const MemberSelectionModal = memo<MemberSelectionModalProps>(
                         onToggle={handleAgentToggle}
                       />
                     );
-                  }}
-                />
+                  })}
+                </div>
               )}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
 
           {/* Right Column - Host and Selected Agents */}
-          <Flexbox className={styles.rightColumn} flex={1}>
-            <Flexbox gap={16}>
+          <div className={cn('flex flex-1 flex-col', styles.rightColumn)}>
+            <div className={'flex flex-col gap-4'}>
               {/* Host Card - Only show in create mode or when host is disabled in add mode */}
               {!isHostCurrentlyEnabled && (
-                <Flexbox horizontal align="center" className={styles.hostCard} gap={12}>
-                  <Flexbox flex={1} gap={2}>
-                    <Text
+                <div className={cn('flex gap-3 items-center', styles.hostCard)}>
+                  <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
+                    <div
+                      className={isHostRemoved ? 'text-muted-foreground' : undefined}
                       style={{ fontSize: 14, fontWeight: 500 }}
-                      type={isHostRemoved ? 'secondary' : undefined}
                     >
                       {t('groupWizard.host.title')}
-                    </Text>
-                    <Text
-                      style={{ color: '#999', fontSize: 12 }}
-                      type={isHostRemoved ? 'secondary' : undefined}
+                    </div>
+                    <div
+                      className={isHostRemoved ? 'text-muted-foreground' : undefined}
+                      style={{ color: isHostRemoved ? undefined : '#999', fontSize: 12 }}
                     >
                       {t('groupWizard.host.description')}
-                    </Text>
-                  </Flexbox>
-                  <Flexbox horizontal align="center" gap={12}>
-                    <Tooltip title={t('groupWizard.host.tooltip')}>
-                      <Switch
-                        checked={!isHostRemoved}
-                        size="small"
-                        onChange={(checked) => handleHostToggle(checked)}
-                      />
+                    </div>
+                  </div>
+                  <div className={'flex gap-3 items-center'}>
+                    <Tooltip>
+                      <TooltipTrigger render={<span />}>
+                        <Switch
+                          checked={!isHostRemoved}
+                          size="sm"
+                          onCheckedChange={(checked) => handleHostToggle(checked)}
+                        />
+                      </TooltipTrigger>
+                      <TooltipContent>{t('groupWizard.host.tooltip')}</TooltipContent>
                     </Tooltip>
-                  </Flexbox>
-                </Flexbox>
+                  </div>
+                </div>
               )}
 
               {/* Selected Agents List */}
-              <Flexbox flex={1}>
+              <div className={'flex flex-1 flex-col'}>
                 {selectedAgentListItems.length === 0 ? (
                   <AgentSelectionEmpty variant="noSelected" />
                 ) : (
-                  <List items={selectedAgentListItems} />
+                  <div className={'flex w-full flex-col'}>
+                    {selectedAgentListItems.map((item) => (
+                      <div className={'flex items-center gap-3 py-2'} key={item.key}>
+                        {item.avatar}
+                        <div className={'flex flex-1 flex-col'}>
+                          {item.title}
+                          {item.description}
+                        </div>
+                        {item.showAction !== false && item.actions}
+                      </div>
+                    ))}
+                  </div>
                 )}
-              </Flexbox>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
+              </div>
+            </div>
+          </div>
+        </div>
       </ImperativeModal>
     );
   },

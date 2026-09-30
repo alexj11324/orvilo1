@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { Loader2 } from 'lucide-react';
 import { memo } from 'react';
@@ -23,7 +22,7 @@ const TopicMigrationIndicator = memo<TopicMigrationIndicatorProps>(
 
     if (!topicPending) return null;
 
-    return <Icon spin color={cssVar.colorTextQuaternary} icon={Loader2} size={12} />;
+    return <Loader2 className="animate-spin" color={cssVar.colorTextQuaternary} size={12} />;
   },
 );
 

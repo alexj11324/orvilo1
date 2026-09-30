@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { CheckCircle2, CircleAlert } from 'lucide-react';
@@ -94,10 +93,10 @@ export const DeclareSelfFeedbackIntentInspector = memo<
       {isSettled &&
         pluginState &&
         (pluginState.accepted ? (
-          <Icon className={styles.iconAccepted} icon={CheckCircle2} size={14} />
+          <CheckCircle2 className={styles.iconAccepted} size={14} />
         ) : (
           <>
-            <Icon className={styles.iconRejected} icon={CircleAlert} size={14} />
+            <CircleAlert className={styles.iconRejected} size={14} />
             <span className={styles.meta}>
               {t('builtins.orvilo-self-feedback-intent.inspector.rejected')}
             </span>

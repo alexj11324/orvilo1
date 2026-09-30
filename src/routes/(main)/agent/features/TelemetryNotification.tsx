@@ -1,14 +1,15 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Button } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { LucideArrowUpRightFromSquare, TelescopeIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import Notification from '@/components/Notification';
+import { Button } from '@/components/ui/button';
 import { PRIVACY_URL } from '@/const/url';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
@@ -41,31 +42,30 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   return (
     <Notification mobile={mobile} show={showModal} showCloseIcon={false}>
-      <Flexbox>
+      <div className="flex flex-col">
         <Avatar
           avatar={<TelescopeIcon />}
           background={cssVar.geekblue1}
           style={{ color: cssVar.geekblue7 }}
         />
-      </Flexbox>
-      <Flexbox gap={16}>
-        <Flexbox gap={12}>
-          <Flexbox className={styles.title}>
+      </div>
+      <div className="flex flex-col gap-4">
+        <div className="flex flex-col gap-3">
+          <div className={cn('flex flex-col', styles.title)}>
             {t('telemetry.title', { appName: BRANDING_NAME })}
-          </Flexbox>
+          </div>
           <div className={styles.desc}>
             {t('telemetry.desc', { appName: BRANDING_NAME })}
             <span>
               <a href={PRIVACY_URL} rel="noreferrer" target="_blank">
                 {t('telemetry.learnMore')}
-                <Icon icon={LucideArrowUpRightFromSquare} style={{ marginInlineStart: 4 }} />
+                <LucideArrowUpRightFromSquare style={{ marginInlineStart: 4 }} />
               </a>
             </span>
           </div>
-        </Flexbox>
-        <Flexbox horizontal gap={8}>
+        </div>
+        <div className="flex gap-2">
           <Button
-            type={'primary'}
             onClick={() => {
               updateTelemetry(true);
             }}
@@ -73,15 +73,15 @@ const TelemetryNotification = memo<{ mobile?: boolean }>(({ mobile }) => {
             {t('telemetry.allow')}
           </Button>
           <Button
-            type={'text'}
+            variant="ghost"
             onClick={() => {
               updateTelemetry(false);
             }}
           >
             {t('telemetry.deny')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </Notification>
   );
 });

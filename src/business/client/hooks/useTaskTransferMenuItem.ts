@@ -1,3 +1,3 @@
-import { type ItemType } from 'antd/es/menu/interface';
+import { type ItemType } from '@/components/Menu';
 
 export const useTaskTransferMenuItem = (_taskId?: string): ItemType[] | null => null;

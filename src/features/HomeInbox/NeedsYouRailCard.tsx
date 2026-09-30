@@ -1,10 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ChevronLeftIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { type BriefItem } from '@/features/DailyBrief/types';
 import RailCard from '@/features/Home/components/RailCard';
 
@@ -38,7 +37,7 @@ const NeedsYouRailCard = memo<{ briefs: BriefItem[]; scopeControl?: ReactNode }>
         title={t('inbox.needsYou.title')}
         action={
           scopeControl || briefs.length > 1 ? (
-            <Flexbox horizontal align={'center'} gap={4}>
+            <div className="flex items-center gap-1">
               {scopeControl}
               {briefs.length > 1 && (
                 <>
@@ -59,7 +58,7 @@ const NeedsYouRailCard = memo<{ briefs: BriefItem[]; scopeControl?: ReactNode }>
                   />
                 </>
               )}
-            </Flexbox>
+            </div>
           ) : null
         }
       >

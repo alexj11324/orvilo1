@@ -1,11 +1,18 @@
-import { Alert } from '@lobehub/ui/base-ui';
+import { Info } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Alert, AlertTitle } from '@/components/ui/alert';
 
 const AbortResponse = memo(() => {
   const { t } = useTranslation('chat');
 
-  return <Alert title={t('tool.intervention.toolAbort')} type={'secondary'} />;
+  return (
+    <Alert variant="default">
+      <Info />
+      <AlertTitle>{t('tool.intervention.toolAbort')}</AlertTitle>
+    </Alert>
+  );
 });
 
 export default AbortResponse;

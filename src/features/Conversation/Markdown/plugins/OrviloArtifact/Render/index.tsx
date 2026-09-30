@@ -1,5 +1,5 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Loader2 } from 'lucide-react';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -83,10 +83,12 @@ const Render = memo<ArtifactProps>(({ identifier, title, type, language, childre
   }, [isGenerating, hasChildren, str, identifier, title, type, id, language]);
 
   return (
-    <Flexbox
-      className={cx(styles.container, isDarkMode && styles.container_dark)}
-      gap={16}
-      width={'100%'}
+    <div
+      style={{ width: '100%' }}
+      className={cn(
+        'flex flex-col gap-4',
+        cx(styles.container, isDarkMode && styles.container_dark),
+      )}
       onClick={() => {
         const state = useChatStore.getState();
         const currentArtifactMessageId = chatPortalSelectors.artifactMessageId(state);
@@ -98,34 +100,37 @@ const Render = memo<ArtifactProps>(({ identifier, title, type, language, childre
         }
       }}
     >
-      <Flexbox horizontal align={'center'} flex={1}>
-        <Center horizontal className={styles.avatar} height={64} width={64}>
+      <div className="flex items-center flex-1">
+        <div
+          className={cn('flex items-center justify-center', styles.avatar)}
+          style={{ height: 64, width: 64 }}
+        >
           <ArtifactIcon type={type} />
-        </Center>
-        <Flexbox gap={4} paddingBlock={8} paddingInline={12}>
+        </div>
+        <div className="flex flex-col gap-1 py-2 px-3">
           {!title && isGenerating ? (
-            <Flexbox horizontal className={cx(dotLoading)}>
-              {t('artifact.generating')}
-            </Flexbox>
+            <div className={cn('flex', cx(dotLoading))}>{t('artifact.generating')}</div>
           ) : (
-            <Flexbox className={cx(styles.title)}>{title || t('artifact.unknownTitle')}</Flexbox>
+            <div className={cn('flex flex-col', cx(styles.title))}>
+              {title || t('artifact.unknownTitle')}
+            </div>
           )}
           {hasChildren && (
-            <Flexbox horizontal className={styles.desc}>
+            <div className={cn('flex', styles.desc)}>
               {identifier} ·&nbsp;
-              <Flexbox horizontal gap={2}>
+              <div className="flex gap-0.5">
                 {!isArtifactTagClosed && (
                   <div>
-                    <Icon spin icon={Loader2} />
+                    <Loader2 className="animate-spin" />
                   </div>
                 )}
                 {str?.length}
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           )}
-        </Flexbox>
-      </Flexbox>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 });
 

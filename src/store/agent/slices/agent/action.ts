@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { isDesktop, randomAgentName } from '@orvilo/const';
 import { type AgentContextDocument } from '@orvilo/context-engine';
 import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
@@ -14,6 +13,7 @@ import type { SWRResponse } from 'swr';
 import type { PartialDeep } from 'type-fest';
 
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { MESSAGE_CANCEL_FLAT } from '@/const/message';
 import { analyticsClient } from '@/libs/analytics/client';
 import { mutate, useClientDataSWRWithSync } from '@/libs/swr';

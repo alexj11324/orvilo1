@@ -1,17 +1,18 @@
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
+import { cx } from 'antd-style';
 import { MessageCircle } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { Button } from '@/components/ui/button';
 import { useTopicCommentThreads } from '@/features/TopicComment/hooks';
 import { mutate } from '@/libs/swr';
 import { topicCommentKeys } from '@/libs/swr/keys';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 
+import SimpleEmpty from '../SimpleEmpty';
 import CommentCard from './CommentCard';
 import Composer from './Composer';
 import { styles } from './styles';
@@ -46,21 +47,21 @@ const Body = memo(() => {
   if (!view) return null;
   if (isInitialError) {
     return (
-      <Flexbox className={styles.body}>
+      <div className={cx('flex flex-col', styles.body)}>
         <AsyncError error={error} variant={'page'} onRetry={() => void reload()} />
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox className={styles.body}>
-      <Flexbox className={styles.list}>
+    <div className={cx('flex flex-col', styles.body)}>
+      <div className={cx('flex flex-col', styles.list)}>
         {isLoadingInitial ? (
           <SurfaceSkeleton header={false} variant={'list'} />
         ) : items.length === 0 ? (
-          <Center className={styles.empty}>
-            <Empty description={t('topicComment.empty')} icon={MessageCircle} />
-          </Center>
+          <div className={cx('flex flex-col items-center justify-center', styles.empty)}>
+            <SimpleEmpty description={t('topicComment.empty')} icon={MessageCircle} />
+          </div>
         ) : (
           items.map(({ replyCount, root }) => {
             const pending = pendingCommentIds.has(root.id);
@@ -87,16 +88,16 @@ const Body = memo(() => {
           />
         ) : (
           hasMore && (
-            <Center paddingBlock={12}>
-              <Button loading={isLoadingMore} type={'text'} onClick={() => void loadMore()}>
+            <div className="flex flex-col items-center justify-center py-3">
+              <Button loading={isLoadingMore} variant="ghost" onClick={() => void loadMore()}>
                 {t('topicComment.loadMore')}
               </Button>
-            </Center>
+            </div>
           )
         )}
-      </Flexbox>
+      </div>
       <Composer messageId={view.messageId} topicId={view.topicId} onCreated={() => void reload()} />
-    </Flexbox>
+    </div>
   );
 });
 

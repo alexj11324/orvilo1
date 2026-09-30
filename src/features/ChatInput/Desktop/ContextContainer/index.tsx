@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-
 import ContextList from './ContextList';
 
 /**
@@ -8,9 +6,9 @@ import ContextList from './ContextList';
  */
 const ContextContainer = () => {
   return (
-    <Flexbox paddingInline={8}>
+    <div className="flex flex-col px-2">
       <ContextList />
-    </Flexbox>
+    </div>
   );
 };
 

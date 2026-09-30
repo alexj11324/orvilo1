@@ -1,9 +1,10 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import SimpleEmpty from '@/components/SimpleEmpty';
 
 import type { SearchKnowledgeBaseArgs, SearchKnowledgeBaseState } from '../../../types';
 import FileItem from './Item';
@@ -15,15 +16,15 @@ const SearchKnowledgeBase = memo<
   const { fileResults } = pluginState || {};
 
   if (!fileResults || fileResults.length === 0) {
-    return <Empty description={t('builtins.orvilo-knowledge-base.inspector.noResults')} />;
+    return <SimpleEmpty description={t('builtins.orvilo-knowledge-base.inspector.noResults')} />;
   }
 
   return (
-    <Flexbox horizontal gap={8} wrap={'wrap'}>
+    <div className="flex flex-row gap-2 flex-wrap">
       {fileResults.map((file, index) => {
         return <FileItem index={index} key={file.fileId} {...file} />;
       })}
-    </Flexbox>
+    </div>
   );
 });
 

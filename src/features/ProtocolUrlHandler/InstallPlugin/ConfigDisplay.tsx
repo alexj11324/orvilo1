@@ -1,9 +1,7 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { type McpInstallSchema } from '@orvilo/electron-client-ipc';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { LinkIcon, Settings2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -122,9 +120,12 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
   };
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       {/* Installation info */}
-      <Block className={styles.configSection} variant={'outlined'}>
+      <div
+        className={cx(styles.configSection, 'flex flex-col border')}
+        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+      >
         <div className={styles.configTitle}>
           <LinkIcon size={14} />
           {t('protocolInstall.install.title')}
@@ -135,9 +136,9 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
           <div className={styles.previewItem}>
             <span className={styles.previewLabel}>{t('protocolInstall.config.type.label')}</span>
             <div className={styles.typeValue}>
-              <Text className={styles.previewValue}>
+              <span className={styles.previewValue}>
                 {schema.config.type === 'stdio' ? 'STDIO' : 'HTTP'}
-              </Text>
+              </span>
             </div>
           </div>
 
@@ -168,10 +169,13 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
             </>
           )}
         </div>
-      </Block>
+      </div>
 
       {/* Config info - directly use KeyValueEditor */}
-      <Block className={styles.configSection} variant={'outlined'}>
+      <div
+        className={cx(styles.configSection, 'flex flex-col border')}
+        style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+      >
         <div className={styles.configTitle}>
           <Settings2Icon size={14} />
           {schema.config.type === 'stdio'
@@ -200,8 +204,8 @@ const ConfigDisplay = memo<ConfigDisplayProps>(({ schema, onConfigUpdate }) => {
             />
           )}
         </div>
-      </Block>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

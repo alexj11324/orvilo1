@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Tag, Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { ArrowLeftRightIcon, RotateCcwIcon } from 'lucide-react';
 import type { MouseEvent } from 'react';
@@ -10,20 +9,21 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import ActionIcon from '@/components/ActionIcon';
+import { Badge } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useEventCallback } from '@/hooks/useEventCallback';
 import type { DocumentHistorySaveSource } from '@/server/routers/lambda/_schema/documentHistory';
 
 import { formatHistoryAbsoluteTime, formatHistoryRowTime } from './formatHistoryDate';
 import { historyItemSelectors, useHistoryItemsStore } from './HistoryItemsProvider';
 
-type TagColor = 'default' | 'success' | 'purple' | 'geekblue' | 'gold' | 'processing';
-
-const SOURCE_TAG_COLOR: Record<DocumentHistorySaveSource, TagColor> = {
-  autosave: 'default',
-  llm_call: 'purple',
-  manual: 'success',
-  restore: 'geekblue',
-  system: 'gold',
+const SOURCE_TAG_CLASS: Record<DocumentHistorySaveSource, string> = {
+  autosave: 'text-muted-foreground',
+  llm_call: 'text-primary',
+  manual: 'text-success',
+  restore: 'text-info',
+  system: 'text-warning',
 };
 
 const styles = createStaticStyles(({ css }) => ({
@@ -165,46 +165,55 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
       className={cx(styles.row, item.isCurrent && styles.rowCurrent)}
       onClick={item.isCurrent ? undefined : handleCompare}
     >
-      <Flexbox align={'flex-start'} className={styles.rowMain} gap={4}>
-        <Tooltip title={formatHistoryAbsoluteTime(item.savedAt)}>
-          <span className={cx(styles.rowTime, item.isCurrent && styles.rowTimeCurrent)}>
-            {timeLabel}
-          </span>
-        </Tooltip>
+      <div className={cn('flex flex-col items-start gap-1', styles.rowMain)}>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span style={{ display: 'inline-flex' }}>
+                  <span className={cx(styles.rowTime, item.isCurrent && styles.rowTimeCurrent)}>
+                    {timeLabel}
+                  </span>
+                </span>
+              }
+            />
+            <TooltipContent>{formatHistoryAbsoluteTime(item.savedAt)}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
         <span className={styles.description}>
           {authorInfo?.fullName ? `${authorInfo.fullName} · ` : ''}
           {dayjs(item.savedAt).fromNow()}
         </span>
-      </Flexbox>
+      </div>
 
       <div className={styles.rowRight}>
         {item.isCurrent && (
-          <Tag
-            className={styles.currentBadge}
-            color={'processing'}
-            size={'small'}
-            variant={'borderless'}
+          <Badge
+            className={cn(styles.currentBadge, 'bg-transparent text-info')}
+            size="sm"
+            variant="secondary"
           >
             {t('pageEditor.history.current', { ns: 'file' })}
-          </Tag>
+          </Badge>
         )}
 
         {!item.isCurrent && (
-          <Tag
-            className={cx(styles.sourceTag, 'history-source-tag')}
-            color={SOURCE_TAG_COLOR[item.saveSource]}
-            size={'small'}
-            variant={'borderless'}
+          <Badge
+            size="sm"
+            variant="secondary"
+            className={cn(
+              styles.sourceTag,
+              'history-source-tag',
+              'bg-transparent',
+              SOURCE_TAG_CLASS[item.saveSource],
+            )}
           >
             {saveSourceLabel}
-          </Tag>
+          </Badge>
         )}
         {!item.isCurrent && (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={cx(styles.actions, 'history-actions')}
-            gap={2}
+          <div
+            className={cn('flex items-center gap-0.5', cx(styles.actions, 'history-actions'))}
             onClick={handleStopPropagation}
           >
             <ActionIcon
@@ -220,7 +229,7 @@ export const HistoryListItem = memo<HistoryListItemProps>(({ historyId, onCompar
               title={t('pageEditor.history.restore', { ns: 'file' })}
               onClick={handleRestore}
             />
-          </Flexbox>
+          </div>
         )}
       </div>
     </div>

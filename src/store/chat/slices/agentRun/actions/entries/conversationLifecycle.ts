@@ -1,5 +1,4 @@
 // Disable the auto sort key eslint rule to make the code more logic and readable
-import { toast } from '@lobehub/ui/base-ui';
 import { GoalIdentifier, isGoalPrompt } from '@orvilo/builtin-tool-goal';
 import {
   isDesktop,
@@ -35,6 +34,7 @@ import {
 import { generateEntityId, nanoid } from '@orvilo/utils';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { type ChatInputEditor } from '@/features/ChatInput';
 import {
   ensureAgentManagementAccess,

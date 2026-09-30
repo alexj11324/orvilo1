@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Badge } from '@/components/reui/badge';
 
 import type { UpdateIdentityMemoryParams, UpdateIdentityMemoryState } from '../../../types';
 import { getUpdateIdentityViewModel, IdentityMemoryCard } from '../../components';
@@ -16,27 +16,23 @@ const UpdateIdentityMemoryRender = memo<
   if (isEmpty) return null;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {/* An update only sends the fields it writes, so naming them is the whole story */}
       {changedFields.length > 0 && (
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-          <Text fontSize={12} type={'secondary'}>
-            Updated
-          </Text>
+        <div className="flex items-center gap-2 flex-wrap">
+          <div className="text-[12px] text-muted-foreground">Updated</div>
           {changedFields.map((field) => (
-            <Tag key={field} size={'small'}>
+            <Badge key={field} size="sm">
               {field}
-            </Tag>
+            </Badge>
           ))}
           {mergeStrategy && (
-            <Text fontSize={12} type={'secondary'}>
-              · {mergeStrategy}
-            </Text>
+            <div className="text-[12px] text-muted-foreground">· {mergeStrategy}</div>
           )}
-        </Flexbox>
+        </div>
       )}
       <IdentityMemoryCard data={identity} fallbackTitle={'Updated Identity'} />
-    </Flexbox>
+    </div>
   );
 });
 

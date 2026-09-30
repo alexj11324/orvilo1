@@ -1,12 +1,11 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { Maximize2Icon, Minimize2Icon, MinusIcon, XIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { electronSystemService } from '@/services/electron/system';
 import { electronStylish } from '@/styles/electron';
 
@@ -84,12 +83,11 @@ const WinControl = memo(() => {
   );
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.container, electronStylish.nodrag)}
-      gap={4}
-      justify={'flex-end'}
+    <div
+      className={cx(
+        cx(styles.container, electronStylish.nodrag),
+        'flex items-center gap-1 justify-end',
+      )}
     >
       {controls.map((control) => (
         <ActionIcon
@@ -102,7 +100,7 @@ const WinControl = memo(() => {
           onClick={control.onClick}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

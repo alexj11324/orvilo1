@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import AgentBuilderWelcome from '@/features/AgentBuilder/AgentBuilderWelcome';
@@ -27,13 +26,13 @@ const AgentBuilderConversation = memo<AgentBuilderConversationProps>(({ agentId 
   useResolveFeedbackOnSend();
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <TopicSelector agentId={agentId} disabled={!canCreate} />
-      <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
         <ChatList welcome={<AgentBuilderWelcome disabled={!canCreate} mode="groupBuilder" />} />
-      </Flexbox>
+      </div>
       <ChatInput leftActions={actions} rightActions={rightActions} showControlBar={false} />
-    </Flexbox>
+    </div>
   );
 });
 

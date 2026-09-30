@@ -1,10 +1,11 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon, TargetIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { homeType } from '@/features/Home/components/homeType';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
@@ -98,12 +99,12 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
 
   return (
     <Button
-      className={cx(styles.row, bare && styles.bareRow)}
+      className={cn(cx(styles.row, bare && styles.bareRow))}
       disabled={!href}
-      type={'text'}
+      variant="ghost"
       onClick={() => href && navigate(href)}
     >
-      <Flexbox horizontal align={'center'} gap={ROW_GAP} style={{ width: '100%' }}>
+      <div className="flex items-center" style={{ gap: ROW_GAP, width: '100%' }}>
         {/* The pile heading says which of the two states this is; the glyph
             carries the exact one (verifying, planning, waiting) on hover, where
             it costs the row nothing. */}
@@ -111,12 +112,15 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
           {entry.bucket === 'running' ? (
             <RunningGlyph />
           ) : (
-            <Icon color={cssVar.colorInfo} icon={TargetIcon} size={16} />
+            <TargetIcon color={cssVar.colorInfo} size={16} />
           )}
         </span>
-        <Text ellipsis className={homeType.itemTitle} style={{ flex: 1, minWidth: 0 }}>
+        <div
+          className={cn('truncate', 'block', homeType.itemTitle)}
+          style={{ flex: 1, minWidth: 0 }}
+        >
           {entry.title}
-        </Text>
+        </div>
         <GoalAgentAvatar agentId={entry.agentId} />
         {/* A goal is measured in the tasks it has closed, not in time — how far
             through its own decomposition it is says more at a glance. */}
@@ -129,8 +133,8 @@ const GoalRow = memo<GoalRowProps>(({ bare, entry }) => {
                 total: entry.taskTotal,
               })}
         </span>
-        <Icon color={cssVar.colorTextQuaternary} icon={ChevronRightIcon} size={14} />
-      </Flexbox>
+        <ChevronRightIcon color={cssVar.colorTextQuaternary} size={14} />
+      </div>
     </Button>
   );
 });
@@ -157,35 +161,35 @@ const GoalsRailCard = memo<GoalsRailCardProps>(({ bare, entries }) => {
   const { buckets, collapsed } = resolveHomeGoalView(entries, expanded);
 
   return (
-    <Flexbox className={bare ? styles.bareList : styles.list}>
+    <div className={cx(bare ? styles.bareList : styles.list, 'flex flex-col')}>
       {buckets.map(({ bucket, entries: rows, total }) => (
-        <Flexbox key={bucket}>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={cx(styles.groupLabel, bare && styles.bareGroupLabel)}
-            gap={6}
+        <div className="flex flex-col" key={bucket}>
+          <div
+            className={cx(
+              cx(styles.groupLabel, bare && styles.bareGroupLabel),
+              'flex items-center gap-1.5',
+            )}
           >
             <span className={homeType.sectionLabel}>
               {t(bucket === 'review' ? 'inbox.goals.review' : 'inbox.goals.running')}
             </span>
             <span className={homeType.badge}>{total}</span>
-          </Flexbox>
+          </div>
           {rows.map((entry) => (
             <GoalRow bare={bare} entry={entry} key={entry.id} />
           ))}
-        </Flexbox>
+        </div>
       ))}
       {collapsed && (
         <Button
-          className={cx(styles.row, bare && styles.bareRow, homeType.supporting)}
-          type={'text'}
+          className={cn(cx(styles.row, bare && styles.bareRow, homeType.supporting))}
+          variant="ghost"
           onClick={() => setExpanded(true)}
         >
           {t('inbox.goals.showAll', { count: entries.length })}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

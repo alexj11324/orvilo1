@@ -1,5 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { MessageCircle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,16 +10,18 @@ export const TopicCommentsTitle = memo(() => {
   const view = useChatStore(chatPortalSelectors.topicCommentsView);
 
   return (
-    <Flexbox horizontal align={'center'} gap={8}>
-      <Icon icon={MessageCircle} size={18} />
-      <Text weight={500}>
+    <div className="flex flex-row items-center gap-2">
+      <span className="anticon" role="img">
+        <MessageCircle fill={'transparent'} height={18} size={18} width={18} />
+      </span>
+      <div className="font-medium">
         {view?.messageId ? t('topicComment.messageComments') : t('topicComment.title')}
-      </Text>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
 export const TopicCommentThreadTitle = memo(() => {
   const { t } = useTranslation('chat');
-  return <Text weight={500}>{t('topicComment.thread')}</Text>;
+  return <div className="font-medium">{t('topicComment.thread')}</div>;
 });

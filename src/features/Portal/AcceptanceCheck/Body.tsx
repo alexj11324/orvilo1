@@ -1,13 +1,14 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { VerifyAgentPlanConfig } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   checkHeadMeta,
   type CheckReviewInput,
@@ -19,6 +20,8 @@ import { verifyService } from '@/services/verify';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useTaskStore } from '@/store/task';
+
+import SimpleEmpty from '../SimpleEmpty';
 
 const styles = createStaticStyles(({ css }) => ({
   body: css`
@@ -74,20 +77,22 @@ const Body = memo(() => {
 
   if (isLoading) {
     return (
-      <Center height={'100%'}>
+      <div className="flex flex-col items-center justify-center h-[100%]">
         <NeuralNetworkLoading size={40} />
-      </Center>
+      </div>
     );
   }
 
   if (error || !data || !check) {
     return (
-      <Center height={'100%'}>
-        <Flexbox align={'center'} gap={12}>
-          <Empty description={t('taskDetail.acceptance.loadError')} />
-          <Button onClick={() => void mutate()}>{t('taskDetail.acceptance.retry')}</Button>
-        </Flexbox>
-      </Center>
+      <div className="flex flex-col items-center justify-center h-[100%]">
+        <div className="flex flex-col items-center gap-3">
+          <SimpleEmpty description={t('taskDetail.acceptance.loadError')} />
+          <Button variant="outline" onClick={() => void mutate()}>
+            {t('taskDetail.acceptance.retry')}
+          </Button>
+        </div>
+      </div>
     );
   }
 
@@ -98,37 +103,49 @@ const Body = memo(() => {
   const usesMultimodalLlm = requiredEvidence.some((evidence) => evidence.type === 'screenshot');
 
   return (
-    <Flexbox className={styles.body} gap={16}>
-      <Flexbox horizontal align={'center'} gap={10}>
-        <Icon color={checkMeta.color} icon={checkMeta.icon} size={18} style={{ flex: 'none' }} />
-        <Text fontSize={16} weight={600}>
+    <div className={cx('flex flex-col gap-4', styles.body)}>
+      <div className="flex flex-row items-center gap-2.5">
+        <span className="anticon" role="img" style={{ flex: 'none' }}>
+          <checkMeta.icon
+            color={checkMeta.color}
+            fill={'transparent'}
+            height={18}
+            size={18}
+            width={18}
+          />
+        </span>
+        <div className="text-[16px] font-semibold">
           C{check.seq} · {check.title}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
       {(verifierType || requiredEvidence.length > 0) && (
-        <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
+        <div className="flex flex-row items-center gap-4 flex-wrap">
           {verifierType && (
-            <Flexbox horizontal align={'center'} gap={8}>
-              <Text fontSize={12} type={'secondary'}>
+            <div className="flex flex-row items-center gap-2">
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskDetail.acceptance.verifier')}
-              </Text>
-              <Tag>{t(`criterion.verifierType.${verifierType}` as const, { ns: 'verify' })}</Tag>
-              {usesMultimodalLlm && <Tag>{t('taskDetail.acceptance.multimodalLlm')}</Tag>}
-            </Flexbox>
+              </div>
+              <Badge variant="secondary">
+                {t(`criterion.verifierType.${verifierType}` as const, { ns: 'verify' })}
+              </Badge>
+              {usesMultimodalLlm && (
+                <Badge variant="secondary">{t('taskDetail.acceptance.multimodalLlm')}</Badge>
+              )}
+            </div>
           )}
           {requiredEvidence.length > 0 && (
-            <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-              <Text fontSize={12} type={'secondary'}>
+            <div className="flex flex-row items-center gap-2 flex-wrap">
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskDetail.acceptance.requiredEvidence')}
-              </Text>
+              </div>
               {requiredEvidence.map((evidence) => (
-                <Tag key={evidence.type}>
+                <Badge key={evidence.type} variant="secondary">
                   {t(`report.evidence.medium.${evidence.type}` as const, { ns: 'verify' })}
-                </Tag>
+                </Badge>
               ))}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
       <FocusedCheckDetails
         canReview={canReviewAcceptance(data)}
@@ -138,7 +155,7 @@ const Body = memo(() => {
         onReview={handleReview}
         onRound={() => openAcceptance(data.acceptance.id)}
       />
-    </Flexbox>
+    </div>
   );
 });
 

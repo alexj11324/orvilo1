@@ -1,6 +1,7 @@
-import { createModal } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { lazy, Suspense } from 'react';
+
+import { createModal } from '@/components/Modal';
 
 import type { CreateProjectOptions } from './CreateProjectContent';
 

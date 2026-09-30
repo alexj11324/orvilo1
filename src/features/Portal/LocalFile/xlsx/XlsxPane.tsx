@@ -1,9 +1,9 @@
-import { Tabs } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Loading from '@/components/Loading/CircleLoading';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { classifySheet } from './classifySheet';
 import { MAX_PREVIEW_ROWS, readWorkbook, type SheetModel } from './model';
@@ -137,22 +137,16 @@ const XlsxPane = memo<XlsxPaneProps>(({ blob, onError }) => {
             </button>
           ))}
         </div>
-        <Tabs
-          activeKey={resolvedMode}
-          className={styles.modes}
-          size={'small'}
-          items={[
-            {
-              key: 'reflow',
-              label: t('workingPanel.localFile.document.xlsxReflow'),
-            },
-            {
-              key: 'fidelity',
-              label: t('workingPanel.localFile.document.xlsxOriginal'),
-            },
-          ]}
-          onChange={(key) => setMode(key as 'fidelity' | 'reflow')}
-        />
+        <Tabs value={resolvedMode} onValueChange={(key) => setMode(key as 'fidelity' | 'reflow')}>
+          <TabsList className={styles.modes}>
+            <TabsTrigger value="reflow">
+              {t('workingPanel.localFile.document.xlsxReflow')}
+            </TabsTrigger>
+            <TabsTrigger value="fidelity">
+              {t('workingPanel.localFile.document.xlsxOriginal')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       </div>
     </div>
   );

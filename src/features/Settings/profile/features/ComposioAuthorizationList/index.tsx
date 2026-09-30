@@ -1,9 +1,11 @@
-import { Flexbox } from '@lobehub/ui';
-import { Avatar, confirmModal, Tag } from '@lobehub/ui/base-ui';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
+import { X } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
 import { useToolStore } from '@/store/tool';
 import { type ComposioServer } from '@/store/tool/slices/composioStore';
 
@@ -44,7 +46,11 @@ const ComposioAuthItem = memo<ComposioAuthItemProps>(({ server }) => {
     if (!serverType) return null;
 
     if (typeof serverType.icon === 'string') {
-      return <Avatar avatar={serverType.icon} size={16} />;
+      return (
+        <Avatar className="size-4">
+          <AvatarImage alt="" src={serverType.icon} />
+        </Avatar>
+      );
     }
 
     const IconComponent = serverType.icon;
@@ -52,12 +58,26 @@ const ComposioAuthItem = memo<ComposioAuthItemProps>(({ server }) => {
   };
 
   return (
-    <Tag closable onClose={handleRevoke}>
-      <Flexbox horizontal align="center" gap={4} style={{ opacity: isRevoking ? 0.5 : 1 }}>
+    <span className="inline-flex items-center gap-1 rounded-lg border border-border px-2 py-1 text-sm">
+      <div
+        className="flex flex-row gap-[4px] items-center"
+        style={{ opacity: isRevoking ? 0.5 : 1 }}
+      >
         {renderIcon()}
         {serverType?.label || server.label}
-      </Flexbox>
-    </Tag>
+      </div>
+      <Button
+        disabled={isRevoking}
+        size="icon-xs"
+        variant="ghost"
+        aria-label={t('profile.authorizations.revoke.title', {
+          name: serverType?.label || server.label,
+        })}
+        onClick={handleRevoke}
+      >
+        <X />
+      </Button>
+    </span>
   );
 });
 
@@ -67,11 +87,11 @@ interface ComposioAuthorizationListProps {
 
 export const ComposioAuthorizationList = memo<ComposioAuthorizationListProps>(({ servers }) => {
   return (
-    <Flexbox horizontal gap={8} wrap="wrap">
+    <div className="flex flex-wrap gap-2">
       {servers.map((server) => (
         <ComposioAuthItem key={server.identifier} server={server} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

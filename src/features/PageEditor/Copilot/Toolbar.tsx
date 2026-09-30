@@ -1,9 +1,9 @@
-import { Flexbox, Popover } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { Clock3Icon, PanelRightCloseIcon, PlusIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
 import NavHeader from '@/features/NavHeader';
@@ -47,15 +47,12 @@ const CopilotToolbar = memo<CopilotToolbarProps>(({ onTopicChange, topicId }) =>
     <NavHeader
       showTogglePanelButton={false}
       left={
-        <Text
+        <div
+          className="text-muted-foreground truncate min-w-0"
           style={{ fontSize: 13, fontWeight: 500, marginLeft: 8 }}
-          type={'secondary'}
-          ellipsis={{
-            tooltipWhenOverflow: true,
-          }}
         >
           {topicTitle}
-        </Text>
+        </div>
       }
       right={
         <>
@@ -70,12 +67,23 @@ const CopilotToolbar = memo<CopilotToolbarProps>(({ onTopicChange, topicId }) =>
           {!hideHistory && (
             <Popover
               open={isLoadingTopics ? false : topicPopoverOpen}
-              placement="bottomRight"
-              trigger="click"
-              content={
-                <Flexbox
-                  gap={4}
-                  padding={8}
+              onOpenChange={setTopicPopoverOpen}
+            >
+              <PopoverTrigger
+                render={
+                  <span style={{ display: 'inline-flex' }}>
+                    <ActionIcon
+                      disabled={isLoadingTopics}
+                      icon={Clock3Icon}
+                      loading={isLoadingTopics}
+                      size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                    />
+                  </span>
+                }
+              />
+              <PopoverContent align="end" side="bottom" style={{ padding: 0, width: 240 }}>
+                <div
+                  className="flex flex-col gap-1 p-2"
                   style={{
                     maxHeight: '50vh',
                     overflowY: 'auto',
@@ -95,22 +103,8 @@ const CopilotToolbar = memo<CopilotToolbarProps>(({ onTopicChange, topicId }) =>
                       onTopicChange={(id) => (onTopicChange ? onTopicChange(id) : switchTopic(id))}
                     />
                   ))}
-                </Flexbox>
-              }
-              styles={{
-                content: {
-                  padding: 0,
-                  width: 240,
-                },
-              }}
-              onOpenChange={setTopicPopoverOpen}
-            >
-              <ActionIcon
-                disabled={isLoadingTopics}
-                icon={Clock3Icon}
-                loading={isLoadingTopics}
-                size={DESKTOP_HEADER_ICON_SMALL_SIZE}
-              />
+                </div>
+              </PopoverContent>
             </Popover>
           )}
           {!hasOverride && (

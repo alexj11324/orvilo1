@@ -1,15 +1,16 @@
 'use client';
 
-import { Center, Flexbox, Icon, lobeStaticStylish } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
+import { lobeStaticStylish } from '@lobehub/ui';
 import { ORVILO_CLOUD, UTM_SOURCE } from '@orvilo/business-const';
 import { useSize } from 'ahooks';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowRightIcon } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import Marquee from 'react-fast-marquee';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { OFFICIAL_URL } from '@/const/url';
 import { useIsDark } from '@/hooks/useIsDark';
 import { isOnServerSide } from '@/utils/env';
@@ -61,7 +62,7 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
   }, [size, contentSize, mobile]);
 
   const content = (
-    <Flexbox horizontal align={'center'} flex={'none'} gap={8} ref={contentRef}>
+    <div className="flex items-center gap-2" ref={contentRef} style={{ flex: 'none' }}>
       <b>{t('alert.cloud.title', { name: ORVILO_CLOUD })}:</b>
       <span>
         {t(mobile ? 'alert.cloud.descOnMobile' : 'alert.cloud.desc', {
@@ -69,31 +70,34 @@ const CloudBanner = memo<{ mobile?: boolean }>(({ mobile }) => {
           name: ORVILO_CLOUD,
         })}
       </span>
-    </Flexbox>
+    </div>
   );
   return (
-    <Center
-      className={isDarkMode ? styles.containerDark : styles.containerLight}
-      flex={'none'}
-      height={BANNER_HEIGHT}
-      paddingInline={16}
+    <div
       ref={ref}
-      width={'100%'}
+      style={{ flex: 'none', height: BANNER_HEIGHT, width: '100%' }}
+      className={cn(
+        'flex items-center justify-center px-4',
+        isDarkMode ? styles.containerDark : styles.containerLight,
+      )}
     >
       <div className={styles.background} />
-      <Center horizontal className={styles.wrapper} gap={16} width={'100%'}>
+      <div
+        className={cn('flex items-center justify-center gap-4', styles.wrapper)}
+        style={{ width: '100%' }}
+      >
         {isTruncated ? <Marquee pauseOnHover>{content}</Marquee> : content}
         <a
           href={`${OFFICIAL_URL}?utm_source=${UTM_SOURCE}&utm_medium=banner`}
           rel="noreferrer"
           target="_blank"
         >
-          <Button size={'small'} type="primary">
-            {t('alert.cloud.action')} <Icon icon={ArrowRightIcon} />
+          <Button size="sm" variant="default">
+            {t('alert.cloud.action')} <ArrowRightIcon />
           </Button>
         </a>
-      </Center>
-    </Center>
+      </div>
+    </div>
   );
 });
 

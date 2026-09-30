@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createGlobalStyle, createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
 /**
@@ -99,14 +99,15 @@ const GeneratingBorder = memo<GeneratingBorderProps>(
   ({ children, className, generating, style }) => (
     <>
       <BorderAngleProperty />
-      <Flexbox
-        style={style}
-        className={[styles.shell, generating && styles.shellGenerating, className]
-          .filter(Boolean)
-          .join(' ')}
+      <div
+        style={{ ...style }}
+        className={cn(
+          'flex flex-col',
+          [styles.shell, generating && styles.shellGenerating, className].filter(Boolean).join(' '),
+        )}
       >
         {children}
-      </Flexbox>
+      </div>
     </>
   ),
 );

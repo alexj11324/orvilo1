@@ -1,10 +1,10 @@
-import { Center, Flexbox, Icon } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import type { LocalSearchFilesParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinPlaceholderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import React, { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   query: css`
@@ -23,24 +23,26 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 const SearchFiles = memo<BuiltinPlaceholderProps<LocalSearchFilesParams>>(({ args = {} }) => {
   return (
-    <Flexbox gap={4}>
-      <Flexbox horizontal align={'center'} distribution={'space-between'} gap={40} height={26}>
-        <Flexbox horizontal align={'center'} className={styles.query} gap={8}>
-          <Icon icon={SearchIcon} />
-          {args.keywords ? args.keywords : <Skeleton height={20} width={40} />}
-        </Flexbox>
+    <div className="flex flex-col gap-1">
+      <div className="flex flex-row items-center justify-between gap-10 h-[26px]">
+        <div className={cx('flex flex-row items-center gap-2', styles.query)}>
+          <span className="anticon" role="img">
+            <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+          {args.keywords || <Skeleton style={{ height: 20, width: 40 }} />}
+        </div>
 
-        <Skeleton height={20} width={40} />
-      </Flexbox>
-      <Center height={140}>
-        <Flexbox gap={4} width={'90%'}>
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-          <Skeleton height={16} />
-        </Flexbox>
-      </Center>
-    </Flexbox>
+        <Skeleton style={{ height: 20, width: 40 }} />
+      </div>
+      <div className="flex flex-col items-center justify-center h-[140px]">
+        <div className="flex flex-col gap-1 w-[90%]">
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
+          <Skeleton style={{ height: 16 }} />
+        </div>
+      </div>
+    </div>
   );
 });
 

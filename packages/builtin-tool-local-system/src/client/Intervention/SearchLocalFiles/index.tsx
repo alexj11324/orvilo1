@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { type LocalSearchFilesParams } from '@orvilo/electron-client-ipc';
 import { type BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
@@ -14,13 +12,13 @@ const SearchLocalFiles = memo<BuiltinInterventionProps<LocalSearchFilesParams>>(
   const { keywords, scope } = args;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <OutOfScopeWarning paths={scope ? [scope] : []} />
       {scope && <LocalFolder path={scope} />}
-      <Text type="secondary">
+      <div className="text-muted-foreground">
         {t('localFiles.searchFiles.keywords')}: {keywords}
-      </Text>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

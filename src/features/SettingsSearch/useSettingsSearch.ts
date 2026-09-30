@@ -1,5 +1,5 @@
-import type { IconProps } from '@lobehub/ui';
 import { isDesktop, ORVILO_SKILL_PROVIDERS } from '@orvilo/const';
+import type { LucideIcon } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -28,7 +28,7 @@ export interface SettingsSearchResult {
   anchor?: string;
   /** Where the result lives, e.g. `Account › Appearance` */
   breadcrumb: string;
-  icon?: IconProps['icon'];
+  icon?: LucideIcon;
   key: string;
   label: string;
   tab: SettingsTabs;
@@ -107,7 +107,7 @@ export const useSettingsSearch = (
     const entries: IndexedEntry[] = [];
     const visibleTabs = new Map<
       SettingsTabs,
-      { groupTitle: string; icon?: IconProps['icon']; label: string; url: string }
+      { groupTitle: string; icon?: LucideIcon; label: string; url: string }
     >();
 
     for (const group of categoryGroups) {

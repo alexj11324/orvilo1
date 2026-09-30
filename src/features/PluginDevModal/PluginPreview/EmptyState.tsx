@@ -1,6 +1,3 @@
-import { Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { Space } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { Puzzle } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -59,17 +56,17 @@ export default function PluginEmptyState() {
   return (
     <div className={styles.container}>
       <div className={styles.iconWrapper}>
-        <Icon icon={Puzzle} size={32} />
+        <span className="anticon" role="img">
+          <Puzzle fill={'transparent'} height={32} size={32} width={32} />
+        </span>
       </div>
-      <Text as={'h4'} className={styles.title}>
-        {t('dev.preview.empty.title')}
-      </Text>
-      <Text className={styles.description}>{t('dev.preview.empty.desc')}</Text>
-      <Space align="center" orientation="vertical">
+      <h4 className={styles.title}>{t('dev.preview.empty.title')}</h4>
+      <p className={styles.description}>{t('dev.preview.empty.desc')}</p>
+      <div className="flex flex-col items-center gap-2">
         <div className={styles.line} style={{ width: 128 }} />
         <div className={styles.line} style={{ width: 96 }} />
         <div className={styles.line} style={{ width: 48 }} />
-      </Space>
+      </div>
     </div>
   );
 }

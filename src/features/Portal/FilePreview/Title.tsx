@@ -1,7 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { ArrowLeft } from 'lucide-react';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useFileStore } from '@/store/file';
@@ -18,17 +19,17 @@ const Title = () => {
   const { data, isLoading } = useFetchFileItem(previewFileId);
 
   return (
-    <Flexbox horizontal align={'center'} gap={4}>
+    <div className="flex flex-row items-center gap-1">
       <ActionIcon icon={ArrowLeft} size={'small'} onClick={() => closeFilePreview()} />
 
       {isLoading ? (
-        <Skeleton height={28} />
+        <Skeleton style={{ height: 28 }} />
       ) : (
-        <Text className={oneLineEllipsis} style={{ fontSize: 16 }} type={'secondary'}>
+        <div className={cn('text-muted-foreground', oneLineEllipsis)} style={{ fontSize: 16 }}>
           {data?.name}
-        </Text>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

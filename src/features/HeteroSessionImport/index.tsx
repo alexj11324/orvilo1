@@ -1,5 +1,6 @@
-import { createModal } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
+
+import { createModal } from '@/components/Modal';
 
 import Content from './Content';
 

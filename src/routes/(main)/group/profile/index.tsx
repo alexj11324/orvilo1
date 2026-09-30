@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { type FC } from 'react';
 import { memo, Suspense } from 'react';
 import { useParams } from 'react-router';
@@ -27,17 +26,25 @@ const ProfileArea = memo(() => {
   const isGroupTab = activeTabId === 'group';
 
   return (
-    <Flexbox flex={1} height={'100%'} style={{ minWidth: 0, overflow: 'hidden' }}>
+    <div
+      className="flex flex-col flex-1"
+      style={{ height: '100%', minWidth: 0, overflow: 'hidden' }}
+    >
       {isGroupsLoading ? (
         <ProfileSkeleton variant={'group'} />
       ) : (
         <>
           <Header />
-          <Flexbox
-            horizontal
-            height={'100%'}
-            style={{ cursor: 'text', display: 'flex', overflowY: 'auto', position: 'relative' }}
-            width={'100%'}
+          <div
+            className="flex"
+            style={{
+              height: '100%',
+              width: '100%',
+              cursor: 'text',
+              display: 'flex',
+              overflowY: 'auto',
+              position: 'relative',
+            }}
             onClick={() => {
               editor?.focus();
             }}
@@ -45,10 +52,10 @@ const ProfileArea = memo(() => {
             <WideScreenContainer>
               {isGroupTab ? <GroupProfileSettings /> : <MemberProfile />}
             </WideScreenContainer>
-          </Flexbox>
+          </div>
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -64,10 +71,10 @@ const GroupProfile: FC = () => {
         resourceType="agentGroup"
       >
         <StoreSync />
-        <Flexbox horizontal height={'100%'} width={'100%'}>
+        <div className="flex" style={{ height: '100%', width: '100%' }}>
           <ProfileArea />
           <AgentBuilder />
-        </Flexbox>
+        </div>
       </ResourceConfigAccessGate>
     </Suspense>
   );

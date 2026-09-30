@@ -1,4 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
+'use client';
+
 import {
   BookOpen,
   BrainCircuit,
@@ -33,7 +34,7 @@ export default function MemoryNavigation() {
   const navigate = useWorkspaceAwareNavigate();
   const { pathname } = useActiveLocation();
   return (
-    <Flexbox gap={1} paddingInline={4}>
+    <div className="flex flex-col px-1" style={{ gap: 1 }}>
       {tabs.map(({ key, icon }) => {
         const url = `/memory/${key}`;
         const active = pathname.endsWith(url) || (key === 'home' && pathname.endsWith('/memory'));
@@ -51,6 +52,6 @@ export default function MemoryNavigation() {
           </Link>
         );
       })}
-    </Flexbox>
+    </div>
   );
 }

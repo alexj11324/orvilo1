@@ -1,15 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import {
-  Button,
-  Checkbox,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { memo, useCallback, useState } from 'react';
+
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface WorkspaceDeleteAllModalContentProps {
   acknowledgeText: string;
@@ -38,26 +33,26 @@ const WorkspaceDeleteAllModalContent = memo<WorkspaceDeleteAllModalContentProps>
     }, [acknowledged, close, loading, onConfirm]);
 
     return (
-      <Flexbox gap={20}>
-        <Text type={'secondary'}>{description}</Text>
-        <Checkbox checked={acknowledged} onChange={setAcknowledged}>
+      <div className="flex flex-col gap-5">
+        <div className="text-muted-foreground">{description}</div>
+        <label className="flex items-center gap-2">
+          <Checkbox checked={acknowledged} onCheckedChange={(v) => setAcknowledged(v === true)} />
           {acknowledgeText}
-        </Checkbox>
-        <Flexbox horizontal gap={8} justify={'flex-end'}>
+        </label>
+        <div className="flex justify-end gap-2">
           <Button disabled={loading} onClick={close}>
             {cancelText}
           </Button>
           <Button
-            danger
             disabled={!acknowledged}
             loading={loading}
-            type={'primary'}
+            variant="destructive"
             onClick={handleConfirm}
           >
             {confirmText}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import debug from 'debug';
 import { Loader2 } from 'lucide-react';
@@ -190,15 +189,13 @@ const Conversation = memo(() => {
             // Neutral loading while the builtin map resolves the real inbox
             // id — the composer must not send under the `inbox` slug, and the
             // populated path would flash the deprecated AgentHome welcome.
-            <Flexbox
-              align={'center'}
+            <div
               aria-label={t('loading', { ns: 'common' })}
-              flex={1}
-              justify={'center'}
+              className="flex flex-col items-center flex-1 justify-center"
               role={'status'}
             >
-              <Icon spin color={cssVar.colorTextDescription} icon={Loader2} size={20} />
-            </Flexbox>
+              <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={20} />
+            </div>
           ) : (
             <>
               {chatInput}
@@ -213,10 +210,11 @@ const Conversation = memo(() => {
       ) : (
         <>
           <SplitDropZone>
-            <Flexbox
-              flex={1}
-              width={'100%'}
+            <div
+              className="flex flex-col flex-1"
               style={{
+                width: '100%',
+
                 overflowX: 'hidden',
                 overflowY: 'auto',
                 position: 'relative',
@@ -231,13 +229,7 @@ const Conversation = memo(() => {
                   welcome={<AgentHome />}
                   footerSlot={
                     isSubagentThread ? (
-                      <Flexbox
-                        horizontal
-                        align={'center'}
-                        justify={'center'}
-                        paddingBlock={6}
-                        paddingInline={16}
-                      >
+                      <div className="flex items-center justify-center py-1.5 px-4">
                         <span
                           style={{
                             color: cssVar.colorTextDescription,
@@ -247,18 +239,18 @@ const Conversation = memo(() => {
                         >
                           {t('thread.subagentReadOnlyHint')}
                         </span>
-                      </Flexbox>
+                      </div>
                     ) : undefined
                   }
                 />
               )}
-            </Flexbox>
+            </div>
           </SplitDropZone>
           {chatInput}
         </>
       )}
       {topicPending && (
-        <Flexbox horizontal align={'center'} justify={'center'} paddingBlock={6} paddingInline={16}>
+        <div className="flex items-center justify-center py-1.5 px-4">
           <span style={{ color: cssVar.colorTextDescription, fontSize: 12, textAlign: 'center' }}>
             {t(
               migrationJob?.type === 'copy'
@@ -266,7 +258,7 @@ const Conversation = memo(() => {
                 : 'transferMigration.inputDisabledHint',
             )}
           </span>
-        </Flexbox>
+        </div>
       )}
       <ExposeMainEditor />
       <ComposerDraftReceiver />

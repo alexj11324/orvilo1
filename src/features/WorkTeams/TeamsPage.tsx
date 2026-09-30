@@ -1,19 +1,23 @@
 'use client';
-
-import { Center, Empty, Flexbox, SearchBar } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { WORK_SEARCH_MAX_PER_TYPE } from '@orvilo/types';
 import { useDebounce } from 'ahooks';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
-import { SearchXIcon, UsersIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { SearchIcon, SearchXIcon, UsersIcon, XIcon } from 'lucide-react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import {
+  InputGroup,
+  InputGroupAddon,
+  InputGroupButton,
+  InputGroupInput,
+} from '@/components/ui/input-group';
+import { Skeleton } from '@/components/ui/skeleton';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
 import { useClientDataSWR } from '@/libs/swr';
@@ -74,7 +78,7 @@ interface TeamRowData {
 }
 
 const TeamRow = memo<{ team: TeamRowData }>(({ team }) => (
-  <Flexbox horizontal align={'center'} className={styles.row}>
+  <div className={cn('flex flex-row items-center', styles.row)}>
     <WorkspaceLink className={styles.link} to={`/teams/${team.id}`}>
       <TeamIdentity
         color={team.color}
@@ -82,23 +86,20 @@ const TeamRow = memo<{ team: TeamRowData }>(({ team }) => (
         letter={(team.key || team.name).slice(0, 1)}
         size={18}
       />
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
-        <Text ellipsis weight={500}>
-          {team.name}
-        </Text>
-      </Flexbox>
+      <div className="flex flex-col flex-1 min-w-0">
+        <span className="text-sm truncate font-medium">{team.name}</span>
+      </div>
       {team.key ? <span className={styles.key}>{team.key}</span> : null}
       {team.updatedAt ? (
-        <Text
-          className={styles.meta}
-          fontSize={12}
+        <span
+          className={cn('text-sm', styles.meta)}
           title={dayjs(team.updatedAt).format('YYYY-MM-DD HH:mm')}
         >
           {dayjs(team.updatedAt).fromNow()}
-        </Text>
+        </span>
       ) : null}
     </WorkspaceLink>
-  </Flexbox>
+  </div>
 ));
 
 TeamRow.displayName = 'TeamRow';
@@ -157,46 +158,67 @@ const TeamsPage = memo(() => {
     <WorkSurface>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <span className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
             {t('tab.teams')}
-          </Text>
+          </span>
         }
       />
       {!workspaceId ? (
-        <Center flex={1}>
-          <Empty description={t('teams.personal')} icon={UsersIcon} />
-        </Center>
+        <div className="flex flex-col items-center justify-center flex-1">
+          <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+            <UsersIcon aria-hidden className="size-8" />
+            <p>{t('teams.personal')}</p>
+          </div>
+        </div>
       ) : (
         <WorkSurfaceCollection
           toolbar={
             <WorkSurfaceToolbar>
-              <SearchBar
-                allowClear
-                placeholder={t('teams.searchPlaceholder')}
-                style={{ maxWidth: 280 }}
-                value={keyword}
-                onChange={(event) => setKeyword(event.target.value)}
-              />
+              <InputGroup className="max-w-70">
+                <InputGroupAddon>
+                  <SearchIcon />
+                </InputGroupAddon>
+                <InputGroupInput
+                  aria-label={t('teams.searchPlaceholder')}
+                  placeholder={t('teams.searchPlaceholder')}
+                  value={keyword}
+                  onChange={(event) => setKeyword(event.target.value)}
+                />
+                {keyword ? (
+                  <InputGroupAddon align="inline-end">
+                    <InputGroupButton aria-label={t('close')} onClick={() => setKeyword('')}>
+                      <XIcon />
+                    </InputGroupButton>
+                  </InputGroupAddon>
+                ) : null}
+              </InputGroup>
             </WorkSurfaceToolbar>
           }
         >
           {error ? (
             <AsyncError error={error} onRetry={() => revalidate()} />
           ) : isLoading ? (
-            <SkeletonList rows={8} />
+            <div aria-busy className="flex flex-col gap-2">
+              {Array.from({ length: 8 }, (_, index) => (
+                <Skeleton className="h-10 w-full" key={index} />
+              ))}
+            </div>
           ) : teams.length === 0 ? (
-            <Center flex={1} padding={48}>
-              <Empty
-                description={searching ? t('teams.searchEmpty') : t('teams.empty')}
-                icon={searching ? SearchXIcon : UsersIcon}
-              />
-            </Center>
+            <div className="flex flex-col items-center justify-center flex-1 p-12">
+              <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                {createElement(searching ? SearchXIcon : UsersIcon, {
+                  'aria-hidden': true,
+                  'className': 'size-8',
+                })}
+                <p>{searching ? t('teams.searchEmpty') : t('teams.empty')}</p>
+              </div>
+            </div>
           ) : (
-            <Flexbox gap={2}>
+            <div className="flex flex-col" style={{ gap: 2 }}>
               {teams.map((team) => (
                 <TeamRow key={team.id} team={team} />
               ))}
-            </Flexbox>
+            </div>
           )}
         </WorkSurfaceCollection>
       )}

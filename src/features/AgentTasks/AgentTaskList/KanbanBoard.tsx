@@ -10,8 +10,6 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import type { WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
@@ -20,6 +18,8 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { toast } from '@/components/toast';
 import {
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
@@ -827,7 +827,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         }));
 
   const skeletonBoard = (
-    <Flexbox horizontal className={styles.board}>
+    <div className={styles.board}>
       {skeletonColumns.map((col) => (
         <KanbanColumn
           loading
@@ -840,13 +840,16 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           total={0}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 
   const emptyState = (
-    <Center height={'80vh'} width={'100%'}>
-      <Empty description={emptyDescription ?? t('taskList.empty')} icon={ClipboardCheckIcon} />
-    </Center>
+    <div className="flex h-[80vh] w-full items-center justify-center">
+      <SimpleEmpty
+        description={emptyDescription ?? t('taskList.empty')}
+        icon={ClipboardCheckIcon}
+      />
+    </div>
   );
 
   const board = (

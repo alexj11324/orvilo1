@@ -1,15 +1,3 @@
-import { type MenuProps } from '@lobehub/ui';
-import { ContextMenuTrigger, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
 import {
   ArrowDownIcon,
   ArrowUpIcon,
@@ -23,8 +11,15 @@ import { memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { openCustomizeSidebarModal } from '@/features/HomeSidebar/Body/CustomizeSidebarModal';
+import SidebarDropdownMenu, {
+  renderSidebarMenuItems,
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
 import { useGlobalStore } from '@/store/global';
@@ -81,7 +76,7 @@ const Recents = memo<RecentsProps>(({ itemKey }) => {
   const dropdownMenu = useMemo(() => {
     const pageSizeOptions = [5, 10, 15, 20];
     const pageSizeItems = pageSizeOptions.map((size) => ({
-      icon: recentPageSize === size ? <Icon icon={LucideCheck} /> : <div />,
+      icon: recentPageSize === size ? <LucideCheck /> : <div />,
       key: `pageSize-${size}`,
       label: t('pageSizeItem', { count: size }),
       onClick: () => {
@@ -93,39 +88,39 @@ const Recents = memo<RecentsProps>(({ itemKey }) => {
       {
         children: pageSizeItems,
         extra: recentPageSize,
-        icon: <Icon icon={Hash} />,
+        icon: <Hash />,
         key: 'show',
         label: t('navPanel.show'),
       },
       {
         disabled: isFirst,
-        icon: <Icon icon={ArrowUpIcon} />,
+        icon: <ArrowUpIcon />,
         key: 'moveUp',
         label: t('navPanel.moveUp'),
         onClick: () => moveSection('up'),
       },
       {
         disabled: isLast,
-        icon: <Icon icon={ArrowDownIcon} />,
+        icon: <ArrowDownIcon />,
         key: 'moveDown',
         label: t('navPanel.moveDown'),
         onClick: () => moveSection('down'),
       },
       {
         disabled: false,
-        icon: <Icon icon={EyeOffIcon} />,
+        icon: <EyeOffIcon />,
         key: 'hideSection',
         label: t('navPanel.hideSection'),
         onClick: hideSection,
       },
       { type: 'divider' as const },
       {
-        icon: <Icon icon={SlidersHorizontalIcon} />,
+        icon: <SlidersHorizontalIcon />,
         key: 'customizeSidebar',
         label: t('navPanel.customizeSidebar'),
         onClick: () => openCustomizeSidebarModal(),
       },
-    ] as MenuProps['items'];
+    ] as SidebarMenuItems;
   }, [recentPageSize, updateSystemStatus, t, isFirst, isLast, moveSection, hideSection]);
 
   if (!isLogin) return null;
@@ -133,30 +128,29 @@ const Recents = memo<RecentsProps>(({ itemKey }) => {
 
   return (
     <AccordionItem value={itemKey}>
-      <ContextMenuTrigger items={dropdownMenu}>
-        <AccordionHeader>
-          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-            <Flexbox horizontal align="center" gap={4}>
-              <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-                {t('recents')}
-              </Text>
-              {syncStatus?.isValidating && query && <NeuralNetworkLoading size={14} />}
-            </Flexbox>
-          </AccordionTrigger>
-          <div
-            className={cx(
-              'accordion-action',
-              accordionStyles.action,
-              accordionStyles.actionBorderless,
-            )}
-          >
-            <DropdownMenu items={dropdownMenu}>
-              <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
-            </DropdownMenu>
+      <ContextMenu>
+        <ContextMenuTrigger>
+          <div className="flex items-center">
+            <div className="min-w-0 flex-1">
+              <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
+                <div className="flex items-center gap-1">
+                  <div className="truncate text-[12px] text-muted-foreground font-medium">
+                    {t('recents')}
+                  </div>
+                  {syncStatus?.isValidating && query && <NeuralNetworkLoading size={14} />}
+                </div>
+              </AccordionTrigger>
+            </div>
+            <div className="flex shrink-0 items-center">
+              <SidebarDropdownMenu items={dropdownMenu}>
+                <ActionIcon icon={MoreHorizontalIcon} size={'small'} style={{ flex: 'none' }} />
+              </SidebarDropdownMenu>
+            </div>
           </div>
-        </AccordionHeader>
-      </ContextMenuTrigger>
-      <AccordionPanel>
+        </ContextMenuTrigger>
+        <ContextMenuContent>{renderSidebarMenuItems(dropdownMenu)}</ContextMenuContent>
+      </ContextMenu>
+      <AccordionContent>
         <Suspense fallback={<SkeletonList rows={3} />}>
           <RecentsList
             error={syncStatus?.error}
@@ -164,7 +158,7 @@ const Recents = memo<RecentsProps>(({ itemKey }) => {
             onRetry={() => void refreshRecents(scope)}
           />
         </Suspense>
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

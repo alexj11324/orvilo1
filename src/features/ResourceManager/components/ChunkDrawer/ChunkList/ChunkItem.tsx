@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useMemo } from 'react';
 
@@ -42,8 +41,8 @@ const ChunkItem = memo<ChunkItemProps>(({ text, type, id }) => {
   }, [type]);
 
   return (
-    <Flexbox
-      className={cx(styles.container, typeClassName)}
+    <div
+      className={cx('flex flex-col', cx(styles.container, typeClassName))}
       onMouseEnter={() => {
         highlightChunks([id]);
       }}
@@ -52,7 +51,7 @@ const ChunkItem = memo<ChunkItemProps>(({ text, type, id }) => {
       }}
     >
       {text}
-    </Flexbox>
+    </div>
   );
 });
 

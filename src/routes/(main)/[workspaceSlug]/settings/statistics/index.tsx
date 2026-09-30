@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -48,7 +47,7 @@ const WorkspaceStatsSetting = () => {
   );
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       <Page
         enableUserDimension
         headerNode={<WorkspaceWelcome />}
@@ -56,7 +55,7 @@ const WorkspaceStatsSetting = () => {
         showSettingHeader={false}
       />
       <WorkspaceSpendInsights />
-    </Flexbox>
+    </div>
   );
 };
 

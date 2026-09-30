@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -18,28 +17,27 @@ export const MinimapPreview = memo<MinimapPreviewProps>(
     const styles = previewStyles;
 
     return (
-      <Flexbox className={styles.list} gap={2}>
+      <div className={cx(styles.list, 'flex flex-col gap-0.5')}>
         {indicators.map(({ id, preview, virtuosoIndex, width }, position) => {
           const isActive = activePosition === position;
           const label = preview || t('minimap.emptyPreview');
 
           return (
-            <Flexbox
-              horizontal
-              align={'center'}
+            <div
               aria-current={isActive ? 'true' : undefined}
-              className={cx(styles.item, isActive && styles.itemActive)}
-              gap={10}
-              justify={'flex-end'}
               key={id}
+              className={cx(
+                cx(styles.item, isActive && styles.itemActive),
+                'flex items-center gap-2.5 justify-end',
+              )}
               onClick={() => onJump(virtuosoIndex)}
             >
               <span className={cx(styles.label, isActive && styles.labelActive)}>{label}</span>
               <div className={cx(styles.dash, isActive && styles.dashActive)} style={{ width }} />
-            </Flexbox>
+            </div>
           );
         })}
-      </Flexbox>
+      </div>
     );
   },
 );

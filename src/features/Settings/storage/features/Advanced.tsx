@@ -1,15 +1,18 @@
 'use client';
 
-import type { FormGroupItemType } from '@lobehub/ui';
-import { Form, Icon } from '@lobehub/ui';
-import { Button, confirmModal, Switch, toast } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { HardDriveDownload, HardDriveUpload } from 'lucide-react';
-import { useCallback } from 'react';
+import { createElement, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AccountDeletion from '@/business/client/features/AccountDeletion';
 import { useTransferAgentsFormItem } from '@/business/client/hooks/useTransferAgentsFormItem';
+import type { FormGroupItemType } from '@/components/GroupForm';
+import Form from '@/components/GroupForm';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import DataImporter from '@/features/DataImporter';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -47,11 +50,12 @@ const AdvancedActions = () => {
     return {
       children: (
         <Button
-          icon={<Icon icon={HardDriveUpload} />}
+          variant="outline"
           onClick={() => {
             configService.exportAll();
           }}
         >
+          {createElement(HardDriveUpload, {})}
           {t('storage.actions.export.button')}
         </Button>
       ),
@@ -70,7 +74,8 @@ const AdvancedActions = () => {
       {
         children: (
           <DataImporter>
-            <Button icon={<Icon icon={HardDriveDownload} />}>
+            <Button variant="outline">
+              {createElement(HardDriveDownload, {})}
               {t('storage.actions.import.button')}
             </Button>
           </DataImporter>
@@ -86,7 +91,7 @@ const AdvancedActions = () => {
       ...(enableBusinessFeatures ? [renderExportButtonFormItem()] : []),
       {
         children: (
-          <Button danger type={'primary'} onClick={handleReset}>
+          <Button variant="destructive" onClick={handleReset}>
             {t('danger.reset.action')}
           </Button>
         ),
@@ -109,7 +114,7 @@ const AdvancedActions = () => {
         children: (
           <Switch
             checked={!!checked}
-            onChange={(value) => {
+            onCheckedChange={(value) => {
               updateGeneralConfig({ telemetry: value });
             }}
           />
@@ -121,6 +126,7 @@ const AdvancedActions = () => {
           </SettingsSearchAnchor>
         ),
         minWidth: undefined,
+        trigger: 'onCheckedChange',
         valuePropName: 'checked',
       },
     ],

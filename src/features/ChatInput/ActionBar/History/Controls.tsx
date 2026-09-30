@@ -1,20 +1,53 @@
-import { type FormItemProps } from '@lobehub/ui';
-import { Form } from '@lobehub/ui';
-import { SliderWithInput, Switch } from '@lobehub/ui/base-ui';
-import { Form as AntdForm } from 'antd';
 import { debounce } from 'es-toolkit/compat';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
+import InputNumber from '@/components/InputNumber';
+import { FieldLabel } from '@/components/ui/field';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
 import { useAgentStore } from '@/store/agent';
 import { chatConfigByIdSelectors } from '@/store/agent/selectors';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
 
+const HistoryCountSlider = ({
+  value,
+  onChange,
+  disabled,
+}: {
+  disabled?: boolean;
+  onChange?: (v: number) => void;
+  value?: number;
+}) => (
+  <div className="flex items-center" style={{ gap: 10, marginBlock: 8, paddingLeft: 4 }}>
+    <Slider
+      className="flex-1"
+      disabled={disabled}
+      max={20}
+      min={0}
+      step={1}
+      value={value}
+      onValueChange={(v) => onChange?.(Array.isArray(v) ? v[0] : v)}
+    />
+    <InputNumber
+      disabled={disabled}
+      min={0}
+      step={1}
+      style={{ maxWidth: 64 }}
+      value={value ?? null}
+      onChange={(v) => {
+        if (typeof v === 'number') onChange?.(v);
+      }}
+    />
+  </div>
+);
+
 const Controls = () => {
   const { t } = useTranslation('setting');
-  const [form] = AntdForm.useForm();
+  const [form] = Form.useForm();
   const [updating, setUpdating] = useState(false);
   const agentId = useAgentId();
   const { updateAgentChatConfig } = useUpdateAgentConfig();
@@ -47,53 +80,27 @@ const Controls = () => {
 
   useEffect(() => () => handleValuesChange.cancel(), [handleValuesChange]);
 
-  const items: FormItemProps[] = [
-    {
-      children: <Switch loading={updating} size={'small'} />,
-      label: t('settingChat.enableHistoryCount.title'),
-      layout: 'horizontal',
-      minWidth: undefined,
-      name: 'enableHistoryCount',
-      valuePropName: 'checked',
-    },
-    {
-      children: (
-        <SliderWithInput
-          disabled={!enableHistoryCount}
-          max={20}
-          min={0}
-          size={'small'}
-          step={1}
-          style={{ marginBlock: 8, paddingLeft: 4 }}
-          unlimitedInput={true}
-          styles={{
-            input: {
-              maxWidth: 64,
-            },
-          }}
-        />
-      ),
-      name: 'historyCount',
-      noStyle: true,
-    },
-  ];
-
   return (
     <Form
       form={form}
-      items={items}
-      itemsType={'flat'}
       initialValues={{
         enableHistoryCount,
         historyCount,
       }}
-      styles={{
-        group: {
-          background: 'transparent',
-        },
-      }}
       onValuesChange={handleValuesChange}
-    />
+    >
+      <div className="flex flex-row items-center justify-between gap-2">
+        <FieldLabel htmlFor="enableHistoryCount">
+          {t('settingChat.enableHistoryCount.title')}
+        </FieldLabel>
+        <Form.Item name="enableHistoryCount" style={{ marginBlockEnd: 0 }} valuePropName="checked">
+          <Switch disabled={updating} size="sm" />
+        </Form.Item>
+      </div>
+      <Form.Item noStyle name="historyCount">
+        <HistoryCountSlider disabled={!enableHistoryCount} />
+      </Form.Item>
+    </Form>
   );
 };
 

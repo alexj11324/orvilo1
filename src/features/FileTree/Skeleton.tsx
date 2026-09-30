@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface FileTreeSkeletonProps {
   rows?: number;
@@ -16,9 +16,9 @@ const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile =
   const skeletonRows = Array.from({ length: rows }, (_, index) => index);
 
   return (
-    <Flexbox gap={2}>
+    <div className="flex flex-col gap-0.5">
       {showRootFile && (
-        <Flexbox horizontal align={'center'} gap={6} height={ROW_HEIGHT} paddingInline={8}>
+        <div className="flex flex-row items-center gap-1.5 px-2" style={{ height: ROW_HEIGHT }}>
           <Skeleton
             style={{
               borderRadius: cssVar.borderRadius,
@@ -36,21 +36,17 @@ const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile =
               width: '40%',
             }}
           />
-        </Flexbox>
+        </div>
       )}
       {skeletonRows.map((rowIndex) => {
         const depth = rowIndex % 3;
         const width = `${40 + ((rowIndex * 13) % 45)}%`;
 
         return (
-          <Flexbox
-            horizontal
-            align={'center'}
-            gap={6}
-            height={ROW_HEIGHT}
+          <div
+            className="flex flex-row items-center gap-1.5 px-2"
             key={rowIndex}
-            paddingInline={8}
-            style={{ paddingInlineStart: 8 + depth * 16 }}
+            style={{ paddingInlineStart: 8 + depth * 16, height: ROW_HEIGHT }}
           >
             <Skeleton
               style={{
@@ -69,10 +65,10 @@ const FileTreeSkeleton = memo<FileTreeSkeletonProps>(({ rows = 8, showRootFile =
                 width,
               }}
             />
-          </Flexbox>
+          </div>
         );
       })}
-    </Flexbox>
+    </div>
   );
 });
 

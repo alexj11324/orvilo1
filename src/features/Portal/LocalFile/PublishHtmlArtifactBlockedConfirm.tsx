@@ -1,17 +1,18 @@
-import { Flexbox } from '@lobehub/ui';
-import {
-  Accordion,
-  Button,
-  Checkbox,
-  createModal,
-  ScrollArea,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { workspaceHtmlArtifactIdentifierForFile } from '@orvilo/html-artifact';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { useTranslation } from 'react-i18next';
+
+import { createModal, useModalContext } from '@/components/Modal';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 import {
   type BlockedWorkspaceHtmlPublishInput,
@@ -39,107 +40,96 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
   const failedPaths = new Set(failed.map((item) => item.absolutePath));
   return (
     <>
-      <ScrollArea
-        disableContentFit
-        scrollFade
-        style={{ maxHeight: BODY_MAX_HEIGHT, overflow: 'hidden' }}
-        viewportProps={{ style: { height: 'auto', maxHeight: BODY_MAX_HEIGHT } }}
-      >
-        <Flexbox gap={12} style={{ paddingBlock: 12, paddingInline: 16 }}>
-          <Text>
+      <ScrollArea style={{ maxHeight: BODY_MAX_HEIGHT, overflow: 'hidden' }}>
+        <div className="flex flex-col gap-3" style={{ paddingBlock: 12, paddingInline: 16 }}>
+          <div>
             {t('workingPanel.localFile.publish.outsideWorkspace.description', {
               count: plan.escaped.length,
               ns: 'chat',
             })}
-          </Text>
-          <Text type={'secondary'}>
+          </div>
+          <div className="text-muted-foreground">
             {t('workingPanel.localFile.publish.outsideWorkspace.workspace', {
               ns: 'chat',
               path: workingDirectory,
             })}
-          </Text>
+          </div>
           {resources.some((item) => item.source) && (
-            <Text type={'secondary'}>
+            <div className="text-muted-foreground">
               {t('workingPanel.localFile.publish.outsideWorkspace.closureDescription', {
                 ns: 'chat',
               })}
-            </Text>
+            </div>
           )}
-          <Accordion
-            indicatorPlacement={'start'}
-            variant={'borderless'}
-            items={[
-              {
-                children: (
-                  <Flexbox gap={8} paddingBlock={'4px 0'}>
-                    {resources.map((item) => (
-                      <Flexbox gap={2} key={item.absolutePath}>
-                        <Text>{item.hrefs.join(', ')}</Text>
-                        {item.source && (
-                          <Text fontSize={12} type={'secondary'}>
-                            {t(
-                              `workingPanel.localFile.publish.outsideWorkspace.source.${item.source}`,
-                              { ns: 'chat' },
-                            )}
-                          </Text>
-                        )}
-                        <Text
-                          type={'secondary'}
-                          style={{
-                            color: failedPaths.has(item.absolutePath)
-                              ? cssVar.colorError
-                              : undefined,
-                            fontFamily: cssVar.fontFamilyCode,
-                            wordBreak: 'break-all',
-                          }}
-                        >
-                          {item.absolutePath}
-                        </Text>
-                      </Flexbox>
-                    ))}
-                  </Flexbox>
-                ),
-                key: 'paths',
-                title: (
-                  <Text fontSize={12} type={'secondary'} weight={500}>
-                    {t('workingPanel.localFile.publish.details', { ns: 'chat' })}
-                  </Text>
-                ),
-              },
-            ]}
-          />
-          <Text type={'secondary'}>
+          <Accordion>
+            <AccordionItem className="border-b-0" value="details">
+              <AccordionTrigger>
+                <div className="text-[12px] text-muted-foreground font-medium">
+                  {t('workingPanel.localFile.publish.details', { ns: 'chat' })}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-col gap-2" style={{ paddingBlock: '4px 0' }}>
+                  {resources.map((item) => (
+                    <div className="flex flex-col gap-0.5" key={item.absolutePath}>
+                      <div>{item.hrefs.join(', ')}</div>
+                      {item.source && (
+                        <div className="text-[12px] text-muted-foreground">
+                          {t(
+                            `workingPanel.localFile.publish.outsideWorkspace.source.${item.source}`,
+                            { ns: 'chat' },
+                          )}
+                        </div>
+                      )}
+                      <div
+                        className="text-muted-foreground"
+                        style={{
+                          color: failedPaths.has(item.absolutePath) ? cssVar.colorError : undefined,
+                          fontFamily: cssVar.fontFamilyCode,
+                          wordBreak: 'break-all',
+                        }}
+                      >
+                        {item.absolutePath}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
+          <div className="text-muted-foreground">
             {t('workingPanel.localFile.publish.outsideWorkspace.copyHint', {
               count: resources.length,
               dir: relativeTargetDirectory,
               ns: 'chat',
             })}
-          </Text>
+          </div>
           {failed.length > 0 && (
-            <Text style={{ color: cssVar.colorError }}>
+            <div style={{ color: cssVar.colorError }}>
               {t('workingPanel.localFile.publish.outsideWorkspace.copyFailed', {
                 list: failed.map((item) => item.absolutePath).join(', '),
                 ns: 'chat',
               })}
-            </Text>
+            </div>
           )}
-        </Flexbox>
+        </div>
       </ScrollArea>
-      <Flexbox style={{ paddingBlock: '8px 4px', paddingInline: 16 }}>
-        <Checkbox checked={force} onChange={handleForceChange}>
-          <Text fontSize={12}>
+      <div className="flex flex-col" style={{ paddingBlock: '8px 4px', paddingInline: 16 }}>
+        <div className="flex items-center gap-2">
+          <Checkbox checked={force} onCheckedChange={handleForceChange} />
+          <div className="text-[12px]">
             {t('workingPanel.localFile.publish.outsideWorkspace.forceLabel', { ns: 'chat' })}
-          </Text>
-        </Checkbox>
-      </Flexbox>
-      <Flexbox
-        horizontal
-        gap={8}
-        justify={'flex-end'}
+          </div>
+        </div>
+      </div>
+      <div
+        className="flex flex-row gap-2 justify-end"
         style={{ paddingBlock: 12, paddingInline: 16 }}
       >
-        <Button onClick={cancel}>{t('cancel', { ns: 'common' })}</Button>
-        <Button loading={busy} type={'primary'} onClick={() => void handleContinue()}>
+        <Button variant="outline" onClick={cancel}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
+        <Button loading={busy} variant="default" onClick={() => void handleContinue()}>
           {busy && !force
             ? t('workingPanel.localFile.publish.outsideWorkspace.copying', { ns: 'chat' })
             : t(
@@ -149,7 +139,7 @@ const BlockedConfirmContent = (input: OpenWorkspaceHtmlPublishBlockedConfirmInpu
                 { ns: 'chat' },
               )}
         </Button>
-      </Flexbox>
+      </div>
     </>
   );
 };

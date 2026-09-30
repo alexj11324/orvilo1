@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { CHAT_GROUP_SESSION_ID_PREFIX } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { createElement, type PropsWithChildren } from 'react';
@@ -6,6 +5,7 @@ import { SWRConfig, unstable_serialize } from 'swr';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as activeWorkspaceModule from '@/business/client/hooks/useActiveWorkspaceId';
+import { toast } from '@/components/toast';
 import { setScopedMutate } from '@/libs/swr';
 import { agentConfigKeys, builtinAgentKeys } from '@/libs/swr/keys';
 import * as cacheScopeModule from '@/libs/swr/useCacheScope';
@@ -43,7 +43,7 @@ vi.mock('@/services/agentDocument', () => ({
   resolveAgentDocumentsContext: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...(await import('~base-ui-stubs')).baseUiStubs,
 }));

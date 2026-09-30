@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Drawer } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
+import { useTranslation } from 'react-i18next';
 
+import { Sheet, SheetContent, SheetTitle } from '@/components/ui/sheet';
 import { PortalContent } from '@/features/Portal/router';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
@@ -31,6 +31,7 @@ import { usePortalColumnHost } from './usePortalColumnHost';
  * user with nothing. Both conditions are required.
  */
 const AcceptancePortalDrawer = memo(() => {
+  const { t } = useTranslation('chat');
   const [viewType, clearPortalStack] = useChatStore((state) => [
     chatPortalSelectors.currentViewType(state),
     state.clearPortalStack,
@@ -40,24 +41,20 @@ const AcceptancePortalDrawer = memo(() => {
   const open = isAcceptancePortalView(viewType) && !(columnHost && columnExpanded);
 
   return (
-    <Drawer
-      noHeader
-      closable={false}
-      containerMaxWidth={'100%'}
-      open={open}
-      placement={'right'}
-      width={'min(960px, 92vw)'}
-      styles={{
-        bodyContent: { height: '100%', minHeight: 0, overflow: 'hidden', padding: 0 },
-      }}
-      onClose={clearPortalStack}
-    >
-      {open && (
-        <Flexbox height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
-          <PortalContent />
-        </Flexbox>
-      )}
-    </Drawer>
+    <Sheet open={open} onOpenChange={(next) => !next && clearPortalStack()}>
+      <SheetContent
+        className="w-[min(960px,92vw)] gap-0 sm:max-w-[min(960px,92vw)]"
+        showCloseButton={false}
+        side={'right'}
+      >
+        <SheetTitle className={'sr-only'}>{t('taskDetail.acceptance.goal')}</SheetTitle>
+        {open && (
+          <div className="flex flex-col h-full" style={{ minHeight: 0, overflow: 'hidden' }}>
+            <PortalContent />
+          </div>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 });
 

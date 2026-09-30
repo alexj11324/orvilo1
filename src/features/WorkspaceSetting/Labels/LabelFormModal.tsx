@@ -1,11 +1,14 @@
-import { Flexbox, Input } from '@lobehub/ui';
-import { Button, createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { type AgentLabelListItem } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { t as translate } from 'i18next';
+import { Loader2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useHomeStore } from '@/store/home';
 
 import { DEFAULT_LABEL_COLOR, isValidLabelColor, LABEL_COLOR_PRESETS } from './constants';
@@ -105,8 +108,16 @@ const LabelFormContent = memo<LabelFormModalOptions>(({ assignTo, label, restore
 
   return (
     <>
-      <Flexbox gap={16} paddingBlock={8} paddingInline={16}>
-        <Flexbox gap={8}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 16,
+          paddingBlock: 8,
+          paddingInline: 16,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span>{t('workspaceSetting.labels.form.name')}</span>
           <Input
             autoFocus
@@ -115,8 +126,8 @@ const LabelFormContent = memo<LabelFormModalOptions>(({ assignTo, label, restore
             value={name}
             onChange={(e) => setName(e.target.value)}
           />
-        </Flexbox>
-        <Flexbox gap={8}>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span>{t('workspaceSetting.labels.form.description')}</span>
           <Input
             maxLength={200}
@@ -124,10 +135,18 @@ const LabelFormContent = memo<LabelFormModalOptions>(({ assignTo, label, restore
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-        </Flexbox>
-        <Flexbox gap={8}>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span>{t('workspaceSetting.labels.form.color')}</span>
-          <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'row',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+              gap: 8,
+            }}
+          >
             {LABEL_COLOR_PRESETS.map((preset) => (
               <span
                 aria-label={preset}
@@ -144,17 +163,20 @@ const LabelFormContent = memo<LabelFormModalOptions>(({ assignTo, label, restore
               value={color}
               onChange={(e) => setColor(e.target.value)}
             />
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
       <ModalFooter>
-        <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
+        <Button variant="outline" onClick={close}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
         <Button
-          disabled={!name.trim() || !isValidLabelColor(color)}
-          loading={loading}
-          type={'primary'}
+          aria-busy={loading}
+          disabled={!name.trim() || !isValidLabelColor(color) || loading}
+          variant="default"
           onClick={handleSave}
         >
+          {loading && <Loader2 aria-hidden className="size-4 animate-spin" />}
           {t('ok', { defaultValue: 'OK', ns: 'common' })}
         </Button>
       </ModalFooter>

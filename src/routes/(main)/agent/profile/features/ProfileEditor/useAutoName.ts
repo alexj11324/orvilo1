@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { randomAgentName } from '@orvilo/const';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { useAgentStore } from '@/store/agent';
 import { useGlobalStore } from '@/store/global';
 import { globalGeneralSelectors } from '@/store/global/selectors';

@@ -1,8 +1,9 @@
-import { Center, Flexbox } from '@lobehub/ui';
-import { Button, DropdownMenu } from '@lobehub/ui/base-ui';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Button } from '@/components/ui/button';
 
 import type { AutomationScope, AutomationStatusFilter } from './shared';
 
@@ -26,22 +27,22 @@ export const AutomationScopeSwitch = memo<AutomationScopeSwitchProps>(({ onChang
   const { t } = useTranslation('automation');
 
   return (
-    <Flexbox horizontal gap={2}>
+    <div className="flex gap-0.5">
       <Button
-        size={'small'}
-        type={scope === 'all' ? 'fill' : 'text'}
+        size="sm"
+        variant={scope === 'all' ? 'secondary' : 'ghost'}
         onClick={() => onChange('all')}
       >
         {t('overview.team')}
       </Button>
       <Button
-        size={'small'}
-        type={scope === 'created' ? 'fill' : 'text'}
+        size="sm"
+        variant={scope === 'created' ? 'secondary' : 'ghost'}
         onClick={() => onChange('created')}
       >
         {t('overview.mine')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -67,7 +68,7 @@ export const AutomationStatusSelect = memo<AutomationStatusSelectProps>(({ onCha
       ).map(([option, label]) => ({
         icon:
           value === option ? (
-            <Center height={14} width={14}>
+            <div className="flex flex-col items-center justify-center h-[14px] w-[14px]">
               <span
                 style={{
                   background: 'currentColor',
@@ -77,20 +78,16 @@ export const AutomationStatusSelect = memo<AutomationStatusSelectProps>(({ onCha
                   width: 6,
                 }}
               />
-            </Center>
+            </div>
           ) : undefined,
         key: option,
         label,
         onClick: () => onChange(option),
       }))}
     >
-      <Button
-        icon={ChevronDownIcon}
-        iconPosition={'end'}
-        size={'small'}
-        title={t('overview.filter_automations')}
-      >
+      <Button size="sm" title={t('overview.filter_automations')}>
         {value === 'all' ? t('overview.all_statuses') : t(`status.${value}`)}
+        <ChevronDownIcon data-icon="inline-end" />
       </Button>
     </DropdownMenu>
   );

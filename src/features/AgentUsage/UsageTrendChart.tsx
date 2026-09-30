@@ -1,12 +1,12 @@
 'use client';
 
 import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
-import { Block, Flexbox } from '@lobehub/ui';
-import { Segmented, Skeleton, Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Separator } from '@/components/ui/separator';
+import { Skeleton } from '@/components/ui/skeleton';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { type AgentUsageBucket } from '@/types/usage/usageRecord';
 import { formatNumber, formatTokenNumber } from '@/utils/format';
 
@@ -53,22 +53,19 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
   );
 
   return (
-    <Block gap={16} variant={'borderless'}>
-      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-        <Text fontSize={16} weight={500}>
-          {t('usageStats.chart.title')}
-        </Text>
-        <Segmented
-          value={type}
-          options={[
-            { label: t('usageStats.chart.spend'), value: ShowType.Spend },
-            { label: t('usageStats.chart.tokens'), value: ShowType.Token },
-          ]}
-          onChange={(value) => setType(value as ShowType)}
-        />
-      </Flexbox>
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-2 justify-between">
+        <div className="text-[16px] font-medium">{t('usageStats.chart.title')}</div>
+        <ToggleGroup
+          value={[type]}
+          onValueChange={(value) => value[0] && setType(value[0] as ShowType)}
+        >
+          <ToggleGroupItem value={ShowType.Spend}>{t('usageStats.chart.spend')}</ToggleGroupItem>
+          <ToggleGroupItem value={ShowType.Token}>{t('usageStats.chart.tokens')}</ToggleGroupItem>
+        </ToggleGroup>
+      </div>
       {isLoading ? (
-        <Skeleton height={320} />
+        <Skeleton style={{ height: 320 }} />
       ) : (
         <BarChart
           showLegend
@@ -87,15 +84,16 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
 
             return (
               <ChartTooltipFrame>
-                <Flexbox paddingBlock={8} paddingInline={16}>
-                  <Text as={'p'} style={{ margin: 0 }}>
-                    {label}
-                  </Text>
-                </Flexbox>
+                <div className="flex flex-col py-2 px-4">
+                  <p style={{ margin: 0 }}>{label}</p>
+                </div>
                 {visibleItems.length > 0 && (
                   <>
-                    <Divider style={{ margin: 0 }} />
-                    <Flexbox gap={4} paddingBlock={8} paddingInline={16}>
+                    <Separator
+                      className="bg-transparent border-t border-border"
+                      style={{ margin: 0 }}
+                    />
+                    <div className="flex flex-col gap-1 py-2 px-4">
                       {visibleItems.map(({ color, name, value }) => (
                         <ChartTooltipRow
                           color={color ?? '#1668dc'}
@@ -108,7 +106,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
                           }
                         />
                       ))}
-                    </Flexbox>
+                    </div>
                   </>
                 )}
               </ChartTooltipFrame>
@@ -119,7 +117,7 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
           }
         />
       )}
-    </Block>
+    </div>
   );
 });
 

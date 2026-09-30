@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { type ConversationContext, type UIChatMessage } from '@orvilo/types';
 import { memo } from 'react';
 
@@ -15,15 +14,14 @@ const ChatListContent = memo<ChatListContentProps>(({ ids }) => {
   const renderedIds = ids.length > 0 ? ids : displayMessageIds;
 
   return (
-    <Flexbox
-      height={'100%'}
+    <div
+      className="flex flex-col h-full w-full"
       style={{ padding: 24, pointerEvents: 'none', position: 'relative' }}
-      width={'100%'}
     >
       {renderedIds.map((id, index) => (
         <MessageItem id={id} index={index} key={id} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

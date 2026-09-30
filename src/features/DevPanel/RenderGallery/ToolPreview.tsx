@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Tabs, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { useMemo, useState } from 'react';
+
+import { Badge as Tag } from '@/components/reui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import {
   bodyKindForMode,
@@ -85,39 +86,40 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
   const derived = useMemo(() => deriveFixtureProps(activeVariant, mode), [activeVariant, mode]);
 
   return (
-    <Flexbox className={styles.card} id={toApiAnchor(api.apiName)}>
-      <Flexbox className={styles.cardHeader}>
-        <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
-          <Text fontSize={18} weight={600}>
-            {api.apiName}
-          </Text>
+    <div className={cx(styles.card, 'flex flex-col')} id={toApiAnchor(api.apiName)}>
+      <div className={cx(styles.cardHeader, 'flex flex-col')}>
+        <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+          <div className="text-[18px] font-semibold">{api.apiName}</div>
           <Tag>{api.identifier}</Tag>
           {variants.length > 1 && (
             <Tabs
-              activeKey={activeVariant.id}
-              size={'small'}
-              items={variants.map((variant) => ({
-                key: variant.id,
-                label: variant.label,
-              }))}
-              onChange={(key) => setActiveVariantId(key)}
-            />
+              value={activeVariant.id}
+              onValueChange={(key) => {
+                if (typeof key === 'string') setActiveVariantId(key);
+              }}
+            >
+              <TabsList>
+                {variants.map((variant) => (
+                  <TabsTrigger key={variant.id} value={variant.id}>
+                    {variant.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           )}
-        </Flexbox>
+        </div>
         {(api.description || activeVariant.description) && (
-          <Text fontSize={13} type={'secondary'}>
+          <div className="text-[13px] text-muted-foreground">
             {activeVariant.description ?? api.description}
-          </Text>
+          </div>
         )}
-      </Flexbox>
+      </div>
 
-      <Flexbox className={styles.cardBody}>
-        <Flexbox className={styles.previewSection}>
-          <Flexbox horizontal className={styles.sectionLabel}>
-            <Text fontSize={12} type={'secondary'} weight={600}>
-              Inspector
-            </Text>
-          </Flexbox>
+      <div className={cx(styles.cardBody, 'flex flex-col')}>
+        <div className={cx(styles.previewSection, 'flex flex-col')}>
+          <div className={cx(styles.sectionLabel, 'flex')}>
+            <div className="text-[12px] text-muted-foreground font-semibold">Inspector</div>
+          </div>
           <div className={styles.previewShell}>
             <ToolInspectorSlot
               api={api}
@@ -126,15 +128,13 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
               variant={activeVariant}
             />
           </div>
-        </Flexbox>
+        </div>
 
-        <Flexbox className={styles.previewSection}>
-          <Flexbox horizontal className={styles.sectionLabel}>
-            <Text fontSize={12} type={'secondary'} weight={600}>
-              Body
-            </Text>
+        <div className={cx(styles.previewSection, 'flex flex-col')}>
+          <div className={cx(styles.sectionLabel, 'flex')}>
+            <div className="text-[12px] text-muted-foreground font-semibold">Body</div>
             <Tag>{bodyKindForMode(mode)}</Tag>
-          </Flexbox>
+          </div>
           <div className={styles.previewShell}>
             <ToolBodySlot
               api={api}
@@ -144,7 +144,7 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
               toolCallId={toolCallId}
             />
           </div>
-        </Flexbox>
+        </div>
 
         <details className={styles.fixture}>
           <summary className={styles.fixtureSummary}>Fixture payload</summary>
@@ -164,8 +164,8 @@ const ToolPreview = ({ api, mode }: ToolPreviewProps) => {
             )}
           </pre>
         </details>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

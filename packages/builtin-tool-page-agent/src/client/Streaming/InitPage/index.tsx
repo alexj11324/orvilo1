@@ -1,10 +1,9 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { InitDocumentArgs } from '@orvilo/editor-runtime';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { FileText, Hash, ListTree } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -82,29 +81,29 @@ export const InitPageStreaming = memo<BuiltinStreamingProps<InitDocumentArgs>>((
   if (!markdown) return null;
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
+    <div className={cn('flex', 'flex-col', styles.container)}>
+      <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
         <FileText className={styles.icon} size={16} />
-        <Flexbox flex={1} gap={2}>
+        <div className="flex flex-col flex-1 gap-[2px]">
           <div className={styles.title}>
             {title || t('builtins.orvilo-page-agent.apiName.initPage.creating')}
           </div>
-          <Flexbox horizontal align={'center'} className={styles.meta} gap={10}>
-            <Text as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
-              <Icon icon={ListTree} size={12} /> <AnimatedNumber value={lines} />
+          <div className={cn('flex', 'items-center', 'gap-[10px]', styles.meta)}>
+            <span className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+              <ListTree size={12} /> <AnimatedNumber value={lines} />
               {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
-            </Text>
-            <Text as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
-              <Icon icon={Hash} size={12} /> <AnimatedNumber value={chars} />
+            </span>
+            <span className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+              <Hash size={12} /> <AnimatedNumber value={chars} />
               {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
-            </Text>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+            </span>
+          </div>
+        </div>
+      </div>
       <div className={styles.preview}>
         <StreamingMarkdown>{preview}</StreamingMarkdown>
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

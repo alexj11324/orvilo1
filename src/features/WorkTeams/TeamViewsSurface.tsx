@@ -1,20 +1,30 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Button, Popover, Select, Text, toast } from '@lobehub/ui/base-ui';
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import type { WorkQueryEntityType } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { FilterIcon, Layers2Icon, PlusIcon, Settings2Icon } from 'lucide-react';
+import { cn } from 'cn';
+import { FilterIcon, Layers2Icon, LoaderCircleIcon, PlusIcon, Settings2Icon } from 'lucide-react';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { filterSavedViewsByEntity } from '@/features/SavedViews/savedViewDirectory';
 import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
 import { savedViewVisibilityKey } from '@/features/SavedViews/savedViewVisibility';
@@ -31,30 +41,6 @@ import { newTeamViewDraft, teamViewDraftQuery } from './teamViewsDraft';
 import { nextTeamViewsSearch, readTeamViewsSearch } from './teamViewsNavigation';
 
 const styles = createStaticStyles(({ css }) => ({
-  choice: css`
-    cursor: pointer;
-
-    display: inline-flex;
-    align-items: center;
-
-    height: 28px;
-    padding-inline: 12px;
-    border: 1px solid transparent;
-    border-radius: 999px;
-
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover {
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  choiceActive: css`
-    border-color: ${cssVar.colorBorderSecondary};
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
   directoryBody: css`
     display: flex;
     flex-direction: column;
@@ -227,46 +213,60 @@ const TeamViewsSurface = ({
   };
 
   const entityTabs = (
-    <Flexbox horizontal align="center" gap={6}>
-      {(['task', 'project'] as const).map((kind) => (
-        <button
-          aria-current={entityType === kind ? 'page' : undefined}
-          className={`${styles.choice} ${entityType === kind ? styles.choiceActive : ''}`}
-          key={kind}
-          type="button"
-          onClick={() => selectEntity(kind)}
-        >
-          {t(kind === 'task' ? 'savedViews.tabIssues' : 'savedViews.entityProject')}
-        </button>
-      ))}
-    </Flexbox>
+    <Tabs
+      value={entityType}
+      onValueChange={(kind) => {
+        if (kind === 'task' || kind === 'project') selectEntity(kind);
+      }}
+    >
+      <TabsList>
+        {(['task', 'project'] as const).map((kind) => (
+          <TabsTrigger key={kind} value={kind}>
+            {t(kind === 'task' ? 'savedViews.tabIssues' : 'savedViews.entityProject')}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   );
+
+  const sortOptions = [
+    { label: t('savedViews.sort.nameAsc'), value: 'nameAsc' },
+    { label: t('savedViews.sort.nameDesc'), value: 'nameDesc' },
+    { label: t('savedViews.sort.createdDesc'), value: 'createdDesc' },
+    { label: t('savedViews.sort.createdAsc'), value: 'createdAsc' },
+    { label: t('savedViews.sort.updatedDesc'), value: 'updatedDesc' },
+    { label: t('savedViews.sort.updatedAsc'), value: 'updatedAsc' },
+  ];
 
   const displayControl = (
     <Popover
       open={control === 'display'}
-      placement="bottomRight"
-      trigger="click"
-      content={
-        creating ? (
-          <Flexbox className={styles.popover}>
+      onOpenChange={(open) => setControl(open ? 'display' : null)}
+    >
+      <PopoverTrigger
+        render={
+          <Button
+            aria-label={t('savedViews.displayOptions')}
+            size="icon"
+            title={t('savedViews.displayOptions')}
+            variant="ghost"
+          >
+            <Settings2Icon aria-hidden className="size-4" />
+          </Button>
+        }
+      />
+      <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+        {creating ? (
+          <div className={cn('flex flex-col', styles.popover)}>
             <ViewDefinitionEditor showFilters={false} value={draft} onChange={setDraft} />
-          </Flexbox>
+          </div>
         ) : (
-          <Flexbox className={styles.popover} gap={10}>
-            <Text>{t('savedViews.sortDefault')}</Text>
+          <div className={cn('flex flex-col', styles.popover)} style={{ gap: 10 }}>
+            <span className="text-sm">{t('savedViews.sortDefault')}</span>
             <Select
-              aria-label={t('savedViews.sortDefault')}
+              items={sortOptions}
               value={sort}
-              options={[
-                { label: t('savedViews.sort.nameAsc'), value: 'nameAsc' },
-                { label: t('savedViews.sort.nameDesc'), value: 'nameDesc' },
-                { label: t('savedViews.sort.createdDesc'), value: 'createdDesc' },
-                { label: t('savedViews.sort.createdAsc'), value: 'createdAsc' },
-                { label: t('savedViews.sort.updatedDesc'), value: 'updatedDesc' },
-                { label: t('savedViews.sort.updatedAsc'), value: 'updatedAsc' },
-              ]}
-              onChange={(value) => {
+              onValueChange={(value) => {
                 if (
                   value === 'nameAsc' ||
                   value === 'nameDesc' ||
@@ -277,18 +277,21 @@ const TeamViewsSurface = ({
                 )
                   setSort(value);
               }}
-            />
-          </Flexbox>
-        )
-      }
-      onOpenChange={(open) => setControl(open ? 'display' : null)}
-    >
-      <ActionIcon
-        aria-label={t('savedViews.displayOptions')}
-        icon={Settings2Icon}
-        size="small"
-        title={t('savedViews.displayOptions')}
-      />
+            >
+              <SelectTrigger aria-label={t('savedViews.sortDefault')}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {sortOptions.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </PopoverContent>
     </Popover>
   );
 
@@ -297,68 +300,78 @@ const TeamViewsSurface = ({
       <WorkSurface>
         <NavHeader
           left={
-            <Text weight={500}>
+            <span className="text-sm font-medium">
               {teamName} › {draft.name || defaultName}
-            </Text>
+            </span>
           }
         />
-        <Flexbox className={styles.editorHeader} gap={14}>
-          <Flexbox horizontal align="center" gap={12} wrap="wrap">
+        <div className={cn('flex flex-col', styles.editorHeader)} style={{ gap: 14 }}>
+          <div className="flex flex-row items-center gap-3 flex-wrap">
             <Input
               aria-label={t('savedViews.name')}
+              className="flex-1"
               placeholder={defaultName}
-              style={{ flex: 1, minWidth: 180 }}
+              style={{ minWidth: 180 }}
               value={draft.name}
               onChange={(event) =>
                 setDraft((current) => ({ ...current, name: event.target.value }))
               }
             />
-            <Text type="secondary">
+            <span className="text-sm text-muted-foreground">
               {t('teams.viewSaveTo')} {teamName}
-            </Text>
-            <Button onClick={cancel}>{t('cancel')}</Button>
-            <Button loading={saving} type="primary" onClick={() => void save()}>
+            </span>
+            <Button variant="outline" onClick={cancel}>
+              {t('cancel')}
+            </Button>
+            <Button aria-busy={saving} disabled={saving} onClick={() => void save()}>
+              {saving ? <LoaderCircleIcon className="animate-spin" /> : null}
               {t('savedViews.createView')}
             </Button>
-          </Flexbox>
+          </div>
           <Input disabled placeholder={t('teams.viewDescription')} />
-        </Flexbox>
+        </div>
         <WorkSurfaceToolbar>
           {entityTabs}
-          <Flexbox horizontal align="center" gap={6} style={{ marginInlineStart: 'auto' }}>
+          <div className="flex flex-row items-center" style={{ gap: 6, marginInlineStart: 'auto' }}>
             <Popover
               open={control === 'filters'}
-              placement="bottomRight"
-              trigger="click"
-              content={
-                <Flexbox className={styles.popover}>
-                  <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
-                </Flexbox>
-              }
               onOpenChange={(open) => setControl(open ? 'filters' : null)}
             >
-              <ActionIcon
-                aria-label={t('savedViews.filters.add')}
-                icon={FilterIcon}
-                size="small"
-                title={t('savedViews.filters.add')}
+              <PopoverTrigger
+                render={
+                  <Button
+                    aria-label={t('savedViews.filters.add')}
+                    size="icon"
+                    title={t('savedViews.filters.add')}
+                    variant="ghost"
+                  >
+                    <FilterIcon aria-hidden className="size-4" />
+                  </Button>
+                }
               />
+              <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+                <div className={cn('flex flex-col', styles.popover)}>
+                  <ViewDefinitionEditor showDisplay={false} value={draft} onChange={setDraft} />
+                </div>
+              </PopoverContent>
             </Popover>
             {displayControl}
-          </Flexbox>
+          </div>
         </WorkSurfaceToolbar>
         <div className={styles.resultScroll}>
           {previewError ? (
             <AsyncError error={previewError} onRetry={() => void retryPreview()} />
           ) : draft.entityType === 'project' ? (
             previewLoading ? (
-              <Text>{t('savedViews.loading')}</Text>
+              <span className="text-sm">{t('savedViews.loading')}</span>
             ) : projects.length ? (
               projects.map((project) => <SavedViewProjectRow key={project.id} project={project} />)
             ) : (
-              <Center padding={48}>
-                <Empty description={t('savedViews.emptyResults')} />
-              </Center>
+              <div className="flex flex-col items-center justify-center p-12">
+                <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                  <p>{t('savedViews.emptyResults')}</p>
+                </div>
+              </div>
             )
           ) : (
             <WorkQueryResults
@@ -380,63 +393,77 @@ const TeamViewsSurface = ({
   return (
     <WorkSurface>
       <NavHeader
-        left={<Text weight={500}>{t('tab.views')}</Text>}
+        left={<span className="text-sm font-medium">{t('tab.views')}</span>}
         right={
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex flex-row items-center gap-2">
             <WorkFavoriteButton targetId={teamId} targetType="team" />
-            <Button icon={PlusIcon} size="small" onClick={() => changeLocation({ creating: true })}>
+            <Button variant="outline" onClick={() => changeLocation({ creating: true })}>
+              <PlusIcon aria-hidden className="size-4" />
               {t('savedViews.newView')}
             </Button>
-          </Flexbox>
+          </div>
         }
       />
       <WorkSurfaceToolbar>
         {entityTabs}
-        <Flexbox style={{ marginInlineStart: 'auto' }}>{displayControl}</Flexbox>
+        <div className="flex flex-col" style={{ marginInlineStart: 'auto' }}>
+          {displayControl}
+        </div>
       </WorkSurfaceToolbar>
       <WorkSurfaceCollection className={styles.directoryBody}>
         {error && sortedViews.length === 0 ? (
           <AsyncError error={error} onRetry={onRetry} />
         ) : isLoading && sortedViews.length === 0 ? (
-          <SkeletonList aria-label={t('savedViews.loading')} rows={4} />
+          <div aria-busy aria-label={t('savedViews.loading')} className="flex flex-col gap-2">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton className="h-10 w-full" key={index} />
+            ))}
+          </div>
         ) : sortedViews.length ? (
-          <Flexbox gap={0}>
+          <div className="flex flex-col gap-0">
             {error ? <AsyncError error={error} variant="inline" onRetry={onRetry} /> : null}
             {sortedViews.map((view) => (
               <WorkspaceLink className={styles.viewRow} key={view.id} to={`/views/${view.id}`}>
-                <Icon icon={Layers2Icon} size={16} />
-                <Text style={{ flex: 1 }}>{view.name}</Text>
-                <Text fontSize={12} type="secondary">
+                <Layers2Icon aria-hidden className="size-4 shrink-0" />
+                <span className={cn('flex-1', 'text-sm')}>{view.name}</span>
+                <span className="text-sm text-muted-foreground">
                   {t(savedViewVisibilityKey(view.visibility))}
-                </Text>
+                </span>
               </WorkspaceLink>
             ))}
-          </Flexbox>
+          </div>
         ) : (
           <div className={styles.empty}>
-            <Icon icon={Layers2Icon} size={64} />
-            <Text fontSize={20} weight={600}>
+            {
+              <Layers2Icon
+                aria-hidden
+                className="size-4 shrink-0"
+                style={{ width: 64, height: 64 }}
+              />
+            }
+            <span className="text-sm font-semibold" style={{ fontSize: 20 }}>
               {t('tab.views')}
-            </Text>
-            <Text type="secondary">
+            </span>
+            <span className="text-sm text-muted-foreground">
               {t(
                 entityType === 'task'
                   ? 'teams.viewDirectoryDescriptionIssues'
                   : 'teams.viewDirectoryDescriptionProjects',
               )}
-            </Text>
-            <Flexbox horizontal gap={8} justify="center" wrap="wrap">
-              <Button type="primary" onClick={() => changeLocation({ creating: true })}>
+            </span>
+            <div className="flex flex-row justify-center gap-2 flex-wrap">
+              <Button onClick={() => changeLocation({ creating: true })}>
                 {t('teams.viewCreateNew')}
               </Button>
               <Button
+                variant="outline"
                 onClick={() =>
                   window.open('/docs/usage/getting-started/work', '_blank', 'noopener,noreferrer')
                 }
               >
                 {t('teams.viewDocumentation')}
               </Button>
-            </Flexbox>
+            </div>
           </div>
         )}
       </WorkSurfaceCollection>

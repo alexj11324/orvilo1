@@ -1,12 +1,10 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { Table } from 'antd';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelIcon } from '@/components/OrviloIcons';
+import { Spinner } from '@/components/ui/spinner';
 import { type AgentUsageModelRow } from '@/types/usage/usageRecord';
 import { formatNumber, formatUsageValue } from '@/utils/format';
 
@@ -18,60 +16,46 @@ interface ModelBreakdownProps {
 const ModelBreakdown = memo<ModelBreakdownProps>(({ rows, isLoading }) => {
   const { t } = useTranslation('spend');
 
-  const columns = [
-    {
-      dataIndex: 'model',
-      key: 'model',
-      render: (model: string, record: AgentUsageModelRow) => (
-        <Flexbox horizontal align={'center'} gap={8}>
-          <ModelIcon model={model} size={20} />
-          <Flexbox>
-            <Text ellipsis>{model}</Text>
-            <Text fontSize={12} type={'secondary'}>
-              {record.provider}
-            </Text>
-          </Flexbox>
-        </Flexbox>
-      ),
-      title: t('usageStats.breakdown.model'),
-    },
-    {
-      align: 'right' as const,
-      dataIndex: 'requests',
-      key: 'requests',
-      render: (value: number) => formatNumber(value),
-      title: t('usageStats.breakdown.requests'),
-    },
-    {
-      align: 'right' as const,
-      dataIndex: 'totalTokens',
-      key: 'totalTokens',
-      render: (value: number) => formatUsageValue(value),
-      title: t('usageStats.breakdown.totalTokens'),
-    },
-    {
-      align: 'right' as const,
-      dataIndex: 'cost',
-      key: 'cost',
-      render: (value: number) => `$${formatNumber(value, 2)}`,
-      title: t('usageStats.breakdown.cost'),
-    },
-  ];
-
   return (
-    <Block gap={16} variant={'borderless'}>
-      <Text fontSize={16} weight={500}>
-        {t('usageStats.breakdown.title')}
-      </Text>
-      <Table<AgentUsageModelRow>
-        columns={columns}
-        dataSource={rows}
-        loading={isLoading}
-        pagination={false}
-        rowKey={'id'}
-        size={'middle'}
-      />
-    </Block>
+    <div className="flex flex-col gap-4">
+      <div className="text-[16px] font-medium">{t('usageStats.breakdown.title')}</div>
+      {isLoading ? (
+        <div className="flex items-center justify-center" style={{ paddingBlock: 24 }}>
+          <Spinner />
+        </div>
+      ) : (
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-border border-b">
+              <th className="py-2 text-left font-medium">{t('usageStats.breakdown.model')}</th>
+              <th className="py-2 text-right font-medium">{t('usageStats.breakdown.requests')}</th>
+              <th className="py-2 text-right font-medium">
+                {t('usageStats.breakdown.totalTokens')}
+              </th>
+              <th className="py-2 text-right font-medium">{t('usageStats.breakdown.cost')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((record) => (
+              <tr className="border-border border-b last:border-0" key={record.id}>
+                <td className="py-2">
+                  <div className="flex items-center gap-2">
+                    <ModelIcon model={record.model} size={20} />
+                    <div className="flex flex-col">
+                      <div className="truncate block">{record.model}</div>
+                      <div className="text-[12px] text-muted-foreground">{record.provider}</div>
+                    </div>
+                  </div>
+                </td>
+                <td className="py-2 text-right">{formatNumber(record.requests)}</td>
+                <td className="py-2 text-right">{formatUsageValue(record.totalTokens)}</td>
+                <td className="py-2 text-right">${formatNumber(record.cost, 2)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+    </div>
   );
 });
 

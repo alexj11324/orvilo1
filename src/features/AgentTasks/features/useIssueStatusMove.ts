@@ -1,10 +1,10 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import type { TaskWorkflowCategory } from '@orvilo/types';
 import { t } from 'i18next';
 import { useCallback } from 'react';
 
+import { toast } from '@/components/toast';
 import {
   moveBoardMaybePickingState,
   workQueryBoardMoveToastKey,

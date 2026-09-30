@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Checkbox } from '@lobehub/ui/base-ui';
 import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface DeleteTopicConfirmContentProps {
   defaultRemoveFiles?: boolean;
@@ -19,20 +19,21 @@ export const DeleteTopicConfirmContent = memo<DeleteTopicConfirmContentProps>(
     const [checked, setChecked] = useState(defaultRemoveFiles);
 
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         {description ?? t('actions.confirmRemoveTopic')}
         {showRemoveFiles && (
-          <Checkbox
-            checked={checked}
-            onChange={(value) => {
-              setChecked(value);
-              onChange(value);
-            }}
-          >
+          <label className="flex items-center gap-2">
+            <Checkbox
+              checked={checked}
+              onCheckedChange={(value) => {
+                setChecked(value);
+                onChange(value);
+              }}
+            />
             {t('actions.confirmRemoveTopicFiles')}
-          </Checkbox>
+          </label>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

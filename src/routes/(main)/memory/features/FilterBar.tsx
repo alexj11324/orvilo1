@@ -1,8 +1,10 @@
-import { Flexbox, Icon, SearchBar } from '@lobehub/ui';
-import { Select } from '@lobehub/ui/base-ui';
 import { ArrowDownNarrowWide, Search } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
+import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface SortOption {
   label: string;
@@ -22,30 +24,40 @@ const FilterBar = memo<FilterBarProps>(
     const { t } = useTranslation('memory');
 
     return (
-      <Flexbox horizontal align={'center'} gap={12}>
-        <SearchBar
-          allowClear
-          defaultValue={searchValue}
-          placeholder={t('filter.search')}
-          prefix={<Search size={16} />}
-          style={{ flex: 1 }}
-          onSearch={(v) => onSearch(v)}
-          onInputChange={(v) => {
-            if (!v) {
-              onSearch(v);
-            }
-          }}
-        />
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute top-1/2 left-2 -translate-y-1/2 opacity-60" size={16} />
+          <Input
+            className="pl-7"
+            defaultValue={searchValue}
+            placeholder={t('filter.search')}
+            onChange={(e) => {
+              const v = e.target.value;
+              if (!v) {
+                onSearch(v);
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') onSearch(e.currentTarget.value);
+            }}
+          />
+        </div>
         {sortOptions && sortOptions.length > 0 && onSortChange && (
           <Select
-            options={sortOptions}
-            prefix={<Icon icon={ArrowDownNarrowWide} style={{ marginRight: 4 }} />}
-            style={{ minWidth: 150 }}
+            items={selectItems(sortOptions)}
             value={sortValue}
-            onChange={(value) => onSortChange(value as string)}
-          />
+            onValueChange={(value) => value && onSortChange(value)}
+          >
+            <SelectTrigger style={{ minWidth: 150 }}>
+              <ArrowDownNarrowWide style={{ marginRight: 4 }} />
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectOptionItems options={sortOptions} />
+            </SelectContent>
+          </Select>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

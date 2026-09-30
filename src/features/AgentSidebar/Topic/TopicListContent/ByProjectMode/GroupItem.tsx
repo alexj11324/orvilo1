@@ -1,23 +1,16 @@
-import { Center, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { FolderClosedIcon, FolderOpenIcon, type LucideIcon, PlusIcon } from 'lucide-react';
-import { memo, useCallback, useMemo } from 'react';
+import { createElement, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import RingLoadingIcon from '@/components/RingLoading';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import UnreadDot from '@/components/UnreadDot';
 import { isDesktop } from '@/const/version';
 import { useCommitWorkingDirectory } from '@/features/ChatInput/ControlBar/useCommitWorkingDirectory';
@@ -128,24 +121,35 @@ const CollapsedStatusBadges = memo<{ counts: ProjectTopicStatusCounts }>(({ coun
   if (items.length === 0) return null;
 
   return (
-    <Flexbox horizontal align={'center'} gap={3}>
+    <div className="flex items-center gap-[3px]">
       {items.map(({ className, count, icon, label, loading }) => (
-        <Tooltip key={label} title={label}>
-          <span aria-label={label} className={cx(styles.statusBadge, className)} role="status">
-            {loading ? (
-              <RingLoadingIcon
-                ringColor={`color-mix(in srgb, ${cssVar.colorWarning} 28%, transparent)`}
-                size={11}
-                style={{ color: cssVar.colorWarning }}
-              />
-            ) : (
-              icon && <Icon icon={icon} size={{ size: 11, strokeWidth: 2 }} />
-            )}
-            {count}
-          </span>
+        <Tooltip key={label}>
+          <TooltipTrigger
+            render={
+              <span>
+                <span
+                  aria-label={label}
+                  className={cx(styles.statusBadge, className)}
+                  role="status"
+                >
+                  {loading ? (
+                    <RingLoadingIcon
+                      ringColor={`color-mix(in srgb, ${cssVar.colorWarning} 28%, transparent)`}
+                      size={11}
+                      style={{ color: cssVar.colorWarning }}
+                    />
+                  ) : (
+                    icon && createElement(icon, { size: 11, strokeWidth: 2 })
+                  )}
+                  {count}
+                </span>
+              </span>
+            }
+          />
+          <TooltipContent>{label}</TooltipContent>
         </Tooltip>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -156,8 +160,15 @@ const CollapsedUnreadDot = memo<{ count: number }>(({ count }) => {
   const label = t('projectStatus.unread', { count });
 
   return (
-    <Tooltip title={label}>
-      <UnreadDot label={label} />
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span>
+            <UnreadDot label={label} />
+          </span>
+        }
+      />
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 });
@@ -234,7 +245,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
   const ProjectFolderIcon = expanded ? FolderOpenIcon : FolderClosedIcon;
   const action =
     canAddTopic || hasCollapsedIndicators ? (
-      <Flexbox horizontal align={'center'} gap={4}>
+      <div className="flex items-center gap-1">
         {hasCollapsedStatus && <CollapsedStatusBadges counts={statusCounts} />}
         {hasCollapsedUnread && <CollapsedUnreadDot count={unreadCount} />}
         {canAddTopic && (
@@ -251,41 +262,31 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
             />
           </span>
         )}
-      </Flexbox>
+      </div>
     ) : undefined;
 
   return (
     <AccordionItem value={id}>
-      <AccordionHeader className={'accordion-header'}>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-          <Flexbox horizontal align="center" gap={8} height={24} style={{ overflow: 'hidden' }}>
-            <Center flex={'none'} height={24} width={28}>
-              <Icon
-                color={cssVar.colorTextTertiary}
-                icon={ProjectFolderIcon}
-                size={{ size: 15, strokeWidth: 1.5 }}
-              />
-            </Center>
-            <Text ellipsis fontSize={14} style={{ color: cssVar.colorTextSecondary, flex: 1 }}>
-              {title}
-            </Text>
-          </Flexbox>
-        </AccordionTrigger>
-        {action && (
-          <div
-            className={cx(
-              'accordion-action',
-              accordionStyles.action,
-              accordionStyles.actionBorderless,
-              hasCollapsedIndicators && accordionStyles.actionAlwaysVisible,
-            )}
-          >
-            {action}
-          </div>
-        )}
-      </AccordionHeader>
-      <AccordionPanel contentStyle={{ padding: 0 }}>
-        <Flexbox gap={1} paddingBlock={1}>
+      <div className="flex items-center accordion-header">
+        <div className="min-w-0 flex-1">
+          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+            <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
+              <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[28px]">
+                <ProjectFolderIcon color={cssVar.colorTextTertiary} size={15} strokeWidth={1.5} />
+              </div>
+              <div
+                className="truncate text-[14px]"
+                style={{ color: cssVar.colorTextSecondary, flex: 1 }}
+              >
+                {title}
+              </div>
+            </div>
+          </AccordionTrigger>
+        </div>
+        {action && <div className="flex shrink-0 items-center">{action}</div>}
+      </div>
+      <AccordionContent className="[&>div]:p-0">
+        <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
               fav={topic.favorite}
@@ -297,8 +298,8 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
               userId={topic.userId}
             />
           ))}
-        </Flexbox>
-      </AccordionPanel>
+        </div>
+      </AccordionContent>
     </AccordionItem>
   );
 }, isEqual);

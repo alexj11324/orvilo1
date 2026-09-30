@@ -1,20 +1,16 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import {
-  Button,
-  Checkbox,
-  createModal,
-  type ModalInstance,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useClientDataSWR } from '@/libs/swr';
 import { verifyKeys } from '@/libs/swr/keys';
 import { verifyService } from '@/services/verify';
@@ -97,8 +93,8 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
         : translate('acceptance.workspace.deleteConfirm.ok', { size });
 
   return (
-    <Flexbox gap={12}>
-      <Text fontSize={13} type={purge ? 'danger' : 'secondary'}>
+    <div className="flex flex-col gap-3">
+      <div className={cn('text-[13px]', purge ? 'text-destructive' : 'text-muted-foreground')}>
         {purge
           ? translate('acceptance.workspace.deleteConfirm.purgeWarning')
           : batch
@@ -106,13 +102,9 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
                 count: ids.length,
               })
             : translate('acceptance.workspace.deleteConfirmDescription', { title })}
-      </Text>
-      {description && (
-        <Text fontSize={13} type={'secondary'}>
-          {description}
-        </Text>
-      )}
-      <Checkbox checked={purge} onChange={setPurge}>
+      </div>
+      {description && <div className="text-[13px] text-muted-foreground">{description}</div>}
+      <Checkbox checked={purge} onCheckedChange={(c) => setPurge(c === true)}>
         {size
           ? translate('acceptance.workspace.deleteConfirm.purgeOption', { size })
           : translate('acceptance.workspace.deleteConfirm.purgeOptionPlain')}
@@ -134,15 +126,15 @@ const DeleteConfirmContent = memo<DeleteConfirmProps>(({ description, ids, onDel
           <dd>{formatSize(preview.bytes)}</dd>
         </dl>
       )}
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <Button disabled={pending} onClick={close}>
           {translate('actions.cancel')}
         </Button>
-        <Button danger loading={pending} type={'primary'} onClick={() => void run()}>
+        <Button loading={pending} variant="destructive" onClick={() => void run()}>
           {okLabel}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

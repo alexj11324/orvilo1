@@ -53,6 +53,9 @@ vi.mock('@/features/Electron/titlebar/TitleBar', nullComponent);
 vi.mock('@/features/GlobalOverlays', nullComponent);
 vi.mock('@/features/HotkeyHelperPanel', nullComponent);
 vi.mock('@/features/NavPanel/Shell', nullComponent);
+vi.mock('@/features/ReUIShell/SidebarShell', () => ({
+  SidebarShell: () => null,
+}));
 vi.mock('@/layout/GlobalProvider/CmdkLazy', nullComponent);
 vi.mock('./RegisterHotkeys', nullComponent);
 vi.mock('../home', nullComponent);

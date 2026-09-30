@@ -1,8 +1,8 @@
 import type { MarkdownProps } from '@lobehub/ui';
-import { Center, Empty, Flexbox, Image, Markdown } from '@lobehub/ui';
-import { Text, ToggleGroup } from '@lobehub/ui/base-ui';
+import { Image, Markdown } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CodeIcon, ExternalLinkIcon, EyeIcon, RefreshCwIcon } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import CodeEditorPane from '@/components/CodeEditorPane';
 import { applyHtmlPreviewBaseUrl, InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
 import Loading from '@/components/Loading/CircleLoading';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   PublishHtmlArtifactLiveBar,
   PublishHtmlArtifactProvider,
@@ -29,6 +30,7 @@ import {
   type SkillMarkdownMetadataItem,
 } from '@/utils/skillMarkdown';
 
+import SimpleEmpty from '../SimpleEmpty';
 import { getFileExtension } from './Body.helpers';
 import MarkdownImage from './MarkdownImage';
 import PreviewToolbar, { ToolbarActionButton } from './PreviewToolbar';
@@ -56,7 +58,10 @@ const ImagePreview = memo<ImagePreviewProps>(({ blob, filename }) => {
   if (!imageSrc) return <Loading />;
 
   return (
-    <Center height={'100%'} style={{ overflow: 'auto' }} width={'100%'}>
+    <div
+      className="flex flex-col items-center justify-center h-[100%] w-[100%]"
+      style={{ overflow: 'auto' }}
+    >
       <Image
         alt={filename}
         objectFit={'contain'}
@@ -64,7 +69,7 @@ const ImagePreview = memo<ImagePreviewProps>(({ blob, filename }) => {
         style={{ maxWidth: '100%' }}
         variant={'borderless'}
       />
-    </Center>
+    </div>
   );
 });
 
@@ -115,14 +120,14 @@ const SkillFrontmatterPreviewCard = memo<SkillFrontmatterPreviewCardProps>(({ me
   if (metadata.length === 0) return null;
 
   return (
-    <Flexbox className={frontmatterStyles.card} style={{ flexShrink: 0 }}>
+    <div className={cx('flex flex-col', frontmatterStyles.card)} style={{ flexShrink: 0 }}>
       {metadata.map((item) => (
-        <Flexbox horizontal align={'flex-start'} className={frontmatterStyles.row} key={item.key}>
-          <Text className={frontmatterStyles.key}>{item.key}</Text>
-          <Text className={frontmatterStyles.value}>{item.value}</Text>
-        </Flexbox>
+        <div className={cx('flex flex-row items-start', frontmatterStyles.row)} key={item.key}>
+          <div className={cn(frontmatterStyles.key)}>{item.key}</div>
+          <div className={cn(frontmatterStyles.value)}>{item.value}</div>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -290,7 +295,7 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
         topicId={activeTopicId}
         workingDirectory={workingDirectory}
       >
-        <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflow: 'hidden' }}>
           <PublishHtmlArtifactLiveBar />
           <PreviewToolbar
             deviceId={deviceId}
@@ -308,26 +313,25 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
                 )}
                 {canRender && (
                   <ToggleGroup
-                    value={mode}
-                    variant={'outlined'}
-                    options={[
-                      {
-                        icon: <EyeIcon size={14} />,
-                        label: t('workingPanel.localFile.preview.render'),
-                        value: 'render',
-                      },
-                      {
-                        icon: <CodeIcon size={14} />,
-                        label: t(
-                          isHtml
-                            ? 'workingPanel.localFile.preview.source'
-                            : 'workingPanel.localFile.preview.raw',
-                        ),
-                        value: 'raw',
-                      },
-                    ]}
-                    onChange={(value) => setMode(value as TextPreviewMode)}
-                  />
+                    value={[mode]}
+                    variant="outline"
+                    onValueChange={(value) => {
+                      if (value.length > 0) setMode(value[0] as TextPreviewMode);
+                    }}
+                  >
+                    <ToggleGroupItem value="render">
+                      <EyeIcon size={14} />
+                      {t('workingPanel.localFile.preview.render')}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="raw">
+                      <CodeIcon size={14} />
+                      {t(
+                        isHtml
+                          ? 'workingPanel.localFile.preview.source'
+                          : 'workingPanel.localFile.preview.raw',
+                      )}
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 )}
                 {isHtml && canOpenExternal && (
                   <ToolbarActionButton
@@ -340,7 +344,10 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
               </>
             }
           />
-          <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+          <div
+            className="flex flex-col flex-1 h-[100%]"
+            style={{ minHeight: 0, overflow: 'hidden' }}
+          >
             {/* The rendered-markdown branch scrolls here; the HTML preview and
                 the code editor each own their scrolling, and the editor needs
                 that so its gutter and status bar stay pinned. */}
@@ -372,8 +379,8 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
                 />
               )}
             </div>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </PublishHtmlArtifactProvider>
     );
   },
@@ -479,15 +486,15 @@ const ActiveFileView = memo<ActiveFileViewProps>(
 
     if (error || !preview) {
       return (
-        <Center height={'100%'} width={'100%'}>
-          <Empty
+        <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+          <SimpleEmpty
             description={t(
               sandboxTopicId
                 ? 'workingPanel.localFile.sandboxUnavailable'
                 : 'workingPanel.localFile.error',
             )}
           />
-        </Center>
+        </div>
       );
     }
 
@@ -515,9 +522,9 @@ const ActiveFileView = memo<ActiveFileViewProps>(
 
     if (preview.type !== 'text') {
       return (
-        <Center height={'100%'} width={'100%'}>
-          <Empty description={t('workingPanel.localFile.binary')} />
-        </Center>
+        <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
+          <SimpleEmpty description={t('workingPanel.localFile.binary')} />
+        </div>
       );
     }
 
@@ -566,7 +573,7 @@ const Body = memo(() => {
   if (!activeFile) return null;
 
   return (
-    <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+    <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflow: 'hidden' }}>
       <ActiveFileView
         activeTopicId={activeTopicId}
         allowExternalFilePreview={activeFile.allowExternalFilePreview}
@@ -575,7 +582,7 @@ const Body = memo(() => {
         sandboxTopicId={activeFile.sandboxTopicId}
         workingDirectory={activeFile.workingDirectory}
       />
-    </Flexbox>
+    </div>
   );
 });
 

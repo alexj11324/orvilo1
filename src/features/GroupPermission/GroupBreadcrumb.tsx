@@ -1,8 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { Breadcrumb as AntBreadcrumb } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
@@ -11,6 +8,13 @@ import { Link } from 'react-router';
 import urlJoin from 'url-join';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import {
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbLink,
+  BreadcrumbList,
+  BreadcrumbSeparator,
+} from '@/components/ui/breadcrumb';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
@@ -54,32 +58,32 @@ const GroupBreadcrumb = memo<GroupBreadcrumbProps>(({ groupId, title }) => {
   );
 
   return (
-    <AntBreadcrumb
-      className={styles.breadcrumb}
-      separator={<Icon icon={ChevronRight} size={14} />}
-      items={[
-        {
-          title: (
-            <Link to={groupHomePath}>
-              <Text ellipsis as={'span'} color={'inherit'} style={{ maxWidth: 200 }} weight={500}>
-                {displayTitle}
-              </Text>
-            </Link>
-          ),
-        },
-        ...(title === undefined || title === null
-          ? []
-          : [
-              {
-                title: (
-                  <Text as={'span'} color={'inherit'} weight={500}>
-                    {title}
-                  </Text>
-                ),
-              },
-            ]),
-      ]}
-    />
+    <Breadcrumb className={styles.breadcrumb}>
+      <BreadcrumbList>
+        <BreadcrumbItem>
+          <BreadcrumbLink render={<Link to={groupHomePath} />}>
+            <span
+              className="truncate block font-medium"
+              style={{ maxWidth: 200, color: 'inherit' }}
+            >
+              {displayTitle}
+            </span>
+          </BreadcrumbLink>
+        </BreadcrumbItem>
+        {title !== undefined && title !== null && (
+          <>
+            <BreadcrumbSeparator>
+              <ChevronRight size={14} />
+            </BreadcrumbSeparator>
+            <BreadcrumbItem>
+              <span className="font-medium" style={{ color: 'inherit' }}>
+                {title}
+              </span>
+            </BreadcrumbItem>
+          </>
+        )}
+      </BreadcrumbList>
+    </Breadcrumb>
   );
 });
 

@@ -1,6 +1,6 @@
 'use client';
 
-import { Block, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
@@ -71,11 +71,14 @@ export const UpdateAgentRender = memo<BuiltinRenderProps<UpdateAgentParams>>(({ 
       {config?.systemRole && (
         <div className={styles.field}>
           <div className={styles.label}>System Prompt</div>
-          <Block paddingBlock={8} paddingInline={12} variant={'outlined'} width="100%">
+          <div
+            className="rounded-md border bg-card"
+            style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
+          >
             <Markdown fontSize={13} variant={'chat'}>
               {config.systemRole as string}
             </Markdown>
-          </Block>
+          </div>
         </div>
       )}
       {config?.model && (

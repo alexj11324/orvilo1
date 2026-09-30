@@ -1,12 +1,13 @@
-import { Flexbox, Icon, SearchResultCards } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
+import { SearchResultCards } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronRight, Globe, Images } from 'lucide-react';
 import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { useIsDark } from '@/hooks/useIsDark';
 import Image from '@/libs/next/Image';
 import { type GroundingSearch } from '@/types/search';
@@ -140,30 +141,29 @@ const SearchGrounding = memo<GroundingSearch>(
       : t('search.grounding.imageTitle', { count: imageResults?.length });
 
     return (
-      <Flexbox
-        gap={16}
+      <div
         style={{ width: showDetail ? '100%' : undefined }}
-        className={cx(
-          styles.container,
-          isDarkMode ? styles.containerDark : styles.containerLight,
-          showDetail && (isDarkMode ? styles.expandDark : styles.expandLight),
+        className={cn(
+          'flex flex-col gap-4',
+          cx(
+            styles.container,
+            isDarkMode ? styles.containerDark : styles.containerLight,
+            showDetail && (isDarkMode ? styles.expandDark : styles.expandLight),
+          ),
         )}
       >
-        <Flexbox
-          horizontal
-          distribution={'space-between'}
-          flex={1}
-          gap={8}
+        <div
+          className="flex justify-between flex-1 gap-2"
           style={{ cursor: 'pointer' }}
           onClick={() => {
             setShowDetail(!showDetail);
           }}
         >
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Icon icon={titleIcon} />
-            <Flexbox horizontal>{titleText}</Flexbox>
+          <div className="flex items-center gap-2">
+            {createElement(titleIcon, {})}
+            <div className="flex">{titleText}</div>
             {!showDetail && hasWebResults && (
-              <Flexbox horizontal>
+              <div className="flex">
                 {validCitations?.slice(0, 8).map((item, index) => (
                   <Image
                     unoptimized
@@ -181,10 +181,10 @@ const SearchGrounding = memo<GroundingSearch>(
                     }}
                   />
                 ))}
-              </Flexbox>
+              </div>
             )}
             {!showDetail && !hasWebResults && hasImageResults && (
-              <Flexbox horizontal>
+              <div className="flex">
                 {imageResults?.slice(0, 8).map((item, index) => (
                   <Image
                     unoptimized
@@ -202,14 +202,14 @@ const SearchGrounding = memo<GroundingSearch>(
                     }}
                   />
                 ))}
-              </Flexbox>
+              </div>
             )}
-          </Flexbox>
+          </div>
 
-          <Flexbox horizontal gap={4}>
-            <Icon icon={showDetail ? ChevronDown : ChevronRight} />
-          </Flexbox>
-        </Flexbox>
+          <div className="flex gap-1">
+            {createElement(showDetail ? ChevronDown : ChevronRight, {})}
+          </div>
+        </div>
 
         <AnimatePresence initial={false}>
           {showDetail && (
@@ -227,16 +227,16 @@ const SearchGrounding = memo<GroundingSearch>(
                 open: { height: 'auto', opacity: 1, width: 'auto' },
               }}
             >
-              <Flexbox gap={12}>
+              <div className="flex flex-col gap-3">
                 {searchQueries && (
-                  <Flexbox horizontal gap={4}>
+                  <div className="flex gap-1">
                     {t('search.grounding.searchQueries')}
-                    <Flexbox horizontal gap={8}>
+                    <div className="flex gap-2">
                       {searchQueries.map((query, index) => (
-                        <Tag key={index}>{query}</Tag>
+                        <Badge key={index}>{query}</Badge>
                       ))}
-                    </Flexbox>
-                  </Flexbox>
+                    </div>
+                  </div>
                 )}
                 {validCitations && (
                   <SearchResultCards
@@ -250,20 +250,20 @@ const SearchGrounding = memo<GroundingSearch>(
                   />
                 )}
                 {imageSearchQueries && imageSearchQueries.length > 0 && (
-                  <Flexbox horizontal gap={4}>
+                  <div className="flex gap-1">
                     {t('search.grounding.imageSearchQueries')}
-                    <Flexbox horizontal gap={8} wrap={'wrap'}>
+                    <div className="flex gap-2 flex-wrap">
                       {imageSearchQueries.map((query, index) => (
-                        <Tag key={index}>{query}</Tag>
+                        <Badge key={index}>{query}</Badge>
                       ))}
-                    </Flexbox>
-                  </Flexbox>
+                    </div>
+                  </div>
                 )}
                 {imageResults && imageResults.length > 0 && (
                   <div className={styles.imageGrid}>
                     {imageResults.map((item, index) => (
                       <div className={styles.imageCard} key={`${item.imageUri}-${index}`}>
-                        <Flexbox gap={4}>
+                        <div className="flex flex-col gap-1">
                           <a
                             className={styles.imageCardLink}
                             href={item.imageUri}
@@ -285,12 +285,12 @@ const SearchGrounding = memo<GroundingSearch>(
                             target="_blank"
                             title={item.title ? stripHtml(item.title) : undefined}
                           >
-                            <Flexbox gap={2}>
+                            <div className="flex flex-col gap-0.5">
                               {item.title && (
                                 <div className={styles.imageTitle}>{stripHtml(item.title)}</div>
                               )}
                               {item.domain && (
-                                <Flexbox horizontal align="center" gap={4}>
+                                <div className="flex items-center gap-1">
                                   <Image
                                     unoptimized
                                     alt={item.domain}
@@ -300,20 +300,20 @@ const SearchGrounding = memo<GroundingSearch>(
                                     width={12}
                                   />
                                   <div className={styles.imageDomain}>{item.domain}</div>
-                                </Flexbox>
+                                </div>
                               )}
-                            </Flexbox>
+                            </div>
                           </a>
-                        </Flexbox>
+                        </div>
                       </div>
                     ))}
                   </div>
                 )}
-              </Flexbox>
+              </div>
             </m.div>
           )}
         </AnimatePresence>
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,6 +1,5 @@
 'use client';
 
-import { A, Tooltip } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import { createStaticStyles } from 'antd-style';
@@ -8,6 +7,7 @@ import type { MouseEvent } from 'react';
 import { memo, useCallback } from 'react';
 
 import FileIcon from '@/components/FileIcon';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
@@ -109,31 +109,53 @@ const Render = memo<MarkdownElementProps<LocalFileLinkProperties>>(({ node }) =>
 
   if (!canPreview) {
     return (
-      <Tooltip mouseEnterDelay={0.1} placement={'topLeft'} title={title}>
-        <span className={styles.reference} data-file-path={parsed?.filePath}>
-          <span aria-hidden className={styles.icon}>
-            <FileIcon fileName={iconFileName} size={16} variant={'raw'} />
-          </span>
-          <span>{label}</span>
-        </span>
-      </Tooltip>
+      <TooltipProvider delay={100}>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span style={{ display: 'inline-flex' }}>
+                <span className={styles.reference} data-file-path={parsed?.filePath}>
+                  <span aria-hidden className={styles.icon}>
+                    <FileIcon fileName={iconFileName} size={16} variant={'raw'} />
+                  </span>
+                  <span>{label}</span>
+                </span>
+              </span>
+            }
+          />
+          <TooltipContent align="start" side="top">
+            {title}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   }
 
   return (
-    <Tooltip mouseEnterDelay={0.1} placement={'topLeft'} title={title}>
-      <A
-        {...(parsed ? { [RENDERER_HANDLED_LINK_ATTR]: 'true' } : {})}
-        className={styles.link}
-        href={linkHref}
-        onClick={handleClick}
-      >
-        <span aria-hidden className={styles.icon}>
-          <FileIcon fileName={iconFileName} size={16} variant={'raw'} />
-        </span>
-        <span>{label}</span>
-      </A>
-    </Tooltip>
+    <TooltipProvider delay={100}>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span style={{ display: 'inline-flex' }}>
+              <a
+                {...(parsed ? { [RENDERER_HANDLED_LINK_ATTR]: 'true' } : {})}
+                className={styles.link}
+                href={linkHref}
+                onClick={handleClick}
+              >
+                <span aria-hidden className={styles.icon}>
+                  <FileIcon fileName={iconFileName} size={16} variant={'raw'} />
+                </span>
+                <span>{label}</span>
+              </a>
+            </span>
+          }
+        />
+        <TooltipContent align="start" side="top">
+          {title}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

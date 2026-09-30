@@ -1,11 +1,11 @@
-import { Center, Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import type { DocumentCommentItem, DocumentCommentThread } from '@orvilo/types';
+import { cn } from 'cn';
 import { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { Button } from '@/components/ui/button';
 import { documentCommentService } from '@/services/documentComment';
 
 import CommentCard from './CommentCard';
@@ -252,7 +252,7 @@ const Thread = memo<ThreadProps>(
     );
 
     return (
-      <Flexbox className={styles.thread} ref={containerRef}>
+      <div className={cn('flex flex-col', styles.thread)} ref={containerRef}>
         <CommentCard
           comment={root}
           focusToken={focus && focus.commentId === root.id ? focus.token : undefined}
@@ -263,7 +263,7 @@ const Thread = memo<ThreadProps>(
         />
 
         {(replyCount > 0 || replyTargetId || focusedReplyId) && (
-          <Flexbox className={styles.replyList}>
+          <div className={cn('flex flex-col', styles.replyList)}>
             {replyTargetId === root.id && (
               <Composer
                 documentId={documentId}
@@ -294,21 +294,21 @@ const Thread = memo<ThreadProps>(
               />
             ) : (
               replies.hasMore && (
-                <Center paddingBlock={8}>
+                <div className="flex flex-col items-center justify-center py-2">
                   <Button
                     loading={replies.isLoadingMore}
-                    size={'small'}
-                    type={'text'}
+                    size="sm"
+                    variant="ghost"
                     onClick={() => void replies.loadMore()}
                   >
                     {t('pageEditor.comments.loadMoreReplies')}
                   </Button>
-                </Center>
+                </div>
               )
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

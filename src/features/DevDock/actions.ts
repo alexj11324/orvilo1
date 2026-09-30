@@ -1,5 +1,5 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
-
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/version';
 import { getUserStoreState } from '@/store/user';
 

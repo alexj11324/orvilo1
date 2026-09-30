@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { type TabBarProps } from '@lobehub/ui/mobile';
 import { TabBar } from '@lobehub/ui/mobile';
 import { createStaticStyles } from 'antd-style';
@@ -39,7 +38,7 @@ const NavBar = memo(() => {
       [
         {
           icon: (active: boolean) => (
-            <Icon className={active ? styles.active : undefined} icon={MessageSquare} />
+            <MessageSquare className={active ? styles.active : undefined} />
           ),
           key: SidebarTabKey.Chat,
           onClick: () => {
@@ -48,9 +47,7 @@ const NavBar = memo(() => {
           title: t('tab.chat'),
         },
         {
-          icon: (active: boolean) => (
-            <Icon className={active ? styles.active : undefined} icon={Inbox} />
-          ),
+          icon: (active: boolean) => <Inbox className={active ? styles.active : undefined} />,
           key: SidebarTabKey.Inbox,
           onClick: () => {
             navigate('/inbox');
@@ -58,9 +55,7 @@ const NavBar = memo(() => {
           title: t('tab.inbox'),
         },
         {
-          icon: (active: boolean) => (
-            <Icon className={active ? styles.active : undefined} icon={SquareUser} />
-          ),
+          icon: (active: boolean) => <SquareUser className={active ? styles.active : undefined} />,
           key: SidebarTabKey.MyWork,
           onClick: () => {
             navigate('/my-issues');
@@ -68,9 +63,7 @@ const NavBar = memo(() => {
           title: t('tab.myWork'),
         },
         {
-          icon: (active: boolean) => (
-            <Icon className={active ? styles.active : undefined} icon={User} />
-          ),
+          icon: (active: boolean) => <User className={active ? styles.active : undefined} />,
           key: SidebarTabKey.Me,
           onClick: () => {
             navigate('/me', { escape: true });

@@ -1,22 +1,34 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
-import { Avatar, Button, DropdownMenu, Segmented, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import isEqual from 'fast-deep-equal';
-import { ChevronDownIcon, ChevronRightIcon, PlusIcon } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { ChevronDownIcon, ChevronRightIcon, PlusIcon, Search } from 'lucide-react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import NavHeader from '@/features/NavHeader';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
@@ -82,21 +94,20 @@ const groupHeaderStyles = createStaticStyles(({ css, cssVar }) => ({
 
 const GroupHeader = memo<GroupHeaderProps>(
   ({ avatar, collapsed, color, count, index, label, onToggle }) => (
-    <Flexbox
-      horizontal
-      align={'center'}
-      gap={8}
-      className={cx(
-        groupHeaderStyles.bar,
-        index % 2 === 0 ? groupHeaderStyles.barEven : groupHeaderStyles.barOdd,
+    <div
+      className={cn(
+        'flex items-center gap-2',
+        cx(
+          groupHeaderStyles.bar,
+          index % 2 === 0 ? groupHeaderStyles.barEven : groupHeaderStyles.barOdd,
+        ),
       )}
       onClick={onToggle}
     >
-      <Icon
-        color={cssVar.colorTextSecondary}
-        icon={collapsed ? ChevronRightIcon : ChevronDownIcon}
-        size={14}
-      />
+      {createElement(collapsed ? ChevronRightIcon : ChevronDownIcon, {
+        color: cssVar.colorTextSecondary,
+        size: 14,
+      })}
       {avatar ? (
         <Avatar avatar={avatar} size={20} />
       ) : color ? (
@@ -110,13 +121,9 @@ const GroupHeader = memo<GroupHeaderProps>(
           }}
         />
       ) : null}
-      <Text fontSize={13} weight={500}>
-        {label}
-      </Text>
-      <Text fontSize={12} type={'secondary'}>
-        {count}
-      </Text>
-    </Flexbox>
+      <div className="text-[13px] font-medium">{label}</div>
+      <div className="text-[12px] text-muted-foreground">{count}</div>
+    </div>
   ),
 );
 
@@ -125,12 +132,10 @@ GroupHeader.displayName = 'AgentViewAllGroupHeader';
 // Bucket tab label: name plus how many agents the tab would list, in the same
 // muted-count style the group headers use.
 const SegmentLabel = memo<{ count: number; label: string }>(({ count, label }) => (
-  <Flexbox horizontal align={'center'} gap={6}>
+  <div className="flex items-center gap-1.5">
     {label}
-    <Text fontSize={12} type={'secondary'}>
-      {count}
-    </Text>
-  </Flexbox>
+    <div className="text-[12px] text-muted-foreground">{count}</div>
+  </div>
 ));
 
 SegmentLabel.displayName = 'AgentViewAllSegmentLabel';
@@ -419,12 +424,12 @@ const AgentViewAllPage = memo(() => {
   }, [createAgentMenuItem, createConnectAgentMenuItem, createGroupChatMenuItem, createOptions]);
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <NavHeader
         left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
+          <div className="font-medium" style={{ paddingInlineStart: 4 }}>
             {t('agentViewAll.title')}
-          </Text>
+          </div>
         }
         right={
           <ListConfig
@@ -436,86 +441,94 @@ const AgentViewAllPage = memo(() => {
           />
         }
       />
-      <WideScreenContainer gap={16} paddingBlock={16} wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+      <WideScreenContainer className="gap-4 py-4" wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
+        <div className="flex items-center gap-3 justify-between">
           {/* The workspace/private split only exists inside a workspace;
               personal mode leads with the search box instead. */}
           {activeWorkspaceId ? (
-            <Segmented
-              value={segment}
-              options={[
-                {
-                  label: (
-                    <SegmentLabel
-                      count={bucketCounts.workspace}
-                      label={t('navPanel.publicAgents')}
-                    />
-                  ),
-                  value: 'workspace',
-                },
-                {
-                  label: (
-                    <SegmentLabel
-                      count={bucketCounts.private}
-                      label={t('navPanel.privateAgents')}
-                    />
-                  ),
-                  value: 'private',
-                },
-              ]}
-              onChange={(value) => handleSegmentChange(value as SegmentValue)}
-            />
+            <ToggleGroup
+              value={[segment]}
+              onValueChange={(value) => value[0] && handleSegmentChange(value[0] as SegmentValue)}
+            >
+              <ToggleGroupItem value="workspace">
+                <SegmentLabel count={bucketCounts.workspace} label={t('navPanel.publicAgents')} />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="private">
+                <SegmentLabel count={bucketCounts.private} label={t('navPanel.privateAgents')} />
+              </ToggleGroupItem>
+            </ToggleGroup>
           ) : (
-            <SearchBar
-              allowClear
-              placeholder={t('navPanel.searchAgent')}
-              style={{ maxWidth: 240 }}
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
-            />
-          )}
-          <Flexbox horizontal align={'center'} gap={8}>
-            {activeWorkspaceId && (
-              <SearchBar
-                allowClear
+            <div className="relative" style={{ maxWidth: 240 }}>
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 opacity-60" size={14} />
+              <Input
+                className="pl-7"
                 placeholder={t('navPanel.searchAgent')}
-                style={{ maxWidth: 240 }}
                 value={keyword}
                 onChange={(e) => setKeyword(e.target.value)}
               />
+            </div>
+          )}
+          <div className="flex items-center gap-2">
+            {activeWorkspaceId && (
+              <div className="relative" style={{ maxWidth: 240 }}>
+                <Search className="absolute left-2 top-1/2 -translate-y-1/2 opacity-60" size={14} />
+                <Input
+                  className="pl-7"
+                  placeholder={t('navPanel.searchAgent')}
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                />
+              </div>
             )}
             {canCreate ? (
-              <DropdownMenu items={createMenuItems}>
-                <Button icon={PlusIcon} loading={isMutatingAgent}>
-                  <Icon icon={ChevronDownIcon} size={14} />
+              <SidebarDropdownMenu items={createMenuItems}>
+                <Button loading={isMutatingAgent}>
+                  <PlusIcon data-icon="inline-start" />
+                  <ChevronDownIcon size={14} />
                 </Button>
-              </DropdownMenu>
+              </SidebarDropdownMenu>
             ) : (
-              <Tooltip title={createBlockedReason}>
-                <Button disabled icon={PlusIcon}>
-                  <Icon icon={ChevronDownIcon} size={14} />
-                </Button>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <Button disabled>
+                          <PlusIcon data-icon="inline-start" />
+                          <ChevronDownIcon size={14} />
+                        </Button>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{createBlockedReason}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {!isInit ? (
           <SkeletonList rows={8} />
         ) : filteredItems.length === 0 ? (
-          <Center flex={1} padding={40}>
-            <Empty
-              description={
-                keyword.trim() ? t('navPanel.searchResultEmpty') : t('agentViewAll.empty')
-              }
-            />
-          </Center>
+          <div className="flex items-center justify-center flex-1 p-10">
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant="icon">
+                  <Search />
+                </EmptyMedia>
+                <EmptyTitle />
+                <EmptyDescription>
+                  {keyword.trim() ? t('navPanel.searchResultEmpty') : t('agentViewAll.empty')}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
+          </div>
         ) : viewMode === 'card' ? (
           groupedItems ? (
-            <Flexbox data-agent-list gap={8}>
+            <div data-agent-list className="flex flex-col gap-2">
               {groupedItems.map((group, index) => {
                 const collapsed = !expandedGroupSet.has(group.key);
                 return (
-                  <Flexbox gap={12} key={group.key}>
+                  <div className="flex flex-col gap-3" key={group.key}>
                     <GroupHeader
                       avatar={group.avatar}
                       collapsed={collapsed}
@@ -528,10 +541,10 @@ const AgentViewAllPage = memo(() => {
                     {!collapsed && (
                       <div className={cardStyles.grid}>{group.items.map(renderCard)}</div>
                     )}
-                  </Flexbox>
+                  </div>
                 );
               })}
-            </Flexbox>
+            </div>
           ) : (
             <div data-agent-list className={cardStyles.grid}>
               {filteredItems.map(renderCard)}
@@ -540,12 +553,12 @@ const AgentViewAllPage = memo(() => {
         ) : (
           // Grouped list shares the card branch's wrapper rhythm (outer gap 8,
           // bare GroupHeader) so toggling the view mode doesn't shift the bars.
-          <Flexbox data-agent-list gap={groupedItems ? 8 : 2}>
+          <div data-agent-list className="flex flex-col" style={{ gap: groupedItems ? 8 : 2 }}>
             {groupedItems
               ? groupedItems.map((group, index) => {
                   const collapsed = !expandedGroupSet.has(group.key);
                   return (
-                    <Flexbox gap={2} key={group.key}>
+                    <div className="flex flex-col gap-0.5" key={group.key}>
                       <GroupHeader
                         avatar={group.avatar}
                         collapsed={collapsed}
@@ -556,14 +569,14 @@ const AgentViewAllPage = memo(() => {
                         onToggle={() => toggleGroupCollapsed(group.key)}
                       />
                       {!collapsed && group.items.map(renderRow)}
-                    </Flexbox>
+                    </div>
                   );
                 })
               : filteredItems.map(renderRow)}
-          </Flexbox>
+          </div>
         )}
       </WideScreenContainer>
-    </Flexbox>
+    </div>
   );
 });
 

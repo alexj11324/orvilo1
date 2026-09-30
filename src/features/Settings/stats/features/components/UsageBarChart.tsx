@@ -1,9 +1,7 @@
 import { type BarChartProps } from '@lobehub/charts';
 import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 
+import { Separator } from '@/components/ui/separator';
 import { formatNumber, formatTokenNumber } from '@/utils/format';
 
 interface UsageBarChartProps extends BarChartProps {
@@ -21,24 +19,36 @@ export const UsageBarChart = ({ ...props }: UsageBarChartProps) => (
         );
         return (
           <ChartTooltipFrame>
-            <Flexbox horizontal justify={'space-between'} paddingBlock={8} paddingInline={16}>
-              <Text ellipsis as={'p'} style={{ margin: 0 }}>
+            <div
+              className={'flex min-w-0'}
+              style={{
+                flexDirection: 'row',
+                justifyContent: 'space-between',
+                paddingBlock: 8,
+                paddingInline: 16,
+              }}
+            >
+              <p className={'truncate'} style={{ margin: 0 }}>
                 {label}
-              </Text>
+              </p>
               {sum !== 0 && (
                 <span style={{ fontWeight: 'bold' }}>
                   {props.showType === 'spend' ? formatNumber(sum, 2) : formatTokenNumber(sum)}
                 </span>
               )}
-            </Flexbox>
+            </div>
             {sum !== 0 && (
               <>
-                <Divider style={{ margin: 0 }} />
-                <Flexbox
-                  gap={4}
-                  paddingBlock={8}
-                  paddingInline={16}
-                  style={{ flexDirection: 'column-reverse', marginTop: 4 }}
+                <Separator style={{ margin: 0 }} />
+                <div
+                  className={'flex min-w-0'}
+                  style={{
+                    gap: 4,
+                    paddingBlock: 8,
+                    paddingInline: 16,
+                    flexDirection: 'column-reverse',
+                    marginTop: 4,
+                  }}
                 >
                   {payload.map(({ value, color, name }: any, idx: number) =>
                     typeof value === 'number' && value > 0 ? (
@@ -54,7 +64,7 @@ export const UsageBarChart = ({ ...props }: UsageBarChartProps) => (
                       />
                     ) : null,
                   )}
-                </Flexbox>
+                </div>
               </>
             )}
           </ChartTooltipFrame>

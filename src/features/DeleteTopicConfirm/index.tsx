@@ -1,9 +1,9 @@
 'use client';
 
-import { confirmModal } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import type { ReactNode } from 'react';
 
+import { confirmModal } from '@/components/Modal';
 import { topicService } from '@/services/topic';
 
 import { DeleteTopicConfirmContent } from './Content';

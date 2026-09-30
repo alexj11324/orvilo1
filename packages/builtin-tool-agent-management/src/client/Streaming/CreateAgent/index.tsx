@@ -1,10 +1,11 @@
 'use client';
 
-import { Block, Flexbox, Markdown } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 import type { CreateAgentParams } from '../../../types';
 
@@ -60,21 +61,24 @@ export const CreateAgentStreaming = memo<BuiltinStreamingProps<CreateAgentParams
       {plugins && plugins.length > 0 && (
         <div className={styles.field}>
           <div className={styles.label}>Plugins</div>
-          <Flexbox horizontal gap={4} wrap={'wrap'}>
+          <div className="flex flex-row gap-1 flex-wrap">
             {plugins.map((plugin) => (
               <Tag key={plugin}>{plugin}</Tag>
             ))}
-          </Flexbox>
+          </div>
         </div>
       )}
       {systemRole && (
         <div className={styles.field}>
           <div className={styles.label}>System Prompt</div>
-          <Block paddingBlock={8} paddingInline={12} variant={'outlined'} width="100%">
+          <div
+            className="rounded-md border bg-card"
+            style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
+          >
             <Markdown animated variant={'chat'}>
               {systemRole}
             </Markdown>
-          </Block>
+          </div>
         </div>
       )}
     </div>

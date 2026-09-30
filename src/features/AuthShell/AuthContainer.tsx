@@ -2,7 +2,6 @@
 
 import '@/app/globals.css';
 
-import { Center, Flexbox } from '@lobehub/ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { cx } from 'antd-style';
 import { type FC, type PropsWithChildren } from 'react';
@@ -16,23 +15,23 @@ import { styles } from './style';
 
 const AuthContainer: FC<PropsWithChildren> = ({ children }) => {
   return (
-    <Flexbox className={cx(styles.page, 'orvilo-entry-surface')} width={'100%'}>
+    <div className={cx(cx(styles.page, 'orvilo-entry-surface'), 'flex flex-col w-full')}>
       <header className={styles.header}>
         <a aria-label={BRANDING_NAME} className={styles.logoLink} href={'/'}>
           <ProductLogo size={36} type={'combine'} />
         </a>
-        <Flexbox horizontal align={'center'} className={styles.headerActions} gap={4}>
+        <div className={cx(styles.headerActions, 'flex items-center gap-1')}>
           <AuthLangButton />
           <AuthThemeButton size={18} />
-        </Flexbox>
+        </div>
       </header>
       <main className={styles.main}>
-        <Center width={'100%'}>{children}</Center>
+        <div className="flex flex-col items-center justify-center w-full">{children}</div>
       </main>
       <footer className={styles.footer}>
         <AuthFooterLinks />
       </footer>
-    </Flexbox>
+    </div>
   );
 };
 

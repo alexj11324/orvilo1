@@ -1,8 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import type { SelectOptions } from '@lobehub/ui/base-ui';
-import { Button, Select, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import {
   isRemoteHeterogeneousType,
@@ -25,6 +22,7 @@ import {
   normalizeHeterogeneousProviderConfig,
 } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { Cpu } from 'lucide-react';
 import { memo, type ReactNode, useMemo, useState } from 'react';
@@ -32,6 +30,18 @@ import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
 import { ProductLogo } from '@/components/Branding';
+import type { SelectOptions } from '@/components/SelectOptions';
+import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/components/SelectOptions';
+import { Button } from '@/components/ui/button';
+import {
+  Combobox,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   getEffortLabelKeys,
   getModeLabelKey,
@@ -523,33 +533,38 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const rows: { content: ReactNode; key: string; label: string }[] = [
     {
       content: legacyRuntime ? (
-        <Flexbox align={'flex-start'} gap={8}>
-          <Text>{t('agentEngine.legacy.name')}</Text>
-          <Text className={styles.hint}>{t('agentEngine.legacy.description')}</Text>
+        <div className="flex flex-col items-start gap-2">
+          <div>{t('agentEngine.legacy.name')}</div>
+          <div className={styles.hint}>{t('agentEngine.legacy.description')}</div>
           <Button
             disabled={!canEdit}
-            size={'small'}
-            type={'primary'}
+            size="sm"
             onClick={() => {
               void patchProvider({ engine: DEFAULT_ORVILO_ENGINE, type: 'orvilo' });
             }}
           >
             {t('agentEngine.legacy.migrate')}
           </Button>
-        </Flexbox>
+        </div>
       ) : (
         <Select
-          className={styles.select}
           disabled={!canEdit}
-          options={harnessOptions}
+          items={selectItems(harnessOptions)}
           value={harnessType}
-          onChange={(value) => {
+          onValueChange={(value) => {
             if (typeof value !== 'string') return;
             void patchProvider(
               buildHarnessProviderPatch(provider, value as HeterogeneousAgentType),
             );
           }}
-        />
+        >
+          <SelectTrigger className={styles.select}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectOptionItems options={harnessOptions} />
+          </SelectContent>
+        </Select>
       ),
       key: 'harness',
       label: t('agentEngine.harness.label'),
@@ -561,20 +576,26 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
       content: (
         <>
           <Select
-            className={styles.select}
             disabled={!canEdit}
-            options={engineOptions}
+            items={selectItems(engineOptions)}
             value={provider?.engine ?? DEFAULT_ORVILO_ENGINE}
-            onChange={(value) => {
+            onValueChange={(value) => {
               if (typeof value !== 'string') return;
               void patchProvider(buildEngineProviderPatch(provider, value as OrviloEngineKind));
             }}
-          />
+          >
+            <SelectTrigger className={styles.select}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectOptionItems options={engineOptions} />
+            </SelectContent>
+          </Select>
           {engineCapabilities &&
           (!engineCapabilities.userQuestions || !engineCapabilities.builtinTools) ? (
-            <Text className={styles.hint} type={'warning'}>
+            <div className={cn(styles.hint, 'text-warning')}>
               {t('agentEngine.engine.limitedCapabilities')}
-            </Text>
+            </div>
           ) : null}
         </>
       ),
@@ -587,15 +608,20 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
     rows.push({
       content: (
         <Select
-          className={styles.select}
           disabled={!canEdit}
-          options={modelOptions}
-          showSearch={false}
+          items={selectItems(modelOptions)}
           value={model}
-          onChange={(value) => {
+          onValueChange={(value) => {
             if (typeof value === 'string') handleModelChange(value);
           }}
-        />
+        >
+          <SelectTrigger className={styles.select}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectOptionItems options={modelOptions} />
+          </SelectContent>
+        </Select>
       ),
       key: 'model',
       label: t('agentEngine.model.label'),
@@ -604,22 +630,41 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
     rows.push({
       content: (
         <>
-          <Select
-            showSearch
-            className={styles.select}
-            disabled={!canEdit}
-            loading={catalog.isLoading}
-            options={catalogModelOptions}
+          <Combobox
+            disabled={!canEdit || catalog.isLoading}
+            items={flattenSelectOptions(catalogModelOptions).map((o) => o.value)}
             value={model}
-            onOpenChange={setCatalogOpen}
-            onChange={(value) => {
+            itemToStringLabel={(v) =>
+              flattenSelectOptions(catalogModelOptions).find((o) => o.value === v)?.title ?? v
+            }
+            onOpenChange={(open) => setCatalogOpen(open)}
+            onValueChange={(value) => {
               if (typeof value === 'string') handleModelChange(value);
             }}
-          />
+          >
+            <ComboboxInput className={styles.select} />
+            <ComboboxContent>
+              <ComboboxEmpty>
+                {catalog.isLoading ? t('agentEngine.model.catalogPending') : null}
+              </ComboboxEmpty>
+              <ComboboxList>
+                {(v) => {
+                  const option = flattenSelectOptions(catalogModelOptions).find(
+                    (o) => o.value === v,
+                  );
+                  return (
+                    <ComboboxItem key={v} value={v}>
+                      {option?.label ?? v}
+                    </ComboboxItem>
+                  );
+                }}
+              </ComboboxList>
+            </ComboboxContent>
+          </Combobox>
           {!catalogTargetReady ? (
-            <Text className={styles.hint}>{t('agentEngine.model.catalogPending')}</Text>
+            <div className={styles.hint}>{t('agentEngine.model.catalogPending')}</div>
           ) : catalog.error ? (
-            <Text className={styles.hint}>{t('agentEngine.model.catalogError')}</Text>
+            <div className={styles.hint}>{t('agentEngine.model.catalogError')}</div>
           ) : null}
         </>
       ),
@@ -632,11 +677,10 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
     rows.push({
       content: (
         <Select
-          className={styles.select}
           disabled={!canEdit}
-          options={effortOptions}
+          items={selectItems(effortOptions)}
           value={effort}
-          onChange={(value) => {
+          onValueChange={(value) => {
             if (typeof value !== 'string') return;
             void patchProvider(
               applyEngineAwareSelection(provider, {
@@ -644,7 +688,14 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
               }),
             );
           }}
-        />
+        >
+          <SelectTrigger className={styles.select}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectOptionItems options={effortOptions} />
+          </SelectContent>
+        </Select>
       ),
       key: 'effort',
       label: t('agentEngine.effort.label'),
@@ -655,11 +706,10 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
     rows.push({
       content: (
         <Select
-          className={styles.select}
           disabled={!canEdit}
-          options={modeOptions}
+          items={selectItems(modeOptions)}
           value={mode}
-          onChange={(value) => {
+          onValueChange={(value) => {
             if (typeof value !== 'string') return;
             void patchProvider(
               applyEngineAwareSelection(provider, {
@@ -667,7 +717,14 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
               }),
             );
           }}
-        />
+        >
+          <SelectTrigger className={styles.select}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectOptionItems options={modeOptions} />
+          </SelectContent>
+        </Select>
       ),
       key: 'mode',
       label: t('agentEngine.mode.label'),
@@ -678,11 +735,10 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
     rows.push({
       content: (
         <Select
-          className={styles.select}
           disabled={!canEdit}
-          options={speedOptions}
+          items={selectItems(speedOptions)}
           value={speed}
-          onChange={(value) => {
+          onValueChange={(value) => {
             if (typeof value !== 'string') return;
             void patchProvider(
               applyEngineAwareSelection(provider, {
@@ -690,7 +746,14 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
               }),
             );
           }}
-        />
+        >
+          <SelectTrigger className={styles.select}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectOptionItems options={speedOptions} />
+          </SelectContent>
+        </Select>
       ),
       key: 'speed',
       label: t('agentEngine.speed.label'),
@@ -702,17 +765,22 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
       content: (
         <>
           <Select
-            className={styles.select}
             disabled={!canEdit}
-            options={targetOptions}
-            placeholder={t('settingAgent.devicePolicy.selectTarget')}
+            items={selectItems(targetOptions)}
             value={selectedTargetValue}
-            onChange={(value) => {
+            onValueChange={(value) => {
               if (typeof value === 'string') handleTargetChange(value);
             }}
-          />
+          >
+            <SelectTrigger className={styles.select}>
+              <SelectValue placeholder={t('settingAgent.devicePolicy.selectTarget')} />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectOptionItems options={targetOptions} />
+            </SelectContent>
+          </Select>
           {builtinEngine ? (
-            <Text className={styles.hint}>{t('agentEngine.target.orviloHint')}</Text>
+            <div className={styles.hint}>{t('agentEngine.target.orviloHint')}</div>
           ) : null}
         </>
       ),
@@ -722,24 +790,22 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   }
 
   return (
-    <Flexbox className={styles.card} gap={0}>
+    <div className={cn('flex flex-col gap-0', styles.card)}>
       <div className={styles.cardHeader}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Icon icon={Cpu} size={16} />
-          <Text strong className={styles.title}>
-            {t('agentEngine.title')}
-          </Text>
-        </Flexbox>
+        <div className="flex items-center gap-2">
+          <Cpu size={16} />
+          <div className={cn(styles.title, 'font-semibold')}>{t('agentEngine.title')}</div>
+        </div>
       </div>
       <div className={styles.detailList}>
         {rows.map((row) => (
           <div className={styles.detailRow} key={row.key}>
-            <Text className={styles.detailLabel}>{row.label}</Text>
+            <div className={styles.detailLabel}>{row.label}</div>
             <div className={styles.detailContent}>{row.content}</div>
           </div>
         ))}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

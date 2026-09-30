@@ -1,12 +1,12 @@
 import { useEditor } from '@lobehub/editor/react';
-import { Flexbox, Tooltip } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { Paperclip } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import ActionIcon from '@/components/ActionIcon';
 import CollapsibleContent from '@/components/CollapsibleContent';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { seedAttachments } from '@/features/EditorCanvas/attachmentRegistry';
@@ -131,7 +131,7 @@ const TaskInstruction = memo(() => {
   const showAttach = !overflowing || expanded;
 
   return (
-    <Flexbox gap={4}>
+    <div className="flex flex-col gap-1">
       <EditingIndicator
         holderId={lock.lockedByOther ? lock.holderId : null}
         pending={canEditTask && lock.pending}
@@ -164,20 +164,30 @@ const TaskInstruction = memo(() => {
         </div>
       </CollapsibleContent>
       {showAttach && (
-        <Tooltip title={editable ? t('upload.action.tooltip') : attachBlockedReason}>
-          {/* The wrapper span keeps the tooltip reachable — a disabled button
-              swallows pointer events, so the reason would never surface. */}
-          <span style={{ display: 'inline-flex' }}>
-            <ActionIcon
-              disabled={!editable}
-              icon={Paperclip}
-              size={'small'}
-              onClick={handleAttach}
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                // The wrapper span keeps the tooltip reachable — a disabled
+                // button swallows pointer events, so the reason would never
+                // surface.
+                <span style={{ display: 'inline-flex' }}>
+                  <ActionIcon
+                    disabled={!editable}
+                    icon={Paperclip}
+                    size={'small'}
+                    onClick={handleAttach}
+                  />
+                </span>
+              }
             />
-          </span>
-        </Tooltip>
+            <TooltipContent>
+              {editable ? t('upload.action.tooltip') : attachBlockedReason}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

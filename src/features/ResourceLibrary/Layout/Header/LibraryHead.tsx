@@ -1,8 +1,5 @@
 'use client';
 
-import { Block, Center, stopPropagation } from '@lobehub/ui';
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { ActionIcon, DropdownMenu, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import type { DragEvent } from 'react';
@@ -11,7 +8,10 @@ import { useTranslation } from 'react-i18next';
 
 import BusinessKnowledgeBaseImportAction from '@/business/client/BusinessKnowledgeBaseImportAction';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import LibraryStatusIcon from '@/components/LibIcon/StatusIcon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useDragActive } from '@/features/ResourceManager/DndContextWrapper';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -93,7 +93,10 @@ const Head = memo<{ id: string }>(({ id }) => {
     const entries = libraries.map((library): LibraryMenuEntry => ({
       item: {
         icon: (
-          <Center className={styles.menuIcon} style={{ minWidth: 16 }} width={16}>
+          <div
+            className={cx('flex flex-col items-center justify-center w-[16px]', styles.menuIcon)}
+            style={{ minWidth: 16 }}
+          >
             <LibraryStatusIcon
               size={14}
               visibility={library.visibility}
@@ -101,12 +104,12 @@ const Head = memo<{ id: string }>(({ id }) => {
                 (library as typeof library & { memberRestricted?: boolean }).memberRestricted
               }
             />
-          </Center>
+          </div>
         ),
         key: library.id,
         label: library.name,
         onClick: () => handleLibrarySwitch(library.id),
-        style: library.id === id ? { backgroundColor: 'var(--ant-control-item-bg-active)' } : {},
+        className: library.id === id ? 'bg-[var(--ant-control-item-bg-active)]' : undefined,
       },
       visibility: library.visibility,
     }));
@@ -118,43 +121,39 @@ const Head = memo<{ id: string }>(({ id }) => {
   }, [activeWorkspaceId, libraries, handleLibrarySwitch, id, t]);
 
   return (
-    <Block
-      clickable
-      horizontal
-      align={'center'}
-      className={cx(isDropZoneActive && styles.dropZoneActive)}
+    <div
       data-drop-target-id="root"
       data-is-folder="true"
       data-root-drop="true"
-      gap={8}
-      padding={2}
-      style={{ minWidth: 32, overflow: 'hidden' }}
-      variant={'borderless'}
+      style={{ minWidth: 32, overflow: 'hidden', cursor: 'pointer' }}
+      className={cx(
+        'flex flex-row items-center gap-2 p-0.5',
+        isDropZoneActive && styles.dropZoneActive,
+      )}
       onClick={handleClick}
       onDragLeave={handleDragLeave}
       onDragOver={handleDragOver}
       onDrop={handleDrop}
     >
-      <Center style={{ minWidth: 32 }} width={32}>
+      <div className="flex flex-col items-center justify-center w-[32px]" style={{ minWidth: 32 }}>
         <LibraryStatusIcon
           memberRestricted={activeLibrary?.memberRestricted}
           size={18}
           visibility={activeLibrary?.visibility}
         />
-      </Center>
+      </div>
       {!name ? (
-        <Skeleton.Text width={80} />
+        <Skeleton className="h-4" style={{ width: 80 }} />
       ) : (
         <DropdownMenu items={menuItems} placement="bottomRight">
-          <Center
-            horizontal
-            gap={4}
+          <div
+            className="flex flex-col items-center justify-center gap-1"
             style={{ cursor: 'pointer', flex: 1, overflow: 'hidden' }}
-            onClick={stopPropagation}
+            onClick={(event) => event.stopPropagation()}
           >
-            <Text ellipsis style={{ flex: 1 }} weight={500}>
+            <div className="truncate min-w-0 font-medium" style={{ flex: 1 }}>
               {name}
-            </Text>
+            </div>
             <ActionIcon
               icon={ChevronsUpDownIcon}
               style={{ width: 24 }}
@@ -163,11 +162,11 @@ const Head = memo<{ id: string }>(({ id }) => {
                 size: 16,
               }}
             />
-          </Center>
+          </div>
         </DropdownMenu>
       )}
       <BusinessKnowledgeBaseImportAction knowledgeBaseId={id} />
-    </Block>
+    </div>
   );
 });
 

@@ -1,7 +1,6 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -38,9 +37,14 @@ const VideoViewer = memo<VideoViewerProps>(({ url }) => {
   if (!url) return null;
 
   return (
-    <Center className={styles.container} height={'100%'} width={'100%'}>
+    <div
+      className={cx(
+        'flex flex-col items-center justify-center h-[100%] w-[100%]',
+        styles.container,
+      )}
+    >
       <video controls className={styles.video} height={'100%'} src={url} width={'100%'} />
-    </Center>
+    </div>
   );
 });
 

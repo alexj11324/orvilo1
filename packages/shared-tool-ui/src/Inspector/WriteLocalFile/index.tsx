@@ -1,7 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
 import { Plus } from 'lucide-react';
@@ -63,10 +61,13 @@ export const createWriteLocalFileInspector = (translationKey: string) => {
           {!isLoading && lineCount && (
             <>
               {' '}
-              <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12}>
-                <Icon icon={Plus} size={12} />
+              <span
+                className="font-mono rounded bg-muted px-1 text-[12px]"
+                style={{ color: cssVar.colorSuccess }}
+              >
+                <Plus size={12} />
                 {lineCount}
-              </Text>
+              </span>
             </>
           )}
         </div>

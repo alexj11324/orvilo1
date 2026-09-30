@@ -1,9 +1,10 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { CopyIcon, GitBranchIcon, LinkIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskCopyActions } from './useTaskCopyActions';

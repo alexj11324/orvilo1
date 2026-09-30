@@ -1,9 +1,10 @@
-import { Tooltip } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
+
 import { useAgentDisplayMeta } from '../shared/useAgentDisplayMeta';
+import { SimpleTooltip } from './SimpleTooltip';
 import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 
 interface AssigneeAvatarProps {
@@ -32,7 +33,7 @@ const AssigneeAvatar = memo<AssigneeAvatarProps>(
       />
     );
 
-    return tooltip ? <Tooltip title={displayMeta.title}>{avatar}</Tooltip> : avatar;
+    return tooltip ? <SimpleTooltip title={displayMeta.title}>{avatar}</SimpleTooltip> : avatar;
   },
 );
 

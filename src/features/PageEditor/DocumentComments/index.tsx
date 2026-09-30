@@ -1,13 +1,15 @@
 'use client';
 
-import { Center, Flexbox } from '@lobehub/ui';
-import { Button, Skeleton, Text, toast } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { memo, useCallback, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { documentCommentService } from '@/services/documentComment';
 
 import Composer from './Composer';
@@ -216,31 +218,26 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
   if (!workspaceId) return null;
 
   return (
-    <Flexbox
+    <div
       data-document-comments
-      className={styles.section}
-      gap={24}
+      className={cn('flex flex-col gap-6', styles.section)}
       onClick={(event) => event.stopPropagation()}
     >
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
+      <div className={cn('flex items-center gap-2', styles.header)}>
         {isHeaderLoading ? (
           <>
-            <Skeleton height={28} width={48} />
-            <Skeleton height={20} width={16} />
+            <Skeleton style={{ height: 28, width: 48 }} />
+            <Skeleton style={{ height: 20, width: 16 }} />
           </>
         ) : (
           <>
-            <Text as={'h2'} fontSize={20} weight={600}>
-              {t('pageEditor.comments.title')}
-            </Text>
+            <h2 className="text-[20px] font-semibold">{t('pageEditor.comments.title')}</h2>
             {summary.data && (
-              <Text className={styles.meta} fontSize={14}>
-                {summary.data.total}
-              </Text>
+              <div className={cn('text-[14px]', styles.meta)}>{summary.data.total}</div>
             )}
           </>
         )}
-      </Flexbox>
+      </div>
 
       {/* The pinned deep-link thread renders on its own, so a pending or failed list
           request never hides a target that was already fetched. */}
@@ -248,7 +245,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
       threads.isLoadingInitial ||
       threads.items.length > 0 ||
       pinnedThread ? (
-        <Flexbox className={styles.threadList}>
+        <div className={cn('flex flex-col', styles.threadList)}>
           {pinnedThread && (
             <Thread
               documentId={documentId}
@@ -296,18 +293,18 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
             />
           ) : (
             threads.hasMore && (
-              <Center paddingBlock={12}>
+              <div className="flex flex-col items-center justify-center py-3">
                 <Button
                   loading={threads.isLoadingMore}
-                  type={'text'}
+                  variant="ghost"
                   onClick={() => void threads.loadMore()}
                 >
                   {t('pageEditor.comments.loadMore')}
                 </Button>
-              </Center>
+              </div>
             )
           )}
-        </Flexbox>
+        </div>
       ) : null}
 
       {/* While the thread list is still skeleton-loading the composer would
@@ -315,7 +312,7 @@ const DocumentComments = memo<{ documentId: string }>(({ documentId }) => {
       {!threads.isLoadingInitial && (
         <Composer documentId={documentId} key={`root:${documentId}`} onSubmit={handleCreate} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

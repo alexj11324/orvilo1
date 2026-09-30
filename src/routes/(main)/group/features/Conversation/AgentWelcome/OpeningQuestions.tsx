@@ -1,10 +1,11 @@
 'use client';
 
-import { Block, Flexbox, Tooltip } from '@lobehub/ui';
-import { createStaticStyles, cx, responsive } from 'antd-style';
+import { createStaticStyles, cssVar, cx, responsive } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useConversationStore } from '@/features/Conversation';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useAgentGroupStore } from '@/store/agentGroup';
@@ -58,16 +59,16 @@ const OpeningQuestions = memo<OpeningQuestionsProps>(({ mobile, questions }) => 
   return (
     <div className={styles.container}>
       <p className={styles.title}>{t('guide.questions.title')}</p>
-      <Flexbox horizontal gap={8} wrap={'wrap'}>
+      <div className="flex gap-2 flex-wrap">
         {questions.slice(0, mobile ? 2 : 5).map((question) => {
           const card = (
-            <Block
-              className={cx(styles.card, !canUseResource && styles.cardDisabled)}
-              clickable={canUseResource}
+            <div
               key={question}
-              paddingBlock={8}
-              paddingInline={12}
-              variant={'filled'}
+              style={{ cursor: 'pointer', background: cssVar.colorFillSecondary }}
+              className={cn(
+                'flex flex-col py-2 px-3',
+                cx(styles.card, !canUseResource && styles.cardDisabled),
+              )}
               onClick={
                 canUseResource
                   ? () => {
@@ -77,18 +78,21 @@ const OpeningQuestions = memo<OpeningQuestionsProps>(({ mobile, questions }) => 
               }
             >
               {question}
-            </Block>
+            </div>
           );
 
           return canUseResource ? (
             card
           ) : (
-            <Tooltip key={question} title={t('input.viewOnlyGroup', { ns: 'chat' })}>
-              {card}
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger render={<span style={{ display: 'inline-flex' }}>{card}</span>} />
+                <TooltipContent>{t('input.viewOnlyGroup', { ns: 'chat' })}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           );
         })}
-      </Flexbox>
+      </div>
     </div>
   );
 });

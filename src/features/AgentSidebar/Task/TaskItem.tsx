@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useCallback } from 'react';
 
@@ -31,9 +30,9 @@ const TaskItem = memo<TaskItemProps>(({ task, active }) => {
       title={displayTitle}
       slots={{
         titlePrefix: hasName ? (
-          <Text fontSize={12} style={{ color: cssVar.colorTextTertiary, flex: 'none' }}>
+          <div className="text-[12px]" style={{ color: cssVar.colorTextTertiary, flex: 'none' }}>
             {task.identifier}
-          </Text>
+          </div>
         ) : undefined,
       }}
       onClick={handleClick}

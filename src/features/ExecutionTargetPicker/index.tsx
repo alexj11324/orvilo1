@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { DeviceExecutionTarget, DeviceListItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { BoxIcon, LaptopIcon, MonitorOffIcon, SparklesIcon } from 'lucide-react';
@@ -119,19 +118,19 @@ export const ExecutionTargetIcon = memo<ExecutionTargetIconProps>(
   ({ devicePlatform, size = 14, target }) => {
     switch (target) {
       case 'auto': {
-        return <Icon icon={SparklesIcon} size={size} />;
+        return <SparklesIcon size={size} />;
       }
       case 'device': {
         return <>{getDeviceIcon(devicePlatform, size)}</>;
       }
       case 'local': {
-        return <Icon icon={LaptopIcon} size={size} />;
+        return <LaptopIcon size={size} />;
       }
       case 'none': {
-        return <Icon icon={MonitorOffIcon} size={size} />;
+        return <MonitorOffIcon size={size} />;
       }
       case 'sandbox': {
-        return <Icon icon={BoxIcon} size={size} />;
+        return <BoxIcon size={size} />;
       }
     }
   },

@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { DiamondIcon } from 'lucide-react';
 import { type CSSProperties, memo } from 'react';
@@ -29,9 +28,8 @@ interface MilestoneIconProps {
  * directly — it is the same shape, unpainted by the host's own styling.
  */
 const MilestoneIcon = memo<MilestoneIconProps>(({ muted, size = MILESTONE_ICON_SIZE, style }) => (
-  <Icon
+  <DiamondIcon
     {...(muted ? { color: cssVar.colorTextDescription } : MILESTONE_ICON_PAINT)}
-    icon={DiamondIcon}
     size={size}
     style={style}
   />

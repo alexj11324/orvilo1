@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { useResponsive } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo, useMemo } from 'react';
@@ -39,10 +38,10 @@ const GalleyGrid = memo<GalleyGridProps>(({ items, renderItem: Render }) => {
       gap: mobile ? 4 : 6,
       max: (mobile ? MAX_SIZE_MOBILE : MAX_SIZE_DESKTOP) * scale,
     };
-  }, [mobile, items]);
+  }, [mobile, items, firstRow.length]);
 
   return (
-    <Flexbox gap={gap}>
+    <div className={'flex flex-col'} style={{ gap }}>
       <Grid col={firstRow.length} gap={gap} max={max}>
         {firstRow.map((i, index) => (
           <Render {...i} index={index} key={index} />
@@ -55,7 +54,7 @@ const GalleyGrid = memo<GalleyGridProps>(({ items, renderItem: Render }) => {
           ))}
         </Grid>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

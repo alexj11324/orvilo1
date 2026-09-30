@@ -1,9 +1,9 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import type { ChatTopicStatus, TaskStatus } from '@orvilo/types';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { TASK_STATUS_VISUALS, TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 interface StatusGlyphProps {
   size?: number;
@@ -28,11 +28,22 @@ const StatusGlyph = memo<StatusGlyphProps>(({ status, variant, size = 14 }) => {
   if (!visual) return null;
 
   return (
-    <Tooltip title={t(`taskDetail.status.${status}`, { defaultValue: status })}>
-      <Flexbox flex={'none'}>
-        <Icon color={visual.color} icon={visual.icon} size={size} />
-      </Flexbox>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex">
+              <div className="flex flex-col flex-none">
+                {createElement(visual.icon, { color: visual.color, size })}
+              </div>
+            </span>
+          }
+        />
+        <TooltipContent>
+          {t(`taskDetail.status.${status}`, { defaultValue: status })}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

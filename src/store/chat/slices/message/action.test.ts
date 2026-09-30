@@ -1,4 +1,3 @@
-import { copyToClipboard } from '@lobehub/ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { TraceEventType } from '@orvilo/types';
 import { act, renderHook } from '@testing-library/react';
@@ -16,11 +15,12 @@ import {
 import { topicService } from '@/services/topic';
 import { LOCAL_MESSAGE_SCOPE } from '@/store/chat/utils/localMessages';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { copyToClipboard } from '@/utils/clipboard';
 
 import { useChatStore } from '../../store';
 
 // Mock @/libs/swr mutate
-vi.mock('@lobehub/ui', async (importOriginal) => ({
+vi.mock('@/utils/clipboard', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   copyToClipboard: vi.fn(),
 }));

@@ -1,10 +1,11 @@
 'use client';
 
-import { Flexbox, Popover } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+import { PreviewCard } from '@base-ui/react/preview-card';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { memo, type ReactNode } from 'react';
+import { memo, type ReactElement, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 
 const styles = createStaticStyles(({ css }) => ({
   label: css`
@@ -82,32 +83,28 @@ const GoalRoundPopover = memo<GoalRoundPopoverProps>(
     ];
 
     return (
-      <Popover
-        arrow={false}
-        placement={'top'}
-        trigger={'hover'}
-        content={
-          <Flexbox gap={6} style={{ minWidth: 140 }}>
-            <Text fontSize={13} weight={500}>
-              {t('taskDetail.goalTimeline.round', { index })}
-            </Text>
-            {rows.map((row) => (
-              <Flexbox
-                horizontal
-                align={'center'}
-                gap={16}
-                justify={'space-between'}
-                key={row.label}
-              >
-                <span className={styles.label}>{row.label}</span>
-                <span className={styles.value}>{row.value}</span>
-              </Flexbox>
-            ))}
-          </Flexbox>
-        }
-      >
-        {children}
-      </Popover>
+      <PreviewCard.Root>
+        <PreviewCard.Trigger render={children as ReactElement} />
+        <PreviewCard.Portal>
+          <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
+            <PreviewCard.Popup
+              className={`${POPUP_Z_CLASS} flex flex-col rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
+            >
+              <div className="flex flex-col gap-1.5" style={{ minWidth: 140 }}>
+                <div className="text-[13px] font-medium">
+                  {t('taskDetail.goalTimeline.round', { index })}
+                </div>
+                {rows.map((row) => (
+                  <div className="flex items-center justify-between gap-4" key={row.label}>
+                    <span className={styles.label}>{row.label}</span>
+                    <span className={styles.value}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </PreviewCard.Popup>
+          </PreviewCard.Positioner>
+        </PreviewCard.Portal>
+      </PreviewCard.Root>
     );
   },
 );

@@ -1,12 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Drawer, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceAttachment } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 import { AttachmentThumbs } from '../Evidence/attachments';
 
@@ -95,11 +96,10 @@ const EntryRow = memo<{
   ].filter(Boolean);
 
   return (
-    <Flexbox
-      className={cx(styles.row, entry.checkId && styles.clickable)}
-      gap={8}
+    <div
+      className={`flex flex-col gap-2 ${cx(styles.row, entry.checkId && styles.clickable)}`}
       role={entry.checkId ? 'button' : undefined}
-      style={entry.stale ? { opacity: 0.55 } : undefined}
+      style={{ ...(entry.stale ? { opacity: 0.55 } : undefined) }}
       tabIndex={entry.checkId ? 0 : undefined}
       onClick={entry.checkId ? () => onJumpToCheck(entry.checkId!) : undefined}
       onKeyDown={(event) => {
@@ -113,31 +113,31 @@ const EntryRow = memo<{
         }
       }}
     >
-      <Flexbox horizontal align={'center'} gap={6} wrap={'wrap'}>
+      <div className="flex items-center gap-1.5 flex-wrap">
         {isCheck ? (
           <>
             <span className={styles.seq}>C{entry.checkSeq}</span>
-            <Text ellipsis style={{ fontSize: 13, minWidth: 0 }}>
+            <div className="truncate min-w-0" style={{ fontSize: 13, minWidth: 0 }}>
               {entry.title}
-            </Text>
+            </div>
           </>
         ) : (
-          <Text ellipsis style={{ fontSize: 13, minWidth: 0 }}>
+          <div className="truncate min-w-0" style={{ fontSize: 13, minWidth: 0 }}>
             {entry.groupLabel
               ? t('acceptance.feedback.group', { label: entry.groupLabel })
               : t('acceptance.feedback.global')}
-          </Text>
+          </div>
         )}
-        <Flexbox flex={1} />
+        <div className="flex flex-col flex-1" />
         <span className={styles.meta}>{metaBits.join(' · ')}</span>
-      </Flexbox>
+      </div>
       {entry.comment && (
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {entry.comment}
-        </Text>
+        </div>
       )}
       <AttachmentThumbs attachments={entry.attachments} />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -153,43 +153,42 @@ const FeedbackDrawer = memo<FeedbackDrawerProps>(({ entries, onClose, onJumpToCh
   const history = entries.filter((entry) => entry.stale);
 
   return (
-    <Drawer
-      open={open}
-      placement={'right'}
-      title={t('acceptance.feedback.title')}
-      width={'min(92vw, 440px)'}
-      onClose={onClose}
-    >
-      <Flexbox gap={20}>
-        <Flexbox gap={4}>
-          <Text className={styles.sectionTitle}>
-            {t('acceptance.feedback.current', { count: active.length })}
-          </Text>
-          {active.length === 0 && (
-            <Text fontSize={12} type={'secondary'}>
-              {t('acceptance.feedback.empty')}
-            </Text>
-          )}
-          <Flexbox>
-            {active.map((entry, index) => (
-              <EntryRow entry={entry} key={index} onJumpToCheck={onJumpToCheck} />
-            ))}
-          </Flexbox>
-        </Flexbox>
-        {history.length > 0 && (
-          <Flexbox gap={4}>
-            <Text className={styles.sectionTitle}>
-              {t('acceptance.feedback.history', { count: history.length })}
-            </Text>
-            <Flexbox>
-              {history.map((entry, index) => (
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+      <SheetContent side="right" style={{ maxWidth: 'none', width: 'min(92vw, 440px)' }}>
+        <SheetHeader>
+          <SheetTitle>{t('acceptance.feedback.title')}</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col gap-5">
+          <div className="flex flex-col gap-1">
+            <div className={cn(styles.sectionTitle)}>
+              {t('acceptance.feedback.current', { count: active.length })}
+            </div>
+            {active.length === 0 && (
+              <div className="text-[12px] text-muted-foreground">
+                {t('acceptance.feedback.empty')}
+              </div>
+            )}
+            <div className="flex flex-col">
+              {active.map((entry, index) => (
                 <EntryRow entry={entry} key={index} onJumpToCheck={onJumpToCheck} />
               ))}
-            </Flexbox>
-          </Flexbox>
-        )}
-      </Flexbox>
-    </Drawer>
+            </div>
+          </div>
+          {history.length > 0 && (
+            <div className="flex flex-col gap-1">
+              <div className={cn(styles.sectionTitle)}>
+                {t('acceptance.feedback.history', { count: history.length })}
+              </div>
+              <div className="flex flex-col">
+                {history.map((entry, index) => (
+                  <EntryRow entry={entry} key={index} onJumpToCheck={onJumpToCheck} />
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 });
 

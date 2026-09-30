@@ -1,12 +1,14 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronRight, PencilIcon, PlusIcon, TargetIcon } from 'lucide-react';
-import { memo, useEffect, useState } from 'react';
+import { createElement, memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
@@ -138,59 +140,69 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
     });
 
   return (
-    <Flexbox className={cx(styles.container, topAttached && styles.containerTopAttached)}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.head}
-        gap={8}
-        justify={'space-between'}
+    <div
+      className={cn(
+        'flex flex-col',
+        cx(styles.container, topAttached && styles.containerTopAttached),
+      )}
+    >
+      <div
+        className={cn('flex items-center gap-2 justify-between', styles.head)}
         onClick={() => setOpen(!open)}
       >
-        <Flexbox horizontal align={'center'} flex={1} gap={8} style={{ minWidth: 0 }}>
-          <Icon color={cssVar.colorTextSecondary} icon={TargetIcon} size={14} />
-          <Text strong fontSize={12} style={{ flexShrink: 0 }}>
+        <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
+          <TargetIcon color={cssVar.colorTextSecondary} size={14} />
+          <div className="font-semibold text-[12px]" style={{ flexShrink: 0 }}>
             {t('acceptance.tray.goalLabel')}
-          </Text>
+          </div>
           {/* The goal sentence rides inline only while collapsed; expanded, the
               "Goal" section below owns it, so showing it here too is redundant. */}
           {!open && <span className={styles.summary}>{goal}</span>}
           {checks.length > 0 && (
-            <Text fontSize={12} style={{ flexShrink: 0 }} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground" style={{ flexShrink: 0 }}>
               {t('acceptance.tray.trackCount', { count: checks.length })}
-            </Text>
+            </div>
           )}
-        </Flexbox>
-        <Icon
-          color={cssVar.colorTextQuaternary}
-          icon={open ? ChevronDown : ChevronRight}
-          size={14}
-        />
-      </Flexbox>
+        </div>
+        {createElement(open ? ChevronDown : ChevronRight, {
+          color: cssVar.colorTextQuaternary,
+          size: 14,
+        })}
+      </div>
 
       {open && (
         <>
-          <Flexbox className={styles.goalRow} gap={4}>
-            <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-              <Text className={styles.secLabel}>{t('acceptance.tray.goalSection')}</Text>
-              <Tooltip title={t('acceptance.tray.goalModal.editTitle')}>
-                <ActionIcon
-                  className={cx('verify-tray-goal-edit', styles.rowEdit)}
-                  icon={PencilIcon}
-                  size={'small'}
-                  onClick={openEditGoal}
-                />
-              </Tooltip>
-            </Flexbox>
-            <Text className={styles.goalText} fontSize={13}>
-              {goal}
-            </Text>
-          </Flexbox>
+          <div className={cn('flex flex-col gap-1', styles.goalRow)}>
+            <div className="flex items-center gap-2 justify-between">
+              <div className={styles.secLabel}>{t('acceptance.tray.goalSection')}</div>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <ActionIcon
+                          className={cx('verify-tray-goal-edit', styles.rowEdit)}
+                          icon={PencilIcon}
+                          size={'small'}
+                          onClick={openEditGoal}
+                        />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{t('acceptance.tray.goalModal.editTitle')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
+            <div className={cn('text-[13px]', styles.goalText)}>{goal}</div>
+          </div>
 
           {checks.length > 0 && (
-            <Flexbox className={styles.goalRow} gap={2} style={{ paddingBlock: 0 }}>
-              <Text className={styles.secLabel}>{t('acceptance.tray.trackSection')}</Text>
-            </Flexbox>
+            <div
+              className={cn('flex flex-col gap-0.5', styles.goalRow)}
+              style={{ paddingBlock: 0 }}
+            >
+              <div className={styles.secLabel}>{t('acceptance.tray.trackSection')}</div>
+            </div>
           )}
           {checks.map((check) => (
             <CheckItem
@@ -200,14 +212,14 @@ const GoalTray = memo<GoalTrayProps>(({ topAttached }) => {
               onUpdate={(patch) => updateCheck(check.id, patch)}
             />
           ))}
-          <Flexbox horizontal className={styles.addRow}>
-            <Button icon={PlusIcon} size={'small'} type={'text'} onClick={openAddCheck}>
-              {t('acceptance.tray.addCheck')}
+          <div className={cn('flex', styles.addRow)}>
+            <Button size="sm" variant="ghost" onClick={openAddCheck}>
+              <PlusIcon data-icon="inline-start" /> {t('acceptance.tray.addCheck')}
             </Button>
-          </Flexbox>
+          </div>
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { AlertTriangleIcon } from 'lucide-react';
@@ -41,7 +40,9 @@ const ActivateDevice = memo<BuiltinRenderProps<ActivateDeviceParams, ActivateDev
     if (typeof content === 'string' && content.length > 0) {
       return (
         <div className={styles.failure}>
-          <Icon icon={AlertTriangleIcon} size={14} />
+          <span className="anticon" role="img">
+            <AlertTriangleIcon fill={'transparent'} height={14} size={14} width={14} />
+          </span>
           <span>
             {t('builtins.orvilo-remote-device.render.activationFailed')}: {content}
           </span>

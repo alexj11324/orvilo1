@@ -1,9 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Input, TextArea } from '@lobehub/ui';
-import { ActionIcon, Button, Popover, Text, toast } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
   AnchorIcon,
   ArrowLeftIcon,
@@ -18,8 +15,15 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import urlJoin from 'url-join';
 
+import ActionIcon from '@/components/ActionIcon';
 import GeneratingBorder from '@/components/GeneratingBorder';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Separator } from '@/components/ui/separator';
+import { Textarea } from '@/components/ui/textarea';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import { useResolvedAgentRouteId } from '@/features/AgentRoute/useResolvedAgentRouteId';
 import NavHeader from '@/features/NavHeader';
@@ -316,36 +320,36 @@ const CreateDomainPage = memo(() => {
     const isRefining = refiningTarget === target;
 
     return (
-      <Flexbox gap={8} onKeyDown={(e) => onAdjustmentKeyDown(target, e)}>
-        <TextArea
+      <div className="flex flex-col gap-2" onKeyDown={(e) => onAdjustmentKeyDown(target, e)}>
+        <Textarea
           autoFocus
-          autoSize={{ maxRows: 5, minRows: 2 }}
+          className={'bg-secondary'}
           disabled={isRefining}
           placeholder={t(`create.adjust.placeholder.${target}`)}
+          rows={2}
           value={adjustments[target]}
-          variant={'filled'}
           onChange={(e) => setAdjustments((current) => ({ ...current, [target]: e.target.value }))}
         />
-        <Flexbox horizontal justify={'end'}>
+        <div className="flex flex-row justify-end">
           <Button
             disabled={!adjustments[target].trim() || isRefining}
-            icon={RefreshCwIcon}
             loading={isRefining}
             onClick={() => void refine(target)}
           >
+            <RefreshCwIcon data-icon="inline-start" />
             {isRefining ? t('create.adjust.adjusting') : t('create.adjust.action')}
           </Button>
-        </Flexbox>
+        </div>
         {isRefining && (
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {remainingSeconds > 0
               ? t('create.adjust.generatingCountdown', {
                   time: formatRemainingTime(remainingSeconds),
                 })
               : t('create.generatingAlmostDone')}
-          </Text>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   };
 
@@ -354,24 +358,29 @@ const CreateDomainPage = memo(() => {
     const isRefining = refiningTarget === target;
 
     return (
-      <Popover
-        content={renderAdjustmentContent(target)}
-        open={isOpen}
-        placement={'bottomRight'}
-        styles={{ content: { padding: 12, width: 'min(520px, calc(100vw - 32px))' } }}
-        trigger={'click'}
-        onOpenChange={(open) => setOpenAdjustment(open ? target : undefined)}
-      >
-        <Button
-          aria-expanded={isOpen}
-          aria-haspopup={'dialog'}
-          disabled={!!refiningTarget && !isRefining}
-          icon={SparklesIcon}
-          size={'small'}
-          type={'text'}
+      <Popover open={isOpen} onOpenChange={(open) => setOpenAdjustment(open ? target : undefined)}>
+        <PopoverTrigger
+          render={
+            <Button
+              aria-expanded={isOpen}
+              aria-haspopup={'dialog'}
+              disabled={!!refiningTarget && !isRefining}
+              size="sm"
+              variant="ghost"
+            >
+              <SparklesIcon data-icon="inline-start" />
+              {t('create.adjust.blockAction')}
+            </Button>
+          }
+        />
+        <PopoverContent
+          align="end"
+          className="w-auto"
+          side="bottom"
+          style={{ padding: 12, width: 'min(520px, calc(100vw - 32px))' }}
         >
-          {t('create.adjust.blockAction')}
-        </Button>
+          {renderAdjustmentContent(target)}
+        </PopoverContent>
       </Popover>
     );
   };
@@ -394,7 +403,7 @@ const CreateDomainPage = memo(() => {
   ];
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
+    <div className="flex flex-col h-[100%] w-[100%]">
       <NavHeader
         styles={{ left: { paddingInlineStart: 24 } }}
         left={
@@ -407,22 +416,18 @@ const CreateDomainPage = memo(() => {
           ) : null
         }
       />
-      <Flexbox className={styles.body} flex={1} width={'100%'}>
+      <div className={cx('flex flex-col flex-1 w-[100%]', styles.body)}>
         <WideScreenContainer minWidth={960}>
-          <Flexbox className={styles.content} onKeyDown={onKeyDown}>
-            <Flexbox horizontal className={styles.head}>
-              <Flexbox flex={1} gap={6}>
+          <div className={cx('flex flex-col', styles.content)} onKeyDown={onKeyDown}>
+            <div className={cx('flex flex-row', styles.head)}>
+              <div className="flex flex-col flex-1 gap-1.5">
                 {step === 'review' && (
-                  <Flexbox horizontal>
-                    <Button
-                      icon={ArrowLeftIcon}
-                      size={'small'}
-                      type={'text'}
-                      onClick={returnToOverview}
-                    >
+                  <div className="flex flex-row">
+                    <Button size="sm" variant="ghost" onClick={returnToOverview}>
+                      <ArrowLeftIcon data-icon="inline-start" />
                       {t('create.back')}
                     </Button>
-                  </Flexbox>
+                  </div>
                 )}
                 {step === 'review' && draft ? (
                   <input
@@ -437,29 +442,26 @@ const CreateDomainPage = memo(() => {
                 )}
                 {step !== 'review' && (
                   <>
-                    <Text fontSize={12} type={'secondary'}>
-                      {t('create.briefHelp')}
-                    </Text>
+                    <div className="text-[12px] text-muted-foreground">{t('create.briefHelp')}</div>
                     <GeneratingBorder generating={step === 'preparing'}>
-                      <TextArea
+                      <Textarea
                         autoFocus
-                        autoSize={{ maxRows: 10, minRows: 5 }}
+                        className={cx('bg-secondary', step === 'preparing' && 'border-transparent')}
                         disabled={step === 'preparing'}
                         placeholder={t('create.briefPlaceholder')}
+                        rows={5}
                         value={brief}
-                        variant={step === 'preparing' ? 'borderless' : 'outlined'}
                         onChange={(e) => setBrief(e.target.value)}
                       />
                     </GeneratingBorder>
                     {step === 'preparing' ? (
-                      <Flexbox
-                        horizontal
-                        align={'center'}
-                        className={styles.generatingStatus}
-                        gap={10}
-                        justify={'space-between'}
+                      <div
+                        className={cx(
+                          'flex flex-row items-center gap-2.5 justify-between',
+                          styles.generatingStatus,
+                        )}
                       >
-                        <Flexbox horizontal align={'center'} gap={8}>
+                        <div className="flex flex-row items-center gap-2">
                           <NeuralNetworkLoading size={18} />
                           <div
                             aria-label={t('create.generating')}
@@ -477,124 +479,126 @@ const CreateDomainPage = memo(() => {
                               ))}
                             </div>
                           </div>
-                        </Flexbox>
-                        <Text fontSize={12} type={'secondary'}>
+                        </div>
+                        <div className="text-[12px] text-muted-foreground">
                           {remainingSeconds > 0
                             ? t('create.generatingCountdown', {
                                 time: formatRemainingTime(remainingSeconds),
                               })
                             : t('create.generatingAlmostDone')}
-                        </Text>
-                      </Flexbox>
+                        </div>
+                      </div>
                     ) : (
-                      <Flexbox horizontal align={'center'} justify={'end'}>
+                      <div className="flex flex-row items-center justify-end">
                         <Button
                           disabled={!brief.trim()}
-                          icon={SparklesIcon}
-                          type={'primary'}
+                          variant="outline"
                           onClick={() => void generate()}
                         >
+                          <SparklesIcon data-icon="inline-start" />
                           {t('create.generate')}
                         </Button>
-                      </Flexbox>
+                      </div>
                     )}
                   </>
                 )}
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
 
             {step === 'review' && draft && (
-              <Flexbox className={styles.body}>
-                <Flexbox className={styles.reviewSection} gap={10}>
-                  <Text fontSize={13} weight={600}>
-                    {t('create.field.brief')}
-                  </Text>
-                  <TextArea
-                    autoSize={{ maxRows: 8, minRows: 3 }}
+              <div className={cx('flex flex-col', styles.body)}>
+                <div className={cx('flex flex-col gap-2.5', styles.reviewSection)}>
+                  <div className="text-[13px] font-semibold">{t('create.field.brief')}</div>
+                  <Textarea
+                    className={'bg-secondary'}
+                    rows={3}
                     value={brief}
-                    variant={'filled'}
                     onChange={(e) => setBrief(e.target.value)}
                   />
-                  <Flexbox horizontal justify={'end'} style={{ paddingBlockEnd: 8 }}>
+                  <div className="flex flex-row justify-end" style={{ paddingBlockEnd: 8 }}>
                     <Button
                       disabled={!brief.trim() || !!refiningTarget}
-                      icon={RefreshCwIcon}
-                      size={'small'}
+                      size="sm"
                       onClick={() => void generate()}
                     >
+                      <RefreshCwIcon data-icon="inline-start" />
                       {t('create.regenerate')}
                     </Button>
-                  </Flexbox>
-                </Flexbox>
-                <Divider style={{ margin: 0 }} />
-                <Flexbox className={styles.reviewSection} gap={12}>
-                  <Flexbox horizontal align={'flex-start'} gap={8} justify={'space-between'}>
-                    <Text fontSize={14} type={'secondary'}>
+                  </div>
+                </div>
+                <Separator style={{ margin: 0 }} />
+                <div className={cx('flex flex-col gap-3', styles.reviewSection)}>
+                  <div className="flex flex-row items-start gap-2 justify-between">
+                    <div className="text-[14px] text-muted-foreground">
                       {t('create.reviewHelp')}
-                    </Text>
-                    <Flexbox flex={'none'}>{renderAdjustmentButton('rationale')}</Flexbox>
-                  </Flexbox>
-                  <TextArea
-                    autoSize={{ maxRows: 8, minRows: 2 }}
-                    className={styles.rationale}
+                    </div>
+                    <div className="flex flex-col flex-none">
+                      {renderAdjustmentButton('rationale')}
+                    </div>
+                  </div>
+                  <Textarea
+                    className={cx(styles.rationale, 'border-transparent')}
+                    disabled={refiningTarget === 'rationale'}
                     // An in-flight adjustment answers from the draft as it was when the
                     // request left, so edits made meanwhile would be silently overwritten
                     // when the response merges back.
-                    disabled={refiningTarget === 'rationale'}
                     placeholder={t('create.field.rationalePlaceholder')}
+                    rows={2}
                     value={draft.rationale ?? ''}
-                    variant={'borderless'}
                     onChange={(e) => patch({ rationale: e.target.value })}
                   />
-                </Flexbox>
+                </div>
 
-                <Flexbox className={styles.reviewSection} gap={10}>
-                  <Flexbox horizontal align={'center'} justify={'space-between'}>
-                    <Text fontSize={13} weight={600}>
+                <div className={cx('flex flex-col gap-2.5', styles.reviewSection)}>
+                  <div className="flex flex-row items-center justify-between">
+                    <div className="text-[13px] font-semibold">
                       {t('create.field.domainFilter')}
-                    </Text>
+                    </div>
                     {renderAdjustmentButton('domainFilter')}
-                  </Flexbox>
-                  <TextArea
-                    autoSize={{ maxRows: 6, minRows: 2 }}
+                  </div>
+                  <Textarea
+                    className={'bg-secondary'}
+                    rows={2}
                     value={draft.domainFilter}
-                    variant={'filled'}
                     onChange={(e) => patch({ domainFilter: e.target.value })}
                   />
-                </Flexbox>
-                <Flexbox className={styles.reviewSection} gap={10}>
-                  <Flexbox horizontal align={'center'} justify={'space-between'}>
-                    <Text fontSize={13} weight={600}>
-                      {t('create.field.outOfScope')}
-                    </Text>
+                </div>
+                <div className={cx('flex flex-col gap-2.5', styles.reviewSection)}>
+                  <div className="flex flex-row items-center justify-between">
+                    <div className="text-[13px] font-semibold">{t('create.field.outOfScope')}</div>
                     {renderAdjustmentButton('outOfScope')}
-                  </Flexbox>
-                  <TextArea
-                    autoSize={{ maxRows: 5, minRows: 2 }}
+                  </div>
+                  <Textarea
+                    className={'bg-secondary'}
                     placeholder={t('create.field.outOfScopePlaceholder')}
+                    rows={2}
                     value={draft.outOfScope ?? ''}
-                    variant={'filled'}
                     onChange={(e) => patch({ outOfScope: e.target.value })}
                   />
-                </Flexbox>
+                </div>
 
-                <Flexbox className={styles.reviewSection} gap={10}>
-                  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                    <Flexbox horizontal align={'center'} gap={8}>
-                      <Icon color={cssVar.colorTextTertiary} icon={AnchorIcon} size={16} />
-                      <Text fontSize={13} weight={600}>
-                        {t('create.anchor.canon')}
-                      </Text>
-                      <Text fontSize={12} type={'secondary'}>
+                <div className={cx('flex flex-col gap-2.5', styles.reviewSection)}>
+                  <div className="flex flex-row items-center gap-2 justify-between">
+                    <div className="flex flex-row items-center gap-2">
+                      <span className="anticon" role="img">
+                        <AnchorIcon
+                          color={cssVar.colorTextTertiary}
+                          fill={'transparent'}
+                          height={16}
+                          size={16}
+                          width={16}
+                        />
+                      </span>
+                      <div className="text-[13px] font-semibold">{t('create.anchor.canon')}</div>
+                      <div className="text-[12px] text-muted-foreground">
                         {t('create.anchor.canonHint')}
-                      </Text>
-                    </Flexbox>
-                    <Flexbox horizontal align={'center'} gap={4}>
+                      </div>
+                    </div>
+                    <div className="flex flex-row items-center gap-1">
                       {renderAdjustmentButton('canonEntries')}
                       <Button
-                        icon={PlusIcon}
-                        size={'small'}
-                        type={'text'}
+                        size="sm"
+                        variant="ghost"
                         onClick={() =>
                           patch({
                             canonEntries: [
@@ -609,25 +613,26 @@ const CreateDomainPage = memo(() => {
                           })
                         }
                       >
+                        <PlusIcon data-icon="inline-start" />
                         {t('create.anchor.addCanon')}
                       </Button>
-                    </Flexbox>
-                  </Flexbox>
+                    </div>
+                  </div>
                   {draft.canonEntries.length === 0 && (
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('create.anchor.noCanon')}
-                    </Text>
+                    </div>
                   )}
                   {draft.canonEntries.map((entry, i) => (
                     <div className={styles.itemRow} key={i}>
                       <span className={styles.seq}>E{i + 1}</span>
-                      <Flexbox gap={4}>
-                        <Flexbox horizontal gap={8}>
+                      <div className="flex flex-col gap-1">
+                        <div className="flex flex-row gap-2">
                           <Input
+                            className={'bg-secondary'}
                             placeholder={t('create.anchor.canonTitle')}
                             style={{ flex: 1 }}
                             value={entry.title}
-                            variant={'filled'}
                             onChange={(e) =>
                               patch({
                                 canonEntries: draft.canonEntries.map((c, j) =>
@@ -643,10 +648,10 @@ const CreateDomainPage = memo(() => {
                             }
                           />
                           <Input
+                            className={'bg-secondary'}
                             placeholder={t('create.anchor.canonSource')}
                             style={{ flex: 1 }}
                             value={entry.source}
-                            variant={'filled'}
                             onChange={(e) =>
                               patch({
                                 canonEntries: draft.canonEntries.map((c, j) =>
@@ -655,12 +660,12 @@ const CreateDomainPage = memo(() => {
                               })
                             }
                           />
-                        </Flexbox>
-                        <TextArea
-                          autoSize={{ maxRows: 4, minRows: 1 }}
+                        </div>
+                        <Textarea
+                          className={'border-transparent'}
                           placeholder={t('create.anchor.canonStatement')}
+                          rows={1}
                           value={entry.statement}
-                          variant={'borderless'}
                           onChange={(e) =>
                             patch({
                               canonEntries: draft.canonEntries.map((c, j) =>
@@ -669,7 +674,7 @@ const CreateDomainPage = memo(() => {
                             })
                           }
                         />
-                      </Flexbox>
+                      </div>
                       <ActionIcon
                         icon={Trash2Icon}
                         size={'small'}
@@ -679,26 +684,31 @@ const CreateDomainPage = memo(() => {
                       />
                     </div>
                   ))}
-                </Flexbox>
-                <Flexbox className={styles.reviewSection} gap={10}>
-                  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                    <Flexbox horizontal align={'center'} gap={8}>
-                      <Icon color={cssVar.colorTextTertiary} icon={LayersIcon} size={16} />
-                      <Text fontSize={13} weight={600}>
-                        {t('create.anchor.layers')}
-                      </Text>
-                      <Text fontSize={12} type={'secondary'}>
+                </div>
+                <div className={cx('flex flex-col gap-2.5', styles.reviewSection)}>
+                  <div className="flex flex-row items-center gap-2 justify-between">
+                    <div className="flex flex-row items-center gap-2">
+                      <span className="anticon" role="img">
+                        <LayersIcon
+                          color={cssVar.colorTextTertiary}
+                          fill={'transparent'}
+                          height={16}
+                          size={16}
+                          width={16}
+                        />
+                      </span>
+                      <div className="text-[13px] font-semibold">{t('create.anchor.layers')}</div>
+                      <div className="text-[12px] text-muted-foreground">
                         {draft.layerSource === 'canonical' && draft.layerCanonRef
                           ? t('create.anchor.layersFrom', { ref: draft.layerCanonRef })
                           : t('create.anchor.layersInvented')}
-                      </Text>
-                    </Flexbox>
-                    <Flexbox horizontal align={'center'} gap={4}>
+                      </div>
+                    </div>
+                    <div className="flex flex-row items-center gap-1">
                       {renderAdjustmentButton('layers')}
                       <Button
-                        icon={PlusIcon}
-                        size={'small'}
-                        type={'text'}
+                        size="sm"
+                        variant="ghost"
                         onClick={() =>
                           patch({
                             layers: [
@@ -712,23 +722,24 @@ const CreateDomainPage = memo(() => {
                           })
                         }
                       >
+                        <PlusIcon data-icon="inline-start" />
                         {t('create.anchor.addLayer')}
                       </Button>
-                    </Flexbox>
-                  </Flexbox>
+                    </div>
+                  </div>
                   {draft.layers.length === 0 && (
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('create.anchor.noLayers')}
-                    </Text>
+                    </div>
                   )}
                   {draft.layers.map((layer, i) => (
                     <div className={styles.itemRow} key={i}>
                       <span className={styles.seq}>L{i + 1}</span>
-                      <Flexbox gap={4}>
+                      <div className="flex flex-col gap-1">
                         <Input
+                          className={'bg-secondary'}
                           placeholder={t('create.anchor.layerTitle')}
                           value={layer.title}
-                          variant={'filled'}
                           onChange={(e) =>
                             patch({
                               layers: draft.layers.map((l, j) =>
@@ -744,9 +755,9 @@ const CreateDomainPage = memo(() => {
                           }
                         />
                         <Input
+                          className={'border-transparent'}
                           placeholder={t('create.anchor.layerDesc')}
                           value={layer.description ?? ''}
-                          variant={'borderless'}
                           onChange={(e) =>
                             patch({
                               layers: draft.layers.map((l, j) =>
@@ -755,7 +766,7 @@ const CreateDomainPage = memo(() => {
                             })
                           }
                         />
-                      </Flexbox>
+                      </div>
                       <ActionIcon
                         icon={Trash2Icon}
                         size={'small'}
@@ -763,28 +774,28 @@ const CreateDomainPage = memo(() => {
                       />
                     </div>
                   ))}
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
             )}
 
             {step === 'review' && (
-              <Flexbox horizontal align={'center'} className={styles.footer} justify={'end'}>
-                <Flexbox horizontal align={'center'} gap={4}>
+              <div className={cx('flex flex-row items-center justify-end', styles.footer)}>
+                <div className="flex flex-row items-center gap-1">
                   <Button
                     disabled={!!refiningTarget || !canCreate}
                     loading={creating}
-                    type={'primary'}
+                    variant="outline"
                     onClick={() => void primaryRef.current?.()}
                   >
                     {t('create.confirm')}
                   </Button>
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
             )}
-          </Flexbox>
+          </div>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

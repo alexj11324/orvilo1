@@ -1,9 +1,10 @@
-import { createModal, Tabs, type TabsItem } from '@lobehub/ui/base-ui';
 import { t as i18nT } from 'i18next';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useMergeState from 'use-merge-value';
 
+import { createModal } from '@/components/Modal';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import PluginSettingsConfig from '@/features/PluginSettings';
 import { pluginHelpers } from '@/store/tool';
 
@@ -35,28 +36,21 @@ const PluginDetailModal = memo<PluginDetailModalProps>(({ schema, id, onTabChang
     <>
       <Meta id={id} />
       <Tabs
-        activeKey={tabKey}
-        items={
-          [
-            {
-              key: Tab.Info,
-              label: t('detailModal.tabs.info'),
-            },
-            hasSettings && {
-              key: Tab.Settings,
-              label: t('detailModal.tabs.settings'),
-            },
-          ].filter(Boolean) as TabsItem[]
-        }
-        style={{
-          marginBlock: 16,
-        }}
-        styles={{
-          list: { display: 'flex', width: '100%' },
-          tab: { flex: 1 },
-        }}
-        onChange={(key) => setTabKey(key as Tab)}
-      />
+        style={{ marginBlock: 16 }}
+        value={tabKey}
+        onValueChange={(key) => setTabKey(key as Tab)}
+      >
+        <TabsList className="flex w-full">
+          <TabsTrigger className="flex-1" value={Tab.Info}>
+            {t('detailModal.tabs.info')}
+          </TabsTrigger>
+          {hasSettings && (
+            <TabsTrigger className="flex-1" value={Tab.Settings}>
+              {t('detailModal.tabs.settings')}
+            </TabsTrigger>
+          )}
+        </TabsList>
+      </Tabs>
       {tabKey === 'settings' ? (
         hasSettings && <PluginSettingsConfig id={id} schema={schema} />
       ) : (

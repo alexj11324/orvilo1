@@ -13,14 +13,14 @@ const mocks = vi.hoisted(() => ({
   retryIntegration: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<Record<string, unknown>>()),
-  Tooltip: ({ children, title }: { children: ReactNode; title: ReactNode }) => (
-    <>
-      {children}
-      {title}
-    </>
-  ),
+vi.mock('@base-ui/react/preview-card', () => ({
+  PreviewCard: {
+    Root: ({ children }: { children: ReactNode }) => <>{children}</>,
+    Trigger: ({ render }: { render?: ReactNode }) => <>{render}</>,
+    Portal: ({ children }: { children: ReactNode }) => <>{children}</>,
+    Positioner: ({ children }: { children: ReactNode }) => <>{children}</>,
+    Popup: ({ children }: { children: ReactNode }) => <>{children}</>,
+  },
 }));
 
 vi.mock('@/services/task', () => ({

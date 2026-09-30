@@ -1,12 +1,13 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Popover, Switch } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { HardDrive, SettingsIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import {
   getScopedConnectionCount,
   getWorkspaceConnectionState,
@@ -120,10 +121,10 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
         : t(isConnected ? 'gateway.statusConnected' : 'gateway.statusDisconnected');
 
   const popoverContent = (
-    <Flexbox className={styles.popoverContent} gap={4}>
-      <Flexbox horizontal align="center" justify="space-between">
+    <div className={cx(styles.popoverContent, 'flex flex-col gap-1')}>
+      <div className="flex items-center justify-between">
         <span className={styles.statusTitle}>{t('gateway.title')}</span>
-        <Flexbox horizontal align="center" gap={6}>
+        <div className="flex items-center gap-1.5">
           <ActionIcon
             aria-label={t('gateway.manageDevices')}
             icon={SettingsIcon}
@@ -138,37 +139,36 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
             <Switch
               aria-label={t('gateway.enableConnection')}
               checked={isConnected || isConnecting}
-              loading={isConnecting}
-              size="small"
-              onChange={handleSwitchChange}
+              disabled={isConnecting}
+              size="sm"
+              onCheckedChange={handleSwitchChange}
             />
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       <span className={styles.scopeHint}>{connectionHint}</span>
-    </Flexbox>
+    </div>
   );
 
   return (
-    <Popover
-      arrow={false}
-      content={popoverContent}
-      open={open}
-      placement="bottomRight"
-      styles={{ content: { padding: 8 } }}
-      trigger="click"
-      onOpenChange={setOpen}
-    >
+    <Popover open={open} onOpenChange={setOpen}>
       <div style={{ position: 'relative' }}>
-        <ActionIcon
-          icon={HardDrive}
-          loading={isConnecting}
-          size="small"
-          title={t('gateway.title')}
-          tooltipProps={{ placement: 'bottomRight' }}
+        <PopoverTrigger
+          render={
+            <ActionIcon
+              icon={HardDrive}
+              loading={isConnecting}
+              size="small"
+              title={t('gateway.title')}
+              tooltipProps={{ placement: 'bottomRight' }}
+            />
+          }
         />
         {scopeConnected && <div className={styles.greenDot} />}
       </div>
+      <PopoverContent align="end" className="w-auto" side="bottom" style={{ padding: 8 }}>
+        {popoverContent}
+      </PopoverContent>
     </Popover>
   );
 });

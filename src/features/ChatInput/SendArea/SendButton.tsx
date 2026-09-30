@@ -1,5 +1,4 @@
 import { SendButton as Send } from '@lobehub/editor/react';
-import { Tooltip } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -7,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { usePermission } from '@/hooks/usePermission';
 
 import { useChatInputResourceAccess } from '../hooks/useChatInputResourceAccess';
+import { SimpleTooltip } from '../SimpleTooltip';
 import { selectors, useChatInputStore } from '../store';
 
 const SendButton = memo(() => {
@@ -42,8 +42,9 @@ const SendButton = memo(() => {
     />
   );
 
-  if (!canCreate) return <Tooltip title={reason}>{button}</Tooltip>;
-  if (viewOnly) return <Tooltip title={t('permission.viewOnlySendTip')}>{button}</Tooltip>;
+  if (!canCreate) return <SimpleTooltip title={reason}>{button}</SimpleTooltip>;
+  if (viewOnly)
+    return <SimpleTooltip title={t('permission.viewOnlySendTip')}>{button}</SimpleTooltip>;
   return button;
 });
 

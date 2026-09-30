@@ -1,12 +1,13 @@
-import { Flexbox, Image, Markdown, PreviewGroup } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
+import { Image, Markdown, PreviewGroup } from '@lobehub/ui';
 import { useToolRenderCapabilities } from '@orvilo/shared-tool-ui';
 import type { ReadFileState } from '@orvilo/tool-runtime';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ExternalLink, FolderOpen } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
 import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
 
@@ -86,7 +87,7 @@ const ReadFileView = memo<ReadFileState>(
     if (images && images.length > 0) {
       return (
         <PreviewGroup>
-          <Flexbox horizontal align={'flex-start'} className={styles.imageList} gap={8}>
+          <div className={cx('flex flex-row items-start gap-2', styles.imageList)}>
             {images.map((image, index) => (
               <Image
                 alt={filename || image.mediaType || ''}
@@ -98,7 +99,7 @@ const ReadFileView = memo<ReadFileState>(
                 variant={'outlined'}
               />
             ))}
-          </Flexbox>
+          </div>
         </PreviewGroup>
       );
     }
@@ -122,26 +123,16 @@ const ReadFileView = memo<ReadFileState>(
     const displayPath = displayRelativePath ? displayRelativePath(path) : path;
 
     return (
-      <Flexbox className={styles.container} gap={8}>
-        <Flexbox>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.header}
-            gap={12}
-            justify={'space-between'}
-          >
-            <Flexbox horizontal align={'center'} flex={1} gap={0} style={{ overflow: 'hidden' }}>
+      <div className={cx('flex flex-col gap-2', styles.container)}>
+        <div className="flex flex-col">
+          <div className={cx('flex flex-row items-center gap-3 justify-between', styles.header)}>
+            <div className="flex flex-row items-center flex-1 gap-0" style={{ overflow: 'hidden' }}>
               <FileIcon fileName={filename} fileType={fileType} size={16} variant={'raw'} />
-              <Flexbox horizontal>
-                <Text ellipsis className={styles.fileName}>
-                  {filename}
-                </Text>
+              <div className="flex flex-row">
+                <div className={cn('truncate', 'block', styles.fileName)}>{filename}</div>
                 {(handleOpenFile || handleOpenFolder) && (
-                  <Flexbox
-                    horizontal
-                    className={`${styles.actions} local-file-actions`}
-                    gap={2}
+                  <div
+                    className={cx('flex flex-row gap-0.5', `${styles.actions} local-file-actions`)}
                     style={{ marginLeft: 8 }}
                   >
                     {handleOpenFile && (
@@ -160,19 +151,19 @@ const ReadFileView = memo<ReadFileState>(
                         onClick={handleOpenFolder}
                       />
                     )}
-                  </Flexbox>
+                  </div>
                 )}
-              </Flexbox>
-            </Flexbox>
-          </Flexbox>
+              </div>
+            </div>
+          </div>
 
-          <Text ellipsis className={styles.path} type={'secondary'}>
+          <div className={cn('truncate', 'block', 'text-muted-foreground', styles.path)}>
             {displayPath}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
 
-        <Flexbox
-          className={styles.previewBox}
+        <div
+          className={cx('flex flex-col', styles.previewBox)}
           style={{ height: isHtml ? 240 : undefined, maxHeight: 240 }}
         >
           {isHtml ? (
@@ -184,8 +175,8 @@ const ReadFileView = memo<ReadFileState>(
               {content}
             </div>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

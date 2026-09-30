@@ -1,22 +1,26 @@
-import { Empty as EmptyComponent } from '@lobehub/ui';
 import { BlocksIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const Empty = memo(() => {
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
+
+const EmptyState = memo(() => {
   const { t } = useTranslation('setting');
 
   return (
-    <EmptyComponent
-      icon={BlocksIcon}
-      style={{ paddingBlock: 40 }}
-      description={t('tools.installed.empty', {
-        defaultValue: 'No skills enabled',
-      })}
-    />
+    <Empty style={{ paddingBlock: 40 }}>
+      <EmptyHeader>
+        <EmptyMedia variant={'icon'}>
+          <BlocksIcon />
+        </EmptyMedia>
+        <EmptyDescription>
+          {t('tools.installed.empty', { defaultValue: 'No skills enabled' })}
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 });
 
-Empty.displayName = 'ToolEmpty';
+EmptyState.displayName = 'ProfileEditorEmpty';
 
-export default Empty;
+export default EmptyState;

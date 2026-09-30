@@ -1,7 +1,8 @@
 'use client';
 
-import { createModal } from '@lobehub/ui/base-ui';
 import type { TaskWorkflowCategory } from '@orvilo/types';
+
+import { createModal } from '@/components/Modal';
 
 import { WorkflowStatePickerContent } from './WorkflowStatePickerContent';
 

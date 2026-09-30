@@ -1,7 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
+
 import { type TaskDetail, type ThreadStatus, type UIChatMessage } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,10 +39,10 @@ const TaskContent = memo<TaskContentProps>(
 
       // Already completed but loading messages: show simple loading
       return (
-        <Flexbox horizontal align="center" gap={4}>
+        <div className="flex items-center gap-1">
           <BubblesLoading />
-          <Text type="secondary">{t('task.status.fetchingDetails')}</Text>
-        </Flexbox>
+          <div className='text-muted-foreground'>{t('task.status.fetchingDetails')}</div>
+        </div>
       );
     }
 

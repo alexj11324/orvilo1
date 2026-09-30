@@ -1,13 +1,15 @@
 'use client';
 
-import { Center, Flexbox, Highlighter, Icon, Markdown } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { CodeIcon, EyeIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { CodeBlock } from '@/components/ui/code-block';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { useTextFileLoader } from '../../hooks/useTextFileLoader';
 
@@ -62,32 +64,38 @@ const MarkdownViewer = memo<MarkdownViewerProps>(({ url }) => {
 
   if (loading || fileData === null)
     return (
-      <Center height={'100%'} width={'100%'}>
+      <div className="flex items-center justify-center" style={{ height: '100%', width: '100%' }}>
         <NeuralNetworkLoading size={36} />
-      </Center>
+      </div>
     );
 
   return (
-    <Flexbox className={styles.page}>
-      <Flexbox horizontal align={'center'} className={styles.controls} gap={4}>
+    <div className={cn('flex flex-col', styles.page)}>
+      <div className={cn('flex items-center gap-1', styles.controls)}>
         <Tabs
-          activeKey={mode}
-          size={'small'}
-          items={[
-            { icon: <Icon icon={EyeIcon} />, key: 'render', label: t('preview.render') },
-            { icon: <Icon icon={CodeIcon} />, key: 'raw', label: t('preview.raw') },
-          ]}
-          onChange={(key) => setMode(key as PreviewMode)}
-        />
-      </Flexbox>
+          value={mode}
+          onValueChange={(key) => {
+            if (typeof key === 'string') setMode(key as PreviewMode);
+          }}
+        >
+          <TabsList>
+            <TabsTrigger value="render">
+              <EyeIcon />
+              {t('preview.render')}
+            </TabsTrigger>
+            <TabsTrigger value="raw">
+              <CodeIcon />
+              {t('preview.raw')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
       {mode === 'render' ? (
         <Markdown style={{ paddingBlock: 16, paddingInline: 24 }}>{fileData}</Markdown>
       ) : (
-        <Highlighter language={'markdown'} showLanguage={false} variant={'borderless'}>
-          {fileData}
-        </Highlighter>
+        <CodeBlock code={fileData} language={'markdown'} variant={'ghost'} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

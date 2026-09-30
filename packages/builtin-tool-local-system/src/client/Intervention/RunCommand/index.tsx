@@ -1,8 +1,8 @@
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { RunCommandParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 const formatTimeout = (ms?: number) => {
   if (!ms) return null;
@@ -27,27 +27,25 @@ const formatTimeout = (ms?: number) => {
 const RunCommand = memo<BuiltinInterventionProps<RunCommandParams>>(({ args }) => {
   const { description, command, timeout } = args;
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal justify={'space-between'}>
-        {description && <Text>{description}</Text>}
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-row justify-between">
+        {description && <div>{description}</div>}
         {timeout && (
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             timeout: {formatTimeout(timeout)}
-          </Text>
+          </div>
         )}
-      </Flexbox>
+      </div>
       {command && (
-        <Highlighter
+        <CodeBlock
           wrap
+          code={command}
           language={'sh'}
-          showLanguage={false}
           style={{ padding: '4px 8px' }}
-          variant={'outlined'}
-        >
-          {command}
-        </Highlighter>
+          variant={'default'}
+        />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

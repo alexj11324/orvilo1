@@ -1,19 +1,23 @@
 'use client';
 
-import { Flexbox, Icon, ScrollShadow, SearchBar } from '@lobehub/ui';
-import { Button, Checkbox, Progress, Text, useModalContext } from '@lobehub/ui/base-ui';
 import type {
   HeteroSessionDigest,
   HeteroSessionDirGroup,
   HeteroSessionDirPref,
   HeteroSessionImportStatus,
 } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { Check, FolderSearch, TriangleAlert, X } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useModalContext } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Progress } from '@/components/ui/progress';
+import { ScrollArea } from '@/components/ui/scroll-area';
 import { electronHeteroSessionService } from '@/services/electron/heteroSession';
 import { topicService } from '@/services/topic';
 import { useChatStore } from '@/store/chat';
@@ -240,74 +244,97 @@ const Content = memo<ContentProps>(({ agentId }) => {
 
   if (phase === 'scanning')
     return (
-      <Flexbox align="center" gap={16} justify="center" style={{ height: CONTENT_HEIGHT }}>
+      <div
+        className="flex flex-col items-center gap-4 justify-center"
+        style={{ height: CONTENT_HEIGHT }}
+      >
         <NeuralNetworkLoading size={48} />
-        <Text type="secondary">{t('heteroImport.scanning')}</Text>
-      </Flexbox>
+        <div className="text-muted-foreground">{t('heteroImport.scanning')}</div>
+      </div>
     );
 
   if (phase === 'empty')
     return (
-      <Flexbox align="center" gap={12} justify="center" style={{ height: CONTENT_HEIGHT }}>
-        <Icon icon={FolderSearch} size={40} style={{ opacity: 0.4 }} />
-        <Text weight={500}>{t('heteroImport.empty.title')}</Text>
-        <Text fontSize={13} style={{ maxWidth: 380, textAlign: 'center' }} type="secondary">
+      <div
+        className="flex flex-col items-center gap-3 justify-center"
+        style={{ height: CONTENT_HEIGHT }}
+      >
+        <FolderSearch size={40} style={{ opacity: 0.4 }} />
+        <div className="font-medium">{t('heteroImport.empty.title')}</div>
+        <div
+          className="text-[13px] text-muted-foreground"
+          style={{ maxWidth: 380, textAlign: 'center' }}
+        >
           {t('heteroImport.empty.desc')}
-        </Text>
-        <Button size="small" onClick={scan}>
+        </div>
+        <Button size="sm" onClick={scan}>
           {t('heteroImport.footer.rescan')}
         </Button>
-      </Flexbox>
+      </div>
     );
 
   if (phase === 'error')
     return (
-      <Flexbox align="center" gap={12} justify="center" style={{ height: CONTENT_HEIGHT }}>
-        <Icon icon={TriangleAlert} size={40} style={{ opacity: 0.5 }} />
-        <Text weight={500}>{t('heteroImport.error.title')}</Text>
-        <Text fontSize={13} style={{ maxWidth: 380, textAlign: 'center' }} type="secondary">
+      <div
+        className="flex flex-col items-center gap-3 justify-center"
+        style={{ height: CONTENT_HEIGHT }}
+      >
+        <TriangleAlert size={40} style={{ opacity: 0.5 }} />
+        <div className="font-medium">{t('heteroImport.error.title')}</div>
+        <div
+          className="text-[13px] text-muted-foreground"
+          style={{ maxWidth: 380, textAlign: 'center' }}
+        >
           {t('heteroImport.error.desc')}
-        </Text>
-        <Button size="small" onClick={scan}>
+        </div>
+        <Button size="sm" onClick={scan}>
           {t('heteroImport.footer.rescan')}
         </Button>
-      </Flexbox>
+      </div>
     );
 
   return (
-    <Flexbox>
-      <Flexbox horizontal style={{ height: CONTENT_HEIGHT }}>
+    <div className="flex flex-col">
+      <div className="flex" style={{ height: CONTENT_HEIGHT }}>
         {!importing && (
           <SidebarTree groups={groups} scope={scope} onScopeChange={setScope} onSetPref={setPref} />
         )}
-        <Flexbox style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex flex-col" style={{ flex: 1, minWidth: 0 }}>
           {!importing && (
-            <Flexbox gap={8} style={{ padding: '0 16px 10px' }}>
-              <SearchBar
-                placeholder={t('heteroImport.searchPlaceholder')}
-                value={keyword}
-                variant="filled"
-                onChange={(e) => setKeyword(e.target.value)}
-              />
-              <Flexbox horizontal align="center" justify="space-between">
-                <Checkbox
-                  checked={allChecked}
-                  indeterminate={!allChecked && someChecked}
-                  onChange={toggleAll}
-                >
-                  <Text fontSize={13} type="secondary">
+            <div className="flex flex-col gap-2" style={{ padding: '0 16px 10px' }}>
+              <div className="relative">
+                <FolderSearch
+                  className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  size={14}
+                />
+                <Input
+                  className="h-7 pl-8"
+                  placeholder={t('heteroImport.searchPlaceholder')}
+                  value={keyword}
+                  onChange={(e) => setKeyword(e.target.value)}
+                />
+              </div>
+              <div className="flex items-center justify-between">
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    checked={allChecked}
+                    indeterminate={!allChecked && someChecked}
+                    onCheckedChange={toggleAll}
+                  />
+                  <div className="text-[13px] text-muted-foreground">
                     {t('heteroImport.selectAll')}
-                  </Text>
-                </Checkbox>
-                <Checkbox checked={hideImported} onChange={setHideImported}>
-                  <Text fontSize={13} type="secondary">
+                  </div>
+                </label>
+                <label className="flex items-center gap-2">
+                  <Checkbox checked={hideImported} onCheckedChange={setHideImported} />
+                  <div className="text-[13px] text-muted-foreground">
                     {t('heteroImport.hideImported')}
-                  </Text>
-                </Checkbox>
-              </Flexbox>
-            </Flexbox>
+                  </div>
+                </label>
+              </div>
+            </div>
           )}
-          <ScrollShadow style={{ flex: 1, padding: '0 8px 8px' }}>
+          <ScrollArea style={{ flex: 1, padding: '0 8px 8px' }}>
             {rows.map(({ digest }) => (
               <SessionRow
                 checked={selected.has(digest.sessionId)}
@@ -322,17 +349,17 @@ const Content = memo<ContentProps>(({ agentId }) => {
               />
             ))}
             {rows.length === 0 && (
-              <Flexbox align="center" paddingBlock={48}>
-                <Text type="secondary">{t('heteroImport.searchEmpty')}</Text>
-              </Flexbox>
+              <div className="flex flex-col items-center py-12">
+                <div className="text-muted-foreground">{t('heteroImport.searchEmpty')}</div>
+              </div>
             )}
-          </ScrollShadow>
-        </Flexbox>
-      </Flexbox>
+          </ScrollArea>
+        </div>
+      </div>
 
       {phase === 'select' && (
-        <Flexbox horizontal align="center" className={styles.footer} justify="space-between">
-          <Text fontSize={13} type="secondary">
+        <div className={cx(styles.footer, 'flex items-center justify-between')}>
+          <div className="text-[13px] text-muted-foreground">
             {selected.size > 0
               ? t('heteroImport.footer.selected', {
                   messages: estMessages.toLocaleString(),
@@ -340,58 +367,55 @@ const Content = memo<ContentProps>(({ agentId }) => {
                   tokens: fmtTokens(estTokens),
                 })
               : t('heteroImport.footer.hint')}
-          </Text>
-          <Flexbox horizontal gap={8}>
+          </div>
+          <div className="flex gap-2">
             <Button onClick={scan}>{t('heteroImport.footer.rescan')}</Button>
-            <Button disabled={selected.size === 0} type="primary" onClick={runImport}>
+            <Button disabled={selected.size === 0} variant="default" onClick={runImport}>
               {selected.size > 0
                 ? t('heteroImport.footer.import', { count: selected.size })
                 : t('heteroImport.footer.importEmpty')}
             </Button>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
 
       {phase === 'importing' && (
-        <Flexbox className={styles.footer} gap={4} style={{ width: '100%' }}>
-          <Flexbox horizontal align="center" justify="space-between">
-            <Text fontSize={13} type="secondary">
+        <div className={cx(styles.footer, 'flex flex-col gap-1')} style={{ width: '100%' }}>
+          <div className="flex items-center justify-between">
+            <div className="text-[13px] text-muted-foreground">
               {t('heteroImport.progress', { done: doneStates.length, total: selectedItems.length })}
-            </Text>
-            <Text fontSize={13} type="secondary">
-              {pct}%
-            </Text>
-          </Flexbox>
-          <Progress percent={pct} showInfo={false} size="small" status="active" />
-        </Flexbox>
+            </div>
+            <div className="text-[13px] text-muted-foreground">{pct}%</div>
+          </div>
+          <Progress value={pct} />
+        </div>
       )}
 
       {phase === 'done' && (
-        <Flexbox horizontal align="center" className={styles.footer} justify="space-between">
-          <Flexbox horizontal align="center" gap={8}>
-            <Icon
-              icon={doneStats.failed ? X : Check}
-              size={16}
-              style={{
+        <div className={cx(styles.footer, 'flex items-center justify-between')}>
+          <div className="flex items-center gap-2">
+            {createElement(doneStats.failed ? X : Check, {
+              size: 16,
+              style: {
                 color: doneStats.failed
                   ? 'var(--lobe-color-warning, #faad14)'
                   : 'var(--lobe-color-success, #52c41a)',
-              }}
-            />
-            <Text fontSize={13}>
+              },
+            })}
+            <div className="text-[13px]">
               {t('heteroImport.done.summary', {
                 messages: doneStats.inserted.toLocaleString(),
                 sessions: doneStats.ok,
               })}
               {doneStats.failed > 0 && t('heteroImport.done.failed', { count: doneStats.failed })}
-            </Text>
-          </Flexbox>
-          <Button type="primary" onClick={close}>
+            </div>
+          </div>
+          <Button variant="default" onClick={close}>
             {t('heteroImport.done.cta')}
           </Button>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

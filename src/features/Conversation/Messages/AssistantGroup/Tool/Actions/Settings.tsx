@@ -1,8 +1,8 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { LucideSettings } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { createPluginDetailModal } from '@/features/PluginDetailModal';
 import { pluginHelpers, useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';

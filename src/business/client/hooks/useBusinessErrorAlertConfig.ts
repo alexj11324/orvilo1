@@ -1,8 +1,9 @@
-import { type AlertProps } from '@lobehub/ui/base-ui';
 import { type ErrorType } from '@orvilo/types';
+
+import { type ErrorAlertProps } from '@/features/Conversation/components/ErrorAlert';
 
 export default function useBusinessErrorAlertConfig(
   _errorType?: ErrorType,
-): AlertProps | undefined {
+): ErrorAlertProps | undefined {
   return undefined;
 }

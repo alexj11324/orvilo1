@@ -1,7 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { ChatErrorType } from '@orvilo/types';
 import { TRPCClientError } from '@trpc/client';
 import { t } from 'i18next';
+
+import { toast } from '@/components/toast';
 
 interface OrviloModelDeprecatedErrorData {
   modelType?: string;

@@ -1,13 +1,14 @@
 'use client';
 
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
-import { Button, Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { SmilePlus } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import EmojiPicker from '@/components/EmojiPicker';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Textarea } from '@/components/ui/textarea';
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
 import { useGlobalStore } from '@/store/global';
@@ -46,9 +47,8 @@ const TitleSection = memo(() => {
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
 
   return (
-    <Flexbox
-      gap={16}
-      paddingBlock={16}
+    <div
+      className="flex flex-col gap-4 py-4"
       style={{
         cursor: 'default',
       }}
@@ -93,9 +93,8 @@ const TitleSection = memo(() => {
       {!emoji && !showEmojiPicker && (
         <Button
           disabled={!canEdit}
-          icon={<Icon icon={SmilePlus} />}
-          size="small"
-          type="text"
+          size="sm"
+          variant="ghost"
           style={{
             opacity: isHoveringTitle ? 1 : 0,
             transition: `opacity ${cssVar.motionDurationMid} ${cssVar.motionEaseInOut}`,
@@ -108,20 +107,21 @@ const TitleSection = memo(() => {
             setShowEmojiPicker(true);
           }}
         >
+          <SmilePlus />
           {t('pageEditor.chooseIcon')}
         </Button>
       )}
 
       {/* Title Input */}
       {showTitleSkeleton ? (
-        <Skeleton height={44} width={320} />
+        <Skeleton style={{ height: 44, width: 320 }} />
       ) : (
-        <TextArea
-          autoSize={{ minRows: 1 }}
+        <Textarea
+          className="rounded-none border-0 px-0 shadow-none focus-visible:ring-0 min-h-0"
           placeholder={t('pageEditor.titlePlaceholder')}
+          rows={1}
           {...getTitleTextAreaInteractionProps(canEdit)}
           value={title}
-          variant={'borderless'}
           style={{
             fontSize: 36,
             fontWeight: 600,
@@ -146,7 +146,7 @@ const TitleSection = memo(() => {
           }}
         />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

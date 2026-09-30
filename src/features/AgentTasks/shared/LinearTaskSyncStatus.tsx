@@ -1,14 +1,14 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { LinearIssueLinkSyncState } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { CircleCheck, CircleDashed, CircleMinus, CircleX, TriangleAlert } from 'lucide-react';
-import { createContext, memo, type PropsWithChildren, use, useMemo } from 'react';
+import { createContext, createElement, memo, type PropsWithChildren, use, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useTaskStore } from '@/store/task';
@@ -127,33 +127,28 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
   const issueUrl = getIssueLinkUrl(link);
   const conflictFields = link.conflict?.fields.join(', ');
   const tooltip = (
-    <Flexbox gap={4} style={{ maxWidth: 320 }}>
-      <Text fontSize={12} type={'secondary'}>
+    <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
+      <div className="text-[12px] text-muted-foreground">
         {t('taskDetail.linearSync.source')}: {link.linearIdentifier}
-      </Text>
-      <Text fontSize={12} type={'secondary'}>
-        {t(meta.labelKey as never)}
-      </Text>
+      </div>
+      <div className="text-[12px] text-muted-foreground">{t(meta.labelKey as never)}</div>
       {conflictFields && (
-        <Text fontSize={12} style={{ wordBreak: 'break-word' }} type={'warning'}>
+        <div className="text-[12px] text-warning" style={{ wordBreak: 'break-word' }}>
           {t('taskDetail.linearSync.conflictFields', { fields: conflictFields })}
-        </Text>
+        </div>
       )}
       {issueUrl && (
-        <Text fontSize={12} type={'info'}>
-          {t('taskDetail.linearSync.openIssue')}
-        </Text>
+        <div className="text-[12px] text-info">{t('taskDetail.linearSync.openIssue')}</div>
       )}
-    </Flexbox>
+    </div>
   );
 
+  // Clickable external link — mark it so peek-mode row click capture
+  // (My issues) lets it through instead of selecting the row.
   const tag = (
     <Tag
       data-row-interactive={issueUrl ? true : undefined}
-      size={'small'}
-      // Clickable external link — mark it so peek-mode row click capture
-      // (My issues) lets it through instead of selecting the row.
-      icon={<Icon color={meta.color} icon={meta.icon} size={12} />}
+      size="sm"
       style={{ cursor: issueUrl ? 'pointer' : undefined, flexShrink: 0 }}
       onClick={
         issueUrl
@@ -164,11 +159,19 @@ const LinearTaskSyncStatus = memo<LinearTaskSyncStatusProps>(({ taskId }) => {
           : undefined
       }
     >
+      {createElement(meta.icon, { color: meta.color, size: 12 })}
       {link.linearIdentifier} · {t(meta.labelKey as never)}
     </Tag>
   );
 
-  return <Tooltip title={tooltip}>{tag}</Tooltip>;
+  return (
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={<span className="inline-flex">{tag}</span>} />
+        <TooltipContent>{tooltip}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
+  );
 });
 
 LinearTaskSyncStatus.displayName = 'LinearTaskSyncStatus';

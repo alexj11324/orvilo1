@@ -1,9 +1,11 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, type DropdownItem, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { FilePlusIcon, FolderPlusIcon, PlusIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   toolbar: css`
@@ -32,13 +34,13 @@ const DocumentExplorerToolbar = memo<Props>(({ onCreateDocument, onCreateFolder 
   const createMenuItems = useMemo<DropdownItem[]>(
     () => [
       {
-        icon: <Icon icon={FilePlusIcon} />,
+        icon: <FilePlusIcon />,
         key: 'new-document',
         label: t('workingPanel.resources.tree.newDocument'),
         onClick: onCreateDocument,
       },
       {
-        icon: <Icon icon={FolderPlusIcon} />,
+        icon: <FolderPlusIcon />,
         key: 'new-folder',
         label: t('workingPanel.resources.tree.newFolder'),
         onClick: onCreateFolder,
@@ -48,10 +50,10 @@ const DocumentExplorerToolbar = memo<Props>(({ onCreateDocument, onCreateFolder 
   );
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.toolbar} distribution={'space-between'}>
-      <Text className={styles.title} type={'secondary'}>
+    <div className={`flex items-center justify-between ${styles.toolbar}`}>
+      <div className={cn('text-muted-foreground', styles.title)}>
         {t('workingPanel.resources.filter.documents')}
-      </Text>
+      </div>
       <DropdownMenu items={createMenuItems} placement={'bottomRight'}>
         <ActionIcon
           icon={PlusIcon}
@@ -59,7 +61,7 @@ const DocumentExplorerToolbar = memo<Props>(({ onCreateDocument, onCreateFolder 
           title={t('workingPanel.resources.tree.create')}
         />
       </DropdownMenu>
-    </Flexbox>
+    </div>
   );
 });
 

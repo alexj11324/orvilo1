@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -40,10 +39,10 @@ const RunStatusBadge = memo<RunStatusBadgeProps>(({ hint, status }) => {
         paddingInline: 8,
       }}
     >
-      <Text ellipsis color={'inherit'} fontSize={12}>
+      <div className="truncate min-w-0 text-[12px]" style={{ color: 'inherit' }}>
         {t(`run_status.${normalized}`)}
         {hint ? ` · ${hint}` : ''}
-      </Text>
+      </div>
     </span>
   );
 });

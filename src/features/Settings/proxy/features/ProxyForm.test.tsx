@@ -62,8 +62,7 @@ vi.mock('./SaveBar', () => ({
     ) : null,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/toast', () => ({
   toast: {
     error: toastErrorMock,
     success: toastSuccessMock,

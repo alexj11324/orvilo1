@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { useClientDataSWR } from '@/libs/swr';
 import { portalKeys } from '@/libs/swr/keys';
 import { documentService } from '@/services/document';
@@ -28,34 +28,25 @@ const Header = () => {
 
   if (isLoading || !title) {
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        flex={1}
-        gap={12}
-        justify={'space-between'}
-        width={'100%'}
-      >
-        <Flexbox flex={1}>
-          <Skeleton height={16} width={180} />
-        </Flexbox>
-      </Flexbox>
+      <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
+        <div className="flex flex-col flex-1">
+          <Skeleton style={{ height: 16, width: 180 }} />
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox horizontal align={'center'} flex={1} gap={12} justify={'space-between'} width={'100%'}>
-      <Flexbox flex={1}>
-        <Text className={cx(oneLineEllipsis)} type={'secondary'}>
-          {title}
-        </Text>
-      </Flexbox>
+    <div className="flex flex-row items-center flex-1 gap-3 justify-between w-[100%]">
+      <div className="flex flex-col flex-1">
+        <div className={cn('text-muted-foreground', cx(oneLineEllipsis))}>{title}</div>
+      </div>
       {!isReadonly && (
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex flex-row items-center gap-2">
           <AutoSaveHint />
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

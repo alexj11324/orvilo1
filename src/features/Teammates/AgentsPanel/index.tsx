@@ -1,13 +1,17 @@
 'use client';
 
-import { Empty, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Alert, Button, SkeletonText, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Bot, Check, Minus } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { WorkspaceAgentSummary } from '../api/contract';
 import { useWorkspaceAgentsQuery } from '../api/hooks';
@@ -85,34 +89,43 @@ const AgentRow = memo<AgentRowProps>(({ agent }) => {
     <div className={styles.row}>
       <div className={styles.cell}>
         <Avatar avatar={agent.avatar} name={agent.name} size={32} title={agent.name} />
-        <Flexbox flex={1} gap={0} style={{ minWidth: 0 }}>
+        <div className="flex flex-col flex-1 gap-[0px]" style={{ minWidth: 0 }}>
           <span className={styles.name}>
-            <Icon icon={Bot} size={12} style={{ marginInlineEnd: 6 }} />
+            <Bot size={12} style={{ marginInlineEnd: 6 }} />
             {agent.name}
           </span>
-        </Flexbox>
+        </div>
       </div>
       <div className={styles.cell}>{maintainerName}</div>
       <div className={styles.cell}>
-        <Tooltip title={projectNames}>
-          <span className={styles.projects}>
-            {projectNames || t('workspaceSetting.agents.noProjects')}
-          </span>
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex">
+                  <span className={styles.projects}>
+                    {projectNames || t('workspaceSetting.agents.noProjects')}
+                  </span>
+                </span>
+              }
+            />
+            <TooltipContent>{projectNames}</TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       </div>
       <div>
-        <Tag color={STATUS_COLOR[status]}>
+        <Tag style={{ color: STATUS_COLOR[status] }}>
           {t(`workspaceSetting.agents.status.${status}`, { defaultValue: status })}
         </Tag>
       </div>
       {/* v1 read-only: capability columns exist so the shape is stable when
           the backend starts reporting per-agent grants. */}
       <div className={styles.cell}>
-        <Icon icon={Check} size={14} style={{ color: cssVar.colorSuccess }} />
+        <Check size={14} style={{ color: cssVar.colorSuccess }} />
         <span>{t('workspaceSetting.agents.canUse')}</span>
       </div>
       <div className={styles.cell}>
-        <Icon icon={Minus} size={14} style={{ color: cssVar.colorTextTertiary }} />
+        <Minus size={14} style={{ color: cssVar.colorTextTertiary }} />
         <span>{t('workspaceSetting.agents.cannotEdit')}</span>
       </div>
     </div>
@@ -133,56 +146,47 @@ export const AgentsPanel = memo(() => {
 
   if (isLoading) {
     return (
-      <Flexbox gap={16} style={{ paddingBlock: 8 }}>
+      <div className="flex flex-col gap-4" style={{ paddingBlock: 8 }}>
         {Array.from({ length: 3 }).map((_, i) => (
-          <Flexbox align="center" gap={10} horizontal key={i}>
-            <SkeletonText style={{ marginBottom: 0, width: '30%' }} />
-            <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
-            <SkeletonText style={{ marginBottom: 0, width: '25%' }} />
-          </Flexbox>
+          <div className="flex items-center gap-2.5" key={i}>
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '30%' }} />
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '25%' }} />
+            <Skeleton className="h-3" style={{ marginBottom: 0, width: '25%' }} />
+          </div>
         ))}
-      </Flexbox>
+      </div>
     );
   }
   if (error) {
     return (
-      <Alert
-        title={t('workspaceSetting.agents.loadFailed')}
-        type="error"
-        action={
-          <Button size="small" onClick={() => void mutate()}>
-            {t('retry', { ns: 'common' })}
-          </Button>
-        }
-      />
+      <Alert variant="destructive">
+        <AlertTitle>{t('workspaceSetting.agents.loadFailed')}</AlertTitle>
+        <AlertAction>
+          {
+            <Button size="sm" onClick={() => void mutate()}>
+              {t('retry', { ns: 'common' })}
+            </Button>
+          }
+        </AlertAction>
+      </Alert>
     );
   }
 
   const agents = data ?? [];
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <div className={styles.tableScroll}>
         <div className={styles.table}>
           <div className={styles.row}>
-            <span className={styles.headerCell}>
-              {t('workspaceSetting.agents.columnAgent')}
-            </span>
+            <span className={styles.headerCell}>{t('workspaceSetting.agents.columnAgent')}</span>
             <span className={styles.headerCell}>
               {t('workspaceSetting.agents.columnMaintainer')}
             </span>
-            <span className={styles.headerCell}>
-              {t('workspaceSetting.agents.columnProjects')}
-            </span>
-            <span className={styles.headerCell}>
-              {t('workspaceSetting.agents.columnStatus')}
-            </span>
-            <span className={styles.headerCell}>
-              {t('workspaceSetting.agents.columnCanUse')}
-            </span>
-            <span className={styles.headerCell}>
-              {t('workspaceSetting.agents.columnCanEdit')}
-            </span>
+            <span className={styles.headerCell}>{t('workspaceSetting.agents.columnProjects')}</span>
+            <span className={styles.headerCell}>{t('workspaceSetting.agents.columnStatus')}</span>
+            <span className={styles.headerCell}>{t('workspaceSetting.agents.columnCanUse')}</span>
+            <span className={styles.headerCell}>{t('workspaceSetting.agents.columnCanEdit')}</span>
           </div>
           {agents.map((agent) => (
             <AgentRow agent={agent} key={agent.id} />
@@ -190,9 +194,13 @@ export const AgentsPanel = memo(() => {
         </div>
       </div>
       {agents.length === 0 && (
-        <Empty description={t('workspaceSetting.agents.empty')} style={{ paddingBlock: 32 }} />
+        <Empty style={{ paddingBlock: 32 }}>
+          <EmptyHeader>
+            <EmptyDescription>{t('workspaceSetting.agents.empty')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

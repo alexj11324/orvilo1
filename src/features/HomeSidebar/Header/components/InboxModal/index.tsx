@@ -1,8 +1,8 @@
 'use client';
 
-import { createModal, useModalContext } from '@lobehub/ui/base-ui';
 import { memo, useEffect } from 'react';
 
+import { createModal, useModalContext } from '@/components/Modal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 const RedirectToWorkInbox = memo(() => {

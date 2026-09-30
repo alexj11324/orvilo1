@@ -1,8 +1,6 @@
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
-import { type ReactNode } from 'react';
+import { type HTMLAttributes, type ReactNode } from 'react';
 
-interface MobileContentLayoutProps extends FlexboxProps {
+interface MobileContentLayoutProps extends HTMLAttributes<HTMLDivElement> {
   header?: ReactNode;
   withNav?: boolean;
 }
@@ -16,14 +14,15 @@ const MobileContentLayout = ({
   ...rest
 }: MobileContentLayoutProps) => {
   const content = (
-    <Flexbox
-      height="100%"
+    <div
+      className={'flex flex-col'}
       id={id}
-      width="100%"
       style={{
+        height: '100%',
         overflowX: 'hidden',
         overflowY: 'auto',
         position: 'relative',
+        width: '100%',
         ...style,
         // TabNav Height
         paddingBottom: withNav ? 48 : style?.paddingBottom,
@@ -31,22 +30,26 @@ const MobileContentLayout = ({
       {...rest}
     >
       {children}
-    </Flexbox>
+    </div>
   );
 
   if (!header) return content;
 
   return (
-    <Flexbox height={'100%'} style={{ overflow: 'hidden', position: 'relative' }} width={'100%'}>
+    <div
+      className={'flex flex-col'}
+      style={{ height: '100%', overflow: 'hidden', position: 'relative', width: '100%' }}
+    >
       {header}
-      <Flexbox
-        height="100%"
+      <div
+        className={'flex flex-col'}
         id={'orvilo-mobile-scroll-container'}
-        width="100%"
         style={{
+          height: '100%',
           overflowX: 'hidden',
           overflowY: 'auto',
           position: 'relative',
+          width: '100%',
           ...style,
           // TabNav Height
           paddingBottom: withNav ? 48 : style?.paddingBottom,
@@ -54,8 +57,8 @@ const MobileContentLayout = ({
         {...rest}
       >
         {children}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

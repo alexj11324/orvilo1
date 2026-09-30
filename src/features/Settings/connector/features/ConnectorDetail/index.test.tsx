@@ -78,8 +78,7 @@ vi.mock('@orvilo/const', () => ({
       : undefined,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/Modal', () => ({
   confirmModal: mocks.confirmModal,
 }));
 

@@ -1,9 +1,15 @@
 'use client';
 
-import { Accordion } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { kebabCase } from 'es-toolkit';
 import { type FC, type ReactNode } from 'react';
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   collapse: css`
@@ -31,21 +37,14 @@ const CollapsibleSection: FC<CollapsibleSectionProps> = ({ children, title = '' 
   const id = kebabCase(title);
 
   return (
-    <Accordion
-      className={styles.collapse}
-      defaultValue={[]}
-      gap={8}
-      indicatorPlacement={'end'}
-      styles={{ content: { padding: '12px 16px' } }}
-      variant={'outlined'}
-      items={[
-        {
-          children,
-          key: id || 'section',
-          title: <span className={styles.label}>{title}</span>,
-        },
-      ]}
-    />
+    <Accordion className={styles.collapse} defaultValue={[]}>
+      <AccordionItem value={id || 'section'}>
+        <AccordionTrigger>
+          <span className={styles.label}>{title}</span>
+        </AccordionTrigger>
+        <AccordionContent style={{ padding: '12px 16px' }}>{children}</AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 };
 

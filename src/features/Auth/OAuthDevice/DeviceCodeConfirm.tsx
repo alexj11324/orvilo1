@@ -1,10 +1,9 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import AuthCard from '@/features/AuthCard';
 
 import ThirdPartyNotice from '../OAuthConsent/ThirdPartyNotice';
@@ -28,35 +27,39 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
         subtitle={t('device.confirm.description', { clientName })}
         title={t('device.confirm.title')}
         footer={
-          <form action="/oidc/device" method="post" style={{ width: '100%' }}>
+          <form
+            action="/oidc/device"
+            method="post"
+            style={{ width: '100%' }}
+            onSubmit={() => setIsLoading(true)}
+          >
             {xsrf && <input name="xsrf" type="hidden" value={xsrf} />}
             <input name="user_code" type="hidden" value={userCode} />
             <input name="confirm" type="hidden" value="yes" />
-            <Flexbox gap={12}>
+            <div className="flex flex-col gap-3">
               <Button
-                block
-                htmlType="submit"
+                className="w-full"
                 loading={isLoading}
-                size="large"
-                type="primary"
-                onClick={() => setIsLoading(true)}
+                size="lg"
+                type="submit"
+                variant="default"
               >
                 {t('device.confirm.authorize')}
               </Button>
-              <Button block htmlType="submit" name="abort" size="large" value="yes">
+              <Button className="w-full" name="abort" size="lg" type="submit" value="yes">
                 {t('device.confirm.deny')}
               </Button>
-            </Flexbox>
+            </div>
           </form>
         }
       >
         {isFirstParty === false && (
-          <Flexbox style={{ marginBottom: 16 }}>
+          <div className="flex flex-col" style={{ marginBottom: 16 }}>
             <ThirdPartyNotice developerName={developerName} policyUri={policyUri} />
-          </Flexbox>
+          </div>
         )}
-        <Block padding={16} variant="filled">
-          <Text
+        <div className="flex flex-col p-4">
+          <div
             style={{
               fontFamily: 'monospace',
               fontSize: 24,
@@ -66,11 +69,11 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
             }}
           >
             {userCode}
-          </Text>
-        </Block>
-        <Text style={{ marginTop: 8 }} type="secondary">
+          </div>
+        </div>
+        <div className="text-muted-foreground" style={{ marginTop: 8 }}>
           {t('device.confirm.codeHint')}
-        </Text>
+        </div>
       </AuthCard>
     );
   },

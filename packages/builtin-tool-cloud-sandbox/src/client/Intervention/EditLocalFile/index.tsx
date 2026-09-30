@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 interface EditLocalFileParams {
   all?: boolean;
@@ -16,39 +16,35 @@ const EditLocalFile = memo<BuiltinInterventionProps<EditLocalFileParams>>(({ arg
   const { path, search, replace, all } = args;
 
   return (
-    <Flexbox gap={8}>
-      <Text>
+    <div className="flex flex-col gap-2">
+      <div>
         Edit file: {path} {all && '(replace all)'}
-      </Text>
-      <Flexbox gap={4}>
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           Search:
-        </Text>
-        <Highlighter
+        </div>
+        <CodeBlock
           wrap
+          code={search}
           language={'text'}
-          showLanguage={false}
           style={{ padding: '4px 8px' }}
-          variant={'outlined'}
-        >
-          {search}
-        </Highlighter>
-      </Flexbox>
-      <Flexbox gap={4}>
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+          variant={'default'}
+        />
+      </div>
+      <div className="flex flex-col gap-1">
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           Replace with:
-        </Text>
-        <Highlighter
+        </div>
+        <CodeBlock
           wrap
+          code={replace}
           language={'text'}
-          showLanguage={false}
           style={{ padding: '4px 8px' }}
-          variant={'outlined'}
-        >
-          {replace}
-        </Highlighter>
-      </Flexbox>
-    </Flexbox>
+          variant={'default'}
+        />
+      </div>
+    </div>
   );
 });
 

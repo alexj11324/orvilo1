@@ -13,11 +13,11 @@ const mocks = vi.hoisted(() => ({
   messageSuccess: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', () => ({
+vi.mock('@/utils/clipboard', () => ({
   copyToClipboard: mocks.copyToClipboard,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   toast: { success: mocks.messageSuccess },
 }));

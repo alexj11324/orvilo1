@@ -1,8 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
 import { formatUsageValue } from '@orvilo/utils';
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Separator } from '@/components/ui/separator';
 
 interface TokenProgressItem {
   color: string;
@@ -20,11 +20,9 @@ interface TokenProgressProps {
 const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) => {
   const total = data.reduce((acc, item) => acc + item.value, 0);
   return (
-    <Flexbox gap={8} style={{ position: 'relative' }} width={'100%'}>
-      <Flexbox
-        horizontal
-        height={6}
-        width={'100%'}
+    <div className="flex flex-col gap-2 w-[100%]" style={{ position: 'relative' }}>
+      <div
+        className="flex flex-row h-[6px] w-[100%]"
         style={{
           background: total === 0 ? cssVar.colorFill : undefined,
           borderRadius: 3,
@@ -33,17 +31,17 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) =
         }}
       >
         {data.map((item) => (
-          <Flexbox
-            height={'100%'}
+          <div
+            className="flex flex-col h-[100%]"
             key={item.id}
             style={{ background: item.color, flex: item.value }}
           />
         ))}
-      </Flexbox>
-      <Flexbox>
+      </div>
+      <div className="flex flex-col">
         {data.map((item) => (
-          <Flexbox horizontal align={'center'} gap={4} justify={'space-between'} key={item.id}>
-            <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex flex-row items-center gap-1 justify-between" key={item.id}>
+            <div className="flex flex-row items-center gap-1">
               {showIcon && (
                 <div
                   style={{
@@ -56,21 +54,21 @@ const TokenProgress = memo<TokenProgressProps>(({ data, showIcon, showTotal }) =
                 />
               )}
               <div style={{ color: cssVar.colorTextSecondary }}>{item.title}</div>
-            </Flexbox>
+            </div>
             <div style={{ fontWeight: 500 }}>{formatUsageValue(item.value)}</div>
-          </Flexbox>
+          </div>
         ))}
         {showTotal && (
           <>
-            <Divider style={{ marginBlock: 8 }} />
-            <Flexbox horizontal align={'center'} gap={4} justify={'space-between'}>
+            <Separator style={{ marginBlock: 8 }} />
+            <div className="flex flex-row items-center gap-1 justify-between">
               <div style={{ color: cssVar.colorTextSecondary }}>{showTotal}</div>
               <div style={{ fontWeight: 500 }}>{formatUsageValue(total)}</div>
-            </Flexbox>
+            </div>
           </>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

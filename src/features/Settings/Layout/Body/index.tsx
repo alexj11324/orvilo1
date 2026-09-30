@@ -1,11 +1,17 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Accordion, Text } from '@lobehub/ui/base-ui';
+import { ChevronDown } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { Link } from 'react-router';
 
-import NavItem from '@/features/NavPanel/components/NavItem';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+} from '@/components/ui/sidebar';
+import NavItem from '@/features/NavPanel/components/SidebarNavItem';
 import { getTabUrl, SearchSection } from '@/features/SettingsSearch';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
@@ -19,14 +25,6 @@ const Body = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
   const location = useActiveLocation();
 
-  // Every group starts expanded. Derived from the groups themselves rather than listed
-  // by hand: a hand-written list silently collapses each group added later, which is
-  // how the capability groups would have arrived hidden behind their triggers.
-  const defaultOpenGroups = useMemo(
-    () => categoryGroups.map((group) => group.key),
-    [categoryGroups],
-  );
-
   // Extract current tab from pathname: /settings/profile -> profile
   const activeTab = useMemo(() => {
     const pathParts = location.pathname.split('/');
@@ -38,48 +36,41 @@ const Body = memo(() => {
   }, [location.pathname]);
 
   return (
-    <Flexbox gap={4} paddingInline={4}>
-      <SearchSection>
-        <Accordion
-          defaultValue={defaultOpenGroups}
-          gap={8}
-          indicatorPlacement="inline"
-          styles={{ trigger: { paddingBlock: 4, paddingInline: '8px 4px' } }}
-          items={categoryGroups.map((group) => ({
-            key: group.key,
-            title: (
-              <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-                {group.title}
-              </Text>
-            ),
-            children: (
-              <Flexbox gap={1} paddingBlock={1}>
-                {group.items.map((item) => {
-                  const url = item.href ?? getTabUrl(item.key);
-                  return (
-                    <Link
-                      key={item.key}
-                      to={url}
-                      onClick={(e) => {
-                        if (isModifierClick(e)) return;
-                        e.preventDefault();
-                        navigate(url);
-                      }}
-                    >
+    <SearchSection>
+      {categoryGroups.map((group) => (
+        <Collapsible defaultOpen className="group/collapsible" key={group.key}>
+          <SidebarGroup>
+            <SidebarGroupLabel render={<CollapsibleTrigger />}>
+              {group.title}
+              <ChevronDown className="ml-auto transition-transform group-data-[closed]/collapsible:-rotate-90" />
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.25">
+                  {group.items.map((item) => {
+                    const url = item.href ?? getTabUrl(item.key);
+                    return (
                       <NavItem
                         active={activeTab === item.key}
+                        href={url}
                         icon={item.icon}
+                        key={item.key}
+                        render={<Link to={url} />}
                         title={item.label}
+                        onClick={(e) => {
+                          if (isModifierClick(e)) return;
+                          navigate(url, { escape: true });
+                        }}
                       />
-                    </Link>
-                  );
-                })}
-              </Flexbox>
-            ),
-          }))}
-        />
-      </SearchSection>
-    </Flexbox>
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+      ))}
+    </SearchSection>
   );
 });
 

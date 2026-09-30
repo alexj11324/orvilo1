@@ -1,11 +1,17 @@
 import { ChatInput, ChatInputActionBar, useEditor } from '@lobehub/editor/react';
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { DocumentCommentItem } from '@orvilo/types';
+import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight, MessageCircle, Pencil, Trash } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { AttachmentMenu } from '@/features/AttachmentInput';
 import RichTextMessage from '@/features/Conversation/Messages/User/components/RichTextMessage';
 import { TypoBar } from '@/features/EditorCanvas';
@@ -168,47 +174,44 @@ const CommentCard = memo<CommentCardProps>(
     const attachmentState = getEditorAttachmentStateFromJson(editorData);
 
     return (
-      <Flexbox
-        className={`${styles.card} ${variant === 'reply' ? styles.replyCard : ''}`}
+      <div
         data-document-comment-id={comment.id}
         ref={cardRef}
+        className={cx(
+          'flex flex-col',
+          `${styles.card} ${variant === 'reply' ? styles.replyCard : ''}`,
+        )}
       >
-        <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
+        <div className={cx('flex flex-row items-center gap-2', styles.header)}>
           <Avatar
             avatar={comment.author.avatar || authorName}
             size={variant === 'reply' ? 28 : 32}
           />
-          <Text fontSize={14} weight={600}>
-            {authorName}
-          </Text>
+          <div className="text-[14px] font-semibold">{authorName}</div>
           {replyToName && (
             <>
               <ChevronRight aria-hidden className={styles.replyTargetIcon} size={14} />
-              <Text fontSize={14} weight={600}>
-                {replyToName}
-              </Text>
+              <div className="text-[14px] font-semibold">{replyToName}</div>
             </>
           )}
           {comment.author.status === 'former' && (
-            <Text className={styles.meta} fontSize={12}>
+            <div className={cn('text-[12px]', styles.meta)}>
               {t('pageEditor.comments.author.former')}
-            </Text>
+            </div>
           )}
           {time && (
-            <Text className={styles.meta} fontSize={14} title={timeTitle}>
+            <div className={cn('text-[14px]', styles.meta)} title={timeTitle}>
               {time}
-            </Text>
+            </div>
           )}
           {edited && !deleted && (
-            <Text className={styles.meta} fontSize={12}>
-              {t('pageEditor.comments.edited')}
-            </Text>
+            <div className={cn('text-[12px]', styles.meta)}>{t('pageEditor.comments.edited')}</div>
           )}
-        </Flexbox>
+        </div>
 
         <div className={`${styles.body} ${variant === 'reply' ? styles.replyBody : ''}`}>
           {deleted ? (
-            <Text className={styles.deleted}>{t('pageEditor.comments.deleted')}</Text>
+            <div className={cn(styles.deleted)}>{t('pageEditor.comments.deleted')}</div>
           ) : editing ? (
             <ChatInput
               className={styles.editComposer}
@@ -232,14 +235,19 @@ const CommentCard = memo<CommentCardProps>(
                     />
                   }
                   right={
-                    <Flexbox horizontal gap={8}>
-                      <Button disabled={mutating} size={'small'} onClick={() => setEditing(false)}>
+                    <div className="flex flex-row gap-2">
+                      <Button
+                        disabled={mutating}
+                        size="sm"
+                        variant="outline"
+                        onClick={() => setEditing(false)}
+                      >
                         {t('pageEditor.comments.cancel')}
                       </Button>
                       <Button
                         loading={mutating}
-                        size={'small'}
-                        type={'primary'}
+                        size="sm"
+                        variant="default"
                         disabled={
                           attachmentState.hasIncompleteAttachments ||
                           (!content.trim() && !attachmentState.hasCompletedAttachments)
@@ -248,7 +256,7 @@ const CommentCard = memo<CommentCardProps>(
                       >
                         {t('pageEditor.comments.save')}
                       </Button>
-                    </Flexbox>
+                    </div>
                   }
                 />
               }
@@ -284,10 +292,11 @@ const CommentCard = memo<CommentCardProps>(
         </div>
 
         {!optimistic && !editing && (onReply || comment.canEdit || comment.canDelete) && (
-          <Flexbox
-            horizontal
-            className={`${styles.actions} ${variant === 'reply' ? styles.replyCardActions : ''}`}
-            gap={4}
+          <div
+            className={cx(
+              'flex flex-row gap-1',
+              `${styles.actions} ${variant === 'reply' ? styles.replyCardActions : ''}`,
+            )}
           >
             {onReply && (
               <ActionIcon
@@ -320,9 +329,9 @@ const CommentCard = memo<CommentCardProps>(
                 onClick={handleDelete}
               />
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

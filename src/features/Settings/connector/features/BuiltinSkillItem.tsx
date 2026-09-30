@@ -1,9 +1,9 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useToolStore } from '@/store/tool';
 import { builtinToolSelectors } from '@/store/tool/selectors';

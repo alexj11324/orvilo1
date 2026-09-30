@@ -1,5 +1,3 @@
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Accordion, ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { type ChatToolPayloadWithResult } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { Check, HandIcon, Maximize2, Minimize2, X } from 'lucide-react';
@@ -8,7 +6,14 @@ import * as motion from 'motion/react-m';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useAutoScroll } from '@/hooks/useAutoScroll';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/slices/operation/selectors';
@@ -364,24 +369,25 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
 
     const renderStatusBlock = (): React.ReactNode => {
       const wrapInBlock = (inner: React.ReactNode) => (
-        <Block
-          horizontal
-          align="center"
-          flex="none"
-          height={24}
-          justify="center"
-          style={{ fontSize: 12 }}
-          variant="outlined"
-          width={24}
+        <div
+          className="flex items-center justify-center"
+          style={{
+            flex: 'none',
+            height: 24,
+            border: `1px solid ${cssVar.colorBorder}`,
+            borderRadius: cssVar.borderRadiusLG,
+            width: 24,
+            fontSize: 12,
+          }}
         >
           {inner}
-        </Block>
+        </div>
       );
 
       if (streaming) {
         return wrapInBlock(
           pendingInterventionPresent ? (
-            <Icon color={cssVar.colorInfo} icon={HandIcon} />
+            <HandIcon color={cssVar.colorInfo} />
           ) : (
             <NeuralNetworkLoading size={16} />
           ),
@@ -390,13 +396,13 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
 
       switch (completionStatus) {
         case 'error': {
-          return wrapInBlock(<Icon color={cssVar.colorError} icon={X} />);
+          return wrapInBlock(<X color={cssVar.colorError} />);
         }
         case 'partial': {
-          return wrapInBlock(<Icon color={cssVar.colorSuccess} icon={Check} />);
+          return wrapInBlock(<Check color={cssVar.colorSuccess} />);
         }
         default: {
-          return wrapInBlock(<Icon color={cssVar.colorSuccess} icon={Check} />);
+          return wrapInBlock(<Check color={cssVar.colorSuccess} />);
         }
       }
     };
@@ -438,13 +444,11 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
     );
 
     const title = (
-      <Flexbox horizontal align="center" gap={6} style={{ minWidth: 0 }}>
+      <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
         {renderStatusBlock()}
         {streaming ? (
-          <Flexbox
-            horizontal
-            align="center"
-            gap={6}
+          <div
+            className="flex items-center gap-1.5"
             style={{
               minHeight: WORKFLOW_STREAMING_TITLE_MIN_HEIGHT_PX,
               minWidth: 0,
@@ -485,11 +489,11 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
                 ({formatReasoningDuration(workingElapsedSeconds * TIME_MS_PER_SECOND)})
               </span>
             )}
-          </Flexbox>
+          </div>
         ) : (
-          <Flexbox horizontal align="center" gap={6} style={{ minWidth: 0 }}>
-            <Text
-              type="secondary"
+          <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+            <div
+              className="text-muted-foreground"
               style={{
                 minWidth: 0,
                 overflow: 'hidden',
@@ -499,28 +503,26 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
               }}
             >
               {summaryText}
-            </Text>
+            </div>
             {durationText && (
               <span style={{ color: cssVar.colorTextQuaternary, flexShrink: 0 }}>
                 {durationText}
               </span>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
 
     return (
-      <Accordion
-        indicatorPlacement="inline"
-        styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
-        value={expandedKeys}
-        variant="borderless"
-        items={[
-          {
-            action: expandToggleNode,
-            alwaysShowAction: true,
-            children: (
+      <Accordion multiple value={expandedKeys} onValueChange={handleExpandedChange}>
+        <AccordionItem value="workflow">
+          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+            {title}
+            {expandToggleNode}
+          </AccordionTrigger>
+          <AccordionContent>
+            {
               <WorkflowExpandedList
                 assistantId={assistantMessageId}
                 blocks={blocks}
@@ -529,13 +531,10 @@ const WorkflowCollapse = memo<WorkflowCollapseProps>(
                 scrollRef={scrollRef}
                 onScroll={handleAutoScroll}
               />
-            ),
-            key: 'workflow',
-            title,
-          },
-        ]}
-        onValueChange={handleExpandedChange}
-      />
+            }
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     );
   },
 );

@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { TargetIcon } from 'lucide-react';
 import {
   AlertTriangleIcon,
@@ -78,18 +77,16 @@ const GoalStatusLine = memo<GoalStatusLineProps>(({ passed, phase, progress, tot
   const showChecks = total > 0 && phase !== 'achieved';
 
   return (
-    <Flexbox horizontal align={'center'} gap={6}>
+    <div className="flex items-center gap-1.5">
       {phase !== 'running' && (
         <>
-          <Icon
-            className={styles.statusIcon}
+          <meta.icon
+            className={cn(styles.statusIcon, meta.spin ? 'animate-spin' : undefined)}
             color={meta.color}
-            icon={meta.icon}
             size={12}
-            spin={meta.spin}
           />
-          <Text className={styles.status}>{t(`goalTask.status.${phase}`)}</Text>
-          <Text className={styles.status}>·</Text>
+          <div className={styles.status}>{t(`goalTask.status.${phase}`)}</div>
+          <div className={styles.status}>·</div>
         </>
       )}
       {showChecks && (
@@ -97,10 +94,10 @@ const GoalStatusLine = memo<GoalStatusLineProps>(({ passed, phase, progress, tot
           <div className={styles.progress}>
             <div className={styles.progressFill} style={{ width: `${progress}%` }} />
           </div>
-          <Text className={styles.status}>{t('goalTask.tasksDone', { passed, total })}</Text>
+          <div className={styles.status}>{t('goalTask.tasksDone', { passed, total })}</div>
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

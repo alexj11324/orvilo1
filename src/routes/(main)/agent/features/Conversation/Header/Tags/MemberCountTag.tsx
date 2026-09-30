@@ -1,9 +1,9 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { Users } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useSessionStore } from '@/store/session';
 import { sessionSelectors } from '@/store/session/selectors';
 import { type OrviloGroupSession } from '@/types/session';
@@ -17,14 +17,23 @@ const MemberCountTag = memo(() => {
   if (memberCount < 0) return null;
 
   return (
-    <Tooltip title={t('group.memberTooltip', { count: memberCount })}>
-      <Flexbox height={22}>
-        <Tag>
-          <Icon icon={Users} />
-          <span>{memberCount}</span>
-        </Tag>
-      </Flexbox>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span style={{ display: 'inline-flex' }}>
+              <div className="flex flex-col" style={{ height: 22 }}>
+                <Badge variant="primary-light">
+                  <Users />
+                  <span>{memberCount}</span>
+                </Badge>
+              </div>
+            </span>
+          }
+        />
+        <TooltipContent>{t('group.memberTooltip', { count: memberCount })}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 });
 

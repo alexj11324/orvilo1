@@ -1,62 +1,82 @@
 'use client';
 
-import type { FormGroupItemType } from '@lobehub/ui';
-import { Form, Icon } from '@lobehub/ui';
-import { Button, Switch } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { HardDriveDownload, HardDriveUpload } from 'lucide-react';
-import { memo } from 'react';
+import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { useTransferAgentsFormItem } from '@/business/client/hooks/useTransferAgentsFormItem';
-import { FORM_STYLE } from '@/const/layoutTokens';
+import {
+  type StorageFormItem,
+  useTransferAgentsFormItem,
+} from '@/business/client/hooks/useTransferAgentsFormItem';
+import { Button } from '@/components/ui/button';
+import { Field, FieldDescription, FieldGroup, FieldLabel } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
+
+interface StorageFormGroup {
+  children: StorageFormItem[];
+  title: ReactNode;
+}
+
+const StorageGroup = ({ children, title }: StorageFormGroup) => (
+  <div>
+    <FieldLabel className="mb-2 block">{title}</FieldLabel>
+    <FieldGroup className="gap-4">
+      {children.map((item) => (
+        <Field key={String(item.label)} orientation={'horizontal'}>
+          <div className="flex flex-1 flex-col gap-1">
+            {item.label && <FieldLabel>{item.label}</FieldLabel>}
+            {item.desc && <FieldDescription>{item.desc}</FieldDescription>}
+          </div>
+          {item.children}
+        </Field>
+      ))}
+    </FieldGroup>
+  </div>
+);
 
 const WorkspaceStorageContent = memo(() => {
   const { t } = useTranslation('setting');
   const transferAgentsFormItems = useTransferAgentsFormItem();
 
-  const analytics: FormGroupItemType = {
+  const analytics: StorageFormGroup = {
     children: [
       {
         children: <Switch disabled />,
         desc: t('workspaceSetting.storage.telemetry.desc', { appName: BRANDING_NAME }),
         label: t('workspaceSetting.storage.telemetry.title'),
-        minWidth: undefined,
-        valuePropName: 'checked',
       },
     ],
     title: t('analytics.title'),
   };
 
-  const system: FormGroupItemType = {
+  const system: StorageFormGroup = {
     children: [
       {
         children: (
-          <Button disabled icon={<Icon icon={HardDriveDownload} />}>
+          <Button disabled variant="outline">
+            <HardDriveDownload aria-hidden size={16} />
             {t('storage.actions.import.button')}
           </Button>
         ),
         desc: t('workspaceSetting.storage.comingSoon'),
         label: t('storage.actions.import.title'),
-        layout: 'horizontal',
-        minWidth: undefined,
       },
       {
         children: (
-          <Button disabled icon={<Icon icon={HardDriveUpload} />}>
+          <Button disabled variant="outline">
+            <HardDriveUpload aria-hidden size={16} />
             {t('storage.actions.export.button')}
           </Button>
         ),
         desc: t('workspaceSetting.storage.comingSoon'),
         label: t('storage.actions.export.title'),
-        layout: 'horizontal',
-        minWidth: undefined,
       },
     ],
     title: t('storage.actions.title'),
   };
 
-  const dataMigration: FormGroupItemType | undefined = transferAgentsFormItems
+  const dataMigration: StorageFormGroup | undefined = transferAgentsFormItems
     ? {
         children: transferAgentsFormItems,
         title: t('storage.migration.title'),
@@ -64,13 +84,11 @@ const WorkspaceStorageContent = memo(() => {
     : undefined;
 
   return (
-    <Form
-      collapsible={false}
-      items={[analytics, ...(dataMigration ? [dataMigration] : []), system]}
-      itemsType={'group'}
-      variant={'filled'}
-      {...FORM_STYLE}
-    />
+    <div className="flex flex-col gap-6" style={{ maxWidth: 1024, width: '100%' }}>
+      {[analytics, ...(dataMigration ? [dataMigration] : []), system].map((group) => (
+        <StorageGroup children={group.children} key={String(group.title)} title={group.title} />
+      ))}
+    </div>
   );
 });
 

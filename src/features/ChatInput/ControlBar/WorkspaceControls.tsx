@@ -1,11 +1,11 @@
 'use client';
 
-import { Tooltip } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
 
+import { SimpleTooltip } from '../SimpleTooltip';
 import CloudRepoSwitcher from './CloudRepoSwitcher';
 import HeteroDeviceSwitcher from './HeteroDeviceSwitcher';
 import { useWorkspaceSurface } from './useWorkspaceSurface';
@@ -65,7 +65,7 @@ const WorkspaceControls = memo<WorkspaceControlsProps>(
           (canConfigureResource ? (
             workspace
           ) : (
-            <Tooltip
+            <SimpleTooltip
               title={t(
                 canUseResource
                   ? 'permission.accessTag.useOnlyTip'
@@ -87,7 +87,7 @@ const WorkspaceControls = memo<WorkspaceControlsProps>(
                   {workspace}
                 </div>
               </div>
-            </Tooltip>
+            </SimpleTooltip>
           ))}
       </>
     );

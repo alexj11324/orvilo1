@@ -1,19 +1,28 @@
-import { Flexbox, Icon, TextArea } from '@lobehub/ui';
-import { Select, SliderWithInput, Switch } from '@lobehub/ui/base-ui';
 import { DEFAULT_AGENT_CONFIG } from '@orvilo/const';
-import { Form as AntdForm } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { debounce } from 'es-toolkit/compat';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { MODEL_REASONING_EXTEND_PARAMS } from 'model-bank/aiModel';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
+import AntdForm from '@/components/GroupForm';
 import InfoTooltip from '@/components/InfoTooltip';
+import InputNumber from '@/components/InputNumber';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Slider } from '@/components/ui/slider';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, chatConfigByIdSelectors } from '@/store/agent/selectors';
@@ -388,8 +397,8 @@ interface ControlLabelProps {
 }
 
 const ControlLabel = memo<ControlLabelProps>(({ title, tooltip, tag }) => (
-  <Flexbox align={'flex-start'} className={cx(styles.label, 'control-label')} gap={6}>
-    <Flexbox horizontal align={'center'} className={styles.labelMain} gap={6}>
+  <div className={cx('flex flex-col items-start gap-1.5', cx(styles.label, 'control-label'))}>
+    <div className={cx('flex flex-row items-center gap-1.5', styles.labelMain)}>
       {title}
       {tooltip && (
         <InfoTooltip
@@ -401,8 +410,8 @@ const ControlLabel = memo<ControlLabelProps>(({ title, tooltip, tag }) => (
           }
         />
       )}
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 interface ControlRowProps {
@@ -415,13 +424,18 @@ interface ControlRowProps {
 }
 
 const ControlRow = ({ action, children, muted, tag, title, tooltip }: ControlRowProps) => (
-  <Flexbox className={cx('control-row', styles.rowRoot, muted && styles.muted)} gap={10}>
-    <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+  <div
+    className={cx(
+      'flex flex-col gap-2.5',
+      cx('control-row', styles.rowRoot, muted && styles.muted),
+    )}
+  >
+    <div className="flex flex-row items-center gap-3 justify-between">
       <ControlLabel tag={tag} title={title} tooltip={tooltip} />
       {action}
-    </Flexbox>
+    </div>
     {children && <div className={styles.rowControl}>{children}</div>}
-  </Flexbox>
+  </div>
 );
 
 interface SectionHeaderProps {
@@ -432,10 +446,17 @@ interface SectionHeaderProps {
 
 const SectionHeader = memo<SectionHeaderProps>(({ onToggle, open, title }) => (
   <button aria-expanded={open} className={styles.sectionHeader} type="button" onClick={onToggle}>
-    <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
+    <div className="flex flex-row items-center gap-3 justify-between">
       <span className={cx(styles.label, 'section-header-label')}>{title}</span>
-      <Icon icon={open ? ChevronUp : ChevronDown} size={18} />
-    </Flexbox>
+      <span className="anticon" role="img">
+        {createElement(open ? ChevronUp : ChevronDown, {
+          size: 18,
+          width: 18,
+          height: 18,
+          fill: 'transparent',
+        })}
+      </span>
+    </div>
   </button>
 ));
 
@@ -455,28 +476,53 @@ const SliderField = ({
   step,
   unlimitedInput,
   inputWidth = 56,
-}: SliderFieldProps) => (
-  <SliderWithInput
-    changeOnWheel
-    className={styles.slider}
-    controls={false}
-    disabled={disabled}
-    gap={10}
-    max={max}
-    min={min}
-    size={'small'}
-    step={step}
-    style={{ height: 28 }}
-    unlimitedInput={unlimitedInput}
-    value={value}
-    styles={{
-      input: {
-        maxWidth: inputWidth,
-      },
-    }}
-    onChange={onChange}
-  />
-);
+}: SliderFieldProps) => {
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = wrapRef.current;
+    if (!el) return;
+    const onWheel = (e: WheelEvent) => {
+      if (disabled) return;
+      e.preventDefault();
+      const dir = e.deltaY < 0 ? 1 : -1;
+      const cur = value ?? min;
+      const next = Math.min(max, Math.max(min, cur + dir * step));
+      if (next !== cur) onChange(next);
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, [disabled, max, min, onChange, step, value]);
+
+  return (
+    <div
+      className={cx('flex items-center', styles.slider)}
+      ref={wrapRef}
+      style={{ gap: 10, height: 28 }}
+    >
+      <Slider
+        className="flex-1"
+        disabled={disabled}
+        max={max}
+        min={min}
+        step={step}
+        value={value}
+        onValueChange={(v) => onChange(Array.isArray(v) ? v[0] : v)}
+      />
+      <InputNumber
+        disabled={disabled}
+        max={unlimitedInput ? undefined : max}
+        min={min}
+        step={step}
+        style={{ maxWidth: inputWidth }}
+        value={value ?? null}
+        onChange={(v) => {
+          if (typeof v === 'number') onChange(v);
+        }}
+      />
+    </div>
+  );
+};
 
 const Controls = ({ variant = 'popover' }: ControlsProps) => {
   const { t } = useTranslation(['setting', 'components']);
@@ -702,8 +748,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                 <Switch
                   checked={Boolean(enableContextCompression)}
                   disabled={!canCreate}
-                  size={'small'}
-                  onChange={(checked) => {
+                  size="sm"
+                  onCheckedChange={(checked) => {
                     handleFieldChange(['chatConfig', 'enableContextCompression'], checked);
                   }}
                 />
@@ -717,8 +763,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                 <Switch
                   checked={Boolean(enableHistoryCount)}
                   disabled={!canCreate}
-                  size={'small'}
-                  onChange={(checked) => {
+                  size="sm"
+                  onCheckedChange={(checked) => {
                     handleFieldChange(['chatConfig', 'enableHistoryCount'], checked);
                   }}
                 />
@@ -746,8 +792,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
               action={
                 <Switch
                   checked={Boolean(enableAutoScrollOnStreaming)}
-                  size={'small'}
-                  onChange={(checked) => {
+                  size="sm"
+                  onCheckedChange={(checked) => {
                     handleFieldChange(['chatConfig', 'enableAutoScrollOnStreaming'], checked);
                   }}
                 />
@@ -760,8 +806,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
               action={
                 <Switch
                   checked={enableStreaming !== false}
-                  size={'small'}
-                  onChange={(checked) => {
+                  size="sm"
+                  onCheckedChange={(checked) => {
                     handleFieldChange(['chatConfig', 'enableStreaming'], checked);
                   }}
                 />
@@ -774,8 +820,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
               action={
                 <Switch
                   checked={Boolean(enableFollowUpChips)}
-                  size={'small'}
-                  onChange={(checked) => {
+                  size="sm"
+                  onCheckedChange={(checked) => {
                     handleFieldChange(['chatConfig', 'enableFollowUpChips'], checked);
                   }}
                 />
@@ -792,7 +838,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
               title={t('settingChat.inputTemplate.title')}
               tooltip={t('settingChat.inputTemplate.desc')}
             >
-              <TextArea
+              <Textarea
                 placeholder={t('settingChat.inputTemplate.placeholder')}
                 value={typeof inputTemplateValue === 'string' ? inputTemplateValue : ''}
                 onChange={(e) => {
@@ -826,8 +872,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                           <Switch
                             checked={enabled}
                             disabled={!canCreate}
-                            size={'small'}
-                            onChange={(checked) => {
+                            size="sm"
+                            onCheckedChange={(checked) => {
                               handleToggle(key, checked);
                             }}
                           />
@@ -854,8 +900,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                       <Switch
                         checked={Boolean(enableMaxTokens)}
                         disabled={!canCreate}
-                        size={'small'}
-                        onChange={(checked) => {
+                        size="sm"
+                        onCheckedChange={(checked) => {
                           if (checked && typeof maxTokensValue !== 'number') {
                             form.setFieldValue(['params', 'max_tokens'], 4096);
                           }
@@ -887,8 +933,8 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                       action={
                         <Switch
                           checked={Boolean(enableReasoningEffort)}
-                          size={'small'}
-                          onChange={(checked) => {
+                          size="sm"
+                          onCheckedChange={(checked) => {
                             if (checked && typeof reasoningEffortValue !== 'string') {
                               form.setFieldValue(['params', 'reasoning_effort'], 'medium');
                             }
@@ -899,9 +945,7 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                     >
                       {enableReasoningEffort && (
                         <Select
-                          size={'small'}
-                          style={{ width: '100%' }}
-                          options={[
+                          items={[
                             { label: t('settingModel.reasoningEffort.options.low'), value: 'low' },
                             {
                               label: t('settingModel.reasoningEffort.options.medium'),
@@ -917,10 +961,35 @@ const Controls = ({ variant = 'popover' }: ControlsProps) => {
                               ? reasoningEffortValue
                               : 'medium'
                           }
-                          onChange={(value) => {
+                          onValueChange={(value) => {
+                            if (value == null) return;
                             handleFieldChange(['params', 'reasoning_effort'], value);
                           }}
-                        />
+                        >
+                          <SelectTrigger className="w-full" size="sm">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem
+                              label={t('settingModel.reasoningEffort.options.low')}
+                              value="low"
+                            >
+                              {t('settingModel.reasoningEffort.options.low')}
+                            </SelectItem>
+                            <SelectItem
+                              label={t('settingModel.reasoningEffort.options.medium')}
+                              value="medium"
+                            >
+                              {t('settingModel.reasoningEffort.options.medium')}
+                            </SelectItem>
+                            <SelectItem
+                              label={t('settingModel.reasoningEffort.options.high')}
+                              value="high"
+                            >
+                              {t('settingModel.reasoningEffort.options.high')}
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       )}
                     </ControlRow>
                   )}

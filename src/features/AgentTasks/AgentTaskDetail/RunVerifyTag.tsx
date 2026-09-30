@@ -1,13 +1,12 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import type { TaskRunVerifySummary } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { CircleCheck, CircleDashed, CircleX, Loader2, TriangleAlert } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge as Tag } from '@/components/reui/badge';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
 
@@ -80,12 +79,9 @@ const RunVerifyTag = memo<RunVerifyTagProps>(({ verify }) => {
 
   return (
     <Tag
-      size={'small'}
+      size="sm"
       style={{ cursor: verify.acceptanceId ? 'pointer' : undefined, flexShrink: 0 }}
       title={round ? `${round} · ${label}` : label}
-      icon={
-        <Icon color={meta.color} icon={meta.icon} size={12} spin={'spin' in meta && meta.spin} />
-      }
       onClick={
         verify.acceptanceId
           ? (event) => {
@@ -96,6 +92,13 @@ const RunVerifyTag = memo<RunVerifyTagProps>(({ verify }) => {
           : undefined
       }
     >
+      {
+        <meta.icon
+          className={'spin' in meta && meta.spin ? 'animate-spin' : undefined}
+          color={meta.color}
+          size={12}
+        />
+      }
       {counts ? `${counts} ${label}` : label}
     </Tag>
   );

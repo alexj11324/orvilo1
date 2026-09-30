@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { agentDisplayName, type UIChatMessage } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,43 +41,43 @@ const CompressedMessageItem = memo<CompressedMessageItemProps>(({ message }) => 
       unknownLabel: t('sender.unknownMember'),
     });
     return (
-      <Flexbox horizontal gap={8} paddingBlock={4}>
+      <div className="flex gap-2 py-1">
         <Avatar avatar={avatar} name={title} size={28} title={title || undefined} />
-        <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
           <UserMessageContent {...message} />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   // Render assistant message (standalone without tools)
   if (role === 'assistant') {
     return (
-      <Flexbox horizontal gap={8} paddingBlock={4}>
+      <div className="flex gap-2 py-1">
         <Avatar {...agentAvatar} name={agentDisplayName(agentAvatar)} size={28} />
-        <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
           <ContentBlock
             disableEditing
             assistantId={message.id}
             content={message.content}
             id={message.id}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   // Render assistantGroup (assistant message with tool calls)
   if (role === 'assistantGroup' && children) {
     return (
-      <Flexbox horizontal gap={8} paddingBlock={4}>
+      <div className="flex gap-2 py-1">
         <Avatar {...agentAvatar} name={agentDisplayName(agentAvatar)} size={28} />
-        <Flexbox flex={1} gap={8} style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1 gap-2" style={{ overflow: 'hidden' }}>
           {children.map((block) => (
             <ContentBlock {...block} disableEditing assistantId={message.id} key={block.id} />
           ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 

@@ -1,13 +1,15 @@
-import { ContextMenuTrigger, Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { MessageSquareTextIcon } from 'lucide-react';
-import { memo, useCallback } from 'react';
+import { createElement, memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
@@ -199,9 +201,23 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
 
     const isPrivate = task.visibility === 'private';
     const privacyBadge = isPrivate ? (
-      <Tooltip title={tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}>
-        <Icon color={cssVar.colorTextDescription} icon={TASK_VISIBILITY_ICONS.private} size={14} />
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex">
+                {createElement(TASK_VISIBILITY_ICONS.private, {
+                  color: cssVar.colorTextDescription,
+                  size: 14,
+                })}
+              </span>
+            }
+          />
+          <TooltipContent>
+            {tChat('createTask.visibility.helperPrivate', { defaultValue: 'Private' })}
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     ) : null;
 
     // Executor slot (top-right): the agent — or the hover-revealed assign
@@ -215,12 +231,23 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       >
         {task.assigneeAgentId ? (
           <AssigneeAvatar agentId={task.assigneeAgentId} tooltip={status !== 'running'} />
+        ) : status === 'running' ? (
+          <span className={styles.assignReveal} style={{ display: 'inline-flex' }}>
+            <UnassignedAssigneeIcon kind={'agent'} />
+          </span>
         ) : (
-          <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
-            <span className={styles.assignReveal} style={{ display: 'inline-flex' }}>
-              <UnassignedAssigneeIcon kind={'agent'} />
-            </span>
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className={`inline-flex ${styles.assignReveal}`}>
+                    <UnassignedAssigneeIcon kind={'agent'} />
+                  </span>
+                }
+              />
+              <TooltipContent>{tChat('taskList.assignTo')}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         )}
       </AssigneeAgentSelector>
     );
@@ -238,15 +265,31 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
               onChange={(userId) => void updateTask(task.identifier, { reviewerUserId: userId })}
             >
               {task.reviewerUserId ? (
-                <Tooltip title={tChat('taskDetail.reviewer')}>
-                  <span>
-                    <AssigneeUserAvatar userId={task.reviewerUserId} />
-                  </span>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span>
+                          <AssigneeUserAvatar userId={task.reviewerUserId} />
+                        </span>
+                      }
+                    />
+                    <TooltipContent>{tChat('taskDetail.reviewer')}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               ) : (
-                <Tooltip title={tChat('taskDetail.reviewer')}>
-                  <UnassignedAssigneeIcon kind={'human'} />
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span className="inline-flex">
+                          <UnassignedAssigneeIcon kind={'human'} />
+                        </span>
+                      }
+                    />
+                    <TooltipContent>{tChat('taskDetail.reviewer')}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </AssigneeMemberSelector>
           )
@@ -260,30 +303,51 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             >
               {task.assigneeUserId ? (
                 <AssigneeUserAvatar tooltip={status !== 'running'} userId={task.assigneeUserId} />
+              ) : status === 'running' ? (
+                <UnassignedAssigneeIcon kind={'human'} />
               ) : (
-                <Tooltip title={status === 'running' ? undefined : tChat('taskList.assignTo')}>
-                  <UnassignedAssigneeIcon kind={'human'} />
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span className="inline-flex">
+                          <UnassignedAssigneeIcon kind={'human'} />
+                        </span>
+                      }
+                    />
+                    <TooltipContent>{tChat('taskList.assignTo')}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
             </AssigneeMemberSelector>
           );
 
     const openRunNode =
       status === 'running' && task.currentTopicId ? (
-        <Tooltip title={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}>
-          <ActionIcon
-            icon={MessageSquareTextIcon}
-            size={'small'}
-            onClick={(event) => {
-              event.stopPropagation();
-              openTopicDrawer(task.currentTopicId!, {
-                agentId: task.assigneeAgentId ?? undefined,
-                taskId: task.identifier,
-                title: task.name ?? undefined,
-              });
-            }}
-          />
-        </Tooltip>
+        <TooltipProvider>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <ActionIcon
+                  aria-label={tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}
+                  icon={MessageSquareTextIcon}
+                  size={'small'}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    openTopicDrawer(task.currentTopicId!, {
+                      agentId: task.assigneeAgentId ?? undefined,
+                      taskId: task.identifier,
+                      title: task.name ?? undefined,
+                    });
+                  }}
+                />
+              }
+            />
+            <TooltipContent>
+              {tChat('taskList.contextMenu.openRun', { defaultValue: 'Open run' })}
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
       ) : null;
 
     const card = (
@@ -297,39 +361,46 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       >
         {/* Row 1 — identifier + executor (Cordy: issue identifier top-left,
           assigned executor top-right). */}
-        <Flexbox horizontal align={'center'} gap={8} style={{ minHeight: 24 }}>
-          <Text
-            ellipsis
-            fontSize={12}
+        <div className="flex items-center gap-2" style={{ minHeight: 24 }}>
+          <div
+            className="truncate block text-[12px] text-muted-foreground font-[450]"
             style={{ flex: 1, minWidth: 0 }}
-            type={'secondary'}
-            weight={450}
           >
             {task.identifier}
-          </Text>
+          </div>
           {privacyBadge}
-          <Flexbox horizontal align={'center'} flex={'none'} gap={4}>
-            {executorNode}
-          </Flexbox>
-        </Flexbox>
+          <div className="flex shrink-0 items-center gap-1">{executorNode}</div>
+        </div>
 
         {/* Row 2 — status glyph + title, two lines max. */}
-        <Flexbox horizontal align={'flex-start'} gap={6} style={{ marginTop: 4, minWidth: 0 }}>
+        <div className="flex items-start gap-1.5" style={{ marginTop: 4, minWidth: 0 }}>
           <span
             data-collab-id={`task:${task.id}:status`}
             data-collab-id-alt={`task:${task.identifier}:status`}
             style={{ flex: 'none', marginTop: 2 }}
           >
             {workflowGlyph ? (
-              <Tooltip title={workflowGlyph.label}>
-                <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={14} />
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span className="inline-flex">
+                        {createElement(workflowGlyph.icon, {
+                          color: workflowGlyph.color,
+                          size: 14,
+                        })}
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{workflowGlyph.label}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             ) : (
               <TaskStatusIcon size={14} status={status} />
             )}
           </span>
           <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
-        </Flexbox>
+        </div>
 
         {/* Optional description preview (Cordy shows one muted line). */}
         {task.description?.trim() ? (
@@ -339,21 +410,15 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
         ) : null}
 
         {/* Chip row — priority, schedule, subtask progress. */}
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={6}
+        <div
+          className="flex flex-wrap items-center gap-1.5"
           style={{ marginTop: 6, minHeight: 20, minWidth: 0 }}
-          wrap={'wrap'}
         >
           <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           <LinearTaskSyncStatus taskId={task.id} />
           {projectName ? (
-            <Tag
-              icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />}
-              size="small"
-              variant="outlined"
-            >
+            <Tag size="sm" variant="primary-outline">
+              {<PROJECT_ENTITY_ICON size={12} />}
               {projectName}
             </Tag>
           ) : null}
@@ -366,37 +431,35 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             />
           ) : null}
           {status === 'scheduled' ? (
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
-            </Text>
+            </div>
           ) : null}
-        </Flexbox>
+        </div>
 
         {/* Meta row — human owner + date on the left, subtask progress and the
           live-run entry on the right. */}
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
+        <div
+          className="flex items-center gap-2"
           style={{ marginTop: 6, minHeight: 24, minWidth: 0 }}
         >
-          <Flexbox
-            horizontal
-            align={'center'}
+          <div
+            className="flex shrink-0 items-center gap-1"
             data-collab-id={`task:${task.id}:assignee`}
             data-collab-id-alt={`task:${task.identifier}:assignee`}
-            flex={'none'}
-            gap={4}
           >
             {ownerNode}
-          </Flexbox>
+          </div>
           {time ? (
-            <Text ellipsis fontSize={12} style={{ minWidth: 0 }} type={'secondary'}>
+            <div
+              className="truncate block text-[12px] text-muted-foreground"
+              style={{ minWidth: 0 }}
+            >
               {/* Linear cards stamp the creation date, not the last touch. */}
               {tChat('taskList.createdAt', { date: time, defaultValue: 'Created {{date}}' })}
-            </Text>
+            </div>
           ) : null}
-          <Flexbox horizontal align={'center'} flex={'none'} gap={4} style={{ marginLeft: 'auto' }}>
+          <div className="flex shrink-0 items-center gap-1" style={{ marginLeft: 'auto' }}>
             <TaskSubtaskProgressTag
               currentIdentifier={task.identifier}
               progress={task.subtaskProgress}
@@ -405,20 +468,24 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
               onSubtaskClick={handleSubtaskClick}
             />
             {openRunNode}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </div>
     );
 
-    const content = <GeneratingBorder generating={status === 'running'}>{card}</GeneratingBorder>;
-
     // The overlay twin never opens menus — it only previews the dragged card.
-    if (overlay) return content;
+    if (overlay) {
+      return <GeneratingBorder generating={status === 'running'}>{card}</GeneratingBorder>;
+    }
 
+    // The trigger has to clone the real DOM card: wrapping GeneratingBorder
+    // (which does not forward props) drops the injected contextmenu handlers.
     return (
-      <ContextMenuTrigger items={contextMenuItems} onContextMenu={handleContextMenuOpen}>
-        {content}
-      </ContextMenuTrigger>
+      <GeneratingBorder generating={status === 'running'}>
+        <SidebarContextMenu items={contextMenuItems} onMenuOpen={handleContextMenuOpen}>
+          {card}
+        </SidebarContextMenu>
+      </GeneratingBorder>
     );
   },
 );

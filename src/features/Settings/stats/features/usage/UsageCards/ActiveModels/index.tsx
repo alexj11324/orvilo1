@@ -1,14 +1,15 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { MaximizeIcon } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { createElement, memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { remoteAvatarSrc } from '@/components/Avatar/fallback';
 import ImperativeModal from '@/components/ImperativeModal';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import StatisticCard from '@/components/StatisticCard';
 import TitleWithPercentage from '@/components/StatisticCard/TitleWithPercentage';
+import { Button } from '@/components/ui/button';
 import { type UsageLog } from '@/types/usage/usageRecord';
 import { formatNumber } from '@/utils/format';
 
@@ -79,9 +80,10 @@ const ActiveModels = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveU
       const display = resolveUser?.(item);
       return (
         <Avatar
-          avatar={display?.avatar || display?.name || item}
+          avatar={remoteAvatarSrc(display?.avatar || display?.name || item) || undefined}
           background={cssVar.colorFillSecondary}
           key={item}
+          name={display?.name || item}
           shape={'circle'}
           size={18}
           style={baseStyle}
@@ -103,21 +105,24 @@ const ActiveModels = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveU
         loading={isLoading}
         title={<TitleWithPercentage title={t(titleI18n(groupBy ?? GroupBy.Model))} />}
         extra={
-          <ActionIcon
-            icon={MaximizeIcon}
-            size={'small'}
+          <Button
+            aria-label={t(tableTitleI18n(groupBy ?? GroupBy.Model))}
+            size="icon-sm"
             title={t(tableTitleI18n(groupBy ?? GroupBy.Model))}
+            variant="ghost"
             onClick={() => setOpen(true)}
-          />
+          >
+            {createElement(MaximizeIcon)}
+          </Button>
         }
         statistic={{
           description: (
-            <Flexbox horizontal wrap={'wrap'}>
+            <div className={'flex min-w-0'} style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {iconList.map((item, i) => {
                 if (!item) return null;
                 return renderIcon(item, i);
               })}
-            </Flexbox>
+            </div>
           ),
           precision: 0,
           value: formatNumber(iconList?.length ?? 0),

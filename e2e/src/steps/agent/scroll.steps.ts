@@ -468,14 +468,11 @@ async function setAutoScrollEnabled(world: CustomWorld, desired: boolean): Promi
   const title = world.page.getByText(/Auto-scroll During AI Response|AI 回复时自动滚动/);
   await expect(title).toBeVisible({ timeout: 45_000 });
 
-  // The label and switch are siblings inside one Ant Form item. Scope through
-  // that row so additions above Chat Appearance cannot redirect this scenario
-  // to an unrelated preference.
-  const row = title.locator(
-    'xpath=ancestor::*[contains(concat(" ", normalize-space(@class), " "), " ant-form-item ")][1]',
-  );
+  // Scope through the migrated GroupForm item row so additions above Chat
+  // Appearance cannot redirect this scenario to an unrelated preference.
+  const row = title.locator('xpath=ancestor::*[@data-slot="form-item"][1]');
   await expect(row, 'auto-scroll setting row must be unique').toHaveCount(1);
-  const target = row.locator('[role="switch"], button.ant-switch');
+  const target = row.locator('[role="switch"]');
   await expect(target, 'auto-scroll setting row must contain exactly one switch').toHaveCount(1);
 
   const currentChecked = (await target.getAttribute('aria-checked')) === 'true';

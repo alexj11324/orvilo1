@@ -1,15 +1,22 @@
 'use client';
 
-import { Flexbox, Icon, Input, SortableList } from '@lobehub/ui';
-import { ActionIcon, Avatar, Button, confirmModal, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import type { DeviceListItem, DeviceWorkspaceShare } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { FolderOpenIcon, FolderPlusIcon, LockIcon, XIcon } from 'lucide-react';
 import { memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
+import { Badge as Tag } from '@/components/reui/badge';
+import { Sortable, SortableItem, SortableItemHandle } from '@/components/reui/sortable';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
 import { openAddWorkingDirModal } from '@/features/WorkingDirectory';
 import { createWorkspaceLambdaClient, lambdaQuery } from '@/libs/trpc/client';
@@ -70,12 +77,10 @@ const styles = createStaticStyles(({ css }) => ({
 
 // Section label — one consistent treatment for every field heading in the panel.
 const FieldLabel = memo<{ children: ReactNode; extra?: ReactNode }>(({ children, extra }) => (
-  <Flexbox horizontal align={'center'} distribution={'space-between'}>
-    <Text fontSize={12} type={'secondary'} weight={500}>
-      {children}
-    </Text>
+  <div className="flex items-center justify-between">
+    <div className="text-[12px] text-muted-foreground font-medium">{children}</div>
     {extra}
-  </Flexbox>
+  </div>
 ));
 
 interface DeviceDetailPanelProps {
@@ -224,64 +229,64 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
   };
 
   return (
-    <Flexbox className={styles.container} gap={20}>
+    <div className={`flex flex-col gap-5 ${styles.container}`}>
       {/* ─── Header ─── */}
-      <Flexbox horizontal align={'center'} className={styles.header} gap={12}>
+      <div className={`flex items-center gap-3 ${styles.header}`}>
         <span className={styles.iconTile}>{getDeviceIcon(device.platform, 18)}</span>
-        <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-          <Text ellipsis weight={600}>
+        <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+          <div className="truncate block font-semibold">
             {device.friendlyName || device.hostname || device.deviceId}
-          </Text>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <Tag color={online ? 'success' : 'default'} size={'small'}>
+          </div>
+          <div className="flex items-center gap-2">
+            <Tag size="sm" variant={online ? 'success' : 'default'}>
               {online
                 ? t('devices.status.onlineConnections', { count: channels.length })
                 : t('devices.status.offline')}
             </Tag>
-            {isCurrent && <Tag size={'small'}>{t('devices.currentBadge')}</Tag>}
-          </Flexbox>
-        </Flexbox>
+            {isCurrent && <Tag size="sm">{t('devices.currentBadge')}</Tag>}
+          </div>
+        </div>
         <ActionIcon icon={XIcon} size={'small'} onClick={onClose} />
-      </Flexbox>
+      </div>
 
       {/* Visible hint when the caller can't mutate the row — explains why the
           fields below are read-only without the user needing to try and hit a
           403. Only renders for workspace devices that aren't the caller's own
           enrollment (personal scope is always editable). */}
       {!canEdit && (
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Icon icon={LockIcon} size={14} style={{ color: cssVar.colorTextTertiary }} />
-          <Text fontSize={12} type={'secondary'}>
+        <div className="flex items-center gap-2">
+          <LockIcon size={14} style={{ color: cssVar.colorTextTertiary }} />
+          <div className="text-[12px] text-muted-foreground">
             {t('workspaceSetting.devices.readonlyHint')}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
       )}
 
       {/* ─── Enrolled by (workspace only) ─── */}
       {device.scope === 'workspace' && device.enroller && (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <FieldLabel>{t('workspaceSetting.devices.enrolledByLabel')}</FieldLabel>
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex items-center gap-2">
             <Avatar avatar={device.enroller.avatar ?? undefined} size={24} />
-            <Text>
+            <div>
               {device.enroller.fullName ||
                 device.enroller.username ||
                 t('workspaceSetting.devices.unknownEnroller')}
-            </Text>
-          </Flexbox>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
       )}
 
       {/* ─── Shared to workspaces (personal only) ─── */}
       {device.scope === 'personal' && !!device.sharedWorkspaces?.length && (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <FieldLabel>{t('devices.share.detailLabel')}</FieldLabel>
           {device.sharedWorkspaces.map((share) => (
-            <Flexbox horizontal align={'center'} gap={8} key={share.workspaceId}>
-              <Text ellipsis style={{ flex: 1, minWidth: 0 }}>
+            <div className="flex items-center gap-2" key={share.workspaceId}>
+              <div className="truncate block" style={{ flex: 1, minWidth: 0 }}>
                 {share.workspaceName ?? share.workspaceId}
-              </Text>
-              <Tag size={'small'}>
+              </div>
+              <Tag size="sm">
                 {share.visibility === 'private'
                   ? t('devices.share.visibilityTag.private')
                   : t('devices.share.visibilityTag.public')}
@@ -292,37 +297,37 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
                 title={t('devices.share.revoke')}
                 onClick={() => handleRevokeShare(share)}
               />
-            </Flexbox>
+            </div>
           ))}
-        </Flexbox>
+        </div>
       )}
 
       {/* ─── Connections ─── */}
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <FieldLabel>{t('devices.detail.connections')}</FieldLabel>
         {channels.length > 0 ? (
           channels.map((channel, index) => (
-            <Flexbox horizontal align={'center'} gap={8} key={`${channel.connectedAt}-${index}`}>
+            <div className="flex items-center gap-2" key={`${channel.connectedAt}-${index}`}>
               <span className={styles.dot} style={{ background: cssVar.colorSuccess }} />
-              {channel.channel && <Tag size={'small'}>{channel.channel}</Tag>}
-              <Text fontSize={12} type={'secondary'}>
+              {channel.channel && <Tag size="sm">{channel.channel}</Tag>}
+              <div className="text-[12px] text-muted-foreground">
                 {t('devices.channel.connected', { time: dayjs(channel.connectedAt).fromNow() })}
-              </Text>
-            </Flexbox>
+              </div>
+            </div>
           ))
         ) : (
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex items-center gap-2">
             <span className={styles.dot} style={{ background: cssVar.colorTextQuaternary }} />
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('devices.status.offline')} ·{' '}
               {t('devices.lastSeen', { time: dayjs(device.lastSeen).fromNow() })}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         )}
-      </Flexbox>
+      </div>
 
       {/* ─── Name ─── */}
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <FieldLabel>{t('devices.edit.friendlyName')}</FieldLabel>
         {canEdit ? (
           <Input
@@ -330,46 +335,51 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
             value={name}
             onBlur={commitName}
             onChange={(e) => setName(e.target.value)}
-            onPressEnter={commitName}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') commitName();
+            }}
           />
         ) : device.friendlyName ? (
           // Read-only: render the canonical value (not the local draft), so a
           // value the caller can't actually commit never bleeds through.
-          <Text>{device.friendlyName}</Text>
+          <div>{device.friendlyName}</div>
         ) : (
-          <Text type={'secondary'}>—</Text>
+          <div className="text-muted-foreground">—</div>
         )}
-      </Flexbox>
+      </div>
 
       {/* ─── Default working directory ─── */}
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <FieldLabel>{t('devices.edit.defaultCwd')}</FieldLabel>
         {canEdit ? (
-          <Flexbox horizontal gap={8}>
+          <div className="flex gap-2">
             <Input
               placeholder={t('devices.edit.defaultCwdPlaceholder')}
               value={cwd}
               onBlur={handleCwdBlur}
               onChange={(e) => setCwd(e.target.value)}
-              onPressEnter={handleCwdBlur}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter') handleCwdBlur();
+              }}
             />
             {canBrowse && (
-              <Button icon={<Icon icon={FolderOpenIcon} />} onClick={handleBrowse}>
+              <Button onClick={handleBrowse}>
+                {<FolderOpenIcon />}
                 {t('devices.edit.browse')}
               </Button>
             )}
-          </Flexbox>
+          </div>
         ) : device.defaultCwd ? (
           // Code font only when there's an actual path to read; empty falls back
           // to the same dash style as Name so the two fields look consistent.
-          <Text className={styles.path}>{device.defaultCwd}</Text>
+          <div className={cn(styles.path)}>{device.defaultCwd}</div>
         ) : (
-          <Text type={'secondary'}>—</Text>
+          <div className="text-muted-foreground">—</div>
         )}
-      </Flexbox>
+      </div>
 
       {/* ─── Recent directories ─── */}
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         <FieldLabel
           extra={
             canEdit && (
@@ -385,42 +395,45 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
           {t('devices.detail.recentDirs')}
         </FieldLabel>
         {device.workingDirs.length === 0 ? (
-          <Text fontSize={12} type={'secondary'}>
-            {t('devices.detail.noRecent')}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{t('devices.detail.noRecent')}</div>
         ) : canEdit ? (
-          <SortableList
-            items={device.workingDirs.map((d) => ({ id: d.path, repoType: d.repoType }))}
-            renderItem={(item: { id: string; repoType?: 'git' | 'github' }) => (
-              <SortableList.Item className={styles.recentItem} id={item.id} variant={'filled'}>
-                <SortableList.DragHandle />
-                <DirIcon repoType={item.repoType} />
-                <Text className={styles.path} title={item.id}>
-                  {item.id}
-                </Text>
-                <ActionIcon
-                  icon={XIcon}
-                  size={'small'}
-                  onClick={() => handleRemoveRecent(item.id)}
-                />
-              </SortableList.Item>
-            )}
-            onChange={handleReorderRecent}
-          />
+          <Sortable
+            getItemValue={(item: { id: string }) => item.id}
+            value={device.workingDirs.map((d) => ({ id: d.path, repoType: d.repoType }))}
+            onValueChange={handleReorderRecent}
+          >
+            {device.workingDirs.map((d) => {
+              const item = { id: d.path, repoType: d.repoType };
+              return (
+                <SortableItem className={styles.recentItem} key={item.id} value={item.id}>
+                  <SortableItemHandle />
+                  <DirIcon repoType={item.repoType} />
+                  <div className={cn(styles.path)} title={item.id}>
+                    {item.id}
+                  </div>
+                  <ActionIcon
+                    icon={XIcon}
+                    size={'small'}
+                    onClick={() => handleRemoveRecent(item.id)}
+                  />
+                </SortableItem>
+              );
+            })}
+          </Sortable>
         ) : (
           // Read-only listing: same row layout minus the drag handle and the
           // remove button. Keeps the path + repo type icon visible for context.
           device.workingDirs.map((d) => (
-            <Flexbox horizontal align={'center'} className={styles.recentItem} gap={8} key={d.path}>
+            <div className={`flex items-center gap-2 ${styles.recentItem}`} key={d.path}>
               <DirIcon repoType={d.repoType} />
-              <Text className={styles.path} title={d.path}>
+              <div className={cn(styles.path)} title={d.path}>
                 {d.path}
-              </Text>
-            </Flexbox>
+              </div>
+            </div>
           ))
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

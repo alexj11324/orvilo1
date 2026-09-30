@@ -1,6 +1,7 @@
 'use client';
 
-import { Markdown, ScrollArea } from '@lobehub/ui';
+import { ScrollArea } from '@base-ui/react/scroll-area';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import type { RefObject } from 'react';
 import { memo, useEffect } from 'react';
@@ -40,21 +41,22 @@ const StreamingMarkdown = memo<StreamingMarkdownProps>(({ children, maxHeight = 
   if (!children) return null;
 
   return (
-    <ScrollArea
-      disableContentFit
-      scrollFade
-      className={styles.scrollRoot}
-      viewportProps={{
-        className: styles.container,
-        ref: ref as RefObject<HTMLDivElement>,
-        style: { maxHeight },
-        onScroll: handleScroll,
-      }}
-    >
-      <Markdown animated style={{ overflow: 'unset' }} variant={'chat'}>
-        {children}
-      </Markdown>
-    </ScrollArea>
+    <ScrollArea.Root className={styles.scrollRoot}>
+      <ScrollArea.Viewport
+        className={styles.container}
+        ref={ref as RefObject<HTMLDivElement>}
+        style={{ maxHeight }}
+        onScroll={handleScroll}
+      >
+        <Markdown animated style={{ overflow: 'unset' }} variant={'chat'}>
+          {children}
+        </Markdown>
+      </ScrollArea.Viewport>
+      <ScrollArea.Scrollbar orientation={'vertical'}>
+        <ScrollArea.Thumb />
+      </ScrollArea.Scrollbar>
+      <ScrollArea.Corner />
+    </ScrollArea.Root>
   );
 });
 

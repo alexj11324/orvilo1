@@ -1,13 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { UserMinus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import NavItem from '@/features/NavPanel/components/NavItem';
@@ -109,7 +108,7 @@ const GroupMember = memo<GroupMemberProps>(({ addModalOpen, onAddModalOpenChange
 
   return (
     <>
-      <Flexbox gap={2}>
+      <div className="flex flex-col gap-0.5">
         {/* User */}
         <NavItem icon={<UserAvatar size={24} />} title={nickname || username || 'User'} />
         {groupId &&
@@ -143,7 +142,7 @@ const GroupMember = memo<GroupMemberProps>(({ addModalOpen, onAddModalOpenChange
               </div>
             </AgentProfilePopup>
           ))}
-      </Flexbox>
+      </div>
 
       {groupId && (
         <AddGroupMemberModal

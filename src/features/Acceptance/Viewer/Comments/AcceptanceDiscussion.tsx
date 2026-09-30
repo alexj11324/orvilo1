@@ -1,14 +1,13 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { BadgeCheck, GitCommitHorizontal } from 'lucide-react';
 import { nanoid } from 'nanoid';
-import { memo, useMemo } from 'react';
+import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useActivityTime } from '@/hooks/useActivityTime';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
@@ -36,20 +35,27 @@ const COMPOSER_MIN_HEIGHT = 80;
 const SignInPrompt = memo(() => {
   const { t } = useTranslation('verify');
   return (
-    <Flexbox className={local.signInPrompt} gap={10}>
-      <Text weight={600}>{t('acceptance.comments.signInTitle')}</Text>
-      <Text fontSize={13} type={'secondary'}>
+    <div className={`flex flex-col gap-2.5 ${local.signInPrompt}`}>
+      <div className="font-semibold">{t('acceptance.comments.signInTitle')}</div>
+      <div className="text-[13px] text-muted-foreground">
         {t('acceptance.comments.signInDescription')}
-      </Text>
-      <Flexbox horizontal gap={8}>
-        <Button href={buildAuthReturnUrl('signin', currentReturnPath())} type={'primary'}>
+      </div>
+      <div className="flex gap-2">
+        <Button
+          nativeButton={false}
+          render={<a href={buildAuthReturnUrl('signin', currentReturnPath())} />}
+          variant="outline"
+        >
           {t('acceptance.comments.signIn')}
         </Button>
-        <Button href={buildAuthReturnUrl('signup', currentReturnPath())}>
+        <Button
+          nativeButton={false}
+          render={<a href={buildAuthReturnUrl('signup', currentReturnPath())} />}
+        >
           {t('acceptance.comments.signUp')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -76,22 +82,15 @@ const TimelineEvent = memo<{ at: Date; icon: typeof BadgeCheck; text: string }>(
   ({ at, icon, text }) => {
     const time = useActivityTime(at);
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={cx(styles.timelineEntry, styles.eventEntry)}
-        gap={12}
-      >
-        <span className={styles.eventDot}>
-          <Icon icon={icon} size={12} />
-        </span>
-        <Flexbox horizontal align={'center'} className={styles.event} gap={8} wrap={'wrap'}>
+      <div className={`flex items-center gap-3 ${cx(styles.timelineEntry, styles.eventEntry)}`}>
+        <span className={styles.eventDot}>{createElement(icon, { size: 12 })}</span>
+        <div className={`flex items-center gap-2 flex-wrap ${styles.event}`}>
           <span>{text}</span>
           <span className={styles.meta} title={time.title}>
             {time.text}
           </span>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -122,17 +121,14 @@ const TimelineRound = memo<{
       />
     );
   return (
-    <Flexbox
-      horizontal
-      align={'flex-start'}
-      className={styles.timelineEntry}
-      gap={12}
+    <div
+      className={`flex items-start gap-3 ${styles.timelineEntry}`}
       id={commentAnchorId(proposal.id)}
     >
       <span className={styles.timelineNode}>
         <CommentAvatar comment={proposal} size={TIMELINE_NODE} />
       </span>
-      <Flexbox className={cx(styles.box, anchored && styles.boxAnchored)}>
+      <div className={`flex flex-col ${cx(styles.box, anchored && styles.boxAnchored)}`}>
         <CommentCard
           anchored
           comment={proposal}
@@ -143,8 +139,8 @@ const TimelineRound = memo<{
           })}
           onReact={onReact}
         />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -160,17 +156,16 @@ const TimelineMessage = memo<{
   /** Written by whoever is reading — GitHub paints their own turns blue. */
   self: boolean;
 }>(({ anchored, comment, onDelete, onReact, reactable, self }) => (
-  <Flexbox
-    horizontal
-    align={'flex-start'}
-    className={styles.timelineEntry}
-    gap={12}
+  <div
+    className={`flex items-start gap-3 ${styles.timelineEntry}`}
     id={commentAnchorId(comment.id)}
   >
     <span className={styles.timelineNode}>
       <CommentAvatar comment={comment} size={TIMELINE_NODE} />
     </span>
-    <Flexbox className={cx(styles.box, self && styles.boxSelf, anchored && styles.boxAnchored)}>
+    <div
+      className={`flex flex-col ${cx(styles.box, self && styles.boxSelf, anchored && styles.boxAnchored)}`}
+    >
       <CommentCard
         anchored
         comment={comment}
@@ -178,8 +173,8 @@ const TimelineMessage = memo<{
         onDelete={onDelete}
         onReact={onReact}
       />
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 TimelineMessage.displayName = 'AcceptanceTimelineMessage';
@@ -278,7 +273,7 @@ const AcceptanceDiscussion = memo(() => {
   };
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       {timeline.length === 0 && (
         <span className={local.empty}>{t('acceptance.comments.empty')}</span>
       )}
@@ -286,8 +281,10 @@ const AcceptanceDiscussion = memo(() => {
 
       {/* Last, like GitHub's Conversation: you read the thread, then answer it. */}
       {canComment ? (
-        <Flexbox className={cx(styles.timelineEntry, styles.nodelessEntry, styles.tailEntry)}>
-          <Flexbox className={styles.composerBlock}>
+        <div
+          className={`flex flex-col ${cx(styles.timelineEntry, styles.nodelessEntry, styles.tailEntry)}`}
+        >
+          <div className={`flex flex-col ${styles.composerBlock}`}>
             <CommentComposer
               minHeight={COMPOSER_MIN_HEIGHT}
               placeholder={t('acceptance.comments.placeholder')}
@@ -300,21 +297,19 @@ const AcceptanceDiscussion = memo(() => {
                 })
               }
             />
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       ) : error ? (
         // A read that failed says nothing about permission.
-        <Text fontSize={13} type={'secondary'}>
+        <div className="text-[13px] text-muted-foreground">
           {t('acceptance.comments.loadFailed')}
-        </Text>
+        </div>
       ) : isLoading ? null : isSignedIn ? ( // Neither line below is true yet while the answer is in flight.
-        <Text fontSize={13} type={'secondary'}>
-          {t('acceptance.comments.readOnly')}
-        </Text>
+        <div className="text-[13px] text-muted-foreground">{t('acceptance.comments.readOnly')}</div>
       ) : (
         <SignInPrompt />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

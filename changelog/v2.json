@@ -1,5 +1,28 @@
 [
   {
+    "children": {
+      "fixes": [
+        "persist milestone reorders after sortable drag.",
+        "repair 8 typecheck errors from ReUI migration and sidebar-merge rewrite.",
+        "restore route nav panels beside global sidebar via in-page RoutePanelColumn.",
+        "light sidebar palette on web under light theme.",
+        "theme-aware sidebar + keep modal alive under open Selects.",
+        "suspend modal outside-dismiss while dialog Select is open.",
+        "drop empty cn-menu-target utility breaking Tailwind build."
+      ],
+      "improvements": [
+        "rebuild schedule dialog on ReUI schedule composition, define cn-menu utilities."
+      ],
+      "features": [
+        "wire due-date + remind-me into task surfaces, migrate rail pickers to ReUI.",
+        "add task dueDate + per-user reminders with sweep delivery.",
+        "expand task context menu with labels, project, favorite, rename, copy variants."
+      ]
+    },
+    "date": "2026-09-30",
+    "version": "2.5.0"
+  },
+  {
     "children": {},
     "date": "2026-09-29",
     "version": "2.4.1"

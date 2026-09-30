@@ -1,14 +1,16 @@
 'use client';
-
-import { Block, Flexbox, Highlighter, Icon, Markdown } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { fromNow } from '@orvilo/utils/time';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ExternalLink, Inbox, Link2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
+import { CodeBlock } from '@/components/ui/code-block';
 
 import {
   buildLinearRenderModel,
@@ -157,10 +159,10 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const hasItems = <T,>(items: T[]) => items.length > 0;
 
 const Section = memo<{ children: ReactNode; title: string }>(({ children, title }) => (
-  <Flexbox gap={6}>
-    <Text className={styles.sectionLabel}>{title}</Text>
+  <div className="flex flex-col gap-[6px]">
+    <div className={styles.sectionLabel}>{title}</div>
     {children}
-  </Flexbox>
+  </div>
 ));
 Section.displayName = 'LinearRenderSection';
 
@@ -186,7 +188,7 @@ const LinkList = memo<{ links: LinearLink[] }>(({ links }) => {
   if (!hasItems(links)) return null;
 
   return (
-    <Flexbox gap={4}>
+    <div className="flex flex-col gap-1">
       {links.map((link) => (
         <a
           className={styles.linkRow}
@@ -195,14 +197,14 @@ const LinkList = memo<{ links: LinearLink[] }>(({ links }) => {
           rel={'noreferrer'}
           target={'_blank'}
         >
-          <Icon icon={Link2} size={13} />
-          <Text ellipsis className={styles.linkText} title={link.title}>
+          <Link2 size={13} />
+          <div className={`truncate ${styles.linkText}`} title={link.title}>
             {link.title}
-          </Text>
-          <Icon icon={ExternalLink} size={12} />
+          </div>
+          <ExternalLink size={12} />
         </a>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 LinkList.displayName = 'LinearRenderLinkList';
@@ -217,35 +219,39 @@ const EntityCard = memo<{ entity: LinearEntity }>(({ entity }) => {
   const showId = Boolean(id) && (!title || !isUuidLike(id!));
 
   return (
-    <Block gap={8} padding={10} variant={'outlined'} width={'100%'}>
+    <div
+      className="flex flex-col gap-2 p-[10px]"
+      style={{
+        background: cssVar.colorBgContainer,
+        border: `1px solid ${cssVar.colorBorderSecondary}`,
+        borderRadius: cssVar.borderRadius,
+        width: '100%',
+      }}
+    >
       <div className={styles.entityHeader}>
         <div className={styles.headLeft}>
           {title &&
             (url ? (
               <a className={styles.titleLink} href={url} rel={'noreferrer'} target={'_blank'}>
-                <Text ellipsis weight={600}>
-                  {title}
-                </Text>
-                <Icon icon={ExternalLink} size={12} />
+                <div className="truncate font-semibold">{title}</div>
+                <ExternalLink size={12} />
               </a>
             ) : (
-              <Text ellipsis weight={600}>
-                {title}
-              </Text>
+              <div className="truncate font-semibold">{title}</div>
             ))}
           {showId &&
             (url && !title ? (
               <a className={styles.titleLink} href={url} rel={'noreferrer'} target={'_blank'}>
-                <Tag size={'small'}>{id}</Tag>
-                <Icon icon={ExternalLink} size={12} />
+                <Badge size="sm">{id}</Badge>
+                <ExternalLink size={12} />
               </a>
             ) : (
-              <Tag size={'small'}>{id}</Tag>
+              <Badge size="sm">{id}</Badge>
             ))}
           {state && (
-            <Tag size={'small'} variant={'outlined'}>
+            <Badge size="sm" variant="outline">
               {state}
-            </Tag>
+            </Badge>
           )}
         </div>
         {updatedAt && (
@@ -263,7 +269,7 @@ const EntityCard = memo<{ entity: LinearEntity }>(({ entity }) => {
         </div>
       )}
       <LinkList links={entity.links} />
-    </Block>
+    </div>
   );
 });
 EntityCard.displayName = 'LinearRenderEntityCard';
@@ -286,63 +292,58 @@ const LinearRender = memo<BuiltinRenderProps<Record<string, unknown>, unknown, u
     if (!hasResult && !model.errorText) return null;
 
     return (
-      <Flexbox className={styles.container} gap={12}>
+      <div className={cn('flex', 'flex-col', 'gap-3', styles.container)}>
         {hasItems(model.resultEntities) && (
-          <Flexbox gap={8}>
+          <div className="flex flex-col gap-2">
             {model.resultEntities.map((entity, index) => (
               <EntityCard
                 entity={entity}
                 key={`${entity.id || entity.title || 'entity'}:${index}`}
               />
             ))}
-          </Flexbox>
+          </div>
         )}
         {model.emptyCollectionKey && (
           <div className={styles.empty}>
-            <Icon icon={Inbox} size={14} />
+            <Inbox size={14} />
             <span>
               {t('builtins.linear.render.empty', { collection: model.emptyCollectionKey })}
             </span>
           </div>
         )}
         {model.resultText && (
-          <Highlighter
+          <CodeBlock
             wrap
+            code={model.resultText}
             language={'text'}
-            showLanguage={false}
             style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
-            variant={'filled'}
-          >
-            {model.resultText}
-          </Highlighter>
+            variant="ghost"
+          />
         )}
         {model.rawResultJson && (
           <details className={styles.rawDetails}>
             <summary>Raw result</summary>
-            <Highlighter
+            <CodeBlock
               wrap
+              code={model.rawResultJson}
               language={'json'}
               style={{ maxHeight: 260, overflow: 'auto', paddingInline: 8 }}
-              variant={'filled'}
-            >
-              {model.rawResultJson}
-            </Highlighter>
+              variant="ghost"
+            />
           </details>
         )}
         {model.errorText && (
           <Section title={'Error'}>
-            <Highlighter
+            <CodeBlock
               wrap
+              code={model.errorText}
               language={'text'}
-              showLanguage={false}
               style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
-              variant={'filled'}
-            >
-              {model.errorText}
-            </Highlighter>
+              variant="ghost"
+            />
           </Section>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

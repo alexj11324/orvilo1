@@ -78,9 +78,9 @@ describe('systemStatusSelectors', () => {
       expect(systemStatusSelectors.wideScreen(s)).toBe(false);
     });
 
-    it('keeps the main sidebar visible when older status still says collapsed', () => {
+    it('reads the persisted collapsed state of the main sidebar', () => {
       const collapsed = merge(initialState, { status: { showLeftPanel: false } });
-      expect(systemStatusSelectors.showLeftPanel(collapsed)).toBe(true);
+      expect(systemStatusSelectors.showLeftPanel(collapsed)).toBe(false);
     });
 
     it('should return default portal width if not set', () => {

@@ -1,10 +1,10 @@
-import { Block, Center, Flexbox, Icon } from '@lobehub/ui';
-import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { AlarmClockIcon, PlusIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import {
@@ -58,90 +58,86 @@ const AutomationTemplateGallery = memo<AutomationTemplateGalleryProps>(
       TEMPLATE_CATEGORIES.find((cat) => cat.id === category)?.templateIds ?? [];
 
     return (
-      <Flexbox
+      <div
+        className="flex flex-col gap-4"
         data-testid={'automation-template-gallery'}
-        gap={16}
-        paddingBlock={persistent ? 20 : 48}
-        style={{ marginInline: 'auto', maxWidth: 960, width: '100%' }}
+        style={{
+          paddingBlock: persistent ? 20 : 48,
+          marginInline: 'auto',
+          maxWidth: 960,
+          width: '100%',
+        }}
       >
         {persistent ? (
-          <Flexbox horizontal align={'flex-start'} gap={16} justify={'space-between'}>
-            <Flexbox gap={4}>
-              <Text fontSize={14} weight={600}>
-                {t('templates.section')}
-              </Text>
-              <Text fontSize={12} type={'secondary'}>
-                {t('templates.gallery_cta')}
-              </Text>
-            </Flexbox>
-            <Button icon={PlusIcon} size={'small'} onClick={onStartBlank}>
+          <div className="flex items-start gap-4 justify-between">
+            <div className="flex flex-col gap-1">
+              <div className="text-[14px] font-semibold">{t('templates.section')}</div>
+              <div className="text-[12px] text-muted-foreground">{t('templates.gallery_cta')}</div>
+            </div>
+            <Button size="sm" onClick={onStartBlank}>
+              <PlusIcon data-icon="inline-start" />
               {t('templates.start_blank')}
             </Button>
-          </Flexbox>
+          </div>
         ) : (
-          <Flexbox align={'center'} gap={4} style={{ textAlign: 'center' }}>
-            <Center height={40} width={40}>
-              <Icon color={cssVar.colorTextQuaternary} icon={AlarmClockIcon} size={40} />
-            </Center>
-            <Text fontSize={16} weight={600}>
-              {t('page.empty.title')}
-            </Text>
-            <Text fontSize={13} style={{ maxWidth: 480 }} type={'secondary'}>
+          <div className="flex flex-col items-center gap-1" style={{ textAlign: 'center' }}>
+            <div className="flex items-center justify-center h-[40px] w-[40px]">
+              <AlarmClockIcon color={cssVar.colorTextQuaternary} size={40} />
+            </div>
+            <div className="text-[16px] font-semibold">{t('page.empty.title')}</div>
+            <div className="text-[13px] text-muted-foreground" style={{ maxWidth: 480 }}>
               {t('page.empty.hint')}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         )}
 
-        <TabsRoot
-          size={'small'}
-          value={category}
-          onValueChange={(value) => setCategory(value as TemplateCategoryId)}
-        >
+        <Tabs value={category} onValueChange={(value) => setCategory(value as TemplateCategoryId)}>
           <TabsList>
-            <TabsIndicator />
             {TEMPLATE_CATEGORIES.map((cat) => (
-              <TabsTab key={cat.id} value={cat.id}>
+              <TabsTrigger key={cat.id} value={cat.id}>
                 {t(`template_categories.${cat.id}`)}
-              </TabsTab>
+              </TabsTrigger>
             ))}
           </TabsList>
-        </TabsRoot>
+        </Tabs>
 
         {categoryTemplates.length === 0 ? (
-          <Flexbox align={'center'} paddingBlock={24}>
-            <Text type={'secondary'}>{t('templates.gallery_empty')}</Text>
-          </Flexbox>
+          <div className="flex flex-col items-center py-6">
+            <div className="text-muted-foreground">{t('templates.gallery_empty')}</div>
+          </div>
         ) : (
           <div className={styles.cardGrid}>
             {categoryTemplates.map((id) => {
               const template = AUTOMATION_TEMPLATES[id];
               return (
-                <Block
-                  clickable
-                  gap={4}
+                <div
+                  className="flex flex-col gap-1 p-4 border cursor-pointer hover:bg-[var(--ant-color-fill-tertiary)]"
                   key={id}
-                  padding={16}
-                  variant={'outlined'}
+                  style={{
+                    borderColor: cssVar.colorBorderSecondary,
+                    background: cssVar.colorBgContainer,
+                  }}
                   onClick={() => selectTemplate(id)}
                 >
                   <span className={styles.cardTitle}>{t(`templates.${template.id}.title`)}</span>
                   <span className={styles.cardSummary}>
                     {t(`templates.${template.id}.summary`)}
                   </span>
-                </Block>
+                </div>
               );
             })}
           </div>
         )}
 
         {!persistent && (
-          <Flexbox horizontal justify={'center'}>
-            <Button icon={PlusIcon} size={'small'} onClick={onStartBlank}>
+          <div className="flex justify-center">
+            <Button size="sm" onClick={onStartBlank}>
+              <PlusIcon data-icon="inline-start" />
               {t('templates.start_blank')}
             </Button>
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

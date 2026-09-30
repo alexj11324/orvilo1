@@ -1,6 +1,5 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import fastDeepEqual from 'fast-deep-equal';
 import { LucidePlus, LucideTrash } from 'lucide-react';
 import { type CSSProperties } from 'react';
@@ -8,7 +7,9 @@ import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuidv4 } from 'uuid';
 
+import ActionIcon from '@/components/ActionIcon';
 import { FormInput } from '@/components/FormInput';
+import { Button } from '@/components/ui/button';
 
 import { type KeyValueItem } from './utils';
 import { localListToRecord, recordToLocalList } from './utils';
@@ -140,24 +141,25 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
 
     return (
       <div className={styles.container} style={style}>
-        <Flexbox horizontal className={styles.title} gap={8}>
-          <Flexbox flex={1}>{keyPlaceholder || t('KeyValueEditor.keyPlaceholder')}</Flexbox>
-          <Flexbox flex={2}>{valuePlaceholder || t('KeyValueEditor.valuePlaceholder')}</Flexbox>
-          <Flexbox style={{ width: 30 }} />
-        </Flexbox>
-        <Flexbox width={'100%'}>
+        <div className={cn('flex gap-2', styles.title)}>
+          <div className={'flex flex-1 flex-col'}>
+            {keyPlaceholder || t('KeyValueEditor.keyPlaceholder')}
+          </div>
+          <div className={'flex flex-col'} style={{ flex: 2 }}>
+            {valuePlaceholder || t('KeyValueEditor.valuePlaceholder')}
+          </div>
+          <div className="flex flex-col" style={{ width: 30 }} />
+        </div>
+        <div className={'flex flex-col'} style={{ width: '100%' }}>
           {items.map((item) => {
             const isDuplicate = item.key.trim() && duplicateKeys.has(item.key.trim());
             return (
-              <Flexbox
-                horizontal
-                align="flex-start"
-                className={styles.row}
-                gap={8}
+              <div
+                className={cn('flex items-start gap-2', styles.row)}
                 key={item.id}
-                width={'100%'}
+                style={{ width: '100%' }}
               >
-                <Flexbox flex={1} style={{ position: 'relative' }}>
+                <div className={'flex flex-1 flex-col'} style={{ position: 'relative' }}>
                   <FormInput
                     className={styles.input}
                     disabled={disabled}
@@ -179,8 +181,8 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
                       {duplicateKeyErrorText || t('KeyValueEditor.duplicateKeyError')}
                     </div>
                   )}
-                </Flexbox>
-                <Flexbox flex={2}>
+                </div>
+                <div className={'flex flex-col'} style={{ flex: 2 }}>
                   <FormInput
                     className={styles.input}
                     disabled={disabled}
@@ -189,7 +191,7 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
                     variant={'filled'}
                     onChange={(value) => handleValueChange(item.id, value)}
                   />
-                </Flexbox>
+                </div>
                 <ActionIcon
                   disabled={disabled}
                   icon={LucideTrash}
@@ -198,21 +200,21 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
                   title={deleteTooltip || t('KeyValueEditor.deleteTooltip')}
                   onClick={() => handleRemove(item.id)}
                 />
-              </Flexbox>
+              </div>
             );
           })}
           <Button
-            block
+            className="w-full border-dashed"
             disabled={disabled}
-            icon={<Icon icon={LucidePlus} />}
-            size={'small'}
+            size="sm"
             style={{ marginTop: items.length > 0 ? 16 : 8 }}
-            type="dashed"
+            variant="outline"
             onClick={handleAdd}
           >
+            <LucidePlus data-icon="inline-start" size={16} />
             {addButtonText || t('KeyValueEditor.addButton')}
           </Button>
-        </Flexbox>
+        </div>
       </div>
     );
   },

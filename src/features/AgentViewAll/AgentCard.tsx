@@ -1,14 +1,21 @@
 'use client';
 
-import { Block, ContextMenuTrigger, Flexbox, type MenuProps, Tooltip } from '@lobehub/ui';
-import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, DEFAULT_AVATAR, GROUP_CHAT_URL } from '@orvilo/const';
 import type { SidebarAgentItem } from '@orvilo/types';
 import { agentDisplayName, agentSecondaryDisplayName } from '@orvilo/types';
-import { createStaticStyles, responsive } from 'antd-style';
-import { memo, useCallback, useRef, useState } from 'react';
+import { createStaticStyles, cssVar, responsive } from 'antd-style';
+import { cn } from 'cn';
+import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Badge as Tag } from '@/components/reui/badge';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  renderSidebarMenuItems,
+  type SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
 import AgentAvatar from './AgentAvatar';
@@ -109,93 +116,108 @@ const AgentCard = memo<AgentCardProps>(({ author, item, showAuthor }) => {
   // mounts on the card's pointer-enter and hands its items back via ref.
   const [menuActivated, setMenuActivated] = useState(false);
   const activateMenu = useCallback(() => setMenuActivated(true), []);
-  const menuItemsRef = useRef<(() => MenuProps['items']) | null>(null);
-  const handleMenuReady = useCallback((getItems: () => MenuProps['items']) => {
-    menuItemsRef.current = getItems;
+  const [contextMenuItems, setContextMenuItems] = useState<SidebarMenuItems>([]);
+  const handleMenuReady = useCallback((getItems: () => SidebarMenuItems) => {
+    setContextMenuItems(getItems());
   }, []);
-  const getContextMenuItems = useCallback(() => menuItemsRef.current?.() ?? [], []);
+  const getContextMenuItems = useCallback(() => contextMenuItems, [contextMenuItems]);
 
   return (
-    <ContextMenuTrigger items={getContextMenuItems}>
-      <div className={cardStyles.wrapper}>
-        <WorkspaceLink
-          aria-label={displayTitle}
-          className={cardStyles.link}
-          ref={setAnchor}
-          to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
-          onPointerEnter={activateMenu}
-        >
-          <Block clickable className={cardStyles.card} height={'100%'} variant={'outlined'}>
-            {/* Right padding reserves the header slot the absolutely
+    <ContextMenu>
+      <ContextMenuTrigger>
+        <div className={cardStyles.wrapper}>
+          <WorkspaceLink
+            aria-label={displayTitle}
+            className={cardStyles.link}
+            ref={setAnchor}
+            to={type === 'group' ? GROUP_CHAT_URL(id) : AGENT_CHAT_URL(id, false)}
+            onPointerEnter={activateMenu}
+          >
+            <div
+              className={cn('flex flex-col', cardStyles.card)}
+              style={{
+                cursor: 'pointer',
+                height: '100%',
+                border: `1px solid ${cssVar.colorBorder}`,
+                borderRadius: cssVar.borderRadiusLG,
+              }}
+            >
+              {/* Right padding reserves the header slot the absolutely
                   positioned "…" sibling overlays. */}
-            <Flexbox
-              horizontal
-              align={'center'}
-              gap={8}
-              style={{ minWidth: 0, paddingInlineEnd: 28 }}
-            >
-              <AgentAvatar item={item} size={24} />
-              <Flexbox horizontal align={'center'} flex={1} gap={6} style={{ minWidth: 0 }}>
-                <Text ellipsis style={{ minWidth: 0 }} weight={600}>
-                  {displayTitle}
-                </Text>
-                {roleTag ? (
-                  <Tag size={'small'} style={{ flex: 'none' }}>
-                    {roleTag}
-                  </Tag>
-                ) : null}
-              </Flexbox>
-            </Flexbox>
-            <Text className={cardStyles.description} fontSize={12} type={'secondary'}>
-              {description}
-            </Text>
-            {item.labels?.length ? (
-              <Flexbox horizontal align={'center'} gap={6} wrap={'wrap'}>
-                <LabelTags labels={item.labels} />
-              </Flexbox>
-            ) : null}
-            <Flexbox
-              horizontal
-              align={'center'}
-              gap={8}
-              justify={'space-between'}
-              style={{ marginBlockStart: 'auto' }}
-            >
-              {showAuthor ? (
-                <Flexbox horizontal align={'center'} gap={6} style={{ minWidth: 0 }}>
-                  {author ? (
-                    <Tooltip title={author.name}>
-                      <Avatar avatar={author.avatar || DEFAULT_AVATAR} size={18} />
-                    </Tooltip>
-                  ) : (
-                    <Text fontSize={12} type={'secondary'}>
-                      –
-                    </Text>
-                  )}
-                </Flexbox>
-              ) : (
-                <div />
-              )}
-              <Text className={cardStyles.updatedAt} fontSize={12}>
-                {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
-              </Text>
-            </Flexbox>
-          </Block>
-        </WorkspaceLink>
-        <span className={cardStyles.actions}>
-          {/* Visible "…" trigger AND right-click open the same menu — the
+              <div
+                className="flex items-center gap-2"
+                style={{ minWidth: 0, paddingInlineEnd: 28 }}
+              >
+                <AgentAvatar item={item} size={24} />
+                <div className="flex items-center flex-1 gap-1.5" style={{ minWidth: 0 }}>
+                  <div className="truncate block font-semibold" style={{ minWidth: 0 }}>
+                    {displayTitle}
+                  </div>
+                  {roleTag ? (
+                    <Tag size="sm" style={{ flex: 'none' }}>
+                      {roleTag}
+                    </Tag>
+                  ) : null}
+                </div>
+              </div>
+              <div className={cn('text-[12px]', 'text-muted-foreground', cardStyles.description)}>
+                {description}
+              </div>
+              {item.labels?.length ? (
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <LabelTags labels={item.labels} />
+                </div>
+              ) : null}
+              <div
+                className="flex items-center gap-2 justify-between"
+                style={{ marginBlockStart: 'auto' }}
+              >
+                {showAuthor ? (
+                  <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                    {author ? (
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger
+                            render={
+                              <span style={{ display: 'inline-flex' }}>
+                                <Avatar avatar={author.avatar || DEFAULT_AVATAR} size={18} />
+                              </span>
+                            }
+                          />
+                          <TooltipContent>{author.name}</TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    ) : (
+                      <div className="text-[12px] text-muted-foreground">–</div>
+                    )}
+                  </div>
+                ) : (
+                  <div />
+                )}
+                <div className={cn('text-[12px]', cardStyles.updatedAt)}>
+                  {updatedAt ? formatUpdatedAt(updatedAt) : '–'}
+                </div>
+              </div>
+            </div>
+          </WorkspaceLink>
+          <span className={cardStyles.actions}>
+            {/* Visible "…" trigger AND right-click open the same menu — the
                 context menu alone proved undiscoverable. Rendered as a
                 SIBLING of the link (not inside it) so the menu button isn't a
                 nested interactive control within the card's <a>. */}
-          <ItemActions
-            anchor={anchor}
-            forceActivated={menuActivated}
-            item={item}
-            onMenuReady={handleMenuReady}
-          />
-        </span>
-      </div>
-    </ContextMenuTrigger>
+            <ItemActions
+              anchor={anchor}
+              forceActivated={menuActivated}
+              item={item}
+              onMenuReady={handleMenuReady}
+            />
+          </span>
+        </div>
+      </ContextMenuTrigger>
+      <ContextMenuContent>
+        {renderSidebarMenuItems(getContextMenuItems(), [], 'context')}
+      </ContextMenuContent>
+    </ContextMenu>
   );
 });
 

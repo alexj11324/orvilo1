@@ -1,13 +1,12 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { type ElectronAppState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { cssVar } from 'antd-style';
 import { Bell, Check, FolderOpen, Mic, MonitorCog, SquareArrowOutUpRight } from 'lucide-react';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
@@ -174,40 +173,37 @@ const OsPermissionsPanel = memo(() => {
   };
 
   return (
-    <Block gap={12} padding={4} style={{ width: '100%' }} variant={'outlined'}>
+    <div
+      className="flex flex-col gap-3 rounded-md border border-border"
+      style={{ padding: 4, width: '100%' }}
+    >
       {permissions.map((permission) => (
-        <Block
-          horizontal
-          align={'center'}
-          clickable={!permission.granted}
-          gap={16}
+        <div
+          className="flex items-center cursor-pointer gap-4"
           key={permission.id}
-          paddingBlock={8}
-          paddingInline={'12px 12px'}
-          variant={'borderless'}
           style={{
+            paddingBlock: 8,
+            paddingInline: '12px 12px',
             background: permission.granted ? cssVar.colorFillSecondary : undefined,
             borderColor: permission.granted ? cssVar.colorSuccess : undefined,
           }}
           onClick={() => !permission.granted && handlePermissionRequest(permission.id)}
         >
-          <Block align={'center'} height={40} justify={'center'} variant={'outlined'} width={40}>
-            <Icon color={cssVar.colorTextDescription} icon={permission.icon} size={20} />
-          </Block>
-          <Flexbox gap={2} style={{ flex: 1 }}>
-            <Text weight={500}>{t(permission.titleKey as any)}</Text>
-            <Text color={cssVar.colorTextSecondary} fontSize={12}>
+          <div className="flex flex-col items-center h-[40px] justify-center rounded-md border border-border w-[40px]">
+            {createElement(permission.icon, { color: cssVar.colorTextDescription, size: 20 })}
+          </div>
+          <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 2, flex: 1 }}>
+            <span style={{ fontWeight: 500 }}>{t(permission.titleKey as any)}</span>
+            <span style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
               {t(permission.descriptionKey as any)}
-            </Text>
-          </Flexbox>
+            </span>
+          </div>
           {permission.granted ? (
-            <Icon color={cssVar.colorSuccess} icon={Check} size={20} />
+            createElement(Check, { color: cssVar.colorSuccess, size: 20 })
           ) : (
             <Button
-              icon={SquareArrowOutUpRight}
-              iconPosition={'end'}
-              size={'small'}
-              type={'text'}
+              size="sm"
+              variant="ghost"
               style={{
                 color: cssVar.colorTextSecondary,
               }}
@@ -217,11 +213,12 @@ const OsPermissionsPanel = memo(() => {
               }}
             >
               {t(permission.buttonKey)}
+              {createElement(SquareArrowOutUpRight)}
             </Button>
           )}
-        </Block>
+        </div>
       ))}
-    </Block>
+    </div>
   );
 });
 

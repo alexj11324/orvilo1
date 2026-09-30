@@ -1,5 +1,3 @@
-import { Block, Highlighter } from '@lobehub/ui';
-import { type AlertProps, Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import { type IOrviloAgentRuntimeErrorType } from '@orvilo/model-runtime';
@@ -7,13 +5,17 @@ import { AgentRuntimeErrorType, getErrorCodeSpec } from '@orvilo/model-runtime';
 import { type ChatMessageError, type ErrorType, type IToolErrorType } from '@orvilo/types';
 import { ChatErrorType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
+import { cssVar } from 'antd-style';
 import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import useBusinessErrorAlertConfig from '@/business/client/hooks/useBusinessErrorAlertConfig';
 import useBusinessErrorContent from '@/business/client/hooks/useBusinessErrorContent';
 import useRenderBusinessChatErrorMessageExtra from '@/business/client/hooks/useRenderBusinessChatErrorMessageExtra';
+import { CodeBlock } from '@/components/ui/code-block';
+import { Skeleton } from '@/components/ui/skeleton';
 import ErrorContent from '@/features/Conversation/ChatItem/components/ErrorContent';
+import type { ErrorAlertProps } from '@/features/Conversation/components/ErrorAlert';
 import { useConversationResourceAccess } from '@/features/Conversation/hooks/useConversationResourceAccess';
 import { dataSelectors, useConversationStore } from '@/features/Conversation/store';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
@@ -73,18 +75,19 @@ const getErrorDetails = (error?: ChatMessageError | null) => {
 };
 
 const loading = () => (
-  <Block
-    align={'center'}
-    padding={16}
-    variant={'outlined'}
+  <div
+    className="flex flex-col items-center p-4"
     style={{
+      border: `1px solid ${cssVar.colorBorder}`,
+      borderRadius: cssVar.borderRadiusLG,
+
       overflow: 'hidden',
       position: 'relative',
       width: '100%',
     }}
   >
-    <Skeleton height={36} />
-  </Block>
+    <Skeleton style={{ height: 36 }} />
+  </div>
 );
 
 const ExceededContextWindowError = dynamic(() => import('./ExceededContextWindowError'), {
@@ -174,7 +177,7 @@ const shouldShowTraceIdError = (
 // Config for the errorMessage display
 const getErrorAlertConfig = (
   errorType?: IToolErrorType | IOrviloAgentRuntimeErrorType | ErrorType,
-): AlertProps | undefined => {
+): ErrorAlertProps | undefined => {
   // OpenAIBizError / ZhipuBizError / GoogleBizError / ...
   if (typeof errorType === 'string' && (errorType.includes('Biz') || errorType.includes('Invalid')))
     return {
@@ -220,7 +223,7 @@ export const useErrorContent = (error: any) => {
     message: businessMessage,
   } = useBusinessErrorContent(error);
 
-  return useMemo<AlertProps | undefined>(() => {
+  return useMemo<ErrorAlertProps | undefined>(() => {
     if (!error) return;
     const messageError = error;
     const rawErrorMessage = getRawErrorMessage(messageError);
@@ -260,7 +263,7 @@ export const useErrorContent = (error: any) => {
 
 interface ErrorExtraProps {
   data: ErrorMessageData;
-  error?: AlertProps;
+  error?: ErrorAlertProps;
   onRegenerate?: () => void;
   /**
    * Stable scope key for the overloaded auto-retry counter (the parent user
@@ -531,14 +534,12 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
           message: displayMessage,
           extra:
             !isSharedTopic && errorDetails ? (
-              <Highlighter
-                actionIconSize={'small'}
-                language={'json'}
-                padding={8}
-                variant={'borderless'}
-              >
-                {JSON.stringify(errorDetails, null, 2)}
-              </Highlighter>
+              <CodeBlock
+                code={JSON.stringify(errorDetails, null, 2)}
+                language="json"
+                style={{ padding: 8 }}
+                variant="ghost"
+              />
             ) : undefined,
         }}
         onRegenerate={canRetry ? handleManualRetry : undefined}

@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { githubOAuthService } from '@/services/githubOAuth';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';

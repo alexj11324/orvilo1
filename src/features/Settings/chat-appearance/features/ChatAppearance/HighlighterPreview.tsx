@@ -1,5 +1,4 @@
-import { type HighlighterProps } from '@lobehub/ui';
-import { Highlighter } from '@lobehub/ui';
+import { CodeBlock } from '@/components/ui/code-block';
 
 const code = `
 const person = { name: "Alice", age: 30 };
@@ -10,12 +9,8 @@ type Animal = { name: string };
 const dog = { name: "Buddy", breed: "Golden Retriever" } satisfies Animal;
 `;
 
-const HighlighterPreview = ({ theme }: { theme?: HighlighterProps['theme'] }) => {
-  return (
-    <Highlighter copyable={false} language={'ts'} showLanguage={false} theme={theme}>
-      {code}
-    </Highlighter>
-  );
+const HighlighterPreview = () => {
+  return <CodeBlock code={code} language={'ts'} />;
 };
 
 export default HighlighterPreview;

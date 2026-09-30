@@ -1,4 +1,3 @@
-import { Center, Flexbox, Tooltip } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import numeral from 'numeral';
 import { memo } from 'react';
@@ -7,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
 
+import { SimpleTooltip } from '../../SimpleTooltip';
 import TokenProgress from './TokenProgress';
 import { type TokenBreakdown } from './useTokenBreakdown';
 
@@ -22,19 +22,18 @@ const TokenDetails = memo<TokenDetailsProps>(({ breakdown }) => {
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
 
   return (
-    <Flexbox gap={12} style={{ minWidth: 200 }}>
-      <Flexbox horizontal align={'center'} gap={4} justify={'space-between'} width={'100%'}>
+    <div className="flex flex-col gap-3" style={{ minWidth: 200 }}>
+      <div className="flex flex-row items-center gap-1 justify-between w-[100%]">
         <div style={{ color: cssVar.colorTextDescription }}>{t('tokenDetails.title')}</div>
-        <Tooltip
-          styles={{ root: { maxWidth: 'unset', pointerEvents: 'none' } }}
+        <SimpleTooltip
+          contentStyle={{ maxWidth: 'unset', pointerEvents: 'none' }}
           title={t('ModelSelect.featureTag.tokens', {
             ns: 'components',
             tokens: numeral(maxTokens).format('0,0'),
           })}
         >
-          <Center
-            height={20}
-            paddingInline={4}
+          <div
+            className="flex flex-col items-center justify-center h-[20px] px-1"
             style={{
               background: cssVar.colorFillTertiary,
               borderRadius: 4,
@@ -44,9 +43,9 @@ const TokenDetails = memo<TokenDetailsProps>(({ breakdown }) => {
             }}
           >
             TOKEN
-          </Center>
-        </Tooltip>
-      </Flexbox>
+          </div>
+        </SimpleTooltip>
+      </div>
       {isDevMode && (
         <TokenProgress
           showIcon
@@ -96,7 +95,7 @@ const TokenDetails = memo<TokenDetailsProps>(({ breakdown }) => {
           },
         ]}
       />
-    </Flexbox>
+    </div>
   );
 });
 

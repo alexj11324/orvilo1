@@ -1,34 +1,23 @@
 'use client';
-
-import { Empty, Flexbox } from '@lobehub/ui';
-import { Button, Select, Spin } from '@lobehub/ui/base-ui';
 import { useMutation } from '@tanstack/react-query';
-import { Form, Input } from 'antd';
-import { createStaticStyles } from 'antd-style';
+import { Loader2 } from 'lucide-react';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type CredsApi } from '../useCredsApi';
+import Form from '@/components/GroupForm';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  connectionOption: css`
-    display: flex;
-    gap: 8px;
-    align-items: center;
-  `,
-  footer: css`
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-block-start: 24px;
-  `,
-  provider: css`
-    font-weight: 500;
-  `,
-  username: css`
-    color: ${cssVar.colorTextSecondary};
-  `,
-}));
+import { type CredsApi } from '../useCredsApi';
 
 interface OAuthCredFormProps {
   credsApi: CredsApi;
@@ -59,10 +48,10 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
 
     return {
       label: (
-        <span className={styles.connectionOption}>
+        <span className="flex items-center gap-2">
           <span>
-            <span className={styles.provider}>{provider}</span>
-            {displayName && <span className={styles.username}> - {displayName}</span>}
+            <span className="font-medium">{provider}</span>
+            {displayName && <span className="text-muted-foreground"> - {displayName}</span>}
           </span>
         </span>
       ),
@@ -95,35 +84,47 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
 
   if (isLoading) {
     return (
-      <Flexbox align="center" justify="center" style={{ padding: 48 }}>
-        <Spin />
-      </Flexbox>
+      <div className="flex flex-col items-center justify-center" style={{ padding: 48 }}>
+        <Spinner />
+      </div>
     );
   }
 
   if (connections.length === 0) {
     return (
-      <Flexbox gap={16}>
-        <Empty description={t('creds.oauth.noConnections')} />
-        <div className={styles.footer}>
-          <Button onClick={onBack}>{t('creds.form.back')}</Button>
+      <div>
+        <div className="flex min-h-40 flex-col items-center justify-center gap-2 py-12 text-center text-sm text-muted-foreground">
+          {t('creds.oauth.noConnections')}
         </div>
-      </Flexbox>
+        <div className="mt-6 flex justify-end gap-2">
+          <Button type="button" variant="outline" onClick={onBack}>
+            {t('creds.form.back')}
+          </Button>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Form<FormValues> form={form} layout="vertical" onFinish={handleSubmit}>
+    <Form form={form} layout="vertical" onFinish={handleSubmit}>
       <Form.Item
         label={t('creds.form.selectConnection')}
         name="oauthConnectionId"
         rules={[{ required: true, message: t('creds.form.connectionRequired') }]}
+        trigger="onValueChange"
       >
-        <Select
-          disabled={disabled}
-          options={connectionOptions}
-          placeholder={t('creds.form.selectConnectionPlaceholder')}
-        />
+        <Select disabled={disabled} items={connectionOptions}>
+          <SelectTrigger className="w-full">
+            <SelectValue placeholder={t('creds.form.selectConnectionPlaceholder')} />
+          </SelectTrigger>
+          <SelectContent>
+            {connectionOptions.map((option) => (
+              <SelectItem key={option.value} value={option.value}>
+                {option.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Form.Item>
 
       <Form.Item
@@ -146,21 +147,19 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">
-        <Input.TextArea
+        <Textarea
           disabled={disabled}
           placeholder={t('creds.form.descriptionPlaceholder')}
           rows={2}
         />
       </Form.Item>
 
-      <div className={styles.footer}>
-        <Button onClick={onBack}>{t('creds.form.back')}</Button>
-        <Button
-          disabled={disabled}
-          htmlType="submit"
-          loading={createMutation.isPending}
-          type="primary"
-        >
+      <div className="mt-6 flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onBack}>
+          {t('creds.form.back')}
+        </Button>
+        <Button disabled={createMutation.isPending || disabled} type="submit" variant="default">
+          {createMutation.isPending && <Loader2 className="animate-spin" />}
           {t('creds.form.submit')}
         </Button>
       </div>

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -28,31 +27,29 @@ const Body = memo(() => {
   // resolved not-found (deleted task), which is a terminal 404.
   if (error) {
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
         <AsyncError error={error} variant={'page'} onRetry={onRetry} />
-      </Flexbox>
+      </div>
     );
   }
 
   if (isNotFound) {
     return (
-      <Flexbox flex={1} height={'100%'} style={{ minHeight: 0, overflowY: 'auto' }}>
+      <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0, overflowY: 'auto' }}>
         <NotFound desc={t('taskDetail.notFound.desc')} title={t('taskDetail.notFound.title')} />
-      </Flexbox>
+      </div>
     );
   }
 
   return (
     <TaskDetailScope taskId={taskId}>
-      <Flexbox
-        flex={1}
-        height={'100%'}
-        paddingInline={16}
+      <div
+        className="flex flex-col flex-1 h-[100%] px-4"
         style={{ minHeight: 0, overflowY: 'auto' }}
       >
         {isInitialLoading ? <TaskDetailSkeleton chrome={'body'} /> : <TaskDetailSections />}
         <TopicChatDrawer />
-      </Flexbox>
+      </div>
     </TaskDetailScope>
   );
 });

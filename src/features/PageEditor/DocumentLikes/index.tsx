@@ -1,15 +1,18 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar, Skeleton, Text, toast, Tooltip } from '@lobehub/ui/base-ui';
 import type { DocumentLikeSummary } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ThumbsUp } from 'lucide-react';
 import { memo, useCallback, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useClientDataSWR } from '@/libs/swr';
 import { documentLikeKeys } from '@/libs/swr/keys';
 import { documentLikeService } from '@/services/documentLike';
@@ -197,19 +200,19 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
   // retryable error instead of the idle state with a dead button.
   if (!data && error)
     return (
-      <Flexbox data-document-likes align={'center'} className={styles.section} gap={16}>
+      <div data-document-likes className={cn('flex flex-col items-center gap-4', styles.section)}>
         <AsyncError error={error} variant={'inline'} onRetry={() => void mutate()} />
-      </Flexbox>
+      </div>
     );
 
   // Match the surrounding page skeleton while the summary loads instead of
   // flashing the finished idle state ahead of the rest of the content.
   if (isLoading && !data)
     return (
-      <Flexbox data-document-likes align={'center'} className={styles.section} gap={16}>
-        <Skeleton.Avatar shape={'circle'} size={BUTTON_SIZE} />
-        <Skeleton height={20} width={200} />
-      </Flexbox>
+      <div data-document-likes className={cn('flex flex-col items-center gap-4', styles.section)}>
+        <Skeleton className="rounded-full" style={{ height: BUTTON_SIZE, width: BUTTON_SIZE }} />
+        <Skeleton style={{ height: 20, width: 200 }} />
+      </div>
     );
 
   const liked = data?.liked ?? false;
@@ -223,11 +226,9 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
   const ariaLabel = liked ? t('pageEditor.likes.liked') : t('pageEditor.likes.like');
 
   return (
-    <Flexbox
+    <div
       data-document-likes
-      align={'center'}
-      className={styles.section}
-      gap={16}
+      className={cn('flex flex-col items-center gap-4', styles.section)}
       onClick={(event) => event.stopPropagation()}
     >
       <button
@@ -245,28 +246,37 @@ const DocumentLikes = memo<{ documentId: string }>(({ documentId }) => {
         />
       </button>
       <span className={styles.caption}>
-        <Text as={'span'} color={'inherit'} fontSize={13}>
+        <span className="text-[13px]" style={{ color: 'inherit' }}>
           {label}
-        </Text>
+        </span>
       </span>
       {(likers.length > 0 || overflow > 0) && (
-        <Flexbox horizontal className={styles.avatars} gap={8}>
+        <div className={cn('flex gap-2', styles.avatars)}>
           {likers.map((liker) => {
             const name = liker.fullName || liker.username || liker.id;
             return (
-              <Tooltip key={liker.id} title={name}>
-                <Avatar avatar={liker.avatar || name} size={32} />
-              </Tooltip>
+              <TooltipProvider key={liker.id}>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <Avatar avatar={liker.avatar || name} size={32} />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{name}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             );
           })}
           {overflow > 0 && (
-            <Text fontSize={13} type={'secondary'}>
+            <div className="text-[13px] text-muted-foreground">
               {t('pageEditor.likes.more', { count: overflow })}
-            </Text>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

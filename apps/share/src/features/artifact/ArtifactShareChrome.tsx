@@ -1,11 +1,13 @@
 'use client';
 
-import { copyToClipboard, Flexbox } from '@lobehub/ui';
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { useTranslation } from 'react-i18next';
 
 import { ProductLogo } from '@/components/Branding';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/utils/clipboard';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   header: css`
@@ -39,38 +41,28 @@ export const ArtifactShareChrome = ({ title }: ArtifactShareChromeProps) => {
   };
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.header}
-      gap={12}
-      justify={'space-between'}
-    >
-      <Flexbox horizontal align={'center'} flex={1} style={{ minWidth: 0 }}>
+    <div className={cn('flex items-center gap-3 justify-between', styles.header)}>
+      <div className="flex items-center flex-1" style={{ minWidth: 0 }}>
         <a className={styles.logo} href={'/'}>
           <ProductLogo size={28} />
         </a>
-      </Flexbox>
-      <Flexbox flex={2} style={{ minWidth: 0 }}>
-        <Text
-          ellipsis
-          strong
-          align={'center'}
-          className={styles.title}
-          fontSize={14}
+      </div>
+      <div className="flex flex-col" style={{ flex: 2, minWidth: 0 }}>
+        <div
+          className={cn('truncate min-w-0 font-semibold text-center text-[14px]', styles.title)}
           style={{ margin: 0 }}
         >
           {title}
-        </Text>
-      </Flexbox>
-      <Flexbox horizontal align={'center'} flex={1} gap={8} justify={'flex-end'}>
+        </div>
+      </div>
+      <div className="flex items-center flex-1 gap-2 justify-end">
         <Button size={'small'} onClick={handleShare}>
           {t('sharePage.artifact.share')}
         </Button>
         <Button href={'/'} size={'small'} type={'primary'}>
           {t('sharePage.menu.goToOrvilo')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };

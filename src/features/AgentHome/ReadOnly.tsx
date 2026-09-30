@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import AgentInfo from './AgentInfo';
@@ -12,10 +11,10 @@ import AgentInfo from './AgentInfo';
  */
 const ReadOnlyAgentHome = memo(() => (
   <>
-    <Flexbox flex={1} />
-    <Flexbox gap={32} style={{ paddingBottom: 'max(4vh, 16px)' }} width={'100%'}>
+    <div className="flex flex-col flex-1" />
+    <div className="flex flex-col gap-8 w-full" style={{ paddingBottom: 'max(4vh, 16px)' }}>
       <AgentInfo />
-    </Flexbox>
+    </div>
   </>
 ));
 

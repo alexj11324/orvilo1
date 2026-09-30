@@ -1,7 +1,7 @@
-import { Flexbox } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 import type { GetAvailableModelsParams, GetAvailableModelsState } from '../../types';
 
@@ -12,24 +12,24 @@ const GetAvailableModels = memo<
 
   if (!providers || providers.length === 0) {
     return (
-      <Flexbox style={{ color: 'var(--lobe-text-secondary)', fontSize: 13 }}>
+      <div className="flex flex-col" style={{ color: 'var(--lobe-text-secondary)', fontSize: 13 }}>
         No available models found.
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox gap={12} style={{ fontSize: 13 }}>
+    <div className="flex flex-col gap-3" style={{ fontSize: 13 }}>
       {providers.map((provider) => (
-        <Flexbox gap={8} key={provider.id}>
-          <Flexbox horizontal align="center" gap={8}>
+        <div className="flex flex-col gap-2" key={provider.id}>
+          <div className="flex items-center gap-2">
             <span style={{ fontWeight: 600 }}>{provider.name}</span>
-            <Tag color="blue" style={{ margin: 0 }}>
+            <Tag style={{ margin: 0 }} variant="info-light">
               {provider.models.length} models
             </Tag>
-          </Flexbox>
-          <Flexbox
-            gap={4}
+          </div>
+          <div
+            className="flex flex-col gap-1"
             style={{
               background: 'var(--lobe-fill-tertiary)',
               borderRadius: 6,
@@ -39,29 +39,29 @@ const GetAvailableModels = memo<
             }}
           >
             {provider.models.map((model) => (
-              <Flexbox horizontal align="center" gap={8} key={model.id} style={{ fontSize: 12 }}>
+              <div className="flex items-center gap-2" key={model.id} style={{ fontSize: 12 }}>
                 <code style={{ color: 'var(--lobe-text)' }}>{model.id}</code>
                 {model.abilities?.vision && (
-                  <Tag color="purple" style={{ fontSize: 10, margin: 0 }}>
+                  <Tag style={{ fontSize: 10, margin: 0 }} variant="info-light">
                     vision
                   </Tag>
                 )}
                 {model.abilities?.functionCall && (
-                  <Tag color="green" style={{ fontSize: 10, margin: 0 }}>
+                  <Tag style={{ fontSize: 10, margin: 0 }} variant="success-light">
                     tools
                   </Tag>
                 )}
                 {model.abilities?.reasoning && (
-                  <Tag color="orange" style={{ fontSize: 10, margin: 0 }}>
+                  <Tag style={{ fontSize: 10, margin: 0 }} variant="warning-light">
                     reasoning
                   </Tag>
                 )}
-              </Flexbox>
+              </div>
             ))}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

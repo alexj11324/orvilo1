@@ -1,12 +1,27 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Result } from '@lobehub/ui/base-ui';
-import { Table } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { CheckCircle } from 'lucide-react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const styles = createStaticStyles(({ css, cssVar }) => {
   return {
@@ -31,45 +46,57 @@ interface SuccessResultProps {
 const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickFinish }) => {
   const { t } = useTranslation('common');
 
-  const cellRender = (text: string) => {
-    return text ? text : <span className={styles.zeroCell}>0</span>;
+  const cellRender = (text: number | string) => {
+    return text || <span className={styles.zeroCell}>0</span>;
   };
   return (
-    <Result
-      icon={<Icon icon={CheckCircle} />}
-      status={'success'}
-      style={{ paddingBlock: 24, paddingInline: 0 }}
-      title={t('importModal.finish.title')}
-      extra={
-        <Button size={'large'} type={'primary'} onClick={onClickFinish}>
+    <Empty style={{ paddingBlock: 24, paddingInline: 0 }}>
+      <EmptyHeader>
+        <EmptyMedia variant="icon">
+          <CheckCircle className="text-success" />
+        </EmptyMedia>
+        <EmptyTitle>{t('importModal.finish.title')}</EmptyTitle>
+        <EmptyDescription>
+          {
+            // if there is no importData, means it's only import the settings
+            !dataSource ? (
+              t('importModal.finish.onlySettings')
+            ) : (
+              <div className="flex flex-col gap-4" style={{ width: 500 }}>
+                {t('importModal.finish.subTitle', { duration: (duration / 1000).toFixed(2) })}
+                <Table className="border-collapse border">
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="h-8 border">{t('importModal.result.type')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.added')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.skips')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.errors')}</TableHead>
+                      <TableHead className="h-8 border">{t('importModal.result.update')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dataSource.map((row) => (
+                      <TableRow key={row.title}>
+                        <TableCell className="border py-1.5">{cellRender(row.title)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.added)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.skips)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.error)}</TableCell>
+                        <TableCell className="border py-1.5">{cellRender(row.updated)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            )
+          }
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>
+        <Button size="lg" variant="default" onClick={onClickFinish}>
           {t('importModal.finish.start')}
         </Button>
-      }
-      subTitle={
-        // if there is no importData, means it's only import the settings
-        !dataSource ? (
-          t('importModal.finish.onlySettings')
-        ) : (
-          <Flexbox gap={16} width={500}>
-            {t('importModal.finish.subTitle', { duration: (duration / 1000).toFixed(2) })}
-            <Table
-              bordered
-              dataSource={dataSource}
-              pagination={false}
-              rowKey={'title'}
-              size={'small'}
-              columns={[
-                { dataIndex: 'title', render: cellRender, title: t('importModal.result.type') },
-                { dataIndex: 'added', render: cellRender, title: t('importModal.result.added') },
-                { dataIndex: 'skips', render: cellRender, title: t('importModal.result.skips') },
-                { dataIndex: 'error', render: cellRender, title: t('importModal.result.errors') },
-                { dataIndex: 'updated', render: cellRender, title: t('importModal.result.update') },
-              ]}
-            />
-          </Flexbox>
-        )
-      }
-    />
+      </EmptyContent>
+    </Empty>
   );
 });
 

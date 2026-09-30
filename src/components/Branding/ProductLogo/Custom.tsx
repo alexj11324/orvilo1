@@ -1,10 +1,9 @@
 import { type IconType } from '@lobehub/icons';
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
 import { type LobeChatProps } from '@lobehub/ui/brand';
 import { BRANDING_LOGO_URL, BRANDING_NAME } from '@orvilo/business-const';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { type ReactNode } from 'react';
+import { cn } from 'cn';
+import { type HTMLAttributes, type ReactNode } from 'react';
 import { memo } from 'react';
 
 import { type ImageProps } from '@/libs/next/Image';
@@ -19,22 +18,25 @@ const styles = createStaticStyles(({ css }) => {
   };
 });
 
-const CustomTextLogo = memo<FlexboxProps & { size: number }>(({ size, style, ...rest }) => {
-  return (
-    <Flexbox
-      height={size}
-      style={{
-        fontSize: size / 1.5,
-        fontWeight: 'bolder',
-        userSelect: 'none',
-        ...style,
-      }}
-      {...rest}
-    >
-      {BRANDING_NAME}
-    </Flexbox>
-  );
-});
+const CustomTextLogo = memo<HTMLAttributes<HTMLDivElement> & { size: number }>(
+  ({ size, style, ...rest }) => {
+    return (
+      <div
+        className={'flex flex-col'}
+        style={{
+          fontSize: size / 1.5,
+          fontWeight: 'bolder',
+          userSelect: 'none',
+          ...style,
+          height: size,
+        }}
+        {...rest}
+      >
+        {BRANDING_NAME}
+      </div>
+    );
+  },
+);
 
 const CustomImageLogo = memo<Omit<ImageProps, 'alt' | 'src'> & { size: number }>(
   ({ size, ...rest }) => {
@@ -98,9 +100,9 @@ const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, ty
 
       if (!extra)
         logoComponent = (
-          <Flexbox horizontal align={'center'} flex={'none'} {...rest}>
+          <div className={'flex items-center'} style={{ flex: 'none' }}>
             {logoComponent}
-          </Flexbox>
+          </div>
         );
 
       break;
@@ -116,13 +118,13 @@ const CustomLogo = memo<LobeChatProps>(({ extra, size = 32, className, style, ty
   const extraSize = Math.round((size / 3) * 1.9);
 
   return (
-    <Flexbox horizontal align={'center'} className={className} flex={'none'} {...rest}>
+    <div className={cn('flex items-center', className)} style={{ flex: 'none' }}>
       {logoComponent}
       <Divider size={extraSize} style={{ color: cssVar.colorFill }} />
       <div className={styles.extraTitle} style={{ fontSize: extraSize }}>
         {extra}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

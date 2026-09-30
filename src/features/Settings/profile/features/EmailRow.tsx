@@ -1,11 +1,9 @@
 'use client';
-
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { ExternalLinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { electronSystemService } from '@/services/electron/system';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
@@ -36,15 +34,21 @@ const EmailRow = () => {
       anchor={'profile-email'}
       label={t('profile.email')}
       action={
-        <Text style={{ cursor: 'pointer', fontSize: 13 }} onClick={openAccountsPortal}>
-          <Flexbox horizontal align={'center'} gap={4}>
+        <Button
+          className="text-sm"
+          style={{ cursor: 'pointer', fontSize: 13 }}
+          type="button"
+          variant="link"
+          onClick={openAccountsPortal}
+        >
+          <div className="flex items-center gap-2">
             {t('profile.updateEmail')}
-            <Icon icon={ExternalLinkIcon} size={12} />
-          </Flexbox>
-        </Text>
+            <ExternalLinkIcon className="shrink-0" size={12} />
+          </div>
+        </Button>
       }
     >
-      <Text>{email || '--'}</Text>
+      <span>{email || '--'}</span>
     </ProfileRow>
   );
 };

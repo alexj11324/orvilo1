@@ -1,12 +1,12 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
-import { Checkbox } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleArrowRight, CircleCheckBig, CircleX, ListTodo, RotateCcw } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Checkbox } from '@/components/ui/checkbox';
 
 import { ClaudeCodeApiName, type TaskUpdateArgs } from '../../../types';
 
@@ -104,7 +104,9 @@ const TaskRow = memo<TaskRowProps>(({ item }) => {
   if (status === 'processing') {
     return (
       <div className={cx(styles.itemRow, styles.processingRow)}>
-        <Icon icon={CircleArrowRight} size={17} style={{ color: cssVar.colorInfo }} />
+        <span className="anticon" role="img" style={{ color: cssVar.colorInfo }}>
+          <CircleArrowRight fill={'transparent'} height={17} size={17} width={17} />
+        </span>
         <span className={styles.textProcessing}>{text}</span>
       </div>
     );
@@ -113,21 +115,22 @@ const TaskRow = memo<TaskRowProps>(({ item }) => {
   const isCompleted = status === 'completed';
 
   return (
-    <Checkbox
-      backgroundColor={cssVar.colorSuccess}
-      checked={isCompleted}
-      shape={'circle'}
-      style={{ borderWidth: 1.5, cursor: 'default' }}
-      classNames={{
-        text: cx(styles.textPending, isCompleted && styles.textCompleted),
-        wrapper: styles.itemRow,
-      }}
-      textProps={{
-        type: isCompleted ? 'secondary' : undefined,
-      }}
-    >
-      {text}
-    </Checkbox>
+    <label className={cx('flex items-center gap-2', styles.itemRow)} style={{ cursor: 'default' }}>
+      <Checkbox
+        checked={isCompleted}
+        className="rounded-full data-checked:border-success data-checked:bg-success"
+        style={{ borderWidth: 1.5 }}
+      />
+      <span
+        className={cx(
+          styles.textPending,
+          isCompleted && 'text-muted-foreground',
+          isCompleted && styles.textCompleted,
+        )}
+      >
+        {text}
+      </span>
+    </label>
   );
 });
 
@@ -177,7 +180,9 @@ const TaskHeader = memo<TaskHeaderProps>(({ completed, total, inProgress, overri
 
   return (
     <div className={styles.header}>
-      <Icon icon={icon} size={16} style={{ color, flexShrink: 0 }} />
+      <span className="anticon" role="img" style={{ color, flexShrink: 0 }}>
+        {createElement(icon, { size: 16, width: 16, height: 16, fill: 'transparent' })}
+      </span>
       <div className={styles.headerLabel}>
         <span>{label}</span>
         {detail && (
@@ -280,7 +285,7 @@ const Task = memo<BuiltinRenderProps<TaskUpdateArgs | undefined, TaskPluginState
     if (!items || items.length === 0) return null;
 
     return (
-      <Block variant={'outlined'} width="100%">
+      <div className="rounded-md border bg-card" style={{ width: '100%' }}>
         <TaskHeader
           completed={stats.completed}
           inProgress={stats.inProgress}
@@ -290,7 +295,7 @@ const Task = memo<BuiltinRenderProps<TaskUpdateArgs | undefined, TaskPluginState
         {items.map((item, index) => (
           <TaskRow item={item} key={index} />
         ))}
-      </Block>
+      </div>
     );
   },
 );

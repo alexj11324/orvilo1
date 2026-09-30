@@ -398,7 +398,7 @@ const homeGoalsCollapsed = (s: GlobalState): boolean => s.status.homeGoalsCollap
 const homeRecentsCount = (s: GlobalState): number => s.status.homeRecentsCount ?? 8;
 const homeTaskCount = (s: GlobalState): number => s.status.homeTaskCount ?? 8;
 const showRightPanel = (s: GlobalState) => s.status.showRightPanel;
-const showLeftPanel = (_s: GlobalState) => true;
+const showLeftPanel = (s: GlobalState) => s.status.showLeftPanel;
 const showPageAgentPanel = (s: GlobalState) => s.status.showPageAgentPanel;
 const showTaskAgentPanel = (s: GlobalState) => s.status.showTaskAgentPanel;
 const showTerminalPanel = (s: GlobalState) => s.status.showTerminalPanel;

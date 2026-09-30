@@ -1,38 +1,38 @@
 'use client';
 
-import { Flexbox, type FlexboxProps } from '@lobehub/ui';
-import { cssVar } from 'antd-style';
-import { memo, type PropsWithChildren, type ReactNode } from 'react';
+import { type CSSProperties, type HTMLAttributes, memo, type ReactNode } from 'react';
 
-interface WorkspaceSettingsContainerProps extends FlexboxProps {
+interface WorkspaceSettingsContainerProps extends HTMLAttributes<HTMLDivElement> {
   addonAfter?: ReactNode;
   addonBefore?: ReactNode;
   maxWidth?: number | string;
+  paddingBlock?: CSSProperties['paddingBlock'];
+  paddingInline?: CSSProperties['paddingInline'];
 }
 
-const WorkspaceSettingsContainer = memo<PropsWithChildren<WorkspaceSettingsContainerProps>>(
-  ({ maxWidth = 1024, children, addonAfter, addonBefore, style, ...rest }) => {
-    return (
-      <Flexbox
-        align={'center'}
-        height={'100%'}
-        width={'100%'}
-        style={{
-          background: cssVar.colorBgContainer,
-          overflowX: 'hidden',
-          overflowY: 'auto',
-          ...style,
-        }}
-        {...rest}
-      >
-        {addonBefore}
-        <Flexbox flex={1} gap={36} style={{ maxWidth }} width={'100%'}>
-          {children}
-        </Flexbox>
-        {addonAfter}
-      </Flexbox>
-    );
-  },
+const WorkspaceSettingsContainer = memo<WorkspaceSettingsContainerProps>(
+  ({
+    maxWidth = 1024,
+    children,
+    addonAfter,
+    addonBefore,
+    paddingBlock,
+    paddingInline,
+    style,
+    ...rest
+  }) => (
+    <div
+      className="flex h-full w-full flex-col items-center overflow-x-hidden overflow-y-auto bg-background"
+      style={{ paddingBlock, paddingInline, ...style }}
+      {...rest}
+    >
+      {addonBefore}
+      <div className="flex w-full flex-1 flex-col gap-9" style={{ maxWidth }}>
+        {children}
+      </div>
+      {addonAfter}
+    </div>
+  ),
 );
 
 export default WorkspaceSettingsContainer;

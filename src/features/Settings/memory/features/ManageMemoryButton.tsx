@@ -1,11 +1,11 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { BrainCircuit } from 'lucide-react';
+import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 export const ManageMemoryButton = () => {
@@ -20,10 +20,11 @@ export const ManageMemoryButton = () => {
 
   return (
     <Button
-      icon={<Icon icon={BrainCircuit} />}
-      size={'small'}
+      size="sm"
+      variant="outline"
       onClick={() => navigate('/memory/preferences', { escape: true })}
     >
+      {createElement(BrainCircuit, {})}
       {t('memory.manageEntry')}
     </Button>
   );

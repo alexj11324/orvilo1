@@ -1,12 +1,11 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2 } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { agentService } from '@/services/agent';
 import { useChatStore } from '@/store/chat';
 
@@ -73,19 +72,25 @@ export const TopicMigrationPlaceholder = memo<MigrationBannerProps>(
     );
 
     return (
-      <Flexbox align={'center'} flex={1} gap={12} justify={'center'} padding={24}>
-        <Icon spin color={cssVar.colorTextDescription} icon={Loader2} size={20} />
-        <Text type={'secondary'} weight={500}>
+      <div
+        className="flex flex-col items-center flex-1 gap-3 justify-center"
+        style={{ padding: 24 }}
+      >
+        <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={20} />
+        <div className="text-muted-foreground font-medium">
           {t(
             data?.type === 'copy'
               ? 'transferMigration.topicPendingCopy.title'
               : 'transferMigration.topicPending.title',
           )}
-        </Text>
-        <Text fontSize={12} style={{ maxWidth: 420, textAlign: 'center' }} type={'secondary'}>
+        </div>
+        <div
+          className="text-[12px] text-muted-foreground"
+          style={{ maxWidth: 420, textAlign: 'center' }}
+        >
           {t('transferMigration.topicPending.desc')}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -127,21 +132,28 @@ export const AgentMigrationBadge = memo<MigrationTarget>(({ agentId, groupId }) 
   if (!data) return null;
 
   return (
-    <Tooltip title={t('transferMigration.agentBanner.desc')}>
-      <Flexbox horizontal align={'center'} className={chipStyles.chip} gap={6}>
-        <Icon spin color={cssVar.colorWarning} icon={Loader2} size={12} />
-        <span>
-          {t(
-            data.type === 'copy'
-              ? 'transferMigration.agentBadgeCopy'
-              : 'transferMigration.agentBadge',
-            {
-              completed: data.completedTopics,
-              total: data.totalTopics,
-            },
-          )}
-        </span>
-      </Flexbox>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span>
+            <div className={`flex items-center gap-1.5 ${chipStyles.chip}`}>
+              <Loader2 className="animate-spin" color={cssVar.colorWarning} size={12} />
+              <span>
+                {t(
+                  data.type === 'copy'
+                    ? 'transferMigration.agentBadgeCopy'
+                    : 'transferMigration.agentBadge',
+                  {
+                    completed: data.completedTopics,
+                    total: data.totalTopics,
+                  },
+                )}
+              </span>
+            </div>
+          </span>
+        }
+      />
+      <TooltipContent>{t('transferMigration.agentBanner.desc')}</TooltipContent>
     </Tooltip>
   );
 });

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { type FC } from 'react';
 import { Outlet } from 'react-router';
 
@@ -19,11 +18,11 @@ const Layout: FC = () => {
       }}
     >
       <SideBar />
-      <Flexbox className={styles.mainContainer} flex={1} height={'100%'}>
+      <div className={`flex flex-col flex-1 h-full ${styles.mainContainer}`}>
         <RouteSkeletonChromeProvider>
           <Outlet />
         </RouteSkeletonChromeProvider>
-      </Flexbox>
+      </div>
     </SettingsContextProvider>
   );
 };

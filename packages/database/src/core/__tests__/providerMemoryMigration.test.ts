@@ -10,8 +10,8 @@ const migrations = readMigrationFiles({
   migrationsFolder: path.join(__dirname, '../../../migrations'),
 });
 // The provider-binding and experience-memory additions ship as one consolidated
-// 0196_cloud_control_plane migration alongside the event/handoff tables.
-const additions = migrations.slice(196);
+// 0197_cloud_control_plane migration alongside the event/handoff tables.
+const additions = migrations.slice(197);
 const db = new PGlite({ extensions: { vector } });
 const applyAdditions = async () => {
   for (const migration of additions) {

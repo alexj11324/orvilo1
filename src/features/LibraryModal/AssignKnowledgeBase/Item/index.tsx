@@ -1,6 +1,5 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { LockIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
@@ -34,20 +33,12 @@ interface PluginItemProps extends KnowledgeItem {
 const PluginItem = memo<PluginItemProps>(
   ({ action, id, fileType, name, type, description, enabled, memberRestricted, visibility }) => {
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={8}
-        justify={'space-between'}
-        paddingBlock={12}
-        paddingInline={16}
+      <div
+        className="flex flex-row items-center gap-2 justify-between py-3 px-4"
         style={{ position: 'relative' }}
       >
-        <Flexbox
-          horizontal
-          align={'center'}
-          flex={1}
-          gap={8}
+        <div
+          className="flex flex-row items-center flex-1 gap-2"
           style={{ overflow: 'hidden', position: 'relative' }}
         >
           <KnowledgeIcon
@@ -57,24 +48,31 @@ const PluginItem = memo<PluginItemProps>(
             size={{ file: 40, repo: 40 }}
             type={type}
           />
-          <Flexbox flex={1} gap={4} style={{ overflow: 'hidden', position: 'relative' }}>
-            <Flexbox horizontal align={'center'} gap={6}>
+          <div
+            className="flex flex-col flex-1 gap-1"
+            style={{ overflow: 'hidden', position: 'relative' }}
+          >
+            <div className="flex flex-row items-center gap-1.5">
               {visibility === 'private' && (
-                <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={12} />
+                <span className="anticon" role="img">
+                  <LockIcon
+                    color={cssVar.colorTextDescription}
+                    fill={'transparent'}
+                    height={12}
+                    size={12}
+                    width={12}
+                  />
+                </span>
               )}
-              <Text ellipsis className={styles.title}>
-                {name}
-              </Text>
-            </Flexbox>
+              <div className={cn('truncate min-w-0', styles.title)}>{name}</div>
+            </div>
             {description && (
-              <Text ellipsis className={styles.desc}>
-                {description}
-              </Text>
+              <div className={cn('truncate min-w-0', styles.desc)}>{description}</div>
             )}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {action === undefined ? <Actions enabled={enabled} id={id} type={type} /> : action}
-      </Flexbox>
+      </div>
     );
   },
 );

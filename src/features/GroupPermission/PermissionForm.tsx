@@ -1,22 +1,38 @@
 'use client';
 
-import type { FormGroupItemType } from '@lobehub/ui';
-import { Empty, Form, Icon } from '@lobehub/ui';
-import { Alert } from '@lobehub/ui/base-ui';
 import type { AgentModelSelectionPolicy, AgentTopicSharePolicy } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { Bot, InfoIcon, LockIcon, MonitorSmartphone, Share2, UsersIcon } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
-import { FORM_STYLE } from '@/const/layoutTokens';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import PolicySelect, { type PolicyOption } from '@/features/ResourcePermission/PolicySelect';
 import { getSelectionPolicyLabelKeys } from '@/features/ResourcePermission/selectionPolicyLabels';
 import { useAccessLevelOptions } from '@/features/ResourcePermission/useAccessLevelOptions';
 
 import { resolveGroupPermissionSections } from './permissionSections';
 import { useGroupPermission } from './useGroupPermission';
+
+interface PermissionFormRow {
+  avatar?: ReactNode;
+  children?: ReactNode;
+  desc?: ReactNode;
+  label?: ReactNode;
+}
+
+interface PermissionFormGroup {
+  children: PermissionFormRow[];
+  title?: ReactNode;
+}
 
 const styles = createStaticStyles(({ css }) => ({
   // Same one-line-icon alignment the Agent Permission form uses: FormTitle
@@ -140,22 +156,25 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
 
   if (sections.showPersonalEmpty) {
     return (
-      <Empty
-        description={t('permission.page.groupPersonalDesc')}
-        icon={LockIcon}
-        title={t('permission.page.groupPersonalTitle')}
-        type={'page'}
-      />
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant="icon">
+            <LockIcon />
+          </EmptyMedia>
+          <EmptyTitle>{t('permission.page.groupPersonalTitle')}</EmptyTitle>
+          <EmptyDescription>{t('permission.page.groupPersonalDesc')}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
     );
   }
 
-  const memberGroup: FormGroupItemType | undefined = sections.showAccessCard
+  const memberGroup: PermissionFormGroup | undefined = sections.showAccessCard
     ? {
         children: [
           {
             avatar: (
               <span className={styles.rowIcon}>
-                <Icon icon={UsersIcon} size={16} />
+                <UsersIcon size={16} />
               </span>
             ),
             children: (
@@ -183,7 +202,7 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
                 {
                   avatar: (
                     <span className={styles.rowIcon}>
-                      <Icon icon={Share2} size={16} />
+                      <Share2 size={16} />
                     </span>
                   ),
                   children: (
@@ -209,13 +228,13 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
   // Both rows write to the supervisor agent. Until group detail resolves one
   // there is no row to write to, so the whole card waits rather than offering
   // controls whose save would silently target nothing.
-  const configGroup: FormGroupItemType | undefined = sections.showConfigCard
+  const configGroup: PermissionFormGroup | undefined = sections.showConfigCard
     ? {
         children: [
           {
             avatar: (
               <span className={styles.rowIcon}>
-                <Icon icon={Bot} size={16} />
+                <Bot size={16} />
               </span>
             ),
             children: (
@@ -234,7 +253,7 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
           {
             avatar: (
               <span className={styles.rowIcon}>
-                <Icon icon={MonitorSmartphone} size={16} />
+                <MonitorSmartphone size={16} />
               </span>
             ),
             children: (
@@ -265,21 +284,38 @@ const PermissionForm = memo<PermissionFormProps>(({ groupId }) => {
       {/* Everything below describes what happens once the group is shared, so
           say that once, up front, instead of qualifying each control. */}
       {sections.showPrivateNotice ? (
-        <Alert
-          icon={<Icon icon={InfoIcon} />}
-          style={{ width: '100%' }}
-          title={t('permission.page.groupPrivateNotice')}
-          type={'info'}
-          variant={'outlined'}
-        />
+        <Alert style={{ width: '100%' }} variant="info">
+          <InfoIcon />
+          <AlertTitle>{t('permission.page.groupPrivateNotice')}</AlertTitle>
+        </Alert>
       ) : null}
-      <Form
-        collapsible={false}
-        items={[...(memberGroup ? [memberGroup] : []), ...(configGroup ? [configGroup] : [])]}
-        itemsType={'group'}
-        variant={'filled'}
-        {...FORM_STYLE}
-      />
+      <div className="flex flex-col gap-4">
+        {[memberGroup, configGroup]
+          .filter((group): group is PermissionFormGroup => !!group)
+          .map((group) => (
+            <div
+              className="flex flex-col gap-2 rounded-lg p-3"
+              key={String(group.title)}
+              style={{ background: cssVar.colorFillTertiary }}
+            >
+              <div className="text-sm font-medium">{group.title}</div>
+              {group.children.map((item, index) => (
+                <div className="flex items-center justify-between gap-4 py-1.5" key={index}>
+                  <div className="flex items-start gap-2.5">
+                    {item.avatar}
+                    <div className="flex flex-col">
+                      <span className="text-sm">{item.label}</span>
+                      <span className="text-xs" style={{ color: cssVar.colorTextDescription }}>
+                        {item.desc}
+                      </span>
+                    </div>
+                  </div>
+                  {item.children}
+                </div>
+              ))}
+            </div>
+          ))}
+      </div>
     </>
   );
 });

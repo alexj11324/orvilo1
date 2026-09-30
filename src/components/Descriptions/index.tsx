@@ -1,9 +1,13 @@
-import { type GridProps, type IconProps } from '@lobehub/ui';
-import { Flexbox, Grid, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx, responsive } from 'antd-style';
-import { type CSSProperties, type ReactNode } from 'react';
-import { memo } from 'react';
+import { cn } from 'cn';
+import { type LucideIcon } from 'lucide-react';
+import {
+  createElement,
+  type CSSProperties,
+  type HTMLAttributes,
+  memo,
+  type ReactNode,
+} from 'react';
 
 import CopyableLabel from '../CopyableLabel';
 
@@ -36,7 +40,7 @@ export interface DescriptionItem {
     value?: string;
   };
   copyable?: boolean;
-  icon?: IconProps['icon'];
+  icon?: LucideIcon | ReactNode;
   key: string;
   label: ReactNode;
   style?: CSSProperties;
@@ -47,15 +51,21 @@ export interface DescriptionItem {
   value: ReactNode;
 }
 
-interface DescriptionsProps extends Omit<GridProps, 'children' | 'wrap'> {
+interface DescriptionsProps extends Omit<HTMLAttributes<HTMLDivElement>, 'children'> {
   bordered?: boolean;
   classNames?: {
     item?: string;
     label?: string;
     value?: string;
   };
+  colon?: boolean;
+  column?: number;
   items: DescriptionItem[];
+  labelStyle?: CSSProperties;
   labelWidth?: number | string;
+  maxItemWidth?: number | string;
+  rows?: number;
+  size?: 'default' | 'middle' | 'small';
   styles?: {
     item?: CSSProperties;
     label?: CSSProperties;
@@ -74,24 +84,35 @@ const Descriptions = memo<DescriptionsProps>(
     classNames,
     styles: customStyles,
     wrap,
+    colon: _colon,
+    labelStyle,
+    maxItemWidth = 450,
+    column,
+    rows: _rows,
+    size: _size,
     ...rest
   }) => {
     return (
       <>
         {title && <h3 style={{ marginTop: 12 }}>{title}</h3>}
-        <Grid
+        <div
           className={cx(bordered && styles.bordered, className)}
-          gap={0}
-          maxItemWidth={450}
+          style={{
+            display: 'grid',
+            gridTemplateColumns: column
+              ? `repeat(${column}, 1fr)`
+              : `repeat(auto-fill, minmax(${typeof maxItemWidth === 'number' ? `${maxItemWidth}px` : (maxItemWidth ?? '450px')}, 1fr))`,
+          }}
           {...rest}
         >
           {items.map((item) => (
-            <Flexbox
-              horizontal
-              align={wrap ? 'flex-start' : 'center'}
-              className={cx(bordered && styles.cell, item.className, classNames?.item)}
-              flex={1}
+            <div
               key={item.key}
+              className={cn(
+                'flex flex-1',
+                wrap ? 'items-start' : 'items-center',
+                cx(bordered && styles.cell, item.className, classNames?.item),
+              )}
               style={{
                 overflow: wrap ? undefined : 'hidden',
                 position: 'relative',
@@ -99,21 +120,28 @@ const Descriptions = memo<DescriptionsProps>(
                 ...item.style,
               }}
             >
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={cx(bordered && styles.label)}
-                flex={'none'}
-                gap={6}
-                paddingBlock={bordered ? 12 : 4}
-                paddingInline={bordered ? 16 : 0}
-                style={{ height: '100%', position: 'relative' }}
-                width={labelWidth}
+              <div
+                className={cn('flex items-center', cx(bordered && styles.label))}
+                style={{
+                  flex: 'none',
+                  gap: 6,
+                  height: '100%',
+                  paddingBlock: bordered ? 12 : 4,
+                  paddingInline: bordered ? 16 : 0,
+                  position: 'relative',
+                  width: labelWidth,
+                  ...labelStyle,
+                }}
               >
-                {item.icon && <Icon color={cssVar.colorTextSecondary} icon={item.icon} />}
-                <Text
-                  ellipsis
-                  className={cx(classNames?.label, item.classNames?.label)}
+                {item.icon &&
+                  (typeof item.icon === 'function'
+                    ? createElement(item.icon as LucideIcon, {
+                        size: 16,
+                        style: { color: cssVar.colorTextSecondary },
+                      })
+                    : item.icon)}
+                <div
+                  className={cn('truncate min-w-0', cx(classNames?.label, item.classNames?.label))}
                   style={{
                     color: cssVar.colorTextSecondary,
                     ...customStyles?.label,
@@ -121,18 +149,15 @@ const Descriptions = memo<DescriptionsProps>(
                   }}
                 >
                   {item.label}
-                </Text>
-              </Flexbox>
-              <Flexbox
-                horizontal
-                align={wrap ? 'flex-start' : 'center'}
-                flex={1}
-                justify={'flex-start'}
-                paddingBlock={bordered ? 12 : 4}
-                paddingInline={16}
+                </div>
+              </div>
+              <div
+                className={cn('flex flex-1 justify-start', wrap ? 'items-start' : 'items-center')}
                 style={{
                   height: '100%',
                   overflow: wrap ? undefined : 'hidden',
+                  paddingBlock: bordered ? 12 : 4,
+                  paddingInline: 16,
                   position: 'relative',
                 }}
               >
@@ -144,9 +169,11 @@ const Descriptions = memo<DescriptionsProps>(
                     wrap={wrap}
                   />
                 ) : (
-                  <Text
-                    className={cx(classNames?.value, item.classNames?.value)}
-                    ellipsis={!wrap}
+                  <div
+                    className={cn(
+                      'truncate min-w-0',
+                      cx(classNames?.value, item.classNames?.value),
+                    )}
                     style={{
                       ...(wrap && {
                         overflowWrap: 'anywhere',
@@ -158,12 +185,12 @@ const Descriptions = memo<DescriptionsProps>(
                     }}
                   >
                     {item.value}
-                  </Text>
+                  </div>
                 )}
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           ))}
-        </Grid>
+        </div>
       </>
     );
   },

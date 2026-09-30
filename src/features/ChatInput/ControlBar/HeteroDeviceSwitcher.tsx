@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
 import type { DeviceExecutionTarget } from '@orvilo/types';
@@ -20,6 +18,9 @@ import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InstantSwitch from '@/components/InstantSwitch';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DOWNLOAD_URL } from '@/const/url';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
 import { useLocalSandboxCapability } from '@/features/ChatInput/hooks/useLocalSandboxCapability';
@@ -43,6 +44,7 @@ import { localFileService } from '@/services/electron/localFileService';
 import { useAgentStore } from '@/store/agent';
 import { useElectronStore } from '@/store/electron';
 
+import { SimpleTooltip } from '../SimpleTooltip';
 import { formatLockedControlTooltip } from '../utils/lockedControlTooltip';
 import { useCommitWorkingDirectory } from './useCommitWorkingDirectory';
 
@@ -342,10 +344,10 @@ const OptionRow = memo<OptionRowProps>(
       >
         <div className={styles.optionIcon}>{icon}</div>
         <div className={styles.optionMeta}>
-          <Flexbox horizontal align={'center'} gap={6}>
+          <div className="flex flex-row items-center gap-1.5">
             <span className={styles.optionTitle}>{label}</span>
             {tag ? <span className={styles.tag}>{tag}</span> : null}
-          </Flexbox>
+          </div>
           {desc ? <div className={styles.desc}>{desc}</div> : null}
         </div>
         {extra ? (
@@ -358,7 +360,11 @@ const OptionRow = memo<OptionRowProps>(
             {extra}
           </div>
         ) : null}
-        {active ? <Icon className={styles.check} icon={CheckIcon} size={14} /> : null}
+        {active ? (
+          <span className={cx('anticon', styles.check)} role="img">
+            <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+          </span>
+        ) : null}
       </div>
     );
   },
@@ -669,7 +675,11 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     // A fenced run looks identical to an unfenced one until a command fails, so
     // the chip — the only always-visible surface — has to say which it is.
     if (canShowExecutionTargetSelector && localSandboxEnabled) {
-      chipIcon = <Icon icon={ShieldCheckIcon} size={14} />;
+      chipIcon = (
+        <span className="anticon" role="img">
+          <ShieldCheckIcon fill={'transparent'} height={14} size={14} width={14} />
+        </span>
+      );
       chipLabel = t('heteroAgent.executionTarget.localSandbox');
     }
   } else if (chipExecutionTarget === 'device') {
@@ -717,15 +727,17 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
             {d.online ? null : (
               <Button
                 className={styles.reconnectButton}
-                icon={<Icon icon={RefreshCwIcon} size={10} />}
                 loading={reconnectingDeviceId === d.deviceId}
-                size={'small'}
-                type={'text'}
+                size="sm"
+                variant="ghost"
                 onClick={(event) => {
                   event.stopPropagation();
                   void handleReconnectDevice(d.deviceId);
                 }}
               >
+                <span className="anticon" data-icon="inline-start" role="img">
+                  <RefreshCwIcon fill={'transparent'} height={10} size={10} width={10} />
+                </span>
                 {t('heteroAgent.executionTarget.reconnect')}
               </Button>
             )}
@@ -737,16 +749,18 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   };
 
   const content = (
-    <Flexbox style={{ maxWidth: 320, minWidth: 280 }}>
+    <div className="flex flex-col" style={{ maxWidth: 320, minWidth: 280 }}>
       <div className={styles.header}>
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex flex-row items-center gap-1">
           <span className={styles.headerTitle}>{t('heteroAgent.executionTarget.title')}</span>
-          <Tooltip title={t('heteroAgent.executionTarget.infoTooltip')}>
+          <SimpleTooltip title={t('heteroAgent.executionTarget.infoTooltip')}>
             <span className={styles.headerInfo}>
-              <Icon icon={InfoIcon} size={12} />
+              <span className="anticon" role="img">
+                <InfoIcon fill={'transparent'} height={12} size={12} width={12} />
+              </span>
             </span>
-          </Tooltip>
-        </Flexbox>
+          </SimpleTooltip>
+        </div>
         {isDesktop || showWebDownloadCard ? (
           <button
             className={styles.manageButton}
@@ -756,7 +770,9 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
               navigate('/settings/devices');
             }}
           >
-            <Icon icon={SettingsIcon} size={11} />
+            <span className="anticon" role="img">
+              <SettingsIcon fill={'transparent'} height={11} size={11} width={11} />
+            </span>
             <span>{t('heteroAgent.executionTarget.manage')}</span>
           </button>
         ) : (
@@ -766,7 +782,9 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
             rel="noreferrer"
             target="_blank"
           >
-            <Icon icon={ExternalLinkIcon} size={11} />
+            <span className="anticon" role="img">
+              <ExternalLinkIcon fill={'transparent'} height={11} size={11} width={11} />
+            </span>
             <span>{t('heteroAgent.executionTarget.downloadDesktop')}</span>
           </a>
         )}
@@ -814,7 +832,6 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
         <OptionRow
           active={executionTarget === 'local' && localSandboxEnabled}
           disabled={!canUseLocalSandbox}
-          icon={<Icon icon={ShieldCheckIcon} size={14} />}
           label={t('heteroAgent.executionTarget.localSandbox')}
           desc={
             canUseLocalSandbox
@@ -835,22 +852,29 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
               <>
                 <InstantSwitch
                   enabled={localSandboxNetwork}
-                  size={'small'}
+                  size="sm"
                   onChange={handleToggleSandboxNetwork}
                 />
-                <Tooltip title={t('heteroAgent.executionTarget.localSandboxNetworkTip')}>
+                <SimpleTooltip title={t('heteroAgent.executionTarget.localSandboxNetworkTip')}>
                   <span className={styles.extraInfo}>
-                    <Icon icon={InfoIcon} size={12} />
+                    <span className="anticon" role="img">
+                      <InfoIcon fill={'transparent'} height={12} size={12} width={12} />
+                    </span>
                   </span>
-                </Tooltip>
+                </SimpleTooltip>
               </>
             ) : sandboxCapability?.canInstall ? (
               // The backend is missing but we can provision it — a dead-end row
               // would leave the user to discover a CLI incantation on their own.
-              <Button loading={isInstallingSandbox} size={'small'} onClick={handleInstallSandbox}>
+              <Button loading={isInstallingSandbox} size="sm" onClick={handleInstallSandbox}>
                 {t('heteroAgent.executionTarget.localSandboxSetUp')}
               </Button>
             ) : undefined
+          }
+          icon={
+            <span className="anticon" role="img">
+              <ShieldCheckIcon fill={'transparent'} height={14} size={14} width={14} />
+            </span>
           }
           onClick={() => void handleSelect('local', undefined, true)}
         />
@@ -921,7 +945,9 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
           target="_blank"
         >
           <div className={styles.optionIcon}>
-            <Icon icon={MonitorDownIcon} size={14} />
+            <span className="anticon" role="img">
+              <MonitorDownIcon fill={'transparent'} height={14} size={14} width={14} />
+            </span>
           </div>
           <div className={styles.optionMeta}>
             <div className={styles.optionTitle}>
@@ -931,20 +957,26 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
               {t('heteroAgent.executionTarget.downloadDesktopDesc')}
             </div>
           </div>
-          <Icon className={styles.downloadCardArrow} icon={ExternalLinkIcon} size={13} />
+          <span className={cx('anticon', styles.downloadCardArrow)} role="img">
+            <ExternalLinkIcon fill={'transparent'} height={13} size={13} width={13} />
+          </span>
         </a>
       ) : null}
       {hasNoDevices && !isLoading && isDesktop && !isWorkspaceAgent ? (
         <div className={styles.empty}>{t('heteroAgent.executionTarget.noDevices')}</div>
       ) : null}
-    </Flexbox>
+    </div>
   );
 
   const chip = (
     <div className={cx(styles.button, !canShowExecutionTargetSelector && styles.buttonReadonly)}>
       {chipIcon}
       <span className={styles.buttonLabel}>{chipLabel}</span>
-      {canShowExecutionTargetSelector ? <Icon icon={ChevronDownIcon} size={12} /> : null}
+      {canShowExecutionTargetSelector ? (
+        <span className="anticon" role="img">
+          <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+        </span>
+      ) : null}
     </div>
   );
 
@@ -954,23 +986,19 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   // instead of leaving an inert label.
   if (!canShowExecutionTargetSelector)
     return (
-      <Tooltip
+      <SimpleTooltip
         title={formatLockedControlTooltip(chipLabel, t('heteroAgent.executionTarget.fixedTip'))}
       >
         {chip}
-      </Tooltip>
+      </SimpleTooltip>
     );
 
   return (
-    <Popover
-      content={content}
-      open={open}
-      placement="topLeft"
-      styles={{ content: { padding: 4 } }}
-      trigger="click"
-      onOpenChange={setOpen}
-    >
-      {chip}
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger render={chip} />
+      <PopoverContent align={'start'} className={'w-auto'} side={'top'} style={{ padding: 4 }}>
+        {content}
+      </PopoverContent>
     </Popover>
   );
 });

@@ -1,11 +1,11 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Badge } from '@/components/reui/badge';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import NavItem from '@/features/NavPanel/components/NavItem';
 
@@ -21,7 +21,6 @@ interface GroupMemberItemProps {
 const GroupMemberItem = memo<GroupMemberItemProps>(
   ({ title, avatar, background, actions, isExternal }) => {
     const { t } = useTranslation('chat');
-
     return (
       <NavItem
         actions={actions}
@@ -35,16 +34,16 @@ const GroupMemberItem = memo<GroupMemberItemProps>(
           />
         }
         title={
-          <Flexbox horizontal align="center" gap={4}>
+          <div className="flex items-center gap-1">
             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
               {title}
             </span>
             {isExternal && (
-              <Tag size="small" style={{ flexShrink: 0 }}>
+              <Badge size="sm" style={{ flexShrink: 0 }} variant="primary-light">
                 {t('group.profile.external')}
-              </Tag>
+              </Badge>
             )}
-          </Flexbox>
+          </div>
         }
       />
     );

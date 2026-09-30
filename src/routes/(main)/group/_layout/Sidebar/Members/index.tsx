@@ -1,21 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
 import { ArrowUpDown, Loader2Icon, UserPlus } from 'lucide-react';
 import { type MouseEvent } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useInitGroupConfig } from '@/hooks/useInitGroupConfig';
 import { usePermission } from '@/hooks/usePermission';
@@ -62,20 +53,16 @@ const Members = memo<MembersProps>(({ itemKey }) => {
 
   return (
     <AccordionItem value={itemKey}>
-      <AccordionHeader>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-            {`${t('groupSidebar.tabs.members')} ${membersCount}`}
-          </Text>
-        </AccordionTrigger>
-        <div
-          className={cx(
-            'accordion-action',
-            accordionStyles.action,
-            accordionStyles.actionBorderless,
-          )}
-        >
-          <Flexbox horizontal align="center" gap={4}>
+      <div className="flex items-center">
+        <div className="min-w-0 flex-1">
+          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
+            <div className="truncate text-[12px] text-muted-foreground font-medium">
+              {`${t('groupSidebar.tabs.members')} ${membersCount}`}
+            </div>
+          </AccordionTrigger>
+        </div>
+        <div className="flex shrink-0 items-center">
+          <div className="flex items-center gap-1">
             {isRevalidating && <ActionIcon loading icon={Loader2Icon} size={'small'} />}
             {memberCount > 1 && (
               <ActionIcon
@@ -93,17 +80,17 @@ const Members = memo<MembersProps>(({ itemKey }) => {
               title={canEdit ? t('groupSidebar.members.addMember') : reason}
               onClick={handleAddMember}
             />
-          </Flexbox>
+          </div>
         </div>
-      </AccordionHeader>
-      <AccordionPanel contentStyle={{ padding: 0 }}>
-        <Flexbox gap={1} paddingBlock={1}>
+      </div>
+      <AccordionContent className="[&>div]:p-0">
+        <div className="flex flex-col" style={{ gap: 1, paddingBlock: 1 }}>
           <GroupMember
             addModalOpen={addModalOpen}
             groupId={activeGroupId}
             onAddModalOpenChange={setAddModalOpen}
           />
-        </Flexbox>
+        </div>
         {activeGroupId && (
           <SortMembersModal
             groupId={activeGroupId}
@@ -111,7 +98,7 @@ const Members = memo<MembersProps>(({ itemKey }) => {
             onCancel={() => setSortModalOpen(false)}
           />
         )}
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

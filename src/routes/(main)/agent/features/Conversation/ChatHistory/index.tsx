@@ -1,13 +1,19 @@
 'use client';
 
-import { Popover, type PopoverProps } from '@lobehub/ui';
-import { memo, useState } from 'react';
+import { type ComponentProps, memo, type ReactNode, useState } from 'react';
+
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import Content from './Content';
 
-interface ChatHistoryMenuProps extends Omit<PopoverProps, 'content' | 'onOpenChange' | 'open'> {
-  /** Trigger element — rendered inside the popover trigger slot. */
-  children: PopoverProps['children'];
+interface ChatHistoryMenuProps {
+  children: ReactNode;
+  classNames?: {
+    trigger?: string;
+  };
+  nativeButton?: boolean;
+  placement?: 'bottomLeft' | 'topRight' | 'bottom' | 'top';
+  triggerProps?: ComponentProps<'button'>;
 }
 
 /**
@@ -16,21 +22,28 @@ interface ChatHistoryMenuProps extends Omit<PopoverProps, 'content' | 'onOpenCha
  * `bottomLeft` under the title, `topRight` above the corner control).
  */
 const ChatHistoryMenu = memo<ChatHistoryMenuProps>(
-  ({ children, placement = 'bottomLeft', ...rest }) => {
+  ({ children, classNames, nativeButton = true, placement = 'bottomLeft', triggerProps }) => {
     const [open, setOpen] = useState(false);
+    const side = placement.startsWith('top') ? 'top' : 'bottom';
+    const align =
+      placement.endsWith('Left') || placement.endsWith('Top')
+        ? 'start'
+        : placement.endsWith('Right') || placement.endsWith('Bottom')
+          ? 'end'
+          : 'center';
 
     return (
-      <Popover
-        arrow={false}
-        content={<Content onNavigate={() => setOpen(false)} />}
-        open={open}
-        placement={placement}
-        styles={{ content: { padding: 0 } }}
-        trigger={'click'}
-        {...rest}
-        onOpenChange={setOpen}
-      >
-        {children}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          className={classNames?.trigger}
+          nativeButton={nativeButton}
+          {...triggerProps}
+        >
+          {children}
+        </PopoverTrigger>
+        <PopoverContent align={align} className="p-0" side={side}>
+          <Content onNavigate={() => setOpen(false)} />
+        </PopoverContent>
       </Popover>
     );
   },

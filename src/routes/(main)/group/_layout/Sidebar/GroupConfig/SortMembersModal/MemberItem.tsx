@@ -1,11 +1,13 @@
 'use client';
 
-import { SortableList } from '@lobehub/ui';
-import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { GripVertical } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Badge } from '@/components/reui/badge';
+import { SortableItemHandle } from '@/components/reui/sortable';
 import { DEFAULT_AVATAR } from '@/const/meta';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -30,7 +32,11 @@ const MemberItem = memo<MemberItemProps>(({ avatar, background, disabled, isExte
 
   return (
     <>
-      {!disabled && <SortableList.DragHandle />}
+      {!disabled && (
+        <SortableItemHandle>
+          <GripVertical size={14} />
+        </SortableItemHandle>
+      )}
       <Avatar
         emojiScaleWithBackground
         avatar={avatar || DEFAULT_AVATAR}
@@ -40,9 +46,9 @@ const MemberItem = memo<MemberItemProps>(({ avatar, background, disabled, isExte
       />
       <span className={styles.title}>{title}</span>
       {isExternal && (
-        <Tag size={'small'} style={{ flexShrink: 0 }}>
+        <Badge size="sm" style={{ flexShrink: 0 }} variant="primary-light">
           {t('group.profile.external')}
-        </Tag>
+        </Badge>
       )}
     </>
   );

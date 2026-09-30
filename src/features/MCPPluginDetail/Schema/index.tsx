@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -19,7 +18,7 @@ const Schema = memo(() => {
   const [resourcesMode, setResourcesMode] = useState<ModeType>(ModeType.Docs);
 
   return (
-    <Flexbox gap={40}>
+    <div className="flex flex-col" style={{ gap: 40 }}>
       <Block
         count={toolsCount || 0}
         desc={t('mcp.details.schema.tools.desc')}
@@ -56,7 +55,7 @@ const Schema = memo(() => {
       >
         <Resources mode={resourcesMode} />
       </Block>
-    </Flexbox>
+    </div>
   );
 });
 

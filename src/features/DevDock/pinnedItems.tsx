@@ -1,7 +1,10 @@
 'use client';
 
-import { type DropdownItem, DropdownMenu, Switch } from '@lobehub/ui/base-ui';
 import { Component, memo, type PropsWithChildren, Suspense, useSyncExternalStore } from 'react';
+
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Switch } from '@/components/ui/switch';
 
 import {
   type DevDockActionItem,
@@ -47,7 +50,7 @@ export const PinnedToggle = memo<{ item: DevDockToggleItem }>(({ item }) => {
   const checked = useSyncExternalStore(item.subscribe, item.getChecked, item.getChecked);
   return (
     <label style={{ alignItems: 'center', cursor: 'pointer', display: 'inline-flex', gap: 5 }}>
-      <Switch checked={checked} size={'small'} onChange={item.onToggle} />
+      <Switch checked={checked} size="sm" onCheckedChange={item.onToggle} />
       <span>{item.label}</span>
     </label>
   );
@@ -75,7 +78,7 @@ export const PinnedSelect = memo<{ item: DevDockSelectItem }>(({ item }) => {
     <DropdownMenu
       items={buildItems}
       placement={'topRight'}
-      popupProps={{ style: { maxHeight: 360, minWidth: 180, overflow: 'auto' } }}
+      popupClassName={'max-h-90 min-w-45 overflow-auto'}
     >
       <span className={barButtonStyles.button} title={item.label}>
         <Icon size={11} />

@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -27,11 +25,11 @@ const EMPTY_LEFT_ACTIONS: [] = [];
 const Welcome = memo(() => {
   const { t } = useTranslation('chat');
   return (
-    <Flexbox align={'center'} flex={1} justify={'center'} padding={24}>
-      <Text style={{ fontSize: 14, textAlign: 'center' }} type={'secondary'}>
+    <div className="flex flex-col items-center flex-1 justify-center" style={{ padding: 24 }}>
+      <div className="text-muted-foreground" style={{ fontSize: 14, textAlign: 'center' }}>
         {t('goalChat.welcome')}
-      </Text>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -51,11 +49,11 @@ const Conversation = memo<{ onCollapse: () => void }>(({ onCollapse }) => {
 
   return (
     <DragUploadZone style={{ flex: 1, height: '100%' }} onUploadFiles={handleUploadFiles}>
-      <Flexbox flex={1} height={'100%'} style={{ overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1 h-full" style={{ overflow: 'hidden' }}>
         <Toolbar onCollapse={onCollapse} />
-        <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+        <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
           <ChatList welcome={<Welcome />} />
-        </Flexbox>
+        </div>
         <ChatInput
           actionBarStyle={COMPACT_ACTION_BAR_STYLE}
           allowExpand={false}
@@ -63,7 +61,7 @@ const Conversation = memo<{ onCollapse: () => void }>(({ onCollapse }) => {
           sendButtonProps={COMPACT_SEND_BUTTON_PROPS}
           showControlBar={false}
         />
-      </Flexbox>
+      </div>
     </DragUploadZone>
   );
 });

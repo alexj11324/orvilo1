@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox, SortableList } from '@lobehub/ui';
 import { type AgentGroupMember } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
+import { Sortable, SortableItem } from '@/components/reui/sortable';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
@@ -61,27 +61,13 @@ const SortMembersModal = memo<SortMembersModalProps>(({ groupId, open, onCancel 
       width={400}
       onCancel={onCancel}
     >
-      <Flexbox gap={2}>
-        <SortableList
-          items={list}
-          renderItem={(item: AgentGroupMember) => (
-            <SortableList.Item
-              horizontal
-              align={'center'}
-              className={styles.item}
-              gap={8}
-              id={item.id}
-            >
-              <MemberItem
-                avatar={item.avatar || undefined}
-                background={item.backgroundColor ?? undefined}
-                disabled={!canEdit}
-                isExternal={!item.virtual}
-                title={item.title || t('defaultSession', { ns: 'common' })}
-              />
-            </SortableList.Item>
-          )}
-          onChange={(next: AgentGroupMember[]) => {
+      <div className="flex flex-col gap-0.5">
+        <Sortable
+          className="flex flex-col gap-0.5"
+          getItemValue={(item: AgentGroupMember) => item.id}
+          value={list}
+          onValueChange={setList}
+          onValueCommit={(next: AgentGroupMember[]) => {
             if (!canEdit) return;
 
             setList(next);
@@ -90,8 +76,24 @@ const SortMembersModal = memo<SortMembersModalProps>(({ groupId, open, onCancel 
               next.map((member) => member.id),
             );
           }}
-        />
-      </Flexbox>
+        >
+          {list.map((item: AgentGroupMember) => (
+            <SortableItem
+              className={cx(styles.item, 'flex items-center gap-2')}
+              key={item.id}
+              value={item.id}
+            >
+              <MemberItem
+                avatar={item.avatar || undefined}
+                background={item.backgroundColor ?? undefined}
+                disabled={!canEdit}
+                isExternal={!item.virtual}
+                title={item.title || t('defaultSession', { ns: 'common' })}
+              />
+            </SortableItem>
+          ))}
+        </Sortable>
+      </div>
     </ImperativeModal>
   );
 });

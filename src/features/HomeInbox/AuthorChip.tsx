@@ -1,12 +1,13 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { DEFAULT_USER_AVATAR_URL } from '@orvilo/const';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { AlarmClockIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useWorkspaceMemberProfiles } from '@/business/client/hooks/useWorkspaceMemberProfiles';
+import Avatar from '@/components/Avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 const AVATAR_SIZE = 16;
 
@@ -42,10 +43,10 @@ const AuthorChip = memo<AuthorChipProps>(({ userId, trigger }) => {
 
   if (trigger === 'cron')
     return (
-      <Flexbox horizontal align={'center'} className={styles.chip} gap={4}>
-        <Icon color={cssVar.colorTextQuaternary} icon={AlarmClockIcon} size={12} />
+      <div className={cx(styles.chip, 'flex items-center gap-1')}>
+        <AlarmClockIcon color={cssVar.colorTextQuaternary} size={12} />
         <span className={styles.label}>{t('inbox.author.scheduled')}</span>
-      </Flexbox>
+      </div>
     );
 
   const profile = userId ? profiles.get(userId) : undefined;
@@ -54,18 +55,27 @@ const AuthorChip = memo<AuthorChipProps>(({ userId, trigger }) => {
   const name = profile.fullName || profile.username || '';
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.chip} gap={4}>
-      <Tooltip title={name}>
-        <Avatar
-          avatar={profile.avatar || DEFAULT_USER_AVATAR_URL}
-          shape={'circle'}
-          size={AVATAR_SIZE}
-        />
-      </Tooltip>
-      <Text ellipsis className={styles.label} style={{ maxWidth: 72 }}>
+    <div className={cx(styles.chip, 'flex items-center gap-1')}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex">
+                <Avatar
+                  avatar={profile.avatar || DEFAULT_USER_AVATAR_URL}
+                  shape={'circle'}
+                  size={AVATAR_SIZE}
+                />
+              </span>
+            }
+          />
+          <TooltipContent>{name}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <div className={cn('truncate', 'block', styles.label)} style={{ maxWidth: 72 }}>
         {name}
-      </Text>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

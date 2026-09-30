@@ -9,7 +9,7 @@ const { connectGitHubMcp, remoteServerUrl, status } = vi.hoisted(() => ({
   status: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({ toast: { error: vi.fn() } }));
+vi.mock('@/components/toast', () => ({ toast: { error: vi.fn() } }));
 vi.mock('@orvilo/const', () => ({ isDesktop: true }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key }) }));
 vi.mock('@/services/githubOAuth', () => ({ githubOAuthService: { status } }));

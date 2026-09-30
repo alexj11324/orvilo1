@@ -2,6 +2,159 @@
 
 # Changelog
 
+## [Version 2.5.0](https://github.com/alexj11324/orvilo1/compare/v2.4.2-canary.8...v2.5.0)
+
+<sup>Released on **2026-09-30**</sup>
+
+#### 🐛 Bug Fixes
+
+- **test**: point chunk-error toast mock at @/components/toast.
+- **ui**: restore WideScreenContainer style merge + non-modal menus.
+- **ui**: restore column direction on migrated bare Flexbox sites.
+- **oauth**: set consent loading on form submit so POST is not cancelled.
+- **oauth**: set authorize loading on form submit, assert device POST in e2e.
+- **e2e**: locate confirm popups by alertdialog role.
+- **tasks**: surface schedule dialog API failures via localized toasts.
+- **misc**: persist milestone reorders after sortable drag.
+- **ts**: repair migration-induced type errors in AgentViewAll/ConnectAgent/WorkingDirectory.
+- **ts**: repair migration-induced type errors in AgentSetting/Automations/AgentViewAll/AgentMockDevtools.
+- **ts**: repair migration-induced type errors in Conversation + ChatInput.
+- **ts**: repair migration-induced type errors in Home/Work/DevPanel/PageEditor.
+- **ui**: repair b11b migration regressions — missing cn imports, duplicate className, type-only modal imports, leaked div type prop, compact ToolTag variant, accordion action hover, signin link semantics.
+- **ui**: use Select adapter default export in pagination and schema fields.
+- **ui**: convert className string-literal codemod artifacts to real expressions + retarget dead lobehub base-ui test mocks (b13).
+- **ui**: import named Textarea in teammate invite.
+- **settings**: expose migrated form item rows.
+- **conversation**: ErrorAlert self-hides on close + params-loading testid back in Skeleton mock.
+- **reui**: restore migrated sidebar and conversation flows.
+- **modal**: preserve content during exit.
+- **ui**: restore content lost during ReUI migration.
+- **ui**: restore hover popover, TextArea row bounds and stepper states after ReUI migration.
+- **ui**: drop leftover lobehub flex props on plain divs.
+- **ui**: restore lobehub Flexbox column default after ReUI migration.
+- **ImageSearchRef**: use anchor as popover trigger instead of nested interactive wrapper.
+- **sidebar**: fall back to global icon rail while collapsed on panel routes.
+- **sidebar**: skeleton on panel routes while registering + key panel swaps by navKey.
+- **workspace**: keep slug unresolved while workspace list has no data (fixes cold-load false 404).
+- **settings-sidebar**: drop empty groups, plain group labels, user icon fallback, back-row nowrap.
+- **sidebar**: scope global search row to the home nav, not the column.
+- **sidebar**: wrap settings panels in SideBarLayout for scroll/tooltip chrome.
+- **misc**: repair 8 typecheck errors from ReUI migration and sidebar-merge rewrite.
+- **ci**: diff Linear Tokens gate via refs/pull/N/head instead of capped gh pr diff.
+- **ci**: diff Linear Tokens gate via refs/pull/N/head instead of capped gh pr diff.
+- **misc**: restore route nav panels beside global sidebar via in-page RoutePanelColumn.
+- **context-menu**: accept NativeContextMenuItem in sidebar menu props.
+- **misc**: light sidebar palette on web under light theme.
+- **misc**: theme-aware sidebar + keep modal alive under open Selects.
+- **misc**: suspend modal outside-dismiss while dialog Select is open.
+- **misc**: drop empty cn-menu-target utility breaking Tailwind build.
+
+#### ♻️ Code Refactoring
+
+- **ui**: mop up last lobehub/antd residual imports.
+- **ui**: migrate HotkeyHelperPanel Tabs to ReUI primitives.
+- **ui**: migrate MCP/PluginDevModal/PluginTag to ReUI primitives.
+- **ui**: remove duplicate Ollama guide content after migration.
+- **ui**: migrate b11b features to ReUI primitives.
+- **ui**: migrate app shells/components/store/layout to ReUI (b9).
+- **ui**: migrate builtin-tool packages + shared-tool-ui off lobehub base-ui to ReUI (b12).
+- **ui**: migrate AgentSetting/Auth/Electron/ResourceManager/Settings/User off lobehub base-ui to ReUI (b7).
+- **ui**: migrate Acceptance/AgentGoals/Automations/DevDock/SelfLearning to ReUI (b6).
+- **ui**: migrate LibraryModal/PageEditor/Portal/ResourcePermission/ShareModal to ReUI (b4).
+
+#### ✨ Features
+
+- **ui**: add shadcn breadcrumb primitive for antd Breadcrumb migration.
+- **sidebar**: swap route panels into the single sidebar column (Linear-style).
+- **misc**: wire due-date + remind-me into task surfaces, migrate rail pickers to ReUI.
+- **misc**: add task dueDate + per-user reminders with sweep delivery.
+- **misc**: expand task context menu with labels, project, favorite, rename, copy variants.
+
+#### 💄 Styles
+
+- **misc**: rebuild schedule dialog on ReUI schedule composition, define cn-menu utilities.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **test**: point chunk-error toast mock at @/components/toast ([ab4a6e2](https://github.com/alexj11324/orvilo1/commit/ab4a6e2))
+- **ui**: restore WideScreenContainer style merge + non-modal menus ([506e3e2](https://github.com/alexj11324/orvilo1/commit/506e3e2))
+- **ui**: restore column direction on migrated bare Flexbox sites ([5528e1a](https://github.com/alexj11324/orvilo1/commit/5528e1a))
+- **oauth**: set consent loading on form submit so POST is not cancelled ([c606898](https://github.com/alexj11324/orvilo1/commit/c606898))
+- **oauth**: set authorize loading on form submit, assert device POST in e2e ([00012b9](https://github.com/alexj11324/orvilo1/commit/00012b9))
+- **e2e**: locate confirm popups by alertdialog role ([b0cfbf8](https://github.com/alexj11324/orvilo1/commit/b0cfbf8))
+- **tasks**: surface schedule dialog API failures via localized toasts ([ab1b8f0](https://github.com/alexj11324/orvilo1/commit/ab1b8f0))
+- **misc**: persist milestone reorders after sortable drag ([808ad2f](https://github.com/alexj11324/orvilo1/commit/808ad2f))
+- **ts**: repair migration-induced type errors in AgentViewAll/ConnectAgent/WorkingDirectory ([d9b6937](https://github.com/alexj11324/orvilo1/commit/d9b6937))
+- **ts**: repair migration-induced type errors in AgentSetting/Automations/AgentViewAll/AgentMockDevtools ([58fcd89](https://github.com/alexj11324/orvilo1/commit/58fcd89))
+- **ts**: repair migration-induced type errors in Conversation + ChatInput ([5397d69](https://github.com/alexj11324/orvilo1/commit/5397d69))
+- **ts**: repair migration-induced type errors in Home/Work/DevPanel/PageEditor ([f6271ed](https://github.com/alexj11324/orvilo1/commit/f6271ed))
+- **ui**: repair b11b migration regressions — missing cn imports, duplicate className, type-only modal imports, leaked div type prop, compact ToolTag variant, accordion action hover, signin link semantics ([5a3c1bc](https://github.com/alexj11324/orvilo1/commit/5a3c1bc))
+- **ui**: use Select adapter default export in pagination and schema fields ([ef0981f](https://github.com/alexj11324/orvilo1/commit/ef0981f))
+- **ui**: convert className string-literal codemod artifacts to real expressions + retarget dead lobehub base-ui test mocks (b13) ([14ea167](https://github.com/alexj11324/orvilo1/commit/14ea167))
+- **ui**: import named Textarea in teammate invite ([8b65a88](https://github.com/alexj11324/orvilo1/commit/8b65a88))
+- **settings**: expose migrated form item rows ([b08a227](https://github.com/alexj11324/orvilo1/commit/b08a227))
+- **conversation**: ErrorAlert self-hides on close + params-loading testid back in Skeleton mock ([777284e](https://github.com/alexj11324/orvilo1/commit/777284e))
+- **reui**: restore migrated sidebar and conversation flows ([c1f3c67](https://github.com/alexj11324/orvilo1/commit/c1f3c67))
+- **modal**: preserve content during exit ([638d59e](https://github.com/alexj11324/orvilo1/commit/638d59e))
+- **ui**: restore content lost during ReUI migration ([a9dba98](https://github.com/alexj11324/orvilo1/commit/a9dba98))
+- **ui**: restore hover popover, TextArea row bounds and stepper states after ReUI migration ([c3a2806](https://github.com/alexj11324/orvilo1/commit/c3a2806))
+- **ui**: drop leftover lobehub flex props on plain divs ([92f1760](https://github.com/alexj11324/orvilo1/commit/92f1760))
+- **ui**: restore lobehub Flexbox column default after ReUI migration ([c74a07b](https://github.com/alexj11324/orvilo1/commit/c74a07b))
+- **ImageSearchRef**: use anchor as popover trigger instead of nested interactive wrapper ([5ba87f5](https://github.com/alexj11324/orvilo1/commit/5ba87f5))
+- **sidebar**: fall back to global icon rail while collapsed on panel routes ([6172177](https://github.com/alexj11324/orvilo1/commit/6172177))
+- **sidebar**: skeleton on panel routes while registering + key panel swaps by navKey ([2420b01](https://github.com/alexj11324/orvilo1/commit/2420b01))
+- **workspace**: keep slug unresolved while workspace list has no data (fixes cold-load false 404) ([18bdc8d](https://github.com/alexj11324/orvilo1/commit/18bdc8d))
+- **settings-sidebar**: drop empty groups, plain group labels, user icon fallback, back-row nowrap ([08512e5](https://github.com/alexj11324/orvilo1/commit/08512e5))
+- **sidebar**: scope global search row to the home nav, not the column ([f615ee8](https://github.com/alexj11324/orvilo1/commit/f615ee8))
+- **sidebar**: wrap settings panels in SideBarLayout for scroll/tooltip chrome ([90715d9](https://github.com/alexj11324/orvilo1/commit/90715d9))
+- **misc**: repair 8 typecheck errors from ReUI migration and sidebar-merge rewrite ([36ac5d7](https://github.com/alexj11324/orvilo1/commit/36ac5d7))
+- **ci**: diff Linear Tokens gate via refs/pull/N/head instead of capped gh pr diff ([b3be820](https://github.com/alexj11324/orvilo1/commit/b3be820))
+- **ci**: diff Linear Tokens gate via refs/pull/N/head instead of capped gh pr diff ([4d794f9](https://github.com/alexj11324/orvilo1/commit/4d794f9))
+- **misc**: restore route nav panels beside global sidebar via in-page RoutePanelColumn ([33966ef](https://github.com/alexj11324/orvilo1/commit/33966ef))
+- **context-menu**: accept NativeContextMenuItem in sidebar menu props ([061f20e](https://github.com/alexj11324/orvilo1/commit/061f20e))
+- **misc**: light sidebar palette on web under light theme ([a63362b](https://github.com/alexj11324/orvilo1/commit/a63362b))
+- **misc**: theme-aware sidebar + keep modal alive under open Selects ([cd39c8a](https://github.com/alexj11324/orvilo1/commit/cd39c8a))
+- **misc**: suspend modal outside-dismiss while dialog Select is open ([cc5bfc1](https://github.com/alexj11324/orvilo1/commit/cc5bfc1))
+- **misc**: drop empty cn-menu-target utility breaking Tailwind build ([6d4bf00](https://github.com/alexj11324/orvilo1/commit/6d4bf00))
+
+#### Code Refactoring
+
+- **ui**: mop up last lobehub/antd residual imports ([d3ee67c](https://github.com/alexj11324/orvilo1/commit/d3ee67c))
+- **ui**: migrate HotkeyHelperPanel Tabs to ReUI primitives ([8abbe4a](https://github.com/alexj11324/orvilo1/commit/8abbe4a))
+- **ui**: migrate MCP/PluginDevModal/PluginTag to ReUI primitives ([f08e456](https://github.com/alexj11324/orvilo1/commit/f08e456))
+- **ui**: remove duplicate Ollama guide content after migration ([3d86823](https://github.com/alexj11324/orvilo1/commit/3d86823))
+- **ui**: migrate b11b features to ReUI primitives ([ce6a1b1](https://github.com/alexj11324/orvilo1/commit/ce6a1b1))
+- **ui**: migrate app shells/components/store/layout to ReUI (b9) ([25ab7c9](https://github.com/alexj11324/orvilo1/commit/25ab7c9))
+- **ui**: migrate builtin-tool packages + shared-tool-ui off lobehub base-ui to ReUI (b12) ([61fcee6](https://github.com/alexj11324/orvilo1/commit/61fcee6))
+- **ui**: migrate AgentSetting/Auth/Electron/ResourceManager/Settings/User off lobehub base-ui to ReUI (b7) ([e323409](https://github.com/alexj11324/orvilo1/commit/e323409))
+- **ui**: migrate Acceptance/AgentGoals/Automations/DevDock/SelfLearning to ReUI (b6) ([50d0fc8](https://github.com/alexj11324/orvilo1/commit/50d0fc8))
+- **ui**: migrate LibraryModal/PageEditor/Portal/ResourcePermission/ShareModal to ReUI (b4) ([a9b71e6](https://github.com/alexj11324/orvilo1/commit/a9b71e6))
+
+#### What's improved
+
+- **ui**: add shadcn breadcrumb primitive for antd Breadcrumb migration ([d837246](https://github.com/alexj11324/orvilo1/commit/d837246))
+- **sidebar**: swap route panels into the single sidebar column (Linear-style) ([f720c41](https://github.com/alexj11324/orvilo1/commit/f720c41))
+- **misc**: wire due-date + remind-me into task surfaces, migrate rail pickers to ReUI ([385d855](https://github.com/alexj11324/orvilo1/commit/385d855))
+- **misc**: add task dueDate + per-user reminders with sweep delivery ([d887456](https://github.com/alexj11324/orvilo1/commit/d887456))
+- **misc**: expand task context menu with labels, project, favorite, rename, copy variants ([88b32bc](https://github.com/alexj11324/orvilo1/commit/88b32bc))
+
+#### Styles
+
+- **misc**: rebuild schedule dialog on ReUI schedule composition, define cn-menu utilities ([13f1703](https://github.com/alexj11324/orvilo1/commit/13f1703))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
 ### [Version 2.4.1](https://github.com/alexj11324/orvilo1/compare/v2.4.0...v2.4.1)
 
 <sup>Released on **2026-09-29**</sup>

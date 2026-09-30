@@ -1,7 +1,8 @@
 'use client';
 
-import { SortableList } from '@lobehub/ui';
 import { memo, useCallback } from 'react';
+
+import { Sortable } from '@/components/reui/sortable';
 
 import AddItemRow from './AddItemRow';
 import SortableItem from './SortableItem';
@@ -17,18 +18,13 @@ const TodoList = memo<TodoListProps>(({ placeholder }) => {
   const sortItems = useTodoListStore((s) => s.sortItems);
 
   const handleSortEnd = useCallback(
-    (sorted: unknown[]) => {
-      sortItems(sorted as TodoListItem[]);
+    (sorted: TodoListItem[]) => {
+      sortItems(sorted);
     },
     [sortItems],
   );
 
-  const renderItem = useCallback(
-    (item: TodoListItem) => {
-      return <SortableItem id={item.id} placeholder={placeholder} />;
-    },
-    [placeholder],
-  );
+  const getItemValue = useCallback((item: TodoListItem) => item.id, []);
 
   // Empty state
   if (items.length === 0) {
@@ -41,14 +37,17 @@ const TodoList = memo<TodoListProps>(({ placeholder }) => {
 
   return (
     <>
-      <SortableList
-        gap={0}
-        items={items}
+      <Sortable
+        className="flex flex-col"
+        getItemValue={getItemValue}
         key={listKey}
-        renderItem={renderItem}
-        style={{ marginBottom: 0 }}
-        onChange={handleSortEnd}
-      />
+        value={items}
+        onValueChange={handleSortEnd}
+      >
+        {items.map((item) => (
+          <SortableItem id={item.id} key={item.id} placeholder={placeholder} />
+        ))}
+      </Sortable>
       <AddItemRow placeholder={placeholder} />
     </>
   );

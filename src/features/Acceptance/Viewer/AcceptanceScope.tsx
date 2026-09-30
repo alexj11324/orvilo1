@@ -1,11 +1,17 @@
 'use client';
 
-import { Center, Empty } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { createContext, type ReactNode, use } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { isTrpcErrorCode } from '@/utils/trpcError';
 
 import { useAcceptanceBundle } from './useAcceptanceBundle';
@@ -51,9 +57,9 @@ export const AcceptanceBundleGate = ({
 
   if (isLoading && !data) {
     return (
-      <Center height={height}>
+      <div className="flex flex-col items-center justify-center" style={{ height }}>
         <NeuralNetworkLoading size={48} />
-      </Center>
+      </div>
     );
   }
 
@@ -65,22 +71,30 @@ export const AcceptanceBundleGate = ({
    */
   if (!data && isTrpcErrorCode(error, 'NOT_FOUND')) {
     return (
-      <Center height={height}>
-        <Empty
-          description={t('acceptance.notFound.description')}
-          title={t('acceptance.notFound.title')}
-        />
-      </Center>
+      <div className="flex flex-col items-center justify-center" style={{ height }}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>{t('acceptance.notFound.title')}</EmptyTitle>
+            <EmptyDescription>{t('acceptance.notFound.description')}</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      </div>
     );
   }
 
   if (!data) {
     return (
-      <Center height={height}>
-        <Empty description={t('acceptance.error.description')} title={t('acceptance.error.title')}>
-          <Button onClick={() => void mutate()}>{t('report.actions.retry')}</Button>
+      <div className="flex flex-col items-center justify-center" style={{ height }}>
+        <Empty>
+          <EmptyHeader>
+            <EmptyTitle>{t('acceptance.error.title')}</EmptyTitle>
+            <EmptyDescription>{t('acceptance.error.description')}</EmptyDescription>
+          </EmptyHeader>
+          <EmptyContent>
+            <Button onClick={() => void mutate()}>{t('report.actions.retry')}</Button>
+          </EmptyContent>
         </Empty>
-      </Center>
+      </div>
     );
   }
 

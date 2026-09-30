@@ -1,7 +1,8 @@
-import type * as BaseUI from '@lobehub/ui/base-ui';
 import { act, render, screen } from '@testing-library/react';
 import type { ComponentType } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type { Select } from '@/components/ui/select';
 
 import WorkspaceAgentDevicePolicy from './WorkspaceAgentDevicePolicy';
 
@@ -24,8 +25,8 @@ const testState = vi.hoisted(() => ({
 
 const selectPropsSpy = vi.hoisted(() => vi.fn());
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
-  const actual = await importOriginal<typeof BaseUI>();
+vi.mock('@/components/ui/select', async (importOriginal) => {
+  const actual = await importOriginal<{ Select: typeof Select }>();
   const ActualSelect = actual.Select as ComponentType<Record<string, unknown>>;
   return {
     ...actual,
@@ -87,9 +88,8 @@ describe('WorkspaceAgentDevicePolicy', () => {
     expect(screen.queryByRole('switch')).toBeNull();
 
     const selectProps = selectPropsSpy.mock.lastCall?.[0] as Record<string, unknown>;
-    expect(selectProps.popupMatchSelectWidth).toBe(true);
     expect(selectProps.disabled).toBeFalsy();
-    expect(selectProps.loading).toBeFalsy();
+    expect(selectProps.items).toBeTruthy();
 
     await act(async () => finishSave?.());
   });

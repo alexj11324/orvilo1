@@ -1,13 +1,13 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Button, SkeletonText, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { PowerOff, RotateCcw, TriangleAlert, Unlink } from 'lucide-react';
-import type { CSSProperties } from 'react';
+import { createElement, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { TransferManifest } from '@/services/resourceTransferRequest';
 
 import type { ManifestImpact, TransferManifestPerspective } from './transferManifestRows';
@@ -29,18 +29,20 @@ interface RenderRow {
 }
 
 const ManifestRow = ({ icon, text, warning }: Omit<RenderRow, 'id'>) => (
-  <Flexbox horizontal align="flex-start" gap={8}>
-    <Icon
-      color={warning ? cssVar.colorWarning : cssVar.colorTextTertiary}
-      icon={icon}
-      size={14}
-      // Optically centres a 14px glyph on the 12px/19px text line.
-      style={{ flex: 'none', marginBlockStart: 2 }}
-    />
-    <Text fontSize={12} type={warning ? 'warning' : 'secondary'}>
+  <div className="flex flex-row items-start gap-2">
+    <span className="anticon" role="img" style={{ flex: 'none', marginBlockStart: 2 }}>
+      {createElement(icon, {
+        size: 14,
+        width: 14,
+        height: 14,
+        color: warning ? cssVar.colorWarning : cssVar.colorTextTertiary,
+        fill: 'transparent',
+      })}
+    </span>
+    <div className={warning ? 'text-[12px] text-warning' : 'text-[12px] text-muted-foreground'}>
       {text}
-    </Text>
-  </Flexbox>
+    </div>
+  </div>
 );
 
 export interface TransferManifestListProps {
@@ -86,7 +88,7 @@ const TransferManifestList = ({
   // "nothing rides along" — that silence is exactly what this feature removes.
   if (error)
     return (
-      <Flexbox gap={8} style={style}>
+      <div className="flex flex-col gap-2" style={style}>
         <ManifestRow
           warning
           icon={TriangleAlert}
@@ -99,14 +101,14 @@ const TransferManifestList = ({
         {onRetry && (
           <Button
             loading={retrying}
-            size="small"
+            size="sm"
             style={{ alignSelf: 'flex-start', marginInlineStart: 22 }}
             onClick={onRetry}
           >
             {t('transferRequest.manifestRetry')}
           </Button>
         )}
-      </Flexbox>
+      </div>
     );
 
   // A skeleton rather than nothing: the summary is the reason to pause before
@@ -114,9 +116,17 @@ const TransferManifestList = ({
   // label carries the same news to a screen reader, which a skeleton cannot.
   if (loading || !manifest)
     return loading ? (
-      <Flexbox aria-label={t('transferRequest.manifestLoading')} role="status" style={style}>
-        <SkeletonText fontSize={12} gap={8} rows={2} width={['88%', '64%']} />
-      </Flexbox>
+      <div
+        aria-label={t('transferRequest.manifestLoading')}
+        className="flex flex-col"
+        role="status"
+        style={style}
+      >
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3" style={{ width: '88%' }} />
+          <Skeleton className="h-3" style={{ width: '64%' }} />
+        </div>
+      </div>
     ) : null;
 
   const rows = buildTransferManifestRows(manifest, perspective);
@@ -133,18 +143,18 @@ const TransferManifestList = ({
 
   if (variant === 'inline')
     return (
-      <Flexbox gap={8} style={style}>
+      <div className="flex flex-col gap-2" style={style}>
         {list}
-      </Flexbox>
+      </div>
     );
 
   return (
-    <Block gap={8} padding={12} style={style} variant="filled">
-      <Text fontSize={12} type="secondary" weight={500}>
+    <div className="flex flex-col gap-2 p-3 rounded-lg bg-secondary" style={style}>
+      <div className="text-[12px] text-muted-foreground font-medium">
         {t('transferRequest.manifestTitle')}
-      </Text>
+      </div>
       {list}
-    </Block>
+    </div>
   );
 };
 

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { type ChatFileItem } from '@/types/index';
@@ -11,11 +10,11 @@ interface FileListViewerProps {
 
 const FileListViewer = memo<FileListViewerProps>(({ items }) => {
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {items.map((item) => (
         <FileItem key={item.id} {...item} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 export default FileListViewer;

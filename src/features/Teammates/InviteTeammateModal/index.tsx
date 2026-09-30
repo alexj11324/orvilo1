@@ -1,5 +1,6 @@
-import { createModal } from '@lobehub/ui/base-ui';
 import { lazy, Suspense } from 'react';
+
+import { createModal } from '@/components/Modal';
 
 const InviteTeammateContent = lazy(() => import('./InviteTeammateContent'));
 const InviteTeammateTitle = lazy(() =>

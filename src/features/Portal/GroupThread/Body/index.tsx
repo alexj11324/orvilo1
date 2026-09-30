@@ -1,16 +1,14 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-
 import ThreadChatList from './ThreadChatList';
 
 const Body = () => {
   return (
-    <Flexbox height={'100%'}>
-      <Flexbox flex={1} style={{ overflow: 'hidden', position: 'relative' }}>
+    <div className="flex flex-col h-[100%]">
+      <div className="flex flex-col flex-1" style={{ overflow: 'hidden', position: 'relative' }}>
         <ThreadChatList />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

@@ -1,11 +1,11 @@
 import { type HeatmapsProps } from '@lobehub/charts';
 import { Heatmaps } from '@lobehub/charts';
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Tabs, Tag } from '@lobehub/ui/base-ui';
 import { CoinsIcon, FlameIcon, MessageSquareIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useClientDataSWR } from '@/libs/swr';
 import { statsKeys } from '@/libs/swr/keys';
 import { messageService } from '@/services/message';
@@ -76,32 +76,40 @@ const AiHeatmaps = memo<Omit<HeatmapsProps, 'data' | 'ref'> & { mobile?: boolean
 
     const typeSwitch = (
       <Tabs
-        activeKey={type}
-        size={'small'}
         style={{ width: 'auto' }}
-        items={[
-          {
-            icon: <Icon icon={CoinsIcon} />,
-            key: HeatmapType.Tokens,
-            label: t('stats.tokens'),
-          },
-          {
-            icon: <Icon icon={MessageSquareIcon} />,
-            key: HeatmapType.Messages,
-            label: t('stats.messages'),
-          },
-        ]}
-        onChange={(key) => setType(key as HeatmapType)}
-      />
+        value={type}
+        onValueChange={(key) => setType(key as HeatmapType)}
+      >
+        <TabsList>
+          {[
+            {
+              icon: createElement(CoinsIcon, {}),
+              key: HeatmapType.Tokens,
+              label: t('stats.tokens'),
+            },
+            {
+              icon: createElement(MessageSquareIcon, {}),
+              key: HeatmapType.Messages,
+              label: t('stats.messages'),
+            },
+          ].map((item) => (
+            <TabsTrigger key={item.key} value={item.key}>
+              {item.icon}
+              {item.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
     );
 
     const dayTags = (
-      <Flexbox horizontal gap={8}>
-        <Tag variant={'filled'}>{[days, t('stats.days')].join(' ')}</Tag>
-        <Tag color={'success'} icon={<Icon icon={FlameIcon} />} variant={'filled'}>
+      <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 8 }}>
+        <Badge>{[days, t('stats.days')].join(' ')}</Badge>
+        <Badge variant="success-light">
+          {createElement(FlameIcon, {})}
           {[hotDays, t('stats.days')].join(' ')}
-        </Tag>
-      </Flexbox>
+        </Badge>
+      </div>
     );
 
     return (

@@ -1,9 +1,7 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Popover, Select, Switch, Text } from '@lobehub/ui/base-ui';
 import type { MyWorkMode, WorkQueryLayout } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   BookmarkPlusIcon,
   PanelRightCloseIcon,
@@ -11,9 +9,19 @@ import {
   Settings2Icon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
 
 import {
@@ -45,12 +53,12 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const OptionRow = memo<{ children: ReactNode; label: string }>(({ children, label }) => (
-  <Flexbox horizontal align="center" gap={8}>
+  <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
     <span className={styles.optionLabel}>{label}</span>
-    <Flexbox flex={1} style={{ minWidth: 0 }}>
+    <div className="flex flex-col" style={{ flex: 1, minWidth: 0 }}>
       {children}
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 ));
 
 OptionRow.displayName = 'OptionRow';
@@ -61,10 +69,10 @@ const PropertyRow = memo<{
   label: string;
   onChange: (checked: boolean) => void;
 }>(({ checked, label, onChange }) => (
-  <Flexbox horizontal align="center" justify="space-between">
-    <Text fontSize={13}>{label}</Text>
-    <Switch checked={checked} size="small" onChange={onChange} />
-  </Flexbox>
+  <div className="flex flex-row" style={{ alignItems: 'center', justifyContent: 'space-between' }}>
+    <span className="text-sm">{label}</span>
+    <Switch aria-label={label} checked={checked} onCheckedChange={onChange} />
+  </div>
 ));
 
 PropertyRow.displayName = 'PropertyRow';
@@ -169,7 +177,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
     };
 
     return (
-      <Flexbox horizontal align="center" gap={6} style={{ flex: 'none' }}>
+      <div className="flex flex-row" style={{ alignItems: 'center', gap: 6, flex: 'none' }}>
         <MyWorkFilterMenu
           activeFilterCount={activeFilterCount}
           builder={builder}
@@ -183,187 +191,277 @@ const MyWorkControls = memo<MyWorkControlsProps>(
           onNoProjectChange={onNoProjectChange}
           onResetFilters={onResetFilters}
         />
-        <Popover
-          placement="bottomRight"
-          trigger="click"
-          content={
-            <Flexbox className={styles.controlPopover} gap={12}>
-              {canBoard ? (
-                <OptionRow label={t('myWork.displayLayout')}>
-                  <Select
-                    size="small"
-                    style={{ minWidth: 140 }}
-                    value={layout}
-                    options={[
-                      { label: t('myWork.layoutList'), value: 'list' },
-                      { label: t('myWork.layoutBoard'), value: 'board' },
-                    ]}
-                    onChange={(next) => {
-                      if (next === 'board' || next === 'list') onLayoutChange(next);
-                    }}
-                  />
-                </OptionRow>
-              ) : null}
-              <OptionRow label={t('savedViews.grouping')}>
-                {layout === 'board' ? (
-                  <Select
-                    size="small"
-                    style={{ minWidth: 150 }}
-                    value={boardGrouping}
-                    options={MY_WORK_BOARD_GROUPING_OPTIONS.map((value) => ({
-                      label: groupingLabel(value),
-                      value,
-                    }))}
-                    onChange={(next) => {
-                      if (next === 'status' || next === 'workflowCategory') {
-                        onDisplayChange({ boardGrouping: next });
-                      }
-                    }}
-                  />
-                ) : (
-                  <Select
-                    size="small"
-                    style={{ minWidth: 150 }}
-                    value={display.grouping}
-                    options={groupingOptions.map((value) => ({
-                      label: groupingLabel(value),
-                      value,
-                    }))}
-                    onChange={(next) => {
-                      if (groupingOptions.includes(next as MyWorkListGrouping)) {
-                        onDisplayChange({ grouping: next as MyWorkListGrouping });
-                      }
-                    }}
-                  />
-                )}
-              </OptionRow>
-              {layout === 'list' ? (
-                <OptionRow label={t('myWork.subGrouping')}>
-                  <Select
-                    disabled={display.grouping === 'none'}
-                    size="small"
-                    style={{ minWidth: 150 }}
-                    value={display.grouping === 'none' ? 'none' : display.subGrouping}
-                    options={myWorkSubGroupingOptions(display.grouping).map((value) => ({
-                      label: groupingLabel(value),
-                      value,
-                    }))}
-                    onChange={(next) => {
-                      if (
-                        myWorkSubGroupingOptions(display.grouping).includes(
-                          next as MyWorkSubGrouping,
-                        )
-                      ) {
-                        onDisplayChange({ subGrouping: next as MyWorkSubGrouping });
-                      }
-                    }}
-                  />
-                </OptionRow>
-              ) : null}
-              {orderingOptions.length > 1 ? (
-                <OptionRow label={t('savedViews.ordering')}>
-                  <Select
-                    size="small"
-                    style={{ minWidth: 170 }}
-                    value={display.ordering}
-                    options={orderingOptions.map((value) => ({
-                      label: orderingLabel(value),
-                      value,
-                    }))}
-                    onChange={(next) => {
-                      if (orderingOptions.includes(next as MyWorkOrdering)) {
-                        onDisplayChange({ ordering: next as MyWorkOrdering });
-                      }
-                    }}
-                  />
-                </OptionRow>
-              ) : null}
-              <OptionRow label={t('myWork.completedIssues')}>
-                <Select
-                  size="small"
-                  style={{ minWidth: 140 }}
-                  value={display.completed}
-                  options={(['all', 'pastDay', 'none'] as MyWorkCompletedWindow[]).map((value) => ({
-                    label: t(`myWork.completed.${value}` as never),
-                    value,
-                  }))}
-                  onChange={(next) => {
-                    if (next === 'all' || next === 'none' || next === 'pastDay') {
-                      onDisplayChange({ completed: next });
-                    }
-                  }}
-                />
-              </OptionRow>
-              <OptionRow label={t('myWork.showSubIssues')}>
-                <Switch
-                  checked={display.showSubIssues}
-                  size="small"
-                  onChange={(checked) => onDisplayChange({ showSubIssues: checked })}
-                />
-              </OptionRow>
-              <OptionRow label={t('myWork.showTriageIssues')}>
-                <Switch
-                  checked={display.showTriage}
-                  size="small"
-                  onChange={(checked) => onDisplayChange({ showTriage: checked })}
-                />
-              </OptionRow>
-              <OptionRow label={t('myWork.nestedSubIssues')}>
-                <Switch
-                  checked={display.nestedSubIssues}
-                  disabled={!display.showSubIssues}
-                  size="small"
-                  onChange={(checked) => onDisplayChange({ nestedSubIssues: checked })}
-                />
-              </OptionRow>
-              {layout === 'list' ? (
-                <>
-                  <Text fontSize={12} type="secondary">
-                    {t('myWork.displayProperties')}
-                  </Text>
-                  <Flexbox gap={6}>
-                    {MY_WORK_ROW_PROPERTIES.map((property) => (
-                      <PropertyRow
-                        checked={display.properties[property]}
-                        key={property}
-                        label={t(`myWork.properties.${property}` as never)}
-                        onChange={(checked) =>
-                          onDisplayChange({
-                            properties: { ...display.properties, [property]: checked },
-                          })
-                        }
-                      />
-                    ))}
-                  </Flexbox>
-                </>
-              ) : null}
-              {canSaveAs ? (
-                <Flexbox horizontal justify="flex-end">
-                  <Button icon={BookmarkPlusIcon} size="small" onClick={onSaveAs}>
-                    {t('myWork.saveAs')}
-                  </Button>
-                </Flexbox>
-              ) : null}
-            </Flexbox>
-          }
-        >
-          <ActionIcon
-            aria-label={t('savedViews.displayOptions')}
-            icon={Settings2Icon}
-            size="small"
-            title={t('savedViews.displayOptions')}
+        <Popover>
+          <PopoverTrigger
+            render={
+              <Button
+                aria-label={t('savedViews.displayOptions')}
+                size="icon"
+                title={t('savedViews.displayOptions')}
+                variant="ghost"
+              >
+                {createElement(Settings2Icon, { className: 'size-4 shrink-0' })}
+              </Button>
+            }
           />
+          <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+            {
+              <div className={cn('flex flex-col', styles.controlPopover)} style={{ gap: 12 }}>
+                {canBoard ? (
+                  <OptionRow label={t('myWork.displayLayout')}>
+                    <Select
+                      value={layout}
+                      items={[
+                        { label: t('myWork.layoutList'), value: 'list' },
+                        { label: t('myWork.layoutBoard'), value: 'board' },
+                      ]}
+                      onValueChange={(next) => {
+                        if (next === 'board' || next === 'list') onLayoutChange(next);
+                      }}
+                    >
+                      <SelectTrigger aria-label={t('myWork.displayLayout')} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {[
+                          { label: t('myWork.layoutList'), value: 'list' },
+                          { label: t('myWork.layoutBoard'), value: 'board' },
+                        ].map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </OptionRow>
+                ) : null}
+                <OptionRow label={t('savedViews.grouping')}>
+                  {layout === 'board' ? (
+                    <Select
+                      value={boardGrouping}
+                      items={MY_WORK_BOARD_GROUPING_OPTIONS.map((value) => ({
+                        label: groupingLabel(value),
+                        value,
+                      }))}
+                      onValueChange={(next) => {
+                        if (next === 'status' || next === 'workflowCategory') {
+                          onDisplayChange({ boardGrouping: next });
+                        }
+                      }}
+                    >
+                      <SelectTrigger aria-label={t('savedViews.grouping')} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {MY_WORK_BOARD_GROUPING_OPTIONS.map((value) => ({
+                          label: groupingLabel(value),
+                          value,
+                        })).map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  ) : (
+                    <Select
+                      value={display.grouping}
+                      items={groupingOptions.map((value) => ({
+                        label: groupingLabel(value),
+                        value,
+                      }))}
+                      onValueChange={(next) => {
+                        if (groupingOptions.includes(next as MyWorkListGrouping)) {
+                          onDisplayChange({ grouping: next as MyWorkListGrouping });
+                        }
+                      }}
+                    >
+                      <SelectTrigger aria-label={t('savedViews.grouping')} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {groupingOptions
+                          .map((value) => ({
+                            label: groupingLabel(value),
+                            value,
+                          }))
+                          .map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  )}
+                </OptionRow>
+                {layout === 'list' ? (
+                  <OptionRow label={t('myWork.subGrouping')}>
+                    <Select
+                      disabled={display.grouping === 'none'}
+                      value={display.grouping === 'none' ? 'none' : display.subGrouping}
+                      items={myWorkSubGroupingOptions(display.grouping).map((value) => ({
+                        label: groupingLabel(value),
+                        value,
+                      }))}
+                      onValueChange={(next) => {
+                        if (
+                          myWorkSubGroupingOptions(display.grouping).includes(
+                            next as MyWorkSubGrouping,
+                          )
+                        ) {
+                          onDisplayChange({ subGrouping: next as MyWorkSubGrouping });
+                        }
+                      }}
+                    >
+                      <SelectTrigger aria-label={t('myWork.subGrouping')} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {myWorkSubGroupingOptions(display.grouping)
+                          .map((value) => ({
+                            label: groupingLabel(value),
+                            value,
+                          }))
+                          .map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </OptionRow>
+                ) : null}
+                {orderingOptions.length > 1 ? (
+                  <OptionRow label={t('savedViews.ordering')}>
+                    <Select
+                      value={display.ordering}
+                      items={orderingOptions.map((value) => ({
+                        label: orderingLabel(value),
+                        value,
+                      }))}
+                      onValueChange={(next) => {
+                        if (orderingOptions.includes(next as MyWorkOrdering)) {
+                          onDisplayChange({ ordering: next as MyWorkOrdering });
+                        }
+                      }}
+                    >
+                      <SelectTrigger aria-label={t('savedViews.ordering')} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {orderingOptions
+                          .map((value) => ({
+                            label: orderingLabel(value),
+                            value,
+                          }))
+                          .map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </OptionRow>
+                ) : null}
+                <OptionRow label={t('myWork.completedIssues')}>
+                  <Select
+                    value={display.completed}
+                    items={(['all', 'pastDay', 'none'] as MyWorkCompletedWindow[]).map((value) => ({
+                      label: t(`myWork.completed.${value}` as never),
+                      value,
+                    }))}
+                    onValueChange={(next) => {
+                      if (next === 'all' || next === 'none' || next === 'pastDay') {
+                        onDisplayChange({ completed: next });
+                      }
+                    }}
+                  >
+                    <SelectTrigger aria-label={t('myWork.completedIssues')} className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {(['all', 'pastDay', 'none'] as MyWorkCompletedWindow[])
+                        .map((value) => ({
+                          label: t(`myWork.completed.${value}` as never),
+                          value,
+                        }))
+                        .map((option) => (
+                          <SelectItem key={option.value} value={option.value}>
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                </OptionRow>
+                <OptionRow label={t('myWork.showSubIssues')}>
+                  <Switch
+                    aria-label={t('myWork.showSubIssues')}
+                    checked={display.showSubIssues}
+                    onCheckedChange={(checked) => onDisplayChange({ showSubIssues: checked })}
+                  />
+                </OptionRow>
+                <OptionRow label={t('myWork.showTriageIssues')}>
+                  <Switch
+                    aria-label={t('myWork.showTriageIssues')}
+                    checked={display.showTriage}
+                    onCheckedChange={(checked) => onDisplayChange({ showTriage: checked })}
+                  />
+                </OptionRow>
+                <OptionRow label={t('myWork.nestedSubIssues')}>
+                  <Switch
+                    aria-label={t('myWork.nestedSubIssues')}
+                    checked={display.nestedSubIssues}
+                    disabled={!display.showSubIssues}
+                    onCheckedChange={(checked) => onDisplayChange({ nestedSubIssues: checked })}
+                  />
+                </OptionRow>
+                {layout === 'list' ? (
+                  <>
+                    <span className="text-sm text-muted-foreground">
+                      {t('myWork.displayProperties')}
+                    </span>
+                    <div className="flex flex-col" style={{ gap: 6 }}>
+                      {MY_WORK_ROW_PROPERTIES.map((property) => (
+                        <PropertyRow
+                          checked={display.properties[property]}
+                          key={property}
+                          label={t(`myWork.properties.${property}` as never)}
+                          onChange={(checked) =>
+                            onDisplayChange({
+                              properties: { ...display.properties, [property]: checked },
+                            })
+                          }
+                        />
+                      ))}
+                    </div>
+                  </>
+                ) : null}
+                {canSaveAs ? (
+                  <div className="flex flex-row" style={{ justifyContent: 'flex-end' }}>
+                    <Button variant="outline" onClick={onSaveAs}>
+                      {createElement(BookmarkPlusIcon, { className: 'size-4 shrink-0' })}
+                      {t('myWork.saveAs')}
+                    </Button>
+                  </div>
+                ) : null}
+              </div>
+            }
+          </PopoverContent>
         </Popover>
-        <ActionIcon
+        <Button
           aria-expanded={detailsExpanded}
           aria-label={t(detailsOpen ? 'myWork.closeDetails' : 'myWork.openDetails')}
           disabled={detailsDisabled}
-          icon={detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon}
-          size="small"
+          size="icon"
           title={t(detailsOpen ? 'myWork.closeDetails' : 'myWork.openDetails')}
+          variant="ghost"
           onClick={onToggleDetails}
-        />
-      </Flexbox>
+        >
+          {createElement(detailsOpen ? PanelRightCloseIcon : PanelRightOpenIcon, {
+            className: 'size-4 shrink-0',
+          })}
+        </Button>
+      </div>
     );
   },
 );

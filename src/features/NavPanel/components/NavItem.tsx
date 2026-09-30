@@ -1,15 +1,25 @@
 'use client';
 
-import { type BlockProps, type GenericItemType, type IconProps } from '@lobehub/ui';
-import { Block, Center, ContextMenuTrigger, Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { type FocusEvent, type PointerEvent, type ReactNode } from 'react';
-import { memo } from 'react';
+import type { LucideIcon } from 'lucide-react';
+import {
+  type ComponentType,
+  createElement,
+  type FocusEvent,
+  type HTMLAttributes,
+  isValidElement,
+  memo,
+  type MouseEvent,
+  type PointerEvent,
+  type ReactElement,
+  type ReactNode,
+} from 'react';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { isModifierClick } from '@/utils/navigation';
 
+import { renderSidebarMenuItems, type SidebarMenuItems } from './SidebarDropdownMenu';
 import { type LazyActions, useLazyActions } from './useLazyActions';
 
 const ACTION_CLASS_NAME = 'nav-item-actions';
@@ -77,7 +87,7 @@ export interface NavItemSlots {
   titlePrefix?: ReactNode;
 }
 
-export interface NavItemProps extends Omit<BlockProps, 'children' | 'title'> {
+export interface NavItemProps extends Omit<HTMLAttributes<HTMLElement>, 'children' | 'title'> {
   /**
    * Pass a thunk to defer mounting until the row is first pointed at or focused.
    * Hover-capable pointers keep actions invisible until `:hover`; `@media (hover: none)`
@@ -89,7 +99,7 @@ export interface NavItemProps extends Omit<BlockProps, 'children' | 'title'> {
    */
   actions?: LazyActions;
   active?: boolean;
-  contextMenuItems?: GenericItemType[] | (() => GenericItemType[]);
+  contextMenuItems?: SidebarMenuItems | (() => SidebarMenuItems);
   /**
    * Optional second line rendered under the title (e.g. a topic's project
    * directory). When set, the row grows to fit both lines; when omitted the
@@ -102,7 +112,7 @@ export interface NavItemProps extends Omit<BlockProps, 'children' | 'title'> {
    * Optional href for cmd+click to open in new tab
    */
   href?: string;
-  icon?: IconProps['icon'];
+  icon?: ComponentType | LucideIcon | ReactElement;
   iconSize?: number;
   loading?: boolean;
   slots?: NavItemSlots;
@@ -139,7 +149,7 @@ const NavItem = memo<NavItemProps>(
   }) => {
     const { mount: mountLazyActions, node: renderedActions } = useLazyActions(actions);
 
-    const handlePointerEnter = (e: PointerEvent<HTMLDivElement>) => {
+    const handlePointerEnter = (e: PointerEvent<HTMLElement>) => {
       mountLazyActions();
       onPointerEnter?.(e);
     };
@@ -147,23 +157,17 @@ const NavItem = memo<NavItemProps>(
     // Focus, not just the pointer: a keyboard user reaches the row by tabbing,
     // which never fires `pointerenter`. Without this the actions would be absent
     // from the tab order entirely rather than merely invisible.
-    const handleFocus = (e: FocusEvent<HTMLDivElement>) => {
+    const handleFocus = (e: FocusEvent<HTMLElement>) => {
       mountLazyActions();
       onFocus?.(e);
     };
 
     const iconColor = active ? cssVar.colorText : cssVar.colorTextDescription;
     const textColor = titleColor ?? (active ? cssVar.colorText : cssVar.colorTextSecondary);
-    const variant = active ? 'filled' : 'borderless';
 
     const { titlePrefix, iconPostfix } = slots || {};
-    // Link props for cmd+click support
-    const linkProps = href
-      ? {
-          as: 'a' as const,
-          href,
-        }
-      : {};
+    // Render a real anchor so cmd+click can open in a new tab
+    const RootElement = href ? 'a' : 'div';
 
     const mergedStyle =
       href || disabled || style
@@ -177,18 +181,20 @@ const NavItem = memo<NavItemProps>(
         : undefined;
 
     const Content = (
-      <Block
-        horizontal
-        align={'center'}
-        className={cx(styles.container, className)}
-        clickable={!disabled}
-        gap={8}
-        height={description ? undefined : 28}
-        paddingBlock={description ? 8 : undefined}
-        paddingInline={4}
-        style={mergedStyle}
-        variant={variant}
-        onClick={(e) => {
+      <RootElement
+        className={cx(
+          cx(styles.container, className),
+          'flex items-center gap-2 px-1',
+          !disabled && 'cursor-pointer hover:bg-[var(--ant-color-fill-secondary)]',
+        )}
+        style={{
+          borderRadius: cssVar.borderRadius,
+          ...(active ? { background: cssVar.colorFillTertiary } : undefined),
+          height: description ? undefined : 28,
+          paddingBlock: description ? 8 : undefined,
+          ...mergedStyle,
+        }}
+        onClick={(e: MouseEvent<HTMLElement>) => {
           // Always prevent default <a> navigation for normal clicks to avoid full page reload.
           // This must run before any early return to ensure SPA navigation is never bypassed.
           if (href && !isModifierClick(e)) {
@@ -197,98 +203,98 @@ const NavItem = memo<NavItemProps>(
           if (disabled) return;
           onClick?.(e);
         }}
-        {...linkProps}
         {...rest}
+        {...(href ? { href } : undefined)}
         onFocus={handleFocus}
         onPointerEnter={handlePointerEnter}
       >
         {icon && (
-          <Center
-            flex={'none'}
+          <div
+            className="flex flex-none items-center justify-center"
             // With a description the row is two lines tall; align the leading icon
             // to the title's first line (match its line-height) instead of letting
             // it center across both lines, which drops it into the gap.
-            height={description ? 22 : 28}
-            style={description ? { alignSelf: 'flex-start' } : undefined}
-            width={28}
+            style={{
+              alignSelf: description ? 'flex-start' : undefined,
+              height: description ? 22 : 28,
+              width: 28,
+            }}
           >
             {loading ? (
               <NeuralNetworkLoading size={iconSize} />
+            ) : isValidElement(icon) ? (
+              icon
             ) : (
-              <Icon color={iconColor} icon={icon} size={iconSize} />
+              createElement(icon as ComponentType<{ color?: string; size?: number }>, {
+                color: iconColor,
+                size: iconSize,
+              })
             )}
-          </Center>
+          </div>
         )}
 
         {iconPostfix}
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={CONTENT_CLASS_NAME}
-          flex={1}
-          gap={8}
+        <div
+          className={cx(CONTENT_CLASS_NAME, 'flex items-center flex-1 gap-2')}
           style={{ overflow: 'hidden' }}
         >
           {titlePrefix}
           {description ? (
-            <Flexbox flex={1} gap={3} style={{ overflow: 'hidden' }}>
-              <Text
-                color={textColor}
-                ellipsis={{ tooltipWhenOverflow: true }}
-                fontSize={13}
-                weight={500}
+            <div className="flex flex-col flex-1 gap-[3px]" style={{ overflow: 'hidden' }}>
+              <div
+                className="truncate font-medium text-[13px]"
+                style={{ color: textColor }}
+                title={typeof title === 'string' ? title : undefined}
               >
                 {title}
-              </Text>
+              </div>
               {description}
-            </Flexbox>
+            </div>
           ) : (
-            <Text
-              color={textColor}
-              fontSize={13}
-              style={{ flex: 1 }}
-              weight={500}
-              ellipsis={{
-                tooltipWhenOverflow: true,
-              }}
+            <div
+              className="flex-1 truncate font-medium text-[13px]"
+              style={{ color: textColor }}
+              title={typeof title === 'string' ? title : undefined}
             >
               {title}
-            </Text>
+            </div>
           )}
           {extra && (
-            <Flexbox
-              horizontal
-              align={'center'}
-              gap={2}
-              justify={'flex-end'}
+            <div
+              className="flex items-center gap-0.5 justify-end"
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
               }}
             >
               {extra}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
         {actions && (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={ACTION_CLASS_NAME}
-            gap={2}
-            justify={'flex-end'}
+          <div
+            className={cx(ACTION_CLASS_NAME, 'flex items-center gap-0.5 justify-end')}
             onClick={(e) => {
               e.preventDefault();
               e.stopPropagation();
             }}
           >
             {renderedActions}
-          </Flexbox>
+          </div>
         )}
-      </Block>
+      </RootElement>
     );
     if (!contextMenuItems) return Content;
-    return <ContextMenuTrigger items={contextMenuItems}>{Content}</ContextMenuTrigger>;
+    return (
+      <ContextMenu>
+        <ContextMenuTrigger render={Content} />
+        <ContextMenuContent>
+          {renderSidebarMenuItems(
+            typeof contextMenuItems === 'function' ? contextMenuItems() : contextMenuItems,
+          )}
+        </ContextMenuContent>
+      </ContextMenu>
+    );
   },
 );
 

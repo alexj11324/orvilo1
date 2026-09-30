@@ -1,11 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Progress, Text } from '@lobehub/ui/base-ui';
 import { cssVar, useResponsive } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Progress, ProgressIndicator, ProgressTrack } from '@/components/ui/progress';
 import { type SkillRatingDistribution } from '@/types/discover';
 import { formatShortenNumber } from '@/utils/format';
 
@@ -26,41 +25,39 @@ const RatingOverview = memo<RatingOverviewProps>(
     const stars = [5, 4, 3, 2, 1] as const;
 
     return (
-      <Flexbox gap={32} horizontal={!mobile}>
-        <Flexbox align={'center'} gap={6} style={{ minWidth: 120 }}>
-          <Text style={{ fontSize: 48, fontWeight: 'bold', lineHeight: 1.2 }}>
+      <div className={mobile ? 'flex flex-col gap-8' : 'flex flex-row gap-8'}>
+        <div className="flex flex-col items-center gap-1.5" style={{ minWidth: 120 }}>
+          <div style={{ fontSize: 48, fontWeight: 'bold', lineHeight: 1.2 }}>
             {displayAverage.toFixed(1)}
-          </Text>
+          </div>
           <Rate value={displayAverage} />
-          <Text type={'secondary'}>
+          <div className="text-muted-foreground">
             {totalCount > 0
               ? t('skills.details.rating.totalRatings', {
                   count: formatShortenNumber(totalCount),
                 } as any)
               : t('skills.details.rating.noRatings')}
-          </Text>
-        </Flexbox>
-        <Flexbox flex={1} justify={'center'}>
+          </div>
+        </div>
+        <div className="flex flex-1 flex-col justify-center">
           {stars.map((star) => {
             const count = distribution?.[star] ?? 0;
             const percent = totalCount > 0 ? (count / totalCount) * 100 : 0;
             return (
-              <Flexbox horizontal align={'center'} gap={8} key={star}>
-                <Text style={{ flexShrink: 0, width: 16 }} type={'secondary'}>
+              <div className="flex items-center gap-2" key={star}>
+                <div className="text-muted-foreground" style={{ flexShrink: 0, width: 16 }}>
                   {star}
-                </Text>
-                <Progress
-                  percent={percent}
-                  showInfo={false}
-                  size={'small'}
-                  strokeColor={cssVar.colorWarning}
-                  style={{ flex: 1, marginBottom: 0 }}
-                />
-              </Flexbox>
+                </div>
+                <Progress style={{ flex: 1, marginBottom: 0 }} value={percent}>
+                  <ProgressTrack>
+                    <ProgressIndicator style={{ background: cssVar.colorWarning }} />
+                  </ProgressTrack>
+                </Progress>
+              </div>
             );
           })}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

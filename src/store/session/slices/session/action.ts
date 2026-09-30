@@ -1,10 +1,10 @@
-import { toast } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 import { type SWRResponse } from 'swr';
 import useSWR from 'swr';
 import { type PartialDeep } from 'type-fest';
 
+import { toast } from '@/components/toast';
 import { DEFAULT_AGENT_ORVILO_SESSION, INBOX_SESSION_ID } from '@/const/session';
 import { analyticsClient } from '@/libs/analytics/client';
 import { mutate, useClientDataSWR } from '@/libs/swr';

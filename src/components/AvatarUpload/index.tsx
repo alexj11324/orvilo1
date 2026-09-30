@@ -1,10 +1,12 @@
 'use client';
 
-import { Avatar, Spin, Upload } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2, PencilIcon, X } from 'lucide-react';
 import { createElement, memo, useMemo } from 'react';
 
+import Avatar from '@/components/Avatar';
+import { Spinner as Spin } from '@/components/ui/spinner';
+import { Upload } from '@/components/Upload';
 import { imageToBase64 } from '@/utils/imageToBase64';
 import { createUploadImageHandler } from '@/utils/uploadFIle';
 

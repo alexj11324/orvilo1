@@ -1,9 +1,15 @@
 'use client';
 
-import { Accordion, Button } from '@lobehub/ui/base-ui';
 import { lazy, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { MAX_WIDTH } from '@/const/layoutTokens';
 
 const Highlighter = lazy(() => import('@lobehub/ui/es/Highlighter/index'));
@@ -63,25 +69,18 @@ const ErrorCapture = ({ error, resetPath = '/' }: ErrorCaptureProps) => {
             width: 560,
           }}
         >
-          <Accordion
-            indicatorPlacement={'inline'}
-            value={expandedKeys}
-            variant={'borderless'}
-            items={[
-              {
-                key: 'stack',
-                title: t('error.stack'),
-                children: (
-                  <Suspense fallback={null}>
-                    <Highlighter language={'plaintext'} padding={12} variant={'borderless'}>
-                      {error.stack!}
-                    </Highlighter>
-                  </Suspense>
-                ),
-              },
-            ]}
-            onValueChange={setExpandedKeys}
-          />
+          <Accordion value={expandedKeys} onValueChange={setExpandedKeys}>
+            <AccordionItem value="stack">
+              <AccordionTrigger>{t('error.stack')}</AccordionTrigger>
+              <AccordionContent>
+                <Suspense fallback={null}>
+                  <Highlighter language={'plaintext'} padding={12} variant={'borderless'}>
+                    {error.stack!}
+                  </Highlighter>
+                </Suspense>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       )}
     </div>

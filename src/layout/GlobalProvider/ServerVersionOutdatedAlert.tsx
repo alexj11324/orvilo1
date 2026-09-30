@@ -1,11 +1,11 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, useTheme } from 'antd-style';
 import { TriangleAlert, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { MANUAL_UPGRADE_URL } from '@/const/url';
 import { CURRENT_VERSION } from '@/const/version';
 import { useElectronStore } from '@/store/electron';

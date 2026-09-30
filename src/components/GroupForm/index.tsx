@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, type ButtonProps, Text } from '@lobehub/ui/base-ui';
 import {
   Form as AntdForm,
   type FormItemProps as AntdFormItemProps,
@@ -13,6 +12,7 @@ import { Info, type LucideIcon } from 'lucide-react';
 import { createElement, type CSSProperties, memo, type ReactNode, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button, type ButtonProps } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { useSingleton } from '@/hooks/useSingleton';
 
@@ -103,16 +103,10 @@ const FormGroupItems = ({
             >
               <div className="flex flex-row items-center gap-2">
                 {avatar}
-                <Text as={'span'} weight={500}>
-                  {label}
-                </Text>
+                <span className="font-medium">{label}</span>
                 {tag}
               </div>
-              {desc ? (
-                <Text fontSize={12} type={'secondary'}>
-                  {desc}
-                </Text>
-              ) : null}
+              {desc ? <div className="text-[12px] text-muted-foreground">{desc}</div> : null}
             </div>
             {hasBinding ? (
               <AntdForm.Item style={{ marginBottom: 0 }} {...binding}>
@@ -155,14 +149,12 @@ export const FormGroup = memo<FormGroupProps>(
         <div className="flex flex-row items-center justify-between gap-4">
           <div className="flex flex-row items-center gap-2 min-w-0">
             {icon ? createElement(icon, { size: 18 }) : null}
-            <Text strong as={'span'}>
-              {title}
-            </Text>
+            <span className="font-semibold">{title}</span>
           </div>
           {extra}
         </div>
       ) : null}
-      {desc ? <Text type={'secondary'}>{desc}</Text> : null}
+      {desc ? <div className="text-muted-foreground">{desc}</div> : null}
       <div
         className={cx(
           'flex flex-col gap-2',

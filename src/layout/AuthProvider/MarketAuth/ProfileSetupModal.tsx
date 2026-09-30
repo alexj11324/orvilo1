@@ -1,6 +1,5 @@
 'use client';
 
-import { confirmModal, Text, toast, Upload } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CircleHelp, Globe, ImagePlus, Trash2 } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
@@ -9,9 +8,12 @@ import { useTranslation } from 'react-i18next';
 import EmojiPicker from '@/components/EmojiPicker';
 import Form from '@/components/GroupForm';
 import ImperativeModal from '@/components/ImperativeModal';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { Upload } from '@/components/Upload';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';
@@ -397,14 +399,14 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
         width={640}
         title={
           <div className="flex flex-col gap-1">
-            <Text strong fontSize={16} lineHeight={1.4}>
+            <div className="font-semibold text-[16px]" style={{ lineHeight: 1.4 }}>
               {isFirstTimeSetup ? t('profileSetup.titleFirstTime') : t('profileSetup.titleEdit')}
-            </Text>
-            <Text fontSize={13} lineHeight={1.4} type="secondary">
+            </div>
+            <div className="text-[13px] text-muted-foreground" style={{ lineHeight: 1.4 }}>
               {isFirstTimeSetup
                 ? t('profileSetup.descriptionFirstTime')
                 : t('profileSetup.descriptionEdit')}
-            </Text>
+            </div>
           </div>
         }
         onCancel={handleCancel}
@@ -565,7 +567,7 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                             size={24}
                             style={{ color: bannerUrl ? '#fff' : cssVar.colorTextSecondary }}
                           />
-                          <Text
+                          <div
                             style={{
                               color: bannerUrl ? '#fff' : cssVar.colorTextSecondary,
                               fontSize: 12,
@@ -574,14 +576,14 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                             {bannerUploading
                               ? t('profileSetup.fields.bannerUrl.uploading')
                               : t('profileSetup.fields.bannerUrl.clickToUpload')}
-                          </Text>
+                          </div>
                         </div>
                       </div>
                     </div>
                   </Upload>
                   {bannerUrl && (
                     <div className="flex items-center justify-end gap-2">
-                      <Text
+                      <div
                         style={{
                           color: cssVar.colorError,
                           cursor: 'pointer',
@@ -596,15 +598,15 @@ const ProfileSetupModal = memo<ProfileSetupModalProps>(
                           <Trash2 size={12} />
                           {t('profileSetup.fields.bannerUrl.remove')}
                         </div>
-                      </Text>
+                      </div>
                     </div>
                   )}
                 </div>
               </Form.Item>
 
-              <Text style={{ display: 'block', marginBottom: 12 }} type="secondary">
+              <div className="text-muted-foreground" style={{ display: 'block', marginBottom: 12 }}>
                 {t('profileSetup.socialLinks.title')}
-              </Text>
+              </div>
 
               {/* GitHub OAuth Connect Button */}
               <div className="flex flex-col gap-3" style={{ marginBottom: 16 }}>

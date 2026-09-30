@@ -1,14 +1,17 @@
 'use client';
 
-import { Button, toast, Upload, useModalContext } from '@lobehub/ui/base-ui';
 import { BRANDING_EMAIL } from '@orvilo/business-const';
 import { ImagePlus, Send } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { useModalContext } from '@/components/Modal';
 import TextArea from '@/components/TextArea';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Field, FieldError, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Upload } from '@/components/Upload';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useFileStore } from '@/store/file';
 import { userProfileSelectors } from '@/store/user/selectors';

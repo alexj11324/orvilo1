@@ -1,8 +1,9 @@
 import { PreviewCard } from '@base-ui/react/preview-card';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { type CSSProperties, type FC, type ReactNode } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
 
 const styles = createStaticStyles(({ css }) => {
   return {

@@ -1,12 +1,12 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { RotateCwIcon, TriangleAlertIcon } from 'lucide-react';
 import { createElement, memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 
 /**
@@ -88,9 +88,9 @@ const AsyncError = memo<AsyncErrorProps>(
       return (
         <div className={cn('flex items-center', styles.metric)} style={{ gap: 6 }}>
           {createElement(TriangleAlertIcon, { size: 14 })}
-          <Text color={cssVar.colorTextQuaternary} fontSize={13}>
+          <div className="text-[13px]" style={{ color: cssVar.colorTextQuaternary }}>
             {t('asyncState.metricLabel')}
-          </Text>
+          </div>
           {showRetry && (
             <Button
               disabled={retrying}
@@ -111,9 +111,9 @@ const AsyncError = memo<AsyncErrorProps>(
       return (
         <div className={cn('inline-flex gap-2 items-center justify-center', styles.inline)}>
           {createElement(TriangleAlertIcon, { size: 14 })}
-          <Text color={cssVar.colorTextSecondary} fontSize={13}>
+          <div className="text-[13px]" style={{ color: cssVar.colorTextSecondary }}>
             {heading}
-          </Text>
+          </div>
           {showRetry && (
             <Button
               disabled={retrying}
@@ -139,17 +139,15 @@ const AsyncError = memo<AsyncErrorProps>(
       >
         {createElement(TriangleAlertIcon, { size: 16 })}
         <div className={'flex flex-col gap-1 items-center'}>
-          <Text fontSize={variant === 'page' ? 16 : 15} weight={600}>
+          <div className="font-semibold" style={{ fontSize: variant === 'page' ? 16 : 15 }}>
             {heading}
-          </Text>
-          <Text
-            align={'center'}
-            color={cssVar.colorTextTertiary}
-            fontSize={13}
-            style={{ maxWidth: 360 }}
+          </div>
+          <div
+            className="text-center text-[13px]"
+            style={{ color: cssVar.colorTextTertiary, maxWidth: 360 }}
           >
             {reason}
-          </Text>
+          </div>
         </div>
         {action ??
           (showRetry && (

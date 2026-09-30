@@ -1,8 +1,10 @@
-import { Spin, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, responsive } from 'antd-style';
 import { cn } from 'cn';
 import { type CSSProperties, type ReactNode } from 'react';
 import { memo } from 'react';
+
+import { Spinner as Spin } from '@/components/ui/spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 const prefixCls = 'ant';
 
@@ -141,19 +143,25 @@ const StatisticCard = memo<StatisticCardProps>(
         <div className={styles.header}>
           <div className={styles.title}>
             {typeof title === 'string' ? (
-              <Text
-                as={'h2'}
-                ellipsis={{ rows: 1, tooltip: true }}
-                style={{
-                  fontSize: 'inherit',
-                  fontWeight: 'inherit',
-                  lineHeight: 'inherit',
-                  margin: 0,
-                  overflow: 'hidden',
-                }}
-              >
-                {title}
-              </Text>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <h2
+                      className="line-clamp-1"
+                      style={{
+                        fontSize: 'inherit',
+                        fontWeight: 'inherit',
+                        lineHeight: 'inherit',
+                        margin: 0,
+                        overflow: 'hidden',
+                      }}
+                    >
+                      {title}
+                    </h2>
+                  }
+                />
+                <TooltipContent>{title}</TooltipContent>
+              </Tooltip>
             ) : (
               title
             )}

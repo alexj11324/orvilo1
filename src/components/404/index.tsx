@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { MAX_WIDTH } from '@/const/layoutTokens';
 
 const NotFound = memo<{

@@ -1,10 +1,20 @@
-import { LoadingDots } from '@lobehub/ui/chat';
 import { cssVar } from 'antd-style';
 
 const BubblesLoading = () => {
   return (
-    <div className={'flex flex-col items-center justify-center'} style={{ height: 24, width: 32 }}>
-      <LoadingDots color={cssVar.colorTextSecondary} size={12} variant={'pulse'} />
+    <div className={'flex items-center justify-center gap-1'} style={{ height: 24, width: 32 }}>
+      {[0, 1, 2].map((i) => (
+        <span
+          className={'animate-pulse rounded-full'}
+          key={i}
+          style={{
+            animationDelay: `${i * 160}ms`,
+            background: cssVar.colorTextSecondary,
+            height: 12,
+            width: 12,
+          }}
+        />
+      ))}
     </div>
   );
 };

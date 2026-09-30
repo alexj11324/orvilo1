@@ -1,12 +1,12 @@
 'use client';
 
-import { Switch, Text } from '@lobehub/ui/base-ui';
 import type { NotificationChannelSettings, NotificationSettings } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { Bell, Mail, Smartphone } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Switch } from '@/components/ui/switch';
 import { useUserStore } from '@/store/user';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -99,13 +99,13 @@ const ItemRows = memo<{
             className={`${styles.itemRow} flex items-center justify-between`}
             key={`${category}.${item}`}
           >
-            <Text className={styles.itemLabel}>
+            <div className={cn(styles.itemLabel)}>
               {humanize(category)} · {humanize(item)}
-            </Text>
+            </div>
             <Switch
               checked={enabled !== false}
-              size="small"
-              onChange={(value: boolean) => onToggle(category, item, value)}
+              size="sm"
+              onCheckedChange={(value: boolean) => onToggle(category, item, value)}
             />
           </div>
         )),
@@ -127,15 +127,13 @@ const ChannelRow = memo<{
         <div className="flex items-center gap-2.5">
           <def.icon size={16} />
           <div className="flex flex-col">
-            <Text className={styles.channelLabel}>{t(def.labelKey)}</Text>
-            <Text fontSize={12} type="secondary">
-              {t(def.descriptionKey)}
-            </Text>
+            <div className={cn(styles.channelLabel)}>{t(def.labelKey)}</div>
+            <div className="text-[12px] text-muted-foreground">{t(def.descriptionKey)}</div>
           </div>
         </div>
         <Switch
           checked={settings?.enabled !== false}
-          onChange={(value: boolean) => onToggleChannel(def.key, value)}
+          onCheckedChange={(value: boolean) => onToggleChannel(def.key, value)}
         />
       </div>
       <ItemRows
@@ -159,9 +157,9 @@ export const WorkspaceNotification = memo(() => {
 
   return (
     <div className={`${styles.container} flex flex-col`}>
-      <Text className={styles.pageTitle}>{t('workspaceSetting.notification.title')}</Text>
+      <div className={cn(styles.pageTitle)}>{t('workspaceSetting.notification.title')}</div>
       <div className={`${styles.section} flex flex-col`}>
-        <Text className={styles.groupTitle}>{t('workspaceSetting.notification.channels')}</Text>
+        <div className={cn(styles.groupTitle)}>{t('workspaceSetting.notification.channels')}</div>
         {CHANNELS.map((def) => (
           <ChannelRow
             def={def}

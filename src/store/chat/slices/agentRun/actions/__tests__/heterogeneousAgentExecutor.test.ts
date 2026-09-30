@@ -40,8 +40,7 @@ const mockUpdateToolMessage = vi.fn();
 const mockGetMessages = vi.fn();
 
 const mockToastInfo = vi.fn();
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/toast', () => ({
   toast: { info: (...args: unknown[]) => mockToastInfo(...args) },
 }));
 

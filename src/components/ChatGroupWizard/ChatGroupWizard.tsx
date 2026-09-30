@@ -1,17 +1,26 @@
 'use client';
 
-import { Accordion, Avatar, Button, Checkbox, Switch, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { omit } from 'es-toolkit/compat';
 import { SearchIcon, Users } from 'lucide-react';
-import { type ChangeEvent } from 'react';
+import { type ChangeEvent, type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import ImperativeModal from '@/components/ImperativeModal';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import GroupAvatar from '@/features/GroupAvatar';
@@ -36,7 +45,7 @@ const TemplateItem = memo<{
       <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
-          onChange={() => onToggle(template.id)}
+          onCheckedChange={() => onToggle(template.id)}
           onClick={(e) => e.stopPropagation()}
         />
         <GroupAvatar
@@ -49,18 +58,16 @@ const TemplateItem = memo<{
             }))}
         />
         <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
-          <Text className={styles.title}>{template.title}</Text>
-          <Text ellipsis className={styles.description}>
-            {template.description}
-          </Text>
+          <div className={cn(styles.title)}>{template.title}</div>
+          <div className={cn('truncate min-w-0', styles.description)}>{template.description}</div>
           <div className={'flex gap-1 items-center'}>
             <Users size={11} style={{ color: '#999' }} />
-            <Text style={{ fontSize: 11 }} type="secondary">
+            <div className="text-muted-foreground" style={{ fontSize: 11 }}>
               {t('groupWizard.memberCount', {
                 count: template.members.filter((member) => member !== null && member !== undefined)
                   .length,
               })}
-            </Text>
+            </div>
           </div>
         </div>
       </div>
@@ -89,16 +96,14 @@ const ExistingMemberItem = memo<{
       <div className={'flex gap-3 items-center'}>
         <Checkbox
           checked={isSelected}
-          onChange={() => onToggle(agentId)}
+          onCheckedChange={() => onToggle(agentId)}
           onClick={(e) => e.stopPropagation()}
         />
         <Avatar avatar={avatar} background={avatarBackground} size={40} />
         <div className={'flex flex-1 flex-col'} style={{ gap: 2, minWidth: 0 }}>
-          <Text className={styles.title}>{title}</Text>
+          <div className={cn(styles.title)}>{title}</div>
           {description && (
-            <Text ellipsis className={styles.description}>
-              {description}
-            </Text>
+            <div className={cn('truncate min-w-0', styles.description)}>{description}</div>
           )}
         </div>
       </div>
@@ -415,8 +420,8 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
             actions: (
               <Switch
                 checked
-                size="small"
-                onChange={(checked) => {
+                size="sm"
+                onCheckedChange={(checked) => {
                   if (!checked) handleRemoveAgent(agentId);
                 }}
               />
@@ -425,9 +430,7 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
             description: description ? (
               <Tooltip>
                 <TooltipTrigger render={<span />}>
-                  <Text className={memberDescriptionClass} ellipsis={{ rows: 1 }}>
-                    {description}
-                  </Text>
+                  <div className={cn('line-clamp-1', memberDescriptionClass)}>{description}</div>
                 </TooltipTrigger>
                 <TooltipContent>{description}</TooltipContent>
               </Tooltip>
@@ -536,83 +539,81 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
               className={'flex flex-1 flex-col'}
               style={{ overflowY: 'auto', padding: `0 ${cssVar.paddingSM}` }}
             >
-              <Accordion
-                gap={12}
-                indicatorPlacement="end"
-                multiple={false}
-                value={[activePanel]}
-                variant="borderless"
-                items={[
-                  {
-                    children:
-                      filteredTemplates.length === 0 ? (
-                        <Empty style={{ maxWidth: 400 }}>
-                          <EmptyHeader>
-                            <EmptyMedia variant={'icon'}>
-                              <Users />
-                            </EmptyMedia>
-                            <EmptyDescription style={{ fontSize: 14 }}>
-                              {searchTerm
-                                ? t('groupWizard.noMatchingTemplates')
-                                : t('groupWizard.noTemplates')}
-                            </EmptyDescription>
-                          </EmptyHeader>
-                        </Empty>
-                      ) : (
-                        <div className={'flex flex-col gap-1'}>
-                          {filteredTemplates.map((template) => (
-                            <TemplateItem
-                              cx={cx}
-                              isSelected={selectedTemplate === template.id}
-                              key={template.id}
-                              styles={styles}
-                              template={template}
-                              onToggle={handleTemplateToggle}
-                            />
-                          ))}
-                        </div>
-                      ),
-                    key: 'templates',
-                    title: t('groupWizard.useTemplate'),
-                  },
-                  {
-                    children:
-                      filteredAgents.length === 0 ? (
-                        <Empty style={{ maxWidth: 400 }}>
-                          <EmptyHeader>
-                            <EmptyMedia variant={'icon'}>
-                              <Users />
-                            </EmptyMedia>
-                            <EmptyDescription style={{ fontSize: 14 }}>
-                              {searchTerm
-                                ? t('noMatchingAgents', { ns: 'chat' })
-                                : t('noAvailableAgents', { ns: 'chat' })}
-                            </EmptyDescription>
-                          </EmptyHeader>
-                        </Empty>
-                      ) : (
-                        <div className={'flex flex-col gap-1'}>
-                          {filteredAgents.map((agent) => (
-                            <ExistingMemberItem
-                              agent={agent}
-                              cx={cx}
-                              isSelected={selectedAgents.includes(agent.config?.id || '')}
-                              key={agent.id}
-                              styles={styles}
-                              onToggle={handleAgentToggle}
-                            />
-                          ))}
-                        </div>
-                      ),
-                    key: 'agents',
-                    title: t('groupWizard.existingMembers'),
-                  },
-                ]}
-                styles={{
-                  header: { color: cssVar.colorTextDescription, fontSize: cssVar.fontSize },
-                }}
-                onValueChange={handlePanelChange}
-              />
+              <Accordion value={[activePanel]} onValueChange={handlePanelChange}>
+                {(
+                  [
+                    {
+                      children:
+                        filteredTemplates.length === 0 ? (
+                          <Empty style={{ maxWidth: 400 }}>
+                            <EmptyHeader>
+                              <EmptyMedia variant={'icon'}>
+                                <Users />
+                              </EmptyMedia>
+                              <EmptyDescription style={{ fontSize: 14 }}>
+                                {searchTerm
+                                  ? t('groupWizard.noMatchingTemplates')
+                                  : t('groupWizard.noTemplates')}
+                              </EmptyDescription>
+                            </EmptyHeader>
+                          </Empty>
+                        ) : (
+                          <div className={'flex flex-col gap-1'}>
+                            {filteredTemplates.map((template) => (
+                              <TemplateItem
+                                cx={cx}
+                                isSelected={selectedTemplate === template.id}
+                                key={template.id}
+                                styles={styles}
+                                template={template}
+                                onToggle={handleTemplateToggle}
+                              />
+                            ))}
+                          </div>
+                        ),
+                      key: 'templates',
+                      title: t('groupWizard.useTemplate'),
+                    },
+                    {
+                      children:
+                        filteredAgents.length === 0 ? (
+                          <Empty style={{ maxWidth: 400 }}>
+                            <EmptyHeader>
+                              <EmptyMedia variant={'icon'}>
+                                <Users />
+                              </EmptyMedia>
+                              <EmptyDescription style={{ fontSize: 14 }}>
+                                {searchTerm
+                                  ? t('noMatchingAgents', { ns: 'chat' })
+                                  : t('noAvailableAgents', { ns: 'chat' })}
+                              </EmptyDescription>
+                            </EmptyHeader>
+                          </Empty>
+                        ) : (
+                          <div className={'flex flex-col gap-1'}>
+                            {filteredAgents.map((agent) => (
+                              <ExistingMemberItem
+                                agent={agent}
+                                cx={cx}
+                                isSelected={selectedAgents.includes(agent.config?.id || '')}
+                                key={agent.id}
+                                styles={styles}
+                                onToggle={handleAgentToggle}
+                              />
+                            ))}
+                          </div>
+                        ),
+                      key: 'agents',
+                      title: t('groupWizard.existingMembers'),
+                    },
+                  ] as { children: ReactNode; key: string; title: ReactNode }[]
+                ).map((item) => (
+                  <AccordionItem key={item.key} value={item.key}>
+                    <AccordionTrigger>{item.title}</AccordionTrigger>
+                    <AccordionContent>{item.children}</AccordionContent>
+                  </AccordionItem>
+                ))}
+              </Accordion>
             </div>
           </div>
 
@@ -620,26 +621,26 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
             <div className={'flex flex-col gap-4 flex-1'} style={{ overflowY: 'auto' }}>
               <div className={cn('flex gap-3 items-center', styles.hostCard)}>
                 <div className={'flex flex-1 flex-col'} style={{ gap: 2 }}>
-                  <Text
+                  <div
                     style={{ fontSize: 14, fontWeight: 500 }}
                     type={isHostRemoved ? 'secondary' : undefined}
                   >
                     {t('groupWizard.host.title')}
-                  </Text>
-                  <Text
+                  </div>
+                  <div
                     style={{ color: '#999', fontSize: 12 }}
                     type={isHostRemoved ? 'secondary' : undefined}
                   >
                     {t('groupWizard.host.description')}
-                  </Text>
+                  </div>
                 </div>
                 <div className={'flex gap-3 items-center'}>
                   <Tooltip>
                     <TooltipTrigger render={<span />}>
                       <Switch
                         checked={!isHostRemoved}
-                        size="small"
-                        onChange={(checked) => handleHostToggle(checked)}
+                        size="sm"
+                        onCheckedChange={(checked) => handleHostToggle(checked)}
                       />
                     </TooltipTrigger>
                     <TooltipContent>{t('groupWizard.host.tooltip')}</TooltipContent>
@@ -656,8 +657,8 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                           actions: (
                             <Switch
                               checked={!member.isRemoved}
-                              size="small"
-                              onChange={(checked) =>
+                              size="sm"
+                              onCheckedChange={(checked) =>
                                 handleToggleMember(selectedTemplate, member.title, checked)
                               }
                             />
@@ -672,13 +673,12 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                           description: member.systemRole ? (
                             <Tooltip>
                               <TooltipTrigger render={<span />}>
-                                <Text
-                                  className={memberDescriptionClass}
-                                  ellipsis={{ rows: 1 }}
+                                <div
+                                  className={cn('line-clamp-1', memberDescriptionClass)}
                                   type={member.isRemoved ? 'secondary' : undefined}
                                 >
                                   {member.systemRole}
-                                </Text>
+                                </div>
                               </TooltipTrigger>
                               <TooltipContent>{member.systemRole}</TooltipContent>
                             </Tooltip>
@@ -686,9 +686,9 @@ const ChatGroupWizard = memo<ChatGroupWizardProps>(
                           key: member.key,
                           showAction: true,
                           title: (
-                            <Text type={member.isRemoved ? 'secondary' : undefined}>
+                            <div type={member.isRemoved ? 'secondary' : undefined}>
                               {member.title}
-                            </Text>
+                            </div>
                           ),
                         }))
                         .map((item) => (

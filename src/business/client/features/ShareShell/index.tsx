@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { Link } from 'react-router';
 
@@ -34,15 +33,11 @@ export const ShareHero = ({ avatar, byline, title }: ShareHeroProps) => (
   <div className="flex flex-col gap-2 px-6 pt-6 pb-4">
     {avatar}
     {title && (
-      <Text as={'h1'} fontSize={24} style={{ margin: 0 }} weight={700}>
+      <h1 className="text-[24px] font-bold" style={{ margin: 0 }}>
         {title}
-      </Text>
+      </h1>
     )}
-    {byline && (
-      <Text fontSize={12} type={'secondary'}>
-        {byline}
-      </Text>
-    )}
+    {byline && <div className="text-[12px] text-muted-foreground">{byline}</div>}
   </div>
 );
 

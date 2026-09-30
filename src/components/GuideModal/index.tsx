@@ -1,10 +1,13 @@
 'use client';
 
-import { Button, createModal, type ModalInstance, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
+
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 
 const styles = createStaticStyles(({ css }) => ({
   body: css`

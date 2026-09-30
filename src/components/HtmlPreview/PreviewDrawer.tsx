@@ -1,5 +1,4 @@
 import { HtmlPreview } from '@lobehub/ui';
-import { Button, Drawer, Tabs } from '@lobehub/ui/base-ui';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
 import { extractHtmlTitle } from '@orvilo/html-artifact';
 import { exportFile } from '@orvilo/utils/client';
@@ -9,6 +8,9 @@ import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { Button } from '@/components/ui/button';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { isDesktop } from '@/const/version';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -45,30 +47,22 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
 
   const extra = (
     <div className={'flex gap-2 items-center'}>
-      <Tabs
-        activeKey={mode}
-        items={[
-          {
-            key: 'preview',
-            label: (
-              <div className={'flex items-center'} style={{ gap: 6 }}>
-                <Eye size={16} />
-                {t('HtmlPreview.mode.preview')}
-              </div>
-            ),
-          },
-          {
-            key: 'code',
-            label: (
-              <div className={'flex items-center'} style={{ gap: 6 }}>
-                <Code2 size={16} />
-                {t('HtmlPreview.mode.code')}
-              </div>
-            ),
-          },
-        ]}
-        onChange={(key) => setMode(key as 'preview' | 'code')}
-      />
+      <Tabs value={mode} onValueChange={(key) => setMode(key as 'preview' | 'code')}>
+        <TabsList>
+          <TabsTrigger value="preview">
+            <div className={'flex items-center'} style={{ gap: 6 }}>
+              <Eye size={16} />
+              {t('HtmlPreview.mode.preview')}
+            </div>
+          </TabsTrigger>
+          <TabsTrigger value="code">
+            <div className={'flex items-center'} style={{ gap: 6 }}>
+              <Code2 size={16} />
+              {t('HtmlPreview.mode.code')}
+            </div>
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
       <Button icon={<Download size={16} />} type={'fill'} onClick={onDownload}>
         {t('HtmlPreview.actions.download')}
       </Button>
@@ -76,43 +70,46 @@ const HtmlPreviewDrawer = memo<HtmlPreviewDrawerProps>(({ content, open, onClose
   );
 
   return (
-    <Drawer
-      containerMaxWidth={'100%'}
-      extra={extra}
-      height={isDesktop ? `calc(100vh - ${TITLE_BAR_HEIGHT}px)` : '100vh'}
-      open={open}
-      placement="bottom"
-      title={t('HtmlPreview.title')}
-      styles={{
-        bodyContent: { height: '100%', padding: 0 },
-        header: { paddingBlock: 8, paddingInline: 12 },
-      }}
-      onClose={onClose}
-    >
-      {mode === 'preview' ? (
-        <div className={styles.container}>
-          <HtmlPreview
-            actionsRender={hideHtmlPreviewActions}
-            copyable={false}
-            downloadable={false}
-            style={{ height: '100%' }}
-            styles={{ iframe: { height: '100%' } }}
-            title={t('HtmlPreview.iframeTitle')}
-            variant={'borderless'}
-          >
-            {content}
-          </HtmlPreview>
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+      <SheetContent
+        side="bottom"
+        style={{
+          height: isDesktop ? `calc(100vh - ${TITLE_BAR_HEIGHT}px)` : '100vh',
+          maxWidth: 'none',
+          padding: 0,
+        }}
+      >
+        <SheetHeader style={{ paddingBlock: 8, paddingInline: 12 }}>
+          <SheetTitle>{t('HtmlPreview.title')}</SheetTitle>
+          {extra}
+        </SheetHeader>
+        <div style={{ height: '100%' }}>
+          {mode === 'preview' ? (
+            <div className={styles.container}>
+              <HtmlPreview
+                actionsRender={hideHtmlPreviewActions}
+                copyable={false}
+                downloadable={false}
+                style={{ height: '100%' }}
+                styles={{ iframe: { height: '100%' } }}
+                title={t('HtmlPreview.iframeTitle')}
+                variant={'borderless'}
+              >
+                {content}
+              </HtmlPreview>
+            </div>
+          ) : (
+            <div className={styles.container}>
+              <CodeBlock
+                code={content}
+                language={'html'}
+                style={{ height: '100%', overflow: 'auto' }}
+              />
+            </div>
+          )}
         </div>
-      ) : (
-        <div className={styles.container}>
-          <CodeBlock
-            code={content}
-            language={'html'}
-            style={{ height: '100%', overflow: 'auto' }}
-          />
-        </div>
-      )}
-    </Drawer>
+      </SheetContent>
+    </Sheet>
   );
 });
 

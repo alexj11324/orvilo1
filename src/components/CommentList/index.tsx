@@ -1,11 +1,11 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { MessageSquare } from 'lucide-react';
 import { memo, useCallback, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ArticleSkeleton } from '@/components/Skeleton';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { type SkillCommentItem, type SkillCommentListResponse } from '@/types/discover';
 

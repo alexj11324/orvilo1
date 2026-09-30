@@ -1,10 +1,11 @@
-import { Badge, Button, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { BoltIcon, Loader2Icon, RotateCwIcon } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
@@ -54,13 +55,13 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
         return (
           <Tooltip>
             <TooltipTrigger render={<span />}>
-              <Tag
-                className={className}
-                color={'processing'}
-                icon={<Badge status={'processing'} />}
-              >
+              <Badge className={className} variant="info">
+                <span
+                  aria-hidden
+                  className={'inline-block size-2 animate-pulse rounded-full bg-white'}
+                />
                 {t('FileParsingStatus.chunks.status.processing')}
-              </Tag>
+              </Badge>
             </TooltipTrigger>
             <TooltipContent>{t('FileParsingStatus.chunks.status.processingTip')}</TooltipContent>
           </Tooltip>
@@ -71,7 +72,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
         return (
           <Tooltip>
             <TooltipTrigger render={<span />}>
-              <Tag className={className} color={'error'} variant={'filled'}>
+              <Badge className={className} variant="destructive">
                 {t('FileParsingStatus.chunks.status.error')}{' '}
                 {createElement(RotateCwIcon, {
                   size: 16,
@@ -81,7 +82,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
                     onErrorClick?.('chunking');
                   },
                 })}
-              </Tag>
+              </Badge>
             </TooltipTrigger>
             <TooltipContent style={{ maxWidth: 340 }}>
               <div className={'flex flex-col gap-1'}>
@@ -107,19 +108,17 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
             <div className={'flex'}>
               <Tooltip>
                 <TooltipTrigger render={<span />}>
-                  <Tag
+                  <Badge
                     className={cx('chunk-tag', className)}
                     style={{ cursor: 'pointer' }}
-                    variant={'filled'}
-                    icon={
-                      preparingEmbedding
-                        ? createElement(Loader2Icon, { size: 16 })
-                        : createElement(BoltIcon, { size: 16 })
-                    }
+                    variant="secondary"
                     onClick={() => {
                       onClick?.(AsyncTaskStatus.Success);
                     }}
                   >
+                    {preparingEmbedding
+                      ? createElement(Loader2Icon, { size: 16 })
+                      : createElement(BoltIcon, { size: 16 })}
                     {chunkCount}
                     {
                       // if want to hide button
@@ -143,7 +142,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
                         </Button>
                       )
                     }
-                  </Tag>
+                  </Badge>
                 </TooltipTrigger>
                 <TooltipContent>
                   {t('FileParsingStatus.chunks.embeddingStatus.empty')}

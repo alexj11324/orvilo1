@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CheckIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -67,18 +66,18 @@ const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwit
         shape={'square'}
         size={20}
       />
-      <Text ellipsis fontSize={13} style={{ flex: 1 }}>
+      <div className="truncate min-w-0 text-[13px]" style={{ flex: 1 }}>
         {name}
-      </Text>
+      </div>
       {selected && <CheckIcon size={16} style={{ color: cssVar.colorTextSecondary }} />}
     </div>
   );
 
   return (
     <div className="flex flex-col gap-px px-1">
-      <Text fontSize={11} style={{ paddingInline: 8 }} type={'secondary'} weight={500}>
+      <div className="text-[11px] text-muted-foreground font-medium" style={{ paddingInline: 8 }}>
         {t('workspaceSwitcher.label')}
-      </Text>
+      </div>
       {workspaces.map((workspace) =>
         row(
           workspace.id,

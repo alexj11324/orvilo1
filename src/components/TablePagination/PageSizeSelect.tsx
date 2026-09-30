@@ -1,7 +1,8 @@
 'use client';
 
-import { Select } from '@lobehub/ui/base-ui';
 import { memo, type ReactNode } from 'react';
+
+import { Select } from '@/components/Select';
 
 interface PageSizeOption {
   label?: ReactNode;

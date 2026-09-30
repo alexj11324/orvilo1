@@ -1,12 +1,12 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { formatIntergerNumber } from '@/utils/format';
 
 import PageSizeSelect from './PageSizeSelect';

@@ -1,12 +1,12 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { CloudIcon, Loader2Icon, TriangleAlertIcon } from 'lucide-react';
 import { createElement, type CSSProperties } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { type SaveStatus } from '@/types/saveState';
 
 interface AutoSaveHintProps {
@@ -29,35 +29,38 @@ const AutoSaveHint = memo<AutoSaveHintProps>(({ style, saveStatus, lastUpdatedTi
 
   if (saveStatus === 'saving')
     return (
-      <Tag icon={createElement(Loader2Icon, { size: 16 })} style={style}>
+      <Badge style={style} variant="secondary">
+        {createElement(Loader2Icon, { size: 16 })}
         {t('autoSave.saving')}
-      </Tag>
+      </Badge>
     );
 
   if (saveStatus === 'failed')
     return (
-      <Tag
-        color={'error'}
-        icon={createElement(TriangleAlertIcon, { size: 16 })}
+      <Badge
         style={{ cursor: onRetry ? 'pointer' : undefined, ...style }}
+        variant="destructive"
         onClick={onRetry}
       >
+        {createElement(TriangleAlertIcon, { size: 16 })}
         {t('autoSave.failed')}
         {onRetry ? ` · ${t('autoSave.retry')}` : ''}
-      </Tag>
+      </Badge>
     );
 
   if (saveStatus === 'saved' && lastUpdatedTime)
     return (
-      <Tag icon={createElement(CloudIcon, { size: 16 })} style={style}>
+      <Badge style={style} variant="secondary">
+        {createElement(CloudIcon, { size: 16 })}
         {t('autoSave.saved')} {dayjs(lastUpdatedTime).fromNow()}
-      </Tag>
+      </Badge>
     );
 
   return (
-    <Tag icon={createElement(CloudIcon, { size: 16 })} style={style}>
+    <Badge style={style} variant="secondary">
+      {createElement(CloudIcon, { size: 16 })}
       {t('autoSave.latest')}
-    </Tag>
+    </Badge>
   );
 });
 

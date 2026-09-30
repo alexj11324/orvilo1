@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx, responsive } from 'antd-style';
 import { cn } from 'cn';
 import { type LucideIcon } from 'lucide-react';
@@ -141,9 +140,8 @@ const Descriptions = memo<DescriptionsProps>(
                         style: { color: cssVar.colorTextSecondary },
                       })
                     : item.icon)}
-                <Text
-                  ellipsis
-                  className={cx(classNames?.label, item.classNames?.label)}
+                <div
+                  className={cn('truncate min-w-0', cx(classNames?.label, item.classNames?.label))}
                   style={{
                     color: cssVar.colorTextSecondary,
                     ...customStyles?.label,
@@ -151,7 +149,7 @@ const Descriptions = memo<DescriptionsProps>(
                   }}
                 >
                   {item.label}
-                </Text>
+                </div>
               </div>
               <div
                 className={cn('flex flex-1 justify-start', wrap ? 'items-start' : 'items-center')}
@@ -171,9 +169,11 @@ const Descriptions = memo<DescriptionsProps>(
                     wrap={wrap}
                   />
                 ) : (
-                  <Text
-                    className={cx(classNames?.value, item.classNames?.value)}
-                    ellipsis={!wrap}
+                  <div
+                    className={cn(
+                      'truncate min-w-0',
+                      cx(classNames?.value, item.classNames?.value),
+                    )}
                     style={{
                       ...(wrap && {
                         overflowWrap: 'anywhere',
@@ -185,7 +185,7 @@ const Descriptions = memo<DescriptionsProps>(
                     }}
                   >
                     {item.value}
-                  </Text>
+                  </div>
                 )}
               </div>
             </div>

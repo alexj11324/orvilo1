@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 
 import SkeletonBar from './Bar';
 
@@ -58,35 +58,34 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const Section = (props: SectionSkeletonProps) => (
-  <Flexbox gap={12}>
+  <div className={'flex flex-col gap-3'}>
     <SkeletonBar height={18} width={112} />
     <ResourceSectionSkeleton {...props} />
-  </Flexbox>
+  </div>
 );
 
 const ResourceHomeSkeleton = () => (
-  <Flexbox aria-busy flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.header}
-      flex={'none'}
-      height={44}
-      justify={'space-between'}
-      paddingInline={16}
+  <div
+    aria-busy
+    className={'flex flex-1 flex-col'}
+    style={{ height: '100%', minHeight: 0, overflow: 'hidden' }}
+  >
+    <div
+      className={cn('flex items-center justify-between px-4', styles.header)}
+      style={{ flex: 'none', height: 44 }}
     >
       <SkeletonBar height={20} width={96} />
       <SkeletonBar height={28} width={88} />
-    </Flexbox>
+    </div>
     <div className={styles.scroll}>
-      <Flexbox className={styles.content} gap={40}>
+      <div className={cn('flex flex-col gap-10', styles.content)}>
         <Section {...RESOURCE_HOME_SECTIONS.libraries} />
         <Section {...RESOURCE_HOME_SECTIONS.works} />
         <Section {...RESOURCE_HOME_SECTIONS.pages} />
         <Section {...RESOURCE_HOME_SECTIONS.files} />
-      </Flexbox>
+      </div>
     </div>
-  </Flexbox>
+  </div>
 );
 
 export default ResourceHomeSkeleton;

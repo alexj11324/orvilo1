@@ -1,11 +1,10 @@
 'use client';
 
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
-import { memo } from 'react';
+import { type HTMLAttributes, memo } from 'react';
 
 import { useIsDark } from '@/hooks/useIsDark';
 
@@ -51,14 +50,14 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-interface NotificationProps extends FlexboxProps {
+interface NotificationProps extends HTMLAttributes<HTMLDivElement> {
   height?: number | string;
   mobile?: boolean;
   onCancel?: (show?: boolean) => void;
   show: boolean;
   showCloseIcon?: boolean;
   width?: number | string;
-  wrapper?: FlexboxProps;
+  wrapper?: HTMLAttributes<HTMLDivElement>;
 }
 
 const Notification = memo<NotificationProps>(
@@ -78,29 +77,29 @@ const Notification = memo<NotificationProps>(
     const { className: wrapperClassName, ...restWrapper } = wrapper;
     return (
       show && (
-        <Flexbox
-          className={cx(styles.container, mobile && styles.mobileContainer, className)}
-          height={height}
-          width={mobile ? 'calc(100% - 16px)' : width}
+        <div
+          className={cn('flex', cx(styles.container, mobile && styles.mobileContainer, className))}
+          style={{ height, width: mobile ? 'calc(100% - 16px)' : width }}
           {...rest}
         >
           {showCloseIcon && (
             <ActionIcon className={styles.cancelIcon} icon={XIcon} onClick={() => onCancel?.()} />
           )}
-          <Flexbox
-            horizontal
-            gap={16}
-            padding={'20px 20px 16px'}
-            className={cx(
-              styles.wrapper,
-              isDarkMode ? styles.wrapperDark : styles.wrapperLight,
-              wrapperClassName,
+          <div
+            style={{ padding: '20px 20px 16px' }}
+            className={cn(
+              'flex gap-4 p-4',
+              cx(
+                styles.wrapper,
+                isDarkMode ? styles.wrapperDark : styles.wrapperLight,
+                wrapperClassName,
+              ),
             )}
             {...restWrapper}
           >
             {children}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )
     );
   },

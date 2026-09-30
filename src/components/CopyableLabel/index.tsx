@@ -1,7 +1,11 @@
-import { CopyButton, Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
+import { CopyIcon } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
+
+import { Button } from '@/components/ui/button';
+import { copyToClipboard } from '@/utils/clipboard';
 
 interface CopyableLabelProps {
   className?: string;
@@ -13,16 +17,9 @@ interface CopyableLabelProps {
 const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--', wrap }) => {
   if (wrap) {
     return (
-      <Flexbox
-        horizontal
-        align={'flex-start'}
-        className={className}
-        gap={4}
-        style={{
-          position: 'relative',
-          width: '100%',
-          ...style,
-        }}
+      <div
+        className={cn('flex gap-1', className)}
+        style={{ position: 'relative', width: '100%', ...style }}
       >
         <Text
           style={{
@@ -38,22 +35,24 @@ const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--'
         >
           {value || '--'}
         </Text>
-        <CopyButton content={value || '--'} size={'small'} />
-      </Flexbox>
+        <Button
+          className={'text-muted-foreground size-6'}
+          size={'icon'}
+          variant={'ghost'}
+          onClick={async () => {
+            await copyToClipboard(value || '--');
+          }}
+        >
+          <CopyIcon size={12} />
+        </Button>
+      </div>
     );
   }
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={className}
-      gap={4}
-      style={{
-        overflow: 'hidden',
-        position: 'relative',
-        ...style,
-      }}
+    <div
+      className={cn('flex gap-1 items-center', className)}
+      style={{ overflow: 'hidden', position: 'relative', ...style }}
     >
       <Text
         ellipsis
@@ -68,8 +67,17 @@ const CopyableLabel = memo<CopyableLabelProps>(({ className, style, value = '--'
       >
         {value || '--'}
       </Text>
-      <CopyButton content={value || '--'} size={'small'} />
-    </Flexbox>
+      <Button
+        className={'text-muted-foreground size-6'}
+        size={'icon'}
+        variant={'ghost'}
+        onClick={async () => {
+          await copyToClipboard(value || '--');
+        }}
+      >
+        <CopyIcon size={12} />
+      </Button>
+    </div>
   );
 });
 

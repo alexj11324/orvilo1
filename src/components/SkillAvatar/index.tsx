@@ -1,7 +1,7 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
+import { cn } from 'cn';
 import { type CSSProperties, memo } from 'react';
 
 interface SkillAvatarProps {
@@ -12,9 +12,8 @@ interface SkillAvatarProps {
 
 const SkillAvatar = memo<SkillAvatarProps>(({ size = 40, className, style }) => {
   return (
-    <Center
-      className={className}
-      flex={'none'}
+    <div
+      className={cn('flex items-center justify-center', className)}
       style={{
         borderRadius: Math.floor(size * 0.1),
         color: '#000',
@@ -22,10 +21,11 @@ const SkillAvatar = memo<SkillAvatarProps>(({ size = 40, className, style }) => 
         overflow: 'hidden',
         width: size,
         ...style,
+        flex: none,
       }}
     >
       <SkillsIcon color={'#000'} size={size} style={{ transform: 'scale(0.75)' }} />
-    </Center>
+    </div>
   );
 });
 

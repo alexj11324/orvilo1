@@ -1,8 +1,8 @@
-import { type IconProps } from '@lobehub/ui';
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
+import { type LucideIcon } from 'lucide-react';
 import { ChevronRight } from 'lucide-react';
-import { type ReactNode } from 'react';
+import { createElement, type ReactNode } from 'react';
 import { memo } from 'react';
 
 import Divider from './Divider';
@@ -20,7 +20,7 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 export interface CellProps {
-  icon?: IconProps['icon'];
+  icon?: LucideIcon;
   key?: string | number;
   label?: string | ReactNode;
   onClick?: () => void;
@@ -31,21 +31,16 @@ const Cell = memo<CellProps>(({ label, icon, onClick, type }) => {
   if (type === 'divider') return <Divider />;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.container)}
-      gap={12}
-      justify={'space-between'}
-      padding={16}
+    <div
+      className={cn('flex gap-3 items-center justify-between p-4', cx(styles.container))}
       onClick={onClick}
     >
-      <Flexbox horizontal align={'center'} gap={12}>
-        {icon && <Icon color={cssVar.colorPrimaryBorder} icon={icon} size={{ size: 20 }} />}
+      <div className={'flex gap-3 items-center'}>
+        {icon && createElement(icon, { size: 20, style: { color: cssVar.colorPrimaryBorder } })}
         {label}
-      </Flexbox>
-      <Icon color={cssVar.colorBorder} icon={ChevronRight} size={{ size: 16 }} />
-    </Flexbox>
+      </div>
+      {createElement(ChevronRight, { size: 16, style: { color: cssVar.colorBorder } })}
+    </div>
   );
 });
 

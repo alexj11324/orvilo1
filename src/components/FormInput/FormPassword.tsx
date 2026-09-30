@@ -1,16 +1,15 @@
-import { type InputProps as Props } from '@lobehub/ui';
-import { InputPassword } from '@lobehub/ui';
-import { type InputRef } from 'antd/es/input/Input';
+import { type InputHTMLAttributes } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
 
+import { Input } from '@/components/ui/input';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 
-interface FormPasswordProps extends Omit<Props, 'onChange'> {
+interface FormPasswordProps extends Omit<InputHTMLAttributes<HTMLInputElement>, 'onChange'> {
   onChange?: (value: string) => void;
 }
 
 const FormPassword = memo<FormPasswordProps>(({ onChange, value: defaultValue, ...props }) => {
-  const ref = useRef<InputRef>(null);
+  const ref = useRef<HTMLInputElement>(null);
   const { compositionProps, isComposingRef } = useIMECompositionEvent();
 
   const [value, setValue] = useState(defaultValue as string);
@@ -20,8 +19,9 @@ const FormPassword = memo<FormPasswordProps>(({ onChange, value: defaultValue, .
   }, [defaultValue]);
 
   return (
-    <InputPassword
+    <Input
       ref={ref}
+      type={'password'}
       onBlur={() => {
         onChange?.(value);
       }}
@@ -29,15 +29,14 @@ const FormPassword = memo<FormPasswordProps>(({ onChange, value: defaultValue, .
         setValue(e.target.value);
       }}
       {...compositionProps}
-      onPressEnter={() => {
-        if (isComposingRef.current) return;
-        onChange?.(value);
-      }}
       // Secret field (API keys, tokens): suppress autofill of the saved login
       // password. Overridable by callers via {...props}.
       autoComplete="new-password"
       {...props}
       value={value}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !isComposingRef.current) onChange?.(value);
+      }}
     />
   );
 });

@@ -1,10 +1,9 @@
 import { type IconAvatarProps } from '@lobehub/icons';
 import { LobeHub as Orvilo } from '@lobehub/icons';
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { type ChatModelCard } from '@orvilo/types';
 import { createStaticStyles, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import {
   AudioLines,
   Infinity as InfinityIcon,
@@ -16,11 +15,12 @@ import {
 } from 'lucide-react';
 import { type ModelAbilities } from 'model-bank';
 import numeral from 'numeral';
-import { type CSSProperties, type FC } from 'react';
+import { createElement, type CSSProperties, type FC, type HTMLAttributes } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type AiProviderSourceType } from '@/types/aiProvider';
 import { formatTokenNumber } from '@/utils/format';
 
@@ -89,15 +89,16 @@ const FeatureTagItem = memo<FeatureTagItemProps>(
 
     const tag = (
       <Tag className={className} color={color} size={'small'}>
-        <Icon icon={icon} />
+        {createElement(icon, { size: 16 })}
       </Tag>
     );
 
     if (disableTooltip) return tag;
 
     return (
-      <Tooltip placement={placement} title={title}>
-        {tag}
+      <Tooltip>
+        <TooltipTrigger render={<span />}>{tag}</TooltipTrigger>
+        <TooltipContent side={placement}>{title}</TooltipContent>
       </Tooltip>
     );
   },
@@ -202,13 +203,13 @@ const Context = memo(
     if (disableTooltip) return tag;
 
     return (
-      <Tooltip
-        placement={placement}
-        title={t('ModelSelect.featureTag.tokens', {
-          tokens: contextWindowTokens === 0 ? '∞' : numeral(contextWindowTokens).format('0,0'),
-        })}
-      >
-        {tag}
+      <Tooltip>
+        <TooltipTrigger render={<span />}>{tag}</TooltipTrigger>
+        <TooltipContent side={placement}>
+          {t('ModelSelect.featureTag.tokens', {
+            tokens: contextWindowTokens === 0 ? '∞' : numeral(contextWindowTokens).format('0,0'),
+          })}
+        </TooltipContent>
       </Tooltip>
     );
   },
@@ -217,12 +218,15 @@ const Context = memo(
 export const ModelInfoTags = memo<ModelInfoTagsProps>(
   ({ directionReverse, disableTooltip, placement = 'top', style, ...model }) => {
     return (
-      <Flexbox
-        className={TAG_CLASSNAME}
-        direction={directionReverse ? 'horizontal-reverse' : 'horizontal'}
-        gap={2}
-        style={{ marginLeft: 'auto', ...style }}
-        width={'fit-content'}
+      <div
+        className={cn('flex', TAG_CLASSNAME)}
+        style={{
+          gap: 2,
+          marginLeft: 'auto',
+          ...style,
+          flexDirection: directionReverse ? 'horizontal-reverse' : 'row',
+          width: 'fit-content',
+        }}
       >
         <FeatureTags
           audio={model.audio}
@@ -243,12 +247,12 @@ export const ModelInfoTags = memo<ModelInfoTagsProps>(
             styles={styles}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
 
-interface ModelItemRenderProps extends ChatModelCard, Pick<FlexboxProps, 'className' | 'style'> {
+interface ModelItemRenderProps extends ChatModelCard, Pick<HTMLAttributes<HTMLDivElement>> {
   abilities?: ModelAbilities;
   audio?: boolean;
   newBadgeLabel?: string;
@@ -279,23 +283,12 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
     const displayNameOrId = displayName || id;
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={className}
-        gap={32}
-        justify={'space-between'}
-        style={{
-          overflow: 'hidden',
-          position: 'relative',
-          width: '100%',
-          ...style,
-        }}
+      <div
+        className={cn('flex gap-8 items-center justify-between', className)}
+        style={{ overflow: 'hidden', position: 'relative', width: '100%', ...style }}
       >
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
+        <div
+          className={'flex gap-2 items-center'}
           style={{ flexShrink: 1, minWidth: 0, overflow: 'hidden' }}
         >
           <ModelIcon model={id} size={20} />
@@ -318,7 +311,7 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
               {proBadgeLabel}
             </Tag>
           )}
-        </Flexbox>
+        </div>
         {showInfoTag && (
           <ModelInfoTags
             audio={audio ?? abilities?.audio}
@@ -331,7 +324,7 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
             vision={vision ?? abilities?.vision}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -349,15 +342,7 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
   ({ provider, name, source, logo, type = 'mono', size = 16 }) => {
     const isMono = type === 'mono';
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={6}
-        width={'100%'}
-        style={{
-          overflow: 'hidden',
-        }}
-      >
+      <div className={'flex items-center'} style={{ gap: 6, overflow: 'hidden' }}>
         {source === 'custom' && !!logo ? (
           <Avatar
             avatar={logo}
@@ -374,7 +359,7 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
         <Text ellipsis color={'inherit'}>
           {name}
         </Text>
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -385,8 +370,8 @@ interface LabelRendererProps {
 }
 
 export const LabelRenderer = memo<LabelRendererProps>(({ Icon, label }) => (
-  <Flexbox horizontal align={'center'} gap={8}>
-    <Icon size={20} />
+  <div className={'flex gap-2 items-center'}>
+    {createElement(Icon, { size: 20 })}
     <span>{label}</span>
-  </Flexbox>
+  </div>
 ));

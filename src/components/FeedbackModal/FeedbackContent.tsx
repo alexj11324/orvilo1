@@ -1,11 +1,10 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, toast, Upload, useModalContext } from '@lobehub/ui/base-ui';
 import { BRANDING_EMAIL } from '@orvilo/business-const';
 import { Form, Input } from 'antd';
 import { ImagePlus, Send } from 'lucide-react';
-import { memo, useCallback, useState } from 'react';
+import { createElement, memo, useCallback, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import TextArea from '@/components/TextArea';
@@ -104,7 +103,7 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
   }, [close, form]);
 
   return (
-    <Flexbox gap={16}>
+    <div className={'flex flex-col gap-4'}>
       <p style={{ color: 'var(--colorTextSecondary)', fontSize: 14, margin: 0 }}>
         <Trans
           i18nKey="feedback.emailContact"
@@ -152,9 +151,9 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
         </Form.Item>
 
         <Form.Item label={t('feedback.fields.screenshot.label')} style={{ marginBottom: 0 }}>
-          <Flexbox gap={8}>
+          <div className={'flex flex-col gap-2'}>
             {screenshotUrl ? (
-              <Flexbox gap={8}>
+              <div className={'flex flex-col gap-2'}>
                 <img
                   alt="Screenshot"
                   src={screenshotUrl}
@@ -163,7 +162,7 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
                 <Button danger disabled={uploadingScreenshot} onClick={handleRemoveScreenshot}>
                   {t('feedback.fields.screenshot.remove')}
                 </Button>
-              </Flexbox>
+              </div>
             ) : (
               <Upload
                 accept="image/*"
@@ -173,27 +172,32 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
                   return false;
                 }}
               >
-                <Button icon={<Icon icon={ImagePlus} />} loading={uploadingScreenshot}>
+                <Button icon={createElement(ImagePlus, { size: 16 })} loading={uploadingScreenshot}>
                   {uploadingScreenshot
                     ? t('feedback.fields.screenshot.uploading')
                     : t('feedback.fields.screenshot.upload')}
                 </Button>
               </Upload>
             )}
-          </Flexbox>
+          </div>
           <p style={{ color: 'var(--colorTextSecondary)', fontSize: 12, marginTop: 8 }}>
             {t('feedback.fields.screenshot.hint')}
           </p>
         </Form.Item>
       </Form>
 
-      <Flexbox horizontal gap={8} justify="flex-end">
+      <div className={'flex gap-2 justify-end'}>
         <Button onClick={handleCancel}>{t('cancel')}</Button>
-        <Button icon={<Icon icon={Send} />} loading={loading} type="primary" onClick={handleSubmit}>
+        <Button
+          icon={createElement(Send, { size: 16 })}
+          loading={loading}
+          type="primary"
+          onClick={handleSubmit}
+        >
           {t('feedback.submit')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

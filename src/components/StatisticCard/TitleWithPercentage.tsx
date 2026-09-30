@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { type CSSProperties } from 'react';
@@ -26,15 +25,9 @@ const TitleWithPercentage = memo<TitleWithPercentageProps>(
     };
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={4}
-        justify={'flex-start'}
-        style={{
-          overflow: 'hidden',
-          position: 'inherit',
-        }}
+      <div
+        className={'flex gap-1 items-center justify-start'}
+        style={{ overflow: 'hidden', position: 'inherit' }}
       >
         <Text
           as={'h2'}
@@ -66,7 +59,7 @@ const TitleWithPercentage = memo<TitleWithPercentageProps>(
             {percentage.toFixed(1)}%
           </Tag>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

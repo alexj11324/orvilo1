@@ -1,7 +1,6 @@
 'use client';
 
 import { Avatar as AvatarPrimitive } from '@base-ui/react/avatar';
-import { FluentEmoji } from '@lobehub/ui';
 import type { AvatarProps as OrviloAvatarProps } from '@lobehub/ui/base-ui';
 import { cssVar, cx } from 'antd-style';
 import { type ComponentProps, isValidElement, memo, type ReactNode } from 'react';
@@ -40,29 +39,29 @@ export interface AvatarProps
 const Avatar = memo<AvatarProps>(
   ({
     alt,
-    animation,
+    animation: _animation,
     avatar,
     background,
-    bordered,
-    borderedColor,
+    bordered: _bordered,
+    borderedColor: _borderedColor,
     children,
     className,
-    emojiScaleWithBackground,
-    gap,
-    icon,
-    loading,
+    emojiScaleWithBackground: _emojiScaleWithBackground,
+    gap: _gap,
+    icon: _icon,
+    loading: _loading,
     name,
-    shadow,
+    shadow: _shadow,
     shape,
     size = 48,
-    sliceText,
+    sliceText: _sliceText,
     src: srcProp,
-    srcSet,
+    srcSet: _srcSet,
     style,
     title,
-    tooltipProps,
-    unoptimized,
-    variant,
+    tooltipProps: _tooltipProps,
+    unoptimized: _unoptimized,
+    variant: _variant,
     ...rest
   }) => {
     const src = remoteAvatarSrc(avatar) ?? remoteAvatarSrc(srcProp);
@@ -99,11 +98,13 @@ const Avatar = memo<AvatarProps>(
       // A non-URL string is either an emoji identity (pages, connectors) or the
       // initials produced by the fallback above.
       content = EMOJI_RE.test(resolved.avatar) ? (
-        <FluentEmoji
-          emoji={resolved.avatar}
-          size={Math.round(numericSize * 0.72)}
-          type={animation ? 'anim' : undefined}
-        />
+        <span
+          aria-label={resolved.avatar}
+          role={'img'}
+          style={{ fontSize: Math.round(numericSize * 0.72), lineHeight: 1 }}
+        >
+          {resolved.avatar}
+        </span>
       ) : (
         <span
           aria-hidden="true"

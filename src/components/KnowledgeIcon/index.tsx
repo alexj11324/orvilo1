@@ -1,4 +1,3 @@
-import { Center } from '@lobehub/ui';
 import { memo } from 'react';
 
 import FileIcon from '@/components/FileIcon';
@@ -20,9 +19,12 @@ const KnowledgeIcon = memo<KnowledgeIconProps>(({ type, size, fileType, locked, 
   const fileSize = (typeof size === 'object' ? size.file : size) || 24;
 
   return type === KnowledgeType.KnowledgeBase ? (
-    <Center height={repoSize} width={repoSize}>
+    <div
+      className={'flex flex-col items-center justify-center'}
+      style={{ height: repoSize, width: repoSize }}
+    >
       {locked ? <LockedLibIcon size={repoSize / 1.2} /> : <RepoIcon size={repoSize / 1.2} />}
-    </Center>
+    </div>
   ) : (
     <FileIcon fileName={name} fileType={fileType!} size={fileSize} />
   );

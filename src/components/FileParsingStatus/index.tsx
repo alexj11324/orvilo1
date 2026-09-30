@@ -1,10 +1,11 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Badge, Button, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { BoltIcon, Loader2Icon, RotateCwIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type FileParsingTask } from '@/types/asyncTask';
 import { AsyncTaskStatus } from '@/types/asyncTask';
 
@@ -51,46 +52,50 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
     switch (chunkingStatus) {
       case AsyncTaskStatus.Processing: {
         return (
-          <Tooltip
-            styles={{ root: { pointerEvents: 'none' } }}
-            title={t('FileParsingStatus.chunks.status.processingTip')}
-          >
-            <Tag className={className} color={'processing'} icon={<Badge status={'processing'} />}>
-              {t('FileParsingStatus.chunks.status.processing')}
-            </Tag>
+          <Tooltip>
+            <TooltipTrigger render={<span />}>
+              <Tag
+                className={className}
+                color={'processing'}
+                icon={<Badge status={'processing'} />}
+              >
+                {t('FileParsingStatus.chunks.status.processing')}
+              </Tag>
+            </TooltipTrigger>
+            <TooltipContent>{t('FileParsingStatus.chunks.status.processingTip')}</TooltipContent>
           </Tooltip>
         );
       }
 
       case AsyncTaskStatus.Error: {
         return (
-          <Tooltip
-            styles={{ root: { maxWidth: 340, pointerEvents: 'none' } }}
-            title={
-              <Flexbox gap={4}>
+          <Tooltip>
+            <TooltipTrigger render={<span />}>
+              <Tag className={className} color={'error'} variant={'filled'}>
+                {t('FileParsingStatus.chunks.status.error')}{' '}
+                {createElement(RotateCwIcon, {
+                  size: 16,
+                  style: { cursor: 'pointer' },
+                  title: t('retry', { ns: 'common' }),
+                  onClick: () => {
+                    onErrorClick?.('chunking');
+                  },
+                })}
+              </Tag>
+            </TooltipTrigger>
+            <TooltipContent style={{ maxWidth: 340 }}>
+              <div className={'flex flex-col gap-1'}>
                 {t('FileParsingStatus.chunks.status.errorResult')}
                 {chunkingError && (
-                  <Flexbox className={styles.errorReason}>
+                  <div className={cn('flex', styles.errorReason)}>
                     [{chunkingError.name}]:{' '}
                     {chunkingError.body && typeof chunkingError.body !== 'string'
                       ? chunkingError.body.detail
                       : chunkingError.body}
-                  </Flexbox>
+                  </div>
                 )}
-              </Flexbox>
-            }
-          >
-            <Tag className={className} color={'error'} variant={'filled'}>
-              {t('FileParsingStatus.chunks.status.error')}{' '}
-              <Icon
-                icon={RotateCwIcon}
-                style={{ cursor: 'pointer' }}
-                title={t('retry', { ns: 'common' })}
-                onClick={() => {
-                  onErrorClick?.('chunking');
-                }}
-              />
-            </Tag>
+              </div>
+            </TooltipContent>
           </Tooltip>
         );
       }
@@ -99,48 +104,52 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
         // if no embedding status, it means that the embedding is not started
         if (!embeddingStatus || preparingEmbedding)
           return (
-            <Flexbox horizontal>
-              <Tooltip
-                styles={{ root: { pointerEvents: 'none' } }}
-                title={t('FileParsingStatus.chunks.embeddingStatus.empty')}
-              >
-                <Tag
-                  className={cx('chunk-tag', className)}
-                  style={{ cursor: 'pointer' }}
-                  variant={'filled'}
-                  icon={
-                    preparingEmbedding ? <Icon spin icon={Loader2Icon} /> : <Icon icon={BoltIcon} />
-                  }
-                  onClick={() => {
-                    onClick?.(AsyncTaskStatus.Success);
-                  }}
-                >
-                  {chunkCount}
-                  {
-                    // if want to hide button
-                    hideEmbeddingButton ||
-                    // or if preparing the embedding
-                    preparingEmbedding ? null : (
-                      <Button
-                        type={'link'}
-                        style={{
-                          fontSize: 12,
-                          height: 'auto',
-                          paddingBlock: 0,
-                          paddingInline: '8px 0',
-                        }}
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          onEmbeddingClick?.();
-                        }}
-                      >
-                        {t('FileParsingStatus.chunks.embeddings')}
-                      </Button>
-                    )
-                  }
-                </Tag>
+            <div className={'flex'}>
+              <Tooltip>
+                <TooltipTrigger render={<span />}>
+                  <Tag
+                    className={cx('chunk-tag', className)}
+                    style={{ cursor: 'pointer' }}
+                    variant={'filled'}
+                    icon={
+                      preparingEmbedding
+                        ? createElement(Loader2Icon, { size: 16 })
+                        : createElement(BoltIcon, { size: 16 })
+                    }
+                    onClick={() => {
+                      onClick?.(AsyncTaskStatus.Success);
+                    }}
+                  >
+                    {chunkCount}
+                    {
+                      // if want to hide button
+                      hideEmbeddingButton ||
+                      // or if preparing the embedding
+                      preparingEmbedding ? null : (
+                        <Button
+                          type={'link'}
+                          style={{
+                            fontSize: 12,
+                            height: 'auto',
+                            paddingBlock: 0,
+                            paddingInline: '8px 0',
+                          }}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEmbeddingClick?.();
+                          }}
+                        >
+                          {t('FileParsingStatus.chunks.embeddings')}
+                        </Button>
+                      )
+                    }
+                  </Tag>
+                </TooltipTrigger>
+                <TooltipContent>
+                  {t('FileParsingStatus.chunks.embeddingStatus.empty')}
+                </TooltipContent>
               </Tooltip>
-            </Flexbox>
+            </div>
           );
 
         return (

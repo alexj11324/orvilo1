@@ -1,8 +1,8 @@
-import { Flexbox, InputNumber } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useMergeState from 'use-merge-value';
 
+import { NumberField } from '@/components/reui/number-field';
 import { useIsMobile } from '@/hooks/useIsMobile';
 
 import DiscreteSlider from './DiscreteSlider';
@@ -64,8 +64,8 @@ const MaxTokenSlider = memo<MaxTokenSliderProps>(({ value, onChange, defaultValu
   );
 
   return (
-    <Flexbox horizontal align={'center'} gap={12}>
-      <Flexbox flex={1}>
+    <div className={'flex gap-3 items-center'}>
+      <div className={'flex flex-1 flex-col'}>
         <DiscreteSlider
           options={options}
           value={powValue}
@@ -79,20 +79,19 @@ const MaxTokenSlider = memo<MaxTokenSliderProps>(({ value, onChange, defaultValu
           }}
           onChange={updateWithPowValue}
         />
-      </Flexbox>
+      </div>
       <div>
-        <InputNumber
-          changeOnWheel
+        <NumberField
           min={0}
           step={4 * Kibi}
           value={token}
-          onChange={(e) => {
-            if (!e && e !== 0) return;
-            updateWithRealValue(e as number);
+          onValueChange={(e) => {
+            if (e === null || e === undefined) return;
+            updateWithRealValue(e);
           }}
         />
       </div>
-    </Flexbox>
+    </div>
   );
 });
 export default MaxTokenSlider;

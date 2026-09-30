@@ -6,9 +6,8 @@ import {
   SiPnpm,
   SiPython,
 } from '@icons-pack/react-simple-icons';
-import { Flexbox } from '@lobehub/ui';
 import { AutoComplete, type AutoCompleteProps } from '@lobehub/ui/base-ui';
-import { type FC } from 'react';
+import { createElement, type FC } from 'react';
 import { memo } from 'react';
 
 import { parseCommandInput } from './parseCommandInput';
@@ -51,10 +50,10 @@ const MCPStdioCommandInput = memo<MCPStdioCommandInputProps>(({ onParsedArgs, ..
       <AutoComplete
         options={STDIO_COMMAND_OPTIONS.map(({ value, icon: Icon, color }) => ({
           label: (
-            <Flexbox horizontal align={'center'} gap={8}>
-              {Icon && <Icon color={color} size={16} />}
+            <div className={'flex gap-2 items-center'}>
+              {Icon && createElement(Icon, { size: 16, style: { color } })}
               {value}
-            </Flexbox>
+            </div>
           ),
           value,
         }))}

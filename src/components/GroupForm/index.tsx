@@ -91,6 +91,7 @@ const FormGroupItems = ({
       return (
         <div
           className={cx('flex flex-col', variantClassName[variant ?? itemVariant])}
+          data-slot="form-item"
           key={binding.name ?? index}
         >
           <div

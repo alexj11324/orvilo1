@@ -4,6 +4,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Progress } from '@/components/ui/progress';
 
 import { type ScoreResult } from '../../MCP/calculateScore';
 import { sortItemsByPriority } from '../../MCP/calculateScore';

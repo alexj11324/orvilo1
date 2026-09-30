@@ -4,13 +4,13 @@ import { Avatar, Button } from '@lobehub/ui/base-ui';
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog } from '@orvilo/const';
 import { getActivePluginIds, upsertPluginMode } from '@orvilo/types';
-import type { ItemType } from 'antd/es/menu/interface';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { PlusIcon } from 'lucide-react';
 import React, { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ItemType } from '@/components/Menu';
 import { isDesktop } from '@/const/version';
 import ActionDropdown from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import ComposioServerItem from '@/features/ChatInput/ActionBar/Tools/ComposioServerItem';

@@ -1,9 +1,9 @@
-import { type ItemType } from 'antd/es/menu/interface';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ExternalLink, Settings } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ItemType } from '@/components/Menu';
 import SearchBar from '@/components/SearchBar';
 import { ScrollSignalProvider } from '@/features/ChatInput/ActionBar/Tools/ScrollSignalContext';
 import ToolsList, { toolsListStyles } from '@/features/ChatInput/ActionBar/Tools/ToolsList';

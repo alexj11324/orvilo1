@@ -19,8 +19,8 @@ import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import type { DropdownItem } from '@/components/ItemsMenu';
 import { captureVisibleTabPreviews } from '@/features/Electron/TabHost';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
@@ -237,7 +237,7 @@ const TabBar = () => {
     handleNewTab(data?.path);
   });
 
-  const overflowItems = useCallback((): DropdownItem[] => {
+  const overflowItems = useCallback((): SidebarMenuItems => {
     const visible = new Set(layout.visibleIndices);
 
     return flowTabs

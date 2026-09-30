@@ -8,7 +8,8 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
-import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';

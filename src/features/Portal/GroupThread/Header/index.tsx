@@ -26,8 +26,6 @@ const Header = memo(() => {
 
   return (
     <NavHeader
-      paddingBlock={6}
-      paddingInline={8}
       showTogglePanelButton={false}
       left={
         <div className="flex flex-row items-center gap-2">
@@ -49,6 +47,8 @@ const Header = memo(() => {
       }
       style={{
         background: cssVar.colorBgContainer,
+        paddingBlock: 6,
+        paddingInline: 8,
       }}
     />
   );

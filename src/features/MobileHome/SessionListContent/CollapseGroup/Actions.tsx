@@ -48,7 +48,7 @@ const Actions = memo<ActionsProps>(
       icon: <Settings2 size={14} />,
       key: 'config',
       label: t('sessionGroup.config'),
-      onClick: ({ domEvent }) => {
+      onClick: ({ domEvent }: any) => {
         domEvent.stopPropagation();
         openConfigModal();
       },
@@ -58,7 +58,7 @@ const Actions = memo<ActionsProps>(
       icon: <Plus size={14} />,
       key: 'newAgent',
       label: t('newAgent'),
-      onClick: async ({ domEvent }) => {
+      onClick: async ({ domEvent }: any) => {
         domEvent.stopPropagation();
         const creatingToast = toast.loading(t('sessionGroup.creatingAgent'));
 
@@ -73,7 +73,7 @@ const Actions = memo<ActionsProps>(
       icon: <UsersRound size={14} />,
       key: 'newGroupChat',
       label: t('newGroupChat'),
-      onClick: ({ domEvent }) => {
+      onClick: ({ domEvent }: any) => {
         domEvent.stopPropagation();
         setIsGroupModalOpen(true);
       },
@@ -124,7 +124,7 @@ const Actions = memo<ActionsProps>(
           icon: <PencilLine size={14} />,
           key: 'rename',
           label: t('sessionGroup.rename'),
-          onClick: ({ domEvent }) => {
+          onClick: ({ domEvent }: any) => {
             domEvent.stopPropagation();
             openRenameModal?.();
           },
@@ -138,7 +138,7 @@ const Actions = memo<ActionsProps>(
           icon: <Trash size={14} />,
           key: 'delete',
           label: t('delete', { ns: 'common' }),
-          onClick: ({ domEvent }) => {
+          onClick: ({ domEvent }: any) => {
             domEvent.stopPropagation();
             confirmModal({
               cancelText: t('cancel', { ns: 'common' }),

@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { cssVar, cx } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

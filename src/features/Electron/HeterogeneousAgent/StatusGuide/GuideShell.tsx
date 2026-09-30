@@ -109,7 +109,6 @@ const GuideShell = ({
         gap: compact ? 12 : 16,
         padding: compact ? 12 : 16,
         borderColor: cssVar.colorBorderSecondary,
-        background: cssVar.colorBgContainer,
         background: cssVar.colorBgElevated,
         overflow: 'hidden',
         width: '100%',

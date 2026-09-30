@@ -84,7 +84,7 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
         )}
         {!!keywords && (
           <button
-            aria-label={t('clear', { ns: 'common' })}
+            aria-label={t('clear', { ns: 'common', defaultValue: 'Clear' })}
             type="button"
             onClick={() => updateSearchKeywords('')}
           >

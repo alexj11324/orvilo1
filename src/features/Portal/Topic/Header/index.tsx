@@ -14,11 +14,11 @@ const Header = memo(() => {
   return (
     <NavHeader
       left={<Title />}
-      paddingBlock={6}
-      paddingInline={8}
       right={<ActionIcon icon={XIcon} size={'small'} onClick={closeTopicPortal} />}
       showTogglePanelButton={false}
       style={{
+        paddingBlock: 6,
+        paddingInline: 8,
         borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
       }}
     />

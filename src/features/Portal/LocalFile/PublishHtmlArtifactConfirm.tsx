@@ -51,10 +51,7 @@ const PublishHtmlArtifactConfirmContent = ({
   );
 
   return (
-    <ScrollArea
-      style={{ maxHeight: CONFIRM_BODY_MAX_HEIGHT, overflow: 'hidden' }}
-      viewportProps={{ style: { height: 'auto', maxHeight: CONFIRM_BODY_MAX_HEIGHT } }}
-    >
+    <ScrollArea style={{ maxHeight: CONFIRM_BODY_MAX_HEIGHT, overflow: 'hidden' }}>
       <div className="flex flex-col gap-2" style={{ paddingBlock: 12, paddingInline: 16 }}>
         <div>{t('workingPanel.localFile.publish.privacy')}</div>
         {showDetails && (

@@ -51,7 +51,7 @@ const Active = memo(() => {
           }}
         >
           <span className="anticon" role="img">
-            <subagentTypeInfo.icon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            <subagentTypeInfo.icon className={'anticon'} size={12} />
           </span>
           {subagentTypeInfo.label}
         </Badge>

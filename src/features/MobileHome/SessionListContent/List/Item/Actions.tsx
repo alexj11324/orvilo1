@@ -14,10 +14,10 @@ import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { type ItemType } from '@/components/Menu';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { isDesktop } from '@/const/index';
+import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
@@ -89,7 +89,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
             key: 'duplicate',
             label: t('duplicate', { ns: 'common' }),
             title: createReason,
-            onClick: ({ domEvent }) => {
+            onClick: ({ domEvent }: any) => {
               domEvent.stopPropagation();
               if (!canCreate) return;
 
@@ -102,7 +102,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
                   icon: <ExternalLink size={14} />,
                   key: 'openInNewWindow',
                   label: t('openInNewWindow'),
-                  onClick: ({ domEvent }: { domEvent: Event }) => {
+                  onClick: ({ domEvent }: any) => {
                     domEvent.stopPropagation();
                     openAgentInNewWindow(id);
                   },
@@ -145,7 +145,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
                 key: 'createGroup',
                 label: <div>{t('sessionGroup.createGroup')}</div>,
                 title: createReason,
-                onClick: ({ domEvent }) => {
+                onClick: ({ domEvent }: any) => {
                   domEvent.stopPropagation();
                   if (!canCreate) return;
                   openCreateGroupModal();
@@ -168,7 +168,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
             key: 'delete',
             label: t('delete', { ns: 'common' }),
             title: editReason,
-            onClick: ({ domEvent }) => {
+            onClick: ({ domEvent }: any) => {
               domEvent.stopPropagation();
               if (!canEdit) return;
               confirmModal({
@@ -193,7 +193,7 @@ const Actions = memo<ActionProps>(({ group, id, openCreateGroupModal, parentType
               });
             },
           },
-        ] as ItemType[]
+        ] as SidebarMenuItemData[]
       ).filter(Boolean),
     [
       canCreate,

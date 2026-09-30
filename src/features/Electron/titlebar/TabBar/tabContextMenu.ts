@@ -1,6 +1,6 @@
-import type { SidebarDropdownMenuProps } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
-type TabMenuItem = Exclude<SidebarDropdownMenuProps['items'], () => unknown>[number];
+type TabMenuItem = NativeContextMenuItem;
 
 type TabContextMenuLabelKey =
   | 'tab.closeCurrentTab'

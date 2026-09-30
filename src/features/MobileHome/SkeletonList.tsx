@@ -51,10 +51,8 @@ const SkeletonList = memo<SkeletonListProps>(({ count = 4 }) => {
     <div className="flex flex-col gap-1">
       {Array.from({ length: count }).map((_, index) => (
         <div className={cx(styles.item, 'flex items-center gap-3')} key={index}>
-          <Skeleton.Avatar
-            shape="square"
-            size={40}
-            style={{ borderRadius: cssVar.borderRadius, flex: 'none' }}
+          <Skeleton
+            style={{ borderRadius: cssVar.borderRadius, flex: 'none', height: 40, width: 40 }}
           />
           <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
             <div className="flex flex-col gap-4 w-full">

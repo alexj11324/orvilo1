@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
-import { Popover } from '@/components/ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Switch } from '@/components/ui/switch';
 import {
   getScopedConnectionCount,
@@ -151,25 +151,24 @@ const DeviceGateway = memo<DeviceGatewayProps>(({ workspaceScoped }) => {
   );
 
   return (
-    <Popover
-      arrow={false}
-      content={popoverContent}
-      open={open}
-      placement="bottomRight"
-      styles={{ content: { padding: 8 } }}
-      trigger="click"
-      onOpenChange={setOpen}
-    >
-      <div style={{ position: 'relative' }}>
-        <ActionIcon
-          icon={HardDrive}
-          loading={isConnecting}
-          size="small"
-          title={t('gateway.title')}
-          tooltipProps={{ placement: 'bottomRight' }}
-        />
-        {scopeConnected && <div className={styles.greenDot} />}
-      </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <div style={{ position: 'relative' }}>
+            <ActionIcon
+              icon={HardDrive}
+              loading={isConnecting}
+              size="small"
+              title={t('gateway.title')}
+              tooltipProps={{ placement: 'bottomRight' }}
+            />
+            {scopeConnected && <div className={styles.greenDot} />}
+          </div>
+        }
+      />
+      <PopoverContent align="end" className="w-auto" side="bottom" style={{ padding: 8 }}>
+        {popoverContent}
+      </PopoverContent>
     </Popover>
   );
 });

@@ -19,8 +19,6 @@ const Header = memo(() => {
   return (
     <NavHeader
       left={<Title />}
-      paddingBlock={6}
-      paddingInline={8}
       showTogglePanelButton={false}
       right={
         <div className="flex flex-row gap-1">
@@ -40,6 +38,8 @@ const Header = memo(() => {
         </div>
       }
       style={{
+        paddingBlock: 6,
+        paddingInline: 8,
         borderBottom: `1px solid ${cssVar.colorBorderSecondary}`,
       }}
     />

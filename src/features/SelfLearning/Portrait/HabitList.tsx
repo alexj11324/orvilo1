@@ -1,6 +1,6 @@
 'use client';
 
-import { cx } from 'antd-style';
+import { cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import relativeTime from 'dayjs/plugin/relativeTime';
 import {
@@ -10,13 +10,15 @@ import {
   PencilIcon,
   SearchIcon,
 } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Link } from 'react-router';
 import urlJoin from 'url-join';
 
 import ActionIcon from '@/components/ActionIcon';
-import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
@@ -95,6 +97,22 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
   const { t } = useTranslation('selfLearning');
   const navigate = useWorkspaceAwareNavigate();
   const [teaching, setTeaching] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
+  const hoverTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const clearHoverTimer = () => {
+    if (hoverTimer.current) {
+      clearTimeout(hoverTimer.current);
+      hoverTimer.current = null;
+    }
+  };
+  const schedulePreviewOpen = () => {
+    clearHoverTimer();
+    hoverTimer.current = setTimeout(() => setPreviewOpen(true), 420);
+  };
+  const schedulePreviewClose = () => {
+    clearHoverTimer();
+    hoverTimer.current = setTimeout(() => setPreviewOpen(false), 150);
+  };
 
   const hint = useMemo(
     () => describeRecent(habit.recent, habit.taughtByUser, t),
@@ -162,13 +180,15 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
         >
           {habit.code}
         </div>
-        <Popover openOnHover delay={420}>
+        <Popover open={previewOpen} onOpenChange={setPreviewOpen}>
           <PopoverTrigger
             render={
               <div
                 className={cx(styles.previewTarget, 'flex flex-col gap-0.5')}
                 style={{ flex: 1, minWidth: 0 }}
                 onClick={() => navigate(lessonPath)}
+                onMouseEnter={schedulePreviewOpen}
+                onMouseLeave={schedulePreviewClose}
                 // base-ui gives the trigger role="button" and focus, but brings no activation of
                 // its own, so a keyboard user could tab here and have Enter do nothing.
                 onKeyDown={(event) => {
@@ -192,7 +212,13 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
               </div>
             }
           />
-          <PopoverContent align="end" className="w-auto p-0" side="bottom">
+          <PopoverContent
+            align="end"
+            className="w-auto p-0"
+            side="bottom"
+            onMouseEnter={clearHoverTimer}
+            onMouseLeave={schedulePreviewClose}
+          >
             <LessonPreview
               code={habit.code}
               layer={habit.layer}
@@ -205,7 +231,7 @@ const HabitRow = memo<HabitRowProps>(({ agentId, domainTitle, habit, onChanged }
         <RecentDots recent={habit.recent} />
         <div className={cx('teach', 'flex items-center gap-1')} style={{ flex: 'none' }}>
           <DropdownMenu items={menu}>
-            <ActionIcon icon={MoreHorizontalIcon} size="sm" />
+            <ActionIcon icon={MoreHorizontalIcon} size="small" />
           </DropdownMenu>
         </div>
       </div>

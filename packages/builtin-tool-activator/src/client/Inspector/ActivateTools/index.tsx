@@ -1,13 +1,14 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { type BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { AlertTriangle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { inspectorTextStyles, shinyTextStyles } from '@/styles';
 
 import type { ActivatedToolInfo, ActivateToolsParams, ActivateToolsState } from '../../../types';
@@ -91,24 +92,23 @@ export const ActivateToolsInspector = memo<
   const notFoundTitle = notFoundList.join(', ');
 
   return (
-    <Flexbox
-      allowShrink
-      horizontal
-      className={inspectorTextStyles.root}
-      gap={8}
-      style={{ flexWrap: 'wrap' }}
-    >
+    <div className={cn('flex', 'gap-2', inspectorTextStyles.root)} style={{ flexWrap: 'wrap' }}>
       <span>{t('builtins.orvilo-activator.apiName.activateTools')}</span>
       {hasNotFound && (
-        <Tooltip title={notFoundTitle}>
-          <Flexbox horizontal className={styles.notFoundHint} gap={4}>
-            <Icon color={cssVar.colorWarning} icon={AlertTriangle} />
-            <span>
-              {t('builtins.orvilo-activator.inspector.activateTools.notFoundCount', {
-                count: notFoundList.length,
-              })}
-            </span>
-          </Flexbox>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <div className={cn('flex', 'gap-1', styles.notFoundHint)}>
+                <AlertTriangle style={{ color: cssVar.colorWarning }} />
+                <span>
+                  {t('builtins.orvilo-activator.inspector.activateTools.notFoundCount', {
+                    count: notFoundList.length,
+                  })}
+                </span>
+              </div>
+            }
+          />
+          <TooltipContent>{notFoundTitle}</TooltipContent>
         </Tooltip>
       )}
       {visibleTools.length > 0 && (
@@ -121,7 +121,7 @@ export const ActivateToolsInspector = memo<
           ))}
         </span>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import type { KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -130,7 +130,7 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
 
     if (!isCustom) {
       return (
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <Text>{prompt}</Text>
           {description && (
             <Text style={{ fontSize: 13 }} type="secondary">
@@ -143,7 +143,7 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
               total: allTemplates.length,
             })}
           </Text>
-        </Flexbox>
+        </div>
       );
     }
 
@@ -151,7 +151,7 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
     const showEmpty = !isLoading && visibleTemplates.length === 0;
 
     return (
-      <Flexbox className={styles.root} gap={12}>
+      <div className={cn('flex', 'flex-col', 'gap-3', styles.root)}>
         <div className={styles.header}>
           <Text style={{ fontWeight: 500 }}>{prompt}</Text>
           {description && (
@@ -242,7 +242,7 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
             {`${t('common.confirm')} (${selected.size})`}
           </Button>
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );

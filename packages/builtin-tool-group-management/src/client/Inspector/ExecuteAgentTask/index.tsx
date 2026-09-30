@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -55,11 +55,13 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
         );
       if (agent) {
         return (
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={cx(styles.root, shinyGroupStyles.shinyGroup)}
-            gap={8}
+          <div
+            className={cn(
+              'flex',
+              'items-center',
+              'gap-2',
+              cx(styles.root, shinyGroupStyles.shinyGroup),
+            )}
           >
             <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
               {t('builtins.orvilo-group-management.inspector.executeAgentTask.assignTo')}
@@ -86,7 +88,7 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
                 <span className={highlightTextStyles.primary}>{taskTitle}</span>
               </>
             )}
-          </Flexbox>
+          </div>
         );
       }
     }
@@ -94,7 +96,7 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
     const agentName = agent?.title || agentId;
 
     return (
-      <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
+      <div className={cn('flex', 'items-center', 'gap-2', styles.root)}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-group-management.inspector.executeAgentTask.assignTo')}
         </span>
@@ -116,7 +118,7 @@ export const ExecuteAgentTaskInspector = memo<BuiltinInspectorProps<ExecuteTaskP
             <span className={highlightTextStyles.primary}>{taskTitle}</span>
           </>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { MoveFilesState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
@@ -47,9 +46,9 @@ export const createMoveLocalFilesInspector = (translationKey: string) => {
           {!isLoading && successCount !== undefined && (
             <span style={{ marginInlineStart: 4 }}>
               {allSucceeded ? (
-                <Icon color={cssVar.colorSuccess} icon={Check} size={14} />
+                <Check size={14} style={{ color: cssVar.colorSuccess }} />
               ) : (
-                <Icon color={cssVar.colorError} icon={X} size={14} />
+                <X size={14} style={{ color: cssVar.colorError }} />
               )}
             </span>
           )}

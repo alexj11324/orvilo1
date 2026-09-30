@@ -1,6 +1,6 @@
 'use client';
 
-import { Icon, MaterialFileTypeIcon } from '@lobehub/ui';
+import { MaterialFileTypeIcon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ImageIcon } from 'lucide-react';
@@ -65,7 +65,7 @@ export const FilePathDisplay = memo<FilePathDisplayProps>(({ filePath, isDirecto
     <>
       {name &&
         (isImage && !isDirectory ? (
-          <Icon className={styles.icon} icon={ImageIcon} size={16} />
+          <ImageIcon className={styles.icon} size={16} />
         ) : (
           <MaterialFileTypeIcon
             className={styles.icon}

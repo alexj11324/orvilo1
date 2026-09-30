@@ -1,6 +1,5 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -115,7 +114,14 @@ export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, Crea
     const failedCount = pluginState?.failed ?? results.filter((r) => !r.success).length;
 
     return (
-      <Block variant={'outlined'} width={'100%'}>
+      <div
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+          width: '100%',
+        }}
+      >
         <div className={styles.header}>
           <span className={styles.headerCount}>
             {t('builtins.orvilo-task.createTasks.count', { count: rows.length })}
@@ -151,7 +157,7 @@ export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, Crea
             </div>
           );
         })}
-      </Block>
+      </div>
     );
   },
 );

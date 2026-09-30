@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { FileTextIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -48,22 +48,22 @@ export const CreateDocumentStreaming = memo<BuiltinStreamingProps<CreateDocument
     if (!content && !title) return null;
 
     return (
-      <Flexbox className={styles.container}>
-        <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
+      <div className={cn('flex', 'flex-col', styles.container)}>
+        <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
           <FileTextIcon className={styles.icon} size={16} />
-          <Flexbox flex={1}>
+          <div className="flex flex-col flex-1">
             <div className={styles.title}>{title}</div>
-          </Flexbox>
+          </div>
           <NeuralNetworkLoading size={20} />
-        </Flexbox>
+        </div>
         {!content ? (
-          <Flexbox paddingBlock={16} paddingInline={12}>
+          <div className="flex flex-col py-4 px-3">
             <BubblesLoading />
-          </Flexbox>
+          </div>
         ) : (
           <StreamingMarkdown>{content}</StreamingMarkdown>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { EditFileState } from '@orvilo/tool-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
@@ -67,7 +66,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
     if (linesAdded > 0) {
       statsParts.push(
         <Text code as={'span'} color={cssVar.colorSuccess} fontSize={12} key="added">
-          <Icon icon={Plus} size={12} />
+          <Plus size={12} />
           {linesAdded}
         </Text>,
       );
@@ -75,7 +74,7 @@ export const EditLocalFileInspector = memo<EditLocalFileInspectorProps>(
     if (linesDeleted > 0) {
       statsParts.push(
         <Text code as={'span'} color={cssVar.colorError} fontSize={12} key="deleted">
-          <Icon icon={Minus} size={12} />
+          <Minus size={12} />
           {linesDeleted}
         </Text>,
       );

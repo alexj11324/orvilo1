@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { CheckCircle, Clock, XCircle } from 'lucide-react';
 import { memo } from 'react';
@@ -25,7 +24,7 @@ const InstallPlugin = memo<BuiltinRenderProps<InstallPluginParams, InstallPlugin
     // Error state
     if (error) {
       return (
-        <Flexbox horizontal align={'center'} gap={8} style={{ fontSize: 13 }}>
+        <div className="flex items-center gap-2" style={{ fontSize: 13 }}>
           <XCircle size={14} style={{ color: 'var(--lobe-error-6)' }} />
           <span style={{ fontWeight: 500 }}>
             Failed to install plugin:{' '}
@@ -41,14 +40,14 @@ const InstallPlugin = memo<BuiltinRenderProps<InstallPluginParams, InstallPlugin
               {pluginName || pluginId}
             </code>
           </span>
-        </Flexbox>
+        </div>
       );
     }
 
     // Awaiting approval state
     if (awaitingApproval) {
       return (
-        <Flexbox horizontal align={'center'} gap={8} style={{ fontSize: 13 }}>
+        <div className="flex items-center gap-2" style={{ fontSize: 13 }}>
           <Clock size={14} style={{ color: 'var(--lobe-warning-6)' }} />
           <span style={{ fontWeight: 500 }}>
             {isComposio || isOrviloSkill ? (
@@ -88,14 +87,14 @@ const InstallPlugin = memo<BuiltinRenderProps<InstallPluginParams, InstallPlugin
               </>
             )}
           </span>
-        </Flexbox>
+        </div>
       );
     }
 
     // Installed state
     if (installed) {
       return (
-        <Flexbox horizontal align={'center'} gap={8} style={{ fontSize: 13 }}>
+        <div className="flex items-center gap-2" style={{ fontSize: 13 }}>
           <CheckCircle size={14} style={{ color: 'var(--lobe-success-6)' }} />
           <span style={{ fontWeight: 500 }}>
             {isComposio || isOrviloSkill ? 'Connected and enabled' : 'Installed and enabled'}:{' '}
@@ -111,7 +110,7 @@ const InstallPlugin = memo<BuiltinRenderProps<InstallPluginParams, InstallPlugin
               {pluginName || pluginId}
             </code>
           </span>
-        </Flexbox>
+        </div>
       );
     }
 

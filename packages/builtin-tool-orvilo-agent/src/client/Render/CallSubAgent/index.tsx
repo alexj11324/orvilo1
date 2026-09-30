@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -87,28 +88,23 @@ export const CallSubAgentRender = memo<
   const showResultSection = !!result || !!subagentThread;
 
   return (
-    <Flexbox className={styles.container} gap={12}>
+    <div className={cn('flex', 'flex-col', 'gap-3', styles.container)}>
       {prompt && (
-        <Flexbox>
+        <div className="flex flex-col">
           <Text className={styles.label} style={{ marginBlockEnd: 4 }}>
             {t('builtins.orvilo-claude-code.agent.instruction')}
           </Text>
-          <Flexbox className={styles.promptBox}>
+          <div className={cn('flex', 'flex-col', styles.promptBox)}>
             <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
               {prompt}
             </Markdown>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
 
       {showResultSection && (
-        <Flexbox>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.labelRow}
-            justify={'space-between'}
-          >
+        <div className="flex flex-col">
+          <div className={cn('flex', 'items-center', 'justify-between', styles.labelRow)}>
             <Text className={styles.label}>{t('builtins.orvilo-claude-code.agent.result')}</Text>
             {subagentThread && (
               <Button
@@ -123,17 +119,17 @@ export const CallSubAgentRender = memo<
                   : tChat('thread.openSubagentThread')}
               </Button>
             )}
-          </Flexbox>
+          </div>
           {result && (
-            <Flexbox className={styles.resultBox}>
+            <div className={cn('flex', 'flex-col', styles.resultBox)}>
               <Markdown style={{ maxHeight: 320, overflow: 'auto' }} variant={'chat'}>
                 {result}
               </Markdown>
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, PatchDiff } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import {
   FilePathDisplay,
@@ -11,8 +10,11 @@ import {
 } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock, parseUnifiedDiff } from '@/components/ui/code-block';
 
 import {
   type CodexFileChangeArgs,
@@ -82,14 +84,14 @@ const FileChangeRender = memo<BuiltinRenderProps<CodexFileChangeArgs, CodexFileC
     }
 
     return (
-      <Flexbox className={styles.list}>
+      <div className={cn('flex', 'flex-col', styles.list)}>
         {data.changes.map((change, index) => {
           const kind = getFileChangeKind(change.kind);
           const path = change.path || '';
 
           return (
-            <Flexbox key={`${path}-${index}`}>
-              <Flexbox horizontal className={styles.row}>
+            <div className="flex flex-col" key={`${path}-${index}`}>
+              <div className={cn('flex', styles.row)}>
                 <KindDot kind={kind} />
                 <div className={styles.rowMain}>
                   <div className={styles.path}>
@@ -105,23 +107,24 @@ const FileChangeRender = memo<BuiltinRenderProps<CodexFileChangeArgs, CodexFileC
                   </div>
                   <LineStats linesAdded={change.linesAdded} linesDeleted={change.linesDeleted} />
                 </div>
-              </Flexbox>
+              </div>
               {change.diffText && (
                 <div className={styles.patch}>
-                  <PatchDiff
-                    fileName={getFileName(path)}
-                    language={getFileLanguage(path)}
-                    patch={change.diffText}
-                    showHeader={false}
-                    variant="borderless"
-                    viewMode="unified"
-                  />
+                  {parseUnifiedDiff(change.diffText).map((file) => (
+                    <CodeBlock
+                      key={file.file}
+                      label={getFileName(path)}
+                      language={getFileLanguage(path)}
+                      lines={file.lines}
+                      variant="ghost"
+                    />
+                  ))}
                 </div>
               )}
-            </Flexbox>
+            </div>
           );
         })}
-      </Flexbox>
+      </div>
     );
   },
 );

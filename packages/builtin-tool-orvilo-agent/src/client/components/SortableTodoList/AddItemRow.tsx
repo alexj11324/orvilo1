@@ -1,13 +1,14 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
 import { ActionIcon, Checkbox } from '@lobehub/ui/base-ui';
-import type { InputRef } from 'antd';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { Plus } from 'lucide-react';
 import type { ChangeEvent, KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Input } from '@/components/ui/input';
 
 import { ADD_ITEM_ID, useTodoListStore } from './store';
 
@@ -29,7 +30,7 @@ interface AddItemRowProps {
 
 const AddItemRow = memo<AddItemRowProps>(({ placeholder, showDragHandle = true, className }) => {
   const { t } = useTranslation('tool');
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const defaultPlaceholder = placeholder || t('orvilo-agent.addTodo.placeholder');
 
   const newItemText = useTodoListStore((s) => s.newItemText);
@@ -87,22 +88,20 @@ const AddItemRow = memo<AddItemRowProps>(({ placeholder, showDragHandle = true, 
   }, [setFocusedId]);
 
   return (
-    <Flexbox horizontal align="center" className={cx(styles.addRow, className)} gap={4}>
+    <div className={cn('flex', 'items-center', 'gap-1', cx(styles.addRow, className))}>
       {showDragHandle && <div className={styles.dragHandlePlaceholder} />}
       <Checkbox checked={false} shape={'circle'} style={{ borderWidth: 1.5, cursor: 'default' }} />
       <Input
         placeholder={defaultPlaceholder}
         ref={inputRef}
-        size="small"
         style={{ flex: 1 }}
         value={newItemText}
-        variant="borderless"
         onChange={handleChange}
         onFocus={handleFocus}
         onKeyDown={handleKeyDown}
       />
       <ActionIcon icon={Plus} size="small" tabIndex={-1} onClick={addItem} />
-    </Flexbox>
+    </div>
   );
 });
 

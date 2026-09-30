@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Clock } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -41,19 +41,19 @@ const ExecuteTaskRender = memo<BuiltinRenderProps<ExecuteTaskParams, ExecuteTask
     const timeoutMinutes = args?.timeout ? Math.round(args.timeout / 60_000) : 30;
 
     return (
-      <Flexbox className={styles.container} gap={12}>
+      <div className={cn('flex', 'flex-col', 'gap-3', styles.container)}>
         {/* Header: Agent info + Timeout */}
-        <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} flex={1} gap={12} style={{ minWidth: 0 }}>
+        <div className="flex items-center gap-3 justify-between">
+          <div className="flex items-center flex-1 gap-3" style={{ minWidth: 0 }}>
             <span className={styles.agentTitle}>{args?.title}</span>
-          </Flexbox>
-          <Flexbox horizontal align="center" className={styles.timeout} gap={4}>
+          </div>
+          <div className={cn('flex', 'items-center', 'gap-1', styles.timeout)}>
             <Clock size={14} />
             <span>
               {timeoutMinutes} {t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
             </span>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
 
         {/* Instruction content (read-only) */}
         {args?.instruction && (
@@ -61,7 +61,7 @@ const ExecuteTaskRender = memo<BuiltinRenderProps<ExecuteTaskParams, ExecuteTask
             {args.instruction}
           </Text>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

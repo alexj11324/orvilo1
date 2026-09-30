@@ -10,12 +10,13 @@ import {
   ReactTablePlugin,
 } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
-import { Flexbox, TextArea } from '@lobehub/ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Textarea } from '@/components/ui/textarea';
 
 import type { CreatePlanParams } from '../../types';
 
@@ -131,35 +132,30 @@ const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
     }, []);
 
     return (
-      <Flexbox
-        gap={8}
-        paddingBlock={16}
+      <div
+        className="flex flex-col gap-2 py-4"
         onClick={(e) => {
           e.stopPropagation();
           e.preventDefault();
         }}
       >
         {/* Goal - Main Title */}
-        <TextArea
-          autoSize={{ minRows: 1 }}
+        <Textarea
           className={styles.title}
           placeholder={t('orvilo-agent.createPlan.goal.placeholder')}
           style={{ padding: 0, resize: 'none' }}
           value={goal}
-          variant={'borderless'}
           onChange={(e) => handleGoalChange(e.target.value)}
           onKeyDown={handleGoalKeyDown}
         />
 
         {/* Description - Subtitle */}
-        <TextArea
-          autoSize={{ minRows: 1 }}
+        <Textarea
           className={styles.description}
           data-testid="plan-description"
           placeholder={t('orvilo-agent.createPlan.description.placeholder')}
           style={{ padding: 0, resize: 'none' }}
           value={description}
-          variant={'borderless'}
           onChange={(e) => handleDescriptionChange(e.target.value)}
           onKeyDown={handleDescriptionKeyDown}
         />
@@ -187,7 +183,7 @@ const CreatePlanIntervention = memo<BuiltinInterventionProps<CreatePlanParams>>(
             onTextChange={handleContentChange}
           />
         </div>
-      </Flexbox>
+      </div>
     );
   },
   isEqual,

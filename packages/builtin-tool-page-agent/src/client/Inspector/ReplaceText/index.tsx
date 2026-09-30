@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { ReplaceTextArgs } from '@orvilo/editor-runtime';
 import type { BuiltinInspectorProps } from '@orvilo/types';
@@ -57,7 +56,7 @@ export const ReplaceTextInspector = memo<BuiltinInspectorProps<ReplaceTextArgs, 
         {hasResult && (
           <>
             <span className={styles.from}>{from}</span>
-            <Icon className={styles.arrow} icon={ArrowRight} size={12} />
+            <ArrowRight className={styles.arrow} size={12} />
             <span className={highlightTextStyles.gold}>
               {to || t('builtins.orvilo-page-agent.apiName.replaceText.empty')}
             </span>

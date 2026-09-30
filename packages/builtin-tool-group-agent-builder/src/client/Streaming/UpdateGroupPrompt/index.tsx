@@ -1,7 +1,8 @@
 'use client';
 
-import { Block, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
+import { cssVar } from 'antd-style';
 import { memo, useEffect } from 'react';
 
 import { useGroupProfileStore } from '@/store/groupProfile';
@@ -21,11 +22,19 @@ export const UpdateGroupPromptStreaming = memo<BuiltinStreamingProps<UpdateGroup
     if (!prompt) return null;
 
     return (
-      <Block paddingBlock={8} paddingInline={12} variant={'outlined'} width="100%">
+      <div
+        className="py-2 px-3"
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+          width: '100%',
+        }}
+      >
         <Markdown animated variant={'chat'}>
           {prompt}
         </Markdown>
-      </Block>
+      </div>
     );
   },
 );

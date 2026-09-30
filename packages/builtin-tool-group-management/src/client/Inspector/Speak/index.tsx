@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx, useTheme } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -56,7 +56,7 @@ export const SpeakInspector = memo<BuiltinInspectorProps<SpeakParams>>(
     const agentName = agent?.title || agentId;
 
     return (
-      <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
+      <div className={cn('flex', 'items-center', 'gap-2', styles.root)}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t('builtins.orvilo-group-management.inspector.speak.title')}
         </span>
@@ -70,7 +70,7 @@ export const SpeakInspector = memo<BuiltinInspectorProps<SpeakParams>>(
           />
         )}
         {agentName && <span className={highlightTextStyles.primary}>{agentName}</span>}
-      </Flexbox>
+      </div>
     );
   },
 );

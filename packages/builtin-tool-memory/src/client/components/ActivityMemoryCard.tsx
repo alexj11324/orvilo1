@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import BubblesLoading from '@/components/BubblesLoading';
@@ -56,15 +56,15 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
   if (isEmpty) return null;
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
-        <Flexbox flex={1}>
+    <div className={cn('flex', 'flex-col', styles.container)}>
+      <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
+        <div className="flex flex-col flex-1">
           <div className={styles.title}>{title || 'Activity Memory'}</div>
-        </Flexbox>
+        </div>
         {activityType && <Tag>{activityType}</Tag>}
         {status && <Tag color={STATUS_COLORS[status] || 'default'}>{status.replace('_', ' ')}</Tag>}
         {loading && <NeuralNetworkLoading size={20} />}
-      </Flexbox>
+      </div>
 
       {hasActivityContent ? (
         <>
@@ -72,11 +72,8 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
 
           {/* When it happened — the anchor an episodic memory is recalled by */}
           {schedule && (
-            <Flexbox
-              horizontal
-              align={'center'}
-              className={styles.section}
-              gap={8}
+            <div
+              className={cn('flex', 'items-center', 'gap-2', styles.section)}
               style={{ paddingBlock: 12, paddingInline: 12 }}
             >
               <span>🕒</span>
@@ -86,7 +83,7 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
                   {timezone}
                 </Text>
               )}
-            </Flexbox>
+            </div>
           )}
 
           {narrative && (
@@ -116,7 +113,7 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
           )}
         </>
       ) : (
-        <Flexbox className={styles.content} gap={8}>
+        <div className={cn('flex', 'flex-col', 'gap-2', styles.content)}>
           {!summary && loading ? (
             <BubblesLoading />
           ) : (
@@ -124,17 +121,17 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
               {summary && <div className={styles.summary}>{summary}</div>}
               {details && <StreamingMarkdown>{details}</StreamingMarkdown>}
               {tags.length > 0 && (
-                <Flexbox horizontal className={styles.tags} gap={8} wrap={'wrap'}>
+                <div className={cn('flex', 'gap-2', 'flex-wrap', styles.tags)}>
                   {tags.map((tag, index) => (
                     <Tag key={index}>{tag}</Tag>
                   ))}
-                </Flexbox>
+                </div>
               )}
             </>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

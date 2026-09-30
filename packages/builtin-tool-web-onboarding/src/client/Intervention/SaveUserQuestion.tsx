@@ -1,6 +1,6 @@
 'use client';
 
-import { EmojiPicker, Flexbox } from '@lobehub/ui';
+import { EmojiPicker } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps, SaveUserQuestionInput } from '@orvilo/types';
 import type { CSSProperties } from 'react';
@@ -94,16 +94,16 @@ const AgentIdentitySection = memo<AgentIdentitySectionProps>(
           : 'tool.intervention.onboarding.agentIdentity.titleAvatarOnly';
 
     return (
-      <Flexbox gap={12}>
-        <Flexbox gap={4}>
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-col gap-1">
           <Text style={{ fontSize: 16, fontWeight: 600 }}>{t(titleKey)}</Text>
           <Text style={{ fontSize: 13 }} type="secondary">
             {t('tool.intervention.onboarding.agentIdentity.editHint')}
           </Text>
-        </Flexbox>
+        </div>
 
         <div style={detailCardStyle}>
-          <Flexbox horizontal align="center" gap={12}>
+          <div className="flex items-center gap-3">
             <EmojiPicker
               defaultAvatar={'🤖'}
               locale={i18n.language}
@@ -121,9 +121,9 @@ const AgentIdentitySection = memo<AgentIdentitySectionProps>(
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-          </Flexbox>
+          </div>
         </div>
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -151,8 +151,8 @@ const UserProfileSection = memo<UserProfileSectionProps>(({ fullName }) => {
   if (fields.length === 0) return null;
 
   return (
-    <Flexbox gap={12}>
-      <Flexbox gap={4}>
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
         <Text style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.04em' }} type="secondary">
           {t('tool.intervention.onboarding.userProfile.eyebrow')}
         </Text>
@@ -162,26 +162,26 @@ const UserProfileSection = memo<UserProfileSectionProps>(({ fullName }) => {
         <Text style={{ fontSize: 13 }} type="secondary">
           {t('tool.intervention.onboarding.userProfile.description')}
         </Text>
-      </Flexbox>
+      </div>
 
       <div style={detailCardStyle}>
-        <Flexbox gap={16}>
+        <div className="flex flex-col gap-4">
           <div style={detailGridStyle}>
             {fields.map((field) => (
-              <Flexbox gap={6} key={field.label}>
+              <div className="flex flex-col gap-[6px]" key={field.label}>
                 <Text style={{ fontSize: 12, fontWeight: 600 }} type="secondary">
                   {field.label}
                 </Text>
                 <div style={detailValueStyle}>{field.value}</div>
-              </Flexbox>
+              </div>
             ))}
           </div>
           <Text style={{ fontSize: 12 }} type="secondary">
             {t('tool.intervention.onboarding.userProfile.applyHint')}
           </Text>
-        </Flexbox>
+        </div>
       </div>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -195,7 +195,7 @@ const SaveUserQuestionIntervention = memo<BuiltinInterventionProps<SaveUserQuest
     const hasUserProfile = Boolean(fullName);
 
     return (
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         {hasAgentIdentity && (
           <AgentIdentitySection
             args={args}
@@ -204,7 +204,7 @@ const SaveUserQuestionIntervention = memo<BuiltinInterventionProps<SaveUserQuest
           />
         )}
         {hasUserProfile && <UserProfileSection fullName={fullName} />}
-      </Flexbox>
+      </div>
     );
   },
 );

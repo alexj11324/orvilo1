@@ -1,12 +1,11 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { PanelRight, PanelRightClose } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AssigneeAvatar from '@/features/AgentTasks/features/AssigneeAvatar';
@@ -164,16 +163,21 @@ export const TaskResultCard = memo<TaskResultCardProps>(
     const { canOpen, isExpanded, open, toggle } = useTaskDetailToggle(identifier);
 
     return (
-      <Block
-        clickable={canOpen}
-        variant={'outlined'}
-        width={'100%'}
+      <div
+        style={{
+          background: cssVar.colorBgContainer,
+          border: `1px solid ${cssVar.colorBorderSecondary}`,
+          borderRadius: cssVar.borderRadius,
+          width: '100%',
+        }}
         onClick={canOpen ? open : undefined}
       >
         <div className={cx(styles.header, !!children && styles.headerDivider)}>
-          {icon && (
-            <Icon icon={icon} size={15} style={{ color: iconColor ?? cssVar.colorTextSecondary }} />
-          )}
+          {icon &&
+            createElement(icon, {
+              size: 15,
+              style: { color: iconColor ?? cssVar.colorTextSecondary },
+            })}
           <Text className={styles.title}>{title}</Text>
           {identifier && <span className={styles.identifier}>{identifier}</span>}
           {headerExtra}
@@ -192,7 +196,7 @@ export const TaskResultCard = memo<TaskResultCardProps>(
           )}
         </div>
         {children && <div className={styles.body}>{children}</div>}
-      </Block>
+      </div>
     );
   },
 );

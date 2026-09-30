@@ -41,6 +41,7 @@ export * from './integrationLease';
 export * from './linearImport';
 export * from './linearSync';
 export * from './llmGenerationTracing';
+export * from './mcpEvents';
 export * from './message';
 export * from './metric';
 export * from './nextauth';

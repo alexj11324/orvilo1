@@ -1,4 +1,3 @@
-import { Icon, stopPropagation, Tooltip } from '@lobehub/ui';
 import { Checkbox } from '@lobehub/ui/base-ui';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
@@ -11,12 +10,13 @@ import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from '
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import {
   getTransparentDragImage,
   useDragActive,
   useSetCurrentDrag,
 } from '@/features/ResourceManager/DndContextWrapper';
-import { showContextMenu } from '@/libs/contextMenu';
+import { type NativeContextMenuItem, showContextMenu } from '@/libs/contextMenu';
 import { getChunkTargetId, useFileStore } from '@/store/file';
 import { type FileListItem } from '@/types/files';
 
@@ -373,14 +373,14 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
         onDragStart={handleDragStart}
         onContextMenu={(e) => {
           e.preventDefault();
-          showContextMenu(menuItems());
+          showContextMenu(menuItems() as NativeContextMenuItem[]);
         }}
       >
         <div
           className={cx('checkbox', styles.checkbox)}
           style={{ cursor: selectable ? 'pointer' : 'not-allowed' }}
           title={selectable ? undefined : t('FileManager.selection.onlyOwn')}
-          onPointerDown={stopPropagation}
+          onPointerDown={(event) => event.stopPropagation()}
           onClick={(e) => {
             e.stopPropagation();
             if (!selectable) return;
@@ -392,18 +392,20 @@ const MasonryFileItem = memo<MasonryFileItemProps>(
 
         <div
           className={cx('dropdown', styles.dropdown)}
-          onClick={stopPropagation}
-          onPointerDown={stopPropagation}
+          onClick={(event) => event.stopPropagation()}
+          onPointerDown={(event) => event.stopPropagation()}
         >
           <DropdownMenu items={menuItems} />
         </div>
 
         {isPrivate && (
-          <Tooltip title={t('resources.visibility.privateTooltip', { ns: 'chat' })}>
+          <SimpleTooltip title={t('resources.visibility.privateTooltip', { ns: 'chat' })}>
             <div className={styles.privateBadge}>
-              <Icon icon={LockIcon} size={14} />
+              <span className="anticon" role="img">
+                <LockIcon fill={'transparent'} height={14} size={14} width={14} />
+              </span>
             </div>
-          </Tooltip>
+          </SimpleTooltip>
         )}
 
         <div

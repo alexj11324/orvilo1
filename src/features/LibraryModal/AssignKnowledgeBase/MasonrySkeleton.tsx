@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
@@ -37,13 +36,16 @@ const MasonrySkeleton = memo<MasonrySkeletonProps>(({ columnCount }) => {
     >
       {Array.from({ length: itemCount }).map((_, index) => (
         <div className={styles.card} key={index}>
-          <Flexbox horizontal align={'flex-start'} gap={16} width={'100%'}>
+          <div className="flex flex-row items-start gap-4 w-[100%]">
             <Skeleton.Avatar size={48} />
-            <Flexbox gap={16} style={{ height: heights[index % heights.length] }} width={'100%'}>
+            <div
+              className="flex flex-col gap-4 w-[100%]"
+              style={{ height: heights[index % heights.length] }}
+            >
               <Skeleton.Text width={'80%'} />
               <Skeleton.Text rows={3} width={['100%', '90%', '70%']} />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </div>
       ))}
     </div>

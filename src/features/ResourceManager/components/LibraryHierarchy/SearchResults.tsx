@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { useDebounce } from 'ahooks';
 import { cssVar } from 'antd-style';
@@ -111,12 +110,23 @@ const SearchResults = memo<SearchResultsProps>(({ libraryId, query }) => {
   const isWaitingForDebounce = !debouncedQuery || debouncedQuery !== query.trim();
 
   const emptyState = (
-    <Center gap={12} padding={24} style={{ height: '100%', textAlign: 'center' }}>
-      <Icon color={cssVar.colorTextQuaternary} icon={SearchXIcon} size={32} />
+    <div
+      className="flex flex-col items-center justify-center gap-3 p-6"
+      style={{ height: '100%', textAlign: 'center' }}
+    >
+      <span className="anticon" role="img">
+        <SearchXIcon
+          color={cssVar.colorTextQuaternary}
+          fill={'transparent'}
+          height={32}
+          size={32}
+          width={32}
+        />
+      </span>
       <Text style={{ fontSize: 12 }} type={'secondary'}>
         {t('library.hierarchy.search.noResults')}
       </Text>
-    </Center>
+    </div>
   );
 
   return (
@@ -132,7 +142,7 @@ const SearchResults = memo<SearchResultsProps>(({ libraryId, query }) => {
       loading={<TreeSkeleton />}
       onRetry={() => mutate()}
     >
-      <Flexbox paddingInline={4} style={{ height: '100%' }}>
+      <div className="flex flex-col px-1" style={{ height: '100%' }}>
         <VList
           bufferSize={typeof window !== 'undefined' ? window.innerHeight : 0}
           ref={listRef}
@@ -158,7 +168,7 @@ const SearchResults = memo<SearchResultsProps>(({ libraryId, query }) => {
             </div>
           )}
         </VList>
-      </Flexbox>
+      </div>
     </AsyncBoundary>
   );
 });

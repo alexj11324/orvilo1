@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { FolderPlusIcon } from 'lucide-react';
@@ -73,16 +72,27 @@ const LibraryHierarchy = memo(() => {
   const rootError = status[''] === 'error' ? errors[''] : undefined;
 
   const emptyState = (
-    <Center gap={16} padding={24} style={{ height: '100%', textAlign: 'center' }}>
-      <Icon color={cssVar.colorTextQuaternary} icon={FolderPlusIcon} size={36} />
-      <Flexbox align={'center'} gap={4}>
+    <div
+      className="flex flex-col items-center justify-center gap-4 p-6"
+      style={{ height: '100%', textAlign: 'center' }}
+    >
+      <span className="anticon" role="img">
+        <FolderPlusIcon
+          color={cssVar.colorTextQuaternary}
+          fill={'transparent'}
+          height={36}
+          size={36}
+          width={36}
+        />
+      </span>
+      <div className="flex flex-col items-center gap-1">
         <Text strong>{t('library.hierarchy.empty.title')}</Text>
         <Text style={{ fontSize: 12 }} type={'secondary'}>
           {t('library.hierarchy.empty.desc')}
         </Text>
-      </Flexbox>
+      </div>
       <AddButton />
-    </Center>
+    </div>
   );
 
   // A typed query swaps the tree for flat, library-scoped results. The tree
@@ -105,7 +115,7 @@ const LibraryHierarchy = memo(() => {
           loading={<TreeSkeleton />}
           onRetry={() => loadChildren('')}
         >
-          <Flexbox paddingInline={4} style={{ height: '100%' }}>
+          <div className="flex flex-col px-1" style={{ height: '100%' }}>
             <VList
               bufferSize={typeof window !== 'undefined' ? window.innerHeight : 0}
               style={{ height: '100%' }}
@@ -124,7 +134,7 @@ const LibraryHierarchy = memo(() => {
                 </div>
               ))}
             </VList>
-          </Flexbox>
+          </div>
         </AsyncBoundary>
       )}
     </KnowledgeBaseListProvider>

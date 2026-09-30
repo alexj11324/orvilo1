@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { PlusIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -133,7 +132,7 @@ const Libraries = memo(() => {
   };
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <SectionTitle title={t('home.libraries')} />
       {error && !data?.length ? (
         <AsyncError error={error} variant={'inline'} onRetry={() => void mutate()} />
@@ -165,12 +164,14 @@ const Libraries = memo(() => {
             type={'button'}
             onClick={handleCreate}
           >
-            <Icon icon={PlusIcon} size={16} />
+            <span className="anticon" role="img">
+              <PlusIcon fill={'transparent'} height={16} size={16} width={16} />
+            </span>
             {t('home.uploadEntries.library.title')}
           </button>
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

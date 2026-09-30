@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo, useMemo } from 'react';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
@@ -129,7 +128,7 @@ const ResourceExplorer = memo(() => {
 
   return (
     <KnowledgeBaseListProvider>
-      <Flexbox height={'100%'}>
+      <div className="flex flex-col h-[100%]">
         <Header />
         <div style={{ flex: 1, overflow: 'hidden', position: 'relative' }}>
           {/*
@@ -162,7 +161,7 @@ const ResourceExplorer = memo(() => {
           </AsyncBoundary>
           <SearchResultsOverlay />
         </div>
-      </Flexbox>
+      </div>
     </KnowledgeBaseListProvider>
   );
 });

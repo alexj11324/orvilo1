@@ -1,6 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { memo, useState } from 'react';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
@@ -16,9 +15,9 @@ const ImageViewer = memo<ImageViewerProps>(({ url }) => {
   if (!url) return null;
 
   return (
-    <Center height={'100%'} width={'100%'}>
+    <div className="flex flex-col items-center justify-center h-[100%] w-[100%]">
       {!isLoaded && <NeuralNetworkLoading size={36} />}
-      { }
+      {}
       <img
         alt="Image preview"
         src={url}
@@ -31,7 +30,7 @@ const ImageViewer = memo<ImageViewerProps>(({ url }) => {
         }}
         onLoad={() => setIsLoaded(true)}
       />
-    </Center>
+    </div>
   );
 });
 

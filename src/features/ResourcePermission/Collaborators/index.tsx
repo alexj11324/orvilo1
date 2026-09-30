@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Button, createModal } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { PlusIcon } from 'lucide-react';
@@ -68,7 +67,15 @@ export const AddCollaboratorButton = memo<CollaboratorTargetProps>(
     if (!grantLevel) return null;
 
     return (
-      <Button icon={<Icon icon={PlusIcon} />} size={'small'} onClick={handleOpen}>
+      <Button
+        size={'small'}
+        icon={
+          <span className="anticon" role="img">
+            <PlusIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        }
+        onClick={handleOpen}
+      >
         {t('permission.collaborators.add')}
       </Button>
     );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
 import { Button, createModal, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { t } from 'i18next';
@@ -11,6 +10,7 @@ import { Virtuoso } from 'react-virtuoso';
 import useSWRInfinite from 'swr/infinite';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import type { ExistingEditorAttachment } from '@/features/EditorCanvas/editorAttachments';
 import { resourceService } from '@/services/resource';
 import { useGlobalStore } from '@/store/global';
@@ -137,29 +137,31 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
   }, [hasMore, isValidating, setSize]);
 
   return (
-    <Flexbox height={500} width={'100%'}>
-      <Flexbox horizontal align={'center'} justify={'flex-end'} style={{ paddingBlockEnd: 12 }}>
+    <div className="flex flex-col h-[500px] w-[100%]">
+      <div className="flex flex-row items-center justify-end" style={{ paddingBlockEnd: 12 }}>
         <ViewSwitcher
           view={viewMode}
           onViewChange={(mode) => updateSystemStatus({ knowledgeBaseModalViewMode: mode })}
         />
-      </Flexbox>
+      </div>
       {isLoading && files.length === 0 ? (
         <Loading />
       ) : error && files.length === 0 ? (
-        <Center flex={1} gap={12} padding={40}>
-          <Icon icon={ServerCrash} size={80} />
+        <div className="flex flex-col items-center justify-center flex-1 gap-3 p-10">
+          <span className="anticon" role="img">
+            <ServerCrash fill={'transparent'} height={80} size={80} width={80} />
+          </span>
           {t('networkError', { ns: 'file' })}
           <Button onClick={() => void mutate()}>{t('retry', { ns: 'common' })}</Button>
-        </Center>
+        </div>
       ) : files.length === 0 ? (
-        <Center flex={1} padding={40}>
-          <Empty
+        <div className="flex flex-col items-center justify-center flex-1 p-10">
+          <SimpleEmpty
             description={t('empty', { ns: 'file' })}
             descriptionProps={{ fontSize: 14 }}
             icon={FileSearch}
           />
-        </Center>
+        </div>
       ) : viewMode === 'list' ? (
         <Virtuoso
           data={files}
@@ -189,7 +191,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
           )}
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Tag } from '@lobehub/ui/base-ui';
 import { Descriptions, Divider } from 'antd';
 import dayjs from 'dayjs';
@@ -57,7 +56,14 @@ const FileDetail = memo<FileDetailProps>((props) => {
   const dataItems = [
     {
       children: chunkCount ? (
-        <Tag icon={<Icon icon={BoltIcon} />} variant={'filled'}>
+        <Tag
+          variant={'filled'}
+          icon={
+            <span className="anticon" role="img">
+              <BoltIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          }
+        >
           {' '}
           {chunkCount}
         </Tag>
@@ -79,7 +85,7 @@ const FileDetail = memo<FileDetailProps>((props) => {
   ];
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       <Descriptions
         colon={false}
         column={1}
@@ -107,7 +113,7 @@ const FileDetail = memo<FileDetailProps>((props) => {
         labelStyle={{ width: 120 }}
         size={'small'}
       />
-    </Flexbox>
+    </div>
   );
 });
 

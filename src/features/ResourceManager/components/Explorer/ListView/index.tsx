@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { useRef } from 'react';
 import type { VirtuosoHandle } from 'react-virtuoso';
 
@@ -36,7 +35,7 @@ const ListView = ({ isLoading, isValidating, queryParams }: ListViewProps) => {
     return <ListViewSkeleton columnWidths={columnWidths} showUploader={showUploader} />;
 
   return (
-    <Flexbox height={'100%'}>
+    <div className="flex flex-col h-[100%]">
       <div className={styles.scrollContainer}>
         <ListViewHeader
           columnWidths={columnWidths}
@@ -54,7 +53,7 @@ const ListView = ({ isLoading, isValidating, queryParams }: ListViewProps) => {
           />
         </ListViewDropZone>
       </div>
-    </Flexbox>
+    </div>
   );
 };
 

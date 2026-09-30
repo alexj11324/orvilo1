@@ -1,9 +1,8 @@
-import { Input, stopPropagation } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
-import { type InputRef } from 'antd';
 import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { useKnowledgeBaseStore } from '@/store/library';
 
 interface EditingProps {
@@ -20,7 +19,7 @@ const Editing = memo<EditingProps>(({ id, name, toggleEditing }) => {
     s.updateKnowledgeBase,
   ]);
   const [newName, setNewName] = useState(name);
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
   const submittingRef = useRef(false);
 
   useEffect(() => {
@@ -30,8 +29,8 @@ const Editing = memo<EditingProps>(({ id, name, toggleEditing }) => {
     submittingRef.current = false;
 
     queueMicrotask(() => {
-      inputRef.current?.input?.focus();
-      inputRef.current?.input?.select();
+      inputRef.current?.focus();
+      inputRef.current?.select();
     });
   }, [editing, name]);
 
@@ -53,30 +52,34 @@ const Editing = memo<EditingProps>(({ id, name, toggleEditing }) => {
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLInputElement>) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        void handleUpdate();
+        return;
+      }
       if (e.key === 'Escape') {
         e.preventDefault();
         e.stopPropagation();
         toggleEditing(false);
       }
     },
-    [toggleEditing],
+    [handleUpdate, toggleEditing],
   );
 
   if (!editing) return null;
 
   return (
     <Input
+      className="h-7"
       maxLength={64}
       ref={inputRef}
-      size="small"
       style={{ width: '100%' }}
       value={newName}
       onBlur={() => void handleUpdate()}
       onChange={(e) => setNewName(e.target.value)}
-      onClick={stopPropagation}
+      onClick={(event) => event.stopPropagation()}
       onKeyDown={handleKeyDown}
-      onMouseDown={stopPropagation}
-      onPressEnter={() => void handleUpdate()}
+      onMouseDown={(event) => event.stopPropagation()}
     />
   );
 });

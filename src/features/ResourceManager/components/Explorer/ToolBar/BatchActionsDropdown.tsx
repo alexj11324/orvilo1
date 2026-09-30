@@ -1,5 +1,3 @@
-import { type DropdownItem } from '@lobehub/ui';
-import { DropdownMenu, Icon, Tooltip } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import {
   BookMinusIcon,
@@ -12,7 +10,9 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import RepoIcon from '@/components/LibIcon';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useKnowledgeBaseListContext } from '@/features/ResourceManager/components/KnowledgeBaseListProvider';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { openWorkspaceDeleteAllModal } from '@/features/WorkspaceDeleteAllModal';
@@ -56,7 +56,11 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
     if (libraryId && selectCount === 0) {
       items.push({
         danger: true,
-        icon: <Icon icon={Trash2Icon} />,
+        icon: (
+          <span className="anticon" role="img">
+            <Trash2Icon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'deleteLibrary',
         label: t('header.actions.deleteLibrary', { ns: 'file' }),
         onClick: async () => {
@@ -117,7 +121,11 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
     if (libraryId) {
       items.push({
         disabled: selectCount === 0,
-        icon: <Icon icon={BookMinusIcon} />,
+        icon: (
+          <span className="anticon" role="img">
+            <BookMinusIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'removeFromKnowledgeBase',
         label: t('FileManager.actions.removeFromLibrary'),
         onClick: () => {
@@ -141,18 +149,26 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
 
       if (availableKnowledgeBases.length > 0) {
         items.push({
-          children: addToKnowledgeBaseSubmenu as any,
+          children: addToKnowledgeBaseSubmenu,
           disabled: selectCount === 0,
-          icon: <Icon icon={BookPlusIcon} />,
+          icon: (
+            <span className="anticon" role="img">
+              <BookPlusIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ),
           key: 'moveToOtherKnowledgeBase',
           label: t('FileManager.actions.moveToOtherLibrary'),
         });
       }
     } else if (availableKnowledgeBases.length > 0) {
       items.push({
-        children: addToKnowledgeBaseSubmenu as any,
+        children: addToKnowledgeBaseSubmenu,
         disabled: selectCount === 0,
-        icon: <Icon icon={BookPlusIcon} />,
+        icon: (
+          <span className="anticon" role="img">
+            <BookPlusIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'addToKnowledgeBase',
         label: t('FileManager.actions.addToLibrary'),
       });
@@ -161,7 +177,11 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
     items.push(
       {
         disabled: selectCount === 0,
-        icon: <Icon icon={FileBoxIcon} />,
+        icon: (
+          <span className="anticon" role="img">
+            <FileBoxIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'batchChunking',
         label: t('FileManager.actions.batchChunking'),
         onClick: async () => {
@@ -174,7 +194,11 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
       {
         danger: true,
         disabled: selectCount === 0,
-        icon: <Icon icon={Trash2Icon} />,
+        icon: (
+          <span className="anticon" role="img">
+            <Trash2Icon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
+        ),
         key: 'delete',
         label: t(isWorkspaceDeleteAll ? 'FileManager.actions.deleteAll' : 'delete', {
           ns: isWorkspaceDeleteAll ? 'components' : 'common',
@@ -233,15 +257,15 @@ const BatchActionsDropdown = memo<BatchActionsDropdownProps>(({ selectCount, onA
   ]);
 
   return (
-    <DropdownMenu items={menuItems} placement="bottomLeft">
-      <Tooltip title={canEditResources ? undefined : reason}>
+    <SimpleTooltip title={canEditResources ? undefined : reason}>
+      <DropdownMenu items={menuItems} placement="bottomLeft">
         <ActionIconWithChevron
           disabled={!canEditResources}
           icon={CircleEllipsisIcon}
           title={t('FileManager.actions.batchActions', 'Batch actions')}
         />
-      </Tooltip>
-    </DropdownMenu>
+      </DropdownMenu>
+    </SimpleTooltip>
   );
 });
 

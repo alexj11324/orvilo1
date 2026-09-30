@@ -1,8 +1,6 @@
-import { copyToClipboard, Icon } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { CUSTOM_FOLDER_FILE_TYPE, DERIVED_DOCUMENT_SOURCE_TYPE } from '@orvilo/const';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
-import { type ItemType } from 'antd/es/menu/interface';
 import {
   BookMinusIcon,
   BookPlusIcon,
@@ -19,6 +17,7 @@ import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { type DropdownItem } from '@/components/ItemsMenu';
 import RepoIcon from '@/components/LibIcon';
 import { useKnowledgeBaseListContext } from '@/features/ResourceManager/components/KnowledgeBaseListProvider';
 import { PAGE_FILE_TYPE } from '@/features/ResourceManager/constants';
@@ -34,6 +33,21 @@ import { userProfileSelectors } from '@/store/user/selectors';
 import { downloadFile } from '@/utils/client/downloadFile';
 
 import { openMoveToFolderModal } from '../MoveToFolderModal';
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.style.position = 'fixed';
+    textarea.style.opacity = '0';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    textarea.remove();
+  }
+};
 
 interface UseFileItemDropdownParams {
   enabled?: boolean;
@@ -70,7 +84,7 @@ interface UseFileItemDropdownParams {
   visibility?: 'private' | 'public' | null;
 }
 
-type FileMenuItem = ItemType & { sfSymbol?: SFSymbol };
+type FileMenuItem = DropdownItem & { sfSymbol?: SFSymbol };
 
 interface UseFileItemDropdownReturn {
   menuItems: () => FileMenuItem[];
@@ -155,7 +169,7 @@ export const useFileItemDropdown = ({
     });
 
     // Submenu for adding files to a library (used when NOT in a library)
-    const addToKnowledgeBaseSubmenu: ItemType[] = availableKnowledgeBases.map((kb) => ({
+    const addToKnowledgeBaseSubmenu: DropdownItem[] = availableKnowledgeBases.map((kb) => ({
       icon: <RepoIcon />,
       key: `add-to-library-${kb.id}`,
       label: <span style={{ marginLeft: 8 }}>{kb.name}</span>,
@@ -186,7 +200,7 @@ export const useFileItemDropdown = ({
 
     // Submenu for moving files to another library (used when IN a library)
     // Move = remove from current library + clear folder relationship + add to target library
-    const moveToKnowledgeBaseSubmenu: ItemType[] = availableKnowledgeBases.map((kb) => ({
+    const moveToKnowledgeBaseSubmenu: DropdownItem[] = availableKnowledgeBases.map((kb) => ({
       icon: <RepoIcon />,
       key: `move-to-library-${kb.id}`,
       label: <span style={{ marginLeft: 8 }}>{kb.name}</span>,
@@ -222,12 +236,20 @@ export const useFileItemDropdown = ({
           ? [
               availableKnowledgeBases.length > 0 && {
                 children: moveToKnowledgeBaseSubmenu,
-                icon: <Icon icon={BookPlusIcon} />,
+                icon: (
+                  <span className="anticon" role="img">
+                    <BookPlusIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  </span>
+                ),
                 key: 'moveToOtherLibrary',
                 label: t('FileManager.actions.moveToOtherLibrary'),
               },
               {
-                icon: <Icon icon={BookMinusIcon} />,
+                icon: (
+                  <span className="anticon" role="img">
+                    <BookMinusIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  </span>
+                ),
                 key: 'removeFromLibrary',
                 label: t('FileManager.actions.removeFromLibrary'),
                 onClick: async ({ domEvent }) => {
@@ -255,12 +277,16 @@ export const useFileItemDropdown = ({
           : [
               availableKnowledgeBases.length > 0 && {
                 children: addToKnowledgeBaseSubmenu,
-                icon: <Icon icon={BookPlusIcon} />,
+                icon: (
+                  <span className="anticon" role="img">
+                    <BookPlusIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                  </span>
+                ),
                 key: 'addToLibrary',
                 label: t('FileManager.actions.addToLibrary'),
               },
             ]
-    ) as ItemType[];
+    ) as DropdownItem[];
 
     const hasKnowledgeBaseActions = libraryRelatedActions.some(Boolean);
 
@@ -286,7 +312,11 @@ export const useFileItemDropdown = ({
       [
         canEditResources &&
           isOwnPrivateFile && {
-            icon: <Icon icon={GlobeIcon} />,
+            icon: (
+              <span className="anticon" role="img">
+                <GlobeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+            ),
             key: 'publishToWorkspace',
             label: t('resources.publishToWorkspace.menu', { ns: 'chat' }),
             onClick: async ({ domEvent }) => {
@@ -311,7 +341,11 @@ export const useFileItemDropdown = ({
         canEditResources && isOwnPrivateFile && { type: 'divider' },
         canEditResources &&
           isOwnPublicFile && {
-            icon: <Icon icon={EyeOffIcon} />,
+            icon: (
+              <span className="anticon" role="img">
+                <EyeOffIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+            ),
             key: 'makePrivate',
             label: t('makePrivate', { ns: 'common' }),
             onClick: async ({ domEvent }) => {
@@ -336,7 +370,11 @@ export const useFileItemDropdown = ({
           },
         canEditResources && isOwnPublicFile && { type: 'divider' },
         {
-          icon: <Icon icon={LinkIcon} />,
+          icon: (
+            <span className="anticon" role="img">
+              <LinkIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ),
           key: 'copyUrl',
           label: t('FileManager.actions.copyUrl'),
           onClick: async ({ domEvent }) => {
@@ -358,7 +396,11 @@ export const useFileItemDropdown = ({
           sfSymbol: 'doc.on.doc',
         },
         !isFolder && {
-          icon: <Icon icon={DownloadIcon} />,
+          icon: (
+            <span className="anticon" role="img">
+              <DownloadIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ),
           key: 'download',
           label: t('download', { ns: 'common' }),
           sfSymbol: 'square.and.arrow.down',
@@ -405,7 +447,11 @@ export const useFileItemDropdown = ({
         ...libraryRelatedActions,
         canEditResources &&
           isInLibrary && {
-            icon: <Icon icon={FolderInputIcon} />,
+            icon: (
+              <span className="anticon" role="img">
+                <FolderInputIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+            ),
             key: 'moveToFolder',
             label: t('FileManager.actions.moveToFolder'),
             onClick: async ({ domEvent }) => {
@@ -419,7 +465,11 @@ export const useFileItemDropdown = ({
           },
         canEditResources &&
           isFolder && {
-            icon: <Icon icon={PencilIcon} />,
+            icon: (
+              <span className="anticon" role="img">
+                <PencilIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+            ),
             key: 'rename',
             label: t('FileManager.actions.rename'),
             onClick: async ({ domEvent }) => {
@@ -433,7 +483,11 @@ export const useFileItemDropdown = ({
         },
         canEditResources && {
           danger: true,
-          icon: <Icon icon={Trash} />,
+          icon: (
+            <span className="anticon" role="img">
+              <Trash fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
+          ),
           key: 'delete',
           label: t('delete', { ns: 'common' }),
           onClick: async ({ domEvent }) => {

@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import FileListItem from './index';
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
+vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Avatar: ({ alt }: { alt: string }) => <span data-testid="avatar">{alt}</span>,
 }));

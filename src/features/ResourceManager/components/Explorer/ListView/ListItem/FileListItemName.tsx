@@ -1,8 +1,9 @@
-import { Center, Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
 import { Input } from 'antd';
+import { cx } from 'antd-style';
 import { FileText, FolderIcon, LockIcon } from 'lucide-react';
 
 import FileIcon from '@/components/FileIcon';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 
 import { styles } from './styles';
 import TruncatedFileName from './TruncatedFileName';
@@ -45,32 +46,37 @@ const FileListItemName = ({
   privateTooltip,
   renamingValue,
 }: FileListItemNameProps) => (
-  <Flexbox horizontal align={'center'} className={styles.nameContainer}>
-    <Flexbox
-      align={'center'}
-      justify={'center'}
+  <div className={cx('flex flex-row items-center', styles.nameContainer)}>
+    <div
+      className="flex flex-col items-center justify-center"
       style={{ fontSize: 24, marginInline: 8, width: 24 }}
     >
       {isPrivate ? (
-        <Tooltip title={privateTooltip}>
-          <Center height={24} width={24}>
-            <Icon icon={LockIcon} size={24} />
-          </Center>
-        </Tooltip>
+        <SimpleTooltip title={privateTooltip}>
+          <div className="flex flex-col items-center justify-center h-[24px] w-[24px]">
+            <span className="anticon" role="img">
+              <LockIcon fill={'transparent'} height={24} size={24} width={24} />
+            </span>
+          </div>
+        </SimpleTooltip>
       ) : isFolder ? (
-        <Icon icon={FolderIcon} size={24} />
+        <span className="anticon" role="img">
+          <FolderIcon fill={'transparent'} height={24} size={24} width={24} />
+        </span>
       ) : isPage ? (
         emoji ? (
           <span style={{ fontSize: 24 }}>{emoji}</span>
         ) : (
-          <Center height={24} width={24}>
-            <Icon icon={FileText} size={24} />
-          </Center>
+          <div className="flex flex-col items-center justify-center h-[24px] w-[24px]">
+            <span className="anticon" role="img">
+              <FileText fill={'transparent'} height={24} size={24} width={24} />
+            </span>
+          </div>
         )
       ) : (
         <FileIcon fileName={name} fileType={fileType} size={24} />
       )}
-    </Flexbox>
+    </div>
     {isRenaming && isFolder ? (
       <Input
         ref={inputRef}
@@ -79,8 +85,8 @@ const FileListItemName = ({
         value={renamingValue}
         onBlur={onRenameConfirm}
         onChange={(e) => onRenamingValueChange(e.target.value)}
-        onClick={stopPropagation}
-        onPointerDown={stopPropagation}
+        onClick={(event) => event.stopPropagation()}
+        onPointerDown={(event) => event.stopPropagation()}
         onKeyDown={(e) => {
           if (e.key === 'Enter') {
             e.preventDefault();
@@ -94,7 +100,7 @@ const FileListItemName = ({
     ) : (
       <TruncatedFileName className={styles.name} name={name || fallbackName} />
     )}
-  </Flexbox>
+  </div>
 );
 
 export default FileListItemName;

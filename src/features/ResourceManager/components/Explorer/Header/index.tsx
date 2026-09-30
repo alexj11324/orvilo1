@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { BookMinusIcon, FileBoxIcon, Trash2Icon } from 'lucide-react';
@@ -64,7 +63,7 @@ const Header = memo(() => {
 
   // If no libraryId, show category name or "Resource" for All
   const leftContent = hasSelected ? (
-    <Flexbox horizontal align={'center'} gap={8} style={{ marginLeft: 0 }}>
+    <div className="flex flex-row items-center gap-2" style={{ marginLeft: 0 }}>
       {libraryId ? (
         <ActionIcon
           disabled={!canEditResources}
@@ -163,17 +162,17 @@ const Header = memo(() => {
           });
         }}
       />
-    </Flexbox>
+    </div>
   ) : !libraryId ? (
-    <Flexbox style={{ marginLeft: 8 }}>
+    <div className="flex flex-col" style={{ marginLeft: 8 }}>
       {category === FilesTabs.All
         ? t('resource', { ns: 'file' })
         : t(`tab.${category as FilesTabs}` as any, { ns: 'file' })}
-    </Flexbox>
+    </div>
   ) : (
-    <Flexbox horizontal align={'center'} gap={4} style={{ marginLeft: 8 }}>
+    <div className="flex flex-row items-center gap-1" style={{ marginLeft: 8 }}>
       <Breadcrumb category={category} knowledgeBaseId={libraryId} />
-    </Flexbox>
+    </div>
   );
 
   return (
@@ -193,9 +192,9 @@ const Header = memo(() => {
           <SortDropdown />
           <BatchActionsDropdown selectCount={selectCount} onActionClick={onActionClick} />
           <ViewSwitcher />
-          <Flexbox style={{ marginLeft: 8 }}>
+          <div className="flex flex-col" style={{ marginLeft: 8 }}>
             <AddButton />
-          </Flexbox>
+          </div>
         </>
       }
       style={{

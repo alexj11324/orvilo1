@@ -1,9 +1,9 @@
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { InfoIcon, MoreVerticalIcon, Trash2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { useAgentStore } from '@/store/agent';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { KnowledgeType } from '@/types/knowledgeBase';
@@ -53,13 +53,17 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
   };
 
   return (
-    <Flexbox horizontal align={'center'}>
+    <div className="flex flex-row items-center">
       {enabled ? (
         <DropdownMenu
           placement="bottomRight"
           items={[
             {
-              icon: <Icon icon={InfoIcon} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <InfoIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
               key: 'detail',
               label: t('knowledgeBase.library.action.detail'),
               onClick: () => {
@@ -73,7 +77,11 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
             },
             {
               danger: true,
-              icon: <Icon icon={Trash2} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <Trash2 fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
               key: 'remove',
               label: t('knowledgeBase.library.action.remove'),
               onClick: removeKnowledge,
@@ -92,7 +100,7 @@ const Actions = memo<ActionsProps>(({ id, type, enabled }) => {
           {t('knowledgeBase.library.action.add')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

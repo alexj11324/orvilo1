@@ -1,12 +1,11 @@
-import { Flexbox, stopPropagation } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import type { IAsyncTaskError } from '@orvilo/types';
-import type { ItemType } from 'antd/es/menu/interface';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
 import { useMemo } from 'react';
 
 import { useFileTransferMenuItem } from '@/business/client/hooks/useFileTransferMenuItem';
+import type { DropdownItem } from '@/components/ItemsMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { getChunkTargetId } from '@/store/file';
 
@@ -27,20 +26,20 @@ interface FileListItemActionsProps {
   isFolder: boolean;
   isPage: boolean;
   isSupportedForChunking: boolean;
-  menuItems: ItemType[] | (() => ItemType[]);
+  menuItems: DropdownItem[] | (() => DropdownItem[]);
   parseFiles: (ids: string[]) => void;
   t: any;
 }
 
-const isDeleteMenuItem = (item: ItemType) =>
+const isDeleteMenuItem = (item: DropdownItem) =>
   item !== null && 'key' in item && item.key === 'delete';
 
-const isDividerMenuItem = (item: ItemType) =>
+const isDividerMenuItem = (item: DropdownItem) =>
   item !== null && 'type' in item && item.type === 'divider';
 
 export const appendTransferMenuItemsBeforeDelete = (
-  baseItems: ItemType[],
-  transferMenuItems: ItemType[] | null,
+  baseItems: DropdownItem[],
+  transferMenuItems: DropdownItem[] | null,
 ) => {
   if (!transferMenuItems || transferMenuItems.length === 0) return baseItems;
 
@@ -85,17 +84,17 @@ const FileListItemActions = ({
 
   const mergedMenuItems = useMemo(() => {
     const baseItems = typeof menuItems === 'function' ? menuItems() : menuItems;
-    return appendTransferMenuItemsBeforeDelete(baseItems, transferMenuItems);
+    return appendTransferMenuItemsBeforeDelete(
+      baseItems,
+      transferMenuItems as DropdownItem[] | null,
+    );
   }, [menuItems, transferMenuItems]);
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      gap={8}
-      paddingInline={8}
-      onClick={stopPropagation}
-      onPointerDown={stopPropagation}
+    <div
+      className="flex flex-row items-center gap-2 px-2"
+      onClick={(event) => event.stopPropagation()}
+      onPointerDown={(event) => event.stopPropagation()}
     >
       {!isFolder &&
         !isPage &&
@@ -139,7 +138,7 @@ const FileListItemActions = ({
           </div>
         ))}
       <DropdownMenu className={styles.hover} items={mergedMenuItems} />
-    </Flexbox>
+    </div>
   );
 };
 

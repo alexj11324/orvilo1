@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
@@ -74,14 +73,14 @@ const Breadcrumb = memo<BreadcrumbProps>(({ category, fileName }) => {
     const categoryLabel = t(`tab.${category as FilesTabs}` as any);
 
     return (
-      <Flexbox horizontal align={'center'} className={styles.breadcrumb} gap={0}>
+      <div className={cx('flex flex-row items-center gap-0', styles.breadcrumb)}>
         <span
           className={cx(styles.breadcrumbItem, styles.currentItem)}
           style={{ cursor: 'default' }}
         >
           {categoryLabel}
         </span>
-      </Flexbox>
+      </div>
     );
   }
 
@@ -109,23 +108,19 @@ const Breadcrumb = memo<BreadcrumbProps>(({ category, fileName }) => {
   const isRootClickable = folderChain.length > 0 || fileName;
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.breadcrumb} gap={0}>
+    <div className={cx('flex flex-row items-center gap-0', styles.breadcrumb)}>
       <span
         className={cx(styles.breadcrumbItem, isAtRoot && styles.currentItem)}
         style={{ cursor: isRootClickable ? 'pointer' : 'default' }}
         onClick={() => isRootClickable && handleNavigate(null)}
       >
-        {knowledgeBaseName ? (
-          knowledgeBaseName
-        ) : (
-          <Skeleton style={{ height: 14, minWidth: 80, width: 80 }} />
-        )}
+        {knowledgeBaseName || <Skeleton style={{ height: 14, minWidth: 80, width: 80 }} />}
       </span>
 
       {folderChain.map((folder: FolderCrumb, index: number) => {
         const isLast = index === folderChain.length - 1 && !fileName;
         return (
-          <Flexbox horizontal align={'center'} gap={0} key={folder.id}>
+          <div className="flex flex-row items-center gap-0" key={folder.id}>
             <span className={styles.separator}>/</span>
             <span
               className={cx(styles.breadcrumbItem, isLast && styles.currentItem)}
@@ -134,12 +129,12 @@ const Breadcrumb = memo<BreadcrumbProps>(({ category, fileName }) => {
             >
               {folder.name}
             </span>
-          </Flexbox>
+          </div>
         );
       })}
 
       {fileName && (
-        <Flexbox horizontal align={'center'} gap={0}>
+        <div className="flex flex-row items-center gap-0">
           <span className={styles.separator}>/</span>
           <span
             className={cx(styles.breadcrumbItem, styles.currentItem)}
@@ -147,9 +142,9 @@ const Breadcrumb = memo<BreadcrumbProps>(({ category, fileName }) => {
           >
             {fileName}
           </span>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

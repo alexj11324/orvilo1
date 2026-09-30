@@ -1,11 +1,11 @@
 'use client';
 
-import { SearchBar } from '@lobehub/ui';
 import { HotkeyEnum } from '@orvilo/const/hotkeys';
 import { type ChangeEvent, type KeyboardEvent } from 'react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import SearchBar from '@/components/SearchBar';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
@@ -42,13 +42,11 @@ const LibrarySearchBar = memo(() => {
 
   return (
     <SearchBar
-      allowClear
       enableShortKey
       placeholder={t('library.hierarchy.search.placeholder')}
       shortKey={hotkey}
       style={{ flex: 1, minWidth: 0 }}
       value={query}
-      variant={'filled'}
       onChange={handleChange}
       onKeyDown={handleKeyDown}
     />

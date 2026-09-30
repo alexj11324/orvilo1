@@ -1,18 +1,26 @@
 'use client';
 
 import { CaretDownFilled } from '@ant-design/icons';
-import { Block, Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Spin, toast } from '@lobehub/ui/base-ui';
 import { DERIVED_DOCUMENT_SOURCE_TYPE } from '@orvilo/const';
-import { Input } from 'antd';
 import { cx } from 'antd-style';
 import { FileText, FolderIcon, FolderOpenIcon, LockIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
-import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  createElement,
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import FileIcon from '@/components/FileIcon';
+import { Input } from '@/components/ui/input';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { PAGE_FILE_TYPE } from '@/features/ResourceManager/constants';
 import {
   getTransparentDragImage,
@@ -21,7 +29,7 @@ import {
 } from '@/features/ResourceManager/DndContextWrapper';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { showContextMenu } from '@/libs/contextMenu';
+import { type NativeContextMenuItem, showContextMenu } from '@/libs/contextMenu';
 import type { TreeItem } from '@/store/tree';
 import { useTreeStore } from '@/store/tree';
 
@@ -69,7 +77,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
 
     const [isRenaming, setIsRenaming] = useState(false);
     const [renamingValue, setRenamingValue] = useState(item.name);
-    const inputRef = useRef<any>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
 
     const { isPage, emoji } = useMemo(() => {
       const lowerFileType = item.fileType?.toLowerCase();
@@ -288,19 +296,14 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
       };
 
       return (
-        <Flexbox gap={2}>
-          <Block
-            clickable
-            horizontal
-            align={'center'}
+        <div className="flex flex-col gap-0.5">
+          <div
             data-drop-target-id={item.id}
             data-is-folder={String(item.isFolder)}
             draggable={!flat}
-            gap={8}
-            height={36}
-            paddingInline={4}
-            variant={isActive ? 'filled' : 'borderless'}
             className={cx(
+              'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-lg px-1',
+              isActive && 'bg-secondary',
               styles.treeItem,
               isOver && styles.fileItemDragOver,
               isDragging && styles.dragging,
@@ -316,7 +319,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
             onDrop={handleDrop}
             onContextMenu={(e) => {
               e.preventDefault();
-              showContextMenu(menuItems());
+              showContextMenu(menuItems() as NativeContextMenuItem[]);
             }}
           >
             {flat ? (
@@ -340,24 +343,28 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
                 />
               </m.div>
             )}
-            <Flexbox
-              horizontal
-              align={'center'}
-              flex={1}
-              gap={8}
+            <div
+              className="flex flex-row items-center flex-1 gap-2"
               style={{ minHeight: 28, minWidth: 0, overflow: 'hidden' }}
             >
-              <Icon icon={isExpanded ? FolderOpenIcon : FolderIcon} size={18} />
+              <span className="anticon" role="img">
+                {createElement(isExpanded ? FolderOpenIcon : FolderIcon, {
+                  size: 18,
+                  width: 18,
+                  height: 18,
+                  fill: 'transparent',
+                })}
+              </span>
               {isRenaming ? (
                 <Input
+                  className="h-7"
                   ref={inputRef}
-                  size="small"
                   style={{ flex: 1 }}
                   value={renamingValue}
                   onBlur={handleRenameConfirm}
                   onChange={(e) => setRenamingValue(e.target.value)}
-                  onClick={stopPropagation}
-                  onPointerDown={stopPropagation}
+                  onClick={(event) => event.stopPropagation()}
+                  onPointerDown={(event) => event.stopPropagation()}
                   onKeyDown={(e) => {
                     if (e.key === 'Enter') {
                       e.preventDefault();
@@ -380,32 +387,30 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
                   {item.name}
                 </span>
               )}
-            </Flexbox>
-            <Flexbox horizontal align={'center'}>
+            </div>
+            <div className="flex flex-row items-center">
               {!flat && <FolderAddButton folderId={item.id} />}
               <HierarchyNodeMenuButton menuItems={menuItems} />
-            </Flexbox>
-          </Block>
-        </Flexbox>
+            </div>
+          </div>
+        </div>
       );
     }
 
     // Render as file
     const isActive = isHierarchyNodeActive(item, selectedKey);
     return (
-      <Flexbox gap={2}>
-        <Block
-          clickable
-          horizontal
-          align={'center'}
-          className={cx(styles.treeItem, isDragging && styles.dragging)}
+      <div className="flex flex-col gap-0.5">
+        <div
           data-drop-target-id={item.id}
           data-is-folder={false}
           draggable={!flat}
-          gap={8}
-          height={36}
-          paddingInline={4}
-          variant={isActive ? 'filled' : 'borderless'}
+          className={cx(
+            'flex flex-row items-center gap-2 h-9 cursor-pointer rounded-lg px-1',
+            isActive && 'bg-secondary',
+            styles.treeItem,
+            isDragging && styles.dragging,
+          )}
           style={{
             paddingInlineStart: level * 12 + 4,
           }}
@@ -414,26 +419,27 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
           onDragStart={handleDragStart}
           onContextMenu={(e) => {
             e.preventDefault();
-            showContextMenu(menuItems());
+            showContextMenu(menuItems() as NativeContextMenuItem[]);
           }}
         >
           <div style={{ width: 20 }} />
-          <Flexbox
-            horizontal
-            align={'center'}
-            flex={1}
-            gap={8}
+          <div
+            className="flex flex-row items-center flex-1 gap-2"
             style={{ minHeight: 28, minWidth: 0, overflow: 'hidden' }}
           >
             {isPrivate ? (
-              <Tooltip title={t('resources.visibility.privateTooltip', { ns: 'chat' })}>
-                <Icon icon={LockIcon} size={18} />
-              </Tooltip>
+              <SimpleTooltip title={t('resources.visibility.privateTooltip', { ns: 'chat' })}>
+                <span className="anticon" role="img">
+                  <LockIcon fill={'transparent'} height={18} size={18} width={18} />
+                </span>
+              </SimpleTooltip>
             ) : isPage ? (
               emoji ? (
                 <span style={{ fontSize: 18 }}>{emoji}</span>
               ) : (
-                <Icon icon={FileText} size={18} />
+                <span className="anticon" role="img">
+                  <FileText fill={'transparent'} height={18} size={18} width={18} />
+                </span>
               )
             ) : (
               <FileIcon fileName={item.name} fileType={item.fileType} size={18} />
@@ -448,10 +454,10 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
             >
               {item.name}
             </span>
-          </Flexbox>
+          </div>
           <HierarchyNodeMenuButton menuItems={menuItems} />
-        </Block>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

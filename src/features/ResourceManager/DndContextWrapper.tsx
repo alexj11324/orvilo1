@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon, useAppElement } from '@lobehub/ui';
 import { toast } from '@lobehub/ui/base-ui';
 import { CUSTOM_DOCUMENT_FILE_TYPE, CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
 import { cssVar } from 'antd-style';
@@ -203,7 +202,11 @@ export const DndContextWrapper = memo<PropsWithChildren>(({ children }) => {
     };
   }, [canEditResources, setCurrentDrag, setSelectedFileIds, t]);
 
-  const appElement = useAppElement();
+  const [appElement, setAppElement] = useState<HTMLElement | null>(null);
+
+  useEffect(() => {
+    setAppElement(document.querySelector('[data-lobe-portal-host]'));
+  }, []);
 
   // Change cursor to grabbing during drag
   useEffect(() => {
@@ -276,9 +279,13 @@ export const DndContextWrapper = memo<PropsWithChildren>(({ children }) => {
                     }}
                   >
                     {currentDrag.data.fileType === CUSTOM_FOLDER_FILE_TYPE ? (
-                      <Icon icon={FolderIcon} size={20} />
+                      <span className="anticon" role="img">
+                        <FolderIcon fill={'transparent'} height={20} size={20} width={20} />
+                      </span>
                     ) : currentDrag.data.fileType === CUSTOM_DOCUMENT_FILE_TYPE ? (
-                      <Icon icon={FileText} size={20} />
+                      <span className="anticon" role="img">
+                        <FileText fill={'transparent'} height={20} size={20} width={20} />
+                      </span>
                     ) : (
                       <Suspense fallback={null}>
                         <FileIcon

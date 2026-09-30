@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Button, createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
 import { t as translate } from 'i18next';
@@ -256,27 +255,34 @@ const MoveToFolderModalContent = memo<MoveToFolderModalContentProps>(
 
     return (
       <>
-        <Flexbox style={{ padding: 16 }}>
-          <Flexbox horizontal justify="flex-end" style={{ marginBottom: 12 }}>
+        <div className="flex flex-col" style={{ padding: 16 }}>
+          <div className="flex flex-row justify-end" style={{ marginBottom: 12 }}>
             <Button
-              icon={<Icon icon={FolderIcon} />}
               loading={isCreatingFolder}
               size="small"
               type="default"
+              icon={
+                <span className="anticon" role="img">
+                  <FolderIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              }
               onClick={handleCreateNewFolder}
             >
               {t('header.actions.newFolder', { ns: 'file' })}
             </Button>
-          </Flexbox>
-          <Flexbox style={{ maxHeight: 400, minHeight: 200, overflowY: 'auto' }}>
+          </div>
+          <div
+            className="flex flex-col"
+            style={{ maxHeight: 400, minHeight: 200, overflowY: 'auto' }}
+          >
             {loading ? (
               <div>{t('loading', { ns: 'common' })}</div>
             ) : folders.length === 0 ? (
-              <Flexbox align="center" justify="center" style={{ minHeight: 200 }}>
+              <div className="flex flex-col items-center justify-center" style={{ minHeight: 200 }}>
                 <div style={{ color: 'var(--lobe-color-text-secondary)' }}>
                   {t('FileManager.noFolders')}
                 </div>
-              </Flexbox>
+              </div>
             ) : (
               <FolderTree
                 expandedFolders={expandedFolders}
@@ -288,8 +294,8 @@ const MoveToFolderModalContent = memo<MoveToFolderModalContentProps>(
                 onToggleFolder={handleToggleFolder}
               />
             )}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         <ModalFooter>
           <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
           <Button type="default" onClick={handleMoveToRoot}>

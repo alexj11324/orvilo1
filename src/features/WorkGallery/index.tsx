@@ -1,13 +1,14 @@
 'use client';
 
-import { Avatar, Button } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { PackageOpenIcon, TriangleAlertIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
 import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { formatWorkVersionCost } from '@/utils/workVersionCost';
@@ -140,19 +141,17 @@ const AgentFilter = memo<AgentFilterProps>(({ active, agentId, onSelect }) => {
   return (
     <Button
       className={cx(styles.agentFilter, active && styles.agentFilterActive)}
-      size={'small'}
-      type={'text'}
-      icon={
-        <Avatar
-          emojiScaleWithBackground
-          avatar={agent.avatar}
-          background={agent.backgroundColor}
-          shape={'square'}
-          size={20}
-        />
-      }
+      size="sm"
+      variant="ghost"
       onClick={() => onSelect(agentId)}
     >
+      <Avatar
+        emojiScaleWithBackground
+        avatar={agent.avatar}
+        background={agent.backgroundColor}
+        shape={'square'}
+        size={20}
+      />
       {agent.title}
     </Button>
   );
@@ -320,8 +319,8 @@ const WorkGallery = memo<WorkGalleryProps>(({ galleryKey }) => {
         <div className={cx('flex flex-row items-center gap-1', styles.filterBar)}>
           <Button
             className={cx(styles.agentFilter, !activeAgentId && styles.agentFilterActive)}
-            size={'small'}
-            type={'text'}
+            size="sm"
+            variant="ghost"
             onClick={() => setActiveAgentId(null)}
           >
             {t('work.agentFilter.all')}

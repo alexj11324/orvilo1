@@ -1,7 +1,8 @@
 'use client';
 
-import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
+
+import { createModal, type ModalInstance } from '@/components/Modal';
 
 import TopicDoctorContent, { type TopicDoctorContentProps } from './Content';
 

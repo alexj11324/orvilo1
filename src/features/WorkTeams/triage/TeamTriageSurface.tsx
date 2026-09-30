@@ -1,11 +1,11 @@
 'use client';
-import { toast } from '@lobehub/ui/base-ui';
 import type { TeamTriageAction } from '@orvilo/types';
 import { ListChecksIcon, PlusIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';

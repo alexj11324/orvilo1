@@ -1,12 +1,13 @@
 'use client';
 
-import { Button, SkeletonText, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import { PowerOff, RotateCcw, TriangleAlert, Unlink } from 'lucide-react';
 import { createElement, type CSSProperties } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { TransferManifest } from '@/services/resourceTransferRequest';
 
 import type { ManifestImpact, TransferManifestPerspective } from './transferManifestRows';
@@ -38,9 +39,9 @@ const ManifestRow = ({ icon, text, warning }: Omit<RenderRow, 'id'>) => (
         fill: 'transparent',
       })}
     </span>
-    <Text fontSize={12} type={warning ? 'warning' : 'secondary'}>
+    <div className="text-[12px]" type={warning ? 'warning' : 'secondary'}>
       {text}
-    </Text>
+    </div>
   </div>
 );
 
@@ -100,7 +101,7 @@ const TransferManifestList = ({
         {onRetry && (
           <Button
             loading={retrying}
-            size="small"
+            size="sm"
             style={{ alignSelf: 'flex-start', marginInlineStart: 22 }}
             onClick={onRetry}
           >
@@ -121,7 +122,10 @@ const TransferManifestList = ({
         role="status"
         style={style}
       >
-        <SkeletonText fontSize={12} gap={8} rows={2} width={['88%', '64%']} />
+        <div className="flex flex-col gap-2">
+          <Skeleton className="h-3" style={{ width: '88%' }} />
+          <Skeleton className="h-3" style={{ width: '64%' }} />
+        </div>
       </div>
     ) : null;
 
@@ -146,9 +150,9 @@ const TransferManifestList = ({
 
   return (
     <div className="flex flex-col gap-2 p-3 rounded-lg bg-secondary" style={style}>
-      <Text fontSize={12} type="secondary" weight={500}>
+      <div className="text-[12px] text-muted-foreground font-medium">
         {t('transferRequest.manifestTitle')}
-      </Text>
+      </div>
       {list}
     </div>
   );

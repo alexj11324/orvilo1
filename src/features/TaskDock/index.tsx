@@ -1,4 +1,3 @@
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   CheckIcon,
@@ -12,6 +11,8 @@ import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import Item from './Item';
 import {
@@ -189,12 +190,12 @@ const TaskDock = memo(() => {
       >
         {icon}
         <div className="flex flex-1 items-baseline gap-[7px]" style={{ minWidth: 0 }}>
-          <Text style={{ fontSize: 14 }}>{t(`taskDock.status.${status}`)}</Text>
-          <Text ellipsis style={{ fontSize: 12 }} type={'secondary'}>
+          <div style={{ fontSize: 14 }}>{t(`taskDock.status.${status}`)}</div>
+          <div className="truncate min-w-0 text-muted-foreground" style={{ fontSize: 12 }}>
             {activeCount > 0
               ? t('taskDock.activeOf', { active: activeCount, total: tasks.length })
               : t('taskDock.totalCount', { count: tasks.length })}
-          </Text>
+          </div>
         </div>
         <div
           className="flex items-center gap-1"
@@ -203,13 +204,13 @@ const TaskDock = memo(() => {
           }}
         >
           {canCancel && (
-            <Text
+            <div
+              className="text-muted-foreground"
               style={{ cursor: 'pointer', flexShrink: 0, fontSize: 12 }}
-              type={'secondary'}
               onClick={cancelAll}
             >
               {t('taskDock.cancelAll')}
-            </Text>
+            </div>
           )}
           {isRunning ? (
             <ActionIcon

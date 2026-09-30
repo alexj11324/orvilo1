@@ -1,9 +1,9 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { MessageCircle } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -47,12 +47,12 @@ const MessageCommentBadge = memo<MessageCommentBadgeProps>(({ count, messageId, 
       <Button
         aria-label={label}
         className={styles.button}
-        icon={MessageCircle}
-        size={'small'}
+        size="sm"
         title={label}
-        type={'text'}
+        variant="ghost"
         onClick={() => openTopicComments(topicId, messageId)}
       >
+        <MessageCircle data-icon="inline-start" />
         {count > 99 ? '99+' : count}
       </Button>
     </div>

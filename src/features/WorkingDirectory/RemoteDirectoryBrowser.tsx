@@ -1,12 +1,13 @@
 'use client';
 
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ArrowUpIcon, FolderIcon, HouseIcon } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { useFetchDeviceDirectory } from '@/store/device/directoryHooks';
@@ -46,7 +47,7 @@ export const RemoteDirectoryBrowser = ({
 
   return (
     <div className="flex flex-col gap-4">
-      <Text type={'secondary'}>{t('workingDirectory.browseDescription')}</Text>
+      <div className="text-muted-foreground">{t('workingDirectory.browseDescription')}</div>
       <div className="flex items-center gap-2">
         <ActionIcon
           aria-label={t('workingDirectory.home')}
@@ -78,7 +79,7 @@ export const RemoteDirectoryBrowser = ({
       {directory && directory.roots.length > 1 && (
         <div className="flex flex-wrap gap-2">
           {directory.roots.map((root) => (
-            <Button disabled={loading} key={root} size={'small'} onClick={() => navigate(root)}>
+            <Button disabled={loading} key={root} size="sm" onClick={() => navigate(root)}>
               {root}
             </Button>
           ))}
@@ -93,7 +94,7 @@ export const RemoteDirectoryBrowser = ({
         {isLoading ? (
           <div className="flex flex-1 flex-col items-center justify-center gap-2">
             <NeuralNetworkLoading />
-            <Text type={'secondary'}>{t('workingDirectory.foldersLoading')}</Text>
+            <div className="text-muted-foreground">{t('workingDirectory.foldersLoading')}</div>
           </div>
         ) : (
           <>
@@ -110,7 +111,9 @@ export const RemoteDirectoryBrowser = ({
                 titleColor={cssVar.colorText}
                 description={
                   entry.readable ? undefined : (
-                    <Text type={'secondary'}>{t('workingDirectory.folderUnreadable')}</Text>
+                    <div className="text-muted-foreground">
+                      {t('workingDirectory.folderUnreadable')}
+                    </div>
                   )
                 }
                 onClick={() => navigate(entry.path)}
@@ -124,16 +127,19 @@ export const RemoteDirectoryBrowser = ({
             ))}
             {error ? (
               <div className="flex flex-col items-center gap-2 p-4" role={'alert'}>
-                <Text style={{ textAlign: 'center', whiteSpace: 'normal' }} type={'secondary'}>
+                <div
+                  className="text-muted-foreground"
+                  style={{ textAlign: 'center', whiteSpace: 'normal' }}
+                >
                   {t('workingDirectory.foldersLoadFailed')}
-                </Text>
+                </div>
                 <Button disabled={loading} onClick={() => void retry()}>
                   {tCommon('retry')}
                 </Button>
               </div>
             ) : directory && entries.length === 0 ? (
               <div className="flex flex-1 flex-col items-center justify-center">
-                <Text type={'secondary'}>{t('workingDirectory.foldersEmpty')}</Text>
+                <div className="text-muted-foreground">{t('workingDirectory.foldersEmpty')}</div>
               </div>
             ) : null}
             {hasMore && !error && (
@@ -145,9 +151,9 @@ export const RemoteDirectoryBrowser = ({
         )}
       </div>
       {submitError && (
-        <Text role={'alert'} type={'danger'}>
+        <div className="text-destructive" role={'alert'}>
           {submitError}
-        </Text>
+        </div>
       )}
       <div className="flex flex-wrap justify-between gap-2">
         <Button disabled={loading} onClick={() => onManual(displayedPath)}>
@@ -159,7 +165,6 @@ export const RemoteDirectoryBrowser = ({
           </Button>
           <Button
             loading={loading}
-            type={'primary'}
             disabled={
               !directory || isLoading || (draft !== undefined && draft.trim() !== directory.path)
             }

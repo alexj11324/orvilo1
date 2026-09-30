@@ -1,5 +1,4 @@
 'use client';
-import { toast } from '@lobehub/ui/base-ui';
 import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -38,6 +37,7 @@ import { useSearchParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,

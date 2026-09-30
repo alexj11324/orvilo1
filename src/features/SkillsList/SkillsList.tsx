@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { EMPTY_ARRAY } from '@orvilo/const';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
@@ -272,9 +271,12 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
             />
           </span>
           <FolderIcon className={styles.childItemIcon} size={12} />
-          <Text ellipsis style={{ color: 'inherit', flex: 1, fontSize: 12, minWidth: 0 }}>
+          <div
+            className="truncate min-w-0"
+            style={{ color: 'inherit', flex: 1, fontSize: 12, minWidth: 0 }}
+          >
             {node.name}
-          </Text>
+          </div>
         </div>
         {isOpen &&
           node.children.map((child) => (
@@ -300,9 +302,12 @@ const TreeRow = memo<TreeRowProps>(({ depth, expanded, node, onOpenFile, onToggl
     >
       <span className={styles.treeChevronSlot} />
       <FileIcon className={styles.childItemIcon} size={12} />
-      <Text ellipsis style={{ color: 'inherit', flex: 1, fontSize: 12, minWidth: 0 }}>
+      <div
+        className="truncate min-w-0"
+        style={{ color: 'inherit', flex: 1, fontSize: 12, minWidth: 0 }}
+      >
         {node.name}
-      </Text>
+      </div>
     </div>
   );
 });
@@ -374,13 +379,13 @@ const SkillRow = memo<SkillRowProps>(
     // a clean DOM-forwarding child. Nesting them (Tooltip around the trigger, or
     // vice versa) would drop `onContextMenu` / the ref on the way through.
     const nameNode = (
-      <Text
-        ellipsis
+      <div
+        className="truncate min-w-0"
         style={{ color: 'inherit', flex: 1, minWidth: 0 }}
         onClick={onOpenSkill ? () => onOpenSkill(item) : undefined}
       >
         {item.name}
-      </Text>
+      </div>
     );
 
     const row = (

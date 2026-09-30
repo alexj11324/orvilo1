@@ -1,7 +1,7 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { useKnowledgeBaseStore } from '@/store/library';
 

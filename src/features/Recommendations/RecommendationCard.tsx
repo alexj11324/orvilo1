@@ -1,8 +1,10 @@
-import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { cssVar, cx } from 'antd-style';
 import { memo, type ReactNode, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import BriefCardSummary from '@/features/DailyBrief/BriefCardSummary';
 import { styles as briefStyles } from '@/features/DailyBrief/style';
@@ -50,14 +52,22 @@ export const RecommendationCard = memo<RecommendationCardProps>(
 
     if (compact)
       return (
-        <Button className={styles.compactRow} loading={loading} type={'text'} onClick={handleClick}>
+        <Button
+          className={styles.compactRow}
+          loading={loading}
+          variant="ghost"
+          onClick={handleClick}
+        >
           <div className="flex flex-row items-start gap-2.5" style={{ width: '100%' }}>
             <div className="flex flex-col flex-none py-[2px]">
               {renderIcon(RECOMMENDATION_ICON_SIZE.compact)}
             </div>
-            <Text className={cx(homeType.itemTitleProse, styles.compactTitle)} style={{ flex: 1 }}>
+            <div
+              className={cn(cx(homeType.itemTitleProse, styles.compactTitle))}
+              style={{ flex: 1 }}
+            >
               {title}
-            </Text>
+            </div>
           </div>
         </Button>
       );
@@ -78,9 +88,7 @@ export const RecommendationCard = memo<RecommendationCardProps>(
             style={{ flex: 1, minWidth: 0, overflow: 'hidden' }}
           >
             {renderIcon(RECOMMENDATION_ICON_SIZE.regular)}
-            <Text ellipsis fontSize={16} weight={500}>
-              {title}
-            </Text>
+            <div className="truncate min-w-0 text-[16px] font-medium">{title}</div>
           </div>
         </div>
         <Separator className="border-dashed" style={{ marginBlock: 0 }} />
@@ -88,16 +96,16 @@ export const RecommendationCard = memo<RecommendationCardProps>(
         <div className="flex flex-row items-center gap-2 justify-between flex-wrap">
           <div className="flex flex-row items-center gap-2">
             {tagLabel ? (
-              <Tag size={'small'} variant={'outlined'}>
+              <Badge size="sm" variant="outline">
                 {tagLabel}
-              </Tag>
+              </Badge>
             ) : null}
           </div>
           <div className="flex flex-row items-center gap-2">
             <Button
               className={briefStyles.actionBtnPrimary}
+              className="rounded-full"
               loading={loading}
-              shape={'round'}
               onClick={handleClick}
             >
               {ctaLabel}

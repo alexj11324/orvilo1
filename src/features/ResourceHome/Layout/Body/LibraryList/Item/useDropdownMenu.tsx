@@ -1,4 +1,3 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { EyeOffIcon, FileText, GlobeIcon, PencilLine, Trash, UsersIcon } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -6,6 +5,8 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useKnowledgeBaseTransferMenuItem } from '@/business/client/hooks/useKnowledgeBaseTransferMenuItem';
 import { type DropdownItem, type MenuProps } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';

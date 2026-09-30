@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,47 +41,47 @@ export const useFileUploadDockTasks = (): DockTask[] => {
           ].filter(Boolean);
 
           return (
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {uploadState?.progress ? formatSize(file.size * (uploadState.progress / 100)) : '-'}/
               {size}
               {trailing.length === 0 ? '' : ' · ' + trailing.join(' · ')}
-            </Text>
+            </div>
           );
         }
         case 'pending': {
           return (
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {size} · {t('uploadDock.body.item.pending')}
               {uploadState?.progress ? ` ${uploadState.progress}%` : ''}
-            </Text>
+            </div>
           );
         }
         case 'processing': {
           return (
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {size} · {t('uploadDock.body.item.processing')}
-            </Text>
+            </div>
           );
         }
         case 'success': {
           return (
-            <Text style={{ fontSize: 12 }} type={'secondary'}>
+            <div className="text-muted-foreground" style={{ fontSize: 12 }}>
               {size} · {t('uploadDock.body.item.done')}
-            </Text>
+            </div>
           );
         }
         case 'error': {
           return (
-            <Text style={{ fontSize: 12 }} type={'danger'}>
+            <div className="text-destructive" style={{ fontSize: 12 }}>
               {error || `${size} · ${t('uploadDock.body.item.error')}`}
-            </Text>
+            </div>
           );
         }
         case 'cancelled': {
           return (
-            <Text style={{ fontSize: 12 }} type={'warning'}>
+            <div className="text-warning" style={{ fontSize: 12 }}>
               {size} · {t('uploadDock.body.item.cancelled')}
-            </Text>
+            </div>
           );
         }
       }

@@ -1,8 +1,10 @@
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { CopyIcon, ExternalLinkIcon, RotateCwIcon, XIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 
 import type { DockTask } from './type';
 
@@ -103,13 +105,12 @@ const Item = memo<ItemProps>(
             className={`flex items-center gap-2 py-1.5 ${styles.result}`}
             style={{ paddingInlineEnd: 8, paddingInlineStart: solo ? 12 : 48 }}
           >
-            <Text
-              ellipsis
-              className={styles.resultLabel}
+            <div
+              className={cn('truncate min-w-0', styles.resultLabel)}
               type={result.onOpen ? undefined : 'secondary'}
             >
               {result.label}
-            </Text>
+            </div>
             {result.onCopy && (
               <ActionIcon icon={CopyIcon} size="small" title={t('copy')} onClick={result.onCopy} />
             )}
@@ -122,7 +123,7 @@ const Item = memo<ItemProps>(
               />
             )}
             {result.action && (
-              <Button size={'small'} onClick={result.onAction}>
+              <Button size="sm" onClick={result.onAction}>
                 {result.action}
               </Button>
             )}

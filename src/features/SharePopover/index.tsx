@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Checkbox, confirmModal, Select, Text, toast } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import {
   FileOutputIcon,
@@ -16,8 +15,19 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { confirmModal } from '@/components/Modal';
 import { ArticleSkeleton } from '@/components/Skeleton';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Separator } from '@/components/ui/separator';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -155,23 +165,24 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
             cancelText: t('cancel', { ns: 'common' }),
             content: (
               <div className="flex flex-col gap-4">
-                <Text>{t('shareModal.popover.privacyWarning.content')}</Text>
+                <div>{t('shareModal.popover.privacyWarning.content')}</div>
                 <div className="flex flex-col gap-3 py-2">
                   {PRIVACY_WARNING_ITEMS.map(({ icon: ItemIcon, labelKey }) => (
                     <div className="flex flex-row items-center gap-2" key={labelKey}>
                       <ItemIcon size={16} />
-                      <Text>{t(labelKey)}</Text>
+                      <div>{t(labelKey)}</div>
                     </div>
                   ))}
                 </div>
-                <Text>{t('shareModal.popover.privacyWarning.note')}</Text>
-                <Checkbox
-                  onChange={(v) => {
-                    doNotShowAgain = v;
-                  }}
-                >
+                <div>{t('shareModal.popover.privacyWarning.note')}</div>
+                <label className="flex items-center gap-2">
+                  <Checkbox
+                    onCheckedChange={(v) => {
+                      doNotShowAgain = v === true;
+                    }}
+                  />
                   {t('shareModal.popover.privacyWarning.doNotShowAgain')}
-                </Checkbox>
+                </label>
               </div>
             ),
             okText: t('shareModal.popover.privacyWarning.confirm'),
@@ -218,8 +229,8 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
     if (!canShare) {
       return (
         <div className={cx('flex flex-col gap-2', styles.container)}>
-          <Text strong>{t('share', { ns: 'common' })}</Text>
-          <Text type="secondary">{reason}</Text>
+          <div className="font-semibold">{t('share', { ns: 'common' })}</div>
+          <div className="text-muted-foreground">{reason}</div>
         </div>
       );
     }
@@ -227,10 +238,10 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
     if (loadError || failedTopicId === activeTopicId) {
       return (
         <div className={cx('flex flex-col gap-2', styles.container)}>
-          <Text strong>{t('share', { ns: 'common' })}</Text>
-          <Text type="secondary">{t('shareModal.popover.loadError')}</Text>
+          <div className="font-semibold">{t('share', { ns: 'common' })}</div>
+          <div className="text-muted-foreground">{t('shareModal.popover.loadError')}</div>
           <div className="flex flex-row justify-end">
-            <Button size="small" type="text" onClick={handleRetry}>
+            <Button size="sm" variant="ghost" onClick={handleRetry}>
               {t('retry', { ns: 'common' })}
             </Button>
           </div>
@@ -243,7 +254,7 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
     if (isLoading || (!shareInfo && canPublishLink)) {
       return (
         <div className={cx('flex flex-col gap-4', styles.container)}>
-          <Text strong>{t('share', { ns: 'common' })}</Text>
+          <div className="font-semibold">{t('share', { ns: 'common' })}</div>
           <ArticleSkeleton rows={2} />
         </div>
       );
@@ -280,46 +291,53 @@ const SharePopoverContent = memo<SharePopoverContentProps>(
 
     return (
       <div className={cx('flex flex-col gap-3', styles.container)} ref={containerRef}>
-        <Text strong>{t('shareModal.popover.title')}</Text>
+        <div className="font-semibold">{t('shareModal.popover.title')}</div>
 
         <div className="flex flex-col gap-1">
-          <Text type="secondary">{t('shareModal.popover.visibility')}</Text>
+          <div className="text-muted-foreground">{t('shareModal.popover.visibility')}</div>
           <Select
             disabled={updating}
-            options={visibilityOptions}
-            style={{ width: '100%' }}
             value={currentVisibility}
-            labelRender={({ value }) => {
-              const option = visibilityOptions.find((o) => o.value === value);
-              return (
-                <div className="flex flex-row items-center gap-2">
-                  {option?.icon}
-                  {option?.label}
-                </div>
-              );
-            }}
-            optionRender={(option) => (
-              <div className="flex flex-row items-center gap-2">
-                {visibilityOptions.find((o) => o.value === option.value)?.icon}
-                {option.label}
-              </div>
-            )}
-            onChange={handleVisibilityChange}
-          />
+            onValueChange={(v) => handleVisibilityChange(v as Visibility)}
+          >
+            <SelectTrigger style={{ width: '100%' }}>
+              <SelectValue>
+                {(value) => {
+                  const option = visibilityOptions.find((o) => o.value === value);
+                  return (
+                    <div className="flex flex-row items-center gap-2">
+                      {option?.icon}
+                      {option?.label}
+                    </div>
+                  );
+                }}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {visibilityOptions.map((option) => (
+                <SelectItem disabled={option.disabled} key={option.value} value={option.value}>
+                  <div className="flex flex-row items-center gap-2">
+                    {option.icon}
+                    {option.label}
+                  </div>
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
-        <Text className={styles.hint} type="secondary">
-          {getVisibilityHint()}
-        </Text>
+        <div className={cn('text-muted-foreground', styles.hint)}>{getVisibilityHint()}</div>
 
         <Separator style={{ margin: '4px 0' }} />
 
         <div className="flex flex-row items-center justify-between">
-          <Button icon={FileOutputIcon} size="small" type="text" onClick={handleOpenModal}>
+          <Button size="sm" variant="ghost" onClick={handleOpenModal}>
+            <FileOutputIcon data-icon="inline-start" />
             {t('shareModal.popover.export')}
           </Button>
           {currentVisibility !== 'private' && (
-            <Button icon={LinkIcon} size="small" type="primary" onClick={handleCopyLink}>
+            <Button size="sm" onClick={handleCopyLink}>
+              <LinkIcon data-icon="inline-start" />
               {t('shareModal.copyLink')}
             </Button>
           )}

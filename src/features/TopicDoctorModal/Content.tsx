@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Skeleton, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { TopicIssue } from '@orvilo/conversation-flow';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleAlert, CircleCheck, EyeOff, Stethoscope } from 'lucide-react';
@@ -8,6 +7,10 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { messageService } from '@/services/message';
 import { useChatStore } from '@/store/chat';
 
@@ -35,7 +38,14 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
     messageService.diagnoseTopic({ agentId, topicId }),
   );
 
-  if (isLoading) return <Skeleton.Text rows={3} />;
+  if (isLoading)
+    return (
+      <div className="flex flex-col gap-2">
+        {[0, 1, 2].map((row) => (
+          <Skeleton className="h-4" key={row} style={{ width: row === 2 ? '60%' : '100%' }} />
+        ))}
+      </div>
+    );
 
   // Without this the check failing would leave the skeleton up forever: SWR clears `isLoading`
   // but never produces `data`, so a `!data` skeleton has no way back.
@@ -43,7 +53,7 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
     return (
       <div className="flex flex-col items-center gap-3 py-6">
         <CircleAlert color={cssVar.colorError} size={32} />
-        <Text>{t('doctor.checkFailed')}</Text>
+        <div>{t('doctor.checkFailed')}</div>
         <Button onClick={() => mutate()}>{t('retry', { ns: 'common' })}</Button>
       </div>
     );
@@ -54,7 +64,7 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
     return (
       <div className="flex flex-col items-center gap-3 py-6">
         <CircleCheck color={cssVar.colorSuccess} size={32} />
-        <Text>{t('doctor.healthy')}</Text>
+        <div>{t('doctor.healthy')}</div>
       </div>
     );
 
@@ -104,7 +114,7 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
       {hiddenCount > 0 && (
         <div className="flex items-center gap-2">
           <EyeOff color={cssVar.colorWarning} />
-          <Text>{t('doctor.summary', { count: hiddenCount })}</Text>
+          <div>{t('doctor.summary', { count: hiddenCount })}</div>
         </div>
       )}
 
@@ -115,8 +125,10 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
               style={{ color: issue.repairable ? cssVar.colorWarning : cssVar.colorTextQuaternary }}
             />
             <div className="flex flex-col gap-0.5">
-              <Text>{describe(issue)}</Text>
-              {!issue.repairable && <Text type={'secondary'}>{t('doctor.notRepairable')}</Text>}
+              <div>{describe(issue)}</div>
+              {!issue.repairable && (
+                <div className="text-muted-foreground">{t('doctor.notRepairable')}</div>
+              )}
             </div>
           </div>
         ))}
@@ -124,13 +136,8 @@ const TopicDoctorContent = memo<TopicDoctorContentProps>(({ agentId, topicId }) 
 
       <div className="flex gap-2 justify-end">
         <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-        <Button
-          disabled={patch.length === 0}
-          icon={Stethoscope}
-          loading={repairing}
-          type={'primary'}
-          onClick={handleRepair}
-        >
+        <Button disabled={patch.length === 0} loading={repairing} onClick={handleRepair}>
+          <Stethoscope data-icon="inline-start" />
           {t('doctor.repair')}
         </Button>
       </div>

@@ -1,12 +1,12 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { type TopicPopupInfo } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cx } from 'antd-style';
 import { ExternalLinkIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -55,7 +55,8 @@ const TopicInPopupGuard = memo<TopicInPopupGuardProps>(({ popup }) => {
     >
       <h2 className={styles.title}>{t('inPopup.title')}</h2>
       <p className={styles.description}>{t('inPopup.description')}</p>
-      <Button icon={ExternalLinkIcon} type={'primary'} onClick={handleFocus}>
+      <Button onClick={handleFocus}>
+        <ExternalLinkIcon data-icon="inline-start" />
         {t('inPopup.focus')}
       </Button>
     </div>

@@ -1,11 +1,11 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { type FC } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useNavigate } from 'react-router';
 
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { Button } from '@/components/ui/button';
 
 import { useWorkspaceFromSlug } from './useWorkspaceFromSlug';
 

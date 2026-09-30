@@ -1,10 +1,13 @@
 'use client';
 
-import { Avatar, Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL, GROUP_CHAT_URL } from '@orvilo/const';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { formatNotificationRelativeTime } from '@/features/ResourceTransferRequest/formatNotificationRelativeTime';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useClientDataSWR } from '@/libs/swr';
@@ -204,20 +207,20 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
               className="flex flex-row items-center gap-1.5 justify-between"
               style={{ minWidth: 0 }}
             >
-              <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+              <div className="truncate min-w-0 font-medium" style={{ minWidth: 0 }}>
                 {resourceTitle}
-              </Text>
+              </div>
               {typeLabelKey && (
-                <Tag size="small" style={{ flexShrink: 0 }}>
+                <Badge size="sm" style={{ flexShrink: 0 }}>
                   {t(typeLabelKey as never)}
-                </Tag>
+                </Badge>
               )}
             </div>
-            <Text ellipsis fontSize={12} type="secondary">
+            <div className="truncate min-w-0 text-[12px] text-muted-foreground">
               {isRecipient
                 ? t('transferRequest.itemIncoming', { name: counterpartLabel })
                 : t('transferRequest.itemOutgoing', { name: counterpartLabel })}
-            </Text>
+            </div>
           </div>
         </div>
         {isRecipient && (
@@ -241,15 +244,15 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
           />
         )}
         <div className="flex flex-row items-center gap-2 justify-between">
-          <Text fontSize={12} style={{ marginInlineStart: 44 }} type="secondary">
+          <div className="text-[12px] text-muted-foreground" style={{ marginInlineStart: 44 }}>
             {formatNotificationRelativeTime(request.createdAt, dateLocale)}
-          </Text>
+          </div>
           <div className="flex flex-row gap-2">
             {isRecipient ? (
               <>
                 <Button
                   disabled={acting}
-                  size="small"
+                  size="sm"
                   onClick={() =>
                     run(() => resourceTransferRequestService.decline(request.id), {
                       description: t('transferRequest.declinedToastDesc', { name: resourceTitle }),
@@ -262,8 +265,7 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
                 <Button
                   disabled={acting || !manifestReady}
                   loading={acting}
-                  size="small"
-                  type="primary"
+                  size="sm"
                   onClick={() =>
                     run(
                       () => resourceTransferRequestService.accept(request.id),
@@ -284,7 +286,7 @@ const TransferRequestItem = memo<TransferRequestItemProps>(
               <Button
                 disabled={acting}
                 loading={acting}
-                size="small"
+                size="sm"
                 onClick={() =>
                   run(() => resourceTransferRequestService.cancel(request.id), {
                     title: t('transferRequest.withdrawnToast'),

@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import { FilePenLineIcon, MessageCircleIcon, SquarePenIcon, Trash2Icon } from 'lucide-react';
@@ -9,9 +8,12 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { confirmModal } from '@/components/Modal';
 import SimpleEmpty from '@/components/SimpleEmpty';
 import { createSurfaceSkeleton } from '@/components/Skeleton/Surface';
+import { toast } from '@/components/toast';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
@@ -312,7 +314,7 @@ const TaskDraftsPage = () => {
     <div className="flex flex-col flex-1 h-[100%]" style={{ minHeight: 0 }}>
       <NavHeader
         className={styles.header}
-        left={<Text weight={500}>{t('drafts.title')}</Text>}
+        left={<div className="font-medium">{t('drafts.title')}</div>}
         right={
           !isEmpty && (
             <ActionIcon
@@ -377,13 +379,12 @@ const TaskDraftsPage = () => {
                       <div className={styles.cardContent}>
                         <div className={styles.cardHeading}>
                           <div className={styles.cardTitle}>{title}</div>
-                          <Text
-                            fontSize={12}
+                          <div
+                            className="text-[12px] text-muted-foreground"
                             title={dayjs(draft.updatedAt).toString()}
-                            type="secondary"
                           >
                             {formatInboxAge(draft.updatedAt, { locale: i18n.language })}
-                          </Text>
+                          </div>
                         </div>
                         <div className={styles.preview}>
                           <div className={styles.previewLabel}>
@@ -438,9 +439,12 @@ const TaskDraftsPage = () => {
                       <div className={styles.cardContent}>
                         <div className={styles.cardHeading}>
                           <div className={styles.cardTitle}>{title}</div>
-                          <Text fontSize={12} title={String(draft.updatedAt)} type="secondary">
+                          <div
+                            className="text-[12px] text-muted-foreground"
+                            title={String(draft.updatedAt)}
+                          >
                             {formatInboxAge(draft.updatedAt, { locale: i18n.language })}
-                          </Text>
+                          </div>
                         </div>
                         <div className={styles.preview}>
                           <div className={styles.previewLabel}>

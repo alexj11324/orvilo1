@@ -1,8 +1,9 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { WorkListBaseItem } from '@orvilo/types';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { workService } from '@/services/work';
 
 /**

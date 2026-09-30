@@ -1,10 +1,11 @@
-import { createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { type AgentLabelListItem } from '@orvilo/types';
 import { t as translate } from 'i18next';
 import { Loader2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useHomeStore } from '@/store/home';

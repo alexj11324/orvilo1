@@ -1,8 +1,8 @@
 'use client';
 
-import { AccordionRoot } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
+import { Accordion } from '@/components/ui/accordion';
 import SideBarLayout from '@/features/NavPanel/SideBarLayout';
 
 import SidebarBody from './Body';
@@ -17,13 +17,9 @@ const ResourceSidebarContent = memo(() => (
     header={<Header />}
     body={
       <div className="flex flex-col py-2 px-1">
-        <AccordionRoot
-          defaultValue={[GroupKey.Library]}
-          indicatorPlacement="inline"
-          style={{ gap: 8 }}
-        >
+        <Accordion defaultValue={[GroupKey.Library]} style={{ gap: 8 }}>
           <SidebarBody itemKey={GroupKey.Library} />
-        </AccordionRoot>
+        </Accordion>
       </div>
     }
   />

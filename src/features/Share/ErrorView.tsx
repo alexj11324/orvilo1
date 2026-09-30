@@ -1,11 +1,11 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { TRPCClientError } from '@trpc/client';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NotFound from '@/components/404';
+import { Button } from '@/components/ui/button';
 import { trackLoginOrSignupClicked } from '@/features/User/UserLoginOrSignup/trackLoginOrSignupClicked';
 
 interface ShareErrorViewProps {
@@ -28,7 +28,6 @@ const ShareErrorView = memo<ShareErrorViewProps>(({ error }) => {
           extra={
             <Button
               href="/signin"
-              type="primary"
               onClick={(event) => {
                 event.preventDefault();
                 const callbackUrl = `${window.location.pathname}${window.location.search}`;

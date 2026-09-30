@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useCallback } from 'react';
 
@@ -36,12 +35,12 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
       onClick={handleClick}
     >
       <div className="flex flex-col gap-1 py-3 px-[14px]">
-        <Text ellipsis fontSize={14} style={{ fontWeight: 500 }}>
+        <div className="truncate min-w-0 text-[14px]" style={{ fontWeight: 500 }}>
           {title}
-        </Text>
-        <Text color={cssVar.colorTextTertiary} ellipsis={{ rows: 2 }} fontSize={12}>
+        </div>
+        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
           {description}
-        </Text>
+        </div>
       </div>
     </div>
   );

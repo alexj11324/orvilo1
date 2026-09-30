@@ -1,7 +1,5 @@
 'use client';
 
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { ActionIcon, DropdownMenu, Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import type { DragEvent } from 'react';
@@ -10,7 +8,10 @@ import { useTranslation } from 'react-i18next';
 
 import BusinessKnowledgeBaseImportAction from '@/business/client/BusinessKnowledgeBaseImportAction';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
 import LibraryStatusIcon from '@/components/LibIcon/StatusIcon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useDragActive } from '@/features/ResourceManager/DndContextWrapper';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -142,7 +143,7 @@ const Head = memo<{ id: string }>(({ id }) => {
         />
       </div>
       {!name ? (
-        <Skeleton.Text width={80} />
+        <Skeleton className="h-4" style={{ width: 80 }} />
       ) : (
         <DropdownMenu items={menuItems} placement="bottomRight">
           <div
@@ -150,9 +151,9 @@ const Head = memo<{ id: string }>(({ id }) => {
             style={{ cursor: 'pointer', flex: 1, overflow: 'hidden' }}
             onClick={(event) => event.stopPropagation()}
           >
-            <Text ellipsis style={{ flex: 1 }} weight={500}>
+            <div className="truncate min-w-0 font-medium" style={{ flex: 1 }}>
               {name}
-            </Text>
+            </div>
             <ActionIcon
               icon={ChevronsUpDownIcon}
               style={{ width: 24 }}

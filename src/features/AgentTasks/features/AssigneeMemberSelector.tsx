@@ -1,5 +1,5 @@
 import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Popover, Text } from '@lobehub/ui/base-ui';
+import { Text } from '@lobehub/ui/base-ui';
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { UserRoundX } from 'lucide-react';
@@ -11,6 +11,7 @@ import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspace
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
 import Avatar from '@/components/Avatar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { usePermission } from '@/hooks/usePermission';
@@ -94,7 +95,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
   }) => {
     const { t } = useTranslation('chat');
     const { allowed: canEditTask, reason } = usePermission('create_content');
-    const [key, setKey] = useState(0);
+    const [open, setOpen] = useState(false);
     const [search, setSearch] = useState('');
     const [activeIndex, setActiveIndex] = useState(0);
     const listRef = useRef<HTMLDivElement>(null);
@@ -158,7 +159,7 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
     const handleMemberChange = useCallback(
       (userId: string | null, member?: WorkspaceMemberRow) => {
         if (!canEditTask || userId === (currentUserId ?? null)) return;
-        setKey((value) => value + 1);
+        setOpen(false);
         setSearch('');
         if (onChange) {
           onChange(userId, member);
@@ -254,69 +255,69 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
     const currentTriggerStyle = fullWidth
       ? { ...pickerTriggerStyle, width: '100%' }
       : pickerTriggerStyle;
-    const trigger = blocked ? (
-      <Tooltip title={disabled ? t('taskDetail.reassignDisabled') : reason}>
-        <div
-          style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
-          onClick={(event) => event.stopPropagation()}
-        >
-          <span style={blockedPickerContentStyle}>{children}</span>
-        </div>
-      </Tooltip>
-    ) : (
-      <div style={currentTriggerStyle} onClick={(event) => event.stopPropagation()}>
-        {children}
-      </div>
-    );
+
+    if (blocked)
+      return (
+        <Tooltip title={disabled ? t('taskDetail.reassignDisabled') : reason}>
+          <div
+            style={{ ...currentTriggerStyle, cursor: 'not-allowed', opacity: 0.5 }}
+            onClick={(event) => event.stopPropagation()}
+          >
+            <span style={blockedPickerContentStyle}>{children}</span>
+          </div>
+        </Tooltip>
+      );
 
     return (
-      <Popover
-        disabled={blocked}
-        key={key}
-        placement={'bottomLeft'}
-        styles={{ content: { padding: 0, width: 260 } }}
-        trigger={'click'}
-        content={
-          <Flexbox onClick={(event) => event.stopPropagation()}>
-            {activeWorkspaceId && (
-              <input
-                autoFocus
-                className={styles.searchInput}
-                placeholder={t('taskList.assigneeSearch.memberPlaceholder')}
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                onKeyDown={handleSearchKeyDown}
-              />
-            )}
-            {activeWorkspaceId && isLoading ? (
-              <SkeletonList rows={6} />
-            ) : flatOptions.length === 0 ? (
-              <Flexbox align={'center'} justify={'center'} padding={16}>
-                <Text fontSize={12} type={'secondary'}>
-                  {t('taskList.assigneeSearch.memberEmpty')}
-                </Text>
-              </Flexbox>
-            ) : (
-              <Flexbox
-                gap={4}
-                padding={8}
-                ref={listRef}
-                style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
-              >
-                {showUnassigned && renderOption({ key: 'unassigned', kind: 'unassigned' })}
-                {selfMember && renderOption(toMemberOption(selfMember))}
-                {otherMembers.length > 0 && (
-                  <div className={styles.sectionHeader}>
-                    {t('taskList.assigneeSelector.workspaceMemberGroup')}
-                  </div>
-                )}
-                {otherMembers.map((member) => renderOption(toMemberOption(member)))}
-              </Flexbox>
-            )}
-          </Flexbox>
-        }
-      >
-        {trigger}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <div style={currentTriggerStyle} onClick={(event) => event.stopPropagation()}>
+              {children}
+            </div>
+          }
+        />
+        <PopoverContent
+          align="start"
+          className="w-65 gap-0 p-0"
+          onClick={(event) => event.stopPropagation()}
+        >
+          {activeWorkspaceId && (
+            <input
+              autoFocus
+              className={styles.searchInput}
+              placeholder={t('taskList.assigneeSearch.memberPlaceholder')}
+              value={search}
+              onChange={(event) => setSearch(event.target.value)}
+              onKeyDown={handleSearchKeyDown}
+            />
+          )}
+          {activeWorkspaceId && isLoading ? (
+            <SkeletonList rows={6} />
+          ) : flatOptions.length === 0 ? (
+            <Flexbox align={'center'} justify={'center'} padding={16}>
+              <Text fontSize={12} type={'secondary'}>
+                {t('taskList.assigneeSearch.memberEmpty')}
+              </Text>
+            </Flexbox>
+          ) : (
+            <Flexbox
+              gap={4}
+              padding={8}
+              ref={listRef}
+              style={{ maxHeight: '50vh', overflowY: 'auto', width: '100%' }}
+            >
+              {showUnassigned && renderOption({ key: 'unassigned', kind: 'unassigned' })}
+              {selfMember && renderOption(toMemberOption(selfMember))}
+              {otherMembers.length > 0 && (
+                <div className={styles.sectionHeader}>
+                  {t('taskList.assigneeSelector.workspaceMemberGroup')}
+                </div>
+              )}
+              {otherMembers.map((member) => renderOption(toMemberOption(member)))}
+            </Flexbox>
+          )}
+        </PopoverContent>
       </Popover>
     );
   },

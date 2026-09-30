@@ -3,6 +3,8 @@ import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { TaskLabelSummary, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import {
   BarChart3Icon,
+  BellIcon,
+  CalendarIcon,
   CopyIcon,
   FileTextIcon,
   LinkIcon,
@@ -54,6 +56,7 @@ import { taskDetailPath } from '../shared/taskDetailPath';
 import { useAssigneeMenuItems } from './assigneeMenuItems';
 import { renderMenuCheck, renderMenuExtra } from './menuExtra';
 import { PRIORITY_META } from './TaskPriorityTag';
+import { openTaskScheduleDialog } from './TaskScheduleDialog';
 import { useIssueStatusMove } from './useIssueStatusMove';
 import { useTaskStatusChange } from './useTaskStatusChange';
 
@@ -78,6 +81,8 @@ export interface TaskContextMenuTarget {
   createdByUserId?: string | null;
   /** Live run's topic — present while a run is in flight; gates "Open run". */
   currentTopicId?: string | null;
+  /** Issue deadline (`YYYY-MM-DD`) — preselects the due-date picker. */
+  dueDate?: string | null;
   /** uuid — the favorite and subscription APIs key on id, not identifier. */
   id?: string;
   identifier: string;
@@ -663,30 +668,46 @@ export const useTaskItemContextMenu = (
 
   const items = useMemo(() => {
     const base = buildItems(task);
-    // Linear orders Assignee immediately after Priority.
-    const withAssignee = showAssignee
-      ? (() => {
-          const priorityIndex = base.findIndex(
-            (item) =>
-              item !== null && typeof item === 'object' && 'key' in item && item.key === 'priority',
-          );
-          const assigneeItem: ContextMenuItem = {
-            children: assigneeItems,
-            disabled: !canEditTask,
-            icon: <Icon icon={UserRoundIcon} />,
-            key: 'assignee',
-            label: t('taskList.contextMenu.assignee'),
-            onTitleMouseEnter: resetActiveSubmenu,
-          };
-          const next = [...base];
-          next.splice(priorityIndex === -1 ? 2 : priorityIndex + 1, 0, assigneeItem);
-          return next;
-        })()
-      : base;
+    // Linear's top block reads Status → Assignee → Due date → Priority —
+    // both inserted items land between Status and Priority in one splice.
+    const priorityIndex = base.findIndex(
+      (item) =>
+        item !== null && typeof item === 'object' && 'key' in item && item.key === 'priority',
+    );
+    const insertIndex = priorityIndex === -1 ? 1 : priorityIndex;
+    const insertedItems: ContextMenuItem[] = [];
+    if (showAssignee) {
+      insertedItems.push({
+        children: assigneeItems,
+        disabled: !canEditTask,
+        icon: <Icon icon={UserRoundIcon} />,
+        key: 'assignee',
+        label: t('taskList.contextMenu.assignee'),
+        onTitleMouseEnter: resetActiveSubmenu,
+      });
+    }
+    if (task.dueDate !== undefined) {
+      insertedItems.push({
+        disabled: !canEditTask,
+        icon: <Icon icon={CalendarIcon} />,
+        key: 'dueDate',
+        label: t('taskList.contextMenu.dueDate', { defaultValue: 'Due date…' }),
+        onClick: ({ domEvent }: MenuInfo) => {
+          domEvent.stopPropagation();
+          openTaskScheduleDialog({ dueDate: task.dueDate ?? null, identifier: task.identifier });
+        },
+      });
+    }
+    const withInserted = (() => {
+      if (insertedItems.length === 0) return base;
+      const next = [...base];
+      next.splice(insertIndex, 0, ...insertedItems);
+      return next;
+    })();
     // Insert transfer/copy entries and the favorite + rename lifecycle
     // actions above the final divider + delete pair — next to the other
     // lifecycle actions but distinct from in-place state changes.
-    const deleteAnchor = withAssignee.findIndex(
+    const deleteAnchor = withInserted.findIndex(
       (item) =>
         item !== null &&
         typeof item === 'object' &&
@@ -713,6 +734,17 @@ export const useTaskItemContextMenu = (
           ]
         : []),
       {
+        // Read-ACL command — a reminder touches only the caller's own row,
+        // so it stays enabled for viewers (unlike the write-gated actions).
+        icon: <Icon icon={BellIcon} />,
+        key: 'remindMe',
+        label: t('taskList.contextMenu.remindMe', { defaultValue: 'Remind me…' }),
+        onClick: ({ domEvent }: MenuInfo) => {
+          domEvent.stopPropagation();
+          openTaskScheduleDialog({ dueDate: task.dueDate ?? null, identifier: task.identifier });
+        },
+      } satisfies ContextMenuItem,
+      {
         disabled: !canEditTask,
         icon: <Icon icon={PencilIcon} />,
         key: 'rename',
@@ -733,18 +765,18 @@ export const useTaskItemContextMenu = (
       { type: 'divider' } as ContextMenuItem,
     ];
 
-    if (deleteAnchor === -1) return [...withAssignee, ...tailItems];
+    if (deleteAnchor === -1) return [...withInserted, ...tailItems];
 
     const insertAt =
       deleteAnchor > 0 &&
-      withAssignee[deleteAnchor - 1] !== null &&
-      typeof withAssignee[deleteAnchor - 1] === 'object' &&
-      'type' in (withAssignee[deleteAnchor - 1] as object) &&
-      (withAssignee[deleteAnchor - 1] as { type?: string }).type === 'divider'
+      withInserted[deleteAnchor - 1] !== null &&
+      typeof withInserted[deleteAnchor - 1] === 'object' &&
+      'type' in (withInserted[deleteAnchor - 1] as object) &&
+      (withInserted[deleteAnchor - 1] as { type?: string }).type === 'divider'
         ? deleteAnchor - 1
         : deleteAnchor;
 
-    return [...withAssignee.slice(0, insertAt), ...tailItems, ...withAssignee.slice(deleteAnchor)];
+    return [...withInserted.slice(0, insertAt), ...tailItems, ...withInserted.slice(deleteAnchor)];
   }, [
     assigneeItems,
     buildItems,

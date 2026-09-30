@@ -2,7 +2,8 @@ import { Block, Icon, Tooltip } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { TaskPriority, TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
-import { TagIcon } from 'lucide-react';
+import { format, parseISO } from 'date-fns';
+import { CalendarIcon, TagIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -16,6 +17,7 @@ import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
+import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
 import TaskStatusTag from '../features/TaskStatusTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
@@ -65,6 +67,7 @@ const TaskProperties = memo(() => {
   const workflowStateRefId = useTaskDetailSelector(taskDetailSelectors.taskWorkflowStateRefId);
   const taskTeamId = useTaskDetailSelector(taskDetailSelectors.taskTeamId);
   const priority = useTaskDetailSelector(taskDetailSelectors.taskPriority);
+  const dueDate = useTaskDetailSelector(taskDetailSelectors.taskDueDate);
   const labels = useTaskDetailSelector(taskDetailSelectors.taskLabels);
   const assigneeUserId = useTaskDetailSelector(taskDetailSelectors.taskAssigneeUserId);
   const reviewerUserId = useTaskDetailSelector(taskDetailSelectors.taskReviewerUserId);
@@ -213,6 +216,35 @@ const TaskProperties = memo(() => {
             </Block>
           </AssigneeMemberSelector>
         )}
+
+        {/* Linear's Due date row — the shared schedule dialog (calendar +
+            reminder presets) is the picker; overdue renders warning-orange. */}
+        <Block
+          clickable
+          horizontal
+          align="center"
+          className={styles.propertyItem}
+          gap={8}
+          variant={'borderless'}
+          onClick={() => openTaskScheduleDialog({ dueDate: dueDate ?? null, identifier: taskId })}
+        >
+          <Icon color={cssVar.colorTextDescription} icon={CalendarIcon} size={16} />
+          <Text
+            fontSize={RAIL_VALUE_FONT_SIZE}
+            weight={500}
+            style={{
+              color: dueDate
+                ? parseISO(dueDate).getTime() < Date.now() - 24 * 60 * 60 * 1000
+                  ? cssVar.colorWarning
+                  : undefined
+                : cssVar.colorTextDescription,
+            }}
+          >
+            {dueDate
+              ? format(parseISO(dueDate), 'MMM d, yyyy')
+              : t('taskDetail.dueDate', { defaultValue: 'Due date' })}
+          </Text>
+        </Block>
 
         {/* Review-phase owner: visible once the task has someone accountable for
           review (auto-stamped on the paused transition) or while it sits in

@@ -1,8 +1,8 @@
 import type { IconType } from '@lobehub/icons';
-import { type DropdownItem, DropdownMenu, Icon, type MenuInfo, Tooltip } from '@lobehub/ui';
+import { Icon, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,6 +12,12 @@ import {
   PRIORITY_LEVELS,
   resolvePriorityLevel,
 } from '@/components/PriorityIcon';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePermission } from '@/hooks/usePermission';
 
 import { renderMenuExtra } from './menuExtra';
@@ -141,43 +147,24 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       },
     });
 
-    const menuItems = useMemo<DropdownItem[]>(
-      () =>
-        filteredLevels.map((level, index) => {
-          const value = PRIORITY_META[level];
-          const IconRender = value.icon;
-          const isCurrent = level === currentLevel;
-          return {
-            extra: renderMenuExtra(String(index + 1), isCurrent),
-            icon: <IconRender color={getPriorityIconColor(level)} size={16} />,
-            key: String(level),
-            label: levelLabel(level),
-            onClick: ({ domEvent }: MenuInfo) => {
-              domEvent.stopPropagation();
-              void handlePriorityChange(level);
-            },
-          };
-        }),
-      [currentLevel, filteredLevels, handlePriorityChange, levelLabel],
-    );
-
     const IconRender = meta.icon;
     const isUrgent = currentLevel === 1;
 
     const triggerNode =
       children ||
       (loading ? (
-        <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+        <span className={styles.trigger}>
+          <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+        </span>
       ) : (
-        <Tooltip title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}>
-          <span
-            className={isUrgent ? styles.triggerUrgent : styles.trigger}
-            data-row-control={'priority'}
-            onClick={(e) => e.stopPropagation()}
-          >
+        <span
+          className={isUrgent ? styles.triggerUrgent : styles.trigger}
+          data-row-control={'priority'}
+        >
+          <Tooltip title={t(`taskDetail.${meta.labelKey}` as never, { defaultValue: meta.label })}>
             <IconRender color={getPriorityIconColor(currentLevel)} size={size} />
-          </span>
-        </Tooltip>
+          </Tooltip>
+        </span>
       ));
 
     if (disableDropdown) return <>{triggerNode}</>;
@@ -196,37 +183,48 @@ const TaskPriorityTag = memo<TaskPriorityTagProps>(
       );
 
     return (
-      <DropdownMenu
-        items={menuItems}
-        open={open}
-        header={
-          <>
-            <input
-              autoFocus
-              className={styles.searchInput}
-              value={query}
-              aria-label={t('taskDetail.changePriorityPlaceholder', {
-                defaultValue: 'Change priority…',
-              })}
-              placeholder={t('taskDetail.changePriorityPlaceholder', {
-                defaultValue: 'Change priority…',
-              })}
-              onChange={(event) => setQuery(event.target.value)}
-              onClick={(event) => event.stopPropagation()}
-            />
-            <div className={styles.showingCaption}>
-              {query.trim()
-                ? t('taskDetail.showingItems', {
-                    count: filteredLevels.length,
-                    defaultValue: 'Showing {{count}} items',
-                  })
-                : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}
-            </div>
-          </>
-        }
-        onOpenChange={setOpen}
-      >
-        {triggerNode}
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger render={triggerNode as ReactElement} />
+        <DropdownMenuContent className="min-w-52">
+          <input
+            autoFocus
+            className={styles.searchInput}
+            value={query}
+            aria-label={t('taskDetail.changePriorityPlaceholder', {
+              defaultValue: 'Change priority…',
+            })}
+            placeholder={t('taskDetail.changePriorityPlaceholder', {
+              defaultValue: 'Change priority…',
+            })}
+            onChange={(event) => setQuery(event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          />
+          <div className={styles.showingCaption}>
+            {query.trim()
+              ? t('taskDetail.showingItems', {
+                  count: filteredLevels.length,
+                  defaultValue: 'Showing {{count}} items',
+                })
+              : t('taskDetail.showingAllItems', { defaultValue: 'Showing all items' })}
+          </div>
+          {filteredLevels.map((level, index) => {
+            const ItemIcon = PRIORITY_META[level].icon;
+            return (
+              <DropdownMenuItem
+                key={level}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handlePriorityChange(level);
+                }}
+              >
+                <ItemIcon color={getPriorityIconColor(level)} size={16} />
+                <span className="flex-1">{levelLabel(level)}</span>
+                {renderMenuExtra(String(index + 1), level === currentLevel)}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
       </DropdownMenu>
     );
   },

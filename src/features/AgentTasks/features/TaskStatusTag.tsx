@@ -1,13 +1,19 @@
-import { type DropdownItem, DropdownMenu, Icon, type MenuInfo, Tooltip } from '@lobehub/ui';
+import { Icon, Tooltip } from '@lobehub/ui';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ReactElement, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { StatusVisual } from '@/components/ExecutionStatus';
 import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePermission } from '@/hooks/usePermission';
 
 import {
@@ -237,50 +243,20 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
       },
     });
 
-    const menuItems = useMemo<DropdownItem[]>(() => {
-      let pickIndex = 0;
-      return filteredChoices.map((choice) => {
-        const pickable = Boolean(choice.status || choice.workflowCategory);
-        const isCurrent = taskStatusChoiceIsCurrent(
-          { workflowStateId, workflowStateRefId },
-          choice,
-          currentColumnKey,
-        );
-        const visual = WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
-        if (pickable) pickIndex += 1;
-        return {
-          disabled: !pickable,
-          extra: pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined,
-          icon: <Icon color={visual.color} icon={visual.icon} size={16} />,
-          key: choice.state ? `ws:${choice.state.id}` : choice.column.key,
-          label: choiceLabel(choice),
-          onClick: ({ domEvent }: MenuInfo) => {
-            domEvent.stopPropagation();
-            void handlePick(choice);
-          },
-        };
-      });
-    }, [
-      choiceLabel,
-      currentColumnKey,
-      filteredChoices,
-      handlePick,
-      workflowStateId,
-      workflowStateRefId,
-    ]);
-
     const triggerNode =
       children ||
       (loading ? (
-        <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+        <span className={styles.trigger}>
+          <Icon spin color={cssVar.colorTextDescription} icon={Loader2Icon} size={size} />
+        </span>
       ) : (
-        <Tooltip
-          title={glyph?.label ?? t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}
-        >
-          <span className={styles.trigger} onClick={(e) => e.stopPropagation()}>
+        <span className={styles.trigger}>
+          <Tooltip
+            title={glyph?.label ?? t(`taskDetail.${meta.labelKey}`, { defaultValue: meta.label })}
+          >
             <Icon color={(glyph ?? meta).color} icon={(glyph ?? meta).icon} size={size} />
-          </span>
-        </Tooltip>
+          </Tooltip>
+        </span>
       ));
 
     if (disableDropdown) return <>{triggerNode}</>;
@@ -294,38 +270,60 @@ const TaskStatusTag = memo<TaskStatusTagProps>(
         </Tooltip>
       );
 
+    let pickIndex = 0;
     return (
-      <DropdownMenu
-        items={menuItems}
-        open={open}
-        header={
-          <>
-            <input
-              autoFocus
-              className={styles.searchInput}
-              value={query}
-              aria-label={t('taskDetail.changeStatusPlaceholder', {
-                defaultValue: 'Change status…',
+      <DropdownMenu open={open} onOpenChange={setOpen}>
+        <DropdownMenuTrigger render={triggerNode as ReactElement} />
+        <DropdownMenuContent className="min-w-52">
+          <input
+            autoFocus
+            className={styles.searchInput}
+            value={query}
+            aria-label={t('taskDetail.changeStatusPlaceholder', {
+              defaultValue: 'Change status…',
+            })}
+            placeholder={t('taskDetail.changeStatusPlaceholder', {
+              defaultValue: 'Change status…',
+            })}
+            onChange={(event) => setQuery(event.target.value)}
+            onClick={(event) => event.stopPropagation()}
+            onKeyDown={(event) => event.stopPropagation()}
+          />
+          {!!query.trim() && (
+            <div className={styles.showingCaption}>
+              {t('taskDetail.showingItems', {
+                count: filteredChoices.length,
+                defaultValue: 'Showing {{count}} items',
               })}
-              placeholder={t('taskDetail.changeStatusPlaceholder', {
-                defaultValue: 'Change status…',
-              })}
-              onChange={(event) => setQuery(event.target.value)}
-              onClick={(event) => event.stopPropagation()}
-            />
-            {!!query.trim() && (
-              <div className={styles.showingCaption}>
-                {t('taskDetail.showingItems', {
-                  count: filteredChoices.length,
-                  defaultValue: 'Showing {{count}} items',
-                })}
-              </div>
-            )}
-          </>
-        }
-        onOpenChange={setOpen}
-      >
-        {triggerNode}
+            </div>
+          )}
+          {filteredChoices.map((choice) => {
+            const pickable = Boolean(choice.status || choice.workflowCategory);
+            const isCurrent = taskStatusChoiceIsCurrent(
+              { workflowStateId, workflowStateRefId },
+              choice,
+              currentColumnKey,
+            );
+            const visual =
+              WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
+            if (pickable) pickIndex += 1;
+            const label = choiceLabel(choice);
+            return (
+              <DropdownMenuItem
+                disabled={!pickable}
+                key={choice.state ? `ws:${choice.state.id}` : choice.column.key}
+                onClick={(event) => {
+                  event.stopPropagation();
+                  void handlePick(choice);
+                }}
+              >
+                <Icon color={visual.color} icon={visual.icon} size={16} />
+                <span className="flex-1">{label}</span>
+                {pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined}
+              </DropdownMenuItem>
+            );
+          })}
+        </DropdownMenuContent>
       </DropdownMenu>
     );
   },

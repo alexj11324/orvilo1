@@ -208,6 +208,16 @@ class TaskService {
 
   delete = async (id: string) => lambdaClient.task.delete.mutate({ id });
 
+  /**
+   * Linear's "Remind me" — per-caller reminder on a task. `remindAt` `null`
+   * clears it; a timestamp in the past is rejected server-side.
+   */
+  setReminder = async (id: string, remindAt: Date | null) =>
+    lambdaClient.task.setReminder.mutate({ id, remindAt });
+
+  /** The caller's own reminder row — feeds menu/rail checked state. */
+  getReminder = async (id: string) => lambdaClient.task.getReminder.query({ id });
+
   clearAll = async () => lambdaClient.task.clearAll.mutate();
 
   updateStatus = async (

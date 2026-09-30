@@ -4,6 +4,7 @@ import type {
   BriefDecision,
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
+  TaskRunTrigger,
   TaskTopicHandoff,
   TaskTopicIntegration,
   VerificationPollStage,
@@ -131,7 +132,7 @@ export class TaskTopicModel {
       integration?: TaskTopicIntegration;
       operationId?: string;
       seq: number;
-      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
+      trigger?: TaskRunTrigger;
     },
   ): Promise<void> {
     const visibility = await this.getTaskVisibility(taskId);
@@ -178,7 +179,7 @@ export class TaskTopicModel {
       integration?: TaskTopicIntegration;
       operationId: string;
       seq: number;
-      trigger?: 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
+      trigger?: TaskRunTrigger;
     },
   ): Promise<void> {
     const visibility = await this.getTaskVisibility(taskId);
@@ -745,7 +746,7 @@ export class TaskTopicModel {
     taskId: string,
     options?: {
       since?: Date;
-      triggers?: Array<'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator'>;
+      triggers?: TaskRunTrigger[];
     },
   ): Promise<number> {
     const conditions = [eq(taskTopics.taskId, taskId), this.ownership()];

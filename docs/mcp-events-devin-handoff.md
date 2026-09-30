@@ -27,7 +27,9 @@ not an enabled event automation feature. Do not resume implementation in the ori
    when discovery fails. Triggers are created disabled; UI cannot enable them.
 6. Event source discriminant and existing TaskDispatch policy/idempotency handling.
    TaskRunner rejects bare event requests before effects pending authoritative Core wiring.
-7. Targeted tests and candidate migration SQL in `docs/development/mcp-events-migration.sql`.
+7. Targeted tests and a registered consolidated migration
+   `packages/database/migrations/0196_cloud_control_plane.sql` (the earlier
+   candidate file in `docs/development/` was removed once the journal entry landed).
 
 ## Validation evidence and limits
 

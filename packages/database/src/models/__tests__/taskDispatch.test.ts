@@ -7,10 +7,16 @@ import {
   agents,
   goalNodes,
   goals,
+  mcpEventBindings,
+  mcpEventInbox,
+  mcpEventTriggerRuns,
+  mcpEventTriggers,
   projects,
   taskDispatches,
   tasks,
+  userConnectors,
   users,
+  workspaceMembers,
   workspaces,
 } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
@@ -27,6 +33,12 @@ const otherUserId = 'task-dispatch-other-user';
 const otherWorkspaceId = 'task-dispatch-other-workspace';
 
 const cleanup = async () => {
+  await db.delete(mcpEventTriggerRuns);
+  await db.delete(mcpEventTriggers);
+  await db.delete(mcpEventInbox);
+  await db.delete(mcpEventBindings);
+  await db.delete(userConnectors).where(eq(userConnectors.workspaceId, workspaceId));
+  await db.delete(workspaceMembers).where(eq(workspaceMembers.workspaceId, workspaceId));
   await db.delete(goalNodes);
   await db.delete(goals).where(eq(goals.workspaceId, workspaceId));
   await db.delete(goals).where(eq(goals.workspaceId, otherWorkspaceId));
@@ -114,6 +126,115 @@ const attachTaskToGoal = async (taskId: string, status: 'paused' | 'running', se
   return goal;
 };
 
+/** Seed the durable chain `verifyEventEvidence` re-checks at claim time. */
+const seedEventEvidence = async (taskId: string) => {
+  const tenantId = workspaceId;
+  const connectorId = '00000000-0000-4000-8000-000000000101';
+  const subscriptionId = 'event-sub-1';
+  const triggerId = 'event-trigger-1';
+  const inboxId = 'event-inbox-1';
+  const runId = 'event-run-1';
+  const eventId = 'occurrence-a';
+  const idempotencyKey = `event:${triggerId}:${eventId}`;
+  const revision = 3;
+
+  await db.insert(userConnectors).values({
+    id: connectorId,
+    identifier: 'mcp-source',
+    name: 'Event source',
+    sourceType: 'custom',
+    status: 'connected',
+    userId,
+    workspaceId,
+  });
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+  await db.insert(mcpEventBindings).values({
+    binding: {
+      callbackToken: 'event-callback',
+      callbackUrl: 'https://receiver.example/callback',
+      connectorId,
+      cursor: null,
+      eventArguments: {},
+      eventName: 'message',
+      expiresAt: null,
+      id: subscriptionId,
+      payloadSchema: {},
+      remoteSubscriptionId: null,
+      revision: 0,
+      schemaId: 'schema-1',
+      signingKeys: [],
+      state: 'active',
+      tenantId,
+      truncated: false,
+    },
+    callbackToken: 'event-callback',
+    connectorId,
+    id: subscriptionId,
+    state: 'active',
+    tenantId,
+  });
+  await db.insert(mcpEventInbox).values({
+    availableAt: Date.now(),
+    connectorId,
+    delivery: {
+      bindingRevision: 0,
+      connectorId,
+      event: { data: {}, eventId, name: 'message', timestamp: '2026-09-30T00:00:00Z' },
+      payloadHash: 'payload-hash',
+      rawBodyBase64: '',
+      receivedAt: Date.now(),
+      schemaId: 'schema-1',
+      subscriptionId,
+      tenantId,
+    },
+    eventId,
+    id: inboxId,
+    leaseToken: 'lease-1',
+    leaseUntil: Date.now() + 60_000,
+    payloadHash: 'payload-hash',
+    receivedAt: Date.now(),
+    schemaId: 'schema-1',
+    status: 'processing',
+    subscriptionId,
+    tenantId,
+  });
+  await db.insert(mcpEventTriggers).values({
+    enabled: true,
+    filters: [],
+    id: triggerId,
+    revision,
+    sourceId: connectorId,
+    subscriptionId,
+    taskId,
+    tenantId,
+    userId,
+    workspaceId,
+  });
+  await db.insert(mcpEventTriggerRuns).values({
+    id: runId,
+    idempotencyKey,
+    inboxId,
+    status: 'pending',
+    tenantId,
+    triggerId,
+    triggerRevision: revision,
+  });
+
+  return {
+    eventId,
+    idempotencyKey,
+    inboxRef: inboxId,
+    sourceId: connectorId,
+    subscriptionId,
+    tenantId,
+    triggerId,
+    triggerRevision: revision,
+    triggerRunId: runId,
+    userId,
+    workspaceId,
+  };
+};
+
 describe('TaskDispatchModel', () => {
   it('persists event identity and applies project admission on duplicate delivery', async () => {
     const task = await createTask('EVT-1', 101);
@@ -127,9 +248,11 @@ describe('TaskDispatchModel', () => {
       })
       .returning();
     await db.update(tasks).set({ projectId: project.id }).where(eq(tasks.id, task.id));
+    const eventEvidence = await seedEventEvidence(task.id);
     const model = new TaskDispatchModel(db, workspaceId);
     const input = {
-      idempotencyKey: 'event:trigger-a:occurrence-a',
+      eventEvidence,
+      idempotencyKey: eventEvidence.idempotencyKey,
       requestedBy: userId,
       taskId: task.id,
       trigger: 'event' as const,

@@ -201,7 +201,7 @@ describe('MCP event durable worker', () => {
       maxAttempts: 1,
       admission: {
         async admit() {
-          return { status: 'waiting', retryable: true, reason: 'capacity' };
+          return { status: 'waiting', retryable: true, reason: 'admission-held' };
         },
       },
     });

@@ -9,6 +9,7 @@ import {
   checkProviderBinding,
   type ProviderConfigurationComposition,
 } from '@/server/services/providerBinding/configuration';
+import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
 
 const version = z.object({ id: z.uuid(), revision: z.number().int().positive() }).strict();
 const procedure = authedProcedure.use(serverDatabase).use(({ ctx, next }) =>
@@ -52,9 +53,15 @@ export const createProviderBindingRouter = (composition?: ProviderConfigurationC
       return { success: true };
     }),
     checkConnection: procedure.input(version).mutation(async ({ ctx, input }) => {
-      return checkProviderBinding(ctx.providerBindings, ctx.userId, input, composition);
+      return checkProviderBinding(
+        ctx.providerBindings,
+        ctx.userId,
+        input,
+        composition ?? createProviderBindingComposition(ctx.serverDB),
+      );
     }),
   });
 
-// Deployment composition must explicitly provide the authoritative host broker.
+// Default composition resolves the canonical configuration broker from the
+// server database — the real provider request happens inside checkBinding.
 export const providerBindingRouter = createProviderBindingRouter();

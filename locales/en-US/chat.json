@@ -1791,6 +1791,7 @@
   "taskDetail.runFollowUpPlaceholder": "Ask a follow-up about this run...",
   "taskDetail.runNow": "Run now",
   "taskDetail.runTask": "Run",
+  "taskDetail.runTrigger.event": "Event",
   "taskDetail.runTrigger.goal": "Goal loop",
   "taskDetail.runTrigger.heartbeat": "Heartbeat",
   "taskDetail.runTrigger.orchestrator": "Orchestrator",

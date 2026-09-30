@@ -1720,6 +1720,7 @@ export default {
   'taskDetail.topicMenu.stopConfirm.content':
     'The current run will be canceled. Generated messages are kept and you can re-run the task later.',
   'taskDetail.topicMenu.stopConfirm.title': 'Stop Run?',
+  'taskDetail.runTrigger.event': 'Event',
   'taskDetail.runTrigger.goal': 'Goal loop',
   'taskDetail.runTrigger.heartbeat': 'Heartbeat',
   'taskDetail.runTrigger.orchestrator': 'Orchestrator',

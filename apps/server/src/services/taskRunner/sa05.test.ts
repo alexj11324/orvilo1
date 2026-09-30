@@ -186,7 +186,7 @@ describe('TaskRunnerService run intent (SA05-A)', () => {
     const resolve = vi.mocked(TaskModel.prototype.resolve);
     await expect(newRunner().runTask({ ...runParams, trigger: 'event' })).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
-      message: 'Event dispatch admission is not configured',
+      message: 'Event dispatch admission evidence is required',
     });
     expect(resolve).not.toHaveBeenCalled();
     expect(prepare).not.toHaveBeenCalled();

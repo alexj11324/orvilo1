@@ -1,30 +1,14 @@
+import type { EventDispatchAdmission } from '@orvilo/agent-execution/controlPlane';
+
 import type { McpEventInbox } from './deliveryTypes';
 import type { SqlMcpEventWorkRepository } from './workerRepository';
 
-/** Temporary shape until the separate Core commit is materialized here.
- * Integration must use EventDispatchAdmission from @orvilo/agent-execution/controlPlane.
- * No runtime launch lives here. */
-export interface McpEventDispatchAdmission {
-  admit: (request: {
-    schemaVersion: 1;
-    tenantId: string;
-    workspaceId: string;
-    userId: string;
-    taskId: string;
-    triggerId: string;
-    triggerRevision: number;
-    sourceId: string;
-    subscriptionId: string;
-    eventId: string;
-    inboxRef: string;
-    idempotencyKey: string;
-  }) => Promise<
-    | { status: 'accepted'; dispatchId: string; operationId?: string }
-    | { status: 'duplicate'; dispatchId: string }
-    | { status: 'waiting'; reason: string; retryable: boolean }
-    | { status: 'denied'; reason: string }
-  >;
-}
+/** Canonical port — see @orvilo/agent-execution/controlPlane contracts. */
+export type { EventDispatchAdmission };
+export type { EventDispatchAdmission as McpEventDispatchAdmission };
+
+const metaString = (value: unknown) =>
+  typeof value === 'string' && value.length > 0 ? value : undefined;
 
 /** Called by the existing maintenance scheduler, never a second task runner. */
 export class McpEventWorker {
@@ -32,7 +16,7 @@ export class McpEventWorker {
     private readonly dependencies: {
       inbox: McpEventInbox;
       repository: SqlMcpEventWorkRepository;
-      admission?: McpEventDispatchAdmission;
+      admission?: EventDispatchAdmission;
       now?: () => number;
       leaseMs?: number;
       maxAttempts?: number;
@@ -69,18 +53,20 @@ export class McpEventWorker {
           const trigger = run.trigger;
           const result = this.dependencies.admission
             ? await this.dependencies.admission.admit({
+                causationId: metaString(delivery.event._meta?.causationId),
+                eventId: delivery.event.eventId,
+                idempotencyKey: run.idempotencyKey,
+                inboxRef: delivery.id,
+                rootDispatchId: metaString(delivery.event._meta?.rootDispatchId),
                 schemaVersion: 1,
-                tenantId: trigger.tenantId,
-                workspaceId: trigger.workspaceId,
-                userId: trigger.userId,
-                taskId: trigger.taskId,
-                triggerId: trigger.id,
-                triggerRevision: trigger.revision,
                 sourceId: trigger.sourceId,
                 subscriptionId: delivery.subscriptionId,
-                eventId: delivery.event.eventId,
-                inboxRef: delivery.id,
-                idempotencyKey: run.idempotencyKey,
+                taskId: trigger.taskId,
+                tenantId: trigger.tenantId,
+                triggerId: trigger.id,
+                triggerRevision: trigger.revision,
+                userId: trigger.userId,
+                workspaceId: trigger.workspaceId,
               })
             : { status: 'waiting' as const, reason: 'runtime-unavailable', retryable: true };
           if (result.status === 'waiting' && result.retryable) {

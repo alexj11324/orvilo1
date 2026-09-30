@@ -36,7 +36,10 @@ vi.mock('./router', () => ({
     renderBody ? renderBody(<div data-portal-body />) : <div data-portal-body />,
 }));
 
-const sheetContent = () => document.querySelector('[data-slot="sheet-content"]');
+// Height is applied via inline `style` — the sheet's own
+// `data-[side=bottom]:h-auto` would override any height utility class, so
+// assert the computed inline style rather than class presence.
+const sheetContent = () => document.querySelector<HTMLElement>('[data-slot="sheet-content"]');
 
 const renderPortal = (showPortal: boolean) => {
   mocks.showPortal = showPortal;
@@ -54,24 +57,24 @@ describe('MobilePortal fullscreen toggle', () => {
   it('opens at 95% height and toggles to the full viewport and back', () => {
     renderPortal(true);
 
-    expect(sheetContent()?.classList.contains('h-[95%]')).toBe(true);
-    expect(sheetContent()?.classList.contains('h-dvh')).toBe(false);
+    expect(sheetContent()?.style.height).toBe('95%');
+    // The portal body mounts inside the sheet subtree.
+    expect(document.querySelector('[data-portal-body]')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'fullscreen' }));
 
-    expect(sheetContent()?.classList.contains('h-dvh')).toBe(true);
-    expect(sheetContent()?.classList.contains('h-[95%]')).toBe(false);
-    expect(screen.getByRole('button', { name: 'Exit fullscreen' })).toBeInTheDocument();
+    expect(sheetContent()?.style.height).toBe('100%');
+    expect(screen.getByRole('button', { name: 'exitFullscreen' })).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: 'Exit fullscreen' }));
+    fireEvent.click(screen.getByRole('button', { name: 'exitFullscreen' }));
 
-    expect(sheetContent()?.classList.contains('h-[95%]')).toBe(true);
+    expect(sheetContent()?.style.height).toBe('95%');
   });
 
   it('reopens at 95% after the store closes the portal externally (no onOpenChange)', () => {
     const { rerender } = renderPortal(true);
-    fireEvent.click(screen.getByRole('button', { name: 'Fullscreen' }));
-    expect(sheetContent()?.classList.contains('h-dvh')).toBe(true);
+    fireEvent.click(screen.getByRole('button', { name: 'fullscreen' }));
+    expect(sheetContent()?.style.height).toBe('100%');
 
     // External close: the store flips showPortal without going through
     // onOpenChange — the sheet unmounts and the fullscreen flag must not
@@ -83,9 +86,8 @@ describe('MobilePortal fullscreen toggle', () => {
     mocks.showPortal = true;
     rerender(<MobilePortal />);
 
-    expect(sheetContent()?.classList.contains('h-[95%]')).toBe(true);
-    expect(sheetContent()?.classList.contains('h-dvh')).toBe(false);
-    expect(screen.getByRole('button', { name: 'Fullscreen' })).toBeInTheDocument();
+    expect(sheetContent()?.style.height).toBe('95%');
+    expect(screen.getByRole('button', { name: 'fullscreen' })).toBeInTheDocument();
   });
 
   it('clears the portal stack when the sheet asks to close (Esc)', () => {

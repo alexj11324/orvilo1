@@ -72,7 +72,7 @@ const MobilePortalContent = ({
     >
       <SheetTitle className={'sr-only'}>{t('title')}</SheetTitle>
       <button
-        aria-label={fullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+        aria-label={t(fullscreen ? 'exitFullscreen' : 'fullscreen')}
         className={styles.fullscreenToggle}
         type="button"
         onClick={() => setFullscreen((prev) => !prev)}

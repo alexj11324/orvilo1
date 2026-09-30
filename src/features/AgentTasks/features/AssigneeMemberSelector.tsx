@@ -1,6 +1,6 @@
 import { canWorkspaceRoleBeTaskAssignee } from '@orvilo/const/rbac';
 import { createStaticStyles } from 'antd-style';
-import { type LucideIcon, UserRoundX } from 'lucide-react';
+import { UserRoundX } from 'lucide-react';
 import type { KeyboardEvent, ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -230,19 +230,27 @@ const AssigneeMemberSelector = memo<AssigneeMemberSelectorProps>(
         >
           <NavItem
             active={active}
+            icon={member ? undefined : UserRoundX}
             style={{ flexShrink: 0 }}
             title={member ? memberName(member) : unassignedLabel}
-            icon={
+            slots={
               member
-                ? ((() => (
-                    <Avatar
-                      avatar={member.user?.avatar || undefined}
-                      name={memberName(member)}
-                      shape={'circle'}
-                      size={22}
-                    />
-                  )) as unknown as LucideIcon)
-                : UserRoundX
+                ? {
+                    iconPostfix: (
+                      <div
+                        className="flex flex-none items-center justify-center"
+                        style={{ height: 28, width: 28 }}
+                      >
+                        <Avatar
+                          avatar={member.user?.avatar || undefined}
+                          name={memberName(member)}
+                          shape={'circle'}
+                          size={22}
+                        />
+                      </div>
+                    ),
+                  }
+                : undefined
             }
             onClick={() => handleSelect(option)}
           />

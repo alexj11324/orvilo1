@@ -94,7 +94,7 @@ export interface SettingsCapability {
  */
 export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapability>> = {
   // ── Withdrawn surfaces ───────────────────────────────────────────────────
-  // The user LLM provider / service-model surface was retired in place. These
+  // The legacy LLM / service-model surfaces were retired in place. These
   // ids stay in `SettingsTabs` because stored URLs and persisted tab state
   // still reference them, and `getSettingsCapability` must keep resolving them
   // to a safe target instead of throwing.
@@ -106,9 +106,11 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // to fall through to Appearance; it must not, so it deliberately names no
   // alias and answers not-found.
   [SettingsTabs.LLM]: { status: 'retired' },
-  [SettingsTabs.Provider]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
   [SettingsTabs.ServiceModel]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
   [SettingsTabs.TTS]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+
+  // Personal configuration uses the broker; it does not revive legacy execution.
+  [SettingsTabs.Provider]: { gate: ({ mobile }) => !mobile, status: 'enabled' },
 
   // ── Live surfaces ────────────────────────────────────────────────────────
   // Settings that follow the user everywhere.

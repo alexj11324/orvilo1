@@ -14,7 +14,14 @@ import { setNamespace } from '@/utils/storeDebug';
 import { type UserMemoryStore } from '../../store';
 import { type IdentityForInjection } from '../../types';
 import { userMemoryCacheKey } from '../../utils/cacheKey';
+import { invalidateMemoryCaches } from '../../utils/invalidate';
 import { createMemorySearchParams } from '../../utils/searchParams';
+import {
+  getMemorySession,
+  isMemorySessionKey,
+  memorySessionKey,
+  useMemorySession,
+} from '../../utils/session';
 import { activityInitialState } from '../activity/initialState';
 import { contextInitialState } from '../context/initialState';
 import { experienceInitialState } from '../experience/initialState';
@@ -52,9 +59,9 @@ export class BaseActionImpl {
   };
 
   purgeAllMemories = async (): Promise<void> => {
-    const { memoryCRUDService } = await import('@/services/userMemory');
-
+    const session = getMemorySession();
     await memoryCRUDService.deleteAll();
+    if (session !== getMemorySession()) return;
 
     this.#set(
       produce((draft) => {
@@ -81,37 +88,58 @@ export class BaseActionImpl {
       n('purgeAllMemories'),
     );
 
+    await invalidateMemoryCaches(session);
     await Promise.all([
       mutate(
-        (key) => Array.isArray(key) && key[0] === userMemoryKeys.memoryDetail.root,
+        (key) => isMemorySessionKey(key, session) && key[0] === userMemoryKeys.memoryDetail.root,
         undefined,
         { revalidate: true },
       ),
-      mutate((key) => Array.isArray(key) && key[0] === userMemoryKeys.activities.root, undefined, {
-        revalidate: true,
-      }),
-      mutate((key) => Array.isArray(key) && key[0] === userMemoryKeys.contexts.root, undefined, {
-        revalidate: true,
-      }),
-      mutate((key) => Array.isArray(key) && key[0] === userMemoryKeys.experiences.root, undefined, {
-        revalidate: true,
-      }),
       mutate(
-        (key) => Array.isArray(key) && key[0] === userMemoryKeys.identityList.root,
+        (key) => isMemorySessionKey(key, session) && key[0] === userMemoryKeys.activities.root,
         undefined,
         {
           revalidate: true,
         },
       ),
-      mutate((key) => Array.isArray(key) && key[0] === userMemoryKeys.preferences.root, undefined, {
-        revalidate: true,
-      }),
-      mutate((key) => Array.isArray(key) && key[0] === userMemoryKeys.retrieve.root, undefined, {
-        revalidate: true,
-      }),
-      mutate(userMemoryKeys.persona(), null, { revalidate: false }),
       mutate(
-        userMemoryKeys.tags(),
+        (key) => isMemorySessionKey(key, session) && key[0] === userMemoryKeys.contexts.root,
+        undefined,
+        {
+          revalidate: true,
+        },
+      ),
+      mutate(
+        (key) => isMemorySessionKey(key, session) && key[0] === userMemoryKeys.experiences.root,
+        undefined,
+        {
+          revalidate: true,
+        },
+      ),
+      mutate(
+        (key) => isMemorySessionKey(key, session) && key[0] === userMemoryKeys.identityList.root,
+        undefined,
+        {
+          revalidate: true,
+        },
+      ),
+      mutate(
+        (key) => isMemorySessionKey(key, session) && key[0] === userMemoryKeys.preferences.root,
+        undefined,
+        {
+          revalidate: true,
+        },
+      ),
+      mutate(
+        (key) => isMemorySessionKey(key, session) && key[0] === userMemoryKeys.retrieve.root,
+        undefined,
+        {
+          revalidate: true,
+        },
+      ),
+      mutate(memorySessionKey(userMemoryKeys.persona(), session), null, { revalidate: false }),
+      mutate(
+        memorySessionKey(userMemoryKeys.tags(), session),
         {
           roles: [],
           tags: [],
@@ -122,9 +150,10 @@ export class BaseActionImpl {
   };
 
   refreshUserMemory = async (params: RetrieveMemoryParams): Promise<void> => {
+    const session = getMemorySession();
     const key = userMemoryCacheKey(params);
 
-    await mutate(userMemoryKeys.retrieve(key));
+    await mutate(memorySessionKey(userMemoryKeys.retrieve(key), session));
   };
 
   setActiveMemoryContext = (context?: MemoryContext): void => {
@@ -155,11 +184,13 @@ export class BaseActionImpl {
   };
 
   updateMemory = async (id: string, content: string, layer: LayersEnum): Promise<void> => {
+    const session = getMemorySession();
     let listKeyRoot: string | undefined;
 
     switch (layer) {
       case LayersEnum.Activity: {
         await memoryCRUDService.updateActivity(id, { narrative: content });
+        if (session !== getMemorySession()) return;
         this.#set(
           produce((draft) => {
             const item = draft.activities.find((memory) => memory.id === id);
@@ -173,6 +204,7 @@ export class BaseActionImpl {
       }
       case LayersEnum.Context: {
         await memoryCRUDService.updateContext(id, { description: content });
+        if (session !== getMemorySession()) return;
         this.#set(
           produce((draft) => {
             const item = draft.contexts.find((memory) => memory.id === id);
@@ -186,6 +218,7 @@ export class BaseActionImpl {
       }
       case LayersEnum.Experience: {
         await memoryCRUDService.updateExperience(id, { keyLearning: content });
+        if (session !== getMemorySession()) return;
         this.#set(
           produce((draft) => {
             const item = draft.experiences.find((memory) => memory.id === id);
@@ -199,6 +232,7 @@ export class BaseActionImpl {
       }
       case LayersEnum.Identity: {
         await memoryCRUDService.updateIdentity(id, { description: content });
+        if (session !== getMemorySession()) return;
         this.#set(
           produce((draft) => {
             const item = draft.identities.find((memory) => memory.id === id);
@@ -212,6 +246,7 @@ export class BaseActionImpl {
       }
       case LayersEnum.Preference: {
         await memoryCRUDService.updatePreference(id, { conclusionDirectives: content });
+        if (session !== getMemorySession()) return;
         this.#set(
           produce((draft) => {
             const item = draft.preferences.find((memory) => memory.id === id);
@@ -226,17 +261,19 @@ export class BaseActionImpl {
     }
 
     this.#get().clearEditingMemory();
+    await invalidateMemoryCaches(session);
 
     if (listKeyRoot) {
       await Promise.all([
-        mutate((key) => Array.isArray(key) && key[0] === listKeyRoot),
-        mutate(userMemoryKeys.memoryDetail(layer, id)),
+        mutate((key) => isMemorySessionKey(key, session) && key[0] === listKeyRoot),
+        mutate(memorySessionKey(userMemoryKeys.memoryDetail(layer, id), session)),
       ]);
     }
   };
 
   useFetchMemoryDetail = (id: string | null, layer: LayersEnum): SWRResponse<any> => {
-    const swrKey = id ? userMemoryKeys.memoryDetail(layer, id) : null;
+    const session = useMemorySession();
+    const swrKey = id ? memorySessionKey(userMemoryKeys.memoryDetail(layer, id), session) : null;
 
     return useSWR(
       swrKey,
@@ -309,6 +346,7 @@ export class BaseActionImpl {
         return null;
       },
       {
+        keepPreviousData: false,
         revalidateOnFocus: false,
       },
     );
@@ -318,14 +356,17 @@ export class BaseActionImpl {
     enable: boolean,
     params?: RetrieveMemoryParams,
   ): SWRResponse<RetrieveMemoryResult> => {
+    const session = useMemorySession();
     const resolvedParams = params ?? this.#get().activeParams;
     const key = resolvedParams ? userMemoryCacheKey(resolvedParams) : undefined;
 
     return useClientDataSWR<RetrieveMemoryResult>(
-      enable && resolvedParams ? userMemoryKeys.retrieve(key) : null,
+      enable && resolvedParams ? memorySessionKey(userMemoryKeys.retrieve(key), session) : null,
       () => userMemoryService.retrieveMemory(resolvedParams!),
       {
+        keepPreviousData: false,
         onSuccess: (result) => {
+          if (session !== getMemorySession()) return;
           if (!resolvedParams || !key) return;
 
           const state = this.#get();
@@ -384,12 +425,15 @@ export class BaseActionImpl {
   };
 
   useInitIdentities = (isLogin: boolean): SWRResponse<any> => {
+    const session = useMemorySession();
     return useClientDataSWRWithSync<IdentityForInjection[]>(
-      isLogin ? userMemoryKeys.identities() : null,
+      isLogin ? memorySessionKey(userMemoryKeys.identities(), session) : null,
       // Use dedicated API that filters for self identities only
       () => userMemoryService.queryIdentitiesForInjection({ limit: 25 }),
       {
+        keepPreviousData: false,
         onSuccess: (data) => {
+          if (session !== getMemorySession()) return;
           if (!data) return;
 
           const fetchedAt = Date.now();

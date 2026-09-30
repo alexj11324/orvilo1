@@ -1322,3 +1322,10 @@ export const swrKeys = {
   pullRequest: pullRequestKeys,
   workAttention: workAttentionKeys,
 };
+
+export const mcpEventsKeys = {
+  triggers: (taskId: string) => ['mcpEvents:triggers', taskId] as const,
+  sources: (taskId: string) => ['mcpEvents:sources', taskId] as const,
+  definitions: (taskId: string, connectorId: string) =>
+    ['mcpEvents:definitions', taskId, connectorId] as const,
+};

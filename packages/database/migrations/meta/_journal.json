@@ -1371,6 +1371,34 @@
       "when": 1790698365351,
       "tag": "0195_team_resources_and_documents",
       "breakpoints": true
+    },
+    {
+      "idx": 196,
+      "version": "7",
+      "when": 1790786176768,
+      "tag": "0196_provider_bindings",
+      "breakpoints": true
+    },
+    {
+      "idx": 197,
+      "version": "7",
+      "when": 1790786196366,
+      "tag": "0197_experience_memory_shadow",
+      "breakpoints": true
+    },
+    {
+      "idx": 198,
+      "version": "7",
+      "when": 1790794374893,
+      "tag": "0198_mcp_events",
+      "breakpoints": true
+    },
+    {
+      "idx": 199,
+      "version": "7",
+      "when": 1790795715648,
+      "tag": "0199_core_execution_authority",
+      "breakpoints": true
     }
   ]
 }

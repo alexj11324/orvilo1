@@ -174,7 +174,10 @@ export class TaskDispatchModel {
     excludeDispatchId?: string,
   ): Promise<string | null> {
     const appliesProjectPolicy =
-      trigger === 'orchestrator' || trigger === 'schedule' || trigger === 'heartbeat';
+      trigger === 'orchestrator' ||
+      trigger === 'schedule' ||
+      trigger === 'heartbeat' ||
+      trigger === 'event';
     if (!appliesProjectPolicy || !task.projectId || !this.workspaceId) return null;
 
     const [project] = await db
@@ -516,7 +519,7 @@ export class TaskDispatchModel {
       if (active?.phase === 'waiting') {
         const requestedTrigger = active.requestedBy.split(':', 1)[0];
         const activeTrigger = (
-          ['goal', 'heartbeat', 'manual', 'orchestrator', 'schedule'] as const
+          ['event', 'goal', 'heartbeat', 'manual', 'orchestrator', 'schedule'] as const
         ).includes(requestedTrigger as TaskRunTrigger)
           ? (requestedTrigger as TaskRunTrigger)
           : input.trigger;
@@ -827,10 +830,13 @@ export class TaskDispatchModel {
           matchesDispatchAssignee(task, dispatch),
         );
         const requestedTrigger = dispatch.requestedBy.split(':', 1)[0];
-        const automatedTrigger = ['heartbeat', 'orchestrator', 'schedule'].includes(
+        const automatedTrigger = ['event', 'heartbeat', 'orchestrator', 'schedule'].includes(
           requestedTrigger,
         )
-          ? (requestedTrigger as Extract<TaskRunTrigger, 'heartbeat' | 'orchestrator' | 'schedule'>)
+          ? (requestedTrigger as Extract<
+              TaskRunTrigger,
+              'event' | 'heartbeat' | 'orchestrator' | 'schedule'
+            >)
           : null;
         const policyWaitingReason =
           currentContract && task && automatedTrigger

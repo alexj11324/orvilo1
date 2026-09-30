@@ -1,4 +1,4 @@
-import type { ProviderBindingConfig } from '@orvilo/types';
+import type { StoredProviderBindingConfig } from '@orvilo/types';
 import { index, integer, jsonb, pgTable, text, uuid } from 'drizzle-orm/pg-core';
 
 import { createdAt, updatedAt } from './_helpers';
@@ -11,7 +11,7 @@ export const providerBindings = pgTable(
     userId: text('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    config: jsonb('config').$type<ProviderBindingConfig>().notNull(),
+    config: jsonb('config').$type<StoredProviderBindingConfig>().notNull(),
     revision: integer('revision').notNull().default(1),
     createdAt: createdAt(),
     updatedAt: updatedAt(),

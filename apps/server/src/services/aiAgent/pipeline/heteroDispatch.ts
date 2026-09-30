@@ -26,6 +26,7 @@ import {
   getWorkingDirEffectivePath,
   resolveHeteroAgentSystemContext,
   resolveOrviloCliAgentType,
+  resolveOrviloEngine,
 } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
@@ -62,6 +63,7 @@ import {
   writeRemoteRunAdmission,
 } from '@/server/services/heterogeneousAgent/runAdmission';
 import type { MarketService } from '@/server/services/market';
+import { resolveOrviloProviderBinding } from '@/server/services/providerBinding/execution';
 
 import {
   getHeterogeneousAgentTitle,
@@ -782,18 +784,6 @@ export const dispatchHeteroAgent = async (
     runAttachments.imageList && runAttachments.imageList.length > 0
       ? runAttachments.imageList.map((image) => ({ id: image.id, url: image.url }))
       : undefined;
-  const effectiveHeterogeneousProvider =
-    heterogeneousProvider?.type === heteroType
-      ? applyTopicModelToHeterogeneousProvider(heterogeneousProvider, pinnedHeterogeneousTopicModel)
-      : undefined;
-  const heteroExecArgs = isLocalHeterogeneousType(heteroCliAgentType)
-    ? buildHeteroExecArgs(
-        effectiveHeterogeneousProvider
-          ? { ...effectiveHeterogeneousProvider, type: heteroCliAgentType }
-          : { type: heteroCliAgentType },
-      )
-    : undefined;
-
   const heteroParams = {
     // Devices and sandboxes receive the CLI family — their `lh hetero exec`
     // may predate `--type orvilo` support.
@@ -864,6 +854,94 @@ export const dispatchHeteroAgent = async (
   const cliDeviceId = deviceHeteroPlan?.kind === 'device' ? deviceHeteroPlan.deviceId : undefined;
   const cliDeviceWorkspaceId = cliDeviceId
     ? await deps.resolveDeviceWorkspaceId(cliDeviceId)
+    : undefined;
+
+  // BYOK: an enabled provider binding whose `selection` matches this run's
+  // engine + dispatch target supplies {provider, endpoint, credentials} for
+  // Orvilo-owned runtimes only (`heteroType === 'orvilo'` — ACP/external
+  // agents never reach this branch). Issuing is revision-fenced at mint time:
+  // a binding edited, disabled, or deleted between check and dispatch must
+  // not silently issue credentials, so the run fails loudly here instead of
+  // billing another account.
+  const byokTarget =
+    !isRemoteHetero && heteroType === 'orvilo'
+      ? deviceHeteroPlan?.kind === 'device'
+        ? { deviceId: deviceHeteroPlan.deviceId, kind: 'device' as const }
+        : deviceHeteroPlan?.kind === 'sandbox'
+          ? { kind: 'sandbox' as const }
+          : undefined
+      : undefined;
+  const byokResolution = byokTarget
+    ? await resolveOrviloProviderBinding(
+        deps.db,
+        deps.userId,
+        resolveOrviloEngine(heterogeneousProvider?.engine),
+        byokTarget,
+      )
+    : undefined;
+  if (byokResolution?.status === 'unavailable') {
+    const message =
+      'The selected provider binding changed or became unavailable; verify it again in Settings and retry.';
+    await finalizeHeteroDispatchError(deps, {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      detail: 'Provider binding unavailable or stale',
+      message,
+      operationId,
+      topicId,
+    });
+    return {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      autoStarted: false,
+      createdAt: new Date().toISOString(),
+      error: 'PROVIDER_BINDING_UNAVAILABLE',
+      message,
+      operationId,
+      status: 'error',
+      success: false,
+      timestamp: new Date().toISOString(),
+      topicId,
+      userMessageId: userMessageId ?? parentMessageId ?? '',
+    };
+  }
+  const byok = byokResolution?.status === 'applied' ? byokResolution.execution : undefined;
+  if (byok) {
+    try {
+      await deps.db
+        .update(agentOperations)
+        .set({
+          metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
+            byok: { bindingId: byok.bindingId, revision: byok.revision },
+          })}::jsonb`,
+        })
+        .where(eq(agentOperations.id, operationId));
+    } catch (err) {
+      log('execAgent: failed to persist byok binding pin: %O', err);
+    }
+  }
+
+  // Built after the binding resolves: the binding's configured model is the
+  // route its credential was verified for, so it wins over the provider's
+  // selection; credentials travel as spawn env + wrapper args, never client
+  // payloads.
+  const effectiveHeterogeneousProvider =
+    heterogeneousProvider?.type === heteroType
+      ? applyTopicModelToHeterogeneousProvider(heterogeneousProvider, pinnedHeterogeneousTopicModel)
+      : undefined;
+  const heteroExecArgs = isLocalHeterogeneousType(heteroCliAgentType)
+    ? [
+        ...(buildHeteroExecArgs(
+          effectiveHeterogeneousProvider
+            ? {
+                ...effectiveHeterogeneousProvider,
+                model: byok?.model ?? effectiveHeterogeneousProvider.model,
+                type: heteroCliAgentType,
+              }
+            : { model: byok?.model, type: heteroCliAgentType },
+        ) ?? []),
+        ...(byok?.execArgs ?? []),
+      ]
     : undefined;
 
   // Register the run's lifecycle hooks so the hetero terminal path fires
@@ -1365,6 +1443,7 @@ export const dispatchHeteroAgent = async (
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
+            env: byok?.env,
             // The device dedupes agent_run_request on this key (= the task id
             // it already tracks for cancelHeteroTask), so a gateway retry can
             // never spawn a duplicate execution of this operation.
@@ -1535,6 +1614,7 @@ export const dispatchHeteroAgent = async (
         ...heteroParams,
         agentType: heteroCliAgentType as 'claude-code' | 'codex',
         args: heteroExecArgs,
+        env: byok?.env,
         jwt: sandboxJwt,
         marketService,
         // `heteroParams.jwt` (the operation token) is overridden above for

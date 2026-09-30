@@ -11,7 +11,7 @@ import {
   CONTROL_PLANE_VERSION,
   createProviderConfigurationBroker,
 } from '@orvilo/agent-execution/controlPlane';
-import type { CredentialKVPayload, ProviderBindingConfig } from '@orvilo/types';
+import type { CredentialKVPayload, StoredProviderBindingConfig } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 
 import { CredentialModel } from '@/database/models/credential';
@@ -24,6 +24,45 @@ import type { ProviderConfigurationComposition } from './configuration';
 const PROVIDER_REQUEST_TIMEOUT_MS = 15_000;
 /** Headers a credential may never override through stored values. */
 const RESERVED_HEADERS = new Set(['content-length', 'host', 'transfer-encoding']);
+
+/**
+ * Decrypt the referenced personal credential and map it onto provider request
+ * headers. `kv-header` secrets forward their stored headers verbatim (minus
+ * reserved hop-by-hop names); `kv-env` secrets fold into the two de-facto auth
+ * headers (`Authorization: Bearer` + `x-api-key`). The mapping stays inside
+ * this trusted boundary — the returned headers are request material, never a
+ * client-facing representation.
+ */
+export const resolveProviderCredentialHeaders = async (
+  db: OrviloDatabase,
+  ownerId: string,
+  secretReference: string,
+): Promise<Record<string, string> | undefined> => {
+  const credentials = new CredentialModel(db, ownerId);
+  const credential = await credentials.findPersonalById(
+    secretReference.slice('credential:'.length),
+  );
+  if (!credential) return undefined;
+  const payload = await credentials.decryptPayload(credential);
+  if (!payload || typeof payload !== 'object' || !('values' in payload)) return undefined;
+  const headers: Record<string, string> = {};
+  const values = (payload as CredentialKVPayload).values ?? {};
+  if (credential.type === 'kv-header') {
+    for (const [name, value] of Object.entries(values)) {
+      if (!RESERVED_HEADERS.has(name.toLowerCase())) headers[name] = value;
+    }
+  } else {
+    // Env-style keys become the two de-facto provider auth headers.
+    const secret =
+      Object.entries(values).find(([key]) => /KEY|TOKEN|SECRET|AUTH/i.test(key))?.[1] ??
+      Object.values(values)[0];
+    if (secret) {
+      headers.Authorization = `Bearer ${secret}`;
+      headers['x-api-key'] = secret;
+    }
+  }
+  return Object.keys(headers).length === 0 ? undefined : headers;
+};
 /**
  * Conservative output-token floor for capability listings when the provider's
  * model catalog publishes no limits — understates rather than fabricates.
@@ -53,7 +92,9 @@ const authorizePersonalScope =
   };
 
 const toContractBinding = (
-  row: { config: ProviderBindingConfig; id: string; revision: number; userId: string } | undefined,
+  row:
+    | { config: StoredProviderBindingConfig; id: string; revision: number; userId: string }
+    | undefined,
 ): ProviderBinding => {
   const config = row?.config;
   return {
@@ -82,30 +123,12 @@ class SqlTrustedProviderBackend implements TrustedProviderBackend {
     const row = await bindings.find(binding.bindingId);
     const config = row?.config;
     if (!config || row?.revision !== binding.revision) return undefined;
-    const credentials = new CredentialModel(this.db, binding.ownerId);
-    const credential = await credentials.findPersonalById(
-      binding.secretReference.slice('credential:'.length),
+    const headers = await resolveProviderCredentialHeaders(
+      this.db,
+      binding.ownerId,
+      binding.secretReference,
     );
-    if (!credential) return undefined;
-    const payload = await credentials.decryptPayload(credential);
-    if (!payload || typeof payload !== 'object' || !('values' in payload)) return undefined;
-    const headers: Record<string, string> = {};
-    const values = (payload as CredentialKVPayload).values ?? {};
-    if (credential.type === 'kv-header') {
-      for (const [name, value] of Object.entries(values)) {
-        if (!RESERVED_HEADERS.has(name.toLowerCase())) headers[name] = value;
-      }
-    } else {
-      // Env-style keys become the two de-facto provider auth headers.
-      const secret =
-        Object.entries(values).find(([key]) => /KEY|TOKEN|SECRET|AUTH/i.test(key))?.[1] ??
-        Object.values(values)[0];
-      if (secret) {
-        headers.Authorization = `Bearer ${secret}`;
-        headers['x-api-key'] = secret;
-      }
-    }
-    if (Object.keys(headers).length === 0) return undefined;
+    if (!headers) return undefined;
     return { endpoint: config.endpoint.replace(/\/+$/, ''), headers, model: config.model };
   }
 

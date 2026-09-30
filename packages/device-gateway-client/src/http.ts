@@ -242,6 +242,8 @@ export class GatewayHttpClient {
     builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
     deviceId?: string;
+    /** Server-minted spawn env (e.g. BYOK credentials) merged into the run's process env. */
+    env?: Record<string, string>;
     /**
      * Server-side admission idempotency key (always the operationId). Relayed
      * to the device so a retried `agent_run_request` cannot spawn a duplicate

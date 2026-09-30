@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { InitDocumentArgs } from '@orvilo/editor-runtime';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -90,14 +89,14 @@ export const InitPageStreaming = memo<BuiltinStreamingProps<InitDocumentArgs>>((
             {title || t('builtins.orvilo-page-agent.apiName.initPage.creating')}
           </div>
           <div className={cn('flex', 'items-center', 'gap-[10px]', styles.meta)}>
-            <Text as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
+            <span className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
               <ListTree size={12} /> <AnimatedNumber value={lines} />
               {t('builtins.orvilo-page-agent.apiName.initPage.lines')}
-            </Text>
-            <Text as={'span'} color={cssVar.colorTextDescription} fontSize={12}>
+            </span>
+            <span className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
               <Hash size={12} /> <AnimatedNumber value={chars} />
               {t('builtins.orvilo-page-agent.apiName.initPage.chars')}
-            </Text>
+            </span>
           </div>
         </div>
       </div>

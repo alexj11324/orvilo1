@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Check } from 'lucide-react';
@@ -134,7 +133,7 @@ export const OptionCard = memo<OptionCardProps>(
       <span className={styles.optionIndex}>{index}</span>
       <div className="flex flex-col flex-1 gap-[2px]">
         <div className="flex items-center gap-2">
-          <Text className={styles.optionLabel}>{label}</Text>
+          <div className={styles.optionLabel}>{label}</div>
           {recommendedText && <span className={styles.recommendedBadge}>{recommendedText}</span>}
         </div>
         {description && <span className={styles.optionDescription}>{description}</span>}

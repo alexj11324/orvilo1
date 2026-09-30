@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -49,17 +48,11 @@ export const CreatePlanStreaming = memo<BuiltinStreamingProps<CreatePlanParams>>
       {/* Header */}
       <div className={styles.header}>
         <ListChecksIcon size={18} />
-        <Text ellipsis className={styles.title}>
-          {goal}
-        </Text>
+        <div className={`truncate ${styles.title}`}>{goal}</div>
       </div>
 
       {/* Description */}
-      {description && (
-        <Text className={styles.description} ellipsis={{ rows: 2 }}>
-          {description}
-        </Text>
-      )}
+      {description && <div className={`line-clamp-2 ${styles.description}`}>{description}</div>}
 
       {/* Context content - streaming with animation */}
       <StreamingMarkdown maxHeight={100}>{context}</StreamingMarkdown>

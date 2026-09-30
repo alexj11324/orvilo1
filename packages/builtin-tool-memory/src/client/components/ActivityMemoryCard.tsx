@@ -1,11 +1,11 @@
 'use client';
 
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { cn } from 'cn';
 import { memo } from 'react';
 
 import BubblesLoading from '@/components/BubblesLoading';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge } from '@/components/reui/badge';
 import StreamingMarkdown from '@/components/StreamingMarkdown';
 
 import type { AddActivityMemoryParams } from '../../types';
@@ -61,8 +61,17 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
         <div className="flex flex-col flex-1">
           <div className={styles.title}>{title || 'Activity Memory'}</div>
         </div>
-        {activityType && <Tag>{activityType}</Tag>}
-        {status && <Tag color={STATUS_COLORS[status] || 'default'}>{status.replace('_', ' ')}</Tag>}
+        {activityType && <Badge>{activityType}</Badge>}
+        {status && (
+          <Badge
+            style={{
+              color: STATUS_COLORS[status] || 'default',
+              borderColor: STATUS_COLORS[status] || 'default',
+            }}
+          >
+            {status.replace('_', ' ')}
+          </Badge>
+        )}
         {loading && <NeuralNetworkLoading size={20} />}
       </div>
 
@@ -77,12 +86,8 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
               style={{ paddingBlock: 12, paddingInline: 12 }}
             >
               <span>🕒</span>
-              <Text fontSize={13}>{schedule}</Text>
-              {timezone && (
-                <Text fontSize={12} type={'secondary'}>
-                  {timezone}
-                </Text>
-              )}
+              <div className="text-[13px]">{schedule}</div>
+              {timezone && <div className="text-[12px] text-muted-foreground">{timezone}</div>}
             </div>
           )}
 
@@ -123,7 +128,7 @@ export const ActivityMemoryCard = memo<ActivityMemoryCardProps>(({ data, loading
               {tags.length > 0 && (
                 <div className={cn('flex', 'gap-2', 'flex-wrap', styles.tags)}>
                   {tags.map((tag, index) => (
-                    <Tag key={index}>{tag}</Tag>
+                    <Badge key={index}>{tag}</Badge>
                   ))}
                 </div>
               )}

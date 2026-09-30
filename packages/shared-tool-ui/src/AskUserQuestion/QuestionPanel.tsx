@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
@@ -100,14 +99,12 @@ export const QuestionPanel = memo<QuestionPanelProps>(
     return (
       <div className="flex flex-col gap-[10px]">
         <div className="flex items-center gap-2">
-          {question.header && <Text type="secondary">{question.header}</Text>}
+          {question.header && <div className="text-muted-foreground">{question.header}</div>}
           {question.multiSelect && (
-            <Text fontSize={12} type="secondary">
-              {multiSelectTag}
-            </Text>
+            <div className="text-[12px] text-muted-foreground">{multiSelectTag}</div>
           )}
         </div>
-        <Text strong>{question.question}</Text>
+        <div className="font-semibold">{question.question}</div>
 
         <div className="flex flex-col gap-1" role="listbox">
           {question.options.map((opt, optIdx) => {

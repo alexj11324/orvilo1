@@ -1,7 +1,5 @@
 'use client';
-
 import { EmojiPicker } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps, SaveUserQuestionInput } from '@orvilo/types';
 import type { CSSProperties } from 'react';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -96,10 +94,10 @@ const AgentIdentitySection = memo<AgentIdentitySectionProps>(
     return (
       <div className="flex flex-col gap-3">
         <div className="flex flex-col gap-1">
-          <Text style={{ fontSize: 16, fontWeight: 600 }}>{t(titleKey)}</Text>
-          <Text style={{ fontSize: 13 }} type="secondary">
+          <div style={{ fontSize: 16, fontWeight: 600 }}>{t(titleKey)}</div>
+          <div className="text-muted-foreground" style={{ fontSize: 13 }}>
             {t('tool.intervention.onboarding.agentIdentity.editHint')}
-          </Text>
+          </div>
         </div>
 
         <div style={detailCardStyle}>
@@ -153,15 +151,18 @@ const UserProfileSection = memo<UserProfileSectionProps>(({ fullName }) => {
   return (
     <div className="flex flex-col gap-3">
       <div className="flex flex-col gap-1">
-        <Text style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.04em' }} type="secondary">
+        <div
+          className="text-muted-foreground"
+          style={{ fontSize: 12, fontWeight: 600, letterSpacing: '0.04em' }}
+        >
           {t('tool.intervention.onboarding.userProfile.eyebrow')}
-        </Text>
-        <Text style={{ fontSize: 16, fontWeight: 600 }}>
+        </div>
+        <div style={{ fontSize: 16, fontWeight: 600 }}>
           {t('tool.intervention.onboarding.userProfile.title')}
-        </Text>
-        <Text style={{ fontSize: 13 }} type="secondary">
+        </div>
+        <div className="text-muted-foreground" style={{ fontSize: 13 }}>
           {t('tool.intervention.onboarding.userProfile.description')}
-        </Text>
+        </div>
       </div>
 
       <div style={detailCardStyle}>
@@ -169,16 +170,16 @@ const UserProfileSection = memo<UserProfileSectionProps>(({ fullName }) => {
           <div style={detailGridStyle}>
             {fields.map((field) => (
               <div className="flex flex-col gap-[6px]" key={field.label}>
-                <Text style={{ fontSize: 12, fontWeight: 600 }} type="secondary">
+                <div className="text-muted-foreground" style={{ fontSize: 12, fontWeight: 600 }}>
                   {field.label}
-                </Text>
+                </div>
                 <div style={detailValueStyle}>{field.value}</div>
               </div>
             ))}
           </div>
-          <Text style={{ fontSize: 12 }} type="secondary">
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {t('tool.intervention.onboarding.userProfile.applyHint')}
-          </Text>
+          </div>
         </div>
       </div>
     </div>

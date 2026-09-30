@@ -1,12 +1,11 @@
 'use client';
-
-import { Progress, Tag, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
 import BubblesLoading from '@/components/BubblesLoading';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge } from '@/components/reui/badge';
 import StreamingMarkdown from '@/components/StreamingMarkdown';
 
 import type { AddContextMemoryParams } from '../../types';
@@ -70,8 +69,17 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
         <div className="flex flex-col flex-1">
           <div className={styles.title}>{title || 'Context Memory'}</div>
         </div>
-        {contextType && <Tag>{contextType}</Tag>}
-        {status && <Tag color={STATUS_COLORS[status] || 'default'}>{status.replace('_', ' ')}</Tag>}
+        {contextType && <Badge>{contextType}</Badge>}
+        {status && (
+          <Badge
+            style={{
+              color: STATUS_COLORS[status] || 'default',
+              borderColor: STATUS_COLORS[status] || 'default',
+            }}
+          >
+            {status.replace('_', ' ')}
+          </Badge>
+        )}
         {loading && <NeuralNetworkLoading size={20} />}
       </div>
 
@@ -94,19 +102,22 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
             >
               {scoreItems.map((item) => (
                 <div className="flex items-center gap-2" key={item.title}>
-                  <Text fontSize={12} type={'secondary'} weight={500}>
-                    {item.title}
-                  </Text>
-                  <Progress
-                    percent={item.percent}
-                    showInfo={false}
-                    size={[2, 12]}
-                    steps={5}
-                    strokeColor={item.strokeColor}
-                  />
-                  <Text fontSize={12} type={'secondary'}>
-                    {item.percent}%
-                  </Text>
+                  <div className="text-[12px] text-muted-foreground font-medium">{item.title}</div>
+                  <div className="flex gap-0.5">
+                    {Array.from({ length: 5 }, (_, index) => (
+                      <div
+                        className="h-[2px] w-[12px] rounded-full"
+                        key={index}
+                        style={{
+                          background:
+                            index < Math.round((item.percent * 5) / 100)
+                              ? item.strokeColor || 'var(--primary)'
+                              : 'var(--muted)',
+                        }}
+                      />
+                    ))}
+                  </div>
+                  <div className="text-[12px] text-muted-foreground">{item.percent}%</div>
                 </div>
               ))}
             </div>
@@ -124,7 +135,7 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
               style={{ paddingBlock: 12, paddingInline: 12 }}
             >
               {labels.map((label, index) => (
-                <Tag key={index}>{label}</Tag>
+                <Badge key={index}>{label}</Badge>
               ))}
             </div>
           )}
@@ -140,7 +151,7 @@ export const ContextMemoryCard = memo<ContextMemoryCardProps>(({ data, loading }
               {tags.length > 0 && (
                 <div className={cn('flex', 'gap-2', 'flex-wrap', styles.tags)}>
                   {tags.map((tag, index) => (
-                    <Tag key={index}>{tag}</Tag>
+                    <Badge key={index}>{tag}</Badge>
                   ))}
                 </div>
               )}

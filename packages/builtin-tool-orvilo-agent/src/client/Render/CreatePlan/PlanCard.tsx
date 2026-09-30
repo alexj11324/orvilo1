@@ -1,7 +1,5 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ListChecksIcon } from 'lucide-react';
@@ -65,16 +63,12 @@ const PlanCard = memo<PlanCardProps>(({ plan }) => {
         onClick={handleHeaderClick}
       >
         <ListChecksIcon size={18} />
-        <Text ellipsis fontSize={16} weight={500}>
-          {plan.goal}
-        </Text>
+        <div className="truncate text-[16px] font-medium">{plan.goal}</div>
       </div>
 
       {/* Description */}
       {plan.description && (
-        <Text ellipsis={{ rows: 2 }} fontSize={14} type={'secondary'}>
-          {plan.description}
-        </Text>
+        <div className="line-clamp-2 text-[14px] text-muted-foreground">{plan.description}</div>
       )}
 
       {/* Context content */}

@@ -1,12 +1,13 @@
 'use client';
 
-import { ActionIcon, Alert, Text } from '@lobehub/ui/base-ui';
 import type { CrawlErrorResult, CrawlSuccessResult } from '@orvilo/web-crawler';
 import { createStaticStyles, cx } from 'antd-style';
-import { ExternalLink } from 'lucide-react';
+import { CircleAlert, ExternalLink } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Alert } from '@/components/ui/alert';
 import { useChatStore } from '@/store/chat';
 
 import { WebBrowsingManifest } from '../../../manifest';
@@ -71,11 +72,12 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
   if ('errorType' in result) {
     return (
       <div className={cx('flex flex-col gap-2', styles.footer)}>
-        <Alert
-          title={<div style={{ textAlign: 'start' }}>{result.errorMessage || result.content}</div>}
-          type={'error'}
-          variant={'borderless'}
-        />
+        <Alert className="border-transparent bg-transparent" variant="destructive">
+          <CircleAlert />
+          <AlertTitle>
+            <div style={{ textAlign: 'start' }}>{result.errorMessage || result.content}</div>
+          </AlertTitle>
+        </Alert>
         <div>
           <div className="flex flex-col">
             <div className={cx('flex gap-1', styles.footerText)}>
@@ -103,14 +105,14 @@ const CrawlerResultCard = memo<CrawlerData>(({ result, messageId, crawler, origi
     >
       <div className="flex flex-col gap-2 py-2 px-3">
         <div className={cx('flex flex-row items-center justify-between', styles.titleRow)}>
-          <Text ellipsis>{title || originalUrl}</Text>
+          <div className="truncate">{title || originalUrl}</div>
           <a href={url} target={'_blank'} onClick={(event) => event.stopPropagation()}>
             <ActionIcon icon={ExternalLink} size={'small'} />
           </a>
         </div>
-        <Text ellipsis={{ rows: 2 }} fontSize={12} type={'secondary'}>
+        <div className="line-clamp-2 text-[12px] text-muted-foreground">
           {description || result.content?.slice(0, 40)}
-        </Text>
+        </div>
       </div>
       <div className={cx('flex flex-col', styles.footer)}>
         <div className="flex gap-6">

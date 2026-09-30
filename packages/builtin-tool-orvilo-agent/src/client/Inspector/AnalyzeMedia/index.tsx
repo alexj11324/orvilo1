@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { cssVar, cx } from 'antd-style';
 import { memo } from 'react';
@@ -51,14 +50,12 @@ export const AnalyzeMediaInspector = memo<
         <span>{t('builtins.orvilo-agent.apiName.analyzeMedia')}</span>
       )}
       {!isArgumentsStreaming && !isLoading && mediaCount > 0 && (
-        <Text
-          as={'span'}
-          color={cssVar.colorTextDescription}
-          fontSize={12}
-          style={{ marginInlineStart: 6 }}
+        <span
+          className="text-[12px]"
+          style={{ marginInlineStart: 6, color: cssVar.colorTextDescription }}
         >
           · {t('builtins.orvilo-agent.apiName.analyzeMedia.mediaCount', { count: mediaCount })}
-        </Text>
+        </span>
       )}
     </div>
   );

@@ -1,13 +1,13 @@
 'use client';
-
 import { CopyButton, Markdown } from '@lobehub/ui';
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Maximize2, Minimize2, NotebookText, PencilLine } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
@@ -114,11 +114,11 @@ const DocumentCard = memo<DocumentCardProps>(({ document }) => {
       {/* Floating expand/collapse button */}
       <Button
         className={styles.expandButton}
-        icon={isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-        shape={'round'}
-        type={'default'}
+        className="rounded-full"
+        variant="outline"
         onClick={handleToggle}
       >
+        {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}{' '}
         {isExpanded
           ? t('builtins.orvilo-notebook.actions.collapse')
           : t('builtins.orvilo-notebook.actions.expand')}

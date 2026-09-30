@@ -1,5 +1,4 @@
 'use client';
-
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { AGENT_SKILLS_IDENTIFIER_PREFIX } from '@orvilo/const';
 import { type BuiltinInspectorProps } from '@orvilo/types';

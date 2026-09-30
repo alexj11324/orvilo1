@@ -1,8 +1,9 @@
-import { Alert } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps, SearchQuery, UniformSearchResponse } from '@orvilo/types';
+import { CircleAlert } from 'lucide-react';
 import { memo, useState } from 'react';
 
 import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { Alert } from '@/components/ui/alert';
 
 import ConfigForm from './ConfigForm';
 import SearchQueryView from './SearchQuery';
@@ -18,20 +19,22 @@ const Search = memo<BuiltinRenderProps<SearchQuery, UniformSearchResponse>>(
       }
 
       return (
-        <Alert
-          title={pluginError?.message}
-          type={'error'}
-          extra={
-            <div className="flex flex-col">
-              <CodeBlock
-                actionIconSize={'small'}
-                code={JSON.stringify(pluginError.body?.data || pluginError.body, null, 2)}
-                language={'json'}
-                variant={'ghost'}
-              />
-            </div>
-          }
-        />
+        <Alert variant="destructive">
+          <CircleAlert />
+          <AlertTitle>{pluginError?.message}</AlertTitle>
+          <AlertAction>
+            {
+              <div className="flex flex-col">
+                <CodeBlock
+                  actionIconSize={'small'}
+                  code={JSON.stringify(pluginError.body?.data || pluginError.body, null, 2)}
+                  language={'json'}
+                  variant={'ghost'}
+                />
+              </div>
+            }
+          </AlertAction>
+        </Alert>
       );
     }
 

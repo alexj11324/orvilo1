@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinPortalTitleProps } from '@orvilo/types';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
@@ -15,9 +14,9 @@ const PortalTitle = memo<BuiltinPortalTitleProps>(() => {
       <span className="anticon" role="img">
         <Globe fill={'transparent'} height={16} size={16} width={16} />
       </span>
-      <Text style={{ fontSize: 16 }} type={'secondary'}>
+      <div className="text-muted-foreground" style={{ fontSize: 16 }}>
         {t('search.title')}
-      </Text>
+      </div>
     </div>
   );
 });

@@ -1,12 +1,13 @@
 'use client';
 
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { TodoPanelHeader } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleArrowRight } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Checkbox } from '@/components/ui/checkbox';
 
 import type { TodoItem, TodoList as TodoListType, TodoStatus } from '../../../types';
 import {
@@ -72,21 +73,19 @@ const ReadOnlyTodoItem = memo<ReadOnlyTodoItemProps>(({ text, status }) => {
 
   // Todo and completed states use Checkbox
   return (
-    <Checkbox
-      backgroundColor={cssVar.colorSuccess}
-      checked={isCompleted}
-      shape={'circle'}
-      style={{ borderWidth: 1.5, cursor: 'default' }}
-      classNames={{
-        text: cx(styles.textTodo, isCompleted && styles.textCompleted),
-        wrapper: styles.itemRow,
-      }}
-      textProps={{
-        type: isCompleted ? 'secondary' : undefined,
-      }}
-    >
-      {text}
-    </Checkbox>
+    <label className={cx('flex flex-row items-center gap-2', styles.itemRow)}>
+      <Checkbox
+        checked={isCompleted}
+        className="rounded-full"
+        style={{ borderWidth: 1.5, cursor: 'default', borderColor: cssVar.colorSuccess }}
+      />
+      <span
+        className={cx(styles.textTodo, isCompleted && styles.textCompleted)}
+        style={{ color: isCompleted ? 'var(--muted-foreground)' : undefined }}
+      >
+        {text}
+      </span>
+    </label>
   );
 });
 

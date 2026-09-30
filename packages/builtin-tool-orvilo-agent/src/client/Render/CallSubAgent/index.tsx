@@ -1,7 +1,5 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -9,6 +7,7 @@ import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 import { portalThreadSelectors, threadSelectors } from '@/store/chat/selectors';
 
@@ -91,9 +90,9 @@ export const CallSubAgentRender = memo<
     <div className={cn('flex', 'flex-col', 'gap-3', styles.container)}>
       {prompt && (
         <div className="flex flex-col">
-          <Text className={styles.label} style={{ marginBlockEnd: 4 }}>
+          <div className={styles.label} style={{ marginBlockEnd: 4 }}>
             {t('builtins.orvilo-claude-code.agent.instruction')}
-          </Text>
+          </div>
           <div className={cn('flex', 'flex-col', styles.promptBox)}>
             <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
               {prompt}
@@ -105,15 +104,15 @@ export const CallSubAgentRender = memo<
       {showResultSection && (
         <div className="flex flex-col">
           <div className={cn('flex', 'items-center', 'justify-between', styles.labelRow)}>
-            <Text className={styles.label}>{t('builtins.orvilo-claude-code.agent.result')}</Text>
+            <div className={styles.label}>{t('builtins.orvilo-claude-code.agent.result')}</div>
             {subagentThread && (
               <Button
                 className={styles.openThread}
-                icon={ListTree}
-                size={'small'}
-                type={'text'}
+                size="sm"
+                variant="ghost"
                 onClick={handleToggleThread}
               >
+                <ListTree data-icon="inline-start" />{' '}
                 {isOpenInPortal
                   ? tChat('thread.closeSubagentThread')
                   : tChat('thread.openSubagentThread')}

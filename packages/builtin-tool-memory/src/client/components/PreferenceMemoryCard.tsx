@@ -1,12 +1,13 @@
 'use client';
 
-import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import BubblesLoading from '@/components/BubblesLoading';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge } from '@/components/reui/badge';
 import {
   Stepper,
   StepperDescription,
@@ -156,7 +157,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
         <div className="flex flex-col flex-1">
           <div className={styles.title}>{title || 'Preference Memory'}</div>
         </div>
-        {type && <Tag>{type}</Tag>}
+        {type && <Badge>{type}</Badge>}
         {loading && <NeuralNetworkLoading size={20} />}
       </div>
 
@@ -168,9 +169,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
             <Accordion>
               <AccordionItem value="summary">
                 <AccordionTrigger>
-                  <Text fontSize={12} type={'secondary'} weight={500}>
-                    Summary
-                  </Text>
+                  <div className="text-[12px] text-muted-foreground font-medium">Summary</div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="flex flex-col gap-2 px-2" style={{ paddingBlock: '8px 12px' }}>
@@ -179,7 +178,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                     {safeTags.length > 0 && (
                       <div className={cn('flex', 'gap-2', 'flex-wrap', styles.tags)}>
                         {safeTags.map((tag, index) => (
-                          <Tag key={index}>{tag}</Tag>
+                          <Badge key={index}>{tag}</Badge>
                         ))}
                       </div>
                     )}
@@ -194,9 +193,9 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
             <Accordion className={styles.section} defaultValue={['context']}>
               <AccordionItem value="context">
                 <AccordionTrigger>
-                  <Text fontSize={12} type={'secondary'} weight={500}>
+                  <div className="text-[12px] text-muted-foreground font-medium">
                     Origin Context
-                  </Text>
+                  </div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="flex flex-col px-2" style={{ paddingBlock: '8px 12px' }}>
@@ -223,9 +222,9 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                               </StepperIndicator>
                               <div className="flex flex-col gap-1">
                                 <StepperTitle>
-                                  <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
+                                  <span className="text-[12px] text-muted-foreground font-medium">
                                     {item.title}
-                                  </Text>
+                                  </span>
                                 </StepperTitle>
                                 <StepperDescription>
                                   <div className={styles.stepContent}>{item.content}</div>
@@ -250,9 +249,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
             <Accordion className={styles.section}>
               <AccordionItem value="appContext">
                 <AccordionTrigger>
-                  <Text fontSize={12} type={'secondary'} weight={500}>
-                    App Context
-                  </Text>
+                  <div className="text-[12px] text-muted-foreground font-medium">App Context</div>
                 </AccordionTrigger>
                 <AccordionContent>
                   <div className="flex flex-col px-2" style={{ paddingBlock: '8px 12px' }}>
@@ -279,9 +276,9 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
                               </StepperIndicator>
                               <div className="flex flex-col gap-1">
                                 <StepperTitle>
-                                  <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
+                                  <span className="text-[12px] text-muted-foreground font-medium">
                                     {item.title}
-                                  </Text>
+                                  </span>
                                 </StepperTitle>
                                 <StepperDescription>
                                   <div className={styles.stepContent}>{item.content}</div>
@@ -307,9 +304,9 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               className={cn('flex', 'flex-col', 'gap-2', styles.section)}
               style={{ paddingBlock: 16, paddingInline: 12 }}
             >
-              <Text fontSize={12} weight={500}>
+              <div className="text-[12px] font-medium">
                 <span className={highlightTextStyles.primary}>Directive</span>
-              </Text>
+              </div>
               <div className={styles.directive}>{conclusionDirectives}</div>
             </div>
           )}
@@ -320,9 +317,9 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               className={cn('flex', 'flex-col', 'gap-2', styles.section)}
               style={{ paddingBlock: 16, paddingInline: 12 }}
             >
-              <Text fontSize={12} weight={500}>
+              <div className="text-[12px] font-medium">
                 <span className={highlightTextStyles.info}>Suggestions</span>
-              </Text>
+              </div>
               <div className="flex flex-col gap-2">
                 {safeSuggestions.map((suggestion, index) => (
                   <div className={styles.suggestion} key={index}>
@@ -344,17 +341,17 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               {details && <StreamingMarkdown>{details}</StreamingMarkdown>}
               {conclusionDirectives && (
                 <div className="flex flex-col gap-1 py-2">
-                  <Text fontSize={12} weight={500}>
+                  <div className="text-[12px] font-medium">
                     <span className={highlightTextStyles.primary}>Directive</span>
-                  </Text>
+                  </div>
                   <div className={styles.directive}>{conclusionDirectives}</div>
                 </div>
               )}
               {hasSuggestions && (
                 <div className="flex flex-col gap-2 py-2">
-                  <Text fontSize={12} weight={500}>
+                  <div className="text-[12px] font-medium">
                     <span className={highlightTextStyles.info}>Suggestions</span>
-                  </Text>
+                  </div>
                   <div className="flex flex-col gap-2">
                     {safeSuggestions.map((suggestion, index) => (
                       <div className={styles.suggestion} key={index}>
@@ -367,7 +364,7 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               {safeTags.length > 0 && (
                 <div className={cn('flex', 'gap-2', 'flex-wrap', styles.tags)}>
                   {safeTags.map((tag, index) => (
-                    <Tag key={index}>{tag}</Tag>
+                    <Badge key={index}>{tag}</Badge>
                   ))}
                 </div>
               )}

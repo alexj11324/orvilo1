@@ -1,6 +1,5 @@
 'use client';
 
-import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { cn } from 'cn';
@@ -8,6 +7,9 @@ import type { KeyboardEvent } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
+
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
 
 import {
   fetchAgentTemplates,
@@ -131,18 +133,18 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
     if (!isCustom) {
       return (
         <div className="flex flex-col gap-2">
-          <Text>{prompt}</Text>
+          <div>{prompt}</div>
           {description && (
-            <Text style={{ fontSize: 13 }} type="secondary">
+            <div className="text-muted-foreground" style={{ fontSize: 13 }}>
               {description}
-            </Text>
+            </div>
           )}
-          <Text style={{ fontSize: 12 }} type="secondary">
+          <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {tTool('agentMarketplace.picker.summary', {
               filtered: templates.length,
               total: allTemplates.length,
             })}
-          </Text>
+          </div>
         </div>
       );
     }
@@ -153,11 +155,11 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
     return (
       <div className={cn('flex', 'flex-col', 'gap-3', styles.root)}>
         <div className={styles.header}>
-          <Text style={{ fontWeight: 500 }}>{prompt}</Text>
+          <div style={{ fontWeight: 500 }}>{prompt}</div>
           {description && (
-            <Text style={{ fontSize: 13 }} type="secondary">
+            <div className="text-muted-foreground" style={{ fontSize: 13 }}>
               {description}
-            </Text>
+            </div>
           )}
         </div>
 
@@ -226,17 +228,16 @@ const PickAgentsIntervention = memo<BuiltinInterventionProps<ShowAgentMarketplac
         )}
 
         <div className={styles.footer}>
-          <Text
-            className={styles.skipLink}
-            type="secondary"
+          <div
+            className={`text-muted-foreground ${styles.skipLink}`}
             onClick={disabled ? undefined : handleSkip}
           >
             {t('form.skip')}
-          </Text>
+          </div>
           <Button
             disabled={disabled || selected.size === 0}
             loading={submitting}
-            type="primary"
+            variant="default"
             onClick={handleSubmit}
           >
             {`${t('common.confirm')} (${selected.size})`}

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { LINEAR_TOOL_NAMES } from '@orvilo/shared-tool-ui/inspectors';
 import { GitHubRender, LinearRender } from '@orvilo/shared-tool-ui/renders';
 import type { BuiltinRenderProps } from '@orvilo/types';
@@ -98,9 +97,9 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
       <div className="flex flex-col gap-3">
         {input && (
           <div>
-            <Text className={styles.sectionLabel}>
+            <div className={styles.sectionLabel}>
               {t('builtins.codex.mcpTool.input', { defaultValue: 'Input' })}
-            </Text>
+            </div>
             <CodeBlock
               wrap
               code={input.text}
@@ -112,9 +111,9 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
         )}
         {output && (
           <div>
-            <Text className={styles.sectionLabel}>
+            <div className={styles.sectionLabel}>
               {t('builtins.codex.mcpTool.result', { defaultValue: 'Result' })}
-            </Text>
+            </div>
             <CodeBlock
               wrap
               code={output.text}
@@ -126,9 +125,9 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
         )}
         {error && (
           <div>
-            <Text className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
+            <div className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
               {t('builtins.codex.mcpTool.error', { defaultValue: 'Error' })}
-            </Text>
+            </div>
             <CodeBlock
               wrap
               code={error}

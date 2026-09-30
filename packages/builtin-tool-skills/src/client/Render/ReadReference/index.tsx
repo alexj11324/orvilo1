@@ -1,7 +1,5 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { type BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
@@ -70,21 +68,19 @@ const ReadReference = memo<BuiltinRenderProps<ReadReferenceParams, ReadReference
     return (
       <div className={cx('flex flex-col gap-2', styles.container)}>
         <div className="flex flex-row items-center justify-between">
-          <Text code ellipsis as={'span'} fontSize={12}>
+          <span className="font-mono rounded bg-muted px-1 truncate text-[12px]">
             {displayPath}
-          </Text>
+          </span>
           {sizeText && (
-            <Text code noWrap as={'span'} fontSize={12} type={'secondary'}>
+            <span className="font-mono rounded bg-muted px-1 whitespace-nowrap text-[12px] text-muted-foreground">
               {sizeText}
-            </Text>
+            </span>
           )}
         </div>
 
         {isBinary ? (
           <div className="rounded-md border bg-card" style={{ padding: 12 }}>
-            <Text fontSize={12} type={'secondary'}>
-              Binary file ({sizeText})
-            </Text>
+            <div className="text-[12px] text-muted-foreground">Binary file ({sizeText})</div>
           </div>
         ) : isMarkdown ? (
           <div className="rounded-md border bg-card" style={{ padding: 12 }}>

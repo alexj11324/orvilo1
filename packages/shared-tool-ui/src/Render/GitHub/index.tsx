@@ -1,7 +1,5 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { fromNow } from '@orvilo/utils/time';
 import { createStaticStyles } from 'antd-style';
@@ -11,6 +9,7 @@ import type { ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { CodeBlock } from '@/components/ui/code-block';
 
 import {
@@ -145,7 +144,7 @@ const hasItems = <T,>(items: T[]) => items.length > 0;
 
 const Section = memo<{ children: ReactNode; title: string }>(({ children, title }) => (
   <div className="flex flex-col gap-[6px]">
-    <Text className={styles.sectionLabel}>{title}</Text>
+    <div className={styles.sectionLabel}>{title}</div>
     {children}
   </div>
 ));
@@ -183,9 +182,9 @@ const LinkList = memo<{ links: GitHubLink[] }>(({ links }) => {
           target={'_blank'}
         >
           <Link2 size={13} />
-          <Text ellipsis className={styles.linkText} title={link.title}>
+          <div className={`truncate ${styles.linkText}`} title={link.title}>
             {link.title}
-          </Text>
+          </div>
           <ExternalLink size={12} />
         </a>
       ))}
@@ -210,25 +209,21 @@ const EntityCard = memo<{ entity: GitHubEntity }>(({ entity }) => {
     >
       <div className={styles.entityHeader}>
         <div className={styles.headLeft}>
-          <Tag size={'small'}>{kind}</Tag>
+          <Badge size="sm">{kind}</Badge>
           {title &&
             (url ? (
               <a className={styles.titleLink} href={url} rel={'noreferrer'} target={'_blank'}>
-                <Text ellipsis weight={600}>
-                  {title}
-                </Text>
+                <div className="truncate font-semibold">{title}</div>
                 <ExternalLink size={12} />
               </a>
             ) : (
-              <Text ellipsis weight={600}>
-                {title}
-              </Text>
+              <div className="truncate font-semibold">{title}</div>
             ))}
-          {id && <Tag size={'small'}>{id}</Tag>}
+          {id && <Badge size="sm">{id}</Badge>}
           {state && (
-            <Tag size={'small'} variant={'outlined'}>
+            <Badge size="sm" variant="outline">
               {state}
-            </Tag>
+            </Badge>
           )}
         </div>
         {updatedAt && (

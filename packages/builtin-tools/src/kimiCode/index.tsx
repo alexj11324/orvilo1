@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import {
   createEditLocalFileInspector,
   createGlobLocalFilesInspector,
@@ -24,6 +23,7 @@ import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CodeBlock, parseUnifiedDiff } from '@/components/ui/code-block';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { countChangedLines, stripKimiLineNumbers } from './utils';
 
@@ -184,7 +184,15 @@ const ReadRender = memo<BuiltinRenderProps<KimiFileArgs>>(({ args, content }) =>
 ReadRender.displayName = 'KimiCodeReadRender';
 
 const WriteRender = memo<BuiltinRenderProps<KimiFileArgs>>(({ args }) => {
-  if (!args) return <Skeleton.Text rows={4} />;
+  if (!args)
+    return (
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/5" />
+      </div>
+    );
   if (!args.content) return null;
 
   const extension = path
@@ -212,7 +220,15 @@ const WriteRender = memo<BuiltinRenderProps<KimiFileArgs>>(({ args }) => {
 WriteRender.displayName = 'KimiCodeWriteRender';
 
 const EditRender = memo<BuiltinRenderProps<KimiEditArgs>>(({ args }) => {
-  if (!args) return <Skeleton.Text rows={4} />;
+  if (!args)
+    return (
+      <div className="flex flex-col gap-2">
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-full" />
+        <Skeleton className="h-4 w-3/5" />
+      </div>
+    );
 
   const filePath = args.path ?? '';
   return (

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { GoalStatus } from '@orvilo/const/goal';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { cssVar } from 'antd-style';
@@ -173,20 +172,20 @@ const CreateGoalRender = memo<BuiltinRenderProps<CreateGoalParams, CreateGoalSta
           })}
           <div className="flex flex-col flex-1 gap-[2px]">
             <div className="flex items-center justify-between">
-              <Text fontSize={13}>{phaseLabel(t, phase)}</Text>
+              <div className="text-[13px]">{phaseLabel(t, phase)}</div>
               {!meta.settled && (
-                <Text code fontSize={12} type={'secondary'}>
+                <div className="font-mono rounded bg-muted px-1 text-[12px] text-muted-foreground">
                   {formatElapsed(now - new Date(pluginState.startedAt ?? Date.now()).getTime())}
-                </Text>
+                </div>
               )}
             </div>
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {meta.settled
                 ? t('builtins.orvilo-task.goal.settledHint')
                 : t('builtins.orvilo-task.goal.runningHint', {
                     count: args?.criteria?.length ?? 0,
                   })}
-            </Text>
+            </div>
           </div>
         </div>
       </TaskResultCard>

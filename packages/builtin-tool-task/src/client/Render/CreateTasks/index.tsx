@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
@@ -143,15 +142,11 @@ export const CreateTasksRender = memo<BuiltinRenderProps<CreateTasksParams, Crea
               <div className={styles.taskBody}>
                 <div className={styles.row}>
                   {identifier && <span className={styles.identifier}>{identifier}</span>}
-                  <Text ellipsis className={styles.title}>
-                    {task.name}
-                  </Text>
+                  <div className={`truncate ${styles.title}`}>{task.name}</div>
                 </div>
                 {task.instruction && <div className={styles.instruction}>{task.instruction}</div>}
                 {failed && (
-                  <Text as={'span'} fontSize={11} type={'danger'}>
-                    {result?.error ?? 'Failed'}
-                  </Text>
+                  <span className="text-[11px] text-destructive">{result?.error ?? 'Failed'}</span>
                 )}
               </div>
             </div>

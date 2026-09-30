@@ -1,13 +1,12 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { PanelRight, PanelRightClose } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
 import TaskStatusTag from '@/features/AgentTasks/features/TaskStatusTag';
 import { useChatStore } from '@/store/chat';
@@ -124,7 +123,7 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
         <div className={styles.taskItem}>
           <div className={styles.row}>
             {identifier && <span className={styles.identifier}>{identifier}</span>}
-            {name && <Text className={styles.title}>{name}</Text>}
+            {name && <div className={styles.title}>{name}</div>}
             {status && <TaskStatusTag disableDropdown size={14} status={status} />}
             {!!priority && <TaskPriorityTag disableDropdown priority={priority} size={14} />}
             {identifier && (
@@ -150,9 +149,9 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
             </div>
           ) : null}
           {parent && (
-            <Text as={'span'} color={cssVar.colorTextTertiary} fontSize={11}>
+            <span className="text-[11px]" style={{ color: cssVar.colorTextTertiary }}>
               {`Subtask of ${parent}`}
-            </Text>
+            </span>
           )}
         </div>
       </div>

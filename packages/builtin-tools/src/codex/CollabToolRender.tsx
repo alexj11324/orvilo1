@@ -1,7 +1,5 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -78,9 +76,9 @@ const CollabToolRender = memo<
     <div className="flex flex-col gap-3">
       {prompt && (
         <div>
-          <Text className={styles.sectionLabel}>
+          <div className={styles.sectionLabel}>
             {t('builtins.codex.collabTool.instruction', { defaultValue: 'Instruction' })}
-          </Text>
+          </div>
           <div className={cn('flex', 'flex-col', styles.promptBox)}>
             <Markdown style={{ maxHeight: 240, overflow: 'auto' }} variant={'chat'}>
               {prompt}
@@ -90,9 +88,9 @@ const CollabToolRender = memo<
       )}
       {agents.length > 0 && (
         <div>
-          <Text className={styles.sectionLabel}>
+          <div className={styles.sectionLabel}>
             {t('builtins.codex.collabTool.agents', { defaultValue: 'Subagents' })}
-          </Text>
+          </div>
           <div className="flex flex-col gap-2">
             {agents.map((agent, index) => (
               <div className={cn('flex', 'flex-col', 'gap-1', styles.agentRow)} key={agent.id}>

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Check, X } from 'lucide-react';
@@ -146,9 +145,7 @@ export const RunTasksRender = memo<BuiltinRenderProps<RunTasksParams, RunTasksSt
                 </div>
                 {result?.topicId && <span className={styles.meta}>topic {result.topicId}</span>}
                 {failedRow && (
-                  <Text as={'span'} fontSize={11} type={'danger'}>
-                    {result?.error || 'Failed'}
-                  </Text>
+                  <span className="text-[11px] text-destructive">{result?.error || 'Failed'}</span>
                 )}
               </div>
             </div>

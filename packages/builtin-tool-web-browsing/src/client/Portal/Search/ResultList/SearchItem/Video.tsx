@@ -1,7 +1,8 @@
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type { UniformSearchResult } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useState } from 'react';
+
+import Avatar from '@/components/Avatar';
 
 import { ENGINE_ICON_MAP } from '../../../../../const';
 import TitleExtra from './TitleExtra';
@@ -114,9 +115,7 @@ const VideoItem = memo<SearchResultProps>(
                   score={score}
                 />
               </div>
-              <Text className={styles.url} type={'secondary'}>
-                {url}
-              </Text>
+              <div className={`text-muted-foreground ${styles.url}`}>{url}</div>
               <div className={cx('flex flex-col', styles.desc)}>{content}</div>
             </div>
           </div>

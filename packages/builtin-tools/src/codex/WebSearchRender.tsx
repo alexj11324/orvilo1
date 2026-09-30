@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -134,8 +133,8 @@ const WebSearchRender = memo<BuiltinRenderProps<CodexWebSearchArgs, CodexWebSear
                   ) : (
                     title
                   )}
-                  {result.url && <Text className={styles.url}>{result.url}</Text>}
-                  {result.snippet && <Text className={styles.snippet}>{result.snippet}</Text>}
+                  {result.url && <div className={styles.url}>{result.url}</div>}
+                  {result.snippet && <div className={styles.snippet}>{result.snippet}</div>}
                 </div>
               );
             })}

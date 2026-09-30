@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { AskUserDraft, AskUserQuestionArgs } from '@orvilo/shared-tool-ui/ask-user';
 import {
   AskUserQuestionView,
@@ -61,12 +60,8 @@ const AskUserQuestionIntervention = memo<BuiltinInterventionProps<AskUserQuestio
       <div className="flex flex-col gap-2">
         {questions.map((q, idx) => (
           <div className="flex flex-col gap-[2px]" key={`${q.question}-${idx}`}>
-            {q.header && (
-              <Text fontSize={12} type="secondary">
-                {q.header}
-              </Text>
-            )}
-            <Text>{q.question}</Text>
+            {q.header && <div className="text-[12px] text-muted-foreground">{q.header}</div>}
+            <div>{q.question}</div>
           </div>
         ))}
       </div>

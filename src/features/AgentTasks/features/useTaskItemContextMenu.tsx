@@ -1,13 +1,18 @@
 import { type ContextMenuItem, copyToClipboard, Icon, type MenuInfo } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
-import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
+import type { TaskLabelSummary, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import {
   BarChart3Icon,
   CopyIcon,
+  FileTextIcon,
   LinkIcon,
   MessageSquareTextIcon,
+  PencilIcon,
   PlayIcon,
+  StarIcon,
+  TagsIcon,
   Trash2Icon,
+  TypeIcon,
   UserRoundIcon,
 } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
@@ -19,14 +24,24 @@ import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransfer
 import type { WorkspaceMemberWithProfile } from '@/business/client/hooks/useWorkspaceMembers';
 import { STATUS_PROPERTY_ICON, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
+import { openRenameModal } from '@/components/RenameModal';
+import { useWorkFavoriteToggle } from '@/features/HomeSidebar/Body/useWorkFavoriteToggle';
+import { resolveLabelColor } from '@/features/Labels/labelColor';
+import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
 import { usePermission } from '@/hooks/usePermission';
 import { closeContextMenu } from '@/libs/contextMenu';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
+import { useClientDataSWR } from '@/libs/swr';
+import { taskLabelKeys } from '@/libs/swr/keys';
+import { taskLabelService } from '@/services/taskLabel';
 import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
+import { useCurrentProjectList } from '@/store/project';
 import { useTaskStore } from '@/store/task';
+import { useUserStore } from '@/store/user';
+import { authSelectors } from '@/store/user/slices/auth/selectors';
 
 import {
   COLUMN_I18N_KEYS,
@@ -37,7 +52,7 @@ import {
 import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { useAssigneeMenuItems } from './assigneeMenuItems';
-import { renderMenuExtra } from './menuExtra';
+import { renderMenuCheck, renderMenuExtra } from './menuExtra';
 import { PRIORITY_META } from './TaskPriorityTag';
 import { useIssueStatusMove } from './useIssueStatusMove';
 import { useTaskStatusChange } from './useTaskStatusChange';
@@ -63,10 +78,16 @@ export interface TaskContextMenuTarget {
   createdByUserId?: string | null;
   /** Live run's topic — present while a run is in flight; gates "Open run". */
   currentTopicId?: string | null;
+  /** uuid — the favorite and subscription APIs key on id, not identifier. */
+  id?: string;
   identifier: string;
+  /** Labels already on the task — renders the check marks in the Labels submenu. */
+  labels?: readonly TaskLabelSummary[];
   /** Only feeds the copied link's readable slug tail. */
   name?: string | null;
   priority?: number | null;
+  /** Owning project — `null`/missing renders "No project" checked. */
+  projectId?: string | null;
   status: string;
   /** `private` narrows the Assignee submenu to the task creator. */
   visibility?: 'private' | 'public' | null;
@@ -104,8 +125,16 @@ export const useTaskContextMenuActions = (
   const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
   const deleteTask = useTaskStore((s) => s.deleteTask);
   const runTask = useTaskStore((s) => s.runTask);
+  const toggleTaskLabel = useTaskStore((s) => s.toggleTaskLabel);
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
+  const projects = useCurrentProjectList();
+  const isLogin = useUserStore(authSelectors.isLogin);
+  const activeWorkspaceId = useActiveWorkspaceId();
+  const { data: labelRegistryData } = useClientDataSWR(
+    isLogin ? taskLabelKeys.list(isLogin, activeWorkspaceId) : null,
+    () => taskLabelService.getLabels(),
+  );
 
   const cleanupRef = useRef<(() => void) | null>(null);
   const activeSubmenuRef = useRef<ActiveSubmenu>(null);
@@ -210,6 +239,77 @@ export const useTaskContextMenuActions = (
       const canRunNow = RUN_NOW_STATUSES.has(currentStatus);
       const canOpenRun = currentStatus === 'running' && !!task.currentTopicId;
 
+      // Linear's Labels submenu toggles rows in place — the menu stays open
+      // (`closeOnClick: false`) so several labels can flip in one go.
+      const assignedLabelIds = new Set((task.labels ?? []).map((label) => label.id));
+      const registry = labelRegistryData ?? [];
+      const labelChildren = registry.length
+        ? registry.map(
+            (label) =>
+              ({
+                closeOnClick: false,
+                disabled: !canEditTask,
+                extra: renderMenuCheck(assignedLabelIds.has(label.id)),
+                icon: (
+                  <span
+                    style={{
+                      backgroundColor: resolveLabelColor(label.name, label.color),
+                      borderRadius: '50%',
+                      display: 'inline-block',
+                      height: 8,
+                      width: 8,
+                    }}
+                  />
+                ),
+                key: `label-${label.id}`,
+                label: label.name,
+                onClick: ({ domEvent }: MenuInfo) => {
+                  domEvent.stopPropagation();
+                  if (!canEditTask) return;
+                  void toggleTaskLabel(task.identifier, label.id, !assignedLabelIds.has(label.id), {
+                    color: label.color,
+                    id: label.id,
+                    name: label.name,
+                  });
+                },
+              }) satisfies NativeContextMenuItem,
+          )
+        : ([
+            {
+              disabled: true,
+              key: 'labels-empty',
+              label: t('taskList.contextMenu.labelsEmpty', { defaultValue: 'No labels' }),
+            },
+          ] satisfies NativeContextMenuItem[]);
+
+      const projectChildren = [
+        {
+          disabled: !canEditTask,
+          extra: renderMenuCheck(!task.projectId),
+          key: 'project-none',
+          label: t('taskList.contextMenu.noProject', { defaultValue: 'No project' }),
+          onClick: ({ domEvent }: MenuInfo) => {
+            domEvent.stopPropagation();
+            if (!canEditTask || !task.projectId) return;
+            void updateTask(task.identifier, { projectId: null });
+          },
+        },
+        ...projects.map(
+          (project) =>
+            ({
+              disabled: !canEditTask,
+              extra: renderMenuCheck(task.projectId === project.id),
+              key: `project-${project.id}`,
+              label: project.name,
+              onClick: ({ domEvent }: MenuInfo) => {
+                domEvent.stopPropagation();
+                if (!canEditTask || task.projectId === project.id) return;
+                void updateTask(task.identifier, { projectId: project.id });
+              },
+            }) satisfies NativeContextMenuItem,
+        ),
+      ] satisfies NativeContextMenuItem[];
+
       return [
         ...(canOpenRun
           ? ([
@@ -269,6 +369,34 @@ export const useTaskContextMenuActions = (
             activeSubmenuRef.current = 'priority';
           },
         },
+        ...(task.labels !== undefined
+          ? [
+              {
+                children: labelChildren,
+                disabled: !canEditTask,
+                icon: <Icon icon={TagsIcon} />,
+                key: 'labels',
+                label: t('taskList.contextMenu.labels', { defaultValue: 'Labels' }),
+                onTitleMouseEnter: () => {
+                  activeSubmenuRef.current = null;
+                },
+              } satisfies NativeContextMenuItem,
+            ]
+          : []),
+        ...(task.projectId !== undefined
+          ? [
+              {
+                children: projectChildren,
+                disabled: !canEditTask,
+                icon: <Icon icon={PROJECT_ENTITY_ICON} />,
+                key: 'project',
+                label: t('taskList.contextMenu.project', { defaultValue: 'Project' }),
+                onTitleMouseEnter: () => {
+                  activeSubmenuRef.current = null;
+                },
+              } satisfies NativeContextMenuItem,
+            ]
+          : []),
         { type: 'divider' },
         // Linear nests the clipboard actions under one `Copy` submenu.
         {
@@ -292,6 +420,51 @@ export const useTaskContextMenuActions = (
                 domEvent.stopPropagation();
                 await copyToClipboard(taskUrl);
                 toast.success(t('taskList.contextMenu.copyLinkSuccess'));
+              },
+              sfSymbol: 'doc.on.doc',
+            },
+            {
+              icon: <Icon icon={TypeIcon} />,
+              key: 'copyTitle',
+              label: t('taskList.contextMenu.copyIssueTitle', { defaultValue: 'Copy title' }),
+              onClick: async ({ domEvent }: MenuInfo) => {
+                domEvent.stopPropagation();
+                await copyToClipboard(task.name ?? task.identifier);
+                toast.success(
+                  t('taskList.contextMenu.copyTitleSuccess', { defaultValue: 'Title copied' }),
+                );
+              },
+              sfSymbol: 'doc.on.doc',
+            },
+            {
+              icon: <Icon icon={LinkIcon} />,
+              key: 'copyTitleAsLink',
+              label: t('taskList.contextMenu.copyTitleAsLink', {
+                defaultValue: 'Copy title as link',
+              }),
+              onClick: async ({ domEvent }: MenuInfo) => {
+                domEvent.stopPropagation();
+                await copyToClipboard(`[${task.name ?? task.identifier}](${taskUrl})`);
+                toast.success(t('taskList.contextMenu.copyLinkSuccess'));
+              },
+              sfSymbol: 'doc.on.doc',
+            },
+            {
+              icon: <Icon icon={FileTextIcon} />,
+              key: 'copyMarkdown',
+              label: t('taskList.contextMenu.copyMarkdown', {
+                defaultValue: 'Copy as Markdown',
+              }),
+              onClick: async ({ domEvent }: MenuInfo) => {
+                domEvent.stopPropagation();
+                await copyToClipboard(
+                  `[${task.identifier}: ${task.name ?? task.identifier}](${taskUrl})`,
+                );
+                toast.success(
+                  t('taskList.contextMenu.copyMarkdownSuccess', {
+                    defaultValue: 'Markdown copied',
+                  }),
+                );
               },
               sfSymbol: 'doc.on.doc',
             },
@@ -430,8 +603,11 @@ export const useTaskContextMenuActions = (
     refreshTaskList,
     deleteTask,
     runTask,
+    toggleTaskLabel,
     openTopicDrawer,
     inboxAgentId,
+    projects,
+    labelRegistryData,
     onStatusChange,
     routeScope,
   ]);
@@ -450,7 +626,9 @@ export const useTaskItemContextMenu = (
   const { t } = useTranslation('chat');
   const { allowed: canEditTask } = usePermission('create_content');
   const updateTask = useTaskStore((s) => s.updateTask);
+  const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
   const activeWorkspaceId = useActiveWorkspaceId();
+  const { pinned: isFavorite, toggle: toggleFavorite } = useWorkFavoriteToggle('task', task.id);
 
   const handleAssigneeSelect = useCallback(
     (userId: string | null, member?: WorkspaceMemberWithProfile) => {
@@ -505,11 +683,9 @@ export const useTaskItemContextMenu = (
           return next;
         })()
       : base;
-    if (!transferItems || transferItems.length === 0) return withAssignee;
-
-    // Insert transfer/copy entries above the final divider + delete pair so
-    // they sit next to the other lifecycle actions but kept distinct from
-    // in-place state changes.
+    // Insert transfer/copy entries and the favorite + rename lifecycle
+    // actions above the final divider + delete pair — next to the other
+    // lifecycle actions but distinct from in-place state changes.
     const deleteAnchor = withAssignee.findIndex(
       (item) =>
         item !== null &&
@@ -517,7 +693,47 @@ export const useTaskItemContextMenu = (
         'key' in item &&
         (item as { key?: string }).key === 'delete',
     );
-    if (deleteAnchor === -1) return [...withAssignee, ...transferItems];
+
+    const tailItems = [
+      ...(transferItems ?? []),
+      ...(transferItems?.length ? ([{ type: 'divider' }] as ContextMenuItem[]) : []),
+      ...(task.id
+        ? [
+            {
+              icon: <Icon fill={isFavorite ? 'currentColor' : 'none'} icon={StarIcon} />,
+              key: 'favorite',
+              label: isFavorite
+                ? t('taskList.contextMenu.unfavorite', { defaultValue: 'Unfavorite' })
+                : t('taskList.contextMenu.favorite', { defaultValue: 'Favorite' }),
+              onClick: ({ domEvent }: MenuInfo) => {
+                domEvent.stopPropagation();
+                void toggleFavorite();
+              },
+            } satisfies ContextMenuItem,
+          ]
+        : []),
+      {
+        disabled: !canEditTask,
+        icon: <Icon icon={PencilIcon} />,
+        key: 'rename',
+        label: t('rename', { ns: 'common' }),
+        onClick: ({ domEvent }: MenuInfo) => {
+          domEvent.stopPropagation();
+          if (!canEditTask) return;
+          openRenameModal({
+            defaultValue: task.name ?? task.identifier,
+            onSave: async (name) => {
+              await updateTask(task.identifier, { name });
+              await refreshTaskList();
+            },
+            title: t('rename', { ns: 'common' }),
+          });
+        },
+      } satisfies ContextMenuItem,
+      { type: 'divider' } as ContextMenuItem,
+    ];
+
+    if (deleteAnchor === -1) return [...withAssignee, ...tailItems];
 
     const insertAt =
       deleteAnchor > 0 &&
@@ -528,21 +744,20 @@ export const useTaskItemContextMenu = (
         ? deleteAnchor - 1
         : deleteAnchor;
 
-    return [
-      ...withAssignee.slice(0, insertAt),
-      ...transferItems,
-      { type: 'divider' } as ContextMenuItem,
-      ...withAssignee.slice(deleteAnchor),
-    ];
+    return [...withAssignee.slice(0, insertAt), ...tailItems, ...withAssignee.slice(deleteAnchor)];
   }, [
     assigneeItems,
     buildItems,
     canEditTask,
+    isFavorite,
+    refreshTaskList,
     resetActiveSubmenu,
     showAssignee,
     t,
     task,
+    toggleFavorite,
     transferItems,
+    updateTask,
   ]);
   const onContextMenu = useCallback(
     (closeMenu?: () => void) => installKeyboardHandlers(task, closeMenu),

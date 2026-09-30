@@ -231,9 +231,12 @@ const TaskSubtasks = memo(() => {
       const target = {
         assigneeAgentId: subtask.assignee?.id,
         assigneeUserId: subtask.assigneeUserId,
+        createdByUserId: subtask.createdByUserId,
         identifier: subtask.identifier,
+        name: subtask.name,
         priority: subtask.priority,
         status: subtask.status,
+        visibility: subtask.visibility,
         workflowCategory: subtask.workflowCategory,
         workflowStateId: subtask.workflowStateId,
       };

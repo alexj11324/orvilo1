@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Avatar, Tag } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
 import { formatTokenNumber } from '@orvilo/utils/format';
@@ -215,8 +214,13 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
   const cost = formatWorkVersionCost(item.totalCost);
 
   return (
-    <Flexbox
-      className={cx('work-preview-card', styles.card, clickable && styles.clickable)}
+    <div
+      className={cx(
+        'work-preview-card',
+        'flex flex-col',
+        styles.card,
+        clickable && styles.clickable,
+      )}
       onClick={
         clickable ? () => (resourceDeleted ? promptResourceDeleted(item) : onOpen(item)) : undefined
       }
@@ -237,24 +241,24 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
       )}
       <WorkPreview item={item} title={title} />
       <div className={styles.cardInfo}>
-        <Flexbox horizontal align={'center'} className={styles.metaRow} gap={6}>
+        <div className={cx('flex items-center gap-1.5', styles.metaRow)}>
           <span className={styles.type}>{t(workTypeKey(item), { ns: 'file' })}</span>
           {displayIdentifier &&
             item.resourceType !== 'document' &&
             item.resourceType !== 'github_pull_request' &&
             item.resourceType !== 'linear_issue' && (
-              <Flexbox horizontal align={'center'} className={styles.identifier} gap={3}>
+              <div className={cx('flex items-center gap-[3px]', styles.identifier)}>
                 {displayIdentifier}
-              </Flexbox>
+              </div>
             )}
           {item.resourceType === 'github_issue' && item.status && (
             <Tag size={'small'} style={{ marginInlineStart: 'auto' }}>
               {item.status}
             </Tag>
           )}
-        </Flexbox>
+        </div>
         <div className={styles.title}>{title}</div>
-        <Flexbox horizontal align={'baseline'} className={styles.footer} gap={7}>
+        <div className={cx('flex items-baseline gap-[7px]', styles.footer)}>
           {agent && (
             <>
               <Avatar
@@ -265,28 +269,28 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
                 shape={'square'}
                 size={24}
               />
-              <Flexbox className={styles.identityMeta} gap={1}>
-                <Flexbox horizontal align={'baseline'} gap={7}>
+              <div className={cx('flex flex-col gap-0.5', styles.identityMeta)}>
+                <div className="flex items-baseline gap-[7px]">
                   <span className={styles.agentName}>{agent.title}</span>
                   <span className={styles.meta}>{eventTime}</span>
-                </Flexbox>
+                </div>
                 {item.originTopicTitle && (
                   <div className={styles.originTopic}>
                     {t('work.fromTopic', { ns: 'file', topic: item.originTopicTitle })}
                   </div>
                 )}
-              </Flexbox>
+              </div>
             </>
           )}
           {!agent && (
-            <Flexbox className={styles.identityMeta} gap={1}>
+            <div className={cx('flex flex-col gap-0.5', styles.identityMeta)}>
               <span className={styles.meta}>{eventTime}</span>
               {item.originTopicTitle && (
                 <div className={styles.originTopic}>
                   {t('work.fromTopic', { ns: 'file', topic: item.originTopicTitle })}
                 </div>
               )}
-            </Flexbox>
+            </div>
           )}
           {(totalTokens || cost) && (
             <span className={styles.usage}>
@@ -295,9 +299,9 @@ const WorkPreviewCard = memo<WorkPreviewCardProps>(({ item, onOpen, onRemoved })
                 .join(' · ')}
             </span>
           )}
-        </Flexbox>
+        </div>
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

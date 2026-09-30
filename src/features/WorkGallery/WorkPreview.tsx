@@ -1,10 +1,9 @@
 'use client';
 
 import { Github } from '@lobehub/icons';
-import { Flexbox } from '@lobehub/ui';
 import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { WorkSummaryItem } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CheckCircle2Icon, GitPullRequestIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -192,30 +191,30 @@ const WorkPreview = memo<WorkPreviewProps>(({ item, title }) => {
       <div className={styles.mockWindow}>
         {isLinear ? (
           <div className={styles.linearBody}>
-            <Flexbox horizontal align={'center'} justify={'space-between'}>
+            <div className="flex items-center justify-between">
               <span className={styles.linearId}>{identifier}</span>
-            </Flexbox>
+            </div>
             <div className={styles.linearTitle}>{title}</div>
             <div className={styles.previewDescription}>{description}</div>
           </div>
         ) : item.resourceType === 'task' ? (
-          <Flexbox className={styles.taskBody} gap={10}>
-            <Flexbox horizontal align={'center'} gap={8}>
+          <div className={cx('flex flex-col gap-2.5', styles.taskBody)}>
+            <div className="flex items-center gap-2">
               <CheckCircle2Icon color={cssVar.colorSuccess} size={22} />
               <Text strong>{title}</Text>
-            </Flexbox>
+            </div>
             <div className={styles.previewDescription}>{description}</div>
-          </Flexbox>
+          </div>
         ) : (
           <div className={styles.previewBody}>
-            <Flexbox horizontal align={'center'} gap={6}>
+            <div className="flex items-center gap-1.5">
               {item.resourceType === 'github_pull_request' && (
                 <GitPullRequestIcon color={cssVar.colorTextTertiary} size={11} />
               )}
               <span className={styles.previewIdentifier}>
                 {previewIdentifier || item.resourceType}
               </span>
-            </Flexbox>
+            </div>
             <div className={styles.previewTitle}>{title}</div>
             <div className={styles.previewDescription}>{description}</div>
           </div>

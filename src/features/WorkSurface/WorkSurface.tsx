@@ -1,11 +1,12 @@
 'use client';
 
-import { Flexbox, type FlexboxProps } from '@lobehub/ui';
-import { ActionIcon, Popover } from '@lobehub/ui/base-ui';
+import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { SlidersHorizontalIcon } from 'lucide-react';
-import type { CSSProperties, ReactNode } from 'react';
+import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
+
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 
 import {
   WORK_SURFACE_CONTAINER,
@@ -162,10 +163,10 @@ const styles = createStaticStyles(({ css }) => ({
 
 /* ---------------------------------- Root ---------------------------------- */
 
-const WorkSurface = memo<FlexboxProps>(({ children, className, ...rest }) => (
-  <Flexbox className={cx(styles.root, className)} {...rest}>
+const WorkSurface = memo<ComponentProps<'div'>>(({ children, className, ...rest }) => (
+  <div className={cx(styles.root, className)} {...rest}>
     {children}
-  </Flexbox>
+  </div>
 ));
 
 WorkSurface.displayName = 'WorkSurface';
@@ -184,7 +185,7 @@ export interface WorkSurfaceCollectionProps {
 
 const WorkSurfaceCollection = memo<WorkSurfaceCollectionProps>(
   ({ children, className, columnHeader, style, toolbar }) => (
-    <Flexbox flex={1} style={{ minHeight: 0 }}>
+    <div className="flex flex-1 flex-col" style={{ minHeight: 0 }}>
       {toolbar}
       <div className={styles.scrollHost}>
         <div className={cx(styles.collectionBody, className)} style={style}>
@@ -192,7 +193,7 @@ const WorkSurfaceCollection = memo<WorkSurfaceCollectionProps>(
           {children}
         </div>
       </div>
-    </Flexbox>
+    </div>
   ),
 );
 
@@ -266,8 +267,8 @@ export interface WorkSurfaceReviewProps {
 
 const WorkSurfaceReview = memo<WorkSurfaceReviewProps>(
   ({ children, footer, nav, navLabel, navWidth }) => (
-    <Flexbox flex={1} style={{ minHeight: 0 }}>
-      <Flexbox horizontal flex={1} style={{ minHeight: 0 }}>
+    <div className="flex flex-1 flex-col" style={{ minHeight: 0 }}>
+      <div className="flex flex-1" style={{ minHeight: 0 }}>
         {nav ? (
           <div
             aria-label={navLabel}
@@ -278,9 +279,9 @@ const WorkSurfaceReview = memo<WorkSurfaceReviewProps>(
           </div>
         ) : null}
         <div className={styles.scrollHost}>{children}</div>
-      </Flexbox>
+      </div>
       {footer ? <div className={styles.reviewFooter}>{footer}</div> : null}
-    </Flexbox>
+    </div>
   ),
 );
 
@@ -305,21 +306,19 @@ const WorkSurfaceToolbar = memo<WorkSurfaceToolbarProps>(
       {aside ? (
         <>
           <div className={styles.toolbarAside}>{aside}</div>
-          <Popover
-            placement="bottomRight"
-            styles={{ content: { padding: 0 } }}
-            trigger="click"
-            content={
-              <Flexbox gap={8} padding={8}>
-                {aside}
-              </Flexbox>
-            }
-          >
-            <ActionIcon
-              aria-label={asideLabel}
-              className={styles.toolbarOverflowTrigger}
-              icon={SlidersHorizontalIcon}
+          <Popover>
+            <PopoverTrigger
+              render={
+                <ActionIcon
+                  aria-label={asideLabel}
+                  className={styles.toolbarOverflowTrigger}
+                  icon={SlidersHorizontalIcon}
+                />
+              }
             />
+            <PopoverContent align={'end'} className="w-auto p-0">
+              <div className="flex flex-col gap-2 p-2">{aside}</div>
+            </PopoverContent>
           </Popover>
         </>
       ) : null}

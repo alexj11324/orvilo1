@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { isChatGroupSessionId } from '@orvilo/types';
 import { memo, useCallback, useMemo } from 'react';
@@ -35,11 +34,11 @@ const EMPTY_LEFT_ACTIONS: [] = [];
 const Welcome = memo(() => {
   const { t } = useTranslation('topic');
   return (
-    <Flexbox align={'center'} flex={1} justify={'center'} padding={24}>
+    <div className="flex flex-1 items-center justify-center p-6">
       <Text style={{ fontSize: 15 }} type={'secondary'}>
         {t('taskManager.welcome')}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 
@@ -69,10 +68,10 @@ const Conversation = memo(() => {
   const leftContent = useMemo(
     () => (
       <ActionBarContext value={COMPACT_ACTION_BAR_CONTEXT}>
-        <Flexbox horizontal align={'center'} gap={2}>
+        <div className="flex items-center gap-0.5">
           <AgentSelectorAction onAgentChange={handleAgentChange} />
           <Search />
-        </Flexbox>
+        </div>
       </ActionBarContext>
     ),
     [handleAgentChange],
@@ -82,11 +81,11 @@ const Conversation = memo(() => {
 
   return (
     <DragUploadZone style={{ flex: 1, height: '100%' }} onUploadFiles={handleUploadFiles}>
-      <Flexbox flex={1} height={'100%'} style={{ overflow: 'hidden' }}>
+      <div className="flex h-full flex-1 flex-col" style={{ overflow: 'hidden' }}>
         <Toolbar />
-        <Flexbox flex={1} style={{ overflow: 'hidden' }}>
+        <div className="flex flex-1 flex-col" style={{ overflow: 'hidden' }}>
           <ChatList welcome={<Welcome />} />
-        </Flexbox>
+        </div>
         <ChatInput
           actionBarStyle={COMPACT_ACTION_BAR_STYLE}
           allowExpand={false}
@@ -96,7 +95,7 @@ const Conversation = memo(() => {
           sendButtonProps={COMPACT_SEND_BUTTON_PROPS}
           showControlBar={false}
         />
-      </Flexbox>
+      </div>
     </DragUploadZone>
   );
 });

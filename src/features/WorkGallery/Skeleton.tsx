@@ -1,5 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 
 import ArticleSkeleton from '@/components/Skeleton/Article';
@@ -54,11 +53,11 @@ export const WorkGalleryCardsSkeleton = memo<{ count?: number }>(({ count = 8 })
 WorkGalleryCardsSkeleton.displayName = 'WorkGalleryCardsSkeleton';
 
 const WorkGallerySkeleton = () => (
-  <Flexbox aria-busy height={'100%'}>
-    <Flexbox className={styles.scroll}>
+  <div aria-busy className="flex h-full flex-col">
+    <div className={cx('flex flex-col', styles.scroll)}>
       <WorkGalleryCardsSkeleton />
-    </Flexbox>
-  </Flexbox>
+    </div>
+  </div>
 );
 
 export default WorkGallerySkeleton;

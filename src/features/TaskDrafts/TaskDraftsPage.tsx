@@ -1,6 +1,6 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
+import { Empty } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
@@ -309,7 +309,7 @@ const TaskDraftsPage = () => {
   const isEmpty = drafts.length === 0 && issueDrafts.length === 0;
 
   return (
-    <Flexbox flex={1} height="100%" style={{ minHeight: 0 }}>
+    <div className="flex h-full flex-1 flex-col" style={{ minHeight: 0 }}>
       <NavHeader
         className={styles.header}
         left={<Text weight={500}>{t('drafts.title')}</Text>}
@@ -337,9 +337,9 @@ const TaskDraftsPage = () => {
       ) : isLoading ? (
         <DraftsSkeleton />
       ) : isEmpty ? (
-        <Center flex={1} padding={48}>
+        <div className="flex flex-1 items-center justify-center p-12">
           <Empty description={t('drafts.empty')} icon={FilePenLineIcon} />
-        </Center>
+        </div>
       ) : (
         <div style={{ overflowY: 'auto' }}>
           {issueDrafts.length > 0 && (
@@ -476,7 +476,7 @@ const TaskDraftsPage = () => {
           )}
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

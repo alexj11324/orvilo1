@@ -1,7 +1,6 @@
 'use client';
 
-import type { DropdownItem } from '@lobehub/ui';
-import { copyToClipboard, DropdownMenu, Flexbox, Freeze } from '@lobehub/ui';
+import { copyToClipboard, Freeze } from '@lobehub/ui';
 import { ActionIcon, confirmModal, FloatingPanel, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ConversationContext, TaskDetailActivity } from '@orvilo/types';
@@ -9,15 +8,23 @@ import { cssVar } from 'antd-style';
 import {
   Copy,
   ExternalLink,
+  type LucideIcon,
   Maximize2,
   Minimize2,
   MoreHorizontal,
   Share2,
   Trash,
 } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import ChatList from '@/features/Conversation/ChatList';
 import { ConversationProvider } from '@/features/Conversation/ConversationProvider';
 import { TaskCardScopeProvider } from '@/features/Conversation/Markdown/plugins/Task';
@@ -108,17 +115,17 @@ export const TopicChatDrawerBody = memo<TopicChatDrawerBodyProps>(
         }}
       >
         <TaskCardScopeProvider value={true}>
-          <Flexbox height={'100%'} style={{ overflow: 'hidden' }}>
-            <Flexbox flex={1} style={{ minHeight: 0, overflow: 'hidden' }}>
+          <div className="flex h-full flex-col" style={{ overflow: 'hidden' }}>
+            <div className="flex flex-1 flex-col" style={{ minHeight: 0, overflow: 'hidden' }}>
               <ChatList disableActionsBar itemContent={itemContent} />
-            </Flexbox>
-            <Flexbox paddingBlock={'0 12px'} paddingInline={12} style={{ flexShrink: 0 }}>
+            </div>
+            <div className="px-3 pt-0 pb-3" style={{ flexShrink: 0 }}>
               <FeedbackInput
                 defaultExpanded={defaultInputExpanded}
                 disableCollapse={disableInputCollapse}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </TaskCardScopeProvider>
       </ConversationProvider>
     );
@@ -219,7 +226,17 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
     });
   }, [closeTopicDrawer, deleteTopic, t, topicId]);
 
-  const menuItems = useMemo<DropdownItem[]>(
+  interface TopicMenuItem {
+    danger?: boolean;
+    disabled?: boolean;
+    icon?: LucideIcon;
+    key?: string;
+    label?: string;
+    onClick?: () => void;
+    type?: 'divider';
+  }
+
+  const menuItems = useMemo<TopicMenuItem[]>(
     () => [
       {
         disabled: !agentId || !topicId,
@@ -275,11 +292,8 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
   );
 
   const title = (
-    <Flexbox
-      horizontal
-      align={'center'}
-      flex={1}
-      gap={8}
+    <div
+      className="flex flex-1 items-center gap-2"
       style={{ maxWidth: '100%', minWidth: 0, overflow: 'hidden' }}
     >
       <AssigneeAvatar agentId={agentId} size={20} />
@@ -307,10 +321,27 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
         taskId={drawerTaskId ?? activeTaskId}
         topicId={topicId}
       />
-      <DropdownMenu items={menuItems}>
-        <ActionIcon icon={MoreHorizontal} size={'small'} />
+      <DropdownMenu>
+        <DropdownMenuTrigger render={<ActionIcon icon={MoreHorizontal} size={'small'} />} />
+        <DropdownMenuContent align={'end'} className="min-w-40">
+          {menuItems.map((item, index) =>
+            item.type === 'divider' ? (
+              <DropdownMenuSeparator key={`divider-${index}`} />
+            ) : (
+              <DropdownMenuItem
+                disabled={item.disabled}
+                key={item.key}
+                variant={item.danger ? 'destructive' : 'default'}
+                onClick={item.onClick}
+              >
+                {item.icon && createElement(item.icon, { size: 16 })}
+                <span className="flex-1">{item.label}</span>
+              </DropdownMenuItem>
+            ),
+          )}
+        </DropdownMenuContent>
       </DropdownMenu>
-    </Flexbox>
+    </div>
   );
 
   const shareIcon = (
@@ -324,7 +355,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
   );
 
   const actions = !topicId ? null : (
-    <Flexbox horizontal align={'center'} gap={4}>
+    <div className="flex items-center gap-1">
       <ActionIcon
         icon={expanded ? Minimize2 : Maximize2}
         size={SHARE_ICON_SIZE}
@@ -338,7 +369,7 @@ const TopicChatDrawer = memo<TopicChatDrawerProps>(({ asGlobalHost }) => {
       ) : (
         shareIcon
       )}
-    </Flexbox>
+    </div>
   );
 
   // A tree that already mounts the app-wide host owns the panel; this

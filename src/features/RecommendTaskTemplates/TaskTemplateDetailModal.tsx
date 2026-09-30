@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import {
   ActionIcon,
   Button,
@@ -57,24 +57,24 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
     }, [created, close]);
 
     return (
-      <Flexbox gap={16} padding={20}>
-        <Flexbox horizontal align={'flex-start'} gap={12} justify={'space-between'}>
-          <Flexbox horizontal align={'center'} gap={12} style={{ flex: 1, minWidth: 0 }}>
+      <div className="flex flex-col gap-4 p-5">
+        <div className="flex items-start justify-between gap-3">
+          <div className="flex items-center gap-3" style={{ flex: 1, minWidth: 0 }}>
             <TemplateBriefIcon spec={iconSpec} tileSize={36} />
-            <Flexbox gap={2} style={{ minWidth: 0 }}>
+            <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
               <Text ellipsis fontSize={18} weight={600}>
                 {title}
               </Text>
-              <Flexbox horizontal align={'center'} gap={4}>
-                <Icon color={cssVar.colorTextSecondary} icon={Clock} size={12} />
+              <div className="flex items-center gap-1">
+                <Clock color={cssVar.colorTextSecondary} size={12} />
                 <Text fontSize={12} type={'secondary'}>
                   {scheduleText}
                 </Text>
-              </Flexbox>
-            </Flexbox>
-          </Flexbox>
+              </div>
+            </div>
+          </div>
           <ActionIcon icon={X} size={'small'} onClick={close} />
-        </Flexbox>
+        </div>
 
         {description.trim().length > 0 && <Text type={'secondary'}>{description}</Text>}
 
@@ -86,7 +86,7 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
         )}
 
         {visibleAuthSpecs.length > 0 && (
-          <Flexbox gap={6}>
+          <div className="flex flex-col gap-1.5">
             {visibleAuthSpecs.map((spec) => (
               <ConnectorAuthRow
                 disabled={disabled}
@@ -95,10 +95,10 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
                 onError={handleConnectError}
               />
             ))}
-          </Flexbox>
+          </div>
         )}
 
-        <Flexbox horizontal justify={'flex-end'}>
+        <div className="flex justify-end">
           <Button
             disabled={disabled}
             loading={loading || pendingCreate}
@@ -108,8 +108,8 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
           >
             {primaryButtonLabel}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

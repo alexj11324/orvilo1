@@ -62,24 +62,26 @@ const serializeSize = (size: unknown) =>
 vi.mock('@lobehub/ui', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   copyToClipboard: vi.fn(),
-  DropdownMenu: ({
+}));
+
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  DropdownMenuContent: ({ children }: { children?: ReactNode }) => <>{children}</>,
+  DropdownMenuItem: ({
     children,
-    items,
+    disabled,
+    onClick,
   }: {
     children?: ReactNode;
-    items?: { key: string; label?: ReactNode; onClick?: () => void; type?: string }[];
+    disabled?: boolean;
+    onClick?: () => void;
   }) => (
-    <>
+    <button disabled={disabled} onClick={onClick}>
       {children}
-      {items?.map((item) =>
-        item.type === 'divider' ? null : (
-          <button key={item.key} onClick={item.onClick}>
-            {item.label}
-          </button>
-        ),
-      )}
-    </>
+    </button>
   ),
+  DropdownMenuSeparator: () => null,
+  DropdownMenuTrigger: ({ render }: { render?: ReactNode }) => render,
 }));
 
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({

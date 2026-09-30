@@ -1,6 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -39,7 +38,7 @@ const CollectionFooter = memo<{
   const { t } = useTranslation('common');
   if (!error && !hasMore && !stale && (total === null || loaded === total)) return null;
   return (
-    <Flexbox className={styles.footer}>
+    <div className={cx('flex flex-col', styles.footer)}>
       {error ? (
         <AsyncError error={error} variant={'inline'} onRetry={onRetry} />
       ) : (
@@ -56,7 +55,7 @@ const CollectionFooter = memo<{
           ) : null}
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

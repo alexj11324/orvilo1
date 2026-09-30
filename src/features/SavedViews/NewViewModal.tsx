@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Button, Modal, Text, toast } from '@lobehub/ui/base-ui';
 import type { WorkQuery, WorkQueryEntityType, WorkQueryFilter } from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -142,16 +141,16 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
       title={t('savedViews.newView')}
       width={640}
       footer={
-        <Flexbox horizontal gap={8} justify="flex-end">
+        <div className="flex justify-end gap-2">
           <Button onClick={onClose}>{t('cancel')}</Button>
           <Button disabled={!ready} loading={saving} type="primary" onClick={() => void save()}>
             {t('savedViews.createView')}
           </Button>
-        </Flexbox>
+        </div>
       }
       onCancel={onClose}
     >
-      <Flexbox gap={16} paddingBlock={8}>
+      <div className="flex flex-col gap-4 py-2">
         <ViewDefinitionEditor
           showEntityPicker
           showName
@@ -159,9 +158,8 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
           value={state}
           onChange={setState}
         />
-        <Flexbox
-          gap={4}
-          padding={12}
+        <div
+          className="flex flex-col gap-1 p-3"
           style={{
             background: 'var(--ant-color-fill-quaternary, rgba(0,0,0,0.02))',
             borderRadius: 8,
@@ -177,8 +175,8 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
               · {title}
             </Text>
           ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     </Modal>
   );
 });

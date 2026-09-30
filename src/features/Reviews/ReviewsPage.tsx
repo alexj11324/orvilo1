@@ -1,8 +1,8 @@
 'use client';
 
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
+import { Empty } from '@lobehub/ui';
 import { Button, TabsIndicator, TabsList, TabsRoot, TabsTab, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
+import { createStaticStyles, cssVar, cx, useResponsive } from 'antd-style';
 import dayjs from 'dayjs';
 import { ChevronDownIcon, GitPullRequestIcon, PlugIcon, SquarePenIcon } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useId, useMemo, useState } from 'react';
@@ -180,17 +180,16 @@ const PullRequestRow = memo<{
       title={`${item.repository}#${item.number}${item.author ? ` · ${item.author}` : ''}`}
       to={detailPath}
     >
-      <Icon className={styles.prIcon} icon={GitPullRequestIcon} size={14} />
-      <Flexbox flex={1} style={{ minWidth: 0 }}>
+      <GitPullRequestIcon className={styles.prIcon} size={14} />
+      <div className="flex-1" style={{ minWidth: 0 }}>
         <Text ellipsis fontSize={13} weight={500}>
           {item.title}
         </Text>
-      </Flexbox>
+      </div>
       {item.isDraft ? (
-        <Icon
+        <SquarePenIcon
           aria-label={t('reviews.state.draft')}
           className={styles.draftIcon}
-          icon={SquarePenIcon}
           size={14}
           title={t('reviews.state.draft')}
         />
@@ -239,7 +238,7 @@ const QueueGroup = ({
 }) => {
   const regionId = useId();
   return (
-    <Flexbox gap={collapsed ? 0 : 4}>
+    <div className="flex flex-col" style={{ gap: collapsed ? 0 : 4 }}>
       <button
         aria-controls={regionId}
         aria-expanded={!collapsed}
@@ -263,7 +262,7 @@ const QueueGroup = ({
       <div hidden={collapsed} id={regionId}>
         {children}
       </div>
-    </Flexbox>
+    </div>
   );
 };
 
@@ -449,7 +448,7 @@ const ReviewsPage = memo(() => {
         </div>
       </div>
       <div className={styles.listBody}>
-        <Flexbox gap={16}>
+        <div className="flex flex-col gap-4">
           {queue.isLoading || notConnected || queue.error || allPullRequests.length === 0 ? (
             /* A single fallback group keeps the header visible — and
                collapsible — over loading / disconnected / error / empty
@@ -463,10 +462,10 @@ const ReviewsPage = memo(() => {
               {queue.isLoading ? (
                 <SkeletonList />
               ) : notConnected ? (
-                <Center gap={8} padding={24}>
+                <div className="flex flex-col items-center justify-center gap-2 p-6">
                   <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
                   <ConnectGitHubButton onConnected={refresh} />
-                </Center>
+                </div>
               ) : queue.error ? (
                 <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
               ) : (
@@ -479,8 +478,8 @@ const ReviewsPage = memo(() => {
               )}
             </QueueGroup>
           ) : (
-            <Flexbox gap={4}>
-              <Flexbox gap={8}>
+            <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-2">
                 {queueGroups.map((group) => (
                   <QueueGroup
                     collapsed={collapsedGroups.has(group.key)}
@@ -493,7 +492,7 @@ const ReviewsPage = memo(() => {
                     }
                     onToggle={() => toggleQueueGroup(group.key)}
                   >
-                    <Flexbox>
+                    <div className="flex flex-col">
                       {group.items.map((item) => (
                         <PullRequestRow
                           active={selectedId === item.id}
@@ -503,10 +502,10 @@ const ReviewsPage = memo(() => {
                           returnTo={listPath}
                         />
                       ))}
-                    </Flexbox>
+                    </div>
                   </QueueGroup>
                 ))}
-              </Flexbox>
+              </div>
               {/* A partial queue is never presented as complete — the tail
                   counts stay visible and pages load on demand. */}
               {queuePager.errorFor('queue') ? (
@@ -517,7 +516,7 @@ const ReviewsPage = memo(() => {
                 />
               ) : null}
               {queueHasMore || (queueTail?.items.length ?? 0) > 0 ? (
-                <Flexbox horizontal align={'center'} justify={'space-between'} paddingInline={12}>
+                <div className="flex items-center justify-between px-3">
                   <Text fontSize={12} type={'secondary'}>
                     {t('reviews.loadedCount', {
                       loaded: allPullRequests.length,
@@ -534,9 +533,9 @@ const ReviewsPage = memo(() => {
                       {t('myWork.loadMore')}
                     </Button>
                   ) : null}
-                </Flexbox>
+                </div>
               ) : null}
-            </Flexbox>
+            </div>
           )}
 
           <QueueGroup
@@ -569,7 +568,7 @@ const ReviewsPage = memo(() => {
               />
             )}
           </QueueGroup>
-        </Flexbox>
+        </div>
       </div>
     </div>
   );
@@ -579,23 +578,23 @@ const ReviewsPage = memo(() => {
   ) : queue.isLoading ? (
     <SkeletonList padding={24} rows={5} />
   ) : notConnected ? (
-    <Center className={styles.detailEmpty} gap={8} padding={24}>
+    <div className={cx('flex flex-col items-center justify-center gap-2 p-6', styles.detailEmpty)}>
       <Empty description={t('reviews.connectGitHub')} icon={PlugIcon} />
       <ConnectGitHubButton onConnected={refresh} />
-    </Center>
+    </div>
   ) : queue.error ? (
-    <Center className={styles.detailEmpty} padding={24}>
+    <div className={cx('flex flex-col items-center justify-center p-6', styles.detailEmpty)}>
       <AsyncError error={queue.error} variant={'block'} onRetry={() => void refresh()} />
-    </Center>
+    </div>
   ) : (
     /* Reference shows a single `N reviews` line under the illustration —
        the queue total for the active tab is the closest count we own. */
-    <Center className={styles.detailEmpty} gap={8}>
-      <Icon icon={GitPullRequestIcon} size={44} />
+    <div className={cx('flex flex-col items-center justify-center gap-2', styles.detailEmpty)}>
+      <GitPullRequestIcon size={44} />
       <Text fontSize={13} type={'secondary'}>
         {t('reviews.detailEmpty', { count: queueTotal ?? allPullRequests.length })}
       </Text>
-    </Center>
+    </div>
   );
 
   return (

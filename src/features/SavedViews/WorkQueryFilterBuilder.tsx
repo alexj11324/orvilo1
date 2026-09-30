@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ActionIcon, Button, Select, Tag, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryEntityType, WorkQueryValue } from '@orvilo/types';
 import { workQueryFieldSpec, workQueryFieldSpecs } from '@orvilo/types';
@@ -350,7 +349,7 @@ const FilterRowEditor = memo<{
   })();
 
   return (
-    <Flexbox horizontal align="center" gap={8}>
+    <div className="flex items-center gap-2">
       <Select
         options={fieldOptions}
         size="small"
@@ -385,7 +384,7 @@ const FilterRowEditor = memo<{
         title={t('savedViews.filters.remove')}
         onClick={onRemove}
       />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -436,7 +435,7 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
     )?.value as string | undefined;
 
     return (
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {value.rows.map((row) => (
           <FilterRowEditor
             cycleTeamId={cycleTeamId}
@@ -449,7 +448,7 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
         ))}
         {value.slots.map((slot, index) =>
           slot.type === 'node' ? (
-            <Flexbox horizontal align="center" gap={8} key={`slot-${index}`}>
+            <div className="flex items-center gap-2" key={`slot-${index}`}>
               <Tag>
                 {t('savedViews.filters.advancedNode', {
                   field: 'field' in slot.node ? slot.node.field : 'any',
@@ -461,11 +460,11 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
                 title={t('savedViews.filters.remove')}
                 onClick={() => removeSlot(index)}
               />
-            </Flexbox>
+            </div>
           ) : null,
         )}
         {value.any.length > 0 ? (
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex items-center gap-2">
             <Tag>{t('savedViews.filters.advancedNode', { field: 'any' })}</Tag>
             <ActionIcon
               icon={XIcon}
@@ -473,9 +472,9 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
               title={t('savedViews.filters.remove')}
               onClick={() => onChange({ ...value, any: [] })}
             />
-          </Flexbox>
+          </div>
         ) : null}
-        <Flexbox horizontal>
+        <div className="flex">
           <Button
             icon={PlusIcon}
             size="small"
@@ -484,7 +483,7 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
           >
             {t('savedViews.filters.add')}
           </Button>
-        </Flexbox>
+        </div>
         {value.rows.length === 0 &&
         !value.slots.some((slot) => slot.type === 'node') &&
         value.any.length === 0 ? (
@@ -492,7 +491,7 @@ const WorkQueryFilterBuilder = memo<WorkQueryFilterBuilderProps>(
             {t('savedViews.filters.empty')}
           </Text>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

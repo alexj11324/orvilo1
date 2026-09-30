@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, type DropdownItem, DropdownMenu, Modal } from '@lobehub/ui/base-ui';
 import type { SavedViewVisibility } from '@orvilo/types';
 import {
@@ -71,7 +70,7 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
     const list: DropdownItem[] = [];
     if (canEdit) {
       list.push({
-        icon: <Icon icon={SquarePenIcon} size={14} />,
+        icon: <SquarePenIcon size={14} />,
         key: 'edit',
         label: t('savedViews.editView'),
         onClick: () => {
@@ -83,7 +82,7 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
       });
     }
     list.push({
-      icon: <Icon icon={CopyIcon} size={14} />,
+      icon: <CopyIcon size={14} />,
       key: 'duplicate',
       label: t('savedViews.duplicateView'),
       onClick: onDuplicate,
@@ -113,7 +112,7 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
       if (moveTargets.length > 0) {
         list.push({
           children: moveTargets,
-          icon: <Icon icon={FolderInputIcon} size={14} />,
+          icon: <FolderInputIcon size={14} />,
           key: 'move-to',
           label: t('savedViews.moveTo'),
           openOnHover: true,
@@ -123,13 +122,13 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
     }
     list.push(
       {
-        icon: <Icon icon={Link2Icon} size={14} />,
+        icon: <Link2Icon size={14} />,
         key: 'copy-link',
         label: t('savedViews.copyLink'),
         onClick: onCopyLink,
       },
       {
-        icon: <Icon icon={DownloadIcon} size={14} />,
+        icon: <DownloadIcon size={14} />,
         key: 'export-csv',
         label: exporting ? t('savedViews.exportingCsv') : t('savedViews.exportCsv'),
         onClick: onExportCsv,
@@ -179,7 +178,7 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
         title={t('savedViews.editView')}
         width={640}
         footer={
-          <Flexbox horizontal gap={8} justify="flex-end">
+          <div className="flex justify-end gap-2">
             <Button onClick={closeEditor}>{t('cancel')}</Button>
             <Button
               disabled={!dirty || !shareReady || !draft?.name.trim()}
@@ -192,15 +191,15 @@ const SavedViewActionsMenu = memo<SavedViewActionsMenuProps>((props) => {
             >
               {t('save')}
             </Button>
-          </Flexbox>
+          </div>
         }
         onCancel={closeEditor}
       >
-        <Flexbox gap={16} paddingBlock={8}>
+        <div className="flex flex-col gap-4 py-2">
           {draft ? (
             <ViewDefinitionEditor showName showShare value={draft} onChange={onDraftChange} />
           ) : null}
-        </Flexbox>
+        </div>
       </Modal>
     </>
   );

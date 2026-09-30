@@ -71,13 +71,13 @@ export const mcpEventsRouter = router({
         });
       if (!validMcpEventFilters(input.filters))
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Invalid event filters' });
-      const task = await ctx.eventTaskModel.findById(input.taskId);
+      const task = await ctx.eventTaskModel.resolve(input.taskId);
       const connector = await ctx.connectorModel.findPublicById(input.connectorId);
       if (!task || !connector || connector.agentId) throw new TRPCError({ code: 'NOT_FOUND' });
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
       assertWorkspaceRowManageable(ctx, connector.userId, 'connector');
       const scope = { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId };
-      const [existing] = await ctx.eventTriggers.list(scope, input.taskId);
+      const [existing] = await ctx.eventTriggers.list(scope, task.id);
       const previousBinding = existing
         ? await ctx.eventBindings.get(
             { tenantId: scope.tenantId, connectorId: existing.sourceId },
@@ -149,12 +149,12 @@ export const mcpEventsRouter = router({
     }),
 
   list: eventProcedure.input(taskInput).query(async ({ ctx, input }) => {
-    if (!(await ctx.eventTaskModel.findById(input.taskId)))
-      throw new TRPCError({ code: 'NOT_FOUND' });
+    const task = await ctx.eventTaskModel.resolve(input.taskId);
+    if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
     const triggers = ctx.workspaceId
       ? await ctx.eventTriggers.list(
           { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId },
-          input.taskId,
+          task.id,
         )
       : [];
     return {
@@ -178,7 +178,7 @@ export const mcpEventsRouter = router({
   discover: eventProcedure
     .input(taskInput.extend({ connectorId: z.string().min(1) }))
     .query(async ({ ctx, input }) => {
-      if (!(await ctx.eventTaskModel.findById(input.taskId)))
+      if (!(await ctx.eventTaskModel.resolve(input.taskId)))
         throw new TRPCError({ code: 'NOT_FOUND' });
       const connector = await ctx.connectorModel.findPublicById(input.connectorId);
       if (!connector || connector.agentId) throw new TRPCError({ code: 'NOT_FOUND' });
@@ -193,11 +193,11 @@ export const mcpEventsRouter = router({
 
   stop: eventWriteProcedure.input(taskInput).mutation(async ({ ctx, input }) => {
     if (!ctx.workspaceId) throw new TRPCError({ code: 'PRECONDITION_FAILED' });
-    const task = await ctx.eventTaskModel.findById(input.taskId);
+    const task = await ctx.eventTaskModel.resolve(input.taskId);
     if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
     assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
     const scope = { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId };
-    const [trigger] = await ctx.eventTriggers.list(scope, input.taskId);
+    const [trigger] = await ctx.eventTriggers.list(scope, task.id);
     if (!trigger) throw new TRPCError({ code: 'NOT_FOUND' });
     // The caller owns this task/trigger. Local revocation never needs a live connector.
     const updated = await ctx.eventTriggers.save({ ...trigger, enabled: false }, trigger.revision);
@@ -234,7 +234,7 @@ export const mcpEventsRouter = router({
   }),
 
   sources: eventProcedure.input(taskInput).query(async ({ ctx, input }) => {
-    if (!(await ctx.eventTaskModel.findById(input.taskId)))
+    if (!(await ctx.eventTaskModel.resolve(input.taskId)))
       throw new TRPCError({ code: 'NOT_FOUND' });
     const connectors = await ctx.connectorModel.queryPublic();
     return {

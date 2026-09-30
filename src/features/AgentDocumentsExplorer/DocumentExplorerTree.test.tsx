@@ -5,7 +5,7 @@ import {
   CUSTOM_FOLDER_FILE_TYPE,
 } from '@orvilo/const';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import type { MouseEvent as ReactMouseEvent, ReactNode } from 'react';
+import type { ComponentType, MouseEvent as ReactMouseEvent, ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -22,22 +22,24 @@ const modalConfirm = vi.hoisted(() => vi.fn());
 const openDocumentMock = vi.hoisted(() => vi.fn());
 const removeDocumentMock = vi.hoisted(() => vi.fn());
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...((await importOriginal()) as Record<string, unknown>),
-  ActionIcon: ({
-    icon,
+vi.mock('@/components/ActionIcon', () => ({
+  default: ({
+    icon: Icon,
     onClick,
     title,
   }: {
-    icon?: { displayName?: string; name?: string };
+    icon?: ComponentType & { displayName?: string; name?: string };
     onClick?: () => void;
     title?: string;
   }) => (
-    <button aria-label={title} data-icon={icon?.displayName ?? icon?.name} onClick={onClick}>
+    <button aria-label={title} data-icon={Icon?.displayName ?? Icon?.name} onClick={onClick}>
       {title}
     </button>
   ),
-  confirmModal: modalConfirm,
+}));
+
+vi.mock('@/components/ItemsMenu', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
   DropdownMenu: ({
     children,
     items,
@@ -56,14 +58,14 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ),
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: { error: messageError, success: messageSuccess, warning: messageWarning },
-      modal: { confirm: modalConfirm },
-    }),
-  },
+vi.mock('@/components/Modal', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  confirmModal: modalConfirm,
+}));
+
+vi.mock('@/components/toast', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  toast: { error: messageError, success: messageSuccess, warning: messageWarning },
 }));
 
 vi.mock('@/services/agentDocument', () => ({

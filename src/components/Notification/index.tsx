@@ -78,8 +78,11 @@ const Notification = memo<NotificationProps>(
     return (
       show && (
         <div
-          className={cn('flex', cx(styles.container, mobile && styles.mobileContainer, className))}
           style={{ height, width: mobile ? 'calc(100% - 16px)' : width }}
+          className={cn(
+            'flex flex-col',
+            cx(styles.container, mobile && styles.mobileContainer, className),
+          )}
           {...rest}
         >
           {showCloseIcon && (

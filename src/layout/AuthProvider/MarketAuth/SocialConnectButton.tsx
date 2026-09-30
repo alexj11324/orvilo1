@@ -89,9 +89,8 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
     // Not connected state
     return (
       <Button
-        block
+        className="w-full"
         disabled={isDisabled}
-        icon={isConnecting ? <Spin size="small" /> : <ProviderIcon size={16} />}
         style={{
           alignItems: 'center',
           display: 'flex',
@@ -102,6 +101,7 @@ export const SocialConnectButton = memo<SocialConnectButtonProps>(
         }}
         onClick={onConnect}
       >
+        {isConnecting ? <Spin className="size-4" /> : <ProviderIcon size={16} />}
         <div className="flex flex-1 items-center justify-between">
           <span>
             {isConnecting

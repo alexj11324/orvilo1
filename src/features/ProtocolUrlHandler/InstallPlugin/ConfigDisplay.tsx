@@ -2,7 +2,7 @@
 
 import { Text } from '@lobehub/ui/base-ui';
 import { type McpInstallSchema } from '@orvilo/electron-client-ipc';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { LinkIcon, Settings2Icon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

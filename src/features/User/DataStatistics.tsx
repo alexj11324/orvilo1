@@ -114,13 +114,14 @@ const DataStatistics = memo<Omit<ComponentProps<'div'>, 'children'>>(({ style, .
                       render={
                         <span className="inline-flex">
                           <Badge
-                            count={`+${item.countToady}`}
                             style={{
                               background: cssVar.colorSuccess,
                               color: cssVar.colorSuccessBg,
                               cursor: 'pointer',
                             }}
-                          />
+                          >
+                            {`+${item.countToady}`}
+                          </Badge>
                         </span>
                       }
                     />

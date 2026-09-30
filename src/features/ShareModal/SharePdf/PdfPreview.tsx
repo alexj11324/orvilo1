@@ -1,6 +1,7 @@
 'use client';
 
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronLeft, ChevronRight, Expand, FileText } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';

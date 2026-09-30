@@ -120,11 +120,11 @@ const ServerVersionOutdatedAlert = () => {
 
           <div className="flex justify-end gap-2" style={{ marginTop: 8 }}>
             <a href={MANUAL_UPGRADE_URL} rel="noreferrer" target="_blank">
-              <Button size="small" type="primary">
+              <Button size="sm" variant="default">
                 {t('serverVersionOutdated.upgrade')}
               </Button>
             </a>
-            <Button size="small" onClick={() => setDismissed(true)}>
+            <Button size="sm" onClick={() => setDismissed(true)}>
               {t('serverVersionOutdated.dismiss')}
             </Button>
           </div>

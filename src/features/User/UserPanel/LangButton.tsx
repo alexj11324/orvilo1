@@ -1,6 +1,6 @@
 import { cssVar } from 'antd-style';
 import { ChevronRight, GlobeIcon } from 'lucide-react';
-import { memo, type ReactElement, type ReactNode, useMemo } from 'react';
+import { memo, type ReactElement, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -38,6 +38,7 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
     ]);
 
     const { t } = useTranslation(['setting', 'common']);
+    const [open, setOpen] = useState(false);
     const currentLabel = getLanguageDisplayLabel(
       language,
       currentLanguage,
@@ -104,7 +105,7 @@ const LangButton = memo<{ compact?: boolean; placement?: LangPlacement }>(
             paddingInline: 8,
           }}
         >
-          <Text fontSize={12}>{currentLabel}</Text> <GlobeIcon data-icon="inline-end" />
+          <span style={{ fontSize: 12 }}>{currentLabel}</span> <GlobeIcon data-icon="inline-end" />
         </Button>
       );
     } else {

@@ -8,6 +8,7 @@ import { type StoreSetter } from '@/store/types';
 
 import { type PersonaData } from '../../initialState';
 import { type UserMemoryStore } from '../../store';
+import { getMemorySession, memorySessionKey, useMemorySession } from '../../utils/session';
 
 const n = (namespace: string) => namespace;
 
@@ -25,11 +26,14 @@ export class HomeActionImpl {
   }
 
   useFetchPersona = (isLogin = true): SWRResponse<PersonaData | null> => {
+    const session = useMemorySession();
     return useClientDataSWR(
-      isLogin ? userMemoryKeys.persona() : null,
+      isLogin ? memorySessionKey(userMemoryKeys.persona(), session) : null,
       () => userMemoryService.getPersona(),
       {
+        keepPreviousData: false,
         onSuccess: (data: PersonaData | null | undefined) => {
+          if (session !== getMemorySession()) return;
           this.#set(
             {
               persona: data ?? undefined,
@@ -44,15 +48,18 @@ export class HomeActionImpl {
   };
 
   useFetchTags = (): SWRResponse<QueryIdentityRolesResult> => {
+    const session = useMemorySession();
     return useClientDataSWR(
-      userMemoryKeys.tags(),
+      memorySessionKey(userMemoryKeys.tags(), session),
       () =>
         userMemoryService.queryIdentityRoles({
           page: 1,
           size: 64,
         }),
       {
+        keepPreviousData: false,
         onSuccess: (data: QueryIdentityRolesResult | undefined) => {
+          if (session !== getMemorySession()) return;
           this.#set(
             {
               roles: data?.roles.map((item) => ({ count: item.count, tag: item.role })) || [],

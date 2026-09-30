@@ -9,6 +9,7 @@ import { type RetrieveMemoryResult } from '@/types/userMemory';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type UserMemoryStore } from '../../store';
+import { getMemorySession, memorySessionKey, useMemorySession } from '../../utils/session';
 
 const n = setNamespace('userMemory/agent');
 
@@ -35,15 +36,18 @@ export class AgentMemoryActionImpl {
   };
 
   useFetchMemoriesForTopic = (topicId?: string | null): SWRResponse<RetrieveMemoryResult> => {
+    const session = useMemorySession();
     return useClientDataSWRWithSync<RetrieveMemoryResult>(
-      topicId ? userMemoryKeys.topicMemories(topicId) : null,
+      topicId ? memorySessionKey(userMemoryKeys.topicMemories(topicId), session) : null,
       async () => {
         // Retrieve memories using topic's context
         // The backend will use topic info to build the query
         return await userMemoryService.retrieveMemoryForTopic(topicId!);
       },
       {
+        keepPreviousData: false,
         onData: (data) => {
+          if (session !== getMemorySession()) return;
           if (!topicId || !data) return;
 
           this.#set(

@@ -2,6 +2,8 @@ import { shallow } from 'zustand/shallow';
 import { createWithEqualityFn } from 'zustand/traditional';
 import { type StateCreator } from 'zustand/vanilla';
 
+import { useUserStore } from '@/store/user';
+
 import { createDevtools } from '../middleware/createDevtools';
 import { expose } from '../middleware/expose';
 import { flattenActions } from '../utils/flattenActions';
@@ -79,3 +81,8 @@ export const useUserMemoryStore = createWithEqualityFn<UserMemoryStore>()(
 expose('userMemory', useUserMemoryStore);
 
 export const getUserMemoryStoreState = () => useUserMemoryStore.getState();
+
+// Clear private settled state synchronously on logout or account replacement.
+useUserStore.subscribe((state, previous) => {
+  if (state.user?.id !== previous.user?.id) useUserMemoryStore.getState().reset();
+});

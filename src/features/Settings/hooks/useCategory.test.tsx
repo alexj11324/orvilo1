@@ -94,10 +94,10 @@ describe('settings useCategory', () => {
     expect(keysOf(SettingsGroupKey.Tools)).toEqual([SettingsTabs.Connector, SettingsTabs.Labels]);
   });
 
-  it('never lists the retired provider or service-model tabs', () => {
+  it('lists Provider configuration but not the retired service-model tab', () => {
     const keys = getItemKeys();
 
-    expect(keys).not.toContain(SettingsTabs.Provider);
+    expect(keys).toContain(SettingsTabs.Provider);
     expect(keys).not.toContain(SettingsTabs.ServiceModel);
   });
 

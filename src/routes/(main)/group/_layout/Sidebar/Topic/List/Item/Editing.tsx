@@ -1,4 +1,3 @@
-import { stopPropagation } from '@lobehub/ui';
 import { memo, useCallback, useState } from 'react';
 
 import { Input } from '@/components/ui/input';
@@ -39,7 +38,7 @@ const Editing = memo<EditingProps>(({ id, title, toggleEditing }) => {
           autoFocus
           defaultValue={title}
           onChange={(e) => setNewTitle(e.target.value)}
-          onClick={stopPropagation}
+          onClick={(e) => e.stopPropagation()}
           onBlur={() => {
             handleUpdate();
             toggleEditing(false);

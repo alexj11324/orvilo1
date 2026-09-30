@@ -1,4 +1,3 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { WorkListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -7,6 +6,7 @@ import { ClipboardListIcon, HistoryIcon, ListIcon } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { getAllWorkSummaries } from '@/features/Conversation/store/slices/data/workSummaries';

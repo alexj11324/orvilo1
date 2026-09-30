@@ -1,4 +1,3 @@
-import { Tabs } from '@lobehub/ui/base-ui';
 import { getCachedTextInputUnitRate, getWriteCacheInputUnitRate } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -8,6 +7,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ModelIcon } from '@/components/OrviloIcons';
+import { Tabs } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -60,13 +60,15 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
         {!!pricing && (
           <div className="flex flex-col">
             <Tabs
-              activeKey={isShowCredit ? 'credit' : 'token'}
-              size={'small'}
-              items={[
-                { key: 'token', label: 'Token' },
-                {
-                  key: 'credit',
-                  label: (
+              value={isShowCredit ? 'credit' : 'token'}
+              onValueChange={(key) => {
+                updateSystemStatus({ isShowCredit: key === 'credit' });
+              }}
+            >
+              <TabsList>
+                <TabsTrigger value={'token'}>{'Token'}</TabsTrigger>
+                <TabsTrigger value={'credit'}>
+                  {
                     <TooltipProvider>
                       <Tooltip>
                         <TooltipTrigger
@@ -79,13 +81,10 @@ const ModelCard = memo<ModelCardProps>(({ pricing, id, provider, displayName }) 
                         <TooltipContent>{t('messages.modelCard.creditTooltip')}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
-                  ),
-                },
-              ]}
-              onChange={(key) => {
-                updateSystemStatus({ isShowCredit: key === 'credit' });
-              }}
-            />
+                  }
+                </TabsTrigger>
+              </TabsList>
+            </Tabs>
           </div>
         )}
       </div>

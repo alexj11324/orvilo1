@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type { EditedFileEntry } from '@orvilo/builtin-tools/fileEditScan';
 import {
   FilePathDisplay,
@@ -22,6 +21,7 @@ import { type KeyboardEvent, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Button } from '@/components/ui/button';
 import { CodeBlock } from '@/components/ui/code-block';
 
 import { type OperationEditedFile, summarizeEditedFilesTotals } from './deriveEditedFiles';
@@ -306,9 +306,9 @@ const SingleEditedFileCard = memo<{ entry: EditedFileEntry; onOpen?: () => void 
             size={SINGLE_EDITED_FILE_ICON_SIZE}
           />
           <div className="flex flex-col flex-1 gap-0.5">
-            <Text ellipsis className={styles.singleTitle}>
+            <div className={cn('truncate', styles.singleTitle)}>
               {t('editedFiles.singleTitle', { path: displayPath })}
-            </Text>
+            </div>
             <LineStats
               hideZeroDeltas
               className={styles.stats}
@@ -389,9 +389,9 @@ const EditedFilesCard = memo<EditedFilesCardProps>(({ entries }) => {
           <FilePenLineIcon size={20} />
         </div>
         <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-          <Text ellipsis className={styles.title}>
+          <div className="truncate styles.title">
             {t('editedFiles.title', { count: entries.length })}
-          </Text>
+          </div>
           <LineStats
             hideZeroDeltas
             className={styles.stats}

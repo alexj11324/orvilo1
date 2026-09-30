@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { FileText } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { cleanSpeakerTag } from '@/store/chat/utils/cleanSpeakerTag';
 import { unescapeMarkdown } from '@/store/chat/utils/unescapeMarkdown';
 import { copyToClipboard } from '@/utils/clipboard';

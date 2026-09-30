@@ -1,4 +1,3 @@
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { cssVar, cx } from 'antd-style';
 import { WrapText } from 'lucide-react';
 import { parse } from 'partial-json';
@@ -6,6 +5,7 @@ import type { ReactNode } from 'react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import type { DescriptionItem } from '@/components/Descriptions';
 import Descriptions from '@/components/Descriptions';
 import { CodeBlock } from '@/components/ui/code-block';
@@ -86,7 +86,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
   return (
     <>
       <div className="flex items-center gap-1 justify-between py-2 px-4">
-        <Text>{t('arguments.title')}</Text>
+        <div>{t('arguments.title')}</div>
         <div className="flex gap-1">
           <ActionIcon
             active={wrap}

@@ -1,8 +1,8 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { Minimize2 } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 
@@ -36,7 +36,7 @@ const ExceededContextWindowError = memo<ExceededContextWindowErrorProps>(({ id }
         <Button
           disabled={!canCreate || !context.topicId || disabled}
           loading={loading}
-          type={'primary'}
+          variant="default"
           onClick={handleCompact}
         >
           {t('exceededContext.compact')}

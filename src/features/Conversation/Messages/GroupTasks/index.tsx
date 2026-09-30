@@ -1,7 +1,5 @@
 'use client';
-
 import { GroupAvatar } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -9,6 +7,7 @@ import { ListTodo } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
@@ -137,7 +136,7 @@ const GroupTasksMessage = memo<GroupTasksMessageProps>(({ id }) => {
       message=""
       placement="left"
       time={createdAt}
-      titleAddon={<Tag>{t('task.groupTasks', { count: tasks.length })}</Tag>}
+      titleAddon={<Badge>{t('task.groupTasks', { count: tasks.length })}</Badge>}
     >
       <div className="flex flex-col gap-2" style={{ width: '100%' }}>
         {tasks.map((task) => (

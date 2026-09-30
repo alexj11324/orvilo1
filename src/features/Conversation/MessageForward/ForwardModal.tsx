@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, createModal, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type StoreApiWithSelector } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -10,6 +9,8 @@ import { Search as SearchIcon, X as XIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
@@ -174,7 +175,7 @@ const ForwardModalContent = memo(() => {
         <div className={cn('flex flex-col gap-1', styles.list)}>
           {candidates.length === 0 ? (
             <div className="flex flex-col items-center justify-center p-6">
-              <Text type={'secondary'}>{t('messageForward.modal.empty')}</Text>
+              <div className="text-muted-foreground">{t('messageForward.modal.empty')}</div>
             </div>
           ) : (
             candidates.map((agent) => {
@@ -190,9 +191,9 @@ const ForwardModalContent = memo(() => {
                 >
                   <SelectCircle checked={checked} />
                   <AgentAvatar avatar={avatarOf(agent.avatar)} />
-                  <Text ellipsis style={{ flex: 1 }}>
+                  <div className="truncate" style={{ flex: 1 }}>
                     {agentDisplayName(agent, t('untitledAgent'))}
-                  </Text>
+                  </div>
                 </div>
               );
             })
@@ -204,16 +205,16 @@ const ForwardModalContent = memo(() => {
 
       {/* Right: forwarded content preview + note */}
       <div className="flex flex-col flex-1 gap-2" style={{ minWidth: 0 }}>
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="text-muted-foreground" style={{ fontSize: 12 }}>
           {t('messageForward.transcript.header', { count: preview.count })}
-        </Text>
+        </div>
         <div className={cn('flex flex-col flex-1', styles.preview)}>
           <div className={cn('flex flex-col flex-1 gap-1', styles.previewLines)}>
             {preview.lines.map((line, i) => (
               <div className={styles.previewLine} key={i}>
-                <Text strong style={{ fontSize: 12 }}>
+                <div className="font-semibold" style={{ fontSize: 12 }}>
                   {line.role}:
-                </Text>{' '}
+                </div>{' '}
                 {line.text}
               </div>
             ))}
@@ -238,7 +239,7 @@ const ForwardModalContent = memo(() => {
 
         <div className="flex gap-2 justify-end">
           <Button onClick={close}>{t('messageForward.bar.cancel')}</Button>
-          <Button disabled={selectedIds.length === 0} type={'primary'} onClick={handleForward}>
+          <Button disabled={selectedIds.length === 0} variant="default" onClick={handleForward}>
             {selectedIds.length > 0
               ? t('messageForward.modal.sendCount', { count: selectedIds.length })
               : t('messageForward.bar.forward')}

@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 
@@ -24,10 +23,8 @@ const BaseErrorForm = memo<BaseErrorFormProps>(({ title, desc, action, avatar })
       <div className="flex items-center gap-3">
         {avatar}
         <div className="flex flex-col gap-0.5">
-          <Text weight={500}>{title}</Text>
-          <Text fontSize={12} type={'secondary'}>
-            {desc}
-          </Text>
+          <div className="font-medium">{title}</div>
+          <div className="text-[12px] text-muted-foreground">{desc}</div>
         </div>
       </div>
       {action}

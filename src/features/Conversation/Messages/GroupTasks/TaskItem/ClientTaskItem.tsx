@@ -1,8 +1,13 @@
 'use client';
 
-import { Accordion, Text } from '@lobehub/ui/base-ui';
 import { memo, useMemo, useState } from 'react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 import { useChatStore } from '@/store/chat';
@@ -133,12 +138,27 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
   return (
     <Accordion
       keepMounted
-      indicatorPlacement="inline"
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
+      multiple
       value={expanded ? [id] : []}
-      items={[
-        {
-          children: (
+      onValueChange={(value) => setExpanded(value.includes(id))}
+    >
+      <AccordionItem value={id}>
+        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+          {
+            <TaskTitle
+              metrics={metrics}
+              status={status}
+              title={title}
+              agent={
+                agent
+                  ? { avatar: agent.avatar || undefined, backgroundColor: agent.backgroundColor }
+                  : undefined
+              }
+            />
+          }
+        </AccordionTrigger>
+        <AccordionContent>
+          {
             <div
               className="flex flex-col gap-4 p-3"
               style={{
@@ -149,9 +169,7 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
             >
               {instruction && (
                 <div className="flex flex-col p-3">
-                  <Text fontSize={13} type={'secondary'}>
-                    {instruction}
-                  </Text>
+                  <div className="text-[13px] text-muted-foreground">{instruction}</div>
                 </div>
               )}
 
@@ -174,24 +192,10 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
               {/* Error State */}
               {!isInitializing && isError && taskDetail && <ErrorState taskDetail={taskDetail} />}
             </div>
-          ),
-          key: id,
-          title: (
-            <TaskTitle
-              metrics={metrics}
-              status={status}
-              title={title}
-              agent={
-                agent
-                  ? { avatar: agent.avatar || undefined, backgroundColor: agent.backgroundColor }
-                  : undefined
-              }
-            />
-          ),
-        },
-      ]}
-      onValueChange={(value) => setExpanded(value.includes(id))}
-    />
+          }
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }, Object.is);
 

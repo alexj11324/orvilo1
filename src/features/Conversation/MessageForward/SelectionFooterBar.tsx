@@ -1,11 +1,14 @@
 'use client';
 
-import { Button, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { Forward, Trash2, X } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 
 import { messageStateSelectors, useConversationStore, useConversationStoreApi } from '../store';
 import { openForwardModal } from './ForwardModal';
@@ -88,18 +91,18 @@ const SelectionFooterBar = memo(() => {
 
   return (
     <div className={cn('flex items-center justify-center', styles.bar)}>
-      <Text className={styles.count} type={'secondary'}>
+      <div className="text-muted-foreground styles.count">
         {t('messageForward.bar.selected', { count: selectedCount })}
-      </Text>
+      </div>
       <div className="flex items-center gap-1">
-        <Button icon={<X />} type={'text'} onClick={exitSelectionMode}>
-          {t('messageForward.bar.cancel')}
+        <Button variant="ghost" onClick={exitSelectionMode}>
+          <X /> {t('messageForward.bar.cancel')}
         </Button>
-        <Button danger disabled={disabled} icon={<Trash2 />} type={'text'} onClick={handleDelete}>
-          {t('messageForward.bar.delete')}
+        <Button disabled={disabled} variant="destructive" onClick={handleDelete}>
+          <Trash2 /> {t('messageForward.bar.delete')}
         </Button>
-        <Button disabled={disabled} icon={<Forward />} type={'text'} onClick={handleForward}>
-          {t('messageForward.bar.forward')}
+        <Button disabled={disabled} variant="ghost" onClick={handleForward}>
+          <Forward /> {t('messageForward.bar.forward')}
         </Button>
       </div>
     </div>

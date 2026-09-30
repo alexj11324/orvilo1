@@ -1,8 +1,8 @@
 import { MaskShadow } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import MarkdownMessage from '@/features/Conversation/Markdown';
 
 import { useConversationStore } from '../../../store';
@@ -23,9 +23,9 @@ export const CollapsedMessage = memo<CollapsedMessageProps>(({ id, content }) =>
       </MaskShadow>
       <div className="flex flex-col p-1">
         <Button
-          block
-          size={'small'}
-          type={'fill'}
+          className="w-full"
+          size="sm"
+          variant="secondary"
           onClick={() => {
             toggleMessageCollapsed(id, false);
           }}

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { safeParseJSON } from '@orvilo/utils';
 import { createStaticStyles } from 'antd-style';
 import { AlertTriangle } from 'lucide-react';
@@ -109,9 +108,9 @@ const UserInterventionFallback = memo<UserInterventionFallbackProps>(
             {t('tool.intervention.renderFallback.description')}
           </span>
         </div>
-        <Text fontSize={12} type="secondary">
+        <div className="text-[12px] text-muted-foreground">
           {identifier} / {apiName} · {t('tool.intervention.renderFallback.rawJson')}
-        </Text>
+        </div>
         <CodeBlock wrap code={json} language="json" variant="ghost" />
         {actionsPortalTarget ? createPortal(actions, actionsPortalTarget) : actions}
       </div>

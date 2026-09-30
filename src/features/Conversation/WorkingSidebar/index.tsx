@@ -1,4 +1,3 @@
-import { ActionIcon, type DropdownItem, DropdownMenu, Skeleton } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { getWorkingDirEffectivePath } from '@orvilo/types';
@@ -44,6 +43,10 @@ import { useTranslation } from 'react-i18next';
 
 import { useBusinessWorkingSidebarTabs } from '@/business/client/features/WorkingSidebarTabs';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Skeleton } from '@/components/ui/skeleton';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { isDesktop } from '@/const/version';
 import { useRepoType } from '@/features/ChatInput/ControlBar/useRepoType';
@@ -1003,7 +1006,7 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
               <DropdownMenu
                 items={openMenuItems}
                 placement={'bottomRight'}
-                onOpenChangeComplete={(open) => {
+                onOpenChange={(open) => {
                   if (open) return;
                   if (pendingTabFocusRef.current) focusPendingTab();
                   else scrollActiveTabIntoView();
@@ -1042,7 +1045,13 @@ const AgentWorkingSidebar = memo<AgentWorkingSidebarProps>(({ availableWidth }) 
                 {paramsAvailable && activeTab === 'params' && (
                   <div className={cn('flex flex-col', styles.pane)}>
                     <Suspense
-                      fallback={<Skeleton.Text className={styles.paramsLoading} rows={6} />}
+                      fallback={
+                        <div className={cn('flex flex-col gap-2', styles.paramsLoading)}>
+                          {Array.from({ length: 6 }, (_, i) => (
+                            <Skeleton className={i === 5 ? 'h-4 w-3/5' : 'h-4 w-full'} key={i} />
+                          ))}
+                        </div>
+                      }
                     >
                       <ParamsSection />
                     </Suspense>

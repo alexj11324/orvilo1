@@ -1,8 +1,8 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ProviderIcon } from '@/components/OrviloIcons';
+import { Button } from '@/components/ui/button';
 import { useProviderName } from '@/hooks/useProviderName';
 import { type GlobalLLMProviderKey } from '@/types/user/settings/modelProvider';
 
@@ -23,7 +23,7 @@ const ChatInvalidAPIKey = memo<ChatInvalidAPIKeyProps>(({ id, provider }) => {
       avatar={<ProviderIcon provider={provider} shape={'square'} size={40} />}
       title={t(`unlock.credentialsUnavailable.title`, { name: providerName, ns: 'error' })}
       action={
-        <Button type={'primary'} onClick={() => deleteMessage(id)}>
+        <Button variant="default" onClick={() => deleteMessage(id)}>
           {t('unlock.closeMessage', { ns: 'error' })}
         </Button>
       }

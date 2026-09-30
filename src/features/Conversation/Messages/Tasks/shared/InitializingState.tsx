@@ -1,14 +1,12 @@
 'use client';
 
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, keyframes } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { shinyTextStyles } from '@/styles';
 
 import { formatElapsedTime } from './utils';
 
@@ -73,10 +71,10 @@ const InitializingState = memo(() => {
     <div className={cn('flex flex-col gap-3', styles.container)}>
       <div className="flex items-center gap-2">
         <NeuralNetworkLoading size={14} />
-        <Text className={shinyTextStyles.shinyText} weight={500}>
+        <div className='font-medium shinyTextStyles.shinyText'>
           {t('task.status.initializing')}
-        </Text>
-        <Text type="secondary">({formatElapsedTime(elapsedTime)})</Text>
+        </div>
+        <div className='text-muted-foreground'>({formatElapsedTime(elapsedTime)})</div>
       </div>
     </div>
   );

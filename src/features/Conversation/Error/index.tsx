@@ -1,4 +1,3 @@
-import { type AlertProps, Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc';
 import { type IOrviloAgentRuntimeErrorType } from '@orvilo/model-runtime';
@@ -13,7 +12,9 @@ import useBusinessErrorAlertConfig from '@/business/client/hooks/useBusinessErro
 import useBusinessErrorContent from '@/business/client/hooks/useBusinessErrorContent';
 import useRenderBusinessChatErrorMessageExtra from '@/business/client/hooks/useRenderBusinessChatErrorMessageExtra';
 import { CodeBlock } from '@/components/ui/code-block';
+import { Skeleton } from '@/components/ui/skeleton';
 import ErrorContent from '@/features/Conversation/ChatItem/components/ErrorContent';
+import type { ErrorAlertProps } from '@/features/Conversation/components/ErrorAlert';
 import { useConversationResourceAccess } from '@/features/Conversation/hooks/useConversationResourceAccess';
 import { dataSelectors, useConversationStore } from '@/features/Conversation/store';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
@@ -84,7 +85,7 @@ const loading = () => (
       width: '100%',
     }}
   >
-    <Skeleton height={36} />
+    <Skeleton style={{ height: 36 }} />
   </div>
 );
 
@@ -175,7 +176,7 @@ const shouldShowTraceIdError = (
 // Config for the errorMessage display
 const getErrorAlertConfig = (
   errorType?: IToolErrorType | IOrviloAgentRuntimeErrorType | ErrorType,
-): AlertProps | undefined => {
+): ErrorAlertProps | undefined => {
   // OpenAIBizError / ZhipuBizError / GoogleBizError / ...
   if (typeof errorType === 'string' && (errorType.includes('Biz') || errorType.includes('Invalid')))
     return {
@@ -221,7 +222,7 @@ export const useErrorContent = (error: any) => {
     message: businessMessage,
   } = useBusinessErrorContent(error);
 
-  return useMemo<AlertProps | undefined>(() => {
+  return useMemo<ErrorAlertProps | undefined>(() => {
     if (!error) return;
     const messageError = error;
     const rawErrorMessage = getRawErrorMessage(messageError);
@@ -261,7 +262,7 @@ export const useErrorContent = (error: any) => {
 
 interface ErrorExtraProps {
   data: ErrorMessageData;
-  error?: AlertProps;
+  error?: ErrorAlertProps;
   onRegenerate?: () => void;
   /**
    * Stable scope key for the overloaded auto-retry counter (the parent user

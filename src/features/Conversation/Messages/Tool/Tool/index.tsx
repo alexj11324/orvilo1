@@ -1,8 +1,14 @@
-import { Accordion, Skeleton } from '@lobehub/ui/base-ui';
 import { getBuiltinRender } from '@orvilo/builtin-tools/renders';
 import { type CSSProperties } from 'react';
 import { memo, useState } from 'react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Skeleton } from '@/components/ui/skeleton';
 import Actions from '@/features/Conversation/Messages/AssistantGroup/Tool/Actions';
 import dynamic from '@/libs/next/dynamic';
 
@@ -10,12 +16,12 @@ import { dataSelectors, messageStateSelectors, useConversationStore } from '../.
 import Inspectors from '../../AssistantGroup/Tool/Inspector';
 
 const Debug = dynamic(() => import('../../AssistantGroup/Tool/Debug'), {
-  loading: () => <Skeleton height={300} width={'100%'} />,
+  loading: () => <Skeleton style={{ height: 300, width: '100%' }} />,
   ssr: false,
 });
 
 const Detail = dynamic(() => import('../../AssistantGroup/Tool/Detail'), {
-  loading: () => <Skeleton height={120} width={'100%'} />,
+  loading: () => <Skeleton style={{ height: 120, width: '100%' }} />,
   ssr: false,
 });
 
@@ -74,13 +80,22 @@ const Tool = memo<InspectorProps>(
 
     return (
       <Accordion
-        gap={8}
-        indicatorPlacement="inline"
-        styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
+        multiple
+        className="gap-2"
         value={expand ? ['tool'] : []}
-        items={[
-          {
-            action: !disableEditing && (
+        onValueChange={(value) => setExpand(value.length > 0)}
+      >
+        <AccordionItem value="tool">
+          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+            {
+              <Inspectors
+                apiName={apiName}
+                identifier={identifier}
+                result={result}
+                toolCallId={toolCallId}
+              />
+            }
+            {!disableEditing && (
               <Actions
                 assistantMessageId={messageId}
                 canToggleCustomToolRender={hasCustomRender}
@@ -90,8 +105,10 @@ const Tool = memo<InspectorProps>(
                 showCustomToolRender={showCustomToolRender}
                 showDebug={showDebug}
               />
-            ),
-            children: (
+            )}
+          </AccordionTrigger>
+          <AccordionContent>
+            {
               <div className="flex flex-col gap-2 py-2">
                 {showDebug && !disableEditing && (
                   <Debug
@@ -115,20 +132,10 @@ const Tool = memo<InspectorProps>(
                   type={type}
                 />
               </div>
-            ),
-            key: 'tool',
-            title: (
-              <Inspectors
-                apiName={apiName}
-                identifier={identifier}
-                result={result}
-                toolCallId={toolCallId}
-              />
-            ),
-          },
-        ]}
-        onValueChange={(value) => setExpand(value.length > 0)}
-      />
+            }
+          </AccordionContent>
+        </AccordionItem>
+      </Accordion>
     );
   },
 );

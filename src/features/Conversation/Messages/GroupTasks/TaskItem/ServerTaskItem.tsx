@@ -1,11 +1,16 @@
 'use client';
 
-import { Accordion } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { ThreadStatus } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo, useMemo, useState } from 'react';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -57,12 +62,27 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
   return (
     <Accordion
       keepMounted
-      indicatorPlacement="inline"
-      styles={{ trigger: { paddingBlock: 4, paddingInline: 4 } }}
+      multiple
       value={expanded ? [id] : []}
-      items={[
-        {
-          children: (
+      onValueChange={(value) => setExpanded(value.includes(id))}
+    >
+      <AccordionItem value={id}>
+        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+          {
+            <TaskTitle
+              metrics={metrics}
+              status={status}
+              title={title}
+              agent={
+                agent
+                  ? { avatar: agent.avatar || undefined, backgroundColor: agent.backgroundColor }
+                  : undefined
+              }
+            />
+          }
+        </AccordionTrigger>
+        <AccordionContent>
+          {
             <div
               className="flex flex-col gap-4 p-3"
               style={{
@@ -82,24 +102,10 @@ const ServerTaskItem = memo<ServerTaskItemProps>(({ item }) => {
                 />
               )}
             </div>
-          ),
-          key: id,
-          title: (
-            <TaskTitle
-              metrics={metrics}
-              status={status}
-              title={title}
-              agent={
-                agent
-                  ? { avatar: agent.avatar || undefined, backgroundColor: agent.backgroundColor }
-                  : undefined
-              }
-            />
-          ),
-        },
-      ]}
-      onValueChange={(value) => setExpanded(value.includes(id))}
-    />
+          }
+        </AccordionContent>
+      </AccordionItem>
+    </Accordion>
   );
 }, isEqual);
 

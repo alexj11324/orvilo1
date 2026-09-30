@@ -1,10 +1,10 @@
-import { type ModalInstance } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { type ReactNode } from 'react';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
 import {
   dataSelectors,
   messageStateSelectors,

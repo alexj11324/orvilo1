@@ -1,7 +1,5 @@
 'use client';
-
 import { PatchDiff } from '@lobehub/ui';
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { GitFileDiffStatus } from '@orvilo/electron-client-ipc';
 import { nanoid } from '@orvilo/utils';
 import { createStaticStyles, cssVar as themeCssVar } from 'antd-style';
@@ -11,6 +9,9 @@ import path from 'path-browserify-esm';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { gitService } from '@/services/git';
 import { useFileStore } from '@/store/file';
 import { useGlobalStore } from '@/store/global';

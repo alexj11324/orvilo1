@@ -1,4 +1,3 @@
-import { ActionIcon, Avatar } from '@lobehub/ui/base-ui';
 import {
   type ActivateToolsParams,
   ActivatorApiName,
@@ -14,6 +13,8 @@ import { createElement, memo, Suspense, useCallback, useMemo, useRef, useState }
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import { pluginHelpers, useToolStore } from '@/store/tool';
 import { toolSelectors } from '@/store/tool/selectors';
 import { useUserStore } from '@/store/user';

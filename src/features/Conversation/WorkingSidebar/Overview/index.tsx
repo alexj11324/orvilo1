@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Skeleton, toast } from '@lobehub/ui/base-ui';
 import { SkillsIcon } from '@lobehub/ui/icons';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -21,6 +20,8 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import RingLoadingIcon from '@/components/RingLoading';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   Empty,
   EmptyDescription,
@@ -28,6 +29,7 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   getCiVisual,
@@ -423,7 +425,11 @@ const Overview = memo<OverviewProps>(
     const workspaceSection = repoType ? (
       isGitLoading ? (
         <div className={styles.skeleton}>
-          <Skeleton.Text rows={3} />
+          <div className="flex flex-col gap-2">
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-full" />
+            <Skeleton className="h-4 w-3/5" />
+          </div>
         </div>
       ) : gitError ? (
         <OverviewRow
@@ -432,12 +438,8 @@ const Overview = memo<OverviewProps>(
           iconColor={cssVar.colorError}
           value={t('workingPanel.overview.environmentError')}
           trailing={
-            <Button
-              icon={<RefreshCwIcon size={12} />}
-              size={'small'}
-              onClick={() => void refreshGit()}
-            >
-              {tCommon('retry')}
+            <Button size="sm" onClick={() => void refreshGit()}>
+              <RefreshCwIcon size={12} /> {tCommon('retry')}
             </Button>
           }
         />
@@ -487,12 +489,7 @@ const Overview = memo<OverviewProps>(
           <div className={cn('flex flex-col', styles.section)}>
             <div className={cn('flex items-center justify-between', styles.sectionHeader)}>
               <span className={styles.sectionTitle}>{t('workingPanel.overview.outputs')}</span>
-              <Button
-                outdent={'end'}
-                size={'small'}
-                type={'text'}
-                onClick={() => onOpenTab('works')}
-              >
+              <Button outdent={'end'} size="sm" variant="ghost" onClick={() => onOpenTab('works')}>
                 {t('workingPanel.overview.viewAll')}
               </Button>
             </div>

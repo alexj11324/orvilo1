@@ -1,11 +1,11 @@
 'use client';
 
-import { Tabs } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { BotIcon, Columns2, Layers } from 'lucide-react';
 import { memo, useState } from 'react';
 
+import { Tabs } from '@/components/ui/tabs';
 import WideScreenContainer from '@/features/WideScreenContainer';
 
 import { dataSelectors, useConversationStore } from '../../store';
@@ -33,28 +33,51 @@ const AgentCouncilMessage = memo<AgentCouncilMessageProps>(({ id }) => {
       <WideScreenContainer>
         <div className="flex items-center gap-2 justify-between py-2" style={{ height: 48 }}>
           {displayMode === 'tab' ? (
-            <Tabs
-              activeKey={String(activeTab)}
-              size="small"
-              items={members.map((_, idx) => ({
-                icon: <BotIcon size={14} />,
-                key: String(idx),
-                label: null,
-              }))}
-              onChange={(key) => setActiveTab(Number(key))}
-            />
+            <Tabs value={String(activeTab)} onValueChange={(key) => setActiveTab(Number(key))}>
+              <TabsList>
+                {members
+                  .map((_, idx) => ({
+                    icon: <BotIcon size={14} />,
+                    key: String(idx),
+                    label: null,
+                  }))
+                  .map((item) => (
+                    <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
+                      {item.icon}
+                      {item.label}
+                    </TabsTrigger>
+                  ))}
+              </TabsList>
+              {(
+                members.map((_, idx) => ({
+                  icon: <BotIcon size={14} />,
+                  key: String(idx),
+                  label: null,
+                })) as { children?: React.ReactNode; key: string }[]
+              ).map(
+                (item) =>
+                  item.children != null && (
+                    <TabsContent key={item.key} value={item.key}>
+                      {item.children}
+                    </TabsContent>
+                  ),
+              )}
+            </Tabs>
           ) : (
             <div />
           )}
-          <Tabs
-            activeKey={displayMode}
-            size="small"
-            items={[
-              { icon: <Columns2 />, key: 'horizontal', label: null },
-              { icon: <Layers />, key: 'tab', label: null },
-            ]}
-            onChange={(key) => setDisplayMode(key as DisplayMode)}
-          />
+          <Tabs value={displayMode} onValueChange={(key) => setDisplayMode(key as DisplayMode)}>
+            <TabsList>
+              <TabsTrigger value={'horizontal'}>
+                <Columns2 />
+                {null}
+              </TabsTrigger>
+              <TabsTrigger value={'tab'}>
+                <Layers />
+                {null}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
         </div>
       </WideScreenContainer>
       <CouncilList activeTab={activeTab} displayMode={displayMode} members={members} />

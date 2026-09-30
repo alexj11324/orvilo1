@@ -1,12 +1,12 @@
 'use client';
 
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { ThreadStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { Footprints, ListChecksIcon, Wrench, XIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { DEFAULT_AVATAR } from '@/const/meta';
 
@@ -121,29 +121,25 @@ const MetricsDisplay = memo<MetricsDisplayProps>(({ metrics, status }) => {
       {hasSteps && (
         <div className="flex items-center gap-0.5">
           <Footprints color={cssVar.colorTextTertiary} size={12} />
-          <Text fontSize={12} type="secondary">
-            {steps}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{steps}</div>
         </div>
       )}
       {/* Tool calls */}
       {hasToolCalls && (
         <div className="flex items-center gap-0.5">
           <Wrench color={cssVar.colorTextTertiary} size={12} />
-          <Text fontSize={12} type="secondary">
-            {toolCalls}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{toolCalls}</div>
         </div>
       )}
       {/* Time */}
       {hasTime && (
-        <Text fontSize={12} type="secondary">
+        <div className="text-[12px] text-muted-foreground">
           {isProcessing
             ? formatElapsedTime(elapsedTime)
             : duration
               ? t('task.metrics.duration', { duration: formatDuration(duration) })
               : null}
-        </Text>
+        </div>
       )}
     </div>
   );
@@ -163,9 +159,7 @@ const TaskTitle = memo<TaskTitleProps>(({ title, status, metrics, agent }) => {
           size={20}
         />
       )}
-      <Text ellipsis fontSize={14}>
-        {title}
-      </Text>
+      <div className="truncate text-[14px]">{title}</div>
       {metrics && <MetricsDisplay metrics={metrics} status={status} />}
     </div>
   );

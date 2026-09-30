@@ -1,14 +1,14 @@
 'use client';
-
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { ActionIcon, Popover } from '@lobehub/ui/base-ui';
 import { createStaticStyles, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { type FC, memo, type ReactNode, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
@@ -118,31 +118,30 @@ const ReactionPicker: FC<ReactionPickerProps> = memo(({ messageId, trigger }) =>
   );
 
   return (
-    <Popover
-      arrow={false}
-      content={content}
-      open={open}
-      placement="top"
-      styles={{ content: { padding: 0 } }}
-      trigger="click"
-      onOpenChange={handleOpenChange}
-    >
-      {trigger || (
-        <span {...(open ? { 'data-popup-open': '' } : {})}>
-          <TooltipProvider>
-            <Tooltip>
-              <TooltipTrigger
-                render={
-                  <span style={{ display: 'inline-flex' }}>
-                    <ActionIcon icon={SmilePlus} size="small" />
-                  </span>
-                }
-              />
-              <TooltipContent>{t('messageAction.reaction')}</TooltipContent>
-            </Tooltip>
-          </TooltipProvider>
-        </span>
-      )}
+    <Popover open={open} onOpenChange={handleOpenChange}>
+      <PopoverTrigger
+        render={
+          trigger || (
+            <span {...(open ? { 'data-popup-open': '' } : {})}>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <ActionIcon icon={SmilePlus} size="small" />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{t('messageAction.reaction')}</TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </span>
+          )
+        }
+      />
+      <PopoverContent className="p-0" side="top">
+        {content}
+      </PopoverContent>
     </Popover>
   );
 });

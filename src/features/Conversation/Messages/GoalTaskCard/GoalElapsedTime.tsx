@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { formatElapsedClockTime } from '@orvilo/utils';
 import { memo, useEffect, useState } from 'react';
 
@@ -25,13 +24,12 @@ const GoalElapsedTime = memo<GoalElapsedTimeProps>(({ startedAt }) => {
   if (!hasValidStartTime) return null;
 
   return (
-    <Text
-      fontSize={12}
+    <div
+      className="text-[12px] text-muted-foreground"
       style={{ flex: 'none', fontVariantNumeric: 'tabular-nums' }}
-      type={'secondary'}
     >
       {formatElapsedClockTime(now - startedAtMs)}
-    </Text>
+    </div>
   );
 });
 

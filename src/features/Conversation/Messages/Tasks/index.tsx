@@ -1,12 +1,12 @@
 'use client';
 
 
-import { Tag } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { ChatItem } from '@/features/Conversation/ChatItem';
 import TaskAvatar from '@/features/Conversation/Messages/Tasks/shared/TaskAvatar';
 
@@ -46,7 +46,7 @@ const TasksMessage = memo<TasksMessageProps>(({ id }) => {
       message=""
       placement="left"
       time={createdAt}
-      titleAddon={<Tag>{t('task.batchTasks', { count: tasks.length })}</Tag>}
+      titleAddon={<Badge>{t('task.batchTasks', { count: tasks.length })}</Badge>}
     >
       <div className="flex flex-col gap-2" style={{width: '100%'}}>
         {tasks.map((task) => (

@@ -1,8 +1,8 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { Split } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { useChatStore } from '@/store/chat';
 
 import { defineAction } from '../defineAction';

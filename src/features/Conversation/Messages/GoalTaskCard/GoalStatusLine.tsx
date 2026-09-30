@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { TargetIcon } from 'lucide-react';
@@ -86,8 +85,8 @@ const GoalStatusLine = memo<GoalStatusLineProps>(({ passed, phase, progress, tot
             color={meta.color}
             size={12}
           />
-          <Text className={styles.status}>{t(`goalTask.status.${phase}`)}</Text>
-          <Text className={styles.status}>·</Text>
+          <div className={styles.status}>{t(`goalTask.status.${phase}`)}</div>
+          <div className={styles.status}>·</div>
         </>
       )}
       {showChecks && (
@@ -95,7 +94,7 @@ const GoalStatusLine = memo<GoalStatusLineProps>(({ passed, phase, progress, tot
           <div className={styles.progress}>
             <div className={styles.progressFill} style={{ width: `${progress}%` }} />
           </div>
-          <Text className={styles.status}>{t('goalTask.tasksDone', { passed, total })}</Text>
+          <div className={styles.status}>{t('goalTask.tasksDone', { passed, total })}</div>
         </>
       )}
     </div>

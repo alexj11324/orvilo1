@@ -1,16 +1,12 @@
 'use client';
 
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 
@@ -48,9 +44,9 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {tv('acceptance.tray.editModal.nameLabel')}
-        </Text>
+        </div>
         <Input
           placeholder={tv('acceptance.tray.editModal.namePlaceholder')}
           value={name}
@@ -59,9 +55,9 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {tv('acceptance.tray.editModal.methodLabel')}
-        </Text>
+        </div>
         <Textarea
           placeholder={tv('acceptance.tray.editModal.methodPlaceholder')}
           rows={2}
@@ -74,8 +70,7 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
       <div className="flex items-center justify-between">
         {onRemove ? (
           <Button
-            danger
-            type={'text'}
+            variant="destructive"
             onClick={() => {
               onRemove();
               close();
@@ -93,7 +88,7 @@ const EditContent = memo<EditContentProps>(({ initial, onRemove, onSubmit }) => 
           <Button
             disabled={!name.trim() || saving}
             loading={saving}
-            type={'primary'}
+            variant="default"
             onClick={handleSave}
           >
             {tv('acceptance.tray.editModal.save')}

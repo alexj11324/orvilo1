@@ -1,9 +1,9 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { ArrowDownIcon } from 'lucide-react';
 import { lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useDevDockMounted } from '@/hooks/useDevDockMounted';
 
 import { styles } from './style';

@@ -25,7 +25,15 @@ const documentExplorerShouldThrow = vi.hoisted(() => ({ current: false }));
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   ...(await import('~base-ui-stubs')).baseUiStubs,
+}));
+
+vi.mock('@/components/Modal', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   confirmModal: modalConfirm,
+}));
+
+vi.mock('@/components/toast', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
   toast: { error: messageError, success: messageSuccess },
 }));
 

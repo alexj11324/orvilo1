@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { ClipboardList } from 'lucide-react';
@@ -150,9 +149,9 @@ const Render = memo<TaskRenderProps>(({ children }) => {
         <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
           <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
             {parsed.identifier && <span className={styles.identifier}>{parsed.identifier}</span>}
-            <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
+            <div className="truncate font-medium" style={{ flex: 1, minWidth: 0 }}>
               {titleText}
-            </Text>
+            </div>
           </div>
         </div>
       </div>
@@ -161,9 +160,7 @@ const Render = memo<TaskRenderProps>(({ children }) => {
         <>
           <div className={styles.divider} />
           <div className="flex flex-col gap-1">
-            <Text fontSize={12} type={'secondary'}>
-              Instruction
-            </Text>
+            <div className="text-[12px] text-muted-foreground">Instruction</div>
             <div className={styles.instruction}>{parsed.instruction}</div>
           </div>
         </>

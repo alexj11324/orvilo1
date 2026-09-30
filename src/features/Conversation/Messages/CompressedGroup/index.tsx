@@ -1,17 +1,19 @@
 'use client';
-
 import { Markdown } from '@lobehub/ui';
-import { ActionIcon, confirmModal, Tabs, type TabsItem } from '@lobehub/ui/base-ui';
 import type { CompressionGroupMetadata, UIChatMessage } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { ChevronDown, ChevronUp, History, Sparkles, Undo2 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
 import StreamingMarkdown from '@/components/StreamingMarkdown';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 import { shinyTextStyles } from '@/styles/loading';
@@ -19,6 +21,14 @@ import { shinyTextStyles } from '@/styles/loading';
 import { dataSelectors, useConversationStore } from '../../store';
 import CompressedMessageItem from './CompressedMessageItem';
 import { isCompressionSummaryGenerating, shouldShowCompressedGroupPanel } from './logic';
+
+type TabItem = {
+  children?: ReactNode;
+  disabled?: boolean;
+  icon?: ReactNode;
+  key: string;
+  label?: ReactNode;
+};
 
 const STORAGE_KEY_PREFIX = 'compressed-group-tab:';
 
@@ -114,7 +124,7 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
     isGeneratingSummary,
   });
 
-  const tabItems: TabsItem[] = useMemo(
+  const tabItems: TabItem[] = useMemo(
     () => [
       {
         icon: <Sparkles size={14} />,
@@ -145,12 +155,27 @@ const CompressedGroupMessage = memo<CompressedGroupMessageProps>(({ id }) => {
       ) : (
         <div className="flex items-center justify-between" style={{ width: '100%' }}>
           <Tabs
-            activeKey={isGeneratingSummary ? 'summary' : activeTab}
             className={styles.header}
-            items={tabItems}
-            variant={'rounded'}
-            onChange={handleTabChange}
-          />
+            value={isGeneratingSummary ? 'summary' : activeTab}
+            onValueChange={handleTabChange}
+          >
+            <TabsList>
+              {tabItems.map((item) => (
+                <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
+                  {item.icon}
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+            {(tabItems as { children?: ReactNode; key: string }[]).map(
+              (item) =>
+                item.children != null && (
+                  <TabsContent key={item.key} value={item.key}>
+                    {item.children}
+                  </TabsContent>
+                ),
+            )}
+          </Tabs>
           <div className="flex gap-1">
             <ActionIcon
               icon={Undo2}

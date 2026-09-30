@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { FileText } from 'lucide-react';
@@ -158,14 +157,8 @@ const PortalResourceCard = memo<PortalResourceCardProps>(
             {icon ?? <FileText size={28} />}
           </div>
           <div className={cn('flex flex-col flex-1 gap-1 px-3', styles.content)}>
-            <Text ellipsis className={styles.title}>
-              {title}
-            </Text>
-            {description && (
-              <Text ellipsis className={styles.desc}>
-                {description}
-              </Text>
-            )}
+            <div className="truncate styles.title">{title}</div>
+            {description && <div className="truncate styles.desc">{description}</div>}
           </div>
           {onOpen && openLabel && (
             <div className="flex flex-col" style={{ flex: 'none', paddingInlineEnd: 10 }}>

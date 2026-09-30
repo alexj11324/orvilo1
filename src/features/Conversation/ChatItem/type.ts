@@ -1,6 +1,8 @@
-import { type AlertProps, type AvatarProps } from '@lobehub/ui/base-ui';
 import type { EditableMessageProps, MetaData } from '@lobehub/ui/chat';
 import type { ComponentProps, ReactNode } from 'react';
+
+import type { AvatarProps } from '@/components/Avatar';
+import type { ErrorAlertProps } from '@/features/Conversation/components/ErrorAlert';
 
 /**
  * `MetaData` from `@lobehub/ui/chat` predates the agent's `name`/`title` split, so
@@ -20,7 +22,7 @@ export interface ChatItemProps extends Omit<ComponentProps<'div'>, 'children' | 
   belowMessage?: ReactNode;
   children?: ReactNode;
   customAvatarRender?: (avatar: ChatItemAvatarMeta, node: ReactNode) => ReactNode;
-  customErrorRender?: (error: AlertProps) => ReactNode;
+  customErrorRender?: (error: ErrorAlertProps) => ReactNode;
   /**
    * @description Whether the chat item is disabled
    * @default false
@@ -33,7 +35,7 @@ export interface ChatItemProps extends Omit<ComponentProps<'div'>, 'children' | 
   /**
    * @description Props for Error render
    */
-  error?: AlertProps;
+  error?: ErrorAlertProps;
   fontSize?: number;
   /** Rendered in the header row next to the time, independent of `showTitle`. */
   headerAddon?: ReactNode;

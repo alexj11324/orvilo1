@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Alert, Avatar, Button, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskTemplateConnectorReference } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -9,6 +8,11 @@ import { PlusIcon, XIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { toast } from '@/components/toast';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import {
@@ -235,7 +239,7 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
     >
       <div className="flex items-center gap-2">
         {renderIcon()}
-        <Text>{tool.label}</Text>
+        <div>{tool.label}</div>
         <ActionIcon
           className={cx('tool-auth-remove', styles.removeIcon)}
           icon={XIcon}
@@ -249,12 +253,12 @@ const ComposioToolAuthItem = memo<ComposioToolAuthItemProps>(({ tool, onAuthComp
       </div>
       <Button
         disabled={isLoading}
-        icon={PlusIcon}
         loading={isLoading}
-        size="small"
-        type="text"
+        size="sm"
+        variant="ghost"
         onClick={handleAuthorize}
       >
+        <PlusIcon data-icon="inline-start" />{' '}
         {isLoading ? t('toolAuth.authorizing') : t('toolAuth.authorize')}
       </Button>
     </div>
@@ -316,7 +320,7 @@ const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
     >
       <div className="flex items-center gap-2">
         {icon}
-        <Text>{tool.label}</Text>
+        <div>{tool.label}</div>
         <ActionIcon
           className={cx('tool-auth-remove', styles.removeIcon)}
           icon={XIcon}
@@ -330,15 +334,15 @@ const OrviloToolAuthItem = ({ tool }: OrviloToolAuthItemProps) => {
       </div>
       <Button
         disabled={isConnecting}
-        icon={PlusIcon}
         loading={isConnecting}
-        size="small"
-        type="text"
+        size="sm"
+        variant="ghost"
         onClick={(event) => {
           event.stopPropagation();
           void handleAuthorize();
         }}
       >
+        <PlusIcon data-icon="inline-start" />{' '}
         {isConnecting ? t('toolAuth.authorizing') : t('toolAuth.authorize')}
       </Button>
     </div>
@@ -380,7 +384,7 @@ const MarketToolAuthItem = memo<MarketToolAuthItemProps>(({ tool }) => {
     >
       <div className="flex items-center gap-2">
         <Avatar alt={tool.label} avatar={tool.avatar} size={20} style={{ flex: 'none' }} />
-        <Text>{tool.label}</Text>
+        <div>{tool.label}</div>
         <ActionIcon
           className={cx('tool-auth-remove', styles.removeIcon)}
           icon={XIcon}
@@ -394,12 +398,12 @@ const MarketToolAuthItem = memo<MarketToolAuthItemProps>(({ tool }) => {
       </div>
       <Button
         disabled={isLoading}
-        icon={PlusIcon}
         loading={isLoading}
-        size="small"
-        type="text"
+        size="sm"
+        variant="ghost"
         onClick={handleSignIn}
       >
+        <PlusIcon data-icon="inline-start" />{' '}
         {isLoading ? t('toolAuth.authorizing') : t('toolAuth.signIn')}
       </Button>
     </div>
@@ -459,37 +463,38 @@ const ToolAuthAlert = memo(() => {
   }
 
   return (
-    <Alert
-      showIcon={false}
-      style={{ background: 'transparent', width: '100%' }}
-      title={<div className="flex items-center gap-1.5">{t('toolAuth.title')}</div>}
-      type="secondary"
-      description={
-        <>
-          {t('toolAuth.hint')}
-          <Separator dashed style={{ marginBlock: 12 }} />
-          <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
-            {pendingAuthTools.map((tool) => {
-              if (tool.authType === 'composio') {
-                return (
-                  <ComposioToolAuthItem
-                    key={tool.identifier}
-                    tool={tool}
-                    onAuthComplete={() => {
-                      // Component will re-render and tool will be removed from list
-                    }}
-                  />
-                );
-              }
-              if (tool.authType === 'orvilo') {
-                return <OrviloToolAuthItem key={tool.id} tool={tool} />;
-              }
-              return <MarketToolAuthItem key={tool.identifier} tool={tool} />;
-            })}
-          </div>
-        </>
-      }
-    />
+    <Alert style={{ background: 'transparent', width: '100%' }} variant="default">
+      <AlertTitle>
+        <div className="flex items-center gap-1.5">{t('toolAuth.title')}</div>
+      </AlertTitle>
+      <AlertDescription>
+        {
+          <>
+            {t('toolAuth.hint')}
+            <Separator dashed style={{ marginBlock: 12 }} />
+            <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
+              {pendingAuthTools.map((tool) => {
+                if (tool.authType === 'composio') {
+                  return (
+                    <ComposioToolAuthItem
+                      key={tool.identifier}
+                      tool={tool}
+                      onAuthComplete={() => {
+                        // Component will re-render and tool will be removed from list
+                      }}
+                    />
+                  );
+                }
+                if (tool.authType === 'orvilo') {
+                  return <OrviloToolAuthItem key={tool.id} tool={tool} />;
+                }
+                return <MarketToolAuthItem key={tool.identifier} tool={tool} />;
+              })}
+            </div>
+          </>
+        }
+      </AlertDescription>
+    </Alert>
   );
 });
 

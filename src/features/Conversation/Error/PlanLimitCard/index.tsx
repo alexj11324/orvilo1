@@ -1,4 +1,3 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { BRANDING_URL } from '@orvilo/business-const';
 import { ChatErrorType, Plans } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -6,6 +5,7 @@ import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { formatIntergerNumber, formatNumber } from '@/utils/format';
 
 import { ErrorActionContainer, FormAction } from '../style';
@@ -156,12 +156,12 @@ const PlanLimitCard = memo<PlanLimitCardProps>(({ errorBody, errorType, onRetry 
               style={{ width: '100%' }}
               target={'_blank'}
             >
-              <Button block size={'large'} type={'primary'}>
+              <Button className="w-full" size="lg" variant="default">
                 {upgradeLabel}
               </Button>
             </a>
           )}
-          <Button block size={'large'} onClick={onRetry}>
+          <Button className="w-full" size="lg" onClick={onRetry}>
             {t('limitation.insufficientBudget.retry')}
           </Button>
         </div>

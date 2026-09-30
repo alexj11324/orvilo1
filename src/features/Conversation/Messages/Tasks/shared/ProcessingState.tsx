@@ -1,7 +1,6 @@
 'use client';
 
 
-import { Text } from '@lobehub/ui/base-ui';
 import { type TaskDetail } from '@orvilo/types';
 import { createStaticStyles, keyframes } from 'antd-style';
 import { cn } from 'cn';
@@ -209,20 +208,14 @@ const ProcessingState = memo<ProcessingStateProps>(
             <div className={styles.activityRow}>
               <div className="flex items-center gap-1">
                 <NeuralNetworkLoading size={14} />
-                <Text as={'span'} fontSize={12} type={'secondary'}>
+                <span className='text-[12px] text-muted-foreground'>
                   {renderActivityText()}
-                </Text>
+                </span>
               </div>
               {currentActivity.contentPreview && (
-                <Text
-                  ellipsis
-                  as={'span'}
-                  fontSize={12}
-                  style={{ whiteSpace: 'nowrap' }}
-                  type={'secondary'}
-                >
+                <span className='truncate text-[12px] text-muted-foreground' style={{  whiteSpace: 'nowrap'  }}>
                   {currentActivity.contentPreview}
-                </Text>
+                </span>
               )}
             </div>
           )}
@@ -239,24 +232,24 @@ const ProcessingState = memo<ProcessingStateProps>(
             <div className="flex items-center gap-3">
               {/* Elapsed Time */}
               {startedAt && (
-                <Text as={'span'} fontSize={12} type={'secondary'}>
+                <span className='text-[12px] text-muted-foreground'>
                   <Timer size={12} />
-                  <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
+                  <span className="text-[12px] text-muted-foreground font-medium">
                     {formatElapsedTime(elapsedTime)}
-                  </Text>
-                </Text>
+                  </span>
+                </span>
               )}
             </div>
             <div className="flex items-center gap-3">
               {/* Steps */}
               {totalSteps !== undefined && totalSteps > 0 && (
-                <Text as={'span'} fontSize={12} type={'secondary'}>
+                <span className='text-[12px] text-muted-foreground'>
                   <Footprints size={12} />
-                  <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
+                  <span className="text-[12px] text-muted-foreground font-medium">
                     {totalSteps}
-                  </Text>
+                  </span>
                   <span>{t('task.metrics.stepsShort')}</span>
-                </Text>
+                </span>
               )}
               {/* Tool Calls */}
               {totalToolCalls !== undefined && totalToolCalls > 0 && (
@@ -264,13 +257,13 @@ const ProcessingState = memo<ProcessingStateProps>(
                   {hasMetrics && totalSteps !== undefined && totalSteps > 0 && (
                     <div className={styles.separator} />
                   )}
-                  <Text as={'span'} fontSize={12} type={'secondary'}>
+                  <span className='text-[12px] text-muted-foreground'>
                     <Wrench size={12} />
-                    <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
+                    <span className="text-[12px] text-muted-foreground font-medium">
                       {totalToolCalls}
-                    </Text>
+                    </span>
                     <span>{t('task.metrics.toolCallsShort')}</span>
-                  </Text>
+                  </span>
                 </>
               )}
             </div>
@@ -286,15 +279,9 @@ const ProcessingState = memo<ProcessingStateProps>(
         {currentActivity && (
           <div className="flex items-center gap-2">
             <NeuralNetworkLoading size={14} />
-            <Text
-              ellipsis
-              as={'span'}
-              fontSize={12}
-              style={{ whiteSpace: 'nowrap' }}
-              type={'secondary'}
-            >
+            <span className='truncate text-[12px] text-muted-foreground' style={{  whiteSpace: 'nowrap'  }}>
               {renderActivityText()}
-            </Text>
+            </span>
           </div>
         )}
 
@@ -311,38 +298,38 @@ const ProcessingState = memo<ProcessingStateProps>(
             {/* Left side: Elapsed Time */}
             <div className="flex items-center gap-2">
               {startedAt && (
-                <Text as={'span'} fontSize={12} type={'secondary'}>
+                <span className='text-[12px] text-muted-foreground'>
                   <Timer size={12} />
-                  <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
+                  <span className="text-[12px] text-muted-foreground font-medium">
                     {formatElapsedTime(elapsedTime)}
-                  </Text>
-                </Text>
+                  </span>
+                </span>
               )}
             </div>
 
             {/* Right side: Steps, Tool Calls */}
             <div className="flex items-center gap-3">
               {totalSteps !== undefined && totalSteps > 0 && (
-                <Text as={'span'} fontSize={12} type={'secondary'}>
+                <span className='text-[12px] text-muted-foreground'>
                   <Footprints size={12} />
-                  <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
+                  <span className="text-[12px] text-muted-foreground font-medium">
                     {totalSteps}
-                  </Text>
+                  </span>
                   <span>{t('task.metrics.stepsShort')}</span>
-                </Text>
+                </span>
               )}
               {totalToolCalls !== undefined && totalToolCalls > 0 && (
                 <>
                   {totalSteps !== undefined && totalSteps > 0 && (
                     <div className={styles.separator} />
                   )}
-                  <Text as={'span'} fontSize={12} type={'secondary'}>
+                  <span className='text-[12px] text-muted-foreground'>
                     <Wrench size={12} />
-                    <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
+                    <span className="text-[12px] text-muted-foreground font-medium">
                       {totalToolCalls}
-                    </Text>
+                    </span>
                     <span>{t('task.metrics.toolCallsShort')}</span>
-                  </Text>
+                  </span>
                 </>
               )}
             </div>

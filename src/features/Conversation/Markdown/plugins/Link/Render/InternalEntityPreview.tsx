@@ -1,7 +1,5 @@
 'use client';
-
 import { Freeze } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type { VerifyCodingScope } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -16,6 +14,7 @@ import {
 import { createElement, memo, type PropsWithChildren, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClientDataSWR } from '@/libs/swr';
@@ -257,26 +256,18 @@ export const InternalEntityPreview = memo<InternalEntityPreviewProps>(
           </div>
         </div>
         {data?.description && (
-          <Text className={styles.description} fontSize={13}>
-            {data.description}
-          </Text>
+          <div className="text-[13px] styles.description">{data.description}</div>
         )}
-        {data?.meta && (
-          <Text fontSize={12} type={'secondary'}>
-            {data.meta}
-          </Text>
-        )}
+        {data?.meta && <div className="text-[12px] text-muted-foreground">{data.meta}</div>}
         {data?.secondaryMeta && (
-          <Text fontSize={12} type={'secondary'}>
-            {data.secondaryMeta}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{data.secondaryMeta}</div>
         )}
       </div>
     );
 
     return (
       <Popover open={open} onOpenChange={setOpen}>
-        <PopoverTrigger openOnHover delay={350} render={<span role="link">{children}</span>} />
+        <PopoverTrigger openOnHover delay={350} render={<span>{children}</span>} />
         <PopoverContent side="top" style={{ borderRadius: 12, overflow: 'hidden', padding: 0 }}>
           {/* Disabling the SWR key clears data before the exit animation finishes. */}
           <Freeze frozen={!open}>{content}</Freeze>

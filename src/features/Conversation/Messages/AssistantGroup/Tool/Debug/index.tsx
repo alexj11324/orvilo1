@@ -1,4 +1,3 @@
-import { Tabs, type TabsProps } from '@lobehub/ui/base-ui';
 import { type ToolIntervention } from '@orvilo/types';
 import {
   BracesIcon,
@@ -8,10 +7,20 @@ import {
   MessageSquareCodeIcon,
   SquareArrowDownIcon,
 } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { CodeBlock } from '@/components/ui/code-block';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+
+type TabItem = {
+  children?: ReactNode;
+  disabled?: boolean;
+  icon?: ReactNode;
+  key: string;
+  label?: ReactNode;
+};
 
 interface DebugProps {
   apiName: string;
@@ -48,7 +57,7 @@ const Debug = memo<DebugProps>(
     const isJsonResult =
       result?.content?.trim().startsWith('{') || result?.content?.trim().startsWith('[');
 
-    const items: TabsProps['items'] = useMemo(
+    const items: TabItem[] = useMemo(
       () => [
         {
           children: (
@@ -148,27 +157,46 @@ const Debug = memo<DebugProps>(
           overflow: 'hidden',
         }}
       >
-        <Tabs
-          items={items}
-          orientation={'vertical'}
-          size={'middle'}
-          styles={{
-            list: {
+        <Tabs orientation={'vertical'}>
+          <TabsList
+            style={{
               borderRadius: 0,
-            },
-            panel: {
-              flex: 'auto',
-              height: 300,
-              minHeight: 0,
-              minWidth: 0,
-              padding: 0,
-            },
-            tab: {
-              justifyContent: 'flex-start',
-              textAlign: 'start',
-            },
-          }}
-        />
+            }}
+          >
+            {items.map((item) => (
+              <TabsTrigger
+                disabled={item.disabled}
+                key={item.key}
+                value={item.key}
+                style={{
+                  justifyContent: 'flex-start',
+                  textAlign: 'start',
+                }}
+              >
+                {item.icon}
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+          {(items as { children?: ReactNode; key: string }[]).map(
+            (item) =>
+              item.children != null && (
+                <TabsContent
+                  key={item.key}
+                  value={item.key}
+                  style={{
+                    flex: 'auto',
+                    height: 300,
+                    minHeight: 0,
+                    minWidth: 0,
+                    padding: 0,
+                  }}
+                >
+                  {item.children}
+                </TabsContent>
+              ),
+          )}
+        </Tabs>
       </div>
     );
   },

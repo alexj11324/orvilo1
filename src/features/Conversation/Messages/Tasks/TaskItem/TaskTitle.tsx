@@ -1,7 +1,6 @@
 'use client';
 
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Footprints, ListChecksIcon, Wrench, XIcon } from 'lucide-react';
 import { memo, useEffect, useState } from 'react';
@@ -108,29 +107,29 @@ const MetricsDisplay = memo<MetricsDisplayProps>(({ metrics, status }) => {
       {hasSteps && (
         <div className="flex items-center gap-0.5">
           <Footprints color={cssVar.colorTextTertiary} size={12} />
-          <Text fontSize={12} type="secondary">
+          <div className='text-[12px] text-muted-foreground'>
             {steps}
-          </Text>
+          </div>
         </div>
       )}
       {/* Tool calls */}
       {hasToolCalls && (
         <div className="flex items-center gap-0.5">
           <Wrench color={cssVar.colorTextTertiary} size={12} />
-          <Text fontSize={12} type="secondary">
+          <div className='text-[12px] text-muted-foreground'>
             {toolCalls}
-          </Text>
+          </div>
         </div>
       )}
       {/* Time */}
       {hasTime && (
-        <Text fontSize={12} type="secondary">
+        <div className='text-[12px] text-muted-foreground'>
           {isProcessing
             ? formatElapsedTime(elapsedTime)
             : duration
               ? t('task.metrics.duration', { duration: formatDuration(duration) })
               : null}
-        </Text>
+        </div>
       )}
     </div>
   );
@@ -142,9 +141,9 @@ const TaskTitle = memo<TaskTitleProps>(({ title, status, metrics }) => {
   return (
     <div className="flex items-center gap-1.5">
       <TaskStatusIndicator status={status} />
-      <Text ellipsis fontSize={14}>
+      <div className='truncate text-[14px]'>
         {title}
-      </Text>
+      </div>
       {metrics && <MetricsDisplay metrics={metrics} status={status} />}
     </div>
   );

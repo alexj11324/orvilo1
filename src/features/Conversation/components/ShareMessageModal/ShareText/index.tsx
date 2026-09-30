@@ -1,4 +1,3 @@
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
@@ -6,6 +5,8 @@ import { CopyIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -36,20 +37,19 @@ const ShareText = memo<ShareTextProps>(({ item }) => {
   const button = (
     <>
       <Button
-        block
-        icon={CopyIcon}
-        size={isMobile ? undefined : 'large'}
-        type={'primary'}
+        className="w-full"
+        size="default"
+        variant="default"
         onClick={async () => {
           await copyToClipboard(content);
           toast.success(t('copySuccess', { ns: 'common' }));
         }}
       >
-        {t('copy', { ns: 'common' })}
+        <CopyIcon data-icon="inline-start" /> {t('copy', { ns: 'common' })}
       </Button>
       <Button
-        block
-        size={isMobile ? undefined : 'large'}
+        className="w-full"
+        size="default"
         onClick={() => {
           exportFile(content, `${title}.md`);
         }}

@@ -1,4 +1,3 @@
-import { ActionIcon, Button, toast } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -6,7 +5,10 @@ import { LucidePlus, LucideTrash } from 'lucide-react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import Form from '@/components/GroupForm';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -175,19 +177,18 @@ const KeyValueEditor = memo<KeyValueEditorProps>(({ initialValue = {}, onFinish,
             <Form.Item style={{ marginBottom: 0, marginTop: 8 }}>
               <div className="flex gap-2 justify-between">
                 <Button
-                  icon={<LucidePlus />}
-                  size={'small'}
-                  type="fill"
+                  size="sm"
+                  variant="secondary"
                   onClick={() => add({ id: `new-${Date.now()}`, key: '', value: '' })}
                 >
-                  {t('updateArgs.form.add')}
+                  <LucidePlus /> {t('updateArgs.form.add')}
                 </Button>
 
                 <div className="flex gap-2">
-                  <Button size={'small'} onClick={handleCancel}>
+                  <Button size="sm" onClick={handleCancel}>
                     {t('cancel', { ns: 'common' })}
                   </Button>
-                  <Button loading={updating} size={'small'} type={'primary'} onClick={handleFinish}>
+                  <Button loading={updating} size="sm" variant="default" onClick={handleFinish}>
                     {t('save', { ns: 'common' })}
                   </Button>
                 </div>

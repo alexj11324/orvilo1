@@ -161,8 +161,13 @@ describe('Provider API against real persistence', () => {
   it('fails closed on connection checking and rejects stale revisions', async () => {
     const api = await caller(owner);
     const { data } = await api.create(config());
-    await expect(api.checkConnection({ id: data.id, revision: 1 })).rejects.toMatchObject({
-      code: 'PRECONDITION_FAILED',
+    // The real broker reports a failed provider probe as `unavailable`, not a
+    // green check — the wired composition resolves rather than throwing.
+    const check = await api.checkConnection({ id: data.id, revision: 1 });
+    expect(check).toMatchObject({
+      bindingId: data.id,
+      bindingRevision: 1,
+      status: 'unavailable',
     });
     await api.update({ id: data.id, revision: 1, config: { ...config(), name: 'Updated' } });
     await expect(api.checkConnection({ id: data.id, revision: 1 })).rejects.toMatchObject({

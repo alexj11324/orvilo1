@@ -472,7 +472,7 @@ async function setAutoScrollEnabled(world: CustomWorld, desired: boolean): Promi
   // Appearance cannot redirect this scenario to an unrelated preference.
   const row = title.locator('xpath=ancestor::*[@data-slot="form-item"][1]');
   await expect(row, 'auto-scroll setting row must be unique').toHaveCount(1);
-  const target = row.locator('[role="switch"], button.ant-switch');
+  const target = row.locator('[role="switch"]');
   await expect(target, 'auto-scroll setting row must contain exactly one switch').toHaveCount(1);
 
   const currentChecked = (await target.getAttribute('aria-checked')) === 'true';

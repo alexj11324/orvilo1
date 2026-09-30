@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { RotateCcwIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -80,9 +79,9 @@ const HowItWorksContent = memo(() => {
       </Stepper>
       <div className={`flex items-start gap-2 ${styles.loopBack}`}>
         <RotateCcwIcon className={styles.loopIcon} size={13} />
-        <Text fontSize={12} style={{ lineHeight: 1.6 }} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.6 }}>
           {t('goalEmpty.loop')}
-        </Text>
+        </div>
       </div>
     </div>
   );

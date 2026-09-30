@@ -1,11 +1,20 @@
-import { Select, Switch, Tabs, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarDays, Clock, RefreshCw } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { NumberField, NumberFieldGroup, NumberFieldInput } from '@/components/reui/number-field';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import {
   formatIntervalLabel,
@@ -137,14 +146,14 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
     <div className="flex flex-col gap-4">
       <div className="flex items-center gap-3">
         <div className="flex flex-col flex-1 gap-0.5">
-          <Text weight={500}>{t('trigger.section', { ns: 'automation' })}</Text>
-          <Text fontSize={12} type={'secondary'}>
+          <div className="font-medium">{t('trigger.section', { ns: 'automation' })}</div>
+          <div className="text-[12px] text-muted-foreground">
             {summary ?? t('trigger.unconfigured', { ns: 'automation' })}
-          </Text>
+          </div>
         </div>
         <Switch
           checked={enabled}
-          onChange={(checked) =>
+          onCheckedChange={(checked) =>
             onChange(
               checked
                 ? { kind: 'schedule', pattern: DEFAULT_PATTERN, timezone: dayjs.tz.guess() }
@@ -157,43 +166,31 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
       {enabled && nextRun && (
         <div className={cx(styles.preview, 'flex items-center gap-2.5')}>
           <Clock color={cssVar.colorTextDescription} size={16} />
-          <Text type={'secondary'}>{t('taskSchedule.nextRun', { ns: 'chat' })}</Text>
-          <Text style={{ flex: 1, textAlign: 'right' }} weight={500}>
+          <div className="text-muted-foreground">{t('taskSchedule.nextRun', { ns: 'chat' })}</div>
+          <div className="font-medium" style={{ flex: 1, textAlign: 'right' }}>
             {nextRun.toDate().toLocaleString()}
-          </Text>
+          </div>
         </div>
       )}
 
       {enabled && (
         <>
-          <Tabs
-            activeKey={kind}
-            items={[
-              {
-                key: 'schedule',
-                label: (
-                  <div className="flex items-center gap-1.5 justify-center">
-                    <CalendarDays size={14} />
-                    <span>{t('taskSchedule.schedulerTab', { ns: 'chat' })}</span>
-                  </div>
-                ),
-              },
-              {
-                key: 'heartbeat',
-                label: (
-                  <div className="flex items-center gap-1.5 justify-center">
-                    <RefreshCw size={14} />
-                    <span>{t('taskSchedule.intervalTab', { ns: 'chat' })}</span>
-                  </div>
-                ),
-              },
-            ]}
-            styles={{
-              list: { display: 'flex', width: '100%' },
-              tab: { flex: 1 },
-            }}
-            onChange={setKind}
-          />
+          <Tabs value={kind} onValueChange={setKind}>
+            <TabsList className="flex w-full">
+              <TabsTrigger className="flex-1" value="schedule">
+                <div className="flex items-center gap-1.5 justify-center">
+                  <CalendarDays size={14} />
+                  <span>{t('taskSchedule.schedulerTab', { ns: 'chat' })}</span>
+                </div>
+              </TabsTrigger>
+              <TabsTrigger className="flex-1" value="heartbeat">
+                <div className="flex items-center gap-1.5 justify-center">
+                  <RefreshCw size={14} />
+                  <span>{t('taskSchedule.intervalTab', { ns: 'chat' })}</span>
+                </div>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
           {kind === 'schedule' ? (
             <SchedulerForm
               maxExecutions={draft?.maxExecutions ?? null}
@@ -203,11 +200,13 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
             />
           ) : (
             <div className="flex flex-col gap-1.5">
-              <Text className={styles.fieldLabel}>
+              <div className={cn(styles.fieldLabel)}>
                 {t('taskSchedule.intervalLabel', { ns: 'chat' })}
-              </Text>
+              </div>
               <div className="flex items-center gap-2">
-                <Text type={'secondary'}>{t('taskSchedule.every', { ns: 'chat' })}</Text>
+                <div className="text-muted-foreground">
+                  {t('taskSchedule.every', { ns: 'chat' })}
+                </div>
                 <NumberField
                   min={intervalUnit === 'minutes' ? MIN_MINUTES : 1}
                   style={{ width: 100 }}
@@ -224,20 +223,31 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
                   </NumberFieldGroup>
                 </NumberField>
                 <Select
-                  style={{ flex: 1 }}
                   value={intervalUnit}
-                  variant={'filled'}
-                  options={[
+                  items={[
                     { label: t('taskSchedule.minutes', { ns: 'chat' }), value: 'minutes' },
                     { label: t('taskSchedule.hours', { ns: 'chat' }), value: 'hours' },
                   ]}
-                  onChange={(u: IntervalUnit) => {
-                    setIntervalUnit(u);
-                    const seconds = u === 'hours' ? intervalValue * 3600 : intervalValue * 60;
+                  onValueChange={(u: string) => {
+                    const unit = u as IntervalUnit;
+                    setIntervalUnit(unit);
+                    const seconds = unit === 'hours' ? intervalValue * 3600 : intervalValue * 60;
                     handleHeartbeatChange(seconds);
                   }}
-                />
-                <Text type={'secondary'}>{t('taskSchedule.intervalSuffix', { ns: 'chat' })}</Text>
+                >
+                  <SelectTrigger style={{ flex: 1 }}>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="minutes">
+                      {t('taskSchedule.minutes', { ns: 'chat' })}
+                    </SelectItem>
+                    <SelectItem value="hours">{t('taskSchedule.hours', { ns: 'chat' })}</SelectItem>
+                  </SelectContent>
+                </Select>
+                <div className="text-muted-foreground">
+                  {t('taskSchedule.intervalSuffix', { ns: 'chat' })}
+                </div>
               </div>
             </div>
           )}

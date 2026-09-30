@@ -1,11 +1,11 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { ActionIcon, Button, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { resolveGoalAttemptBudget, resolveGoalConcurrency } from '@orvilo/builtin-tool-goal';
 import type { CreateGoalParams, GoalCriterionDraft } from '@orvilo/builtin-tool-task';
 import { DEFAULT_GOAL_MAX_ROUNDS } from '@orvilo/const/verify';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   ArrowLeft,
   Paperclip,
@@ -19,7 +19,9 @@ import {
 import { type KeyboardEvent, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import GeneratingBorder from '@/components/GeneratingBorder';
+import { useModalContext } from '@/components/Modal';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import {
   NumberField,
@@ -28,6 +30,8 @@ import {
   NumberFieldIncrement,
   NumberFieldInput,
 } from '@/components/reui/number-field';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   CriterionList,
   CriterionRequiredChip,
@@ -440,9 +444,7 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                 title={t('createGoal.back')}
                 onClick={() => setStep('describe')}
               />
-              <Text fontSize={12} type={'secondary'}>
-                {t('createGoal.reviewStep')}
-              </Text>
+              <div className="text-[12px] text-muted-foreground">{t('createGoal.reviewStep')}</div>
             </div>
           )}
           {step === 'review' ? (
@@ -493,16 +495,16 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                       </div>
                     </div>
                   </div>
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {remainingSeconds > 0
                       ? t('createGoal.generatingCountdown', {
                           time: formatGoalGenerationRemainingTime(remainingSeconds),
                         })
                       : t('createGoal.generatingAlmostDone')}
-                  </Text>
+                  </div>
                 </div>
               ) : (
-                <Text type={'secondary'}>{t('createGoal.describeHint')}</Text>
+                <div className="text-muted-foreground">{t('createGoal.describeHint')}</div>
               )}
             </>
           )}
@@ -531,14 +533,13 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
             <div className="flex items-center gap-2 justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck color={cssVar.colorTextTertiary} size={16} />
-                <Text fontSize={13} weight={600}>
-                  {t('createGoal.criteriaTitle')}
-                </Text>
-                <Text className={styles.sectionHint} fontSize={12}>
+                <div className="text-[13px] font-semibold">{t('createGoal.criteriaTitle')}</div>
+                <div className={cn('text-[12px]', styles.sectionHint)}>
                   {t('createGoal.criteriaHint')}
-                </Text>
+                </div>
               </div>
-              <Button icon={Plus} size={'small'} type={'text'} onClick={addCriterion}>
+              <Button size="sm" variant="ghost" onClick={addCriterion}>
+                <Plus data-icon="inline-start" />
                 {t('createGoal.addCriterion')}
               </Button>
             </div>
@@ -588,14 +589,12 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
           </div>
 
           <div className={`flex flex-col gap-2.5 ${styles.reviewSection}`}>
-            <Text fontSize={13} weight={600}>
-              {t('createGoal.budgetTitle')}
-            </Text>
+            <div className="text-[13px] font-semibold">{t('createGoal.budgetTitle')}</div>
             <div className="flex flex-col gap-3">
               <div className={styles.budgetField}>
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('createGoal.roundBudgetLabel')}
-                </Text>
+                </div>
                 <NumberField
                   disabled={!canCreate}
                   min={2}
@@ -615,15 +614,15 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                     </span>
                   </NumberFieldGroup>
                 </NumberField>
-                <Text className={styles.sectionHint} fontSize={12}>
+                <div className={cn('text-[12px]', styles.sectionHint)}>
                   {t('createGoal.roundBudgetHint')}
-                </Text>
+                </div>
               </div>
 
               <div className={styles.budgetField}>
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('createGoal.costBudgetLabel')}
-                </Text>
+                </div>
                 <NumberField
                   disabled={!canCreate}
                   min={0}
@@ -639,15 +638,15 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                     <NumberFieldInput placeholder={t('createGoal.costBudgetPlaceholder')} />
                   </NumberFieldGroup>
                 </NumberField>
-                <Text className={styles.sectionHint} fontSize={12}>
+                <div className={cn('text-[12px]', styles.sectionHint)}>
                   {t('createGoal.costBudgetHint')}
-                </Text>
+                </div>
               </div>
 
               <div className={styles.budgetField}>
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('createGoal.parallelismLabel')}
-                </Text>
+                </div>
                 <NumberField
                   disabled={!canCreate}
                   max={10}
@@ -668,9 +667,9 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
                     </span>
                   </NumberFieldGroup>
                 </NumberField>
-                <Text className={styles.sectionHint} fontSize={12}>
+                <div className={cn('text-[12px]', styles.sectionHint)}>
                   {t('createGoal.parallelismHint')}
-                </Text>
+                </div>
               </div>
             </div>
           </div>
@@ -692,22 +691,22 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
           {step === 'describe' && (
             <Button
               disabled={!canCreate || isCreating}
-              icon={PencilLine}
-              size={'small'}
+              size="sm"
               style={{ color: cssVar.colorTextTertiary }}
               title={canCreate ? undefined : reason}
-              type={'text'}
+              variant="ghost"
               onClick={handleCreateBlank}
             >
+              <PencilLine data-icon="inline-start" />
               {t('createModal.createBlank')}
             </Button>
           )}
           <Button
+            className="rounded-full"
             loading={isCreating || step === 'preparing'}
-            shape={'round'}
-            size={'small'}
+            size="sm"
             title={canCreate ? undefined : reason}
-            type={'primary'}
+            variant="outline"
             disabled={
               !canCreate ||
               isCreating ||

@@ -1,10 +1,11 @@
 'use client';
 
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { GitPullRequest } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import Avatar from '@/components/Avatar';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
 import { acceptanceCodingScope } from '../History/codingScope';
@@ -74,9 +75,9 @@ const AcceptanceIdentity = ({ statusSlot, topicSlot }: AcceptanceIdentityProps) 
           reader came to judge — and it sat where the title's own meaning
           should carry. */}
       <div className={`flex items-center gap-2.5 flex-wrap ${styles.titleRow}`}>
-        <Text ellipsis as={'h1'} style={{ fontSize: 18, margin: 0, minWidth: 0 }}>
+        <h1 className="truncate min-w-0" style={{ fontSize: 18, margin: 0, minWidth: 0 }}>
           {subject.title ?? subject.id}
-        </Text>
+        </h1>
       </div>
 
       <div className={`flex items-center gap-3 flex-wrap ${styles.metaRow}`}>
@@ -87,7 +88,7 @@ const AcceptanceIdentity = ({ statusSlot, topicSlot }: AcceptanceIdentityProps) 
         {authorName && (
           <div className="flex items-center gap-1.5">
             <Avatar avatar={author?.avatar || authorName.slice(0, 1)} size={18} />
-            <Text style={{ color: cssVar.colorText, fontSize: 'inherit' }}>{authorName}</Text>
+            <div style={{ color: cssVar.colorText, fontSize: 'inherit' }}>{authorName}</div>
           </div>
         )}
         {originAgent && (

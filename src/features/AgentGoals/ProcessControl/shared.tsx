@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import {
   CircleHelp,
   FlaskConical,
@@ -63,9 +63,9 @@ KindDot.displayName = 'GoalKindDot';
 
 export const MonoText = memo<{ children: React.ReactNode; title?: string }>(
   ({ children, title }) => (
-    <Text className={styles.mono} fontSize={12} title={title} type={'secondary'}>
+    <div className={cn('text-[12px] text-muted-foreground', styles.mono)} title={title}>
       {children}
-    </Text>
+    </div>
   ),
 );
 

@@ -1,7 +1,7 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { TargetIcon } from 'lucide-react';
 import {
   CalendarClockIcon,
@@ -15,6 +15,8 @@ import {
 } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import type { GoalExampleKey, GoalExampleSeed } from './goalExamples';
 import { buildGoalExampleSeed, GOAL_EXAMPLE_KEYS } from './goalExamples';
@@ -147,14 +149,13 @@ const GoalEmptyState = memo<GoalEmptyStateProps>(({ onCreate }) => {
             <InfinityIcon aria-hidden size={64} strokeWidth={1.75} />
           </div>
           <div className="flex flex-col items-center gap-2">
-            <Text fontSize={20} weight={600}>
-              {t('goalEmpty.title')}
-            </Text>
-            <Text className={styles.heroLead} fontSize={14} type={'secondary'}>
+            <div className="text-[20px] font-semibold">{t('goalEmpty.title')}</div>
+            <div className={cn('text-[14px] text-muted-foreground', styles.heroLead)}>
               {t('goalEmpty.lead')}
-            </Text>
+            </div>
           </div>
-          <Button icon={PlusIcon} type={'primary'} onClick={() => onCreate()}>
+          <Button variant="outline" onClick={() => onCreate()}>
+            <PlusIcon data-icon="inline-start" />
             {t('goalEmpty.create')}
           </Button>
         </div>
@@ -162,16 +163,16 @@ const GoalEmptyState = memo<GoalEmptyStateProps>(({ onCreate }) => {
 
       <div className={`flex flex-col gap-3 ${styles.section}`}>
         <div className="flex items-center justify-between">
-          <Text fontSize={13} type={'secondary'} weight={600}>
+          <div className="text-[13px] text-muted-foreground font-semibold">
             {t('goalEmpty.examplesTitle')}
-          </Text>
+          </div>
           <Button
-            className={styles.howHint}
-            icon={CircleHelpIcon}
-            size={'small'}
-            type={'text'}
+            className={cn(styles.howHint)}
+            size="sm"
+            variant="ghost"
             onClick={() => createGoalHowItWorksModal()}
           >
+            <CircleHelpIcon data-icon="inline-start" />
             {t('goalEmpty.howHint')}
           </Button>
         </div>
@@ -196,12 +197,10 @@ const GoalEmptyState = memo<GoalEmptyStateProps>(({ onCreate }) => {
                   {createElement(EXAMPLE_ICONS[key], { size: 16 })}
                 </div>
                 <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-                  <Text fontSize={11} type={'secondary'}>
+                  <div className="text-[11px] text-muted-foreground">
                     {t(`goalEmpty.examples.${key}.tag` as never)}
-                  </Text>
-                  <Text ellipsis={{ rows: 2 }} fontSize={13} weight={500}>
-                    {seed.title}
-                  </Text>
+                  </div>
+                  <div className="line-clamp-2 text-[13px] font-medium">{seed.title}</div>
                 </div>
               </div>
             );
@@ -211,13 +210,11 @@ const GoalEmptyState = memo<GoalEmptyStateProps>(({ onCreate }) => {
         <div className={`flex flex-col gap-1.5 ${styles.judge}`}>
           <div className="flex items-start gap-2">
             <XIcon color={cssVar.colorError} size={13} style={{ marginBlockStart: 3 }} />
-            <Text fontSize={12} type={'secondary'}>
-              {t('goalEmpty.judge.bad')}
-            </Text>
+            <div className="text-[12px] text-muted-foreground">{t('goalEmpty.judge.bad')}</div>
           </div>
           <div className="flex items-start gap-2">
             <CheckIcon color={cssVar.colorSuccess} size={13} style={{ marginBlockStart: 3 }} />
-            <Text fontSize={12}>{t('goalEmpty.judge.good')}</Text>
+            <div className="text-[12px]">{t('goalEmpty.judge.good')}</div>
           </div>
         </div>
       </div>

@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { createContext, type ReactNode, use } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Button } from '@/components/ui/button';
 import {
   Empty,
   EmptyContent,

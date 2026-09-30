@@ -7,12 +7,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 import TopicPanel from './TopicPanel';
 
-// Real base-ui ActionIcon only surfaces its title via a hover Tooltip, so the
-// static DOM has no accessible name to query.
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+// The real ActionIcon surfaces its title as aria-label; keep the stub so the
+// assertion stays a plain accessible-name query.
+vi.mock('@/components/ActionIcon', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  ActionIcon: ({ onClick, title }: { onClick?: () => void; title?: string }) =>
-    createElement('button', { onClick, title }, title),
+  default: ({ onClick, title }: { onClick?: () => void; title?: string }) =>
+    createElement('button', { 'aria-label': title, onClick }, title),
 }));
 
 vi.mock('@/features/AgentTasks/AgentTaskDetail/TopicChatDrawer', () => ({
@@ -41,7 +41,7 @@ vi.mock('@/features/AgentTasks/AgentTaskDetail/TopicChatDrawer', () => ({
 describe('TopicPanel', () => {
   it('shows the agent avatar and only a collapse action in the conversation rail', () => {
     const onCollapse = vi.fn();
-    const { getByAltText, getByTestId, getByText, getByTitle, queryByTitle } = render(
+    const { getByLabelText, getByTestId, getByText, queryByTitle } = render(
       createElement(TopicPanel, {
         agentAvatar: '🤖',
         agentId: 'agent-1',
@@ -62,10 +62,10 @@ describe('TopicPanel', () => {
     );
     expect(getByTestId('topic-conversation').textContent).toBe('agent-1:topic-1');
 
-    expect(getByAltText('🤖')).toBeTruthy();
+    expect(getByLabelText('🤖')).toBeTruthy();
     expect(queryByTitle('acceptance.origin.backToRuns')).toBeNull();
 
-    fireEvent.click(getByTitle('acceptance.ledger.collapse'));
+    fireEvent.click(getByLabelText('acceptance.ledger.collapse'));
     expect(onCollapse).toHaveBeenCalledOnce();
   });
 });

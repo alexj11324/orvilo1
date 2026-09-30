@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -25,9 +24,9 @@ const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
   const { t } = useTranslation('selfLearning');
   return (
     <div className="flex flex-col gap-2">
-      <Text fontSize={12} type={'secondary'}>
+      <div className="text-[12px] text-muted-foreground">
         {t('domains.title')} {domains.length}
-      </Text>
+      </div>
       <div
         className="flex flex-col p-0 border"
         style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
@@ -45,12 +44,12 @@ const DomainList = memo<DomainListProps>(({ domains, onOpen }) => {
             }}
             onClick={() => onOpen(d.id)}
           >
-            <Text style={{ flex: 'none', width: 140 }} weight={500}>
+            <div className="font-medium" style={{ flex: 'none', width: 140 }}>
               {d.title}
-            </Text>
-            <Text fontSize={12.5} style={{ flex: 1 }} type={'secondary'}>
+            </div>
+            <div className="text-muted-foreground" style={{ fontSize: 12.5, flex: 1 }}>
               {t('domains.meta', { habits: d.lessons.length, runs: d.runCount })}
-            </Text>
+            </div>
             <ChevronRightIcon size={13} style={{ flex: 'none', opacity: 0.4 }} />
           </button>
         ))}

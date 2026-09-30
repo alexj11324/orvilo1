@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { EyeIcon, PauseIcon, PlayIcon } from 'lucide-react';
 import { memo, type ReactNode, useEffect, useMemo, useState } from 'react';
@@ -10,6 +9,7 @@ import { Link } from 'react-router';
 import NotFound from '@/components/404';
 import AsyncError from '@/components/AsyncError';
 import GoalDetailSkeleton from '@/components/Skeleton/GoalDetail';
+import { Button } from '@/components/ui/button';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import { useAgentRoutePath } from '@/features/AgentBreadcrumb/useAgentRoutePath';
 import NavHeader from '@/features/NavHeader';
@@ -85,9 +85,7 @@ const Metric = memo<{
     <div className="flex items-center gap-[7px]" style={{ minHeight: 26 }}>
       {value}
     </div>
-    <Text fontSize={12} type={'secondary'}>
-      {label}
-    </Text>
+    <div className="text-[12px] text-muted-foreground">{label}</div>
   </div>
 ));
 
@@ -98,11 +96,7 @@ Metric.displayName = 'GoalHeaderMetric';
  *  animation, and a second spinner here said the same thing twice. */
 const LivenessValue = memo<{ latest?: Date }>(({ latest }) => {
   const { text } = useActivityTime(latest);
-  return (
-    <Text fontSize={16} weight={600}>
-      {text || '—'}
-    </Text>
-  );
+  return <div className="text-[16px] font-semibold">{text || '—'}</div>;
 });
 
 LivenessValue.displayName = 'GoalLivenessValue';
@@ -217,9 +211,7 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
                   title={<Link to={buildAgentPath('goals')}>{t('goalList.title')}</Link>}
                 />
               ) : (
-                <Text fontSize={14} weight={500}>
-                  {goal.title}
-                </Text>
+                <div className="text-[14px] font-medium">{goal.title}</div>
               )}
               {/* Not nested under the breadcrumb: an agent-less goal still has to
                   be deletable, and this menu is the only place that can do it. */}
@@ -231,13 +223,13 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
               <div className="flex items-center gap-2">
                 {managerConversation && (
                   <Button
-                    icon={EyeIcon}
-                    size={'small'}
+                    size="sm"
                     onClick={() => {
                       clearPortalStack();
                       chat.openSupervision(managerConversation);
                     }}
                   >
+                    <EyeIcon data-icon="inline-start" />
                     {t('goalProcess.manager.viewTrace')}
                   </Button>
                 )}
@@ -255,61 +247,43 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
         <div className="flex flex-col flex-1" style={{ overflowY: 'auto' }}>
           <WideScreenContainer gap={20} paddingBlock={16}>
             <div className={`flex flex-col gap-2 ${styles.header}`}>
-              <Text as={'h1'} fontSize={22} weight={600}>
-                {goal.title}
-              </Text>
+              <h1 className="text-[22px] font-semibold">{goal.title}</h1>
               <div className={`flex gap-2 flex-wrap ${styles.metrics}`}>
                 <Metric
                   label={t('goalProcess.metrics.status')}
                   value={
                     <>
                       <GoalStatusGlyph size={16} status={goal.status} />
-                      <Text fontSize={16} weight={600}>
+                      <div className="text-[16px] font-semibold">
                         {t(goalStatusKey(goal.status))}
-                      </Text>
+                      </div>
                     </>
                   }
                   onClick={open('lifecycle')}
                 />
                 <Metric
                   label={t('goalProcess.metrics.tasks')}
-                  value={
-                    <Text fontSize={16} weight={600}>
-                      {tasks}
-                    </Text>
-                  }
+                  value={<div className="text-[16px] font-semibold">{tasks}</div>}
                   onClick={open('tasks')}
                 />
                 <Metric
                   label={t('goalProcess.metrics.findings')}
-                  value={
-                    <Text fontSize={16} weight={600}>
-                      {findings}
-                    </Text>
-                  }
+                  value={<div className="text-[16px] font-semibold">{findings}</div>}
                   onClick={open('findings')}
                 />
                 <Metric
                   label={budgetLabel}
                   value={
                     <>
-                      <Text fontSize={16} weight={600}>
-                        {budgetLead}
-                      </Text>
-                      <Text fontSize={12} type={'secondary'}>
-                        {budgetTrail}
-                      </Text>
+                      <div className="text-[16px] font-semibold">{budgetLead}</div>
+                      <div className="text-[12px] text-muted-foreground">{budgetTrail}</div>
                     </>
                   }
                   onClick={open('budget')}
                 />
                 <Metric
                   label={t('goalProcess.metrics.duration')}
-                  value={
-                    <Text fontSize={16} weight={600}>
-                      {durationText}
-                    </Text>
-                  }
+                  value={<div className="text-[16px] font-semibold">{durationText}</div>}
                   onClick={open('duration')}
                 />
                 <Metric
@@ -324,16 +298,20 @@ const GoalDetailPage = memo<GoalDetailPageProps>(({ agentId, goalId }) => {
               {canPause && (
                 <div className="flex items-center gap-2.5" style={{ paddingBlock: '8px 0' }}>
                   <Button
-                    icon={paused ? PlayIcon : PauseIcon}
-                    type={paused ? 'primary' : 'default'}
+                    variant={paused ? 'default' : 'outline'}
                     onClick={() => void (paused ? resumeGoal(goal.id) : pauseGoal(goal.id))}
                   >
+                    {paused ? (
+                      <PlayIcon data-icon="inline-start" />
+                    ) : (
+                      <PauseIcon data-icon="inline-start" />
+                    )}
                     {paused ? t('goalProcess.resume') : t('goalProcess.pause')}
                   </Button>
                   {paused && (
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('goalProcess.paused')}
-                    </Text>
+                    </div>
                   )}
                 </div>
               )}

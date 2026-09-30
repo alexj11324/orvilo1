@@ -1,9 +1,15 @@
 import { Markdown } from '@lobehub/ui';
-import { Accordion, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import type { GoalGraphSnapshot } from '@orvilo/types';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 
 import {
@@ -35,31 +41,29 @@ export const ExperimentDetail = ({
     <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
       <div className="flex flex-col gap-2.5 p-4" style={{ flexShrink: 0 }}>
         <div className="flex gap-2 flex-wrap">
-          <Tag>{t('goalExperiment.number', { number: view.seq })}</Tag>
-          <Tag>
+          <Badge variant="secondary">{t('goalExperiment.number', { number: view.seq })}</Badge>
+          <Badge variant="secondary">
             {t(
               view.isVerifying
                 ? 'goalProcess.tag.verifying'
                 : `goalProcess.nodeStatus.${view.node.status}`,
             )}
-          </Tag>
+          </Badge>
         </div>
-        <Text as={'h2'} fontSize={18} weight={600}>
-          {view.node.title}
-        </Text>
+        <h2 className="text-[18px] font-semibold">{view.node.title}</h2>
         <div className="flex gap-2 flex-wrap">
           {view.node.taskId && (
-            <Button size={'small'} onClick={() => openTask(view.node.taskId!)}>
+            <Button size="sm" onClick={() => openTask(view.node.taskId!)}>
               {t('goalExperiment.execution')}
             </Button>
           )}
           {view.node.taskId && hasReviewableResult(view) && (
-            <Button size={'small'} onClick={() => openResult(view.node.taskId!)}>
+            <Button size="sm" onClick={() => openResult(view.node.taskId!)}>
               {t('goalExperiment.delivery')}
             </Button>
           )}
           {view.acceptance && (
-            <Button size={'small'} onClick={() => openAcceptance(view.acceptance!.id)}>
+            <Button size="sm" onClick={() => openAcceptance(view.acceptance!.id)}>
               {t('goalExperiment.acceptance')}
             </Button>
           )}
@@ -67,13 +71,13 @@ export const ExperimentDetail = ({
       </div>
       <div className="flex flex-col gap-5 p-4" style={{ minHeight: 0, overflowY: 'auto' }}>
         <div className="flex flex-col gap-2" style={{ flexShrink: 0 }}>
-          <Text weight={600}>{t('goalExperiment.result')}</Text>
+          <div className="font-semibold">{t('goalExperiment.result')}</div>
           {view.findings.length === 0 && (
-            <Text type={'secondary'}>{t('goalExperiment.noResult')}</Text>
+            <div className="text-muted-foreground">{t('goalExperiment.noResult')}</div>
           )}
           {view.findings.map((finding) => (
             <div className="flex flex-col gap-1.5" key={finding.id}>
-              <Text weight={500}>{finding.title}</Text>
+              <div className="font-medium">{finding.title}</div>
               {finding.description && (
                 <Markdown fontSize={13} style={{ flexShrink: 0 }} variant={'chat'}>
                   {finding.description}
@@ -83,15 +87,15 @@ export const ExperimentDetail = ({
           ))}
         </div>
         <div className="flex flex-col gap-2" style={{ flexShrink: 0 }}>
-          <Text weight={600}>{t('goalExperiment.lineage')}</Text>
+          <div className="font-semibold">{t('goalExperiment.lineage')}</div>
           {relations.parents.length === 0 && (
-            <Text type={'secondary'}>{t('goalExperiment.baseline')}</Text>
+            <div className="text-muted-foreground">{t('goalExperiment.baseline')}</div>
           )}
           {(['parents', 'children'] as const).map((kind) =>
             relations[kind].map((relative) => (
               <Button
                 key={`${kind}:${relative.node.id}`}
-                size={'small'}
+                size="sm"
                 style={{
                   height: 'auto',
                   minHeight: 32,
@@ -110,16 +114,13 @@ export const ExperimentDetail = ({
             )),
           )}
         </div>
-        <Accordion
-          defaultValue={['instruction']}
-          indicatorPlacement="inline"
-          style={{ flexShrink: 0 }}
-          items={[
+        <Accordion defaultValue={['instruction']}>
+          {[
             {
               children: (
-                <Text style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
+                <div style={{ whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>
                   {view.node.description ?? view.node.title}
-                </Text>
+                </div>
               ),
               key: 'instruction',
               title: t('goalExperiment.instruction'),
@@ -127,15 +128,18 @@ export const ExperimentDetail = ({
             {
               children: (
                 <div className="flex flex-col gap-2">
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('goalExperiment.inputHint')}
-                  </Text>
+                  </div>
                   {inputs.map((input) => (
                     <div className="flex flex-col gap-1" key={input.workVersionId}>
-                      <Text>{input.work?.title ?? t('goalExperiment.unavailableInput')}</Text>
-                      <Text fontSize={12} style={{ overflowWrap: 'anywhere' }} type={'secondary'}>
+                      <div>{input.work?.title ?? t('goalExperiment.unavailableInput')}</div>
+                      <div
+                        className="text-[12px] text-muted-foreground"
+                        style={{ overflowWrap: 'anywhere' }}
+                      >
                         {input.workVersionId}
-                      </Text>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -143,8 +147,15 @@ export const ExperimentDetail = ({
               key: 'inputs',
               title: t('goalExperiment.inputs', { count: inputs.length }),
             },
-          ]}
-        />
+          ]
+            .filter(Boolean)
+            .map((item) => (
+              <AccordionItem key={item.key} value={item.key}>
+                <AccordionTrigger>{item.title}</AccordionTrigger>
+                <AccordionContent>{item.children}</AccordionContent>
+              </AccordionItem>
+            ))}
+        </Accordion>
         {children}
       </div>
     </div>

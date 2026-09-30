@@ -1,12 +1,3 @@
-import {
-  ActionIcon,
-  Button,
-  Checkbox,
-  DropdownMenu,
-  Pagination,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import type { TaskListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
@@ -23,7 +14,13 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import TablePagination from '@/components/TablePagination';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -114,9 +111,7 @@ const CreatedByCell = memo<{ userId: string | null }>(({ userId }) => {
   return (
     <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
       <AssigneeUserAvatar size={16} userId={userId} />
-      <Text ellipsis fontSize={12} type={'secondary'}>
-        {meta?.title ?? ''}
-      </Text>
+      <div className="truncate min-w-0 text-[12px] text-muted-foreground">{meta?.title ?? ''}</div>
     </div>
   );
 });
@@ -140,19 +135,22 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
   return (
     <div className={styles.row} onClick={() => onOpen(task.identifier)}>
       <div onClick={(e) => e.stopPropagation()}>
-        <Checkbox checked={checked} onChange={(next) => onCheckedChange(task.identifier, next)} />
+        <Checkbox
+          checked={checked}
+          onCheckedChange={(next) => onCheckedChange(task.identifier, next === true)}
+        />
       </div>
       <div className={styles.titleCell}>
         <span className={styles.titleText}>{task.name || task.identifier}</span>
       </div>
       <CreatedByCell userId={task.createdByUserId} />
       <AutomationStatusBadge status={status} />
-      <Text ellipsis fontSize={12} type={'secondary'}>
+      <div className="truncate min-w-0 text-[12px] text-muted-foreground">
         {automationTriggerSummary(task, t)}
-      </Text>
-      <Text ellipsis fontSize={12} type={'secondary'}>
+      </div>
+      <div className="truncate min-w-0 text-[12px] text-muted-foreground">
         {nextRun ? dayjs(nextRun.toDate()).fromNow() : '—'}
-      </Text>
+      </div>
       <div onClick={(e) => e.stopPropagation()}>
         <DropdownMenu
           items={[
@@ -316,7 +314,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
           <AsyncError error={error} onRetry={() => void onRefetch()} />
         ) : isLoading ? (
           <div className="flex flex-col p-6">
-            <Text type={'secondary'}>{t('page.loading')}</Text>
+            <div className="text-muted-foreground">{t('page.loading')}</div>
           </div>
         ) : isEmptyUnfiltered ? (
           emptyContent
@@ -352,7 +350,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
                         <Checkbox
                           checked={allChecked}
                           indeterminate={selected.size > 0 && !allChecked}
-                          onChange={(checkedAll) =>
+                          onCheckedChange={(checkedAll) =>
                             setSelected(
                               checkedAll
                                 ? new Set(visibleTasks.map((task) => task.identifier))
@@ -375,7 +373,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
             </div>
             {visibleTasks.length === 0 ? (
               <div className="flex flex-col items-center py-12">
-                <Text type={'secondary'}>{t('page.no_matches')}</Text>
+                <div className="text-muted-foreground">{t('page.no_matches')}</div>
               </div>
             ) : (
               visibleTasks.map((task) => (
@@ -390,10 +388,10 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
             )}
             {(total > SCHEDULED_TASKS_PAGE_SIZE || page > 1) && (
               <div className="flex justify-center py-4">
-                <Pagination
+                <TablePagination
                   current={page}
                   pageSize={SCHEDULED_TASKS_PAGE_SIZE}
-                  showSizeChanger={false}
+                  pageSizeOptions={[SCHEDULED_TASKS_PAGE_SIZE]}
                   total={total}
                   onChange={onPageChange}
                 />
@@ -404,16 +402,16 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
         )}
         {selected.size > 0 && (
           <div className={styles.batchBar}>
-            <Text fontSize={12} type={'secondary'}>
+            <div className="text-[12px] text-muted-foreground">
               {t('batch.selected', { count: selected.size })}
-            </Text>
-            <Button size={'small'} onClick={() => handleBatch('resume')}>
+            </div>
+            <Button size="sm" onClick={() => handleBatch('resume')}>
               {t('batch.resume')}
             </Button>
-            <Button size={'small'} onClick={() => handleBatch('pause')}>
+            <Button size="sm" onClick={() => handleBatch('pause')}>
               {t('batch.pause')}
             </Button>
-            <Button danger size={'small'} onClick={() => handleBatch('delete')}>
+            <Button size="sm" variant="destructive" onClick={() => handleBatch('delete')}>
               {t('batch.delete')}
             </Button>
           </div>

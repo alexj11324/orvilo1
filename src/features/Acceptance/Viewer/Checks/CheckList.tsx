@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceGroupFeedback } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -16,6 +15,8 @@ import {
 import { Fragment, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 
@@ -123,12 +124,12 @@ const CheckList = memo<CheckListProps>(
             <>
               <PartyPopper className={styles.celebrateIcon} color={cssVar.colorSuccess} size={40} />
               <div className="flex flex-col items-center gap-1">
-                <Text strong style={{ color: cssVar.colorSuccess, fontSize: 15 }}>
+                <div className="font-semibold" style={{ color: cssVar.colorSuccess, fontSize: 15 }}>
                   {t('acceptance.checks.allAccepted.title')}
-                </Text>
-                <Text fontSize={13} type={'secondary'}>
+                </div>
+                <div className="text-[13px] text-muted-foreground">
                   {t('acceptance.checks.allAccepted.desc')}
-                </Text>
+                </div>
               </div>
             </>
           ) : (
@@ -213,9 +214,9 @@ const CheckList = memo<CheckListProps>(
                 }}
                 onClick={() => onToggleGroup(key)}
               >
-                <Text strong style={{ fontSize: 13 }}>
+                <div className="font-semibold" style={{ fontSize: 13 }}>
                   {label}
-                </Text>
+                </div>
                 {allVerified ? (
                   <div
                     className="flex items-center gap-1"
@@ -226,26 +227,26 @@ const CheckList = memo<CheckListProps>(
                   </div>
                 ) : (
                   <div className="flex items-center gap-2">
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[12px] text-muted-foreground">
                       {t('acceptance.group.acceptedRatio', {
                         accepted: acceptedCount,
                         total: groupChecks_.length,
                       })}
-                    </Text>
+                    </div>
                     {exceptionCount > 0 && (
-                      <Text style={{ color: cssVar.colorError, fontSize: 12 }}>
+                      <div style={{ color: cssVar.colorError, fontSize: 12 }}>
                         {t('acceptance.group.failedCount', { count: exceptionCount })}
-                      </Text>
+                      </div>
                     )}
                     {rejectedCount > 0 && (
-                      <Text style={{ color: cssVar.colorError, fontSize: 12 }}>
+                      <div style={{ color: cssVar.colorError, fontSize: 12 }}>
                         {t('acceptance.group.rejectedCount', { count: rejectedCount })}
-                      </Text>
+                      </div>
                     )}
                     {ignoredCount > 0 && (
-                      <Text fontSize={12} type={'secondary'}>
+                      <div className="text-[12px] text-muted-foreground">
                         {t('acceptance.group.ignoredCount', { count: ignoredCount })}
-                      </Text>
+                      </div>
                     )}
                   </div>
                 )}
@@ -257,12 +258,11 @@ const CheckList = memo<CheckListProps>(
                     <Button
                       className={'acceptance-group-actions'}
                       disabled={reviewPending && acceptingGroup !== key}
-                      icon={<BadgeCheck />}
                       loading={acceptingGroup === key}
-                      size={'small'}
+                      size="sm"
                       // The spinner must stay visible after the pointer leaves.
                       style={acceptingGroup === key ? { opacity: 1 } : undefined}
-                      type={'text'}
+                      variant="ghost"
                       onClick={async (event) => {
                         event.stopPropagation();
                         setAcceptingGroup(key);
@@ -275,6 +275,7 @@ const CheckList = memo<CheckListProps>(
                         if (ok && !collapsed) onToggleGroup(key);
                       }}
                     >
+                      <BadgeCheck data-icon="inline-start" />
                       {t('acceptance.review.acceptAll')}
                     </Button>
                   ) : allVerified || ignoredCount > 0 ? null : (
@@ -369,19 +370,19 @@ const CheckList = memo<CheckListProps>(
                             color={stale ? cssVar.colorTextQuaternary : cssVar.colorError}
                             size={13}
                           />
-                          <Text
+                          <div
                             style={{
                               color: stale ? cssVar.colorTextTertiary : cssVar.colorError,
                               fontSize: 12,
                             }}
                           >
                             {t('acceptance.group.feedbackLabel')}
-                          </Text>
-                          <Text fontSize={12} type={'secondary'}>
+                          </div>
+                          <div className="text-[12px] text-muted-foreground">
                             {hydrated ? dayjs(entry.createdAt).format('MM-DD HH:mm') : null}
-                          </Text>
+                          </div>
                         </div>
-                        <Text style={{ fontSize: 12 }}>{entry.comment}</Text>
+                        <div style={{ fontSize: 12 }}>{entry.comment}</div>
                         <AttachmentThumbs attachments={entry.attachments} />
                       </div>
                     );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   BadgeCheck,
@@ -13,6 +12,8 @@ import {
 } from 'lucide-react';
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { acceptanceContentLayout } from '../layout';
 
@@ -294,13 +295,9 @@ const DecisionBar = memo<DecisionBarProps>(
             <ProgressRing done={decidedCount} total={totalCount} />
           )}
           <div className="flex flex-col gap-0.5" style={{ flex: '0 1 auto', minWidth: 0 }}>
-            <Text ellipsis type={'secondary'}>
-              {statusText}
-            </Text>
+            <div className="truncate min-w-0 text-muted-foreground">{statusText}</div>
             {subText && (
-              <Text ellipsis fontSize={12} type={'secondary'}>
-                {subText}
-              </Text>
+              <div className="truncate min-w-0 text-[12px] text-muted-foreground">{subText}</div>
             )}
           </div>
 
@@ -308,13 +305,8 @@ const DecisionBar = memo<DecisionBarProps>(
             Sits with the status reading on the left: it explains that reading,
             while the right side stays pure actions. */}
           {feedbackCount > 0 && (
-            <Button
-              icon={<ListTodo />}
-              size={'small'}
-              style={{ flex: 'none' }}
-              type={'text'}
-              onClick={onOpenFeedback}
-            >
+            <Button size="sm" style={{ flex: 'none' }} variant="ghost" onClick={onOpenFeedback}>
+              <ListTodo />
               {t('acceptance.bar.feedback', { count: feedbackCount })}
             </Button>
           )}
@@ -324,7 +316,7 @@ const DecisionBar = memo<DecisionBarProps>(
             the reviewer may still hand the prompt to another agent. Embedded,
             the composer beside it already receives the draft. */}
           {state === 'live' && hasFeedback && !embedded && (
-            <Button disabled={pending} type={'fill'} onClick={onCopyReview}>
+            <Button disabled={pending} variant="secondary" onClick={onCopyReview}>
               {t('acceptance.bar.copyReview')}
             </Button>
           )}
@@ -336,16 +328,12 @@ const DecisionBar = memo<DecisionBarProps>(
               <>
                 {/* Last words before the repair leaves — a global note the next
                   round reads, for what the queued per-check feedback missed. */}
-                <Button
-                  disabled={pending}
-                  icon={<MessageSquarePlus />}
-                  type={'fill'}
-                  onClick={onAddComment}
-                >
+                <Button disabled={pending} variant="secondary" onClick={onAddComment}>
+                  <MessageSquarePlus />
                   {t('acceptance.bar.addComment')}
                 </Button>
                 {!embedded && (
-                  <Button disabled={pending} type={'primary'} onClick={onCopyReview}>
+                  <Button disabled={pending} variant="outline" onClick={onCopyReview}>
                     {t('acceptance.bar.copyReview')}
                   </Button>
                 )}
@@ -353,7 +341,7 @@ const DecisionBar = memo<DecisionBarProps>(
                   <Button
                     disabled={pending}
                     loading={rerunPending}
-                    type={'primary'}
+                    variant="outline"
                     onClick={onRerun}
                   >
                     {t('acceptance.bar.rerun')}
@@ -364,12 +352,12 @@ const DecisionBar = memo<DecisionBarProps>(
               // Clean review — accept carries primary weight only once every
               // check is signed off; before that it stays a quiet option.
               <>
-                <Button disabled={pending} type={'text'} onClick={onRejectComment}>
+                <Button disabled={pending} variant="ghost" onClick={onRejectComment}>
                   {t('acceptance.bar.rejectComment')}
                 </Button>
                 <Button
                   disabled={pending}
-                  type={allConfirmed ? 'primary' : 'fill'}
+                  variant={allConfirmed ? 'default' : 'secondary'}
                   onClick={onAccept}
                 >
                   {t('acceptance.actions.accept')}

@@ -1,6 +1,7 @@
 'use client';
 
-import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
+import type { ModalInstance } from '@/components/Modal';
+import { createModal } from '@/components/Modal';
 
 import CreateGoalContent, { type CreateGoalContentProps } from './CreateGoalContent';
 

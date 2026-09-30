@@ -1,8 +1,9 @@
 'use client';
 
-import { createModal, type ModalInstance, useModalContext } from '@lobehub/ui/base-ui';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
 import type { VerifyCriterionDraft } from '@/services/verify';
 
 import { CriterionEditor, type CriterionEditorProps } from './CriterionEditor';

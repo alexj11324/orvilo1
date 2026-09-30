@@ -2,13 +2,13 @@
 
 import data from '@emoji-mart/data';
 import Picker from '@emoji-mart/react';
-import { toast } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentReaction } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx, useTheme } from 'antd-style';
 import { PlusIcon, SmilePlus } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useGlobalStore } from '@/store/global';

@@ -1,11 +1,21 @@
 'use client';
 
-import { ActionIcon, Button, Select, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ClipboardCheck, History, X } from 'lucide-react';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { type AcceptanceBundle, verifyService } from '@/services/verify';
 
@@ -73,15 +83,15 @@ function AttemptReview({
   return (
     <div className={`flex flex-col gap-2.5 ${styles.review}`}>
       {attempt.review && (
-        <Text>
+        <div>
           {t(`flow.review.${attempt.review}`)}
           {attempt.reviewComment ? ` · ${attempt.reviewComment}` : ''}
-        </Text>
+        </div>
       )}
       {attempt.reviewDetail?.annotations?.map((annotation, index) => (
-        <Text fontSize={12} key={`${annotation.evidenceId}:${index}`}>
+        <div className="text-[12px]" key={`${annotation.evidenceId}:${index}`}>
           {index + 1}. {annotation.comment}
-        </Text>
+        </div>
       ))}
       <AttachmentThumbs attachments={attempt.reviewAttachments} />
       <Button
@@ -203,15 +213,13 @@ export function FlowResults({
     <div className={`flex flex-col ${styles.panel}`}>
       <div className={`flex items-center gap-3 justify-between ${styles.header}`}>
         <div className="flex items-center gap-2.5" style={{ flexWrap: 'wrap' }}>
-          <Text strong fontSize={16}>
-            {node.title}
-          </Text>
+          <div className="font-semibold text-[16px]">{node.title}</div>
           {attempt && (
             <div className="flex items-center gap-1" style={{ flex: 'none' }}>
               <ClipboardCheck color={flowStateColor(attempt.verdict)} size={14} />
-              <Text fontSize={12} style={{ color: flowStateColor(attempt.verdict) }}>
+              <div className="text-[12px]" style={{ color: flowStateColor(attempt.verdict) }}>
                 {t(`flow.state.${attempt.verdict}`)}
-              </Text>
+              </div>
             </div>
           )}
         </div>
@@ -224,56 +232,63 @@ export function FlowResults({
       </div>
       <div className={`flex flex-col gap-4 ${styles.body}`}>
         {selectedEdge && (
-          <Text type="secondary">
+          <div className="text-muted-foreground">
             {selectedEdge.trigger}
             {selectedEdge.condition ? ` · ${selectedEdge.condition}` : ''}
-          </Text>
+          </div>
         )}
         {attempt ? (
           <>
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-1.5">
                 <History size={14} />
-                <Text fontSize={12} type="secondary">
+                <div className="text-[12px] text-muted-foreground">
                   {t('flow.resultHistory', { count: attempts.length })}
-                </Text>
+                </div>
               </div>
               <Select
                 value={attempt.id}
-                options={ordered.map((a, i) => ({
+                items={ordered.map((a, i) => ({
                   value: a.id,
                   label: `${i === 0 ? t('flow.latestResult') : `#${a.sequence}`} · ${edges.find((e) => e.id === a.incomingEdgeId)?.trigger ?? node.title} · ${t(`flow.state.${a.verdict}`)}`,
                 }))}
-                onChange={(id) => setAttemptId(String(id))}
-              />
+                onValueChange={(id) => setAttemptId(String(id))}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ordered.map((a, i) => (
+                    <SelectItem key={a.id} value={a.id}>
+                      {`${i === 0 ? t('flow.latestResult') : `#${a.sequence}`} · ${edges.find((e) => e.id === a.incomingEdgeId)?.trigger ?? node.title} · ${t(`flow.state.${a.verdict}`)}`}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div className="flex flex-col gap-1">
-              <Text fontSize={12} type="secondary">
-                {t('flow.actual')}
-              </Text>
-              <Text className={styles.observation}>{attempt.observation}</Text>
+              <div className="text-[12px] text-muted-foreground">{t('flow.actual')}</div>
+              <div className={cn(styles.observation)}>{attempt.observation}</div>
             </div>
           </>
         ) : (
-          <Text type="secondary">{t('flow.unvisited')}</Text>
+          <div className="text-muted-foreground">{t('flow.unvisited')}</div>
         )}
         <div className="flex flex-col gap-1">
-          <Text fontSize={12} type="secondary">
-            {t('flow.expected')}
-          </Text>
-          <Text>{node.expected}</Text>
+          <div className="text-[12px] text-muted-foreground">{t('flow.expected')}</div>
+          <div>{node.expected}</div>
         </div>
         <details className={styles.plan} open={!attempt}>
           <summary>{t('flow.instruction')}</summary>
-          <Text>{node.instruction}</Text>
+          <div>{node.instruction}</div>
         </details>
         {attempt && (
           <div className="flex flex-col gap-2.5">
-            <Text strong>{t('flow.evidence')}</Text>
+            <div className="font-semibold">{t('flow.evidence')}</div>
             {evidence.length ? (
               <EvidenceList evidence={evidence} overlays={overlays} />
             ) : (
-              <Text type="secondary">{t('flow.noAttachments')}</Text>
+              <div className="text-muted-foreground">{t('flow.noAttachments')}</div>
             )}
           </div>
         )}
@@ -286,10 +301,10 @@ export function FlowResults({
           />
         )}
         {attempt?.review && !canReview && (
-          <Text>
+          <div>
             {t(`flow.review.${attempt.review}`)}
             {attempt.reviewComment ? ` · ${attempt.reviewComment}` : ''}
-          </Text>
+          </div>
         )}
       </div>
     </div>

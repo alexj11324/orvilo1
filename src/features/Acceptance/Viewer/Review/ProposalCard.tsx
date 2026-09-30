@@ -1,10 +1,11 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDown, ChevronRight, Sparkles } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import type { CheckProposal } from './proposal';
 
@@ -104,9 +105,9 @@ const ProposalCard = memo<ProposalCardProps>(
         <div className={`flex items-center gap-1.5 ${styles.head}`} onClick={() => onToggle(!open)}>
           {open ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
           <Sparkles size={12} />
-          <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
             {t('acceptance.proposal.title')}
-          </Text>
+          </div>
           {/* Provenance sits beside the claim it qualifies, but only once the
               card is open. Collapsed, the row's job is the finding itself —
               a model id there just pushes the summary out of view. */}
@@ -125,7 +126,7 @@ const ProposalCard = memo<ProposalCardProps>(
 
         {open && (
           <>
-            {proposal.comment && <Text fontSize={12}>{proposal.comment}</Text>}
+            {proposal.comment && <div className="text-[12px]">{proposal.comment}</div>}
 
             {/* Numbers match the badges now drawn on the evidence image below. */}
             {regions.map((region, index) => (
@@ -133,17 +134,17 @@ const ProposalCard = memo<ProposalCardProps>(
                 <span className={styles.regionIndex} style={{ marginBlockStart: 2 }}>
                   {index + 1}
                 </span>
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {region.comment || t('acceptance.proposal.regionUnnamed')}
-                </Text>
+                </div>
               </div>
             ))}
 
             <div className="flex items-center gap-2 flex-wrap">
               <Button
                 disabled={pending || Boolean(busy)}
-                size={'small'}
-                type={'primary'}
+                size="sm"
+                variant="outline"
                 onClick={onConfirm}
               >
                 {t('acceptance.proposal.confirm')}
@@ -151,7 +152,7 @@ const ProposalCard = memo<ProposalCardProps>(
               <Button
                 disabled={pending || Boolean(busy)}
                 loading={busy === 'not-an-issue'}
-                size={'small'}
+                size="sm"
                 onClick={() => respond('not-an-issue')}
               >
                 {t('acceptance.proposal.notAnIssue')}
@@ -159,8 +160,8 @@ const ProposalCard = memo<ProposalCardProps>(
               <Button
                 disabled={pending || Boolean(busy)}
                 loading={busy === 'misidentified'}
-                size={'small'}
-                type={'text'}
+                size="sm"
+                variant="ghost"
                 onClick={() => respond('misidentified')}
               >
                 {t('acceptance.proposal.misidentified')}

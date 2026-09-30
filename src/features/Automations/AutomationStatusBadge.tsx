@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -30,9 +29,7 @@ const AutomationStatusBadge = memo<AutomationStatusBadgeProps>(({ status }) => {
           width: 8,
         }}
       />
-      <Text fontSize={12} type={'secondary'}>
-        {t(`status.${status}`)}
-      </Text>
+      <div className="text-[12px] text-muted-foreground">{t(`status.${status}`)}</div>
     </div>
   );
 });

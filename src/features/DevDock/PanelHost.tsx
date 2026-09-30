@@ -1,9 +1,10 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Maximize2, Minimize2, XIcon } from 'lucide-react';
 import { memo, Suspense, useCallback, useEffect, useRef, useState } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import { BAR_HEIGHT, BAR_OVERLAP } from './const';
 import PanelErrorBoundary from './PanelErrorBoundary';

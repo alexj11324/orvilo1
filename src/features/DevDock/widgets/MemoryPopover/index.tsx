@@ -1,10 +1,10 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import type { MemoryDump } from '@orvilo/electron-client-ipc';
 import { cx } from 'antd-style';
 import { Fragment, memo, useState } from 'react';
 
+import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
 import { electronDevtoolsService } from '@/services/electron/devtools';
 
@@ -126,10 +126,10 @@ const Breakdown = memo(() => {
         </span>
         <span style={{ flex: 1 }} />
         {error && <span className={cx(styles.error, styles.mono)}>{error}</span>}
-        <Button disabled={loading} size={'small'} onClick={collectGarbage}>
+        <Button disabled={loading} size="sm" onClick={collectGarbage}>
           {'GC'}
         </Button>
-        <Button loading={loading} size={'small'} onClick={capture}>
+        <Button loading={loading} size="sm" onClick={capture}>
           {dump ? 'Re-capture' : 'Capture'}
         </Button>
       </div>

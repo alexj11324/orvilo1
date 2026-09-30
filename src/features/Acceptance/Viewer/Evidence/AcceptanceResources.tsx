@@ -1,7 +1,6 @@
 'use client';
 
 import { Image } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import dayjs from 'dayjs';
 import { FileText, Film, Paperclip } from 'lucide-react';
@@ -171,18 +170,14 @@ const AcceptanceResources = () => {
                     ) : (
                       <FileText size={16} style={{ color: cssVar.colorTextTertiary }} />
                     )}
-                    <Text ellipsis fontSize={13}>
-                      {name}
-                    </Text>
+                    <div className="truncate min-w-0 text-[13px]">{name}</div>
                   </div>
                 )}
                 <div className={`flex flex-col gap-0.5 ${styles.meta}`}>
-                  <Text ellipsis fontSize={12}>
-                    {name}
-                  </Text>
-                  <Text ellipsis fontSize={11} type={'secondary'}>
+                  <div className="truncate min-w-0 text-[12px]">{name}</div>
+                  <div className="truncate min-w-0 text-[11px] text-muted-foreground">
                     {[check, captured].filter(Boolean).join(' · ')}
-                  </Text>
+                  </div>
                 </div>
               </div>
             );

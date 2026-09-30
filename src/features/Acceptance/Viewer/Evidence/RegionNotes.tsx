@@ -1,12 +1,12 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Crosshair, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { Textarea } from '@/components/ui/textarea';
 
 import type { DraftAnnotationEntry, RejectableEvidence } from '../Review/rejectDraft';

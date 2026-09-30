@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRight, FileText } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
@@ -332,7 +331,7 @@ export const DocumentViewer = memo<{ fileName?: string | null; markdown?: boolea
     if (error || fileData === null)
       return (
         <div className="flex flex-col items-center justify-center flex-1 h-full gap-2">
-          <Text type="secondary">{t('report.document.failed')}</Text>
+          <div className="text-muted-foreground">{t('report.document.failed')}</div>
           <a href={url} rel="noreferrer" target="_blank">
             {t('report.document.openOriginal')}
           </a>

@@ -1,10 +1,11 @@
 'use client';
 
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 import { verifyService } from '@/services/verify';
 
@@ -41,7 +42,7 @@ const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
   if (turn !== null && turn !== data.rounds.at(-1)?.run.roundIndex)
     return (
       <div className="flex flex-col gap-2">
-        <Text type={'secondary'}>{t('acceptance.review.historicalReadOnly')}</Text>
+        <div className="text-muted-foreground">{t('acceptance.review.historicalReadOnly')}</div>
         <Button style={{ minHeight: 44 }} onClick={() => setTurn(null)}>
           {t('acceptance.filter.roundAll')}
         </Button>

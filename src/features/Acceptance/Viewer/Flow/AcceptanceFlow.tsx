@@ -2,7 +2,6 @@
 
 import '@xyflow/react/dist/style.css';
 
-import { ActionIcon, Button, Select, Text } from '@lobehub/ui/base-ui';
 import { MarkerType, ReactFlowProvider } from '@xyflow/react';
 import { createStaticStyles, cssVar, useResponsive } from 'antd-style';
 import { Maximize2, Minimize2 } from 'lucide-react';
@@ -10,7 +9,16 @@ import { use, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader } from '@/components/ui/empty';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
 import { acceptanceContentLayout } from '../layout';
@@ -208,13 +216,13 @@ export function AcceptanceFlow() {
         style={{ flexWrap: 'wrap' }}
       >
         <div className="flex items-center gap-1">
-          <Button size="small" type="text" onClick={() => setFocus(undefined)}>
+          <Button size="sm" variant="ghost" onClick={() => setFocus(undefined)}>
             {t('flow.allGroups')}
           </Button>
           {crumbs.map((crumb) => (
             <div className="flex items-center gap-1" key={crumb.id}>
-              <Text type="secondary">/</Text>
-              <Button size="small" type="text" onClick={() => setFocus(crumb.id)}>
+              <div className="text-muted-foreground">/</div>
+              <Button size="sm" variant="ghost" onClick={() => setFocus(crumb.id)}>
                 {crumb.title}
               </Button>
             </div>
@@ -223,29 +231,40 @@ export function AcceptanceFlow() {
         <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
           <AcceptancePlanReview runId={candidates[0]?.run?.verifyRunId} />
           <Button
-            size="small"
-            type="text"
+            size="sm"
+            variant="ghost"
             onClick={() => setDisplay(showOutline ? 'graph' : 'outline')}
           >
             {t(showOutline ? 'flow.graphView' : 'flow.outlineView')}
           </Button>
           <Select
-            size="small"
-            style={{ width: 120, flexShrink: 0 }}
             value={activeKey}
-            options={keys.map((key) => ({
+            items={keys.map((key) => ({
               value: key,
               label:
                 key === 'pending'
                   ? t('flow.pendingPlan')
                   : t('acceptance.round', { round: Number(key) }),
             }))}
-            onChange={(value: string) => {
+            onValueChange={(value: string) => {
               setRoundKey(value);
               setFocus(undefined);
               setSelected(undefined);
             }}
-          />
+          >
+            <SelectTrigger size="sm" style={{ width: 120, flexShrink: 0 }}>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {keys.map((key) => (
+                <SelectItem key={key} value={key}>
+                  {key === 'pending'
+                    ? t('flow.pendingPlan')
+                    : t('acceptance.round', { round: Number(key) })}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           <ActionIcon
             aria-label={t(fullscreen ? 'flow.exitFullscreen' : 'flow.fullscreen')}
             icon={fullscreen ? Minimize2 : Maximize2}

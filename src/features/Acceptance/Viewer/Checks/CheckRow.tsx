@@ -1,8 +1,8 @@
 'use client';
 
-import { ActionIcon, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentThread } from '@orvilo/types';
 import { cssVar, cx, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   AudioLines,
@@ -23,6 +23,9 @@ import {
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
@@ -427,18 +430,20 @@ export const AcceptanceCheckRow = memo<{
               className={`flex items-center flex-1 gap-2 ${styles.rowTitle}`}
               style={{ flexWrap: open ? 'wrap' : 'nowrap', minWidth: 0 }}
             >
-              <Text
-                className={open || !desktop ? undefined : styles.titleEllipsis}
+              <div
+                className={cn(open || !desktop ? undefined : styles.titleEllipsis)}
                 style={{ fontSize: desktop ? 13 : 14, minWidth: 0 }}
               >
                 {title}
-              </Text>
+              </div>
               {!check.required && (
                 <Tooltip>
                   <TooltipTrigger
                     render={
                       <span>
-                        <Tag size={'small'}>{t('acceptance.checks.notRequired')}</Tag>
+                        <Badge size="sm" variant="secondary">
+                          {t('acceptance.checks.notRequired')}
+                        </Badge>
                       </span>
                     }
                   />
@@ -462,7 +467,7 @@ export const AcceptanceCheckRow = memo<{
                     disabled={reviewPending && !accepting}
                     icon={Check}
                     loading={accepting}
-                    size={'small'}
+                    size="sm"
                     title={t('acceptance.review.accept')}
                     onClick={handleAccept}
                   />
@@ -470,14 +475,14 @@ export const AcceptanceCheckRow = memo<{
                     disabled={reviewPending && !ignoring}
                     icon={Ban}
                     loading={ignoring}
-                    size={'small'}
+                    size="sm"
                     title={t('acceptance.review.ignore')}
                     onClick={handleIgnore}
                   />
                   <ActionIcon
                     disabled={reviewPending}
                     icon={MessageSquareX}
-                    size={'small'}
+                    size="sm"
                     title={t('acceptance.review.reject')}
                     onClick={(event) => {
                       event.stopPropagation();
@@ -643,9 +648,9 @@ export const AcceptanceCheckRow = memo<{
               hid the middle of the argument behind an ellipsis with no way to
               open it — in a detail view there is nothing to preview. */}
             {check.result?.toulmin?.evidence && (
-              <Text fontSize={12} style={{ whiteSpace: 'pre-wrap' }} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground" style={{ whiteSpace: 'pre-wrap' }}>
                 {check.result.toulmin.evidence}
-              </Text>
+              </div>
             )}
             {/* An agent judge's argument is its run, not a paragraph — link the
               trace instead of trying to summarize it inline. `onOpenTrace`
@@ -657,14 +662,14 @@ export const AcceptanceCheckRow = memo<{
               onOpenTrace && (
                 <div className="flex">
                   <Button
-                    icon={<Route />}
-                    size={'small'}
-                    type={'text'}
+                    size="sm"
+                    variant="ghost"
                     onClick={(event) => {
                       event.stopPropagation();
                       void onOpenTrace(check.result!.verifierOperationId!);
                     }}
                   >
+                    <Route />
                     {t('acceptance.checks.viewTrace')}
                   </Button>
                 </div>
@@ -677,9 +682,9 @@ export const AcceptanceCheckRow = memo<{
             />
             {staleThreads.length > 0 && (
               <div className={`flex flex-col gap-2.5 ${styles.staleRegions}`}>
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('acceptance.comments.historicalRegions', { count: staleThreads.length })}
-                </Text>
+                </div>
                 {staleThreads.map((thread) => {
                   const evidence = thread.root.evidenceId
                     ? evidenceById.get(thread.root.evidenceId)
@@ -727,9 +732,9 @@ export const AcceptanceCheckRow = memo<{
                   size={15}
                   style={{ flex: 'none' }}
                 />
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('acceptance.focus.verifierDescription.notExecuted')}
-                </Text>
+                </div>
               </div>
             )}
 
@@ -752,12 +757,12 @@ export const AcceptanceCheckRow = memo<{
                     width: '100%',
                   }}
                 >
-                  <Text fontSize={11} type={'secondary'}>
+                  <div className="text-[11px] text-muted-foreground">
                     {t('acceptance.checks.judgeReason')}
-                  </Text>
-                  <Text fontSize={12} style={{ whiteSpace: 'pre-wrap' }}>
+                  </div>
+                  <div className="text-[12px]" style={{ whiteSpace: 'pre-wrap' }}>
                     {check.result.toulmin.reasoning}
-                  </Text>
+                  </div>
                 </div>
               ) : !hasRenderableEvidence(check.evidence.length, visualization) ? (
                 <div
@@ -770,9 +775,9 @@ export const AcceptanceCheckRow = memo<{
                     width: '100%',
                   }}
                 >
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('acceptance.evidence.empty')}
-                  </Text>
+                  </div>
                 </div>
               ) : null)}
 
@@ -787,8 +792,8 @@ export const AcceptanceCheckRow = memo<{
                   {reviewable && (
                     <Button
                       disabled={reviewPending}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={(event) => {
                         event.stopPropagation();
                         openReject();
@@ -805,8 +810,8 @@ export const AcceptanceCheckRow = memo<{
                     <>
                       <Button
                         disabled={reviewPending}
-                        size={'small'}
-                        type={'text'}
+                        size="sm"
+                        variant="ghost"
                         onClick={(event) => {
                           event.stopPropagation();
                           openReject();
@@ -817,8 +822,8 @@ export const AcceptanceCheckRow = memo<{
                       <Button
                         disabled={reviewPending && !accepting}
                         loading={accepting}
-                        size={'small'}
-                        type={'text'}
+                        size="sm"
+                        variant="ghost"
                         onClick={handleAccept}
                       >
                         {t('acceptance.review.revertToAccept')}
@@ -837,8 +842,8 @@ export const AcceptanceCheckRow = memo<{
                       <Button
                         disabled={reviewPending && !accepting}
                         loading={accepting}
-                        size={'small'}
-                        type={'text'}
+                        size="sm"
+                        variant="ghost"
                         onClick={handleAccept}
                       >
                         {t('acceptance.review.revertToAccept')}
@@ -856,14 +861,14 @@ export const AcceptanceCheckRow = memo<{
             {detailMode && reviewable && !activeReview && hasAnnotatableEvidence(check) && (
               <Button
                 outdent
-                icon={<Images />}
                 style={{ alignSelf: 'flex-start' }}
-                type={'text'}
+                variant="ghost"
                 onClick={(event) => {
                   event.stopPropagation();
                   openReject();
                 }}
               >
+                <Images />
                 {t('acceptance.review.annotate')}
               </Button>
             )}
@@ -900,13 +905,13 @@ export const AcceptanceCheckRow = memo<{
                 {canCommentEvidence ? (
                   <Button
                     outdent
-                    icon={<MessageSquare />}
-                    type={'text'}
+                    variant="ghost"
                     onClick={(event) => {
                       event.stopPropagation();
                       openEvidenceComment();
                     }}
                   >
+                    <MessageSquare />
                     {t('acceptance.comments.commentEvidence')}
                   </Button>
                 ) : (
@@ -917,16 +922,16 @@ export const AcceptanceCheckRow = memo<{
                     <Button
                       disabled={reviewPending && !ignoring}
                       loading={ignoring}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={handleIgnore}
                     >
                       {t('acceptance.review.ignore')}
                     </Button>
                     <Button
                       disabled={reviewPending}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={(event) => {
                         event.stopPropagation();
                         openReject();
@@ -936,12 +941,12 @@ export const AcceptanceCheckRow = memo<{
                     </Button>
                     <Button
                       disabled={reviewPending && !accepting}
-                      icon={<Check />}
                       loading={accepting}
-                      size={'small'}
-                      type={'fill'}
+                      size="sm"
+                      variant="secondary"
                       onClick={handleAccept}
                     >
+                      <Check />
                       {t('acceptance.review.accept')}
                     </Button>
                   </div>
@@ -961,25 +966,25 @@ export const AcceptanceCheckRow = memo<{
                 />
                 <div className="flex gap-2">
                   <Button
-                    block
+                    className="w-full"
                     disabled={reviewPending || !reviewComment.trim()}
                     loading={rejecting}
-                    size={'large'}
+                    size="lg"
                     style={{ flex: 1 }}
                     onClick={handleReject}
                   >
                     {t('acceptance.review.reject')}
                   </Button>
                   <Button
-                    block
+                    className="w-full"
                     disabled={reviewPending && !accepting}
-                    icon={<Check />}
                     loading={accepting}
-                    size={'large'}
+                    size="lg"
                     style={{ flex: 1 }}
-                    type={'fill'}
+                    variant="secondary"
                     onClick={handleAccept}
                   >
+                    <Check />
                     {t('acceptance.review.accept')}
                   </Button>
                 </div>

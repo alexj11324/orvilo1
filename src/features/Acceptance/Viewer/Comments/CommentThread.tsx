@@ -1,11 +1,14 @@
 'use client';
 
-import { Button, Tag, toast } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentThread } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { CheckCircle2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 
 import CommentCard, { commentAuthorName } from './CommentCard';
 import CommentComposer from './CommentComposer';
@@ -79,9 +82,9 @@ const CommentThread = memo<CommentThreadProps>(
       );
 
     const badges = root.contextRoundIndex !== null && (
-      <Tag size={'small'}>
+      <Badge size="sm" variant="secondary">
         {t('acceptance.comments.roundContext', { round: root.contextRoundIndex })}
-      </Tag>
+      </Badge>
     );
 
     return (
@@ -109,22 +112,22 @@ const CommentThread = memo<CommentThreadProps>(
             </div>
           ) : (
             <div className={`flex gap-0.5 ${styles.panelActions}`}>
-              <Button outdent size={'small'} type={'text'} onClick={() => setReplying(true)}>
+              <Button outdent size="sm" variant="ghost" onClick={() => setReplying(true)}>
                 {t('acceptance.comments.reply')}
               </Button>
               {canResolve && (
                 <Button
                   outdent
                   loading={resolving}
-                  size={'small'}
-                  type={'text'}
+                  size="sm"
+                  variant="ghost"
                   onClick={() => void toggleResolved()}
                 >
                   {resolved ? t('acceptance.comments.reopen') : t('acceptance.comments.resolve')}
                 </Button>
               )}
               {resolved && (
-                <Button outdent size={'small'} type={'text'} onClick={() => setOpenOverride(false)}>
+                <Button outdent size="sm" variant="ghost" onClick={() => setOpenOverride(false)}>
                   {t('acceptance.comments.collapseThread')}
                 </Button>
               )}

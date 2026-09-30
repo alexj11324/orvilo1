@@ -1,9 +1,9 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 interface TeachBoxProps {
@@ -44,7 +44,7 @@ const TeachBox = memo<TeachBoxProps>(({ autoFocus, onSubmit, placeholder }) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void submit();
         }}
       />
-      <Button disabled={!value.trim()} loading={busy} type={'primary'} onClick={submit}>
+      <Button disabled={!value.trim()} loading={busy} variant="outline" onClick={submit}>
         {t('habit.teach.send')}
       </Button>
     </div>

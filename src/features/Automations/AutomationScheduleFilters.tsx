@@ -1,7 +1,9 @@
-import { Button, DropdownMenu } from '@lobehub/ui/base-ui';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { Button } from '@/components/ui/button';
 
 import type { AutomationScope, AutomationStatusFilter } from './shared';
 
@@ -27,15 +29,15 @@ export const AutomationScopeSwitch = memo<AutomationScopeSwitchProps>(({ onChang
   return (
     <div className="flex gap-0.5">
       <Button
-        size={'small'}
-        type={scope === 'all' ? 'fill' : 'text'}
+        size="sm"
+        variant={scope === 'all' ? 'secondary' : 'ghost'}
         onClick={() => onChange('all')}
       >
         {t('overview.team')}
       </Button>
       <Button
-        size={'small'}
-        type={scope === 'created' ? 'fill' : 'text'}
+        size="sm"
+        variant={scope === 'created' ? 'secondary' : 'ghost'}
         onClick={() => onChange('created')}
       >
         {t('overview.mine')}
@@ -83,12 +85,8 @@ export const AutomationStatusSelect = memo<AutomationStatusSelectProps>(({ onCha
         onClick: () => onChange(option),
       }))}
     >
-      <Button
-        icon={ChevronDownIcon}
-        iconPosition={'end'}
-        size={'small'}
-        title={t('overview.filter_automations')}
-      >
+      <Button iconPosition={'end'} size="sm" title={t('overview.filter_automations')}>
+        <ChevronDownIcon data-icon="inline-start" />
         {value === 'all' ? t('overview.all_statuses') : t(`status.${value}`)}
       </Button>
     </DropdownMenu>

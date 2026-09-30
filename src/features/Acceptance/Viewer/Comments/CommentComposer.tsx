@@ -1,11 +1,12 @@
 'use client';
 
-import { Button, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import type { CSSProperties } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 
 import {
@@ -117,15 +118,15 @@ const CommentComposer = memo<CommentComposerProps>(
           <AttachmentUploadButton disabled={sending} onFiles={uploadFiles} />
           <div className="flex flex-col flex-1" />
           {onCancel && (
-            <Button size={'small'} type={'text'} onClick={onCancel}>
+            <Button size="sm" variant="ghost" onClick={onCancel}>
               {t('cancel', { ns: 'common' })}
             </Button>
           )}
           <Button
             disabled={!canSend}
             loading={sending}
-            size={'small'}
-            type={'primary'}
+            size="sm"
+            variant="outline"
             onClick={() => void submit()}
           >
             {submitLabel ?? t('acceptance.comments.send')}

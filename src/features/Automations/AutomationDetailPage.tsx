@@ -1,14 +1,3 @@
-import {
-  ActionIcon,
-  Button,
-  confirmModal,
-  DropdownMenu,
-  Select,
-  Switch,
-  Tabs,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -19,7 +8,16 @@ import { useTranslation } from 'react-i18next';
 import { useParams, useSearchParams } from 'react-router';
 
 import NotFound from '@/components/404';
+import ActionIcon from '@/components/ActionIcon';
 import AsyncError from '@/components/AsyncError';
+import { DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { SelectOptionItems } from '@/components/SelectOptions';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
@@ -80,15 +78,20 @@ const ProjectSelect = memo(() => {
             <span className="inline-flex">
               <Select
                 disabled={!canEdit || !taskId}
-                options={options}
-                size={'small'}
-                style={{ maxWidth: 200 }}
+                items={options}
                 value={projectId ?? ''}
-                onChange={(value) => {
+                onValueChange={(value) => {
                   if (!taskId || typeof value !== 'string') return;
                   void updateTask(taskId, { projectId: value || null });
                 }}
-              />
+              >
+                <SelectTrigger size="sm" style={{ maxWidth: 200 }}>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectOptionItems options={options} />
+                </SelectContent>
+              </Select>
             </span>
           }
         />
@@ -106,12 +109,11 @@ const AutomationStatusSwitch = memo(() => {
   const active = status ? automationStatusOf(status) === 'active' : true;
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-2" title={canEdit ? undefined : reason}>
       <Switch
         checked={active}
         disabled={!canEdit || !taskId || status === 'running'}
-        title={canEdit ? undefined : reason}
-        onChange={(checked) => {
+        onCheckedChange={(checked) => {
           if (!taskId) return;
           void updateTaskStatus(taskId, checked ? 'scheduled' : 'paused');
         }}
@@ -146,9 +148,9 @@ const AgentChip = memo(() => {
         }}
       >
         <AssigneeAvatar agentId={agentId ?? undefined} size={20} />
-        <Text fontSize={13}>
+        <div className="text-[13px]">
           {agentId && meta ? agentDisplayName(meta) : t('instructions.unassigned')}
-        </Text>
+        </div>
         <ChevronRightIcon color={cssVar.colorTextTertiary} size={14} />
       </div>
     </AssigneeAgentSelector>
@@ -163,9 +165,9 @@ const CreatedByLabel = memo(() => {
   const meta = useUserDisplayMeta(createdByUserId);
   if (!createdByUserId) return null;
   return (
-    <Text fontSize={12} type={'secondary'}>
+    <div className="text-[12px] text-muted-foreground">
       {t('detail.created_by', { name: meta?.title ?? '' })}
-    </Text>
+    </div>
   );
 });
 
@@ -213,7 +215,7 @@ const DetailHeaderActions = memo(() => {
         <ActionIcon
           disabled={!canEdit}
           icon={MoreHorizontalIcon}
-          size={'small'}
+          size="sm"
           title={t('detail.more_actions')}
         />
       </DropdownMenu>
@@ -268,7 +270,7 @@ const AutomationDetailPage = memo(() => {
             title={t('detail.not_found')}
             extra={
               <WorkspaceLink to={'/automations'}>
-                <Button type={'primary'}>{t('page.back_to_automations')}</Button>
+                <Button variant="outline">{t('page.back_to_automations')}</Button>
               </WorkspaceLink>
             }
           />
@@ -298,14 +300,12 @@ const AutomationDetailPage = memo(() => {
                   <ProjectSelect />
                   <CreatedByLabel />
                 </div>
-                <Tabs
-                  activeKey={tab}
-                  items={[
-                    { key: 'settings', label: t('settings.tab_settings') },
-                    { key: 'runs', label: t('settings.tab_runs') },
-                  ]}
-                  onChange={setTab}
-                />
+                <Tabs value={tab} onValueChange={setTab}>
+                  <TabsList>
+                    <TabsTrigger value="settings">{t('settings.tab_settings')}</TabsTrigger>
+                    <TabsTrigger value="runs">{t('settings.tab_runs')}</TabsTrigger>
+                  </TabsList>
+                </Tabs>
                 {tab === 'settings' ? <AutomationSettingsTab /> : <AutomationRunList />}
               </div>
             )}

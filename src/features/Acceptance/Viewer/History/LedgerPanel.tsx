@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
 import {
@@ -17,6 +16,7 @@ import {
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 import type { AcceptanceBundle } from '@/services/verify';
 
@@ -118,9 +118,9 @@ const LedgerPanel = memo<LedgerPanelProps>(
       <div className="flex flex-col gap-3" style={{ padding: 16 }}>
         <div className="flex items-center gap-2">
           <FileClock color={cssVar.colorTextSecondary} size={16} />
-          <Text strong style={{ fontSize: 13 }}>
+          <div className="font-semibold" style={{ fontSize: 13 }}>
             {t('acceptance.ledger.title')}
-          </Text>
+          </div>
           <span className={styles.countBadge}>{rounds.length}</span>
           <div className="flex flex-col flex-1" />
           {!hideCollapse && (
@@ -197,13 +197,13 @@ const LedgerPanel = memo<LedgerPanelProps>(
               onClick={openable ? () => onOpenReport(round) : undefined}
             >
               <div className="flex items-center gap-2">
-                <Text strong style={{ fontSize: 13 }}>
+                <div className="font-semibold" style={{ fontSize: 13 }}>
                   {t('acceptance.round', { round: round.run.roundIndex })}
-                </Text>
+                </div>
                 {round.run.roundIndex === latestIndex && (
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('acceptance.ledger.latest')}
-                  </Text>
+                  </div>
                 )}
                 <div
                   className="flex items-center gap-1"
@@ -213,9 +213,9 @@ const LedgerPanel = memo<LedgerPanelProps>(
                   {stateLabel}
                 </div>
                 <div className="flex flex-col flex-1" />
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {hydrated ? dayjs(round.run.createdAt).format('MM-DD HH:mm') : null}
-                </Text>
+                </div>
                 {openable && (
                   <ChevronRight
                     className="'acceptance-round-open-hint'"
@@ -225,15 +225,11 @@ const LedgerPanel = memo<LedgerPanelProps>(
                 )}
               </div>
               {round.run.title && (
-                <Text fontSize={12} style={{ lineHeight: 1.5 }} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.5 }}>
                   {round.run.title}
-                </Text>
+                </div>
               )}
-              {stats && (
-                <Text fontSize={12} type={'secondary'}>
-                  {stats}
-                </Text>
-              )}
+              {stats && <div className="text-[12px] text-muted-foreground">{stats}</div>}
             </div>
           );
         })}

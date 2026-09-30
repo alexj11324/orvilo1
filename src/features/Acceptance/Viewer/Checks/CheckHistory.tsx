@@ -1,7 +1,6 @@
 'use client';
 
 import { Image } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceReviewAnnotation } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -30,11 +29,11 @@ export const AcceptedNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revi
   return (
     <div className="flex items-center gap-1.5">
       <BadgeCheck color={cssVar.colorTextQuaternary} size={13} />
-      <Text fontSize={12} type={'secondary'}>
+      <div className="text-[12px] text-muted-foreground">
         {t('acceptance.review.acceptedNote', {
           time: hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : '',
         })}
-      </Text>
+      </div>
     </div>
   );
 });
@@ -45,11 +44,11 @@ export const IgnoredNote = memo<{ review: AcceptanceCheckReviewEntry }>(({ revie
   return (
     <div className="flex items-center gap-1.5">
       <Ban color={cssVar.colorTextQuaternary} size={13} />
-      <Text fontSize={12} type={'secondary'}>
+      <div className="text-[12px] text-muted-foreground">
         {t('acceptance.review.ignoredNote', {
           time: hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : '',
         })}
-      </Text>
+      </div>
     </div>
   );
 });
@@ -82,14 +81,14 @@ export const FeedbackCard = memo<{
     <div className="flex flex-col gap-2">
       <div className="flex items-center gap-1.5">
         <MessageSquareX color={cssVar.colorError} size={13} />
-        <Text style={{ color: cssVar.colorError, fontSize: 12 }}>
+        <div style={{ color: cssVar.colorError, fontSize: 12 }}>
           {t('acceptance.review.feedbackLabel')}
-        </Text>
-        <Text fontSize={12} type={'secondary'}>
+        </div>
+        <div className="text-[12px] text-muted-foreground">
           {hydrated ? dayjs(review.createdAt).format('MM-DD HH:mm') : null}
-        </Text>
+        </div>
       </div>
-      {review.comment && <Text style={{ fontSize: 12 }}>{review.comment}</Text>}
+      {review.comment && <div style={{ fontSize: 12 }}>{review.comment}</div>}
       <AttachmentThumbs attachments={review.attachments} />
       {[...groups.entries()].map(([evidenceId, annotations]) => {
         const evidence = evidenceById.get(evidenceId);
@@ -98,9 +97,9 @@ export const FeedbackCard = memo<{
           return annotations
             .filter((annotation) => annotation.comment)
             .map((annotation, index) => (
-              <Text fontSize={12} key={`${evidenceId}-${index}`} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground" key={`${evidenceId}-${index}`}>
                 {annotation.comment}
-              </Text>
+              </div>
             ));
         return (
           <AnnotatedImage
@@ -231,20 +230,20 @@ export const IterationTimeline = memo<{
             >
               {onRound ? (
                 <SimpleTooltip title={t('acceptance.history.jump', { round: step.roundIndex })}>
-                  <Text
-                    strong
+                  <div
+                    className="font-semibold"
                     style={{ cursor: 'pointer', fontSize: 12, lineHeight: '19px' }}
                     onClick={() => onRound(step.roundIndex)}
                   >
                     {t('acceptance.round', { round: step.roundIndex })}
-                  </Text>
+                  </div>
                 </SimpleTooltip>
               ) : (
-                <Text strong style={{ fontSize: 12, lineHeight: '19px' }}>
+                <div className="font-semibold" style={{ fontSize: 12, lineHeight: '19px' }}>
                   {t('acceptance.round', { round: step.roundIndex })}
-                </Text>
+                </div>
               )}
-              <Text style={{ fontSize: 12 }}>{step.title}</Text>
+              <div style={{ fontSize: 12 }}>{step.title}</div>
               {step.evidence.length > 0 && (
                 <div className="flex gap-2 flex-wrap">
                   {step.evidence.map((item) =>
@@ -297,12 +296,10 @@ export const IterationTimeline = memo<{
       })}
       {check.result?.suggestion && (
         <div className="flex gap-3" style={{ marginBlockStart: 12 }}>
-          <Text fontSize={12} style={{ flex: 'none', minWidth: 64 }} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground" style={{ flex: 'none', minWidth: 64 }}>
             {t('acceptance.detail.suggestion')}
-          </Text>
-          <Text fontSize={12} type={'secondary'}>
-            {check.result.suggestion}
-          </Text>
+          </div>
+          <div className="text-[12px] text-muted-foreground">{check.result.suggestion}</div>
         </div>
       )}
     </div>

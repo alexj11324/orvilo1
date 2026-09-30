@@ -2,7 +2,6 @@
 
 import '@xyflow/react/dist/style.css';
 
-import { ActionIcon, Button, Segmented, Text } from '@lobehub/ui/base-ui';
 import type { GoalGraphEdge } from '@orvilo/types';
 import { experimentMembers } from '@orvilo/utils/goalGraph';
 import {
@@ -23,6 +22,9 @@ import { ChevronRight, Maximize2, X } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { PortalContent } from '@/features/Portal/router';
 import { usePortalPanelWidth } from '@/features/Portal/usePortalPanelWidth';
 import RightPanel from '@/features/RightPanel';
@@ -614,7 +616,7 @@ const Canvas = memo<
               zIndex: 1,
             }}
           >
-            <Text type={'secondary'}>{t('goalExperiment.emptyGraph')}</Text>
+            <div className="text-muted-foreground">{t('goalExperiment.emptyGraph')}</div>
           </div>
         )}
         <ReactFlow
@@ -718,16 +720,16 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
   };
   const overview = experiments.length > 0 && (
     <div className="flex items-center gap-2 flex-wrap">
-      <Text fontSize={12} type={'secondary'}>
+      <div className="text-[12px] text-muted-foreground">
         {t('goalExperiment.overviewCount', {
           count: experiments.length,
           nodes: props.graph.nodes.length,
         })}
-      </Text>
-      <Button size={'small'} onClick={() => navigation.expandAll(true)}>
+      </div>
+      <Button size="sm" onClick={() => navigation.expandAll(true)}>
         {t(scopeId ? 'goalExperiment.expandScope' : 'goalExperiment.expandAll')}
       </Button>
-      <Button size={'small'} onClick={() => navigation.expandAll(false)}>
+      <Button size="sm" onClick={() => navigation.expandAll(false)}>
         {t(scopeId ? 'goalExperiment.collapseScope' : 'goalExperiment.collapseAll')}
       </Button>
     </div>
@@ -738,18 +740,18 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
       className="flex items-center gap-1 flex-wrap"
       role={'navigation'}
     >
-      <Button size={'small'} onClick={() => navigation.backTo(0)}>
+      <Button size="sm" onClick={() => navigation.backTo(0)}>
         {t('goalExperiment.root')}
       </Button>
       {navigation.path.map((id, index) => (
         <div className="flex items-center gap-1" key={id}>
           <ChevronRight size={14} />
           {index === navigation.path.length - 1 ? (
-            <Text aria-current={'page'} fontSize={12}>
+            <div aria-current={'page'} className="text-[12px]">
               {props.graph.byId[id]?.node.title}
-            </Text>
+            </div>
           ) : (
-            <Button size={'small'} onClick={() => navigation.backTo(index + 1)}>
+            <Button size="sm" onClick={() => navigation.backTo(index + 1)}>
               {props.graph.byId[id]?.node.title}
             </Button>
           )}
@@ -759,19 +761,18 @@ const Graph = memo<GraphProps>(({ fullscreen, onFullscreenChange, ...props }) =>
   );
   const titleAndViews = (
     <>
-      <Text fontSize={16} weight={600}>
-        {t('goalProcess.graph.title')}
-      </Text>
+      <div className="text-[16px] font-semibold">{t('goalProcess.graph.title')}</div>
       {experiments.length === 0 && (
-        <Segmented
-          size={'small'}
-          value={view}
-          options={[
-            { label: t('goalProcess.graph.view.stage'), value: 'stage' },
-            { label: t('goalProcess.graph.view.all'), value: 'all' },
-          ]}
-          onChange={(value) => setView(value as GraphViewMode)}
-        />
+        <ToggleGroup
+          size="sm"
+          value={[view]}
+          onValueChange={(value) => {
+            if (value.length > 0) setView(value[0] as GraphViewMode);
+          }}
+        >
+          <ToggleGroupItem value="stage">{t('goalProcess.graph.view.stage')}</ToggleGroupItem>
+          <ToggleGroupItem value="all">{t('goalProcess.graph.view.all')}</ToggleGroupItem>
+        </ToggleGroup>
       )}
     </>
   );

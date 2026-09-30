@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo } from 'react';
@@ -58,9 +57,12 @@ const ThreadEvidence = memo<ThreadEvidenceProps>(({ comment, evidence, roundInde
           : t('acceptance.comments.evidenceThisRound')}
       </span>
       {evidence.description && (
-        <Text ellipsis fontSize={12} style={{ maxWidth: THUMBNAIL_WIDTH }} type={'secondary'}>
+        <div
+          className="truncate min-w-0 text-[12px] text-muted-foreground"
+          style={{ maxWidth: THUMBNAIL_WIDTH }}
+        >
           {evidence.description}
-        </Text>
+        </div>
       )}
     </div>
   );

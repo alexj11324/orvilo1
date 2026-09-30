@@ -1,7 +1,6 @@
 'use client';
 
 import { Image, Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import type {
   VerifyAgentPlanConfig,
   VerifyCheckItem,
@@ -12,6 +11,7 @@ import type {
   VerifyVerdict,
 } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { TFunction } from 'i18next';
 import {
   AlertTriangle,
@@ -43,6 +43,7 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
 import Loading from '@/components/Loading/BrandTextLoading';
+import { Button } from '@/components/ui/button';
 import {
   Empty,
   EmptyContent,
@@ -804,17 +805,11 @@ const EvidenceItem = memo<{
       className="flex flex-col gap-1.5"
       style={{ ...(isDocument ? { flex: 1, minHeight: 0 } : undefined) }}
     >
-      {!hideLabel && (
-        <Text strong fontSize={13}>
-          {label}
-        </Text>
-      )}
+      {!hideLabel && <div className="font-semibold text-[13px]">{label}</div>}
       {description && !flat && !isInlineProse && (
         // Inline prose is excluded: its authored description becomes the fold
         // row's title below, so a standalone line here would say it twice.
-        <Text fontSize={13} type={'secondary'}>
-          {description}
-        </Text>
+        <div className="text-[13px] text-muted-foreground">{description}</div>
       )}
       {e.fileUrl && imageEvidenceTypes.has(e.type) ? (
         <div
@@ -1353,7 +1348,8 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
         icon={X}
         title={t('report.error.title')}
         action={
-          <Button icon={<RefreshCw size={16} />} onClick={() => void mutate()}>
+          <Button onClick={() => void mutate()}>
+            <RefreshCw size={16} />
             {t('report.actions.retry')}
           </Button>
         }
@@ -1410,12 +1406,12 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
                 </span>
               </div>
             )}
-            <Text as={'h1'} style={{ fontSize: 24, lineHeight: 1.3, margin: 0 }}>
+            <h1 style={{ fontSize: 24, lineHeight: 1.3, margin: 0 }}>
               {run.title || t('report.titleFallback')}
-            </Text>
+            </h1>
 
-            {!isCodingReport && run.goal && <Text className={styles.summary}>{run.goal}</Text>}
-            {report?.summary && <Text className={styles.summary}>{report.summary}</Text>}
+            {!isCodingReport && run.goal && <div className={cn(styles.summary)}>{run.goal}</div>}
+            {report?.summary && <div className={cn(styles.summary)}>{report.summary}</div>}
 
             {isCodingReport && (
               <CodingScopeCard
@@ -1443,7 +1439,7 @@ const ReportViewer = memo<ReportViewerProps>(({ runId: explicitRunId }) => {
             </div>
           ) : (
             <div className="flex flex-col items-center" style={{ padding: 24 }}>
-              <Text type={'secondary'}>{t('report.filterEmpty')}</Text>
+              <div className="text-muted-foreground">{t('report.filterEmpty')}</div>
             </div>
           )}
 

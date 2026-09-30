@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import type {
   VerifyBarChartView,
   VerifyHeatmapView,
@@ -261,7 +260,7 @@ const ViewCard = memo<{
     <div className={styles.card}>
       <div className={`flex items-center gap-2 ${styles.header}`}>
         <ChartNoAxesCombined size={15} />
-        <Text strong>{title ?? t('report.visualization.title')}</Text>
+        <div className="font-semibold">{title ?? t('report.visualization.title')}</div>
       </div>
       {children}
       {context && <div className={styles.context}>{context}</div>}

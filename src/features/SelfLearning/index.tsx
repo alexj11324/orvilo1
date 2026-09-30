@@ -1,7 +1,5 @@
 'use client';
 
-import type { DropdownItem } from '@lobehub/ui/base-ui';
-import { ActionIcon, Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { DnaIcon, MoreHorizontalIcon, PlusIcon, Trash2Icon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
@@ -9,7 +7,12 @@ import { useTranslation } from 'react-i18next';
 import { Link, useParams } from 'react-router';
 import urlJoin from 'url-join';
 
+import ActionIcon from '@/components/ActionIcon';
 import AsyncBoundary from '@/components/AsyncBoundary';
+import type { DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   Empty,
   EmptyContent,
@@ -154,12 +157,13 @@ const SelfLearning = memo(() => {
         right={
           activeAgentId && allDomains.length > 0 ? (
             <div className="flex gap-2">
-              <Button icon={PlusIcon} onClick={() => setTeachOpen((v) => !v)}>
+              <Button onClick={() => setTeachOpen((v) => !v)}>
+                <PlusIcon data-icon="inline-start" />
                 {t('nav.teach')}
               </Button>
               {/* Starting a new direction belongs to the overview, not to one direction's page. */}
               {!domainId && (
-                <Button type={'text'} onClick={openCreate}>
+                <Button variant="ghost" onClick={openCreate}>
                   {t('nav.newDomain')}
                 </Button>
               )}
@@ -193,7 +197,8 @@ const SelfLearning = memo(() => {
                     <EmptyDescription style={{ fontSize: 13 }}>{t('empty.desc')}</EmptyDescription>
                   </EmptyHeader>
                   <EmptyContent>
-                    <Button icon={PlusIcon} type={'primary'} onClick={openCreate}>
+                    <Button variant="outline" onClick={openCreate}>
+                      <PlusIcon data-icon="inline-start" />
                       {t('nav.newDomain')}
                     </Button>
                   </EmptyContent>
@@ -205,7 +210,9 @@ const SelfLearning = memo(() => {
             <div className="flex flex-col gap-5" style={{ paddingBlock: '22px 64px' }}>
               {/* Counts, not a verdict: this line used to be a sentence judging how well the
                   agent had "grown" into each direction. */}
-              <Text type={'secondary'}>{t('domains.meta', { habits: habits.length, runs })}</Text>
+              <div className="text-muted-foreground">
+                {t('domains.meta', { habits: habits.length, runs })}
+              </div>
 
               {teachOpen && (
                 <div
@@ -217,20 +224,18 @@ const SelfLearning = memo(() => {
                 >
                   <div className="flex flex-col gap-2">
                     <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
-                      <Text fontSize={12} type={'secondary'}>
-                        {t('teachNew.help')}
-                      </Text>
+                      <div className="text-[12px] text-muted-foreground">{t('teachNew.help')}</div>
                       {!single && (
                         <div className="flex items-center gap-1.5">
-                          <Text fontSize={12} type={'secondary'}>
+                          <div className="text-[12px] text-muted-foreground">
                             {t('teachNew.domain')}
-                          </Text>
+                          </div>
                           {scoped.map((d) => (
                             <Button
                               key={d.id}
-                              size={'small'}
-                              type={
-                                (teachDomainId ?? scoped[0].id) === d.id ? 'primary' : 'default'
+                              size="sm"
+                              variant={
+                                (teachDomainId ?? scoped[0].id) === d.id ? 'default' : 'outline'
                               }
                               onClick={() => setTeachDomainId(d.id)}
                             >

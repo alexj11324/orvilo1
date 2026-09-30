@@ -1,9 +1,11 @@
 'use client';
 
-import { type DropdownItem, DropdownMenu } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Ellipsis, Pin } from 'lucide-react';
 import { memo } from 'react';
+
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
 
 import {
   type DevDockItem,

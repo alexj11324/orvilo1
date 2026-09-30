@@ -1,4 +1,3 @@
-import { Button, Text, TextArea, toast } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
@@ -6,6 +5,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
+import { toast } from '@/components/toast';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -14,7 +14,9 @@ import {
   BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import NavHeader from '@/features/NavHeader';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -135,9 +137,9 @@ const AutomationCreatePage = memo(() => {
                 <BreadcrumbLink
                   render={
                     <WorkspaceLink to={'/automations'}>
-                      <Text color={'inherit'} weight={500}>
+                      <div className="font-medium" style={{ color: 'inherit' }}>
                         {t('page.title')}
-                      </Text>
+                      </div>
                     </WorkspaceLink>
                   }
                 />
@@ -145,9 +147,9 @@ const AutomationCreatePage = memo(() => {
               <BreadcrumbSeparator />
               <BreadcrumbItem>
                 <BreadcrumbPage>
-                  <Text color={'inherit'} weight={500}>
+                  <div className="font-medium" style={{ color: 'inherit' }}>
                     {name.trim() || t('page.new_automation')}
-                  </Text>
+                  </div>
                 </BreadcrumbPage>
               </BreadcrumbItem>
             </BreadcrumbList>
@@ -158,7 +160,7 @@ const AutomationCreatePage = memo(() => {
             disabled={!canCreate}
             loading={submitting}
             title={canCreate ? undefined : reason}
-            type={'primary'}
+            variant="outline"
             onClick={submit}
           >
             {t(createdIdentifier ? 'create.retry_enable' : 'create.submit')}
@@ -192,25 +194,22 @@ const AutomationCreatePage = memo(() => {
                   }}
                 >
                   <AssigneeAvatar agentId={assigneeAgentId} size={20} />
-                  <Text fontSize={13}>
+                  <div className="text-[13px]">
                     {assigneeAgentId && assigneeMeta
                       ? agentDisplayName(assigneeMeta)
                       : t('instructions.agent_placeholder')}
-                  </Text>
+                  </div>
                   <ChevronRight color={cssVar.colorTextTertiary} size={14} />
                 </div>
               </AssigneeAgentSelector>
             </div>
             <AutomationTriggerDraft draft={draft} onChange={setDraft} />
             <div className="flex flex-col gap-2">
-              <Text fontSize={13} weight={600}>
-                {t('instructions.section')}
-              </Text>
-              <TextArea
-                autoSize={{ minRows: 4 }}
+              <div className="text-[13px] font-semibold">{t('instructions.section')}</div>
+              <Textarea
+                className="min-h-[calc(4lh+0.75rem)]"
                 placeholder={t('create.instructions_placeholder')}
                 value={instructions}
-                variant={'filled'}
                 onChange={(e) => setInstructions(e.target.value)}
               />
             </div>

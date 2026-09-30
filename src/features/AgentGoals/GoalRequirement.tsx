@@ -1,11 +1,11 @@
 'use client';
 
 import { useEditor } from '@lobehub/editor/react';
-import { toast } from '@lobehub/ui/base-ui';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import CollapsibleContent from '@/components/CollapsibleContent';
+import { toast } from '@/components/toast';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { usePermission } from '@/hooks/usePermission';
 import { useGoalStore } from '@/store/goal';

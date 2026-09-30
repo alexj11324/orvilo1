@@ -1,5 +1,6 @@
-import { type DropdownItem } from '@lobehub/ui';
 import { type API } from '@orvilo/prompts';
+
+import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 export type MentionEntityType = 'collection' | 'api';
 
@@ -14,7 +15,7 @@ export interface MentionMetadata {
   type?: MentionEntityType;
 }
 
-type MentionMenuItem = Extract<DropdownItem, { type?: 'item' }>;
+type MentionMenuItem = SidebarMenuItemData;
 
 export type MentionListOption = MentionMenuItem & {
   description?: string;

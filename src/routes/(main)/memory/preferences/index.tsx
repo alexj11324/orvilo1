@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { BrainCircuitIcon } from 'lucide-react';
 import { type FC } from 'react';
@@ -79,12 +78,10 @@ const PreferencesArea = memo(() => {
   );
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <NavHeader
         left={
-          Boolean(preferencesTotal) && (
-            <Tag icon={<Icon icon={BrainCircuitIcon} />}>{preferencesTotal}</Tag>
-          )
+          Boolean(preferencesTotal) && <Tag icon={<BrainCircuitIcon />}>{preferencesTotal}</Tag>
         }
         right={
           <ActionBar showPurge>
@@ -93,11 +90,10 @@ const PreferencesArea = memo(() => {
           </ActionBar>
         }
       />
-      <Flexbox
-        height={'100%'}
+      <div
+        className="flex flex-col"
         id={SCROLL_PARENT_ID}
-        style={{ overflowY: 'auto', paddingBottom: '16vh' }}
-        width={'100%'}
+        style={{ height: '100%', width: '100%', overflowY: 'auto', paddingBottom: '16vh' }}
       >
         <WideScreenContainer gap={32} paddingBlock={48}>
           <FilterBar
@@ -119,18 +115,18 @@ const PreferencesArea = memo(() => {
             <List isLoading={isLoading} searchValue={searchValue} viewMode={viewMode} />
           </MemoryListBoundary>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
 const Preferences: FC = () => {
   return (
     <>
-      <Flexbox horizontal height={'100%'} width={'100%'}>
+      <div className="flex" style={{ height: '100%', width: '100%' }}>
         <PreferencesArea />
         <PreferenceRightPanel />
-      </Flexbox>
+      </div>
       <EditableModal />
     </>
   );

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { AccordionRoot } from '@lobehub/ui/base-ui';
 
 import Members from './Members';
@@ -11,7 +10,7 @@ export enum ChatSidebarKey {
 
 const Body = () => {
   return (
-    <Flexbox paddingInline={4}>
+    <div className="flex flex-col px-1">
       <AccordionRoot
         defaultValue={[ChatSidebarKey.Members, ChatSidebarKey.Topic]}
         indicatorPlacement="inline"
@@ -20,7 +19,7 @@ const Body = () => {
         <Members itemKey={ChatSidebarKey.Members} />
         <Topic itemKey={ChatSidebarKey.Topic} />
       </AccordionRoot>
-    </Flexbox>
+    </div>
   );
 };
 

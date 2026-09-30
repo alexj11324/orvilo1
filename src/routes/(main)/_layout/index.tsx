@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { HotkeyScopeEnum } from '@orvilo/const/hotkeys';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { type FC } from 'react';
 import { Suspense } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
@@ -56,11 +56,12 @@ const Layout: FC = () => {
           <RouteMetaBridge />
           <Suspense fallback={null}>{showCloudPromotion && <CloudBanner />}</Suspense>
           <DndContextWrapper>
-            <Flexbox
-              horizontal
-              className={cx(isPWA ? styles.mainContainerPWA : styles.mainContainer)}
-              height={showCloudPromotion ? `calc(100% - ${BANNER_HEIGHT}px)` : '100%'}
-              width={'100%'}
+            <div
+              className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
+              style={{
+                height: showCloudPromotion ? `calc(100% - ${BANNER_HEIGHT}px)` : '100%',
+                width: '100%',
+              }}
             >
               <SidebarShell />
               <DesktopLayoutContainer>
@@ -68,7 +69,7 @@ const Layout: FC = () => {
                   <Outlet />
                 </Suspense>
               </DesktopLayoutContainer>
-            </Flexbox>
+            </div>
           </DndContextWrapper>
           <Suspense fallback={null}>
             <HotkeyHelperPanel />

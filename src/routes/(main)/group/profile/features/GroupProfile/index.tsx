@@ -1,8 +1,6 @@
 'use client';
 
-import { DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, Button, type ModalInstance } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { useTheme } from 'antd-style';
 import { MoreHorizontalIcon, PlayIcon, Settings2Icon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -13,8 +11,10 @@ import urlJoin from 'url-join';
 import { useAgentGroupTransferMenuItem } from '@/business/client/hooks/useAgentGroupTransferMenuItem';
 import { useAgentGroupTransferToMemberMenuItem } from '@/business/client/hooks/useAgentGroupTransferToMemberMenuItem';
 import { useHasActiveWorkspace } from '@/business/client/hooks/useHasActiveWorkspace';
+import { Separator } from '@/components/ui/separator';
 import { EditingIndicator, type EditLockClient, useEditLock } from '@/features/EditLock';
 import { EditorCanvas } from '@/features/EditorCanvas';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import AccessLevelTag from '@/features/ResourcePermission/AccessLevelTag';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -73,7 +73,7 @@ const GroupProfile = memo(() => {
           // so an enabled entry here is a click into a dead end. Disabled, not
           // hidden — the member can still see the action exists.
           disabled: !canEdit,
-          icon: <Icon icon={UsersIcon} />,
+          icon: <UsersIcon />,
           key: 'permission',
           label: t('permission.page.entry', { ns: 'setting' }),
           onClick: () => {
@@ -178,14 +178,15 @@ const GroupProfile = memo(() => {
 
   return (
     <>
-      <Flexbox
+      <div
+        className="flex flex-col"
         style={{ cursor: 'default', marginBottom: 12 }}
         onClick={(e) => {
           e.stopPropagation();
         }}
       >
-        <Flexbox height={66} width={'100%'}>
-          <Flexbox horizontal align={'center'} gap={8} paddingBlock={12}>
+        <div className="flex flex-col" style={{ height: 66, width: '100%' }}>
+          <div className="flex items-center gap-2 py-3">
             <AutoSaveHint />
             <AccessLevelTag
               resourceType={'agentGroup'}
@@ -195,18 +196,12 @@ const GroupProfile = memo(() => {
                   : undefined
               }
             />
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {/* Header: Group Avatar + Title */}
         <GroupHeader />
         {/* Start Conversation Button */}
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          justify={'flex-start'}
-          style={{ marginTop: 16 }}
-        >
+        <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
           <Button
             icon={PlayIcon}
             type={'primary'}
@@ -218,13 +213,13 @@ const GroupProfile = memo(() => {
             {t('startConversation')}
           </Button>
           {moreMenuItems.length > 0 && (
-            <DropdownMenu items={moreMenuItems}>
+            <SidebarDropdownMenu items={moreMenuItems}>
               <ActionIcon
                 icon={MoreHorizontalIcon}
                 size={'small'}
                 style={{ color: theme.colorTextSecondary }}
               />
-            </DropdownMenu>
+            </SidebarDropdownMenu>
           )}
           <Button
             disabled={!canEdit}
@@ -241,9 +236,9 @@ const GroupProfile = memo(() => {
           >
             {t('advancedSettings')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-      <Divider />
+        </div>
+      </div>
+      <Separator />
       {/* Group Content Editor */}
       <EditingIndicator
         holderId={lock.lockedByOther ? lock.holderId : null}

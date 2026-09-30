@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { SelectOptions } from '@lobehub/ui/base-ui';
 import { Select } from '@lobehub/ui/base-ui';
 import { HETEROGENEOUS_TYPE_LABELS } from '@orvilo/heterogeneous-agents';
@@ -146,10 +145,10 @@ const ExecutionTargetLabel = memo<ExecutionTargetLabelProps>(
         <span aria-hidden className={styles.optionIcon}>
           {icon}
         </span>
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
+        <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
           <span className={styles.optionName}>{label}</span>
           <span className={styles.optionDescription}>{secondary}</span>
-        </Flexbox>
+        </div>
       </span>
     );
   },

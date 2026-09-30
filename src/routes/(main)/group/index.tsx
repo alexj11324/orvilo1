@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import Conversation from './features/Conversation';
@@ -10,15 +9,13 @@ import TelemetryNotification from './features/TelemetryNotification';
 const ChatPage = memo(() => {
   return (
     <>
-      <Flexbox
-        horizontal
-        height={'100%'}
-        style={{ overflow: 'hidden', position: 'relative' }}
-        width={'100%'}
+      <div
+        className="flex"
+        style={{ height: '100%', width: '100%', overflow: 'hidden', position: 'relative' }}
       >
         <Conversation />
         <Portal />
-      </Flexbox>
+      </div>
       <TelemetryNotification mobile={false} />
     </>
   );

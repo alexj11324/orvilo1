@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDown } from 'lucide-react';
 import { memo } from 'react';
@@ -76,7 +75,7 @@ const ChatHistoryTitleMenu = memo<ChatHistoryTitleMenuProps>(({ title }) => {
       }}
     >
       <span className={styles.label}>{title}</span>
-      <Icon icon={ChevronDown} size={14} />
+      <ChevronDown size={14} />
     </ChatHistoryMenu>
   );
 });

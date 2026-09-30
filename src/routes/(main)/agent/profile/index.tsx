@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { type FC } from 'react';
 import { memo, Suspense } from 'react';
 import { useParams } from 'react-router';
@@ -50,7 +49,7 @@ const ProfileArea = memo(() => {
 
   return (
     <>
-      <Flexbox flex={1} height={'100%'} style={styles.profileArea}>
+      <div className="flex flex-col flex-1" style={{ height: '100%', ...styles.profileArea }}>
         <AsyncBoundary
           // Config lives in the map only after a successful fetch — so "settled"
           // is exactly "not still loading". A truthy sentinel on success lets the
@@ -67,19 +66,22 @@ const ProfileArea = memo(() => {
           onRetry={() => retryAgentConfigFetch()}
         >
           <Header />
-          <Flexbox
-            horizontal
-            height={'100%'}
-            style={{ ...styles.contentWrapper, cursor: canEdit ? 'text' : 'default' }}
-            width={'100%'}
+          <div
+            className="flex"
+            style={{
+              height: '100%',
+              width: '100%',
+              ...styles.contentWrapper,
+              cursor: canEdit ? 'text' : 'default',
+            }}
             onClick={handleContentClick}
           >
             <WideScreenContainer>
               <ProfileEditor />
             </WideScreenContainer>
-          </Flexbox>
+          </div>
         </AsyncBoundary>
-      </Flexbox>
+      </div>
       {/* Mounted unconditionally (not behind the config-loading gate) so the lock
           is peeked on open and resolved before the editor renders. */}
       <EditLockDriver />
@@ -112,10 +114,10 @@ const AgentProfile: FC = () => {
         resourceType="agent"
       >
         <ProfileProvider>
-          <Flexbox horizontal height={'100%'} width={'100%'}>
+          <div className="flex" style={{ height: '100%', width: '100%' }}>
             <ProfileArea />
             <AgentBuilderSlot />
-          </Flexbox>
+          </div>
         </ProfileProvider>
       </ResourceConfigAccessGate>
     </Suspense>

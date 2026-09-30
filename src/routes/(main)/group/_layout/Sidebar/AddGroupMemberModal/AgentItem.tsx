@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Avatar, Checkbox, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { useHover } from 'ahooks';
@@ -98,7 +97,7 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
       style={{ cursor: showCheckbox ? 'pointer' : 'default' }}
       onClick={showCheckbox ? handleClick : undefined}
     >
-      <Flexbox horizontal align="center" gap={8} width="100%">
+      <div className="flex items-center gap-2" style={{ width: '100%' }}>
         {showCheckbox && (
           <Checkbox
             checked={isSelected}
@@ -124,7 +123,7 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
             <X size={14} />
           </div>
         )}
-      </Flexbox>
+      </div>
     </div>
   );
 });

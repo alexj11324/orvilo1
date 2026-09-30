@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import type { ReactNode } from 'react';
 
 import { ProductLogo } from '@/components/Branding';
@@ -100,12 +100,10 @@ export const shouldShowInboxAgentResolving = ({
 
 const InboxAgentLanding = ({ children }: InboxAgentLandingProps) => {
   return (
-    <Flexbox
-      align={'center'}
-      className={styles.root}
+    <div
+      className={cn('flex flex-col items-center flex-1', styles.root)}
       data-testid="inbox-agent-landing-scroll-region"
-      flex={1}
-      width={'100%'}
+      style={{ width: '100%' }}
     >
       <div aria-hidden className={styles.watermark}>
         <ProductLogo size={336} style={{ height: '100%', width: '100%' }} type={'mono'} />
@@ -113,7 +111,7 @@ const InboxAgentLanding = ({ children }: InboxAgentLandingProps) => {
       <div className={styles.composer} data-testid="inbox-agent-landing-content">
         {children}
       </div>
-    </Flexbox>
+    </div>
   );
 };
 

@@ -1,4 +1,3 @@
-import { Icon } from '@lobehub/ui';
 import type { DropdownItem } from '@lobehub/ui/base-ui';
 import { LucideCheck } from 'lucide-react';
 import { useMemo } from 'react';
@@ -27,7 +26,7 @@ export const useTopicFilterDropdownMenu = (): DropdownItem[] => {
     return [
       {
         children: groupModes.map((mode) => ({
-          icon: topicGroupMode === mode ? <Icon icon={LucideCheck} /> : <div />,
+          icon: topicGroupMode === mode ? <LucideCheck /> : <div />,
           key: `group-${mode}`,
           label: t(`filter.groupMode.${mode}`),
           onClick: () => {
@@ -41,7 +40,7 @@ export const useTopicFilterDropdownMenu = (): DropdownItem[] => {
       { type: 'divider' as const },
       {
         children: sortByOptions.map((option) => ({
-          icon: topicSortBy === option ? <Icon icon={LucideCheck} /> : <div />,
+          icon: topicSortBy === option ? <LucideCheck /> : <div />,
           key: `sort-${option}`,
           label: t(`filter.sortBy.${option}`),
           onClick: () => {
@@ -56,7 +55,7 @@ export const useTopicFilterDropdownMenu = (): DropdownItem[] => {
       {
         children: [
           {
-            icon: topicIncludeCompleted ? <Icon icon={LucideCheck} /> : <div />,
+            icon: topicIncludeCompleted ? <LucideCheck /> : <div />,
             key: 'showCompleted',
             label: t('filter.showCompleted'),
             onClick: () => {

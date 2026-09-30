@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Tag } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { HashIcon } from 'lucide-react';
@@ -13,10 +12,10 @@ const HashTags = memo<HashTagsProps>(({ hashTags }) => {
   return (
     hashTags &&
     hashTags.length > 0 && (
-      <Flexbox horizontal wrap="wrap">
+      <div className="flex flex-wrap">
         {hashTags.map((tag, index) => (
           <Tag
-            icon={<Icon icon={HashIcon} />}
+            icon={<HashIcon />}
             key={index}
             variant={'borderless'}
             style={{
@@ -29,7 +28,7 @@ const HashTags = memo<HashTagsProps>(({ hashTags }) => {
             {tag}
           </Tag>
         ))}
-      </Flexbox>
+      </div>
     )
   );
 });

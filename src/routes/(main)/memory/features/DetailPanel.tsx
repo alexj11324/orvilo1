@@ -1,13 +1,11 @@
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
-import { memo } from 'react';
+import { type ComponentProps, memo } from 'react';
 
 import { type NavHeaderProps } from '@/features/NavHeader';
 import NavHeader from '@/features/NavHeader';
 import RightPanel from '@/features/RightPanel';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 
-interface DetailPanelProps extends FlexboxProps {
+interface DetailPanelProps extends ComponentProps<'div'> {
   header?: NavHeaderProps;
 }
 
@@ -23,22 +21,21 @@ const DetailPanel = memo<DetailPanelProps>(({ children, style, header, ...rest }
           </>
         }
       />
-      <Flexbox
-        flex={1}
-        gap={16}
-        height={'100%'}
-        paddingInline={16}
+      <div
+        {...rest}
+        className="flex flex-col flex-1 gap-4 px-4"
         style={{
+          height: '100%',
+
           minWidth: 300,
           overflowY: 'auto',
           paddingBottom: 64,
           paddingTop: 16,
           ...style,
         }}
-        {...rest}
       >
         {children}
-      </Flexbox>
+      </div>
     </RightPanel>
   );
 });

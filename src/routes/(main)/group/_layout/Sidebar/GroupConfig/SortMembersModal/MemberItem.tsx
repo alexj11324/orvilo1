@@ -1,11 +1,12 @@
 'use client';
 
-import { SortableList } from '@lobehub/ui';
 import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { GripVertical } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { SortableItemHandle } from '@/components/reui/sortable';
 import { DEFAULT_AVATAR } from '@/const/meta';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -30,7 +31,11 @@ const MemberItem = memo<MemberItemProps>(({ avatar, background, disabled, isExte
 
   return (
     <>
-      {!disabled && <SortableList.DragHandle />}
+      {!disabled && (
+        <SortableItemHandle>
+          <GripVertical size={14} />
+        </SortableItemHandle>
+      )}
       <Avatar
         emojiScaleWithBackground
         avatar={avatar || DEFAULT_AVATAR}

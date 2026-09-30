@@ -1,7 +1,6 @@
 'use client';
 
-import type { DropdownItem } from '@lobehub/ui';
-import { Block, copyToClipboard, Flexbox, Icon } from '@lobehub/ui';
+import { copyToClipboard } from '@lobehub/ui';
 import { confirmModal, type ModalInstance, Text, toast } from '@lobehub/ui/base-ui';
 import {
   Clock3Icon,
@@ -26,6 +25,7 @@ import { DOCUMENT_HISTORY_QUERY_LIST_LIMIT } from '@/const/documentHistory';
 import { isDesktop } from '@/const/version';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
+import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openDocumentCompareModal } from '@/features/PageEditor/History/CompareModal';
 import { formatHistoryAbsoluteTime } from '@/features/PageEditor/History/formatHistoryDate';
 import type {
@@ -49,27 +49,19 @@ interface TopicInfoHeaderProps {
 }
 
 const TopicInfoHeader = ({ authorName, title, updatedAtLabel }: TopicInfoHeaderProps) => (
-  <Block
-    horizontal
-    align={'center'}
-    gap={12}
-    paddingBlock={8}
-    paddingInline={12}
-    style={{ minWidth: 240 }}
-    variant={'borderless'}
-  >
-    <Flexbox flex={1} gap={2} style={{ minWidth: 0, overflow: 'hidden' }}>
+  <div className="flex items-center gap-3 py-2 px-3" style={{ minWidth: 240 }}>
+    <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0, overflow: 'hidden' }}>
       <Text ellipsis style={{ lineHeight: 1.4 }} weight={'bold'}>
         {title}
       </Text>
       <Text ellipsis fontSize={12} style={{ lineHeight: 1.4 }} type={'secondary'}>
         {updatedAtLabel ? `${authorName} ${updatedAtLabel}` : authorName}
       </Text>
-    </Flexbox>
-  </Block>
+    </div>
+  </div>
 );
 
-export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownItem[] } => {
+export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => SidebarMenuItemData[] } => {
   const { t } = useTranslation(['chat', 'topic', 'common', 'file']);
 
   const { pathname } = useLocation();
@@ -215,13 +207,13 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
     );
   }, [activeTopic?.updatedAt, authorInfo?.fullName, topicId, t]);
 
-  const menuItems = useCallback((): DropdownItem[] => {
-    const items: DropdownItem[] = [];
+  const menuItems = useCallback((): SidebarMenuItemData[] => {
+    const items: SidebarMenuItemData[] = [];
 
     if (topicId) {
       items.push(
         {
-          icon: <Icon icon={Star} />,
+          icon: <Star />,
           key: 'favorite',
           label: t(isFavorite ? 'actions.unfavorite' : 'actions.favorite', { ns: 'topic' }),
           onClick: () => {
@@ -230,7 +222,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
         },
         { type: 'divider' as const },
         {
-          icon: <Icon icon={Wand2} />,
+          icon: <Wand2 />,
           key: 'autoRename',
           label: t('actions.autoRename', { ns: 'topic' }),
           onClick: () => {
@@ -238,7 +230,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
           },
         },
         {
-          icon: <Icon icon={PencilLine} />,
+          icon: <PencilLine />,
           key: 'rename',
           label: t('rename', { ns: 'common' }),
           onClick: () => {
@@ -257,7 +249,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
 
       if (isDesktop && workingDirectory) {
         items.push({
-          icon: <Icon icon={Copy} />,
+          icon: <Copy />,
           key: 'copyWorkingDirectory',
           label: t('actions.copyWorkingDirectory', { ns: 'topic' }),
           onClick: () => {
@@ -269,7 +261,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
 
       if (isDesktop && activeAgentId && !pathname.startsWith('/popup')) {
         items.push({
-          icon: <Icon icon={ExternalLink} />,
+          icon: <ExternalLink />,
           key: 'openInPopupWindow',
           label: t('inPopup.title', { ns: 'topic' }),
           onClick: () => {
@@ -280,7 +272,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
 
       items.push(
         {
-          icon: <Icon icon={FileText} />,
+          icon: <FileText />,
           key: 'copyAsMarkdown',
           label: t('copyAsMarkdown', { ns: 'common' }),
           onClick: async () => {
@@ -300,7 +292,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
           },
         },
         {
-          icon: <Icon icon={Hash} />,
+          icon: <Hash />,
           key: 'copySessionId',
           label: t('actions.copySessionId', { ns: 'topic' }),
           onClick: async () => {
@@ -315,7 +307,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
     if (docId) {
       items.push(
         {
-          icon: <Icon icon={Clock3Icon} />,
+          icon: <Clock3Icon />,
           key: 'open-document-compare',
           label: t('pageEditor.history.compareTitle', { ns: 'file' }),
           onClick: () => {
@@ -328,7 +320,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
 
     items.push({
       checked: wideScreen,
-      icon: <Icon icon={Maximize2} />,
+      icon: <Maximize2 />,
       key: 'full-width',
       label: t('viewMode.fullWidth'),
       onCheckedChange: toggleWideScreen,
@@ -340,7 +332,7 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownIt
         { type: 'divider' as const },
         {
           danger: true,
-          icon: <Icon icon={Trash} />,
+          icon: <Trash />,
           key: 'delete',
           label: t('delete', { ns: 'common' }),
           onClick: () => {

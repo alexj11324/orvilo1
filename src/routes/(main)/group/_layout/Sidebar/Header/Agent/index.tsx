@@ -1,6 +1,5 @@
 'use client';
 
-import { Block } from '@lobehub/ui';
 import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
@@ -30,14 +29,11 @@ const Agent = memo<PropsWithChildren>(() => {
 
   return (
     <SwitchPanel>
-      <Block
-        clickable
-        horizontal
-        align={'center'}
-        gap={8}
-        padding={2}
-        variant={'borderless'}
+      <div
+        className="flex items-center gap-2 p-0.5"
         style={{
+          cursor: 'pointer',
+
           minWidth: 32,
           overflow: 'hidden',
         }}
@@ -56,7 +52,7 @@ const Agent = memo<PropsWithChildren>(() => {
             width: 24,
           }}
         />
-      </Block>
+      </div>
     </SwitchPanel>
   );
 });

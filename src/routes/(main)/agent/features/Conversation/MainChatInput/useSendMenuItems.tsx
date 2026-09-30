@@ -1,13 +1,13 @@
 'use client';
 
-import { type MenuProps } from '@lobehub/ui';
-import { Flexbox, Hotkey, Icon } from '@lobehub/ui';
 import { HotkeyEnum, KeyEnum } from '@orvilo/const/hotkeys';
 import { BotMessageSquare, LucideCheck, MessageSquarePlus } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Kbd, KbdGroup } from '@/components/ui/kbd';
 import { useConversationStore, useConversationStoreApi } from '@/features/Conversation';
+import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useAddUserMessageHotkey } from '@/hooks/useHotkeys';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors, settingsSelectors } from '@/store/user/selectors';
@@ -20,7 +20,7 @@ import { preferenceSelectors, settingsSelectors } from '@/store/user/selectors';
  * - Add AI Message
  * - Add User Message
  */
-export const useSendMenuItems = (): MenuProps['items'] => {
+export const useSendMenuItems = (): SidebarMenuItems => {
   const { t } = useTranslation('chat');
 
   const storeApi = useConversationStoreApi();
@@ -58,38 +58,41 @@ export const useSendMenuItems = (): MenuProps['items'] => {
   return useMemo(
     () => [
       {
-        icon: !useCmdEnterToSend ? <Icon icon={LucideCheck} /> : <div />,
+        icon: !useCmdEnterToSend ? <LucideCheck /> : <div />,
         key: 'sendWithEnter',
         label: (
-          <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex items-center gap-1">
             <Trans
               i18nKey={'input.sendWithEnter'}
               ns={'chat'}
               components={{
-                key: <Hotkey keys={KeyEnum.Enter} variant={'borderless'} />,
+                key: <Kbd>{KeyEnum.Enter}</Kbd>,
               }}
             />
-          </Flexbox>
+          </div>
         ),
         onClick: () => {
           updatePreference({ useCmdEnterToSend: false });
         },
       },
       {
-        icon: useCmdEnterToSend ? <Icon icon={LucideCheck} /> : <div />,
+        icon: useCmdEnterToSend ? <LucideCheck /> : <div />,
         key: 'sendWithCmdEnter',
         label: (
-          <Flexbox horizontal align={'center'} gap={4}>
+          <div className="flex items-center gap-1">
             <Trans
               i18nKey={'input.sendWithCmdEnter'}
               ns={'chat'}
               components={{
                 key: (
-                  <Hotkey keys={[KeyEnum.Mod, KeyEnum.Enter].join('+')} variant={'borderless'} />
+                  <KbdGroup>
+                    <Kbd>{KeyEnum.Mod}</Kbd>
+                    <Kbd>{KeyEnum.Enter}</Kbd>
+                  </KbdGroup>
                 ),
               }}
             />
-          </Flexbox>
+          </div>
         ),
         onClick: () => {
           updatePreference({ useCmdEnterToSend: true });
@@ -97,19 +100,19 @@ export const useSendMenuItems = (): MenuProps['items'] => {
       },
       { type: 'divider' },
       {
-        icon: <Icon icon={BotMessageSquare} />,
+        icon: <BotMessageSquare />,
         key: 'addAi',
         label: t('input.addAi'),
         onClick: handleAddAIMessage,
       },
       {
-        icon: <Icon icon={MessageSquarePlus} />,
+        icon: <MessageSquarePlus />,
         key: 'addUser',
         label: (
-          <Flexbox horizontal align={'center'} gap={24}>
+          <div className="flex items-center gap-6">
             {t('input.addUser')}
-            <Hotkey keys={hotkey} />
-          </Flexbox>
+            <Kbd>{hotkey}</Kbd>
+          </div>
         ),
         onClick: handleAddUserMessage,
       },

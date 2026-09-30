@@ -1,15 +1,16 @@
 'use client';
 
-import { Flexbox, SearchBar } from '@lobehub/ui';
 import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { type ChangeEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
 
+import { Input } from '@/components/ui/input';
 import AgentSelectionEmpty from '@/features/AgentSelectionEmpty';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -101,22 +102,20 @@ const AvailableAgentList = memo<AvailableAgentListProps>(({ agents, isLoading })
   }, [filteredAgents, privateAgentIds, t]);
 
   return (
-    <Flexbox className={styles.container} gap={12}>
-      <SearchBar
-        allowClear
+    <div className={cn('flex flex-col gap-3', styles.container)}>
+      <Input
         placeholder={t('memberSelection.searchAgents')}
         value={searchTerm}
-        variant="filled"
         onChange={handleSearchChange}
       />
 
-      <Flexbox flex={1} style={{ minHeight: 0 }}>
+      <div className="flex flex-col flex-1" style={{ minHeight: 0 }}>
         {isLoading ? (
-          <Flexbox gap={8} padding={8}>
+          <div className="flex flex-col gap-2 p-2">
             <Skeleton.Text rows={1} />
             <Skeleton.Text rows={1} />
             <Skeleton.Text rows={1} />
-          </Flexbox>
+          </div>
         ) : filteredAgents.length === 0 ? (
           <AgentSelectionEmpty
             search={Boolean(searchTerm)}
@@ -146,8 +145,8 @@ const AvailableAgentList = memo<AvailableAgentListProps>(({ agents, isLoading })
             }}
           />
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

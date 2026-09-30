@@ -2,21 +2,21 @@
 
 import { mergeProps } from '@base-ui/react/merge-props';
 import { useRender } from '@base-ui/react/use-render';
-import type {
+import {
   defaultDropAnimationSideEffects,
   DndContext,
-  DragCancelEvent,
-  DragEndEvent,
+  type DragCancelEvent,
+  type DragEndEvent,
   type DraggableSyntheticListeners,
   DragOverlay,
-  DragStartEvent,
-  DropAnimation,
+  type DragStartEvent,
+  type DropAnimation,
   KeyboardSensor,
   MeasuringStrategy,
-  Modifiers,
+  type Modifiers,
   MouseSensor,
   TouchSensor,
-  UniqueIdentifier,
+  type UniqueIdentifier,
   useSensor,
   useSensors,
 } from '@dnd-kit/core';

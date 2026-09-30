@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { memo, useState } from 'react';
 
@@ -20,10 +19,10 @@ const MobileHeader = memo(() => {
       center={<ChatHeaderTitle />}
       style={{ width: '100%' }}
       right={
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex items-center gap-1">
           <TopicCommentButton mobile />
           <ShareButton mobile open={open} setOpen={setOpen} />
-        </Flexbox>
+        </div>
       }
       onBackClick={() =>
         // `/agent` index redirects to `..` (mobile home / session list), preserving

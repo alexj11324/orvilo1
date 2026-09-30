@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { memo, useCallback, useEffect, useRef } from 'react';
 import { type VListHandle } from 'virtua';
@@ -151,9 +150,9 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
   // Show loading when searching
   if (showSearchLoading) {
     return (
-      <Flexbox gap={1} paddingBlock={1} paddingInline={4}>
+      <div className="flex flex-col px-1" style={{ gap: 1, paddingBlock: 1 }}>
         <SkeletonList rows={5} />
-      </Flexbox>
+      </div>
     );
   }
 
@@ -165,7 +164,7 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
       onScroll={handleScroll}
     >
       {activeTopicList?.map((topic) => (
-        <Flexbox gap={1} key={topic.id} padding={'4px 8px'}>
+        <div className="flex flex-col" key={topic.id} style={{ gap: 1, padding: '4px 8px' }}>
           <TopicItem
             active={activeTopicId === topic.id}
             fav={topic.favorite}
@@ -174,12 +173,12 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
             threadId={activeThreadId}
             title={topic.title}
           />
-        </Flexbox>
+        </div>
       ))}
       {showLoading && (
-        <Flexbox padding={'4px 8px'}>
+        <div className="flex flex-col" style={{ padding: '4px 8px' }}>
           <SkeletonList rows={3} />
-        </Flexbox>
+        </div>
       )}
     </VList>
   );

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Alert, Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
@@ -49,7 +48,7 @@ const AgentConfigError = memo(() => {
 
   return (
     <WideScreenContainer>
-      <Flexbox paddingBlock={'0 18px'}>
+      <div className="flex flex-col" style={{ paddingBlock: '0 18px' }}>
         <Alert
           showIcon
           classNames={{ action: styles.retry, description: styles.description }}
@@ -62,7 +61,7 @@ const AgentConfigError = memo(() => {
             </Button>
           }
         />
-      </Flexbox>
+      </div>
     </WideScreenContainer>
   );
 });

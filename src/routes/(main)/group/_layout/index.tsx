@@ -1,4 +1,4 @@
-import { Flexbox } from '@lobehub/ui';
+import { cn } from 'cn';
 import { type FC } from 'react';
 import { Outlet } from 'react-router';
 
@@ -18,13 +18,13 @@ const Layout: FC = () => {
   return (
     <>
       <Sidebar />
-      <Flexbox className={styles.mainContainer} flex={1} height={'100%'}>
+      <div className={cn('flex flex-col flex-1', styles.mainContainer)} style={{ height: '100%' }}>
         {/* Keep the sidebar interactive when the routed group is gone (deleted
             or made private) — only the content area collapses to the 404 card. */}
         <GroupNotFoundGuard>
           <Outlet />
         </GroupNotFoundGuard>
-      </Flexbox>
+      </div>
       <RegisterHotkeys />
       {isDesktop && <ProtocolUrlHandler />}
       <GroupIdSync />

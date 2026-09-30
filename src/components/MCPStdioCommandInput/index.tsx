@@ -6,7 +6,7 @@ import {
   SiPnpm,
   SiPython,
 } from '@icons-pack/react-simple-icons';
-import { type ComponentProps, createElement, type FC } from 'react';
+import { type ComponentProps, type FC } from 'react';
 import { memo } from 'react';
 
 import {
@@ -75,7 +75,7 @@ const MCPStdioCommandInput = memo<MCPStdioCommandInputProps>(
               {STDIO_COMMAND_OPTIONS.map(({ value, icon: Icon, color }) => (
                 <AutocompleteItem key={value} value={value}>
                   <div className={'flex gap-2 items-center'}>
-                    {Icon && createElement(Icon, { size: 16, style: { color } })}
+                    {Icon && <Icon color={color} size={16} />}
                     {value}
                   </div>
                 </AutocompleteItem>

@@ -81,7 +81,6 @@ const ImageItem = memo<ImageItemProps>(
         actions={
           editable && (
             <ActionIcon
-              glass
               className={styles.deleteButton}
               icon={Trash}
               size={'small'}

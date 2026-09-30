@@ -10,6 +10,7 @@ import { mergeWith } from 'es-toolkit/compat';
 import isEqual from 'fast-deep-equal';
 import { Info, type LucideIcon } from 'lucide-react';
 import {
+  type ComponentProps,
   createElement,
   type CSSProperties,
   isValidElement,

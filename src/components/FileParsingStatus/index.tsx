@@ -74,14 +74,15 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
             <TooltipTrigger render={<span />}>
               <Badge className={className} variant="destructive">
                 {t('FileParsingStatus.chunks.status.error')}{' '}
-                {createElement(RotateCwIcon, {
-                  size: 16,
-                  style: { cursor: 'pointer' },
-                  title: t('retry', { ns: 'common' }),
-                  onClick: () => {
+                <span
+                  style={{ cursor: 'pointer' }}
+                  title={t('retry', { ns: 'common' })}
+                  onClick={() => {
                     onErrorClick?.('chunking');
-                  },
-                })}
+                  }}
+                >
+                  <RotateCwIcon size={16} />
+                </span>
               </Badge>
             </TooltipTrigger>
             <TooltipContent style={{ maxWidth: 340 }}>
@@ -126,7 +127,7 @@ const FileParsingStatus = memo<FileParsingStatusProps>(
                       // or if preparing the embedding
                       preparingEmbedding ? null : (
                         <Button
-                          type={'link'}
+                          variant="link"
                           style={{
                             fontSize: 12,
                             height: 'auto',

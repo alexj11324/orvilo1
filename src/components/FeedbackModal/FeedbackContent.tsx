@@ -178,7 +178,11 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
                   src={screenshotUrl}
                   style={{ borderRadius: 8, maxHeight: 200, maxWidth: '100%' }}
                 />
-                <Button danger disabled={uploadingScreenshot} onClick={handleRemoveScreenshot}>
+                <Button
+                  disabled={uploadingScreenshot}
+                  variant="destructive"
+                  onClick={handleRemoveScreenshot}
+                >
                   {t('feedback.fields.screenshot.remove')}
                 </Button>
               </div>
@@ -191,7 +195,8 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
                   return false;
                 }}
               >
-                <Button icon={<ImagePlus size={16} />} loading={uploadingScreenshot}>
+                <Button loading={uploadingScreenshot}>
+                  <ImagePlus data-icon="inline-start" size={16} />
                   {uploadingScreenshot
                     ? t('feedback.fields.screenshot.uploading')
                     : t('feedback.fields.screenshot.upload')}
@@ -207,7 +212,8 @@ const FeedbackContent = memo<FeedbackContentProps>(({ initialValues }) => {
 
       <div className="flex gap-2 justify-end">
         <Button onClick={handleCancel}>{t('cancel')}</Button>
-        <Button icon={<Send size={16} />} loading={loading} type="primary" onClick={handleSubmit}>
+        <Button loading={loading} variant="default" onClick={handleSubmit}>
+          <Send data-icon="inline-start" size={16} />
           {t('feedback.submit')}
         </Button>
       </div>

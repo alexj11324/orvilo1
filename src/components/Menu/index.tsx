@@ -1,5 +1,13 @@
 import { createStaticStyles, cx } from 'antd-style';
-import { type CSSProperties, memo, type ReactNode, type SyntheticEvent } from 'react';
+import {
+  createElement,
+  type CSSProperties,
+  type ElementType,
+  isValidElement,
+  memo,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react';
 
 import { type ActionMenuItem, type MenuInfo } from '@/components/ItemsMenu';
 import { Separator } from '@/components/ui/separator';
@@ -131,7 +139,11 @@ const renderItems = (
           });
         }}
       >
-        {item.icon ? <span className={styles.icon}>{item.icon}</span> : null}
+        {item.icon ? (
+          <span className={styles.icon}>
+            {isValidElement(item.icon) ? item.icon : createElement(item.icon as ElementType)}
+          </span>
+        ) : null}
         <span className={cx(styles.label, item.className)}>{item.label}</span>
         {item.extra}
       </div>

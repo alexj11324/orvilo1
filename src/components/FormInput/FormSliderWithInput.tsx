@@ -6,13 +6,10 @@ import { memo, useEffect, useState } from 'react';
 import InputNumber from '@/components/InputNumber';
 import { Slider } from '@/components/ui/slider';
 
-interface FormSliderWithInputProps extends Omit<
-  ComponentProps<typeof Slider>,
-  'onValueChange' | 'value'
-> {
+type FormSliderWithInputProps = Omit<ComponentProps<typeof Slider>, 'onValueChange' | 'value'> & {
   onChange?: (value: number) => void;
   value?: number;
-}
+};
 
 /**
  * Form-integrated slider with delayed onChange behavior.
@@ -43,21 +40,24 @@ const FormSliderWithInput = memo<FormSliderWithInputProps>(
             }
           }}
         />
-        <InputNumber
-          disabled={props.disabled}
-          max={props.max}
-          min={props.min}
-          step={props.step}
-          value={value}
+        <div
           onBlur={() => {
             onChange?.(value);
           }}
-          onChange={(newValue) => {
-            if (typeof newValue === 'number') {
-              setValue(newValue);
-            }
-          }}
-        />
+        >
+          <InputNumber
+            disabled={props.disabled}
+            max={props.max}
+            min={props.min}
+            step={props.step}
+            value={value}
+            onChange={(newValue) => {
+              if (typeof newValue === 'number') {
+                setValue(newValue);
+              }
+            }}
+          />
+        </div>
       </div>
     );
   },

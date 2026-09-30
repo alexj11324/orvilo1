@@ -58,7 +58,7 @@ const HiddenInput = ({
       style={{ display: 'none' }}
       tabIndex={-1}
       type={'file'}
-      webkitdirectory={directory ? '' : undefined}
+      {...(directory ? ({ webkitdirectory: '' } as const) : {})}
       onChange={handleChange}
     />
   );

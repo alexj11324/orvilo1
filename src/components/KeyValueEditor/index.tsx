@@ -2,7 +2,7 @@ import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import fastDeepEqual from 'fast-deep-equal';
 import { LucidePlus, LucideTrash } from 'lucide-react';
-import { createElement, type CSSProperties } from 'react';
+import { type CSSProperties } from 'react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { v4 as uuidv4 } from 'uuid';
@@ -200,14 +200,14 @@ const KeyValueEditor = memo<KeyValueEditorProps>(
             );
           })}
           <Button
-            block
+            className="w-full border-dashed"
             disabled={disabled}
-            icon={createElement(LucidePlus, { size: 16 })}
-            size={'small'}
+            size="sm"
             style={{ marginTop: items.length > 0 ? 16 : 8 }}
-            type="dashed"
+            variant="outline"
             onClick={handleAdd}
           >
+            <LucidePlus data-icon="inline-start" size={16} />
             {addButtonText || t('KeyValueEditor.addButton')}
           </Button>
         </div>

@@ -414,8 +414,6 @@ const TaskScheduleDialogContent = memo<TaskScheduleDialogContentProps>(
 
 TaskScheduleDialogContent.displayName = 'TaskScheduleDialogContent';
 
-export { TaskScheduleDialogContent };
-
 export interface OpenTaskScheduleDialogProps {
   dueDate: string | null;
   identifier: string;

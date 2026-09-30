@@ -1,10 +1,10 @@
-import { Progress, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import * as m from 'motion/react-m';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Progress } from '@/components/ui/progress';
 import { useToolStore } from '@/store/tool';
 import { mcpStoreSelectors } from '@/store/tool/selectors';
 import { MCPInstallStep } from '@/types/plugins';
@@ -40,17 +40,11 @@ const MCPInstallProgress = memo<{ identifier: string }>(({ identifier }) => {
           }}
         >
           <div className="flex flex-col py-1">
-            <Progress
-              percent={installProgress.progress}
-              showInfo={false}
-              size="small"
-              status="active"
-              strokeColor={cssVar.blue}
-            />
+            <Progress className="h-1.5" value={installProgress.progress} />
             {stepText && (
-              <Text fontSize={11} style={{ marginTop: 4 }} type={'secondary'}>
+              <div style={{ fontSize: 11, marginTop: 4, color: cssVar.colorTextSecondary }}>
                 ({installProgress.progress}%) {stepText}
-              </Text>
+              </div>
             )}
           </div>
         </m.div>

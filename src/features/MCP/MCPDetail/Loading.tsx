@@ -1,16 +1,25 @@
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
+
+const SkeletonText = ({ rows }: { rows: number }) => (
+  <div className="flex flex-col gap-2">
+    {Array.from({ length: rows }, (_, i) => (
+      <Skeleton key={i} style={{ height: 14, width: '100%' }} />
+    ))}
+  </div>
+);
 
 const DetailsLoading = memo(() => {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-3">
         <div className="flex items-center gap-4" style={{ width: '100%' }}>
-          <Skeleton.Avatar shape={'square'} size={64} />
-          <Skeleton height={36} width={200} />
+          <Skeleton className="rounded-md" style={{ height: 64, width: 64 }} />
+          <Skeleton style={{ height: 36, width: 200 }} />
         </div>
-        <Skeleton height={28} width={200} />
+        <Skeleton style={{ height: 28, width: 200 }} />
       </div>
       <div
         className="flex gap-3"
@@ -20,8 +29,8 @@ const DetailsLoading = memo(() => {
           borderBottom: `1px solid ${cssVar.colorBorder}`,
         }}
       >
-        <Skeleton height={36} />
-        <Skeleton height={36} />
+        <Skeleton style={{ height: 36, width: 120 }} />
+        <Skeleton style={{ height: 36, width: 120 }} />
       </div>
       <div
         className="flex flex-col flex-1 gap-4"
@@ -31,9 +40,9 @@ const DetailsLoading = memo(() => {
           overflow: 'hidden',
         }}
       >
-        <Skeleton.Text rows={3} />
-        <Skeleton.Text rows={8} />
-        <Skeleton.Text rows={8} />
+        <SkeletonText rows={3} />
+        <SkeletonText rows={8} />
+        <SkeletonText rows={8} />
       </div>
     </div>
   );

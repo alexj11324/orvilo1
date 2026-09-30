@@ -1,13 +1,16 @@
-import { Alert, Button, RadioGroup } from '@lobehub/ui/base-ui';
 import { type FormInstance } from 'antd';
 import isEqual from 'fast-deep-equal';
+import { CircleAlert, XIcon } from 'lucide-react';
 import { type ComponentProps, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form from '@/components/GroupForm';
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Separator } from '@/components/ui/separator';
 import ErrorDetails from '@/features/MCP/MCPInstallProgress/InstallError/ErrorDetails';
 import { lambdaClient } from '@/libs/trpc/client';
@@ -287,10 +290,10 @@ const MCPManifestForm = ({
                 initialValue={'none'}
                 label={t('dev.mcp.auth.label')}
                 name={AUTH_TYPE}
+                trigger={'onValueChange'}
               >
-                <RadioGroup
-                  style={{ width: '100%' }}
-                  options={[
+                <RadioGroup className="flex flex-col gap-2" style={{ width: '100%' }}>
+                  {[
                     {
                       label: t('dev.mcp.auth.none'),
                       value: 'none',
@@ -307,8 +310,13 @@ const MCPManifestForm = ({
                           },
                         ]
                       : []),
-                  ]}
-                />
+                  ].map((option) => (
+                    <label className="flex items-center gap-2" key={option.value}>
+                      <RadioGroupItem value={option.value} />
+                      {option.label}
+                    </label>
+                  ))}
+                </RadioGroup>
               </FormItem>
               {authType === 'bearer' && (
                 <FormItem
@@ -411,7 +419,7 @@ const MCPManifestForm = ({
             <div className="flex flex-row items-center gap-2 justify-end">
               <Button
                 loading={isTesting}
-                type={!!mcpType ? 'primary' : undefined}
+                variant="default"
                 onClick={isOAuth ? onAuthorizeOAuth : handleTestConnection}
               >
                 {isOAuth ? t('dev.mcp.auth.oauth.authorize') : t('dev.mcp.testConnection')}
@@ -419,17 +427,28 @@ const MCPManifestForm = ({
             </div>
           </FormItem>
           {(connectionError || testState.error) && (
-            <Alert
-              closable
-              showIcon
-              extra={errorMetadata ? <ErrorDetails errorInfo={errorMetadata} /> : undefined}
-              title={connectionError || testState.error}
-              type="error"
-              onClose={() => {
-                setConnectionError(null);
-                setErrorMetadata(null);
-              }}
-            />
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertTitle>{connectionError || testState.error}</AlertTitle>
+              {errorMetadata && (
+                <AlertDescription>
+                  <ErrorDetails errorInfo={errorMetadata} />
+                </AlertDescription>
+              )}
+              <AlertAction>
+                <Button
+                  aria-label={t('close', { ns: 'common' })}
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setConnectionError(null);
+                    setErrorMetadata(null);
+                  }}
+                >
+                  <XIcon />
+                </Button>
+              </AlertAction>
+            </Alert>
           )}
           <FormItem noStyle name={'manifest'} />
           <Separator />

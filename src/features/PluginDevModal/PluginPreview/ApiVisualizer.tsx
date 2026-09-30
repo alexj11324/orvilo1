@@ -1,11 +1,11 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDown, ChevronRight } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import SearchBar from '@/components/SearchBar';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -139,7 +139,9 @@ const ApiItem = memo<ApiItemProps>(({ api }) => {
                       <div className={styles.paramName}>
                         <span>{name}</span>
                         {isRequired && <span className={styles.required}>*</span>}
-                        <Tag className={styles.typeTag}>{param.type}</Tag>
+                        <Badge className={styles.typeTag} variant="secondary">
+                          {param.type}
+                        </Badge>
                       </div>
                       <div className={styles.paramDesc}>{param.description}</div>
                     </div>

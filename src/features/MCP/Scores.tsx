@@ -1,6 +1,5 @@
 'use client';
 
-import { stopPropagation } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { CircleDashedIcon, HammerIcon, LayersIcon, MessageSquareQuoteIcon } from 'lucide-react';
@@ -211,7 +210,13 @@ const Scores = memo<ScoresProps>(
     );
 
     return (
-      <div className="flex items-center gap-2" style={{ flex: 'none' }} onClick={stopPropagation}>
+      <div
+        className="flex items-center gap-2"
+        style={{ flex: 'none' }}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
         {identifier && (isValidated ? scoreTag : unvalidatedTag)}
         {showExtra && (
           <div className={cn('flex items-center gap-4', styles.extraTag)}>

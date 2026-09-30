@@ -1,11 +1,11 @@
 'use client';
 
-import { Tag } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { LucideToyBrick } from 'lucide-react';
 import { memo, useMemo } from 'react';
 
 import Avatar from '@/components/Plugins/PluginAvatar';
+import { Badge } from '@/components/reui/badge';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { filterToolIdsByCurrentEnv } from '@/helpers/toolAvailability';
 import { pluginHelpers, useToolStore } from '@/store/tool';
@@ -61,13 +61,13 @@ const PluginTag = memo<PluginTagProps>(({ plugins }) => {
         })
       }
     >
-      <Tag style={{ cursor: 'pointer' }}>
+      <Badge className="cursor-pointer" variant="secondary">
         <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}>
           {<LucideToyBrick />}
           {pluginHelpers.getPluginTitle(displayPlugin) || visiblePlugins[0]}
           {count > 1 && <div>({visiblePlugins.length - 1}+)</div>}
         </span>
-      </Tag>
+      </Badge>
     </SidebarDropdownMenu>
   );
 });

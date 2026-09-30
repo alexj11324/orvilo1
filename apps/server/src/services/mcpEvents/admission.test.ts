@@ -52,7 +52,13 @@ const cleanup = async () => {
   await db.delete(users).where(eq(users.id, userId));
 };
 
-const seed = async (options: { enabled?: boolean; triggerRevision?: number } = {}) => {
+const seed = async (
+  options: {
+    enabled?: boolean;
+    eventMeta?: Record<string, unknown>;
+    triggerRevision?: number;
+  } = {},
+) => {
   const enabled = options.enabled ?? true;
   const revision = options.triggerRevision ?? 2;
   await db.insert(users).values({ id: userId });
@@ -119,6 +125,7 @@ const seed = async (options: { enabled?: boolean; triggerRevision?: number } = {
       bindingRevision: 0,
       connectorId,
       event: {
+        _meta: options.eventMeta,
         data: { channel: 'C1' },
         eventId,
         name: 'message',
@@ -317,4 +324,77 @@ describe('MCP event admission chain', () => {
     expect(result).toEqual({ reason: 'loop', status: 'denied' });
     expect(await db.select().from(taskDispatches)).toHaveLength(1);
   });
+
+  it('denies admission for a run whose inbox lease already expired', async () => {
+    await seed();
+    // A 'processing' receipt whose lease died carries no live claim: the
+    // evidence check must refuse it rather than mint a dispatch.
+    await db
+      .update(mcpEventInbox)
+      .set({ leaseUntil: Date.now() - 1, status: 'processing' })
+      .where(eq(mcpEventInbox.id, inboxId));
+    const execAgent = vi
+      .spyOn(AiAgentService.prototype, 'execAgent')
+      .mockResolvedValue(execResult());
+    await db.insert(mcpEventTriggerRuns).values({
+      id: 'run-expired-lease',
+      idempotencyKey: 'event:trigger:expired-lease',
+      inboxId,
+      status: 'pending',
+      tenantId,
+      triggerId,
+      triggerRevision: 2,
+    });
+
+    const admission = new McpEventDispatchAdmissionService(db);
+    const result = await admission.admit({
+      eventId,
+      idempotencyKey: 'event:trigger:expired-lease',
+      inboxRef: inboxId,
+      schemaVersion: 1,
+      sourceId: connectorId,
+      subscriptionId,
+      taskId,
+      tenantId,
+      triggerId,
+      triggerRevision: 2,
+      userId,
+      workspaceId,
+    });
+    expect(result).toEqual({ reason: 'invalid-event', status: 'denied' });
+    expect(await db.select().from(taskDispatches)).toHaveLength(0);
+    expect(execAgent).not.toHaveBeenCalled();
+  });
+
+  it.each(['causationId', 'rootDispatchId'] as const)(
+    'denies the run when _meta.%s loops into the task through the worker',
+    async (field) => {
+      await seed({ eventMeta: { [field]: 'ancestor-dispatch' } });
+      await db.insert(taskDispatches).values({
+        generation: 1,
+        id: 'ancestor-dispatch',
+        idempotencyKey: 'manual:ancestor',
+        phase: 'succeeded',
+        policyRevision: 0,
+        requestedBy: 'manual:ancestor',
+        requirementRevision: 0,
+        taskId,
+        taskRevision: 0,
+        workspaceId,
+      });
+      const execAgent = vi
+        .spyOn(AiAgentService.prototype, 'execAgent')
+        .mockResolvedValue(execResult());
+
+      // The worker lifts _meta causation into the admission request, which the
+      // evidence check resolves under the task lock before a dispatch exists.
+      expect(await sweepMcpEventInbox(db)).toEqual({ claimed: 1, completed: 1, retried: 0 });
+      const [run] = await db.select().from(mcpEventTriggerRuns);
+      expect(run).toMatchObject({ reason: 'loop', status: 'denied' });
+      const [receipt] = await db.select().from(mcpEventInbox).where(eq(mcpEventInbox.id, inboxId));
+      expect(receipt).toMatchObject({ status: 'completed' });
+      expect(await db.select().from(taskDispatches)).toHaveLength(1);
+      expect(execAgent).not.toHaveBeenCalled();
+    },
+  );
 });

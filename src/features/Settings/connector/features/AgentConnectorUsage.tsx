@@ -1,10 +1,10 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { ArrowUpRight } from 'lucide-react';
 import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
 import { useNavigateToAgent } from '@/hooks/useNavigateToAgent';
 

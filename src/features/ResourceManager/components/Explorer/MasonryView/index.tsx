@@ -1,12 +1,13 @@
 'use client';
 
-import { Button, Checkbox } from '@lobehub/ui/base-ui';
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { type UIEvent } from 'react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { sortFileList } from '@/features/ResourceManager/store/selectors';
 import { useFileStore } from '@/store/file';
@@ -219,7 +220,7 @@ const MasonryView = memo(function MasonryView({
             checked={allSelected}
             disabled={!hasSelectableItems}
             indeterminate={indeterminate}
-            onChange={handleSelectAllResults}
+            onCheckedChange={handleSelectAllResults}
           />
           <span>
             {selectedCount > 0 || selectAllState === 'all'
@@ -267,7 +268,7 @@ const MasonryView = memo(function MasonryView({
               )}
             </span>
             {selectAllState !== 'all' && (
-              <Button size={'small'} type={'link'} onClick={handleSelectAllResources}>
+              <Button size="sm" variant="link" onClick={handleSelectAllResources}>
                 {total && total > selectableCount
                   ? t('FileManager.total.selectAll', {
                       count: total,

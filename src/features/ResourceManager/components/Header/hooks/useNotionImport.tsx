@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { FILE_URL } from '@orvilo/business-const';
 import debug from 'debug';
 import { type TFunction } from 'i18next';
@@ -7,6 +6,7 @@ import { useCallback, useRef } from 'react';
 
 import { createGuideModal } from '@/components/GuideModal';
 import GuideVideo from '@/components/GuideVideo';
+import { toast } from '@/components/toast';
 import { type DocumentAction } from '@/store/file/slices/document/action';
 import { unzipFile } from '@/utils/unzipFile';
 

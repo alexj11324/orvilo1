@@ -1,9 +1,9 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import AuthCard from '@/features/AuthCard';
 
@@ -32,7 +32,7 @@ const DeviceCodeInput = memo<DeviceCodeInputProps>(({ xsrf, errorKey, userCode }
               placeholder={t('device.input.placeholder')}
               style={{ fontFamily: 'monospace', letterSpacing: '0.15em', textAlign: 'center' }}
             />
-            <Button block htmlType="submit" size="large" type="primary">
+            <Button className="w-full" size="lg" type="submit" variant="default">
               {t('device.input.submit')}
             </Button>
           </div>
@@ -41,7 +41,7 @@ const DeviceCodeInput = memo<DeviceCodeInputProps>(({ xsrf, errorKey, userCode }
     >
       {errorKey && (
         <div className="flex flex-col p-4">
-          <Text style={{ color: 'red' }}>{t(errorKey as any)}</Text>
+          <div style={{ color: 'red' }}>{t(errorKey as any)}</div>
         </div>
       )}
     </AuthCard>

@@ -1,8 +1,9 @@
 'use client';
 
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -31,7 +32,7 @@ const TreeSkeletonItem = memo<TreeSkeletonItemProps>(({ opacity = 1 }) => {
           width: 16,
         }}
       />
-      <Skeleton height={16} width={`${Math.floor(Math.random() * 30 + 40)}%`} />
+      <Skeleton style={{ height: 16, width: `${Math.floor(Math.random() * 30 + 40)}%` }} />
     </div>
   );
 });

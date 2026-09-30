@@ -1,13 +1,16 @@
 'use client';
 
-import { Alert, Button, Switch } from '@lobehub/ui/base-ui';
 import type { AgentGraph, OrviloAgentChatConfig } from '@orvilo/types';
 import { AgentGraphSchema } from '@orvilo/types/agent/graph';
 import { createStaticStyles, cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
+import { CircleAlert } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
 
 import { useStore } from '../store';
@@ -130,7 +133,7 @@ const AgentGraphRuntime = memo(() => {
         <Switch
           checked={enabled}
           disabled={disabled}
-          onChange={(checked) => {
+          onCheckedChange={(checked) => {
             setEnabled(checked);
             setError(undefined);
           }}
@@ -155,13 +158,18 @@ const AgentGraphRuntime = memo(() => {
         />
       </div>
 
-      {error && <Alert showIcon title={error} type="error" />}
+      {error && (
+        <Alert variant="destructive">
+          <CircleAlert />
+          <AlertTitle>{error}</AlertTitle>
+        </Alert>
+      )}
 
       <div className={`flex ${styles.actions}`}>
         <Button
           disabled={disabled || !isDirty}
           loading={saving}
-          type={'primary'}
+          variant="default"
           onClick={handleSave}
         >
           {t('save', { ns: 'common' })}

@@ -1,10 +1,12 @@
-import { Button, createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
 import { t as translate } from 'i18next';
 import { FolderIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { type FolderTreeItem } from '@/features/ResourceManager/components/FolderTree';
 import FolderTree from '@/features/ResourceManager/components/FolderTree';
 import { fileService } from '@/services/file';
@@ -259,15 +261,13 @@ const MoveToFolderModalContent = memo<MoveToFolderModalContentProps>(
           <div className="flex flex-row justify-end" style={{ marginBottom: 12 }}>
             <Button
               loading={isCreatingFolder}
-              size="small"
-              type="default"
-              icon={
-                <span className="anticon" role="img">
-                  <FolderIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                </span>
-              }
+              size="sm"
+              variant="outline"
               onClick={handleCreateNewFolder}
             >
+              <span className="anticon" role="img">
+                <FolderIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>{' '}
               {t('header.actions.newFolder', { ns: 'file' })}
             </Button>
           </div>
@@ -298,10 +298,10 @@ const MoveToFolderModalContent = memo<MoveToFolderModalContentProps>(
         </div>
         <ModalFooter>
           <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-          <Button type="default" onClick={handleMoveToRoot}>
+          <Button variant="outline" onClick={handleMoveToRoot}>
             {t('FileManager.actions.moveToRoot')}
           </Button>
-          <Button disabled={!selectedFolderId} type="primary" onClick={handleMove}>
+          <Button disabled={!selectedFolderId} variant="default" onClick={handleMove}>
             {t('FileManager.actions.moveHere')}
           </Button>
         </ModalFooter>

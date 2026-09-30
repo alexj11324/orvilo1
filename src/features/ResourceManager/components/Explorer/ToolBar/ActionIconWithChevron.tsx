@@ -1,9 +1,10 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { type LucideIcon } from 'lucide-react';
 import { ChevronDownIcon } from 'lucide-react';
 import { type ComponentProps } from 'react';
 import { createElement, memo } from 'react';
+
+import { Button } from '@/components/ui/button';
 
 interface ActionIconWithChevronProps extends ComponentProps<typeof Button> {
   icon: LucideIcon;
@@ -13,12 +14,12 @@ const ActionIconWithChevron = memo<ActionIconWithChevronProps>(
   ({ icon, title, style, disabled, className, ...rest }) => {
     return (
       <Button
-        {...rest}
+        rest
         className={className}
         disabled={disabled}
         style={{ paddingInline: 4, ...style }}
         title={title}
-        type={'text'}
+        variant="ghost"
       >
         <div className="flex flex-row items-center gap-1">
           <span className="anticon" role="img">

@@ -1,10 +1,10 @@
 'use client';
 
-import { useModalContext } from '@lobehub/ui/base-ui';
 import { type CredType } from '@orvilo/types';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { useModalContext } from '@/components/Modal';
 import {
   Stepper,
   StepperIndicator,

@@ -1,8 +1,8 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Link2Icon, LockKeyholeIcon } from 'lucide-react';
 import React, { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({

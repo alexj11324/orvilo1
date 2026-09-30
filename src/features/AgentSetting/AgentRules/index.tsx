@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronRightIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
@@ -10,6 +9,7 @@ import urlJoin from 'url-join';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
 import { FormGroup } from '@/components/GroupForm';
+import { Button } from '@/components/ui/button';
 import { useExpertiseOverview } from '@/features/SelfLearning/hooks';
 import { useAgentStore } from '@/store/agent';
 
@@ -57,12 +57,12 @@ const AgentRules = memo(() => {
             folding it into the empty copy. */}
         <AsyncBoundary
           data={data}
-          empty={<Text type={'secondary'}>{t('agentRules.empty')}</Text>}
+          empty={<div className="text-muted-foreground">{t('agentRules.empty')}</div>}
           error={error}
           errorVariant={'block'}
           isEmpty={!error && domains.length === 0}
           isLoading={isLoading}
-          loading={<Text type={'secondary'}>{t('agentRules.loading')}</Text>}
+          loading={<div className="text-muted-foreground">{t('agentRules.loading')}</div>}
           onRetry={() => mutate()}
         >
           <div
@@ -75,14 +75,14 @@ const AgentRules = memo(() => {
             {domains.map((domain) => (
               <div className={styles.row} key={domain.id}>
                 <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
-                  <Text weight={500}>{domain.title}</Text>
+                  <div className="font-medium">{domain.title}</div>
                   {/* Scope and size, in counts — the same facts the rules page leads with. */}
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('agentRules.domainMeta', {
                       habits: domain.lessons.length,
                       runs: domain.runCount,
                     })}
-                  </Text>
+                  </div>
                 </div>
                 <ChevronRightIcon size={14} style={{ opacity: 0.4 }} />
               </div>
@@ -90,12 +90,12 @@ const AgentRules = memo(() => {
           </div>
         </AsyncBoundary>
         <div className="flex items-center gap-2 justify-between flex-wrap">
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {t('agentRules.summary', { count: ruleCount })}
-          </Text>
+          </div>
           {openPath && (
             <Link to={openPath}>
-              <Button size={'small'} type={'text'}>
+              <Button size="sm" variant="ghost">
                 {t('agentRules.open')}
               </Button>
             </Link>

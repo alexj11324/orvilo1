@@ -1,11 +1,11 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import { type NetworkProxySettings } from '@orvilo/electron-client-ipc';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';

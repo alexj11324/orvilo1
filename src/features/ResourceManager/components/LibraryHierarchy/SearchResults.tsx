@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { useDebounce } from 'ahooks';
 import { cssVar } from 'antd-style';
 import { SearchXIcon } from 'lucide-react';
@@ -123,9 +122,9 @@ const SearchResults = memo<SearchResultsProps>(({ libraryId, query }) => {
           width={32}
         />
       </span>
-      <Text style={{ fontSize: 12 }} type={'secondary'}>
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('library.hierarchy.search.noResults')}
-      </Text>
+      </div>
     </div>
   );
 

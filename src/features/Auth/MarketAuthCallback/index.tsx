@@ -1,10 +1,18 @@
 'use client';
 
-import { Button, Result, Text } from '@lobehub/ui/base-ui';
 import { CircleCheckIcon, FrownIcon, HourglassIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import {
+  Empty,
+  EmptyContent,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 import { persistMarketAuthResult } from '@/layout/AuthProvider/MarketAuth/handoff';
 
 type CallbackStatus = 'loading' | 'success' | 'error';
@@ -164,7 +172,12 @@ const MarketAuthCallbackPage = () => {
   const getExtra = () => {
     if (status === 'error') {
       return (
-        <Button block size={'large'} style={{ minWidth: 240 }} onClick={() => window.close()}>
+        <Button
+          className="w-full"
+          size="lg"
+          style={{ minWidth: 240 }}
+          onClick={() => window.close()}
+        >
           {t('callback.buttons.close')}
         </Button>
       );
@@ -173,21 +186,16 @@ const MarketAuthCallbackPage = () => {
   };
 
   return (
-    <Result
-      extra={getExtra()}
-      icon={getStatusIcon()}
-      status={getResultStatus()}
-      subTitle={
-        <Text fontSize={16} type="secondary">
-          {getSubTitle()}
-        </Text>
-      }
-      title={
-        <Text fontSize={32} weight={'bold'}>
-          {getTitle()}
-        </Text>
-      }
-    />
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="default">{getStatusIcon()}</EmptyMedia>
+        <EmptyTitle>{<div className="text-[32px] font-bold">{getTitle()}</div>}</EmptyTitle>
+        <EmptyDescription>
+          {<div className="text-[16px] text-muted-foreground">{getSubTitle()}</div>}
+        </EmptyDescription>
+      </EmptyHeader>
+      <EmptyContent>{getExtra()}</EmptyContent>
+    </Empty>
   );
 };
 

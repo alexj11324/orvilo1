@@ -1,6 +1,5 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import { CUSTOM_DOCUMENT_FILE_TYPE, CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { FileText, FolderIcon } from 'lucide-react';
@@ -9,6 +8,7 @@ import { createContext, lazy, memo, Suspense, use, useEffect, useRef, useState }
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
 import { usePermission } from '@/hooks/usePermission';
 import { useTreeStore } from '@/store/tree';
 

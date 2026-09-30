@@ -1,9 +1,10 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { MaximizeIcon } from 'lucide-react';
 import { createElement, memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { remoteAvatarSrc } from '@/components/Avatar/fallback';
 import ImperativeModal from '@/components/ImperativeModal';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import StatisticCard from '@/components/StatisticCard';
@@ -79,9 +80,10 @@ const ActiveModels = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveU
       const display = resolveUser?.(item);
       return (
         <Avatar
-          avatar={display?.avatar || display?.name || item}
+          avatar={remoteAvatarSrc(display?.avatar || display?.name || item) || undefined}
           background={cssVar.colorFillSecondary}
           key={item}
+          name={display?.name || item}
           shape={'circle'}
           size={18}
           style={baseStyle}

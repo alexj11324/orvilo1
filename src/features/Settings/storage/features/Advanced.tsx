@@ -1,6 +1,5 @@
 'use client';
 
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { HardDriveDownload, HardDriveUpload } from 'lucide-react';
 import { createElement, useCallback } from 'react';
@@ -10,6 +9,8 @@ import AccountDeletion from '@/business/client/features/AccountDeletion';
 import { useTransferAgentsFormItem } from '@/business/client/hooks/useTransferAgentsFormItem';
 import type { FormGroupItemType } from '@/components/GroupForm';
 import Form from '@/components/GroupForm';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';

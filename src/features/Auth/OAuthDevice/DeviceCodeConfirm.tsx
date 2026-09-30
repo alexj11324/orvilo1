@@ -1,9 +1,9 @@
 'use client';
 
-import { Button, Text } from '@lobehub/ui/base-ui';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import AuthCard from '@/features/AuthCard';
 
 import ThirdPartyNotice from '../OAuthConsent/ThirdPartyNotice';
@@ -33,16 +33,16 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
             <input name="confirm" type="hidden" value="yes" />
             <div className="flex flex-col gap-3">
               <Button
-                block
-                htmlType="submit"
+                className="w-full"
                 loading={isLoading}
-                size="large"
-                type="primary"
+                size="lg"
+                type="submit"
+                variant="default"
                 onClick={() => setIsLoading(true)}
               >
                 {t('device.confirm.authorize')}
               </Button>
-              <Button block htmlType="submit" name="abort" size="large" value="yes">
+              <Button className="w-full" name="abort" size="lg" type="submit" value="yes">
                 {t('device.confirm.deny')}
               </Button>
             </div>
@@ -55,7 +55,7 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
           </div>
         )}
         <div className="flex flex-col p-4">
-          <Text
+          <div
             style={{
               fontFamily: 'monospace',
               fontSize: 24,
@@ -65,11 +65,11 @@ const DeviceCodeConfirm = memo<DeviceCodeConfirmProps>(
             }}
           >
             {userCode}
-          </Text>
+          </div>
         </div>
-        <Text style={{ marginTop: 8 }} type="secondary">
+        <div className="text-muted-foreground" style={{ marginTop: 8 }}>
           {t('device.confirm.codeHint')}
-        </Text>
+        </div>
       </AuthCard>
     );
   },

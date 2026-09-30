@@ -1,9 +1,9 @@
-import { confirmModal } from '@lobehub/ui/base-ui';
 import { COMPOSIO_APP_TYPES } from '@orvilo/const';
 import { X } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
 import { Avatar, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { useToolStore } from '@/store/tool';

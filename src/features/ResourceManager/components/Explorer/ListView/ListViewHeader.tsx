@@ -1,8 +1,8 @@
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { cssVar, cx } from 'antd-style';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { useGlobalStore } from '@/store/global';
 import type { FileListItem } from '@/types/files';
 
@@ -88,7 +88,7 @@ const ListViewHeader = ({
             checked={allSelected}
             disabled={!hasSelectableItems}
             indeterminate={indeterminate}
-            onChange={handleSelectAllResults}
+            onCheckedChange={handleSelectAllResults}
           />
         </div>
         <div

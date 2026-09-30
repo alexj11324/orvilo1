@@ -1,5 +1,4 @@
 'use client';
-
 import {
   closestCenter,
   DndContext,
@@ -11,7 +10,6 @@ import {
   useSensors,
 } from '@dnd-kit/core';
 import { horizontalListSortingStrategy, SortableContext } from '@dnd-kit/sortable';
-import { ActionIcon, type DropdownItem } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { cx } from 'antd-style';
 import { ChevronDown, Plus } from 'lucide-react';
@@ -20,6 +18,8 @@ import * as m from 'motion/react-m';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem } from '@/components/ItemsMenu';
 import { captureVisibleTabPreviews } from '@/features/Electron/TabHost';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';

@@ -1,5 +1,4 @@
 'use client';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { useMutation } from '@tanstack/react-query';
 import dayjs from 'dayjs';
@@ -12,6 +11,8 @@ import urlJoin from 'url-join';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { type LiteTableColumn } from '@/components/LiteTable';
 import LiteTable from '@/components/LiteTable';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button, buttonVariants } from '@/components/ui/button';
 import {
   DropdownMenu,

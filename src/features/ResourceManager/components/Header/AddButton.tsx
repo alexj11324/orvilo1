@@ -1,7 +1,5 @@
 'use client';
-
 import { Notion } from '@lobehub/icons';
-import { Button, toast, Upload } from '@lobehub/ui/base-ui';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
@@ -13,7 +11,10 @@ import { useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { SimpleTooltip } from '@/components/ui/tooltip';
+import { Upload } from '@/components/Upload';
 import { useCurrentFolderId } from '@/features/ResourceManager/hooks/useCurrentFolderId';
 import { useTopLevelFileUpload } from '@/features/ResourceManager/hooks/useTopLevelFileUpload';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
@@ -347,12 +348,13 @@ const AddButton = ({ iconOnly, rootLevel }: AddButtonProps = {}) => {
               data-no-highlight
               aria-label={t('addLibrary')}
               disabled={!canCreate}
-              icon={Plus}
               title={canCreate ? t('addLibrary') : undefined}
-            />
+            >
+              <Plus data-icon="inline-start" />
+            </Button>
           ) : (
-            <Button data-no-highlight disabled={!canCreate} icon={Plus} type="primary">
-              {t('addLibrary')}
+            <Button data-no-highlight disabled={!canCreate} variant="default">
+              <Plus data-icon="inline-start" /> {t('addLibrary')}
             </Button>
           )}
         </DropdownMenu>

@@ -1,9 +1,9 @@
 'use client';
 
-import { Avatar } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
 import { createElement, memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import NavItem from '@/features/NavPanel/components/NavItem';
 
 interface McpSkillItemProps {

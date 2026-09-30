@@ -1,10 +1,14 @@
 'use client';
 
-import { ActionIcon, Avatar, Tabs, Text, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { type LucideIcon, XIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
+import { useModalContext } from '@/components/Modal';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 export interface SettingsModalTabItem {
   icon?: LucideIcon;
@@ -52,16 +56,23 @@ const SettingsModalLayout = memo<SettingsModalLayoutProps>(
         <div className={`flex items-center justify-between ${styles.header}`}>
           <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
             <Avatar avatar={avatar} background={background} shape={'square'} size={24} />
-            <Text ellipsis weight={600}>
-              {title}
-            </Text>
+            <div className="truncate font-semibold">{title}</div>
           </div>
           <ActionIcon icon={XIcon} title={t('cancel')} onClick={close} />
         </div>
 
         {tabItems && tabItems.length >= 2 && (
           <div className={`flex flex-col ${styles.tabsBar}`}>
-            <Tabs activeKey={activeTab} items={tabItems} onChange={onTabChange} />
+            <Tabs value={activeTab} onValueChange={onTabChange}>
+              <TabsList>
+                {tabItems.map((item) => (
+                  <TabsTrigger key={item.key} value={item.key}>
+                    {item.icon}
+                    {item.label}
+                  </TabsTrigger>
+                ))}
+              </TabsList>
+            </Tabs>
           </div>
         )}
 

@@ -1,15 +1,15 @@
 'use client';
 
-import { Alert } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
-import { FlaskConicalIcon } from 'lucide-react';
+import { Info } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Form, { type FormGroupItemType, type FormItemProps } from '@/components/GroupForm';
 import { Badge } from '@/components/reui/badge';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -158,13 +158,10 @@ const Page = ({ showSettingHeader = true }: PageProps) => {
     <>
       {showSettingHeader && <SettingHeader title={tLabs('title')} />}
       <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 16 }}>
-        <Alert
-          showIcon
-          icon={FlaskConicalIcon}
-          title={tLabs('description')}
-          type={'info'}
-          variant={'filled'}
-        />
+        <Alert variant="info">
+          <Info />
+          <AlertTitle>{tLabs('description')}</AlertTitle>
+        </Alert>
         <LabsForm />
       </div>
     </>

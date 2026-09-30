@@ -1,10 +1,10 @@
 'use client';
 
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import type { DropdownItem } from '@/components/ItemsMenu';
 import { DropdownMenu } from '@/components/ItemsMenu';
 

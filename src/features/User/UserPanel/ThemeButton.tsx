@@ -1,9 +1,9 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme as useNextThemesTheme } from 'next-themes';
 import { createElement, type FC, type ReactElement, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import {
   DropdownMenu,
   DropdownMenuContent,

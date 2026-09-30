@@ -1,14 +1,14 @@
-import { Alert, Segmented, Slider } from '@lobehub/ui/base-ui';
 import {
   COMPLETION_BUILTIN_SOUNDS,
   type CompletionSoundSettings,
 } from '@orvilo/electron-client-ipc';
-import { Play } from 'lucide-react';
+import { CircleAlert, Play } from 'lucide-react';
 import { createElement, useCallback, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import BusinessNotification from '@/business/client/BusinessSettingPages/Notification';
 import Form from '@/components/GroupForm';
+import { Alert } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -18,7 +18,9 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Slider } from '@/components/ui/slider';
 import { Switch } from '@/components/ui/switch';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { completionSoundService } from '@/services/electron/completionSound';
@@ -78,15 +80,17 @@ export const DesktopNotificationSettings = () => {
   return (
     <>
       {error && (
-        <Alert
-          description={t('completionSound.error')}
-          type={'error'}
-          action={
-            <Button variant="outline" onClick={() => run(completionSoundService.getSettings)}>
-              {t('completionSound.retry')}
-            </Button>
-          }
-        />
+        <Alert variant="destructive">
+          <CircleAlert />
+          <AlertDescription>{t('completionSound.error')}</AlertDescription>
+          <AlertAction>
+            {
+              <Button variant="outline" onClick={() => run(completionSoundService.getSettings)}>
+                {t('completionSound.retry')}
+              </Button>
+            }
+          </AlertAction>
+        </Alert>
       )}
       {!settings ? (
         !error && (
@@ -203,8 +207,8 @@ export const DesktopNotificationSettings = () => {
                       step={0.1}
                       style={{ width: '100%' }}
                       value={settings.volume}
-                      onChange={(volume) => setSettings({ ...settings, volume })}
-                      onChangeComplete={(volume) =>
+                      onValueChange={(volume) => setSettings({ ...settings, volume })}
+                      onValueCommitted={(volume) =>
                         run(() => completionSoundService.setSettings({ volume }))
                       }
                     />
@@ -234,17 +238,23 @@ export const DesktopNotificationSettings = () => {
                       >
                         {createElement(Play)}
                       </Button>
-                      <Segmented<CompletionSoundSettings['notificationSound']>
+                      <ToggleGroup
                         disabled={busy}
-                        value={settings.notificationSound}
-                        options={[
-                          { label: t('completionSound.banner.system'), value: 'system' },
-                          { label: t('completionSound.banner.orvilo'), value: 'orvilo' },
-                        ]}
-                        onChange={(notificationSound) =>
-                          run(() => completionSoundService.setSettings({ notificationSound }))
-                        }
-                      />
+                        value={[settings.notificationSound]}
+                        onValueChange={(value) => {
+                          const notificationSound =
+                            value[0] as CompletionSoundSettings['notificationSound'];
+                          if (notificationSound)
+                            run(() => completionSoundService.setSettings({ notificationSound }));
+                        }}
+                      >
+                        <ToggleGroupItem value="system">
+                          {t('completionSound.banner.system')}
+                        </ToggleGroupItem>
+                        <ToggleGroupItem value="orvilo">
+                          {t('completionSound.banner.orvilo')}
+                        </ToggleGroupItem>
+                      </ToggleGroup>
                     </div>
                   ),
                   desc: settings.systemSoundDisabled

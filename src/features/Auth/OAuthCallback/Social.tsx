@@ -1,10 +1,17 @@
 'use client';
 
-import { Result, Text } from '@lobehub/ui/base-ui';
 import { CircleCheckIcon, FrownIcon } from 'lucide-react';
 import React, { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
+
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 
 type CallbackStatus = 'error' | 'success';
 
@@ -77,28 +84,35 @@ const SocialOAuthCallbackPage = memo(() => {
   const provider = searchParams.get('provider');
 
   return (
-    <Result
-      icon={status === 'success' ? <CircleCheckIcon size={96} /> : <FrownIcon size={96} />}
-      status={status}
-      subTitle={
-        <Text fontSize={16} type="secondary">
-          {status === 'success' && provider
-            ? t('success.subTitleWithCountdown', {
-                countdown,
-                defaultValue: `You may close this page. Auto-closing in ${countdown}s...`,
-              })
-            : t('error.desc', {
-                defaultValue: `OAuth authorization failed, reason: ${errorMessage}`,
-                reason: errorMessage,
-              })}
-        </Text>
-      }
-      title={
-        <Text fontSize={32} weight={'bold'}>
-          {status === 'success' ? t('success.title') : t('error.title')}
-        </Text>
-      }
-    />
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="default">
+          {status === 'success' ? <CircleCheckIcon size={96} /> : <FrownIcon size={96} />}
+        </EmptyMedia>
+        <EmptyTitle>
+          {
+            <div className="text-[32px] font-bold">
+              {status === 'success' ? t('success.title') : t('error.title')}
+            </div>
+          }
+        </EmptyTitle>
+        <EmptyDescription>
+          {
+            <div className="text-[16px] text-muted-foreground">
+              {status === 'success' && provider
+                ? t('success.subTitleWithCountdown', {
+                    countdown,
+                    defaultValue: `You may close this page. Auto-closing in ${countdown}s...`,
+                  })
+                : t('error.desc', {
+                    defaultValue: `OAuth authorization failed, reason: ${errorMessage}`,
+                    reason: errorMessage,
+                  })}
+            </div>
+          }
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 });
 

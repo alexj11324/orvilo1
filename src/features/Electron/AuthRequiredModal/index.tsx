@@ -1,13 +1,14 @@
 'use client';
 
-import type { ImperativeModalProps, ModalInstance } from '@lobehub/ui/base-ui';
-import { Button, createModal, ModalFooter } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import debug from 'debug';
 import { AlertCircle, LogIn } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ImperativeModalProps, ModalInstance } from '@/components/Modal';
+import { createModal, ModalFooter } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { sessionAuthEvents } from '@/layout/AuthProvider/SessionAuth/events';
 import { useElectronStore } from '@/store/electron';
 import { buildOnboardingRedirectUrl } from '@/utils/onboardingRedirect';
@@ -65,8 +66,8 @@ const AuthRequiredFooter = memo<FooterProps>(({ isSigningIn, onSignIn }) => {
   const { t } = useTranslation('auth');
   return (
     <ModalFooter>
-      <Button icon={<LogIn />} loading={isSigningIn} type="primary" onClick={onSignIn}>
-        {isSigningIn ? t('authModal.signingIn') : t('authModal.signIn')}
+      <Button loading={isSigningIn} variant="default" onClick={onSignIn}>
+        <LogIn /> {isSigningIn ? t('authModal.signingIn') : t('authModal.signIn')}
       </Button>
     </ModalFooter>
   );

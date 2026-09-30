@@ -29,9 +29,11 @@ const hoisted = vi.hoisted(() => ({
   toast: { error: vi.fn(), success: vi.fn(), warning: vi.fn() },
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...((await importOriginal()) as Record<string, unknown>),
+vi.mock('@/components/Modal', () => ({
   confirmModal: hoisted.confirmModal,
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: hoisted.toast,
 }));
 

@@ -1,10 +1,12 @@
 'use client';
 
-import { Avatar, Button, Skeleton, Text } from '@lobehub/ui/base-ui';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router';
 
+import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import AuthCard from '@/features/AuthCard';
 import { useAuthSession } from '@/libs/auth/session';
 import type { OidcClientMetadata } from '@/types/oidc';
@@ -63,13 +65,13 @@ const LoginConfirmClient = memo<LoginConfirmProps>(({ uid, clientMetadata }) => 
             <input name="consent" type="hidden" value="accept" />
             {/* Single confirmation button */}
             <Button
-              block
+              className="w-full"
               data-testid="oauth-consent-accept"
               disabled={!isUserStateInit}
-              htmlType="submit"
               loading={isLoading}
-              size="large"
-              type="primary"
+              size="lg"
+              type="submit"
+              variant="default"
             >
               {buttonText}
             </Button>
@@ -83,14 +85,12 @@ const LoginConfirmClient = memo<LoginConfirmProps>(({ uid, clientMetadata }) => 
           {isUserStateInit ? (
             <div className="flex items-center gap-4">
               <Avatar alt={nickName || ''} avatar={avatar} shape={'square'} size={40} />
-              <Text fontSize={18} weight={500}>
-                {nickName}
-              </Text>
+              <div className="text-[18px] font-medium">{nickName}</div>
             </div>
           ) : (
             <div className="flex gap-4">
-              <Skeleton.Avatar shape={'square'} size={40} />
-              <Skeleton height={36} />
+              <Skeleton className="size-10 rounded-full" />
+              <Skeleton style={{ height: 36 }} />
             </div>
           )}
         </div>

@@ -1,13 +1,12 @@
 'use client';
-
 import { HotkeyInput } from '@lobehub/ui';
-import { toast } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { Loader2Icon } from 'lucide-react';
 import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Form, { type FormGroupItemType } from '@/components/GroupForm';
+import { toast } from '@/components/toast';
 import { Skeleton } from '@/components/ui/skeleton';
 import { DESKTOP_HOTKEYS_REGISTRATION } from '@/const/desktopGlobalShortcuts';
 import { FORM_STYLE } from '@/const/layoutTokens';

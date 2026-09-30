@@ -1,6 +1,5 @@
 'use client';
 
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { BookMinusIcon, FileBoxIcon, Trash2Icon } from 'lucide-react';
 import { memo } from 'react';
@@ -8,6 +7,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useFileBatchTransferActions } from '@/business/client/hooks/useFileBatchTransferActions';
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import NavHeader from '@/features/NavHeader';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { getExplorerSelectedCount } from '@/features/ResourceManager/store/selectors';

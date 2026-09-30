@@ -1,11 +1,11 @@
 'use client';
-
 import { CaretDownFilled } from '@ant-design/icons';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { FolderIcon, FolderOpenIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
 import { createElement, memo, useCallback } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   folderHeader: css`

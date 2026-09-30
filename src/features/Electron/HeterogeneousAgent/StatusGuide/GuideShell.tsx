@@ -1,9 +1,10 @@
-import { ActionIcon, Avatar, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { HeterogeneousAgentStatusGuideVariant } from './types';
@@ -58,7 +59,7 @@ const GuideShell = ({
               style={{ color: cssVar.colorText }}
             />
             <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
-              <Text style={{ fontSize: compact ? 14 : 16, fontWeight: 600 }}>{title}</Text>
+              <div style={{ fontSize: compact ? 14 : 16, fontWeight: 600 }}>{title}</div>
               {headerDescription}
             </div>
           </div>

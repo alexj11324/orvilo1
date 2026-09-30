@@ -1,7 +1,7 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import type { SelectAllState } from '@/features/ResourceManager/store/initialState';
 
 import { getListViewMinWidth } from './ListItem/constants';
@@ -51,7 +51,7 @@ const ListViewSelectAllHint = ({
         )}
       </span>
       {selectAllState !== 'all' && (
-        <Button size={'small'} type={'link'} onClick={onSelectAllResources}>
+        <Button size="sm" variant="link" onClick={onSelectAllResources}>
           {total && total > dataLength
             ? t('FileManager.total.selectAll', {
                 count: total,

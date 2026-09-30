@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { useTranslation } from 'react-i18next';
 
@@ -37,27 +36,29 @@ const AuthRequiredState = ({
         />
       }
       headerDescription={
-        <Text type="secondary">{t('cliAuthGuide.desc', { name: config.title })}</Text>
+        <div className="text-muted-foreground">
+          {t('cliAuthGuide.desc', { name: config.title })}
+        </div>
       }
     >
       {isDesktop && (
         <div className="flex flex-col gap-1.5">
-          <Text strong style={{ fontSize: 12 }}>
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {t('cliAuthGuide.runCommand')}
-          </Text>
+          </div>
           <CodeBlock wrap code={config.signInCommand} language="bash" variant="ghost" />
         </div>
       )}
 
-      <Text style={{ fontSize: 12 }} type="secondary">
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t(isDesktop ? 'cliAuthGuide.afterLogin' : 'cliAuthGuide.cloudAfterUpdate')}
-      </Text>
+      </div>
 
       {rawErrorDetails && (
         <div className="flex flex-col gap-1.5">
-          <Text strong style={{ fontSize: 12 }}>
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {t('cliAuthGuide.errorDetails')}
-          </Text>
+          </div>
           <CodeBlock
             wrap
             code={rawErrorDetails}

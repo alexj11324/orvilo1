@@ -1,7 +1,5 @@
 'use client';
-
 import { Notion } from '@lobehub/icons';
-import { ActionIcon, toast, Upload } from '@lobehub/ui/base-ui';
 import {
   CUSTOM_DOCUMENT_FILE_TYPE,
   CUSTOM_FOLDER_FILE_TYPE,
@@ -12,7 +10,10 @@ import { type ChangeEvent } from 'react';
 import { memo, useCallback, useId, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { type DropdownItem, DropdownMenu } from '@/components/ItemsMenu';
+import { toast } from '@/components/toast';
+import { Upload } from '@/components/Upload';
 import useNotionImport from '@/features/ResourceManager/components/Header/hooks/useNotionImport';
 import useUploadFolder from '@/features/ResourceManager/components/Header/hooks/useUploadFolder';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';

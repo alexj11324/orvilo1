@@ -1,8 +1,9 @@
 'use client';
 
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const PanelContentSkeleton = memo(() => {
   return (

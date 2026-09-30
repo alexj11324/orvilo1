@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ClockAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
@@ -34,20 +33,20 @@ const CliDetectionTimeoutState = ({
         />
       }
       headerDescription={
-        <Text type="secondary">
+        <div className="text-muted-foreground">
           {t('cliDetectionTimeoutGuide.desc', { command: error?.command || config.title })}
-        </Text>
+        </div>
       }
     >
-      <Text style={{ fontSize: 12 }} type="secondary">
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t('cliDetectionTimeoutGuide.hint')}
-      </Text>
+      </div>
 
       {rawErrorDetails && (
         <div className="flex flex-col gap-1.5">
-          <Text strong style={{ fontSize: 12 }}>
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {t('cliDetectionTimeoutGuide.errorDetails')}
-          </Text>
+          </div>
           <CodeBlock
             wrap
             code={rawErrorDetails}

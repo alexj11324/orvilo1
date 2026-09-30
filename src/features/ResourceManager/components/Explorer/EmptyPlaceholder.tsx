@@ -1,9 +1,10 @@
 import { FileTypeIcon } from '@lobehub/ui';
-import { Button, Text, Upload } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ArrowUpIcon, PlusIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Upload } from '@/components/Upload';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import { useCurrentFolderId } from '@/features/ResourceManager/hooks/useCurrentFolderId';
 import { useTopLevelFileUpload } from '@/features/ResourceManager/hooks/useTopLevelFileUpload';
@@ -91,8 +92,8 @@ const EmptyPlaceholder = () => {
         className="flex flex-col items-center justify-center gap-3 h-[100%] w-[100%]"
         style={{ paddingBottom: 100 }}
       >
-        <Text as={'h4'}>{t('FileManager.emptyStatus.filteredTitle')}</Text>
-        <Button size={'small'} onClick={() => setSourceFilter(ResourceSourceFilter.All)}>
+        <h4>{t('FileManager.emptyStatus.filteredTitle')}</h4>
+        <Button size="sm" onClick={() => setSourceFilter(ResourceSourceFilter.All)}>
           {t('FileManager.emptyStatus.actions.showAllSources')}
         </Button>
       </div>
@@ -105,7 +106,7 @@ const EmptyPlaceholder = () => {
         className="flex flex-col items-center justify-center h-[100%] w-[100%]"
         style={{ paddingBottom: 100 }}
       >
-        <Text as={'h4'}>{t('FileManager.emptyStatus.title')}</Text>
+        <h4>{t('FileManager.emptyStatus.title')}</h4>
       </div>
     );
   }
@@ -116,8 +117,8 @@ const EmptyPlaceholder = () => {
       style={{ paddingBottom: 100 }}
     >
       <div className="flex flex-col justify-center" style={{ textAlign: 'center' }}>
-        <Text as={'h4'}>{t('FileManager.emptyStatus.title')}</Text>
-        <Text type={'secondary'}>{t('FileManager.emptyStatus.or')}</Text>
+        <h4>{t('FileManager.emptyStatus.title')}</h4>
+        <div className="text-muted-foreground">{t('FileManager.emptyStatus.or')}</div>
       </div>
       <div className="flex flex-row gap-3">
         {!libraryId && (

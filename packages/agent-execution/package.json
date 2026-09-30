@@ -2,6 +2,11 @@
   "name": "@orvilo/agent-execution",
   "version": "1.0.0",
   "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./controlPlane": "./src/controlPlane/index.ts",
+    "./controlPlane/server": "./src/controlPlane/server.ts"
+  },
   "main": "./src/index.ts",
   "scripts": {
     "test": "vitest",
@@ -11,6 +16,7 @@
     "@orvilo/utils": "workspace:*"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.3.16",
     "@orvilo/context-engine": "workspace:*",
     "@orvilo/types": "workspace:*"
   }

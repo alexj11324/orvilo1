@@ -1,10 +1,11 @@
 'use client';
 
-import { ModalHost } from '@lobehub/ui/base-ui';
+import { ModalHost as BaseModalHost } from '@lobehub/ui/base-ui';
 import { memo, type PropsWithChildren } from 'react';
 
 import BusinessAuthProvider from '@/business/client/BusinessAuthProvider';
 import { OrviloAnalyticsProviderWrapper } from '@/components/Analytics/OrviloAnalyticsProviderWrapper';
+import { ModalHost } from '@/components/Modal';
 import { mapFeatureFlagsEnvToState } from '@/config/featureFlags';
 import type { AuthSPAServerConfig } from '@/types/spaServerConfig';
 
@@ -36,6 +37,7 @@ const AuthShell = memo<PropsWithChildren>(({ children }) => {
             </BusinessAuthProvider>
           </OrviloAnalyticsProviderWrapper>
         </AuthServerConfigProvider>
+        <BaseModalHost />
         <ModalHost />
       </AuthThemeLite>
     </AuthLocale>

@@ -1,10 +1,9 @@
 'use client';
 
-import { SearchIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { Input } from '@/components/ui/input';
+import SearchBar from '@/components/SearchBar';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import SideBarDrawer from '@/features/NavPanel/SideBarDrawer';
 import dynamic from '@/libs/next/dynamic';
@@ -33,18 +32,14 @@ const AllTopicsDrawer = memo<AllTopicsDrawerProps>(({ open, onClose }) => {
       title={t('title')}
       subHeader={
         <div className="flex flex-col" style={{ paddingBlock: '0 8px', paddingInline: 8 }}>
-          <div className="relative">
-            <SearchIcon className="text-muted-foreground absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-            <Input
-              className="pl-8"
-              defaultValue={searchKeyword}
-              placeholder={t('searchPlaceholder')}
-              onChange={(e) => {
-                const keyword = e.target.value;
-                setSearchKeyword(keyword);
-              }}
-            />
-          </div>
+          <SearchBar
+            defaultValue={searchKeyword}
+            placeholder={t('searchPlaceholder')}
+            onSearch={(keyword) => setSearchKeyword(keyword)}
+            onChange={(e) => {
+              if (!e.target.value) setSearchKeyword('');
+            }}
+          />
         </div>
       }
       onClose={onClose}

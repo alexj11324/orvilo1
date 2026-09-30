@@ -1,11 +1,12 @@
 'use client';
 
-import { CopyButton, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { FileTextIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import CopyButton from '@/components/CopyButton';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
 

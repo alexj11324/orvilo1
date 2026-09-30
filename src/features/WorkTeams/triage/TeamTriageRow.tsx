@@ -1,25 +1,22 @@
 'use client';
-
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  type DropdownItem,
-  DropdownMenu,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
+import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ClockIcon, MoreHorizontalIcon } from 'lucide-react';
-import { memo, useCallback, useMemo } from 'react';
+import { createElement, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
 import { resolveTaskStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { formatTaskItemDate } from '@/features/AgentTasks/features/formatTaskItemDate';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import { useTaskWorkflowGlyph } from '@/features/AgentTasks/shared/TaskWorkflowBadge';
+import SidebarDropdownMenu, {
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { lambdaClient } from '@/libs/trpc/client';
 import { isTrpcErrorCode } from '@/utils/trpcError';
@@ -164,7 +161,7 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
       [onPickDuplicate, onReassign, task.id, transfer],
     );
 
-    const overflowMenuItems = useMemo<DropdownItem[]>(
+    const overflowMenuItems = useMemo<Exclude<SidebarDropdownMenuProps['items'], () => unknown>>(
       () =>
         overflowItems.map((item) =>
           item.type === 'leaf'
@@ -195,55 +192,77 @@ const TeamTriageRow = memo<TeamTriageRowProps>(
     });
 
     return (
-      <Flexbox horizontal align="center" className={styles.row} gap={8}>
+      <div className={cn('flex flex-row items-center gap-2', styles.row)}>
         <WorkspaceLink className={styles.link} to={teamTaskDetailPath(task)}>
           <PriorityIcon priority={task.priority} size={16} />
           {workflowGlyph ? (
-            <Tooltip title={workflowGlyph.label}>
-              <Icon color={workflowGlyph.color} icon={workflowGlyph.icon} size={16} />
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span className="inline-flex">
+                      {createElement(workflowGlyph.icon, {
+                        'aria-hidden': true,
+                        'className': 'size-4 shrink-0',
+                        'color': workflowGlyph.color,
+                      })}
+                    </span>
+                  }
+                />
+                <TooltipContent>{workflowGlyph.label}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             <TaskStatusIcon size={16} status={resolveTaskStatus(task.status)} />
           )}
-          {task.identifier ? <Text className={styles.identifier}>{task.identifier}</Text> : null}
-          <Text ellipsis style={{ minWidth: 0 }} weight={500}>
+          {task.identifier ? (
+            <span className={cn('text-sm', styles.identifier)}>{task.identifier}</span>
+          ) : null}
+          <span className={cn('min-w-0', 'text-sm truncate font-medium')}>
             {task.name ?? task.instruction}
-          </Text>
+          </span>
         </WorkspaceLink>
-        <Flexbox horizontal align="center" className={styles.meta} gap={12}>
+        <div className={cn('flex flex-row items-center gap-3', styles.meta)}>
           {age ? (
-            <Text className={styles.age} title={createdDate || undefined}>
+            <span className={cn('text-sm', styles.age)} title={createdDate || undefined}>
               {age}
-            </Text>
+            </span>
           ) : null}
           {creator ? (
             <span className={styles.creator} title={creator.name}>
               <Avatar avatar={creator.avatar} name={creator.name} size={20} />
             </span>
           ) : null}
-        </Flexbox>
-        <Flexbox horizontal align="center" className={styles.actions} gap={4}>
-          <Button size="small" onClick={() => onAction('accept')}>
+        </div>
+        <div className={cn('flex flex-row items-center gap-1', styles.actions)}>
+          <Button variant="outline" onClick={() => onAction('accept')}>
             {t('teams.accept')}
           </Button>
           <Button
             disabled={!TEAM_TRIAGE_SNOOZE_ENABLED}
-            icon={ClockIcon}
-            size="small"
             title={TEAM_TRIAGE_SNOOZE_ENABLED ? undefined : t('teams.snoozeUnavailable')}
+            variant="outline"
           >
+            <ClockIcon aria-hidden className="size-4" />
             {t('teams.snooze')}
           </Button>
-          <Button size="small" onClick={() => onAction('decline')}>
+          <Button variant="outline" onClick={() => onAction('decline')}>
             {t('teams.decline')}
           </Button>
           {overflowMenuItems.length > 0 ? (
-            <DropdownMenu items={overflowMenuItems} placement="bottomRight">
-              <ActionIcon icon={MoreHorizontalIcon} size="small" title={t('teams.moreActions')} />
-            </DropdownMenu>
+            <SidebarDropdownMenu items={overflowMenuItems} placement="bottomRight">
+              <Button
+                aria-label={t('teams.moreActions')}
+                size="icon"
+                title={t('teams.moreActions')}
+                variant="ghost"
+              >
+                <MoreHorizontalIcon aria-hidden className="size-4" />
+              </Button>
+            </SidebarDropdownMenu>
           ) : null}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

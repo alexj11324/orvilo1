@@ -1,21 +1,22 @@
 'use client';
-
-import { type DropdownItem, DropdownMenu, Flexbox, Icon, type MenuInfo } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
+import { type DropdownItem, type MenuInfo } from '@lobehub/ui';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { BarChart3Icon, Trash2Icon, UserRoundIcon, XIcon } from 'lucide-react';
-import { memo, useCallback, useMemo } from 'react';
+import { createElement, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
+import { Button } from '@/components/ui/button';
 import { useAssigneeMenuItems } from '@/features/AgentTasks/features/assigneeMenuItems';
 import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
 import {
   STATUS_META,
   USER_SELECTABLE_STATUSES,
 } from '@/features/AgentTasks/features/taskStatusMeta';
+import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 const styles = createStaticStyles(({ css }) => ({
   /**
@@ -101,7 +102,7 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
         USER_SELECTABLE_STATUSES.map((status) => {
           const meta = STATUS_META[status];
           return {
-            icon: <Icon color={meta.color} icon={meta.icon} size={16} />,
+            icon: createElement(meta.icon, { className: 'size-4 shrink-0', color: meta.color }),
             key: status,
             label: t(`chat:taskDetail.${meta.labelKey}` as never, {
               defaultValue: meta.label,
@@ -182,22 +183,25 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       // selection when the pointer lands on the bar's own chrome; the
       // `data-row-interactive` marker does the same for row-level guards.
       <div data-bulk-actions data-row-interactive className={styles.bar}>
-        <Text className={styles.count} fontSize={12} weight={500}>
+        <span className={cn('text-sm font-medium', styles.count)}>
           {t('myWork.bulk.selected', { count })}
-        </Text>
+        </span>
         <DropdownMenu items={actionItems} placement={'top'}>
-          <Button disabled={busy} size={'small'}>
+          <Button disabled={busy} variant="outline">
             {t('myWork.bulk.actions')}
           </Button>
         </DropdownMenu>
-        <Flexbox flex={'none'}>
-          <ActionIcon
-            icon={XIcon}
-            size={'small'}
+        <div className="flex flex-col" style={{ flex: 'none' }}>
+          <Button
+            aria-label={t('myWork.bulk.clear')}
+            size="icon"
             title={t('myWork.bulk.clear')}
+            variant="ghost"
             onClick={onClear}
-          />
-        </Flexbox>
+          >
+            {createElement(XIcon, { className: 'size-4 shrink-0' })}
+          </Button>
+        </div>
       </div>
     );
   },

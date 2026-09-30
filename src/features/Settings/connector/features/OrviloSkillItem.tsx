@@ -1,13 +1,14 @@
 'use client';
 
-import { Center, Icon, Tooltip } from '@lobehub/ui';
-import { Avatar, Button } from '@lobehub/ui/base-ui';
+import { Avatar } from '@lobehub/ui/base-ui';
 import { type OrviloSkillProviderType } from '@orvilo/const';
 import { cssVar } from 'antd-style';
 import { CircleCheck, Loader2, SquareArrowOutUpRight } from 'lucide-react';
-import { memo, useCallback, useEffect, useRef, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { usePermission } from '@/hooks/usePermission';
 import { useToolStore } from '@/store/tool';
@@ -181,28 +182,56 @@ const OrviloSkillItem = memo<OrviloSkillItemProps>(({ provider, server, isSelect
   // wondering if it's a bug.
   const renderNavExtra = () => {
     if (isConnecting || isWaitingAuth) {
-      return <Button disabled icon={<Icon spin icon={Loader2} />} size="small" type="text" />;
+      return (
+        <Button disabled size="sm" variant="ghost">
+          {createElement(Loader2, { className: 'animate-spin' })}
+        </Button>
+      );
     }
     if (isConnected) {
       return (
-        <Tooltip title={t('tools.orviloSkill.connected', { defaultValue: 'Connected' })}>
-          <Center width={20}>
-            <Icon icon={CircleCheck} size={16} style={{ color: cssVar.colorSuccess }} />
-          </Center>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex min-w-0">
+                <div
+                  className={'flex min-w-0'}
+                  style={{
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    width: 20,
+                  }}
+                >
+                  {createElement(CircleCheck, { size: 16, style: { color: cssVar.colorSuccess } })}
+                </div>
+              </span>
+            }
+          />
+          <TooltipContent side="top">
+            {t('tools.orviloSkill.connected', { defaultValue: 'Connected' })}
+          </TooltipContent>
         </Tooltip>
       );
     }
     return (
-      <Tooltip title={!canCreate ? createReason : editReason}>
-        <Button
-          disabled={!canCreate || !canEdit}
-          icon={<Icon icon={SquareArrowOutUpRight} />}
-          size="small"
-          type="text"
-          onClick={handleConnect}
-        >
-          {t('tools.orviloSkill.connect')}
-        </Button>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span className="inline-flex min-w-0">
+              <Button
+                disabled={!canCreate || !canEdit}
+                size="sm"
+                variant="ghost"
+                onClick={handleConnect}
+              >
+                {createElement(SquareArrowOutUpRight, {})}
+                {t('tools.orviloSkill.connect')}
+              </Button>
+            </span>
+          }
+        />
+        <TooltipContent side="top">{!canCreate ? createReason : editReason}</TooltipContent>
       </Tooltip>
     );
   };
@@ -210,7 +239,7 @@ const OrviloSkillItem = memo<OrviloSkillItemProps>(({ provider, server, isSelect
   const renderNavIcon = () => {
     const { icon, label } = provider;
     if (typeof icon === 'string') return <Avatar alt={label} avatar={icon} size={18} />;
-    return <Icon fill={cssVar.colorText} icon={icon} size={18} />;
+    return createElement(icon, { fill: cssVar.colorText, size: 18 });
   };
 
   return (

@@ -1,11 +1,11 @@
 'use client';
 
 import { type FormGroupItemType } from '@lobehub/ui';
-import { Flexbox, Form } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
+import { Form } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { FORM_STYLE } from '@/const/layoutTokens';
 
 const APP_ENVIRONMENT_ITEMS = [
@@ -35,14 +35,17 @@ const AppEnvironmentSection = memo(() => {
       children: APP_ENVIRONMENT_ITEMS.map((item) => {
         const version = orviloEnv?.[item.versionKey];
         const label = (
-          <Flexbox horizontal align="center" gap={8}>
-            <Text>{item.name}</Text>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
+            <span>{item.name}</span>
             {version && (
-              <Tag color="processing" style={{ marginInlineStart: 0 }}>
+              <Badge style={{ marginInlineStart: 0 }} variant="primary-light">
                 {version}
-              </Tag>
+              </Badge>
             )}
-          </Flexbox>
+          </div>
         );
         return {
           desc: t(item.descKey),

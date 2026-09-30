@@ -25,8 +25,8 @@ const SIDEBAR_STYLE = {
   '--sidebar-primary': 'var(--color-zinc-100)',
   '--sidebar-primary-foreground': 'var(--color-zinc-900)',
   '--sidebar-ring': 'var(--color-zinc-400)',
-  '--sidebar-muted': 'var(--color-zinc-400)',
-  '--sidebar-group': 'var(--color-zinc-500)',
+  '--sidebar-muted': 'var(--color-zinc-300)',
+  '--sidebar-group': 'var(--color-zinc-400)',
   '--sidebar-width': `${SHELL9_SIDEBAR_WIDTH}px`,
   '--sidebar-width-icon': `${SHELL9_SIDEBAR_ICON_WIDTH}px`,
 };
@@ -42,32 +42,33 @@ const LIGHT_SIDEBAR_STYLE = {
   '--sidebar-foreground': 'var(--color-zinc-900)',
   '--sidebar-primary': 'var(--color-zinc-900)',
   '--sidebar-primary-foreground': 'var(--color-zinc-50)',
-  '--sidebar-muted': 'var(--color-zinc-600)',
+  '--sidebar-muted': 'var(--color-zinc-700)',
   '--sidebar-group': 'var(--color-zinc-600)',
 };
 
 // The host's unlayered Ant Design link/reset rules otherwise override the source utilities.
 const hostStyles = createStaticStyles(({ css }) => ({
   sidebar: css`
-    [data-slot='sidebar-menu-button'] {
+    [data-sidebar='menu-button'] {
+      overflow: hidden;
       color: var(--sidebar-muted);
     }
 
-    [data-slot='sidebar-menu-button'] > svg {
+    [data-sidebar='menu-button'] > svg {
       opacity: 0.55;
     }
 
-    [data-slot='sidebar-menu-button']:hover {
+    [data-sidebar='menu-button']:hover {
       color: var(--sidebar-accent-foreground);
       background: var(--sidebar-accent);
     }
 
-    [data-slot='sidebar-menu-button']:hover > svg,
-    [data-slot='sidebar-menu-button'][data-active] > svg {
+    [data-sidebar='menu-button']:hover > svg,
+    [data-sidebar='menu-button'][data-active] > svg {
       opacity: 1;
     }
 
-    [data-slot='sidebar-menu-button'][data-active] {
+    [data-sidebar='menu-button'][data-active] {
       color: var(--sidebar-accent-foreground);
       background: var(--sidebar-accent);
     }
@@ -146,7 +147,7 @@ export function SidebarShell() {
       className={cn(
         hostStyles.sidebar,
         isDesktop &&
-          '[&_[data-shell9-rail]]:absolute [&_[data-slot=sidebar-container]]:absolute [&_[data-slot=sidebar-container]]:h-full',
+          '[&_[data-slot=sidebar-container]]:absolute [&_[data-slot=sidebar-container]]:h-full',
         useNativeTransparency && '[&_[data-sidebar=sidebar]]:bg-transparent!',
       )}
       onOpenChange={setOpen}

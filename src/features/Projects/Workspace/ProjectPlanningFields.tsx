@@ -1,5 +1,5 @@
-import { DatePicker, Flexbox, Icon } from '@lobehub/ui';
-import { Select, Tabs, toast } from '@lobehub/ui/base-ui';
+import { DatePicker } from '@lobehub/ui';
+import { toast } from '@lobehub/ui/base-ui';
 import type { ProjectDatePrecision } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -10,12 +10,31 @@ import {
   TagIcon,
   UserRoundIcon,
 } from 'lucide-react';
-import { useId, useRef, useState } from 'react';
+import { createElement, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { type ProjectDetail, useProjectStore } from '@/store/project';
 
@@ -152,35 +171,71 @@ export function ProjectLabelsField({ detail }: { detail: ProjectDetail }) {
   if (query.error && !query.data)
     return <AsyncError error={query.error} variant="inline" onRetry={() => void query.mutate()} />;
   const labels = query.data?.data ?? detail.labels ?? [];
+  const labelPickerOptions = labels.map((label) => ({ label: label.name, value: label.id }));
   return (
     <>
       <label className={styles.accessibleLabel} htmlFor={id}>
         {t('properties.labels')}
       </label>
-      <Select
-        showSearch
-        className={styles.field}
+      <Combobox
+        multiple
         disabled={saving || query.isLoading}
-        id={id}
-        loading={saving || query.isLoading}
-        mode="multiple"
-        options={labels.map((label) => ({ label: label.name, value: label.id }))}
-        placeholder={t('properties.addLabels')}
-        popupMatchSelectWidth={false}
-        prefix={TagIcon}
-        size="small"
-        suffixIcon={null}
+        items={labelPickerOptions.map((option) => option.value)}
         value={(detail.labels ?? []).map((label) => label.id)}
-        onChange={(value) => {
+        itemToStringLabel={(value) => {
+          const option = labelPickerOptions.find((option) => option.value === value);
+          return option && 'title' in option && typeof option.title === 'string'
+            ? option.title
+            : typeof option?.label === 'string'
+              ? option.label
+              : String(value);
+        }}
+        onValueChange={(value) => {
           if (Array.isArray(value)) void save({ labelIds: value });
         }}
-      />
+      >
+        <>
+          <ComboboxChips className="min-w-0 max-w-full">
+            <TagIcon aria-hidden size={16} />
+            {(detail.labels ?? [])
+              .map((label) => label.id)
+              .map((value) => (
+                <ComboboxChip key={value}>
+                  {labelPickerOptions.find((option) => option.value === value)?.label ??
+                    String(value)}
+                </ComboboxChip>
+              ))}
+            <ComboboxChipsInput
+              aria-label={t('properties.labels')}
+              disabled={saving || query.isLoading}
+              id={id}
+              placeholder={t('properties.addLabels')}
+            />
+          </ComboboxChips>
+          <ComboboxContent className="min-w-56">
+            <ComboboxEmpty>{t('properties.addLabels')}</ComboboxEmpty>
+            <ComboboxList>
+              {(value: (typeof labelPickerOptions)[number]['value']) => {
+                const option = labelPickerOptions.find((option) => option.value === value);
+                return (
+                  <ComboboxItem
+                    disabled={!!option && 'disabled' in option && option.disabled === true}
+                    key={value}
+                    value={value}
+                  >
+                    {option?.label}
+                  </ComboboxItem>
+                );
+              }}
+            </ComboboxList>
+          </ComboboxContent>
+        </>
+      </Combobox>
     </>
   );
 }
 
 export function ProjectLeadField({
-  inline = false,
   project,
 }: {
   inline?: boolean;
@@ -205,10 +260,10 @@ export function ProjectLeadField({
       return {
         disabled: !!member.deletedAt || !!member.suspendedAt,
         label: (
-          <Flexbox horizontal align="center" gap={6}>
+          <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
             <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
             {name}
-          </Flexbox>
+          </div>
         ),
         title: name,
         value: member.userId,
@@ -221,35 +276,66 @@ export function ProjectLeadField({
       title: t('properties.unavailableLead'),
       value: project.leadUserId,
     });
+  const leadPickerOptions = [{ label: t('properties.noLead'), value: 0 }, ...options];
   return (
     <>
       <label className={styles.accessibleLabel} htmlFor={id}>
         {t('properties.lead')}
       </label>
-      <Select
-        showSearch
-        className={inline ? `${styles.field} ${styles.inline}` : styles.field}
+      <Combobox
         disabled={saving || members.isLoading}
-        id={id}
-        labelRender={(option) => (option.value === 0 ? t('properties.addLead') : option.label)}
-        loading={saving || members.isLoading}
-        options={[{ label: t('properties.noLead'), value: 0 }, ...options]}
-        popupMatchSelectWidth={false}
-        prefix={project.leadUserId ? undefined : UserRoundIcon}
-        size="small"
-        suffixIcon={null}
+        items={leadPickerOptions.map((option) => option.value)}
         value={project.leadUserId ?? 0}
-        onChange={(value) => {
+        itemToStringLabel={(value) => {
+          const option = leadPickerOptions.find((option) => option.value === value);
+          if (value === 0) return t('properties.addLead');
+          return option && 'title' in option && typeof option.title === 'string'
+            ? option.title
+            : typeof option?.label === 'string'
+              ? option.label
+              : String(value);
+        }}
+        onValueChange={(value) => {
+          if (value === null) return;
           if ((value === 0 || typeof value === 'string') && value !== (project.leadUserId ?? 0))
             void save({ leadUserId: value === 0 ? null : value });
         }}
-      />
+      >
+        <>
+          <ComboboxInput
+            aria-label={t('properties.lead')}
+            className="min-w-0 max-w-full"
+            disabled={saving || members.isLoading}
+            id={id}
+            placeholder={t('properties.addLead')}
+            showClear={false}
+          >
+            {!project.leadUserId && <UserRoundIcon aria-hidden size={16} />}
+          </ComboboxInput>
+          <ComboboxContent className="min-w-56">
+            <ComboboxEmpty>{t('properties.members')}</ComboboxEmpty>
+            <ComboboxList>
+              {(value: (typeof leadPickerOptions)[number]['value']) => {
+                const option = leadPickerOptions.find((option) => option.value === value);
+                return (
+                  <ComboboxItem
+                    disabled={!!option && 'disabled' in option && option.disabled === true}
+                    key={value}
+                    value={value}
+                  >
+                    {option?.label}
+                  </ComboboxItem>
+                );
+              }}
+            </ComboboxList>
+          </ComboboxContent>
+        </>
+      </Combobox>
     </>
   );
 }
 
 export function ProjectPriorityField({
-  inline = false,
   project,
 }: {
   inline?: boolean;
@@ -258,32 +344,44 @@ export function ProjectPriorityField({
   const { t } = useTranslation('project');
   const { save, saving } = usePlanningMutation(project.id);
   const id = useId();
+  const priorityPickerOptions = priorities.map((name, value) => ({
+    label: (
+      <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
+        <PriorityIcon priority={value} size={16} />
+        {t(`create.priority.${name}`)}
+      </div>
+    ),
+    value,
+  }));
   return (
     <>
       <label className={styles.accessibleLabel} htmlFor={id}>
         {t('properties.priority')}
       </label>
       <Select
-        className={inline ? `${styles.field} ${styles.inline}` : styles.field}
         disabled={saving}
-        id={id}
-        loading={saving}
-        size="small"
-        suffixIcon={null}
+        items={priorityPickerOptions}
         value={project.priority ?? 0}
-        options={priorities.map((name, value) => ({
-          label: (
-            <Flexbox horizontal align="center" gap={6}>
-              <PriorityIcon priority={value} size={16} />
-              {t(`create.priority.${name}`)}
-            </Flexbox>
-          ),
-          value,
-        }))}
-        onChange={(value) => {
+        onValueChange={(value) => {
+          if (value === null) return;
           if (isPriorityLevel(value) && value !== project.priority) void save({ priority: value });
         }}
-      />
+      >
+        <SelectTrigger className="min-w-0 max-w-full" id={id} size="sm">
+          <SelectValue placeholder={undefined} />
+        </SelectTrigger>
+        <SelectContent>
+          {priorityPickerOptions.map((option) => (
+            <SelectItem
+              disabled={'disabled' in option && option.disabled === true}
+              key={option.value}
+              value={option.value}
+            >
+              {option.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </>
   );
 }
@@ -334,24 +432,27 @@ export function ProjectDateField({
       panelRender={(panel) => (
         <>
           <Tabs
-            activeKey={precision}
-            size="small"
-            items={PROJECT_DATE_PRECISIONS.map((value) => ({
-              key: value,
-              label: t(`create.datePrecision.${value}`),
-            }))}
-            onChange={(value) => {
+            value={precision}
+            onValueChange={(value) => {
               if (PROJECT_DATE_PRECISIONS.includes(value as ProjectDatePrecision))
                 setPrecision(value as ProjectDatePrecision);
             }}
-          />
+          >
+            <TabsList>
+              {PROJECT_DATE_PRECISIONS.map((value) => (
+                <TabsTrigger key={value} value={value}>
+                  {t(`create.datePrecision.${value}`)}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
           {panel}
         </>
       )}
       suffixIcon={
-        inline || fitContent ? (
-          <Icon icon={kind === 'startDate' ? CalendarDaysIcon : CalendarIcon} size={16} />
-        ) : null
+        inline || fitContent
+          ? createElement(kind === 'startDate' ? CalendarDaysIcon : CalendarIcon, { size: 16 })
+          : null
       }
       onChange={(value) => {
         let date = Array.isArray(value) ? value[0] : value;
@@ -384,10 +485,10 @@ export function ProjectDateFields({ project }: { project: ProjectDetail['project
     // controls leave this row far short of the column (≈175px in 257px).
     // The separator is a bare 16px svg arrow on the reference, not a text
     // glyph — same treatment as the overview's main property row.
-    <Flexbox horizontal align="center" gap={4} style={{ minWidth: 0, flex: 1 }}>
+    <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, minWidth: 0, flex: 1 }}>
       <ProjectDateField fitContent kind="startDate" project={project} />
-      <Icon aria-hidden icon={ArrowRightIcon} size={16} />
+      <ArrowRightIcon aria-hidden size={16} />
       <ProjectDateField fitContent kind="targetDate" project={project} />
-    </Flexbox>
+    </div>
   );
 }

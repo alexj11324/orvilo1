@@ -1,5 +1,5 @@
 import { type MermaidProps } from '@lobehub/ui';
-import { Center, Flexbox, Mermaid } from '@lobehub/ui';
+import { Mermaid } from '@lobehub/ui';
 
 const code = `sequenceDiagram
     Alice->>John: Hello John, how are you?
@@ -9,11 +9,17 @@ const code = `sequenceDiagram
 
 const MermaidPreview = ({ theme }: { theme?: MermaidProps['theme'] }) => {
   return (
-    <Center>
-      <Flexbox style={{ maxWidth: '100%' }} width={480}>
+    <div
+      className={'flex min-w-0'}
+      style={{ flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
+    >
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'column', width: 480, maxWidth: '100%' }}
+      >
         <Mermaid theme={theme}>{code}</Mermaid>
-      </Flexbox>
-    </Center>
+      </div>
+    </div>
   );
 };
 

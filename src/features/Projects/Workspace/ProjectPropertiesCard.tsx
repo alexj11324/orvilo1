@@ -1,14 +1,14 @@
 'use client';
-
-import { Flexbox, Icon } from '@lobehub/ui';
-import { DropdownMenu, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { Badge } from '@/components/reui/badge';
+import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { projectIssueProgressPercent } from '@/features/Projects/projectIssueProgress';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
@@ -160,92 +160,103 @@ const ProjectPropertiesCard = memo<ProjectPropertiesCardProps>(({ detail, projec
 
   return (
     // 8px between rows on the reference, which puts the row pitch at 36.
-    <Flexbox gap={8}>
+    <div className="flex flex-col" style={{ gap: 8 }}>
       <div className={styles.row}>
-        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
+        <span
+          className={cn('text-sm', styles.label)}
+          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+        >
           {t('properties.status')}
-        </Text>
+        </span>
         <DropdownMenu items={statusItems}>
           <span className={styles.statusTrigger}>
-            <Tag
-              color={statusVisual.color}
-              shape={'round'}
-              size={'small'}
-              icon={
-                <ProjectStatusIcon
-                  percent={projectIssueProgressPercent(detail.tasks) ?? 0}
-                  size={12}
-                  status={resolvedStatus}
-                />
-              }
-            >
+            <Badge radius="full" size="sm" style={{ color: statusVisual.color }} variant="outline">
+              <ProjectStatusIcon
+                percent={projectIssueProgressPercent(detail.tasks) ?? 0}
+                size={12}
+                status={resolvedStatus}
+              />
               {t(`status.${project.status}`)}
-            </Tag>
+            </Badge>
             {updatingStatus ? null : (
-              <Icon aria-hidden icon={ChevronDownIcon} size={12} style={{ opacity: 0.5 }} />
+              <ChevronDownIcon aria-hidden size={12} style={{ opacity: 0.5 }} />
             )}
           </span>
         </DropdownMenu>
       </div>
-
       <div className={styles.row}>
-        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
+        <span
+          className={cn('text-sm', styles.label)}
+          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+        >
           {t('properties.priority')}
-        </Text>
+        </span>
         <ProjectPriorityField project={project} />
       </div>
-
       <div className={styles.row}>
-        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
+        <span
+          className={cn('text-sm', styles.label)}
+          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+        >
           {t('properties.lead')}
-        </Text>
+        </span>
         <ProjectLeadField project={project} />
       </div>
       <div className={styles.row}>
-        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
+        <span
+          className={cn('text-sm', styles.label)}
+          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+        >
           {t('properties.members')}
-        </Text>
+        </span>
         {membersEnabled ? (
           <ProjectMembersField projectId={project.id} query={membersSWR} />
         ) : (
-          <Text fontSize={12} type={'secondary'}>
+          <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
             —
-          </Text>
+          </span>
         )}
       </div>
       <div className={styles.row}>
-        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
+        <span
+          className={cn('text-sm', styles.label)}
+          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+        >
           {t('properties.dates')}
-        </Text>
+        </span>
         <ProjectDateFields project={project} />
       </div>
-
       <div className={styles.row}>
-        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
+        <span
+          className={cn('text-sm', styles.label)}
+          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+        >
           {t('properties.teams', { defaultValue: 'Teams' })}
-        </Text>
+        </span>
         {teams.length === 0 ? (
-          <Text fontSize={12} type={'secondary'}>
+          <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
             —
-          </Text>
+          </span>
         ) : (
           <div className={styles.chipList}>
             {teams.map((team) => (
-              <Tag key={team.id} shape={'round'} size={'small'}>
+              <Badge key={team.id} radius="full" size="sm" variant="secondary">
                 {team.name}
-              </Tag>
+              </Badge>
             ))}
           </div>
         )}
       </div>
-
       <div className={styles.row}>
-        <Text className={styles.label} color={MUTED_LABEL_COLOR} fontSize={12}>
+        <span
+          className={cn('text-sm', styles.label)}
+          style={{ fontSize: 12, color: MUTED_LABEL_COLOR }}
+        >
           {t('properties.labels')}
-        </Text>
+        </span>
         <ProjectLabelsField detail={detail} />
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

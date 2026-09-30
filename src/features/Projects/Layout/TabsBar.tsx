@@ -1,8 +1,6 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type Ref, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useLocation } from 'react-router';
@@ -10,6 +8,7 @@ import { useLocation } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import Avatar from '@/components/Avatar';
 import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
+import { Badge } from '@/components/reui/badge';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
 import {
@@ -178,17 +177,18 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
         }
         right={
           detail?.project.id ? (
-            <Flexbox horizontal align={'center'} gap={10}>
-              <Tag
-                color={headerStatusVisual.color}
-                shape={'round'}
-                size={'small'}
-                icon={<ProjectStatusIcon size={12} status={detail.project.status} />}
+            <div className="flex flex-row" style={{ alignItems: 'center', gap: 10 }}>
+              <Badge
+                radius="full"
+                size="sm"
+                style={{ color: headerStatusVisual.color }}
+                variant="outline"
               >
+                <ProjectStatusIcon size={12} status={detail.project.status} />
                 {t(`status.${detail.project.status}`, {
                   defaultValue: detail.project.status,
                 })}
-              </Tag>
+              </Badge>
               {membersEnabled && (membersSWR.data?.length ?? 0) > 0 && (
                 <div className={styles.headerMembers}>
                   {membersSWR.data!.slice(0, 4).map((member) => (
@@ -206,12 +206,15 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
                 targetType="project"
                 variant="icon"
               />
-            </Flexbox>
+            </div>
           ) : undefined
         }
       />
-      <Flexbox horizontal align={'center'} className={styles.tabsRow} justify={'space-between'}>
-        <Flexbox horizontal gap={4}>
+      <div
+        className={cn('flex flex-row', styles.tabsRow)}
+        style={{ alignItems: 'center', justifyContent: 'space-between' }}
+      >
+        <div className="flex flex-row" style={{ gap: 4 }}>
           {tabs.map((tab) => (
             <WorkspaceLink
               aria-current={activeTab === tab.path ? 'page' : undefined}
@@ -222,9 +225,9 @@ const ProjectTabsBar = memo(({ toolbarRef }: { toolbarRef?: Ref<HTMLDivElement> 
               {tab.label}
             </WorkspaceLink>
           ))}
-        </Flexbox>
+        </div>
         <div ref={toolbarRef} />
-      </Flexbox>
+      </div>
     </>
   );
 });

@@ -1,15 +1,24 @@
 'use client';
 
 import { type FormGroupItemType } from '@lobehub/ui';
-import { Flexbox, Form, Icon, ImageSelect } from '@lobehub/ui';
-import { Select, Skeleton, Tabs } from '@lobehub/ui/base-ui';
+import { Form, ImageSelect } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
-import { Ban, Gauge, Monitor, Moon, Mouse, Sun, Waves } from 'lucide-react';
+import { Ban, Gauge, Monitor, Moon, Mouse, Sun, Waves, XIcon } from 'lucide-react';
 import { useTheme as useNextThemesTheme } from 'next-themes';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { imageUrl } from '@/const/url';
 import { isDesktop } from '@/const/version';
@@ -40,7 +49,14 @@ const Common = memo(() => {
     switchLocale(value);
   };
 
-  if (!(isStatusInit && isUserStateInit)) return <Skeleton.Text rows={5} />;
+  if (!(isStatusInit && isUserStateInit))
+    return (
+      <div aria-busy="true" className="flex flex-col gap-3">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton className="h-4 w-full" key={index} />
+        ))}
+      </div>
+    );
 
   const themeFormGroup: FormGroupItemType = {
     children: [
@@ -83,32 +99,41 @@ const Common = memo(() => {
       },
       {
         children: (
-          <Flexbox horizontal justify={'flex-end'}>
-            <Select
-              defaultValue={language}
-              optionRender={(option) => (
-                <span
-                  style={{
-                    flex: 1,
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    whiteSpace: 'nowrap',
-                  }}
-                  onMouseEnter={() => preloadLang(option.value as LocaleMode)}
-                >
-                  {option.label}
-                </span>
-              )}
-              options={[
-                { label: t('settingCommon.lang.autoMode'), value: 'auto' },
-                ...localeOptions,
-              ]}
-              style={{
-                width: '50%',
-              }}
-              onChange={handleLangChange}
-            />
-          </Flexbox>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', justifyContent: 'flex-end' }}
+          >
+            <div className="w-1/2">
+              <Select
+                defaultValue={language}
+                items={[
+                  { label: t('settingCommon.lang.autoMode'), value: 'auto' },
+                  ...localeOptions,
+                ]}
+                onValueChange={(value) => {
+                  if (value !== null) handleLangChange(value as LocaleMode);
+                }}
+              >
+                <SelectTrigger aria-label={t('settingCommon.lang.title')} className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {[
+                    { label: t('settingCommon.lang.autoMode'), value: 'auto' },
+                    ...localeOptions,
+                  ].map((option) => (
+                    <SelectItem
+                      key={option.value}
+                      value={option.value}
+                      onMouseEnter={() => preloadLang(option.value as LocaleMode)}
+                    >
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
         ),
         label: (
           <SettingsSearchAnchor id={'appearance-language'}>
@@ -118,25 +143,32 @@ const Common = memo(() => {
       },
       {
         children: (
-          <Tabs
-            items={[
-              {
-                icon: <Icon icon={Ban} size={16} />,
-                key: 'disabled',
-                label: t('settingAppearance.animationMode.disabled'),
-              },
-              {
-                icon: <Icon icon={Gauge} size={16} />,
-                key: 'agile',
-                label: t('settingAppearance.animationMode.agile'),
-              },
-              {
-                icon: <Icon icon={Waves} size={16} />,
-                key: 'elegant',
-                label: t('settingAppearance.animationMode.elegant'),
-              },
-            ]}
-          />
+          <Tabs>
+            <TabsList>
+              {[
+                {
+                  icon: createElement(Ban, { size: 16 }),
+                  key: 'disabled',
+                  label: t('settingAppearance.animationMode.disabled'),
+                },
+                {
+                  icon: createElement(Gauge, { size: 16 }),
+                  key: 'agile',
+                  label: t('settingAppearance.animationMode.agile'),
+                },
+                {
+                  icon: createElement(Waves, { size: 16 }),
+                  key: 'elegant',
+                  label: t('settingAppearance.animationMode.elegant'),
+                },
+              ].map((item) => (
+                <TabsTrigger key={item.key} value={item.key}>
+                  {item.icon}
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         ),
         label: (
           <SettingsSearchAnchor id={'appearance-animation'}>
@@ -145,24 +177,32 @@ const Common = memo(() => {
         ),
         minWidth: undefined,
         name: 'animationMode',
-        valuePropName: 'activeKey',
+        trigger: 'onValueChange',
+        valuePropName: 'value',
       },
       {
         children: (
-          <Tabs
-            items={[
-              {
-                icon: <Icon icon={Ban} size={16} />,
-                key: 'disabled',
-                label: t('settingAppearance.contextMenuMode.disabled'),
-              },
-              {
-                icon: <Icon icon={Mouse} size={16} />,
-                key: 'default',
-                label: t('settingAppearance.contextMenuMode.default'),
-              },
-            ]}
-          />
+          <Tabs>
+            <TabsList>
+              {[
+                {
+                  icon: createElement(Ban, { size: 16 }),
+                  key: 'disabled',
+                  label: t('settingAppearance.contextMenuMode.disabled'),
+                },
+                {
+                  icon: createElement(Mouse, { size: 16 }),
+                  key: 'default',
+                  label: t('settingAppearance.contextMenuMode.default'),
+                },
+              ].map((item) => (
+                <TabsTrigger key={item.key} value={item.key}>
+                  {item.icon}
+                  {item.label}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
         ),
         label: (
           <SettingsSearchAnchor id={'appearance-context-menu'}>
@@ -171,25 +211,50 @@ const Common = memo(() => {
         ),
         minWidth: undefined,
         name: 'contextMenuMode',
-        valuePropName: 'activeKey',
+        trigger: 'onValueChange',
+        valuePropName: 'value',
       },
 
       {
         children: (
-          <Flexbox horizontal justify={'flex-end'}>
-            <Select
-              allowClear
-              options={localeOptions}
-              placeholder={t('settingCommon.responseLanguage.placeholder')}
-              value={general?.responseLanguage || undefined}
-              style={{
-                width: '50%',
-              }}
-              onChange={(value) => {
-                save(() => setSettings({ general: { responseLanguage: value ?? '' } }));
-              }}
-            />
-          </Flexbox>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', justifyContent: 'flex-end' }}
+          >
+            <div className="flex w-1/2 items-center gap-1">
+              <Select
+                items={localeOptions}
+                value={general?.responseLanguage || null}
+                onValueChange={(value) =>
+                  save(() => setSettings({ general: { responseLanguage: value ?? '' } }))
+                }
+              >
+                <SelectTrigger
+                  aria-label={t('settingCommon.responseLanguage.title')}
+                  className="w-full"
+                >
+                  <SelectValue placeholder={t('settingCommon.responseLanguage.placeholder')} />
+                </SelectTrigger>
+                <SelectContent>
+                  {localeOptions.map((option) => (
+                    <SelectItem key={option.value} value={option.value}>
+                      {option.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {general?.responseLanguage && (
+                <Button
+                  aria-label={t('reset', { ns: 'common' })}
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => save(() => setSettings({ general: { responseLanguage: '' } }))}
+                >
+                  <XIcon />
+                </Button>
+              )}
+            </div>
+          </div>
         ),
         label: (
           <SettingsSearchAnchor id={'appearance-response-language'}>

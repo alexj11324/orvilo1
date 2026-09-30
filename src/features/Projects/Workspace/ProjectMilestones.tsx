@@ -1,14 +1,19 @@
 'use client';
-
-import { DatePicker, Flexbox, Icon, Input, SortableList, TextArea } from '@lobehub/ui';
-import { Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
+import { DatePicker, SortableList } from '@lobehub/ui';
+import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { CalendarIcon, EllipsisIcon, PencilIcon, PlusIcon, Trash2Icon } from 'lucide-react';
-import { memo, useMemo, useRef, useState } from 'react';
+import { createElement, memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import AccordionArrowIcon from '@/features/AgentTasks/shared/AccordionArrowIcon';
+import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { getProjectTasksPath } from '@/features/Projects/Layout/navigation';
 import { getProjectMilestoneIssuesPath } from '@/features/Projects/milestoneFilter';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
@@ -267,7 +272,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
     };
 
     return (
-      <Flexbox className={styles.composer} gap={8}>
+      <div className={cn('flex flex-col', styles.composer)} style={{ gap: 8 }}>
         <Input
           autoFocus
           aria-label={t('create.milestone.name')}
@@ -284,7 +289,7 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
           aria-label={t('create.milestone.date')}
           format="MMM D, YYYY"
           placeholder={t('create.milestone.date')}
-          prefix={<Icon icon={CalendarIcon} size={13} />}
+          prefix={<CalendarIcon size={13} />}
           size="small"
           suffixIcon={null}
           value={date ? dayjs(date) : null}
@@ -293,28 +298,29 @@ const MilestoneComposer = memo<MilestoneComposerProps>(
             setDate(picked ? picked.format('YYYY-MM-DD') : undefined);
           }}
         />
-        <TextArea
+        <Textarea
           aria-label={t('create.milestone.description')}
           placeholder={t('create.milestone.description')}
           rows={2}
           value={description}
           onChange={(event) => setDescription(event.target.value)}
         />
-        <Flexbox horizontal gap={8} justify={'end'}>
-          <Button size={'small'} onClick={onCancel}>
+        <div className="flex flex-row" style={{ justifyContent: 'end', gap: 8 }}>
+          <Button size="sm" variant="outline" onClick={onCancel}>
             {t('common:cancel')}
           </Button>
           <Button
-            disabled={!name.trim()}
-            loading={saving}
-            size={'small'}
-            type={'primary'}
+            aria-busy={saving}
+            disabled={!name.trim() || saving}
+            size="sm"
+            variant="default"
             onClick={submit}
           >
+            {saving && <Spinner />}
             {initial ? t('common:save') : t('create.milestone.create')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -455,7 +461,10 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
           />
         ) : (
           <>
-            <Flexbox horizontal align={'center'} className={styles.headerRow} gap={6}>
+            <div
+              className={cn('flex flex-row', styles.headerRow)}
+              style={{ alignItems: 'center', gap: 6 }}
+            >
               <a
                 aria-label={milestone.name}
                 className={styles.milestoneIconLink}
@@ -464,9 +473,12 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               >
                 <MilestoneIcon size={MILESTONE_ICON_SIZE} />
               </a>
-              <Text fontSize={15} style={{ flex: '0 1 auto', minWidth: 0 }} weight={450}>
+              <span
+                className="text-sm"
+                style={{ fontSize: 15, fontWeight: 450, flex: '0 1 auto', minWidth: 0 }}
+              >
                 {milestone.name}
-              </Text>
+              </span>
               <button
                 className={styles.collapseButton}
                 type="button"
@@ -477,7 +489,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               >
                 <AccordionArrowIcon isOpen={!collapsed} size={16} />
               </button>
-              <Flexbox flex={1} />
+              <div className="flex flex-col" style={{ flex: 1 }} />
               {/* A `null` readout could not be computed honestly; the link and
                   its number land together or not at all. */}
               {milestone.progress && (
@@ -502,7 +514,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                     disabled={saving}
                     format="MMM D"
                     placeholder={t('overview.milestoneSetDate')}
-                    prefix={<Icon icon={CalendarIcon} size={13} />}
+                    prefix={<CalendarIcon size={13} />}
                     size="small"
                     suffixIcon={null}
                     value={milestone.date ? dayjs(milestone.date) : null}
@@ -527,31 +539,38 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                     >
                       <Button
                         aria-label={t('overview.milestoneMenu')}
-                        icon={EllipsisIcon}
-                        size="small"
-                        type="text"
-                      />
+                        size="icon-sm"
+                        variant="ghost"
+                      >
+                        {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
+                      </Button>
                     </DropdownMenu>
                   </div>
                 </>
               ) : (
                 milestone.date && (
-                  <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+                  <span
+                    className="text-sm text-muted-foreground"
+                    style={{ fontSize: 12, flex: 'none' }}
+                  >
                     {formatProjectDate(milestone.date)}
-                  </Text>
+                  </span>
                 )
               )}
-            </Flexbox>
+            </div>
             {!collapsed &&
               (milestone.description ? (
-                <Flexbox style={{ paddingInlineStart: 28 }}>
-                  <Text className={styles.description} fontSize={13} type={'secondary'}>
+                <div className="flex flex-col" style={{ paddingInlineStart: 28 }}>
+                  <span
+                    className={cn('text-sm text-muted-foreground', styles.description)}
+                    style={{ fontSize: 13 }}
+                  >
                     {milestone.description}
-                  </Text>
-                </Flexbox>
+                  </span>
+                </div>
               ) : (
                 canEdit && (
-                  <Flexbox style={{ paddingInlineStart: 28 }}>
+                  <div className="flex flex-col" style={{ paddingInlineStart: 28 }}>
                     <button
                       className={styles.descriptionGhost}
                       type="button"
@@ -559,7 +578,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                     >
                       {t('overview.descriptionEmpty')}
                     </button>
-                  </Flexbox>
+                  </div>
                 )
               ))}
           </>
@@ -575,14 +594,27 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
   };
 
   return (
-    <Flexbox as={'section'} className={styles.section} gap={8} id={'milestone-list'}>
-      <Flexbox horizontal align={'center'} gap={7}>
-        <Text {...SECTION_LABEL_PROPS}>{t('overview.milestones')}</Text>
-      </Flexbox>
+    <section
+      className={cn('flex flex-col', styles.section)}
+      id={'milestone-list'}
+      style={{ gap: 8 }}
+    >
+      <div className="flex flex-row" style={{ alignItems: 'center', gap: 7 }}>
+        <span
+          className="text-sm"
+          style={{
+            color: SECTION_LABEL_PROPS.color,
+            fontSize: SECTION_LABEL_PROPS.fontSize,
+            fontWeight: SECTION_LABEL_PROPS.weight,
+          }}
+        >
+          {t('overview.milestones')}
+        </span>
+      </div>
       {milestones.length === 0 ? (
-        <Text fontSize={13} style={{ paddingBlock: 4 }} type={'secondary'}>
+        <span className="text-sm text-muted-foreground" style={{ fontSize: 13, paddingBlock: 4 }}>
           {t('overview.milestonesEmpty')}
-        </Text>
+        </span>
       ) : (
         <>
           <SortableList
@@ -594,12 +626,15 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               </SortableList.Item>
             )}
             renderOverlay={(milestone) => (
-              <Flexbox horizontal align={'center'} className={styles.card} gap={8}>
+              <div
+                className={cn('flex flex-row', styles.card)}
+                style={{ alignItems: 'center', gap: 8 }}
+              >
                 <MilestoneIcon size={MILESTONE_ICON_SIZE} />
-                <Text fontSize={15} weight={450}>
+                <span className="text-sm" style={{ fontSize: 15, fontWeight: 450 }}>
                   {milestone.name}
-                </Text>
-              </Flexbox>
+                </span>
+              </div>
             )}
             onChange={(items) => {
               const ids = items.map((item) => item.id);
@@ -615,7 +650,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
               destination); expanding it lists the issues so one can be filed
               under a milestone — the only UI path onto `setTaskMilestone`. */}
           <div className={styles.noMilestoneRow}>
-            <Flexbox horizontal align={'center'} gap={10}>
+            <div className="flex flex-row" style={{ alignItems: 'center', gap: 10 }}>
               <MilestoneIcon muted size={MILESTONE_ICON_SIZE} />
               {unassignedTasks.length > 0 ? (
                 <button
@@ -626,17 +661,23 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                   type="button"
                   onClick={() => setUnassignedOpen((open) => !open)}
                 >
-                  <Text fontSize={13} type={'secondary'} weight={450}>
+                  <span
+                    className="text-sm text-muted-foreground"
+                    style={{ fontSize: 13, fontWeight: 450 }}
+                  >
                     {t('overview.noMilestone')}
-                  </Text>
+                  </span>
                   <AccordionArrowIcon isOpen={unassignedOpen} size={14} />
                 </button>
               ) : (
-                <Text fontSize={13} type={'secondary'} weight={450}>
+                <span
+                  className="text-sm text-muted-foreground"
+                  style={{ fontSize: 13, fontWeight: 450 }}
+                >
                   {t('overview.noMilestone')}
-                </Text>
+                </span>
               )}
-              <Flexbox flex={1} />
+              <div className="flex flex-col" style={{ flex: 1 }} />
               {unassignedProgress && (
                 <WorkspaceLink
                   className={styles.milestoneProgress}
@@ -653,22 +694,20 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                   })}
                 </WorkspaceLink>
               )}
-            </Flexbox>
+            </div>
             {unassignedOpen &&
               unassignedTasks.map((task: ProjectTask) => (
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  className={cx(styles.unassignedBody, styles.unassignedRow)}
-                  gap={8}
+                <div
+                  className={cn('flex flex-row', cx(styles.unassignedBody, styles.unassignedRow))}
                   key={task.id}
+                  style={{ alignItems: 'center', gap: 8 }}
                 >
-                  <Text fontSize={12} type={'secondary'}>
+                  <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
                     {task.identifier}
-                  </Text>
-                  <Text ellipsis fontSize={13} style={{ flex: 1, minWidth: 0 }}>
+                  </span>
+                  <span className="text-sm truncate" style={{ fontSize: 13, flex: 1, minWidth: 0 }}>
                     {task.name ?? task.identifier}
-                  </Text>
+                  </span>
                   {canEdit && (
                     <DropdownMenu
                       items={milestones.map((milestone) => ({
@@ -694,7 +733,7 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
                       </button>
                     </DropdownMenu>
                   )}
-                </Flexbox>
+                </div>
               ))}
           </div>
         </>
@@ -717,20 +756,18 @@ const ProjectMilestones = memo<ProjectMilestonesProps>(({ detail }) => {
           />
         ) : (
           <Button
-            className={styles.addButton}
-            icon={PlusIcon}
-            size={'small'}
-            type={'text'}
-            // One composer at a time — the same rule the ⋯ edit path applies.
+            size="sm"
+            variant="ghost"
             onClick={() => {
               setEditingId(null);
               setCreating(true);
             }}
           >
+            {createElement(PlusIcon, { 'size': 16, 'aria-hidden': true })}
             {t('overview.milestoneAdd')}
           </Button>
         ))}
-    </Flexbox>
+    </section>
   );
 });
 

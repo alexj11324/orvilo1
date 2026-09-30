@@ -3,7 +3,6 @@
 import { useModalContext } from '@lobehub/ui/base-ui';
 import { type CredType } from '@orvilo/types';
 import { Steps } from 'antd';
-import { createStaticStyles } from 'antd-style';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -12,12 +11,6 @@ import CredTypeSelector from './CredTypeSelector';
 import FileCredForm from './FileCredForm';
 import KVCredForm from './KVCredForm';
 import OAuthCredForm from './OAuthCredForm';
-
-const styles = createStaticStyles(({ css }) => ({
-  steps: css`
-    margin-block-end: 24px;
-  `,
-}));
 
 export interface CreateCredModalContentProps {
   /**
@@ -80,7 +73,7 @@ const CreateCredModalContent: FC<CreateCredModalContentProps> = ({ credsApi, onS
   return (
     <>
       <Steps
-        className={styles.steps}
+        className="mb-6"
         current={step}
         size={'small'}
         items={[

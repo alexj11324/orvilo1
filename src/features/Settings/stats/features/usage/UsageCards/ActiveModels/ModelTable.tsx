@@ -1,12 +1,19 @@
 import { CategoryBar, useThemeColorRange } from '@lobehub/charts';
-import { Flexbox } from '@lobehub/ui';
-import { Accordion, Avatar, Skeleton, Tag } from '@lobehub/ui/base-ui';
+import { Avatar } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InlineTable from '@/components/InlineTable';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
+import { Badge } from '@/components/reui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Skeleton } from '@/components/ui/skeleton';
 import { type UsageLog, type UsageRecordItem } from '@/types/usage/usageRecord';
 import { formatPrice } from '@/utils/format';
 
@@ -115,7 +122,10 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
     if (groupBy === GroupBy.User) {
       const display = resolveUser?.(key);
       return (
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div
+          className={'flex min-w-0'}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+        >
           <Avatar
             avatar={display?.avatar || display?.name || key}
             background={cssVar.colorFillSecondary}
@@ -124,79 +134,92 @@ const ModelTable = memo<UsageChartProps>(({ data, isLoading, groupBy, resolveUse
             title={display?.name || key}
           />
           {display?.name || key}
-        </Flexbox>
+        </div>
       );
     }
     return (
-      <Flexbox horizontal align={'center'} gap={8}>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+      >
         {groupBy === GroupBy.Provider ? (
           <ProviderIcon provider={key} size={24} />
         ) : (
           <ModelIcon model={key} size={24} />
         )}
         {key}
-      </Flexbox>
+      </div>
     );
   };
 
   return isLoading ? (
-    <Skeleton.Text rows={8} />
+    <div aria-busy="true" className="flex flex-col gap-3">
+      {Array.from({ length: 8 }, (_, index) => (
+        <Skeleton className="h-4 w-full" key={index} />
+      ))}
+    </div>
   ) : (
-    <Accordion
-      defaultValue={formattedData.map((item) => item.id)}
-      gap={16}
-      indicatorPlacement={'end'}
-      variant={'outlined'}
-      items={formattedData.map((item) => {
+    <Accordion multiple defaultValue={formattedData.map((item) => item.id)}>
+      {formattedData.map((item) => {
         const key = item.id;
-        return {
-          action: <Tag>{item?.childrens?.length ?? 0}</Tag>,
-          alwaysShowAction: true,
-          children: (
-            <Flexbox>
-              <CategoryBar
-                colors={themeColorRange}
-                showLabels={false}
-                size={2}
-                values={item.childrens.map((item) => item.weight)}
-              />
-              <InlineTable
-                dataSource={item.childrens}
-                hoverToActive={false}
-                loading={isLoading}
-                rowKey={(record) => record.id}
-                columns={[
-                  {
-                    dataIndex: 'id',
-                    key: 'id',
-                    render: (value, record, index) => {
-                      return (
-                        <Flexbox horizontal align={'center'} gap={12} key={value}>
-                          {renderInnerIcon(record.id, themeColorRange[index])}
-                          {value}
-                        </Flexbox>
-                      );
-                    },
-                    title: t(innerColumnKey),
-                    width: 200,
-                  },
-                  {
-                    dataIndex: 'spend',
-                    key: 'spend',
-                    render: (value) => {
-                      return `$${formatPrice(value)}`;
-                    },
-                    title: t('usage.activeModels.table.spend'),
-                  },
-                ]}
-              />
-            </Flexbox>
-          ),
-          key,
-          title: renderOuterLabel(key),
-        };
+        return (
+          <AccordionItem key={key} value={key}>
+            <AccordionTrigger>
+              <div className="flex min-w-0 items-center gap-2">
+                {renderOuterLabel(key)}
+                <Badge>{item.childrens.length}</Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent>
+              {
+                <div className={'flex min-w-0'} style={{ flexDirection: 'column' }}>
+                  <CategoryBar
+                    colors={themeColorRange}
+                    showLabels={false}
+                    size={2}
+                    values={item.childrens.map((item) => item.weight)}
+                  />
+                  <InlineTable
+                    dataSource={item.childrens}
+                    hoverToActive={false}
+                    loading={isLoading}
+                    rowKey={(record) => record.id}
+                    columns={[
+                      {
+                        dataIndex: 'id',
+                        key: 'id',
+                        render: (value, record, index) => {
+                          return (
+                            <div
+                              className={'flex min-w-0'}
+                              key={value}
+                              style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}
+                            >
+                              {renderInnerIcon(record.id, themeColorRange[index])}
+                              {value}
+                            </div>
+                          );
+                        },
+                        title: t(innerColumnKey),
+                        width: 200,
+                      },
+                      {
+                        dataIndex: 'spend',
+                        key: 'spend',
+                        render: (value) => {
+                          return `$${formatPrice(value)}`;
+                        },
+                        title: t('usage.activeModels.table.spend'),
+                      },
+                    ]}
+                  />
+                </div>
+              }
+            </AccordionContent>
+          </AccordionItem>
+        );
       })}
-    />
+    </Accordion>
   );
 });
 

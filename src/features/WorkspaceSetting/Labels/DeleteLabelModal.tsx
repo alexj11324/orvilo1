@@ -1,17 +1,12 @@
-import { Flexbox, Input } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  ModalFooter,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
+import { createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { type AgentLabelListItem } from '@orvilo/types';
 import { t as translate } from 'i18next';
+import { Loader2 } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useHomeStore } from '@/store/home';
 
 /** The word the user must type to arm the Delete button (mirrors Linear). */
@@ -72,35 +67,61 @@ const DeleteLabelContent = memo<DeleteLabelContentProps>(({ label }) => {
 
   return (
     <>
-      <Flexbox gap={12} paddingBlock={8} paddingInline={16}>
-        <Text>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 12,
+          paddingBlock: 8,
+          paddingInline: 16,
+        }}
+      >
+        <span>
           {label.usageCount > 0
             ? t('workspaceSetting.labels.delete.descUsed', { count: label.usageCount })
             : t('workspaceSetting.labels.delete.desc')}
-        </Text>
-        <Text type={'secondary'}>{t('workspaceSetting.labels.delete.archiveHint')}</Text>
-        <Text>{t('workspaceSetting.labels.delete.confirmHint')}</Text>
+        </span>
+        <span style={{ color: 'var(--muted-foreground)' }}>
+          {t('workspaceSetting.labels.delete.archiveHint')}
+        </span>
+        <span>{t('workspaceSetting.labels.delete.confirmHint')}</span>
         <Input
           autoFocus
           disabled={loading || archiving}
           placeholder={DELETE_CONFIRM_WORD}
           value={confirmText}
           onChange={(e) => setConfirmText(e.target.value)}
-          onPressEnter={handleDelete}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing) void handleDelete();
+          }}
         />
-      </Flexbox>
+      </div>
       {/* Archive and Delete both mutate the same label, so each locks the other
           out — `loading` alone only disables the button that owns it. */}
       <ModalFooter style={{ justifyContent: 'space-between' }}>
-        <Button disabled={loading} loading={archiving} onClick={handleArchive}>
+        <Button
+          aria-busy={archiving}
+          disabled={loading || archiving}
+          variant="outline"
+          onClick={handleArchive}
+        >
+          {archiving && <Loader2 aria-hidden className="size-4 animate-spin" />}
           {t('workspaceSetting.labels.actions.archive')}
         </Button>
-        <Flexbox horizontal gap={8}>
-          <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
-          <Button danger disabled={!armed || archiving} loading={loading} onClick={handleDelete}>
+        <div style={{ display: 'flex', flexDirection: 'row', gap: 8 }}>
+          <Button variant="outline" onClick={close}>
+            {t('cancel', { ns: 'common' })}
+          </Button>
+          <Button
+            aria-busy={loading}
+            disabled={!armed || archiving || loading}
+            variant="destructive"
+            onClick={handleDelete}
+          >
+            {loading && <Loader2 aria-hidden className="size-4 animate-spin" />}
             {t('delete', { ns: 'common' })}
           </Button>
-        </Flexbox>
+        </div>
       </ModalFooter>
     </>
   );

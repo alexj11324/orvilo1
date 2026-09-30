@@ -1,19 +1,28 @@
 'use client';
 
-import { Flexbox, FluentEmoji } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
+import { FluentEmoji } from '@lobehub/ui';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { Button } from '@/components/ui/button';
 import { MAX_WIDTH } from '@/const/layoutTokens';
 import { usePermission } from '@/hooks/usePermission';
 
 const Forbidden = memo(() => {
   const { t } = useTranslation('error');
   return (
-    <Flexbox align={'center'} justify={'center'} style={{ minHeight: '100%', width: '100%' }}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100%',
+        width: '100%',
+      }}
+    >
       <h1
         style={{
           filter: 'blur(8px)',
@@ -34,10 +43,10 @@ const Forbidden = memo(() => {
       <div style={{ lineHeight: '1.8', marginBottom: '2em', textAlign: 'center' }}>
         {t('forbidden.desc')}
       </div>
-      <Button type={'primary'} onClick={() => (window.location.href = '/')}>
+      <Button variant="default" onClick={() => (window.location.href = '/')}>
         {t('forbidden.backHome')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 

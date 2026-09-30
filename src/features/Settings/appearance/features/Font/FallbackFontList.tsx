@@ -1,11 +1,13 @@
 'use client';
 
-import { Flexbox, SortableList } from '@lobehub/ui';
-import { ActionIcon, Button, Select, type SelectOption, Text } from '@lobehub/ui/base-ui';
+import { SortableList } from '@lobehub/ui';
+import { Select, type SelectOption } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { PlusIcon, XIcon } from 'lucide-react';
-import { useState } from 'react';
+import { createElement, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import { MAX_FALLBACK_FONTS } from './fontStack';
 import { useFontFallbackStack } from './useFontFallbackStack';
@@ -39,10 +41,10 @@ const FallbackFontList = ({
   const { add, atLimit, candidates, fallbacks, labelOf, primary, remove, reorder } =
     useFontFallbackStack({ onChange, options, stack });
 
-  if (!primary) return <Text type={'secondary'}>{needPrimaryHint}</Text>;
+  if (!primary) return <span className={'text-muted-foreground'}>{needPrimaryHint}</span>;
 
   return (
-    <Flexbox gap={6} style={width}>
+    <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 6, ...width }}>
       <SortableList
         gap={6}
         items={fallbacks.map((value) => ({ id: value }))}
@@ -56,16 +58,18 @@ const FallbackFontList = ({
             justify={'space-between'}
             variant={'filled'}
           >
-            <Text ellipsis style={{ flex: 1, fontFamily: item.id }}>
+            <span className={'truncate'} style={{ flex: 1, fontFamily: item.id }}>
               {labelOf(item.id)}
-            </Text>
-            <ActionIcon
+            </span>
+            <Button
               aria-label={t('settingAppearance.font.fallback.remove')}
-              icon={XIcon}
-              size={'small'}
+              size="icon-sm"
               title={t('settingAppearance.font.fallback.remove')}
+              variant="ghost"
               onClick={() => remove(item.id)}
-            />
+            >
+              {createElement(XIcon)}
+            </Button>
             <SortableList.DragHandle />
           </SortableList.Item>
         )}
@@ -87,18 +91,18 @@ const FallbackFontList = ({
         />
       ) : (
         <Button
-          block
+          className="w-full"
           disabled={atLimit}
-          icon={PlusIcon}
-          type={'dashed'}
+          variant="outline"
           onClick={() => setAdding(true)}
         >
+          {createElement(PlusIcon)}
           {atLimit
             ? t('settingAppearance.font.fallback.limit', { count: MAX_FALLBACK_FONTS })
             : t('settingAppearance.font.fallback.add')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

@@ -1,10 +1,7 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { memo, type PropsWithChildren } from 'react';
 
 const WorkspaceSettingsTitle = memo<PropsWithChildren>(({ children }) => (
-  <Text strong as="h2" style={{ fontSize: 20, margin: 0 }}>
-    {children}
-  </Text>
+  <h2 style={{ fontWeight: 600, fontSize: 20, margin: 0 }}>{children}</h2>
 ));
 
 WorkspaceSettingsTitle.displayName = 'WorkspaceSettingsTitle';

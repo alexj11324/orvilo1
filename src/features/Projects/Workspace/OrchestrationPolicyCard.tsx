@@ -1,14 +1,36 @@
 'use client';
-
-import { Block, Flexbox, InputNumber } from '@lobehub/ui';
-import { Alert, Button, Select, Switch, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { Alert, toast } from '@lobehub/ui/base-ui';
 import type { ProjectOrchestrationPolicy } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { CircleAlertIcon, RefreshCwIcon, SaveIcon, ShieldCheckIcon } from 'lucide-react';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { createElement, memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ArticleSkeleton } from '@/components/Skeleton';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxClear,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Switch } from '@/components/ui/switch';
 import { usePermission } from '@/hooks/usePermission';
 import type { ProjectDetail, ProjectOrchestrationPolicyView } from '@/store/project';
 import { useProjectStore } from '@/store/project';
@@ -205,274 +227,460 @@ const OrchestrationPolicyCard = memo<OrchestrationPolicyCardProps>(({ detail, pr
     }
   };
 
+  const coordinatorPickerOptions = participantOptions;
+  const agentPickerOptions = participantOptions;
+  const rolePickerOptions = roleOptions;
+  const replanPickerOptions = [
+    { label: t('orchestration.replanMode.disabled'), value: 'disabled' },
+    { label: t('orchestration.replanMode.observe'), value: 'observe' },
+    { label: t('orchestration.replanMode.suggest'), value: 'suggest' },
+    { label: t('orchestration.replanMode.apply'), value: 'apply' },
+  ];
   return (
-    <Block className={styles.card} variant={'outlined'}>
-      <Flexbox gap={16} padding={20}>
+    <section className={cn('rounded-lg border border-border bg-background', styles.card)}>
+      <div className="flex flex-col" style={{ gap: 16, padding: 20 }}>
         <div className={styles.cardHeader}>
-          <Flexbox gap={4}>
-            <Text as={'h2'} fontSize={16} style={{ margin: 0 }} weight={600}>
+          <div className="flex flex-col" style={{ gap: 4 }}>
+            <h2 className="text-sm" style={{ fontSize: 16, fontWeight: 600, margin: 0 }}>
               {t('orchestration.title')}
-            </Text>
-            <Text className={styles.description} fontSize={13}>
+            </h2>
+            <span className={cn('text-sm', styles.description)} style={{ fontSize: 13 }}>
               {t('orchestration.description')}
-            </Text>
-          </Flexbox>
+            </span>
+          </div>
           <Button
-            disabled={!isDirty || saving || stale || !draft}
-            icon={SaveIcon}
-            loading={saving}
-            type={'primary'}
+            aria-busy={saving}
+            disabled={!isDirty || saving || stale || !draft || saving}
+            variant="default"
             onClick={() => void handleSave()}
           >
+            {createElement(SaveIcon, { 'size': 16, 'aria-hidden': true })}
+            {saving && <Spinner />}
             {t('orchestration.save')}
           </Button>
         </div>
-
         {policySWR.error && (
           <Alert
-            action={<Button onClick={() => void reload()}>{t('orchestration.retry')}</Button>}
             description={errorMessage(policySWR.error, t('orchestration.loadError'))}
             icon={<CircleAlertIcon size={16} />}
             title={t('orchestration.loadError')}
             type={'error'}
+            action={
+              <Button variant="outline" onClick={() => void reload()}>
+                {t('orchestration.retry')}
+              </Button>
+            }
           />
         )}
-
         {stale && (
           <Alert
-            action={<Button onClick={() => void reload()}>{t('orchestration.reload')}</Button>}
             description={t('orchestration.staleDescription')}
             title={t('orchestration.staleTitle')}
             type={'warning'}
+            action={
+              <Button variant="outline" onClick={() => void reload()}>
+                {t('orchestration.reload')}
+              </Button>
+            }
           />
         )}
-
         {saveError && (
           <Alert
             description={saveError}
             title={t('orchestration.saveError')}
             type={'error'}
             action={
-              <Button onClick={() => void handleSave()}>{t('orchestration.retrySave')}</Button>
+              <Button variant="outline" onClick={() => void handleSave()}>
+                {t('orchestration.retrySave')}
+              </Button>
             }
           />
         )}
-
         {!policySWR.error && (!draft || !view) ? (
-          <ArticleSkeleton rows={5} />
+          <div aria-busy="true" className="flex flex-col gap-3" role="status">
+            {Array.from({ length: 5 }, (_, index) => (
+              <Skeleton className="h-4 w-full" key={index} />
+            ))}
+          </div>
         ) : draft && view ? (
           <>
-            <Flexbox horizontal align={'center'} className={styles.note} gap={10}>
-              <Tag icon={<RefreshCwIcon size={13} />}>{t('orchestration.syncLabel')}</Tag>
-              <Text className={styles.description} fontSize={12}>
+            <div
+              className={cn('flex flex-row', styles.note)}
+              style={{ alignItems: 'center', gap: 10 }}
+            >
+              <Badge variant="secondary">
+                <RefreshCwIcon size={13} />
+                {t('orchestration.syncLabel')}
+              </Badge>
+              <span className={cn('text-sm', styles.description)} style={{ fontSize: 12 }}>
                 {t('orchestration.syncDescription')}
-              </Text>
-            </Flexbox>
+              </span>
+            </div>
 
-            <Flexbox className={styles.section} gap={12}>
-              <Flexbox className={styles.grid} gap={12}>
+            <div className={cn('flex flex-col', styles.section)} style={{ gap: 12 }}>
+              <div className={cn('flex flex-col', styles.grid)} style={{ gap: 12 }}>
                 <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>{t('orchestration.coordinatorLabel')}</Text>
+                  <span className={cn('text-sm', styles.fieldLabel)}>
+                    {t('orchestration.coordinatorLabel')}
+                  </span>
                   <Select
                     disabled={saving}
-                    options={participantOptions}
-                    placeholder={t('orchestration.coordinatorPlaceholder')}
-                    value={draft.coordinatorAgentId || undefined}
-                    onChange={(value) => {
+                    items={coordinatorPickerOptions}
+                    value={(draft.coordinatorAgentId || undefined) ?? null}
+                    onValueChange={(value) => {
+                      if (value === null) return;
                       setDraft((current) =>
                         current ? { ...current, coordinatorAgentId: value } : current,
                       );
                       setStale(false);
                       setSaveError(null);
                     }}
-                  />
-                  <Text className={styles.fieldHint} fontSize={12}>
+                  >
+                    <SelectTrigger className={'w-full'} size="sm">
+                      <SelectValue placeholder={t('orchestration.coordinatorPlaceholder')} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {coordinatorPickerOptions.map((option) => (
+                        <SelectItem
+                          disabled={'disabled' in option && option.disabled === true}
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <span className={cn('text-sm', styles.fieldHint)} style={{ fontSize: 12 }}>
                     {t('orchestration.coordinatorHint')}
-                  </Text>
+                  </span>
                 </div>
-
                 <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>{t('orchestration.allowedAgentsLabel')}</Text>
-                  <Select
-                    allowClear
+                  <span className={cn('text-sm', styles.fieldLabel)}>
+                    {t('orchestration.allowedAgentsLabel')}
+                  </span>
+                  <Combobox
+                    multiple
                     disabled={saving}
-                    mode={'multiple'}
-                    options={participantOptions}
-                    placeholder={t('orchestration.allowedAgentsPlaceholder')}
+                    items={agentPickerOptions.map((option) => option.value)}
                     value={draft.orchestrationPolicy.allowedAgentIds ?? []}
-                    onChange={(value) => patchPolicy({ allowedAgentIds: value as string[] })}
-                  />
-                  <Text className={styles.fieldHint} fontSize={12}>
+                    itemToStringLabel={(value) => {
+                      const option = agentPickerOptions.find((option) => option.value === value);
+                      return option && 'title' in option && typeof option.title === 'string'
+                        ? option.title
+                        : typeof option?.label === 'string'
+                          ? option.label
+                          : String(value);
+                    }}
+                    onValueChange={(value) => {
+                      patchPolicy({ allowedAgentIds: value as string[] });
+                    }}
+                  >
+                    <>
+                      <ComboboxChips className={'w-full'}>
+                        {(draft.orchestrationPolicy.allowedAgentIds ?? []).map((value) => (
+                          <ComboboxChip key={value}>
+                            {agentPickerOptions.find((option) => option.value === value)?.label ??
+                              String(value)}
+                          </ComboboxChip>
+                        ))}
+                        <ComboboxChipsInput
+                          aria-label={t('orchestration.allowedAgentsPlaceholder')}
+                          disabled={saving}
+                          placeholder={t('orchestration.allowedAgentsPlaceholder')}
+                        />
+                        <ComboboxClear aria-label={t('reset', { ns: 'common' })} />
+                      </ComboboxChips>
+                      <ComboboxContent className="min-w-56">
+                        <ComboboxEmpty>{t('orchestration.allowedAgentsPlaceholder')}</ComboboxEmpty>
+                        <ComboboxList>
+                          {(value: (typeof agentPickerOptions)[number]['value']) => {
+                            const option = agentPickerOptions.find(
+                              (option) => option.value === value,
+                            );
+                            return (
+                              <ComboboxItem
+                                key={value}
+                                value={value}
+                                disabled={
+                                  !!option && 'disabled' in option && option.disabled === true
+                                }
+                              >
+                                {option?.label}
+                              </ComboboxItem>
+                            );
+                          }}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </>
+                  </Combobox>
+                  <span className={cn('text-sm', styles.fieldHint)} style={{ fontSize: 12 }}>
                     {t('orchestration.allowedAgentsHint')}
-                  </Text>
+                  </span>
                 </div>
-
                 <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>{t('orchestration.allowedRolesLabel')}</Text>
-                  <Select
-                    allowClear
+                  <span className={cn('text-sm', styles.fieldLabel)}>
+                    {t('orchestration.allowedRolesLabel')}
+                  </span>
+                  <Combobox
+                    multiple
                     disabled={saving}
-                    mode={'multiple'}
-                    options={roleOptions}
-                    placeholder={t('orchestration.allowedRolesPlaceholder')}
+                    items={rolePickerOptions.map((option) => option.value)}
                     value={draft.orchestrationPolicy.allowedRoles ?? []}
-                    onChange={(value) => patchPolicy({ allowedRoles: value as string[] })}
-                  />
-                  <Text className={styles.fieldHint} fontSize={12}>
+                    itemToStringLabel={(value) => {
+                      const option = rolePickerOptions.find((option) => option.value === value);
+                      return option && 'title' in option && typeof option.title === 'string'
+                        ? option.title
+                        : typeof option?.label === 'string'
+                          ? option.label
+                          : String(value);
+                    }}
+                    onValueChange={(value) => {
+                      patchPolicy({ allowedRoles: value as string[] });
+                    }}
+                  >
+                    <>
+                      <ComboboxChips className={'w-full'}>
+                        {(draft.orchestrationPolicy.allowedRoles ?? []).map((value) => (
+                          <ComboboxChip key={value}>
+                            {rolePickerOptions.find((option) => option.value === value)?.label ??
+                              String(value)}
+                          </ComboboxChip>
+                        ))}
+                        <ComboboxChipsInput
+                          aria-label={t('orchestration.allowedRolesPlaceholder')}
+                          disabled={saving}
+                          placeholder={t('orchestration.allowedRolesPlaceholder')}
+                        />
+                        <ComboboxClear aria-label={t('reset', { ns: 'common' })} />
+                      </ComboboxChips>
+                      <ComboboxContent className="min-w-56">
+                        <ComboboxEmpty>{t('orchestration.allowedRolesPlaceholder')}</ComboboxEmpty>
+                        <ComboboxList>
+                          {(value: (typeof rolePickerOptions)[number]['value']) => {
+                            const option = rolePickerOptions.find(
+                              (option) => option.value === value,
+                            );
+                            return (
+                              <ComboboxItem
+                                key={value}
+                                value={value}
+                                disabled={
+                                  !!option && 'disabled' in option && option.disabled === true
+                                }
+                              >
+                                {option?.label}
+                              </ComboboxItem>
+                            );
+                          }}
+                        </ComboboxList>
+                      </ComboboxContent>
+                    </>
+                  </Combobox>
+                  <span className={cn('text-sm', styles.fieldHint)} style={{ fontSize: 12 }}>
                     {t('orchestration.allowedRolesHint')}
-                  </Text>
+                  </span>
                 </div>
-
                 <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>{t('orchestration.replanModeLabel')}</Text>
+                  <span className={cn('text-sm', styles.fieldLabel)}>
+                    {t('orchestration.replanModeLabel')}
+                  </span>
                   <Select
                     disabled={saving}
-                    value={draft.orchestrationPolicy.replanMode}
-                    options={[
-                      { label: t('orchestration.replanMode.disabled'), value: 'disabled' },
-                      { label: t('orchestration.replanMode.observe'), value: 'observe' },
-                      { label: t('orchestration.replanMode.suggest'), value: 'suggest' },
-                      { label: t('orchestration.replanMode.apply'), value: 'apply' },
-                    ]}
-                    onChange={(value) =>
+                    items={replanPickerOptions}
+                    value={draft.orchestrationPolicy.replanMode ?? null}
+                    onValueChange={(value) => {
+                      if (value === null) return;
                       patchPolicy({
                         replanMode: value as ProjectOrchestrationPolicy['replanMode'],
-                      })
-                    }
-                  />
+                      });
+                    }}
+                  >
+                    <SelectTrigger className={'w-full'} size="sm">
+                      <SelectValue placeholder={undefined} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {replanPickerOptions.map((option) => (
+                        <SelectItem
+                          disabled={'disabled' in option && option.disabled === true}
+                          key={option.value}
+                          value={option.value}
+                        >
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
                 <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>
+                  <span className={cn('text-sm', styles.fieldLabel)}>
                     {t('orchestration.maxPlanningRevisionsLabel')}
-                  </Text>
-                  <InputNumber
+                  </span>
+                  <Input
                     disabled={saving}
                     min={1}
+                    step="any"
                     style={{ width: '100%' }}
-                    value={draft.orchestrationPolicy.planningBudget?.maxRevisions}
-                    onChange={(value) =>
+                    type="number"
+                    value={draft.orchestrationPolicy.planningBudget?.maxRevisions ?? ''}
+                    onChange={(event) => {
+                      const value =
+                        event.target.value === '' || !Number.isFinite(event.target.valueAsNumber)
+                          ? null
+                          : event.target.valueAsNumber;
                       patchPolicy({
                         planningBudget: {
                           ...draft.orchestrationPolicy.planningBudget,
                           maxRevisions: typeof value === 'number' ? value : undefined,
                         },
-                      })
-                    }
+                      });
+                    }}
                   />
-                  <Text className={styles.fieldHint} fontSize={12}>
+                  <span className={cn('text-sm', styles.fieldHint)} style={{ fontSize: 12 }}>
                     {t('orchestration.maxPlanningRevisionsHint')}
-                  </Text>
+                  </span>
                 </div>
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
 
-            <Flexbox className={styles.section} gap={12}>
+            <div className={cn('flex flex-col', styles.section)} style={{ gap: 12 }}>
               <div className={styles.inline}>
-                <Flexbox gap={2}>
-                  <Text weight={600}>{t('orchestration.autoDispatchLabel')}</Text>
-                  <Text className={styles.fieldHint} fontSize={12}>
+                <div className="flex flex-col" style={{ gap: 2 }}>
+                  <span className="text-sm" style={{ fontWeight: 600 }}>
+                    {t('orchestration.autoDispatchLabel')}
+                  </span>
+                  <span className={cn('text-sm', styles.fieldHint)} style={{ fontSize: 12 }}>
                     {t('orchestration.autoDispatchHint')}
-                  </Text>
-                </Flexbox>
+                  </span>
+                </div>
                 <Switch
                   checked={draft.orchestrationPolicy.autoDispatch}
                   disabled={saving}
-                  onChange={(checked) => patchPolicy({ autoDispatch: checked })}
+                  onCheckedChange={(checked) => patchPolicy({ autoDispatch: checked })}
                 />
               </div>
-              <Text className={styles.fieldHint} fontSize={12}>
+              <span className={cn('text-sm', styles.fieldHint)} style={{ fontSize: 12 }}>
                 {t('orchestration.autoDispatchBoundary')}
-              </Text>
-            </Flexbox>
+              </span>
+            </div>
 
-            <Flexbox className={styles.section} gap={12}>
-              <Text weight={600}>{t('orchestration.executionTitle')}</Text>
-              <Flexbox className={styles.grid} gap={12}>
+            <div className={cn('flex flex-col', styles.section)} style={{ gap: 12 }}>
+              <span className="text-sm" style={{ fontWeight: 600 }}>
+                {t('orchestration.executionTitle')}
+              </span>
+              <div className={cn('flex flex-col', styles.grid)} style={{ gap: 12 }}>
                 <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>{t('orchestration.concurrencyLabel')}</Text>
-                  <InputNumber
+                  <span className={cn('text-sm', styles.fieldLabel)}>
+                    {t('orchestration.concurrencyLabel')}
+                  </span>
+                  <Input
                     disabled={saving}
                     min={1}
                     placeholder={t('orchestration.unlimited')}
+                    step="any"
                     style={{ width: '100%' }}
-                    value={draft.orchestrationPolicy.concurrencyLimit}
-                    onChange={(value) =>
+                    type="number"
+                    value={draft.orchestrationPolicy.concurrencyLimit ?? ''}
+                    onChange={(event) => {
+                      const value =
+                        event.target.value === '' || !Number.isFinite(event.target.valueAsNumber)
+                          ? null
+                          : event.target.valueAsNumber;
                       patchPolicy({
                         concurrencyLimit: typeof value === 'number' ? value : undefined,
-                      })
-                    }
+                      });
+                    }}
                   />
                 </div>
                 <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>{t('orchestration.maxRunsLabel')}</Text>
-                  <InputNumber
+                  <span className={cn('text-sm', styles.fieldLabel)}>
+                    {t('orchestration.maxRunsLabel')}
+                  </span>
+                  <Input
                     disabled={saving}
                     min={1}
                     placeholder={t('orchestration.unlimited')}
+                    step="any"
                     style={{ width: '100%' }}
-                    value={draft.orchestrationPolicy.executionBudget?.maxRuns}
-                    onChange={(value) =>
+                    type="number"
+                    value={draft.orchestrationPolicy.executionBudget?.maxRuns ?? ''}
+                    onChange={(event) => {
+                      const value =
+                        event.target.value === '' || !Number.isFinite(event.target.valueAsNumber)
+                          ? null
+                          : event.target.valueAsNumber;
                       patchPolicy({
                         executionBudget: {
                           ...draft.orchestrationPolicy.executionBudget,
                           maxRuns: typeof value === 'number' ? value : undefined,
                         },
-                      })
-                    }
+                      });
+                    }}
                   />
                 </div>
                 <div className={styles.field}>
-                  <Text className={styles.fieldLabel}>{t('orchestration.maxCostLabel')}</Text>
-                  <InputNumber
+                  <span className={cn('text-sm', styles.fieldLabel)}>
+                    {t('orchestration.maxCostLabel')}
+                  </span>
+                  <Input
                     disabled={saving}
                     min={0}
                     placeholder={t('orchestration.unlimited')}
+                    step="any"
                     style={{ width: '100%' }}
-                    value={draft.orchestrationPolicy.executionBudget?.maxCost}
-                    onChange={(value) =>
+                    type="number"
+                    value={draft.orchestrationPolicy.executionBudget?.maxCost ?? ''}
+                    onChange={(event) => {
+                      const value =
+                        event.target.value === '' || !Number.isFinite(event.target.valueAsNumber)
+                          ? null
+                          : event.target.valueAsNumber;
                       patchPolicy({
                         executionBudget: {
                           ...draft.orchestrationPolicy.executionBudget,
                           maxCost: typeof value === 'number' ? value : undefined,
                         },
-                      })
-                    }
+                      });
+                    }}
                   />
                 </div>
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
 
-            <Flexbox className={styles.section} gap={12}>
+            <div className={cn('flex flex-col', styles.section)} style={{ gap: 12 }}>
               <div className={styles.inline}>
-                <Flexbox gap={2}>
-                  <Text weight={600}>{t('orchestration.humanReviewLabel')}</Text>
-                  <Text className={styles.fieldHint} fontSize={12}>
+                <div className="flex flex-col" style={{ gap: 2 }}>
+                  <span className="text-sm" style={{ fontWeight: 600 }}>
+                    {t('orchestration.humanReviewLabel')}
+                  </span>
+                  <span className={cn('text-sm', styles.fieldHint)} style={{ fontSize: 12 }}>
                     {humanReviewRequired
                       ? t('orchestration.humanReviewRequiredHint')
                       : t('orchestration.humanReviewHint')}
-                  </Text>
-                </Flexbox>
+                  </span>
+                </div>
                 <Switch
                   checked={draft.orchestrationPolicy.requireHumanReview || humanReviewRequired}
                   disabled={saving || humanReviewRequired}
-                  onChange={(checked) => patchPolicy({ requireHumanReview: checked })}
+                  onCheckedChange={(checked) => patchPolicy({ requireHumanReview: checked })}
                 />
               </div>
               <div className={styles.status}>
-                <Tag icon={<ShieldCheckIcon size={13} />}>
+                <Badge variant="secondary">
+                  <ShieldCheckIcon size={13} />
                   {humanReviewRequired
                     ? t('orchestration.humanReviewRequiredTag')
                     : t('orchestration.humanReviewOptionalTag')}
-                </Tag>
-                <Text className={styles.fieldHint} fontSize={12}>
+                </Badge>
+                <span className={cn('text-sm', styles.fieldHint)} style={{ fontSize: 12 }}>
                   {t('orchestration.revision', { revision: view.orchestrationPolicyRevision })}
-                </Text>
+                </span>
               </div>
-            </Flexbox>
+            </div>
           </>
         ) : null}
-      </Flexbox>
-    </Block>
+      </div>
+    </section>
   );
 });
 

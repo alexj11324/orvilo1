@@ -1,14 +1,17 @@
 'use client';
 
 import { type FormGroupItemType } from '@lobehub/ui';
-import { CopyButton, Flexbox, Form, Icon, Tooltip } from '@lobehub/ui';
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
+import { CopyButton, Form } from '@lobehub/ui';
 import { type BinaryStatus } from '@orvilo/electron-client-ipc';
 import { CheckCircle2, Loader2Icon, RefreshCw, XCircle } from 'lucide-react';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { binaryService } from '@/services/electron/binary';
 
@@ -80,48 +83,87 @@ const ToolStatusDisplay = memo<ToolStatusDisplayProps>(({ status, isDetecting })
 
   if (isDetecting) {
     return (
-      <Flexbox horizontal align="center" gap={8}>
-        <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />
-        <Text type="secondary">{t('settingSystemTools.detecting')}</Text>
-      </Flexbox>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+      >
+        {createElement(Loader2Icon, {
+          size: 16,
+          style: { opacity: 0.5 },
+          className: 'animate-spin',
+        })}
+        <span className={'text-muted-foreground'}>{t('settingSystemTools.detecting')}</span>
+      </div>
     );
   }
 
   if (!status) {
     return (
-      <Flexbox horizontal align="center" gap={8}>
-        <Icon color="var(--ant-color-text-quaternary)" icon={XCircle} size={16} />
-        <Text type="secondary">{t('settingSystemTools.status.notDetected')}</Text>
-      </Flexbox>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+      >
+        {createElement(XCircle, { color: 'var(--ant-color-text-quaternary)', size: 16 })}
+        <span className={'text-muted-foreground'}>
+          {t('settingSystemTools.status.notDetected')}
+        </span>
+      </div>
     );
   }
 
   if (!status.available) {
     return (
-      <Flexbox horizontal align="center" gap={8} justify="center">
-        <Icon color="var(--ant-color-error)" icon={XCircle} size={16} />
-        <Text type="secondary">{t('settingSystemTools.status.unavailable')}</Text>
-      </Flexbox>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 }}
+      >
+        {createElement(XCircle, { color: 'var(--ant-color-error)', size: 16 })}
+        <span className={'text-muted-foreground'}>
+          {t('settingSystemTools.status.unavailable')}
+        </span>
+      </div>
     );
   }
 
   return (
-    <Flexbox align="flex-end" gap={4}>
-      <Flexbox horizontal align="center" gap={8} justify="flex-end">
-        <Icon color="var(--ant-color-success)" icon={CheckCircle2} size={16} />
-        <Text type="success">{t('settingSystemTools.status.available')}</Text>
-      </Flexbox>
+    <div
+      className={'flex min-w-0'}
+      style={{ flexDirection: 'column', alignItems: 'flex-end', gap: 4 }}
+    >
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'flex-end', gap: 8 }}
+      >
+        {createElement(CheckCircle2, { color: 'var(--ant-color-success)', size: 16 })}
+        <span className={'text-success'}>{t('settingSystemTools.status.available')}</span>
+      </div>
       {status.path && (
-        <Tooltip title={status.path}>
-          <Flexbox horizontal align="center" gap={4} justify="flex-end" style={{ maxWidth: 280 }}>
-            <Text ellipsis style={{ fontSize: 12 }} type="secondary">
-              {status.path}
-            </Text>
-            <CopyButton content={status.path} size="small" />
-          </Flexbox>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex min-w-0">
+                <div
+                  className={'flex min-w-0'}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'flex-end',
+                    gap: 4,
+                    maxWidth: 280,
+                  }}
+                >
+                  <span className={'truncate text-muted-foreground'} style={{ fontSize: 12 }}>
+                    {status.path}
+                  </span>
+                  <CopyButton content={status.path} size="small" />
+                </div>
+              </span>
+            }
+          />
+          <TooltipContent side="top">{status.path}</TooltipContent>
         </Tooltip>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -161,14 +203,17 @@ const ToolDetectorSection = memo(() => {
       children: categoryConfig.tools.map((tool) => {
         const status = toolStatuses[tool.name];
         const label = (
-          <Flexbox horizontal align="center" gap={8}>
-            <Text>{tool.name}</Text>
+          <div
+            className={'flex min-w-0'}
+            style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+          >
+            <span>{tool.name}</span>
             {status?.version && (
-              <Tag color="processing" style={{ marginInlineStart: 0 }}>
+              <Badge style={{ marginInlineStart: 0 }} variant="primary-light">
                 {status.version}
-              </Tag>
+              </Badge>
             )}
-          </Flexbox>
+          </div>
         );
         return {
           children: <ToolStatusDisplay isDetecting={detecting} status={status} />,
@@ -195,21 +240,27 @@ const ToolDetectorSection = memo(() => {
       itemsType={'group'}
       variant={'filled'}
       footer={
-        <Flexbox
-          horizontal
-          align="center"
-          gap={16}
-          justify="flex-end"
-          style={{ marginBlockStart: 8 }}
+        <div
+          className={'flex min-w-0'}
+          style={{
+            flexDirection: 'row',
+            alignItems: 'center',
+            justifyContent: 'flex-end',
+            gap: 16,
+            marginBlockStart: 8,
+          }}
         >
           <Button
-            icon={<Icon icon={RefreshCw} spin={detecting} />}
-            loading={detecting}
+            aria-busy={detecting}
+            disabled={detecting}
+            variant="outline"
             onClick={handleRedetect}
           >
+            {detecting && <Spinner />}
+            {createElement(RefreshCw, { className: detecting ? 'animate-spin' : undefined })}
             {t('settingSystemTools.redetect')}
           </Button>
-        </Flexbox>
+        </div>
       }
       {...FORM_STYLE}
     />

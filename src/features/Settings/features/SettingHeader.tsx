@@ -1,7 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { type FC, type ReactNode } from 'react';
+
+import { Separator } from '@/components/ui/separator';
 
 interface SettingHeaderProps {
   description?: ReactNode;
@@ -11,18 +10,19 @@ interface SettingHeaderProps {
 
 const SettingHeader: FC<SettingHeaderProps> = ({ title, description, extra }) => {
   return (
-    <Flexbox gap={24} style={{ paddingTop: 12 }}>
-      <Flexbox horizontal align={'center'} justify={'space-between'}>
-        <Flexbox gap={4}>
-          <Text strong fontSize={24}>
-            {title}
-          </Text>
-          {description && <Text type={'secondary'}>{description}</Text>}
-        </Flexbox>
+    <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 24, paddingTop: 12 }}>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+      >
+        <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 4 }}>
+          <span style={{ fontSize: 24, fontWeight: 600 }}>{title}</span>
+          {description && <span className={'text-muted-foreground'}>{description}</span>}
+        </div>
         {extra}
-      </Flexbox>
-      <Divider style={{ margin: 0 }} />
-    </Flexbox>
+      </div>
+      <Separator />
+    </div>
   );
 };
 

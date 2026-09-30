@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  type DropdownItem,
   type DropdownMenuProps as LegacyDropdownMenuProps,
   type IconProps,
   type MenuInfo,
@@ -41,11 +42,10 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-type MenuItems = NonNullable<MenuProps['items']>;
-type BridgeItem = NonNullable<MenuItems[number]>;
+type MenuItems = (NonNullable<MenuProps['items']>[number] | DropdownItem)[];
 
 interface RenderableItem {
-  children?: (BridgeItem | null)[];
+  children?: MenuItems;
   closeOnClick?: boolean;
   danger?: boolean;
   desc?: ReactNode;

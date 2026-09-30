@@ -1,20 +1,16 @@
 'use client';
-
-import { DatePicker, Flexbox, Icon, Input, TextArea } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  ModalFooter,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
+import { DatePicker } from '@lobehub/ui';
+import { createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { t as translate } from 'i18next';
 import { CalendarIcon } from 'lucide-react';
 import { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
+import { Textarea } from '@/components/ui/textarea';
 import { useProjectStore } from '@/store/project';
 
 import type { MilestoneRow } from './milestonePageData';
@@ -67,57 +63,62 @@ const MilestoneFormContent = ({ milestone, projectId }: MilestoneFormContentProp
 
   return (
     <>
-      <Flexbox gap={12} padding={16}>
-        <Flexbox gap={6}>
-          <Text fontSize={13} weight={500}>
+      <div className="flex flex-col" style={{ gap: 12, padding: 16 }}>
+        <div className="flex flex-col" style={{ gap: 6 }}>
+          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('create.milestone.name')}
-          </Text>
+          </span>
           <Input
             autoFocus
             maxLength={255}
             placeholder={t('create.milestone.name')}
             value={name}
             onChange={(event) => setName(event.target.value)}
-            onPressEnter={() => void submit()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter' && !event.nativeEvent.isComposing) void submit();
+            }}
           />
-        </Flexbox>
-        <Flexbox gap={6}>
-          <Text fontSize={13} weight={500}>
+        </div>
+        <div className="flex flex-col" style={{ gap: 6 }}>
+          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('milestones.form.targetDate')}
-          </Text>
+          </span>
           <DatePicker
             allowClear
             aria-label={t('milestones.form.targetDate')}
             format="MMM D, YYYY"
             placeholder={t('create.milestone.date')}
-            prefix={<Icon icon={CalendarIcon} size={13} />}
+            prefix={<CalendarIcon size={13} />}
             value={date ? dayjs(date) : null}
             onChange={(value) => {
               const picked = Array.isArray(value) ? value[0] : value;
               setDate(picked ? picked.format('YYYY-MM-DD') : undefined);
             }}
           />
-        </Flexbox>
-        <Flexbox gap={6}>
-          <Text fontSize={13} weight={500}>
+        </div>
+        <div className="flex flex-col" style={{ gap: 6 }}>
+          <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
             {t('create.milestone.description')}
-          </Text>
-          <TextArea
+          </span>
+          <Textarea
             placeholder={t('create.milestone.description')}
             rows={3}
             value={description}
             onChange={(event) => setDescription(event.target.value)}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       <ModalFooter>
-        <Button onClick={close}>{t('common:cancel')}</Button>
+        <Button variant="outline" onClick={close}>
+          {t('common:cancel')}
+        </Button>
         <Button
-          disabled={!name.trim()}
-          loading={saving}
-          type={'primary'}
+          aria-busy={saving}
+          disabled={!name.trim() || saving}
+          variant="default"
           onClick={() => void submit()}
         >
+          {saving && <Spinner />}
           {milestone ? t('common:save') : t('create.milestone.create')}
         </Button>
       </ModalFooter>

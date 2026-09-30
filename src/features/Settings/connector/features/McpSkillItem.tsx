@@ -1,9 +1,8 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { McpIcon } from '@lobehub/ui/icons';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import NavItem from '@/features/NavPanel/components/NavItem';
 
@@ -27,7 +26,7 @@ const McpSkillItem = memo<McpSkillItemProps>(({ title, avatar, isSelected, onSel
       avatar && avatar !== 'MCP_AVATAR' ? (
         <Avatar avatar={avatar} shape="square" size={18} />
       ) : (
-        <Icon icon={McpIcon} size={18} />
+        createElement(McpIcon, { size: 18 })
       )
     }
     onClick={onSelect}

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { useTranslation } from 'react-i18next';
 
@@ -44,7 +43,7 @@ export function ProjectIssueProgress({ issues }: { issues: ProjectDetail['tasks'
   const progress = projectIssueProgress(issues);
   if (!progress) return <span role="status">{t('overview.progressUnavailable')}</span>;
   return (
-    <Flexbox horizontal gap={8}>
+    <div className="flex flex-row" style={{ gap: 8 }}>
       {(['scope', 'started', 'completed'] as const).map((key) => (
         <dl className={styles.metric} key={key}>
           <dt>
@@ -54,6 +53,6 @@ export function ProjectIssueProgress({ issues }: { issues: ProjectDetail['tasks'
           <dd>{progress[key]}</dd>
         </dl>
       ))}
-    </Flexbox>
+    </div>
   );
 }

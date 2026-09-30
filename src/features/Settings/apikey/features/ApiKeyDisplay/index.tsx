@@ -1,20 +1,9 @@
-import { CopyButton, Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { CopyButton } from '@lobehub/ui';
 import { Eye, EyeOff } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  key: css`
-    overflow: hidden;
-
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  `,
-}));
+import { Button } from '@/components/ui/button';
 
 interface ApiKeyDisplayProps {
   apiKey?: string;
@@ -44,16 +33,20 @@ const ApiKeyDisplay: FC<ApiKeyDisplayProps> = ({ apiKey }) => {
       : `${prefix}${MASK}`;
 
   return (
-    <Flexbox horizontal align={'center'} gap={4}>
-      <span className={styles.key}>{displayValue}</span>
-      <ActionIcon
-        icon={isVisible ? EyeOff : Eye}
-        size={'small'}
+    <div className="flex items-center gap-1">
+      <span className="truncate whitespace-nowrap font-mono text-xs">{displayValue}</span>
+      <Button
+        aria-label={isVisible ? t('apikey.display.hide') : t('apikey.display.show')}
+        size="icon-sm"
         title={isVisible ? t('apikey.display.hide') : t('apikey.display.show')}
+        type="button"
+        variant="ghost"
         onClick={() => setIsVisible(!isVisible)}
-      />
+      >
+        {isVisible ? <EyeOff /> : <Eye />}
+      </Button>
       <CopyButton content={apiKey} size={'small'} title={t('apikey.display.copy')} />
-    </Flexbox>
+    </div>
   );
 };
 

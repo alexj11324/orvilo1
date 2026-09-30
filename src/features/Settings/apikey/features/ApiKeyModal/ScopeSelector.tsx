@@ -1,82 +1,11 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { Checkbox, Switch, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
 import { Check } from 'lucide-react';
 import type { FC } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Checkbox } from '@/components/ui/checkbox';
+import { Switch } from '@/components/ui/switch';
 import type { ApiKeyScope } from '@/const/apiKeyScope';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  disabled: css`
-    pointer-events: none;
-    opacity: 0.45;
-  `,
-  fullAccessRow: css`
-    display: flex;
-    gap: 16px;
-    align-items: center;
-    justify-content: space-between;
-
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-  `,
-  grid: css`
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 12px 16px;
-
-    /* same card treatment as the full-access row so the whole Scope block
-       reads as one system */
-    padding: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-  `,
-  grantCheck: css`
-    flex: none;
-    color: ${cssVar.colorSuccess};
-  `,
-  /* Granted-only list: one row per domain the key actually reaches. Hairline
-     separators, no card-in-card — the surrounding card is the container. */
-  grantList: css`
-    padding-block: 4px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-  `,
-  grantRow: css`
-    padding-block: 12px;
-    border-block-end: 1px solid ${cssVar.colorBorderSecondary};
-
-    &:last-child {
-      border-block-end: none;
-    }
-  `,
-  groupTitle: css`
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-  `,
-  scopeRow: css`
-    flex-wrap: wrap;
-
-    /* keep each label on one line; overflowing items wrap as a whole */
-    .ant-checkbox-wrapper {
-      align-items: center;
-      white-space: nowrap;
-
-      /* antd offsets the box against the first text line (top: 0.2em /
-         flex-start); with this theme's box size that sinks it below the
-         label's midline — pin it back to true center */
-      .ant-checkbox {
-        inset-block-start: 0;
-        align-self: center;
-      }
-    }
-  `,
-}));
 
 /**
  * Scope groups shown to the user. Most domains carry read and write scopes;
@@ -145,21 +74,24 @@ export const ScopeOverview: FC<ScopeOverviewProps> = ({ scopes }) => {
 
   // A restricted key always carries at least one scope, but never render an
   // empty bordered box if that invariant ever breaks.
-  if (grants.length === 0) return <Text type={'secondary'}>{t('apikey.scopes.none')}</Text>;
+  if (grants.length === 0) return <span>{t('apikey.scopes.none')}</span>;
 
   return (
-    <Flexbox className={styles.grantList}>
+    <div className="flex flex-col rounded-lg border border-border px-3 py-1">
       {grants.map((grant) => (
-        <Flexbox horizontal align={'center'} className={styles.grantRow} gap={10} key={grant.key}>
-          <Check className={styles.grantCheck} size={16} />
+        <div
+          className={`flex flex-row gap-[10px] items-center ${'border-b border-border py-3 last:border-b-0'}`}
+          key={grant.key}
+        >
+          <Check className="shrink-0 text-emerald-600" size={16} />
           <span style={{ fontSize: 13 }}>
             <strong>{grant.label}</strong>
             {t('apikey.scopes.grantJoin')}
             {grant.actions.join(separator)}
           </span>
-        </Flexbox>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 };
 
@@ -195,56 +127,60 @@ const ScopeSelector: FC<ScopeSelectorProps> = ({
   };
 
   return (
-    <Flexbox gap={12}>
-      <div className={styles.fullAccessRow}>
-        <Flexbox gap={2}>
-          <Text style={{ fontSize: 14 }}>{t('apikey.form.fields.scopes.fullAccess')}</Text>
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center justify-between gap-4 rounded-lg border border-border p-3">
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm">{t('apikey.form.fields.scopes.fullAccess')}</span>
+          <span className="text-xs text-muted-foreground">
             {t('apikey.form.fields.scopes.fullAccessDescription')}
-          </Text>
-        </Flexbox>
-        <Switch checked={fullAccess} onChange={onFullAccessChange} />
+          </span>
+        </div>
+        <Switch
+          aria-label={t('apikey.form.fields.scopes.fullAccess')}
+          checked={fullAccess}
+          onCheckedChange={onFullAccessChange}
+        />
       </div>
-
-      <div className={fullAccess ? styles.disabled : undefined}>
-        <Flexbox gap={10}>
-          <div className={styles.grid}>
-            {SCOPE_GROUPS.map((group) => (
-              <Flexbox gap={4} key={group.key}>
-                <span className={styles.groupTitle}>{t(group.label)}</span>
-                <Flexbox horizontal className={styles.scopeRow} gap={12}>
+      <div className={fullAccess ? 'pointer-events-none opacity-45' : undefined}>
+        <div className="grid grid-cols-2 gap-x-4 gap-y-3 rounded-lg border border-border p-3">
+          {SCOPE_GROUPS.map((group) => (
+            <div className="flex flex-col gap-1" key={group.key}>
+              <span className="text-xs text-muted-foreground">{t(group.label)}</span>
+              <div className="flex flex-wrap gap-3">
+                <label className="flex items-center gap-2 whitespace-nowrap text-sm">
                   <Checkbox
                     checked={selectedSet.has(group.read)}
                     disabled={fullAccess}
-                    onChange={(checked) => toggle(group.read, checked)}
-                  >
-                    {t('apikey.scopes.read')}
-                  </Checkbox>
-                  {group.write && (
+                    onCheckedChange={(checked) => toggle(group.read, checked)}
+                  />
+                  {t('apikey.scopes.read')}
+                </label>
+                {group.write && (
+                  <label className="flex items-center gap-2 whitespace-nowrap text-sm">
                     <Checkbox
                       checked={selectedSet.has(group.write)}
                       disabled={fullAccess}
-                      onChange={(checked) => group.write && toggle(group.write, checked)}
-                    >
-                      {t('apikey.scopes.write')}
-                    </Checkbox>
-                  )}
-                  {group.key === 'model' && (
+                      onCheckedChange={(checked) => group.write && toggle(group.write, checked)}
+                    />
+                    {t('apikey.scopes.write')}
+                  </label>
+                )}
+                {group.key === 'model' && (
+                  <label className="flex items-center gap-2 whitespace-nowrap text-sm">
                     <Checkbox
                       checked={selectedSet.has('model:invoke')}
                       disabled={fullAccess}
-                      onChange={(checked) => toggle('model:invoke', checked)}
-                    >
-                      {t('apikey.scopes.modelInvoke')}
-                    </Checkbox>
-                  )}
-                </Flexbox>
-              </Flexbox>
-            ))}
-          </div>
-        </Flexbox>
+                      onCheckedChange={(checked) => toggle('model:invoke', checked)}
+                    />
+                    {t('apikey.scopes.modelInvoke')}
+                  </label>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
-    </Flexbox>
+    </div>
   );
 };
 

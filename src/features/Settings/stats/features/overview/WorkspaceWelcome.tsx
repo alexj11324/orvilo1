@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { Clock3Icon, UsersIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -7,6 +5,7 @@ import { Trans, useTranslation } from 'react-i18next';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import { Skeleton } from '@/components/ui/skeleton';
 import { formatIntergerNumber } from '@/utils/format';
 
 import TimeLabel from '../components/TimeLabel';
@@ -24,20 +23,21 @@ const WorkspaceWelcome = memo<{ mobile?: boolean }>(({ mobile }) => {
   const members = useWorkspaceMembers();
 
   if (!workspace) {
-    return <Skeleton height={24} style={{ minWidth: 200 }} width={200} />;
+    return <Skeleton style={{ width: 200, height: 24, minWidth: 200 }} />;
   }
 
   const days = Math.max(1, dayjs().diff(dayjs(workspace.createdAt), 'day'));
   const memberCount = members.length;
 
   return (
-    <Flexbox padding={mobile ? 16 : 0}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={8}
-        wrap={'wrap'}
+    <div className={'flex min-w-0'} style={{ flexDirection: 'column', padding: mobile ? 16 : 0 }}>
+      <div
+        className={'flex min-w-0'}
         style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          gap: 8,
+          flexWrap: 'wrap',
           fontSize: 16,
           fontWeight: 500,
         }}
@@ -54,16 +54,16 @@ const WorkspaceWelcome = memo<{ mobile?: boolean }>(({ mobile }) => {
             name: workspace.name,
           }}
         />
-      </Flexbox>
-      <Flexbox horizontal gap={16} wrap={'wrap'}>
+      </div>
+      <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap' }}>
         <TimeLabel date={String(memberCount)} icon={UsersIcon} />
         <TimeLabel
           date={dayjs(workspace.createdAt).format('YYYY-MM-DD')}
           icon={Clock3Icon}
           title={t('stats.createdAt')}
         />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

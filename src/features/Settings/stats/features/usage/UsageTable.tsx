@@ -1,5 +1,3 @@
-import { Flexbox, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { type TableColumnType } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -10,6 +8,7 @@ import { ProviderIcon } from '@/components/OrviloIcons';
 import SpendType, { type SpendTypeValue } from '@/components/SpendType';
 import TablePagination from '@/components/TablePagination';
 import TotalToken from '@/components/TotalToken';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { parseAsInteger, useQueryStates } from '@/hooks/useQueryParam';
 import { useClientDataSWR } from '@/libs/swr';
 import { statsKeys } from '@/libs/swr/keys';
@@ -115,7 +114,10 @@ const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
       dataIndex: 'model',
       key: 'model',
       render: (value, record) => (
-        <Flexbox horizontal align={'center'} gap={16}>
+        <div
+          className={'flex min-w-0'}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 16 }}
+        >
           <ProviderIcon
             provider={record.provider}
             size={18}
@@ -125,10 +127,17 @@ const UsageTable = memo<UsageChartProps>(({ dateStrings }) => {
               marginRight: -8,
             }}
           />
-          <Tooltip title={value}>
-            <Text>{value?.length > 12 ? `${value.slice(0, 12)}...` : value}</Text>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex min-w-0">
+                  <span>{value?.length > 12 ? `${value.slice(0, 12)}...` : value}</span>
+                </span>
+              }
+            />
+            <TooltipContent side="top">{value}</TooltipContent>
           </Tooltip>
-        </Flexbox>
+        </div>
       ),
       title: tSpend('table.columns.model'),
     },

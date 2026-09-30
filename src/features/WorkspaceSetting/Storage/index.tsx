@@ -1,14 +1,15 @@
 'use client';
 
 import type { FormGroupItemType } from '@lobehub/ui';
-import { Form, Icon } from '@lobehub/ui';
-import { Button, Switch } from '@lobehub/ui/base-ui';
+import { Form } from '@lobehub/ui';
 import { BRANDING_NAME } from '@orvilo/business-const';
 import { HardDriveDownload, HardDriveUpload } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useTransferAgentsFormItem } from '@/business/client/hooks/useTransferAgentsFormItem';
+import { Button } from '@/components/ui/button';
+import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 
 const WorkspaceStorageContent = memo(() => {
@@ -32,7 +33,8 @@ const WorkspaceStorageContent = memo(() => {
     children: [
       {
         children: (
-          <Button disabled icon={<Icon icon={HardDriveDownload} />}>
+          <Button disabled variant="outline">
+            <HardDriveDownload aria-hidden size={16} />
             {t('storage.actions.import.button')}
           </Button>
         ),
@@ -43,7 +45,8 @@ const WorkspaceStorageContent = memo(() => {
       },
       {
         children: (
-          <Button disabled icon={<Icon icon={HardDriveUpload} />}>
+          <Button disabled variant="outline">
+            <HardDriveUpload aria-hidden size={16} />
             {t('storage.actions.export.button')}
           </Button>
         ),

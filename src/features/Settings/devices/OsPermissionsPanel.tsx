@@ -1,13 +1,13 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { Block } from '@lobehub/ui';
 import { type ElectronAppState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { cssVar } from 'antd-style';
 import { Bell, Check, FolderOpen, Mic, MonitorCog, SquareArrowOutUpRight } from 'lucide-react';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { isDesktop } from '@/const/version';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
@@ -192,22 +192,20 @@ const OsPermissionsPanel = memo(() => {
           onClick={() => !permission.granted && handlePermissionRequest(permission.id)}
         >
           <Block align={'center'} height={40} justify={'center'} variant={'outlined'} width={40}>
-            <Icon color={cssVar.colorTextDescription} icon={permission.icon} size={20} />
+            {createElement(permission.icon, { color: cssVar.colorTextDescription, size: 20 })}
           </Block>
-          <Flexbox gap={2} style={{ flex: 1 }}>
-            <Text weight={500}>{t(permission.titleKey as any)}</Text>
-            <Text color={cssVar.colorTextSecondary} fontSize={12}>
+          <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 2, flex: 1 }}>
+            <span style={{ fontWeight: 500 }}>{t(permission.titleKey as any)}</span>
+            <span style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>
               {t(permission.descriptionKey as any)}
-            </Text>
-          </Flexbox>
+            </span>
+          </div>
           {permission.granted ? (
-            <Icon color={cssVar.colorSuccess} icon={Check} size={20} />
+            createElement(Check, { color: cssVar.colorSuccess, size: 20 })
           ) : (
             <Button
-              icon={SquareArrowOutUpRight}
-              iconPosition={'end'}
-              size={'small'}
-              type={'text'}
+              size="sm"
+              variant="ghost"
               style={{
                 color: cssVar.colorTextSecondary,
               }}
@@ -217,6 +215,7 @@ const OsPermissionsPanel = memo(() => {
               }}
             >
               {t(permission.buttonKey)}
+              {createElement(SquareArrowOutUpRight)}
             </Button>
           )}
         </Block>

@@ -183,9 +183,15 @@ export function NavWorkspace() {
       <SidebarMenuItem>
         <DropdownMenu>
           <DropdownMenuTrigger
-            render={<SidebarMenuButton aria-label={t('reuiShell9.openWorkspaceMenu')} />}
+            render={
+              <SidebarMenuButton
+                aria-label={t('reuiShell9.openWorkspaceMenu')}
+                className="h-8"
+                size="lg"
+              />
+            }
           >
-            <div className="flex min-w-0 flex-1 items-center gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2 in-data-[state=collapsed]:justify-center">
               <Avatar className="size-7 shrink-0 rounded-md after:rounded-md in-data-[state=collapsed]:size-6!">
                 {isImageAvatar(userAvatar) && (
                   <AvatarImage alt={displayName} className="rounded-md" src={userAvatar} />
@@ -194,7 +200,7 @@ export function NavWorkspace() {
                   {initials}
                 </AvatarFallback>
               </Avatar>
-              <div className="flex min-w-0 flex-col">
+              <div className="flex min-w-0 flex-col in-data-[state=collapsed]:hidden">
                 <span className="truncate text-xs font-medium text-sidebar-foreground">
                   {displayName}
                 </span>
@@ -206,7 +212,10 @@ export function NavWorkspace() {
                 </span>
               </div>
             </div>
-            <MoreHorizontalIcon aria-hidden className="mr-1 ml-auto size-4 shrink-0 opacity-50" />
+            <MoreHorizontalIcon
+              aria-hidden
+              className="mr-1 ml-auto size-4 shrink-0 opacity-50 in-data-[state=collapsed]:hidden"
+            />
           </DropdownMenuTrigger>
 
           <DropdownMenuContent

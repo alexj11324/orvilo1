@@ -1,0 +1,33 @@
+2026-09-30T00:09:05.4043111Z ##[error]src/features/HomeSidebar/Body/Agent/List/Item/Actions.tsx(17,26): error TS2322: Type 'BaseMenuItemType[] | (() => BaseMenuItemType[])' is not assignable to type 'ItemType<MenuItemType$1>[] | (() => ItemType<MenuItemType$1>[])'.
+2026-09-30T00:09:05.4051714Z   Type 'BaseMenuItemType[]' is not assignable to type 'ItemType<MenuItemType$1>[] | (() => ItemType<MenuItemType$1>[])'.
+2026-09-30T00:09:05.4052539Z     Type 'BaseMenuItemType[]' is not assignable to type 'ItemType<MenuItemType$1>[]'.
+2026-09-30T00:09:05.4053245Z       Type 'BaseMenuItemType' is not assignable to type 'ItemType<MenuItemType$1>'.
+2026-09-30T00:09:05.4053910Z         Type 'BaseMenuItemGroupType' is not assignable to type 'ItemType<MenuItemType$1>'.
+2026-09-30T00:09:05.4056781Z ##[error]src/features/NavPanel/components/SidebarDropdownMenu.test.ts(20,9): error TS2769: No overload matches this call.
+2026-09-30T00:09:05.4057995Z   The last overload gave the following error.
+2026-09-30T00:09:05.4059283Z     Argument of type '{ items: ({ children: { key: string; label: string; onClick: Mock<Procedure>; }[]; key: string; label: string; } | { disabled: true; key: string; label: string; onClick: Mock<Procedure>; })[]; }' is not assignable to parameter of type 'Attributes & SidebarDropdownMenuProps'.
+2026-09-30T00:09:05.4061286Z       Property 'children' is missing in type '{ items: ({ children: { key: string; label: string; onClick: Mock<Procedure>; }[]; key: string; label: string; } | { disabled: true; key: string; label: string; onClick: Mock<Procedure>; })[]; }' but required in type 'SidebarDropdownMenuProps'.
+2026-09-30T00:09:05.4062984Z ##[error]src/features/NavPanel/components/SidebarDropdownMenu.test.ts(59,11): error TS2769: No overload matches this call.
+2026-09-30T00:09:05.4064054Z   The last overload gave the following error.
+2026-09-30T00:09:05.4065243Z     Argument of type '{ items: { key: string; label: FunctionComponentElement<WorkspaceLinkProps>; }[]; }' is not assignable to parameter of type 'Attributes & SidebarDropdownMenuProps'.
+2026-09-30T00:09:05.4066629Z       Property 'children' is missing in type '{ items: { key: string; label: FunctionComponentElement<WorkspaceLinkProps>; }[]; }' but required in type 'SidebarDropdownMenuProps'.
+2026-09-30T00:09:05.4068037Z ##[error]src/features/NavPanel/components/SidebarDropdownMenu.test.ts(99,9): error TS2769: No overload matches this call.
+2026-09-30T00:09:05.4069116Z   The last overload gave the following error.
+2026-09-30T00:09:05.4069945Z     Argument of type '{ items: { key: string; label: string; onClick: Mock<Procedure>; }[]; }' is not assignable to parameter of type 'Attributes & SidebarContextMenuProps'.
+2026-09-30T00:09:05.4071105Z       Property 'children' is missing in type '{ items: { key: string; label: string; onClick: Mock<Procedure>; }[]; }' but required in type 'SidebarContextMenuProps'.
+2026-09-30T00:09:05.4072361Z ##[error]src/features/NavPanel/components/SidebarDropdownMenu.test.ts(115,9): error TS2769: No overload matches this call.
+2026-09-30T00:09:05.4073403Z   The last overload gave the following error.
+2026-09-30T00:09:05.4074650Z     Argument of type '{ items: ({ children: { key: string; label: string; onClick: Mock<Procedure>; }[]; key: string; label: string; } | { disabled: true; key: string; label: string; onClick: Mock<Procedure>; })[]; }' is not assignable to parameter of type 'Attributes & SidebarContextMenuProps'.
+2026-09-30T00:09:05.4077657Z       Property 'children' is missing in type '{ items: ({ children: { key: string; label: string; onClick: Mock<Procedure>; }[]; key: string; label: string; } | { disabled: true; key: string; label: string; onClick: Mock<Procedure>; })[]; }' but required in type 'SidebarContextMenuProps'.
+2026-09-30T00:09:05.4079397Z ##[error]src/features/NavPanel/components/SidebarDropdownMenu.test.ts(153,11): error TS2769: No overload matches this call.
+2026-09-30T00:09:05.4080539Z   The last overload gave the following error.
+2026-09-30T00:09:05.4081432Z     Argument of type '{ items: { key: string; label: FunctionComponentElement<WorkspaceLinkProps>; }[]; }' is not assignable to parameter of type 'Attributes & SidebarContextMenuProps'.
+2026-09-30T00:09:05.4082744Z       Property 'children' is missing in type '{ items: { key: string; label: FunctionComponentElement<WorkspaceLinkProps>; }[]; }' but required in type 'SidebarContextMenuProps'.
+2026-09-30T00:09:05.4084540Z ##[error]src/features/ReUIShell/Logo.tsx(21,53): error TS2322: Type '"icon"' is not assignable to type '"3d" | "combine" | "flat" | "mono" | "text" | undefined'.
+2026-09-30T00:09:05.4086786Z ##[error]src/spa/BootShell/geometry.test.ts(31,39): error TS2322: Type 'false' is not assignable to type 'true'.
+2026-09-30T00:09:05.7899899Z [ELIFECYCLE] Command failed with exit code 1.
+2026-09-30T00:09:05.7921724Z ##[error]Process completed with exit code 1.
+2026-09-30T00:09:05.8027764Z Post job cleanup.
+2026-09-30T00:09:05.8032628Z ##[start-action display=Setup Node.js;id=__be7c312c-6ff0-408a-bfda-2203b8be2367.__actions_setup-node]
+2026-09-30T00:09:05.8036536Z ##[end-action id=__be7c312c-6ff0-408a-bfda-2203b8be2367.__actions_setup-node;outcome=skipped;conclusion=skipped;duration_ms=0]
+2026-09-30T00:09:05.8038950Z ##[start-action display=Install bun;id=__be7c312c-6ff0-408a-bfda-2203b8be2367.__oven-sh_setup-bun]

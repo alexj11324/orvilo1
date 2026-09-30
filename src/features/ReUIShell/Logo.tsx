@@ -18,7 +18,7 @@ function OrviloLogo({ className }: LogoProps) {
       )}
     >
       <ItemMedia className="size-auto" variant="icon">
-        <ProductLogo color="currentColor" size={16} type="icon" />
+        <ProductLogo color="currentColor" size={16} type="mono" />
       </ItemMedia>
     </Item>
   );

@@ -15,7 +15,6 @@ import {
 } from '@/components/ui/sidebar';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SidebarNavItem from '@/features/NavPanel/components/SidebarNavItem';
-import { useTaskCreateDrafts } from '@/features/TaskDrafts/taskCreateDrafts';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { useActiveTabKey } from '@/hooks/useActiveTabKey';
 import type { NavItem as NavItemType } from '@/hooks/useNavLayout';
@@ -24,7 +23,6 @@ import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useClientDataSWR } from '@/libs/swr';
 import { pullRequestKeys } from '@/libs/swr/keys';
 import { pullRequestService } from '@/services/pullRequest';
-import { taskDraftKeys, taskDraftService } from '@/services/taskDraft';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { SIDEBAR_SPACER_ID } from '@/store/global/selectors/systemStatus';
@@ -49,7 +47,7 @@ const SECTION_KEYS = new Set<string>([GroupKey.Workspace, GroupKey.Favorites, Gr
 
 /** Core entries can never be hidden — the fixed IA keeps them always mounted.
  * `create` is the standalone quick-create row (Linear's `+`). */
-const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'drafts', 'create']);
+const CORE_KEYS = new Set<string>(['inbox', 'my-work', 'reviews', 'agent', 'create']);
 
 /** Keys rendered in the header — must be excluded from the body to avoid duplicates
  * when migrating users whose persisted sidebarItems still include them. */
@@ -104,19 +102,6 @@ const Body = memo(() => {
     { revalidateOnFocus: false },
   );
   const reviewsPendingCount = reviewsQueue.data?.data.items?.length ?? 0;
-  // Drafts badge = server-side comment drafts + local issue drafts (Linear
-  // counts both kinds on the Drafts nav item).
-  const commentDraftCount =
-    useClientDataSWR(
-      taskDraftKeys.count(activeWorkspaceId),
-      () => taskDraftService.count(activeWorkspaceId),
-      {
-        revalidateOnFocus: true,
-      },
-    ).data?.data ?? 0;
-  const issueDraftCount = useTaskCreateDrafts(activeWorkspaceId).length;
-  const draftCount = commentDraftCount + issueDraftCount;
-
   const hideSection = useCallback(
     (key: string) => {
       updateSystemStatus({ hiddenSidebarSections: [...hiddenSections, key] });
@@ -206,14 +191,12 @@ const Body = memo(() => {
               ? inboxUnreadCount || undefined
               : key === 'reviews'
                 ? reviewsPendingCount || undefined
-                : key === 'drafts'
-                  ? draftCount || undefined
-                  : undefined
+                : undefined
           }
         />
       );
     },
-    [navLinkItems, tab, getContextMenuItems, inboxUnreadCount, reviewsPendingCount, draftCount, t],
+    [navLinkItems, tab, getContextMenuItems, inboxUnreadCount, reviewsPendingCount, t],
   );
 
   const handleSectionExpandedChange = useCallback(

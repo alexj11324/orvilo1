@@ -1,12 +1,14 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, confirmModal, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { BookOpen, LibraryBigIcon, Plus, Unlink } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { getProjectLibraryPath } from '@/features/Projects/Layout/navigation';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { projectService } from '@/services/project';
@@ -106,33 +108,41 @@ const ProjectResources = memo<ProjectResourcesProps>(({ detail, onRefresh, proje
   );
 
   return (
-    <Flexbox gap={20} padding={24} style={{ marginInline: 'auto', maxWidth: 840, width: '100%' }}>
-      <Flexbox horizontal align={'flex-start'} gap={16} justify={'space-between'}>
-        <Flexbox gap={4}>
-          <Text fontSize={18} weight={600}>
+    <div
+      className="flex flex-col"
+      style={{ gap: 20, padding: 24, marginInline: 'auto', maxWidth: 840, width: '100%' }}
+    >
+      <div
+        className="flex flex-row"
+        style={{ alignItems: 'flex-start', justifyContent: 'space-between', gap: 16 }}
+      >
+        <div className="flex flex-col" style={{ gap: 4 }}>
+          <span className="text-sm" style={{ fontSize: 18, fontWeight: 600 }}>
             {t('resources.title')}
-          </Text>
-          <Text type={'secondary'}>{t('resources.description')}</Text>
-        </Flexbox>
-        <Button icon={Plus} type={'primary'} onClick={handleAdd}>
+          </span>
+          <span className="text-sm text-muted-foreground">{t('resources.description')}</span>
+        </div>
+        <Button variant="default" onClick={handleAdd}>
+          {createElement(Plus, { 'size': 16, 'aria-hidden': true })}
           {t('resources.add')}
         </Button>
-      </Flexbox>
-
+      </div>
       {links.length === 0 ? (
-        <Center padding={40}>
-          <Empty
-            icon={BookOpen}
-            description={
-              <Flexbox gap={4}>
-                <Text>{t('resources.empty.title')}</Text>
-                <Text fontSize={12} type={'secondary'}>
-                  {t('resources.empty.description')}
-                </Text>
-              </Flexbox>
-            }
-          />
-        </Center>
+        <div className="flex flex-col items-center justify-center" style={{ padding: 40 }}>
+          <div className="flex flex-col items-center gap-3 py-8 text-center text-muted-foreground">
+            {createElement(BookOpen, { 'size': 40, 'aria-hidden': true })}
+            <div>
+              {
+                <div className="flex flex-col" style={{ gap: 4 }}>
+                  <span className="text-sm">{t('resources.empty.title')}</span>
+                  <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
+                    {t('resources.empty.description')}
+                  </span>
+                </div>
+              }
+            </div>
+          </div>
+        </div>
       ) : (
         <div className={styles.list}>
           {links.map((link) => {
@@ -140,49 +150,52 @@ const ProjectResources = memo<ProjectResourcesProps>(({ detail, onRefresh, proje
             const busy = busyId === knowledgeBase.id;
 
             return (
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={styles.card}
-                gap={12}
+              <div
+                className={cn('flex flex-row', styles.card)}
                 key={binding.id}
+                style={{ alignItems: 'center', gap: 12 }}
               >
                 <span className={styles.icon}>
-                  <Icon icon={LibraryBigIcon} size={18} />
+                  <LibraryBigIcon size={18} />
                 </span>
-                <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text ellipsis weight={500}>
+                <div className="flex flex-col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
+                  <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
+                    <span className="text-sm truncate" style={{ fontWeight: 500 }}>
                       {knowledgeBase.name}
-                    </Text>
-                    {!binding.enabled && <Tag>{t('resources.disabled')}</Tag>}
-                  </Flexbox>
+                    </span>
+                    {!binding.enabled && (
+                      <Badge variant="secondary">{t('resources.disabled')}</Badge>
+                    )}
+                  </div>
                   {knowledgeBase.description && (
-                    <Text ellipsis fontSize={12} type={'secondary'}>
+                    <span
+                      className="text-sm text-muted-foreground truncate"
+                      style={{ fontSize: 12 }}
+                    >
                       {knowledgeBase.description}
-                    </Text>
+                    </span>
                   )}
-                </Flexbox>
-                <Button size={'small'} type={'text'} onClick={() => handleOpen(knowledgeBase.id)}>
+                </div>
+                <Button size="sm" variant="ghost" onClick={() => handleOpen(knowledgeBase.id)}>
                   {t('resources.open')}
                 </Button>
                 <Button
-                  danger
-                  disabled={busy}
-                  icon={Unlink}
-                  loading={busy}
-                  size={'small'}
-                  type={'text'}
+                  aria-busy={busy}
+                  disabled={busy || busy}
+                  size="sm"
+                  variant="destructive"
                   onClick={() => handleRemove(knowledgeBase.id, knowledgeBase.name)}
                 >
+                  {createElement(Unlink, { 'size': 16, 'aria-hidden': true })}
+                  {busy && <Spinner />}
                   {t('resources.remove')}
                 </Button>
-              </Flexbox>
+              </div>
             );
           })}
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

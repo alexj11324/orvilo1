@@ -1,5 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
-import { Select } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { UsersIcon } from 'lucide-react';
 import { useId, useRef, useState } from 'react';
@@ -8,6 +6,16 @@ import { useTranslation } from 'react-i18next';
 import { useWorkspaceCapabilities } from '@/business/client/hooks/useWorkspaceCapabilities';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxItem,
+  ComboboxList,
+} from '@/components/ui/combobox';
 import {
   type useProjectMembersQuery,
   useTeammateActions,
@@ -90,50 +98,53 @@ export function ProjectMembersField({
     if (!options.some((option) => option.userId === member.userId))
       options.push({ userId: member.userId, user: member.user ?? null, disabled: false });
   }
+  const memberPickerOptions = [
+    ...options.map((member) => {
+      const name = member.user?.fullName || member.user?.username || member.userId;
+      return {
+        disabled: member.disabled,
+        label: (
+          <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
+            <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
+            {name}
+          </div>
+        ),
+        title: name,
+        value: member.userId,
+      };
+    }),
+    ...(capabilities.canInvite
+      ? [
+          {
+            label: t('properties.inviteAndAdd'),
+            value: 0,
+          },
+        ]
+      : []),
+  ];
   return (
     <>
       <label className={styles.label} htmlFor={id}>
         {t('properties.members')}
       </label>
-      <Select
-        showSearch
-        className={styles.field}
+      <Combobox
+        multiple
         disabled={!canEdit || mutating || query.isLoading || roster.isLoading}
-        id={id}
-        loading={mutating || query.isLoading || roster.isLoading}
-        mode="multiple"
+        items={memberPickerOptions.map((option) => option.value)}
         open={open}
-        placeholder={t('properties.membersEmpty')}
-        popupMatchSelectWidth={false}
-        prefix={UsersIcon}
-        size="small"
-        suffixIcon={null}
         value={members.map((member) => member.userId)}
-        options={[
-          ...options.map((member) => {
-            const name = member.user?.fullName || member.user?.username || member.userId;
-            return {
-              disabled: member.disabled,
-              label: (
-                <Flexbox horizontal align="center" gap={6}>
-                  <Avatar avatar={member.user?.avatar ?? undefined} name={name} size={18} />
-                  {name}
-                </Flexbox>
-              ),
-              title: name,
-              value: member.userId,
-            };
-          }),
-          ...(capabilities.canInvite
-            ? [
-                {
-                  label: t('properties.inviteAndAdd'),
-                  value: 0,
-                },
-              ]
-            : []),
-        ]}
-        onChange={async (value) => {
+        itemToStringLabel={(value) => {
+          const option = memberPickerOptions.find((option) => option.value === value);
+          return option && 'title' in option && typeof option.title === 'string'
+            ? option.title
+            : typeof option?.label === 'string'
+              ? option.label
+              : String(value);
+        }}
+        onOpenChange={(nextOpen) => {
+          if (!nextOpen || !inviting.current) setOpen(nextOpen);
+        }}
+        onValueChange={async (value) => {
           if (lock.current || !canEdit || !Array.isArray(value)) return;
           if (value.includes(0)) {
             if (capabilities.canInvite) {
@@ -166,10 +177,44 @@ export function ProjectMembersField({
             lock.current = false;
           }
         }}
-        onOpenChange={(nextOpen) => {
-          if (!nextOpen || !inviting.current) setOpen(nextOpen);
-        }}
-      />
+      >
+        <>
+          <ComboboxChips className="min-w-0 max-w-full">
+            <UsersIcon aria-hidden size={16} />
+            {members
+              .map((member) => member.userId)
+              .map((value) => (
+                <ComboboxChip key={value}>
+                  {memberPickerOptions.find((option) => option.value === value)?.label ??
+                    String(value)}
+                </ComboboxChip>
+              ))}
+            <ComboboxChipsInput
+              aria-label={t('properties.members')}
+              disabled={!canEdit || mutating || query.isLoading || roster.isLoading}
+              id={id}
+              placeholder={t('properties.membersEmpty')}
+            />
+          </ComboboxChips>
+          <ComboboxContent className="min-w-56">
+            <ComboboxEmpty>{t('properties.membersEmpty')}</ComboboxEmpty>
+            <ComboboxList>
+              {(value: (typeof memberPickerOptions)[number]['value']) => {
+                const option = memberPickerOptions.find((option) => option.value === value);
+                return (
+                  <ComboboxItem
+                    disabled={!!option && 'disabled' in option && option.disabled === true}
+                    key={value}
+                    value={value}
+                  >
+                    {option?.label}
+                  </ComboboxItem>
+                );
+              }}
+            </ComboboxList>
+          </ComboboxContent>
+        </>
+      </Combobox>
     </>
   );
 }

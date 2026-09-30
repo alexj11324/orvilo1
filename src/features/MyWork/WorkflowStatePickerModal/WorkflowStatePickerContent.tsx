@@ -1,12 +1,19 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { Button, Select, Text, toast, useModalContext } from '@lobehub/ui/base-ui';
+import { toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { TaskWorkflowCategory, TeamWorkflowStateItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { lambdaClient } from '@/libs/trpc/client';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -84,36 +91,56 @@ export const WorkflowStatePickerContent = ({
   };
 
   return (
-    <Flexbox>
-      <Flexbox className={styles.content} gap={8}>
-        <Text as="h3" weight="bold">
-          {t('myWork.pickWorkflowState')}
-        </Text>
-        <Text color={cssVar.colorTextSecondary}>{t('myWork.pickWorkflowStateDescription')}</Text>
+    <div className="flex flex-col">
+      <div className={cn('flex flex-col', styles.content)} style={{ gap: 8 }}>
+        <h3 className="text-sm font-bold">{t('myWork.pickWorkflowState')}</h3>
+        <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
+          {t('myWork.pickWorkflowStateDescription')}
+        </span>
         {loading ? (
-          <Text color={cssVar.colorTextSecondary}>{t('myWork.loading')}</Text>
+          <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
+            {t('myWork.loading')}
+          </span>
         ) : failed ? (
-          <Text color={cssVar.colorTextSecondary}>{t('myWork.moveFailed')}</Text>
+          <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
+            {t('myWork.moveFailed')}
+          </span>
         ) : options.length === 0 ? (
-          <Text color={cssVar.colorTextSecondary}>{t('myWork.pickWorkflowStateEmpty')}</Text>
+          <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
+            {t('myWork.pickWorkflowStateEmpty')}
+          </span>
         ) : (
           <Select
-            aria-label={t('myWork.pickWorkflowState')}
-            options={options}
-            placeholder={t('myWork.pickWorkflowState')}
+            items={options}
             value={selected}
-            onChange={(next) => {
+            onValueChange={(next) => {
               if (typeof next === 'string') setSelected(next);
             }}
-          />
+          >
+            <SelectTrigger aria-label={t('myWork.pickWorkflowState')}>
+              <SelectValue placeholder={t('myWork.pickWorkflowState')} />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         )}
-      </Flexbox>
-      <Flexbox horizontal className={styles.actions} gap={8} justify="space-between">
-        <Button onClick={handleCancel}>{t('cancel')}</Button>
-        <Button disabled={!selected} type="primary" onClick={handleConfirm}>
+      </div>
+      <div
+        className={cn('flex flex-row', styles.actions)}
+        style={{ justifyContent: 'space-between', gap: 8 }}
+      >
+        <Button variant="outline" onClick={handleCancel}>
+          {t('cancel')}
+        </Button>
+        <Button disabled={!selected} variant="default" onClick={handleConfirm}>
           {t('myWork.pickWorkflowStateConfirm')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };

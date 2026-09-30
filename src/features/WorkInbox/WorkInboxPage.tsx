@@ -1,27 +1,14 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon, Input, Tooltip } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Alert,
-  Button,
-  type DropdownItem,
-  DropdownMenu,
-  SplitButton,
-  TabsIndicator,
-  TabsList,
-  TabsRoot,
-  TabsTab,
-  Text,
-  toast,
-} from '@lobehub/ui/base-ui';
+import { toast } from '@lobehub/ui/base-ui';
 import type { DecisionVerb, NotificationFeedCard } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   ArchiveIcon,
   ArrowUpRightIcon,
   CheckIcon,
+  ChevronDownIcon,
   ChevronLeftIcon,
   ExternalLinkIcon,
   EyeIcon,
@@ -31,8 +18,19 @@ import {
   MoreHorizontalIcon,
   SlidersHorizontalIcon,
   TimerOffIcon,
+  TriangleAlertIcon,
 } from 'lucide-react';
-import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import {
+  createElement,
+  lazy,
+  memo,
+  Suspense,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { useHotkeys } from 'react-hotkeys-hook';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
@@ -40,10 +38,25 @@ import { useSearchParams } from 'react-router';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
+import { Tabs as TabsRoot, TabsList, TabsTrigger as TabsTab } from '@/components/ui/tabs';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import SidebarDropdownMenu, {
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { WorkSurfaceSplit } from '@/features/WorkSurface';
 import { useIsMobile } from '@/hooks/useIsMobile';
@@ -815,12 +828,12 @@ const WorkInboxPage = memo(() => {
 
   // Secondary card actions live behind `…` — only actions the card actually
   // advertises make the list, and an empty list hides the trigger entirely.
-  const detailMoreItems = useMemo(() => {
-    if (!selected) return [] as DropdownItem[];
+  const detailMoreItems = useMemo<Exclude<SidebarDropdownMenuProps['items'], () => unknown>>(() => {
+    if (!selected) return [];
     return [
       selected.availableActions.includes('archive')
         ? {
-            icon: <Icon icon={ArchiveIcon} />,
+            icon: createElement(ArchiveIcon, { className: 'size-4 shrink-0' }),
             key: 'archive',
             label: t('inbox.archive'),
             onClick: () => void archiveCard(selected),
@@ -835,20 +848,20 @@ const WorkInboxPage = memo(() => {
               label: t(`inbox.snoozePreset.${preset}`),
               onClick: () => void snoozeCard(selected, preset),
             })),
-            icon: <Icon icon={TimerOffIcon} />,
+            icon: createElement(TimerOffIcon, { className: 'size-4 shrink-0' }),
             key: 'snooze',
             label: t('inbox.snooze'),
           }
         : null,
       selected.read
         ? {
-            icon: <Icon icon={MailOpenIcon} />,
+            icon: createElement(MailOpenIcon, { className: 'size-4 shrink-0' }),
             key: 'markUnread',
             label: t('inbox.markUnread'),
             onClick: () => void markCardUnread(selected),
           }
         : null,
-    ].filter(Boolean) as DropdownItem[];
+    ].filter(Boolean);
   }, [archiveCard, markCardUnread, selected, snoozeCard, t]);
 
   const selectCard = useCallback(
@@ -914,17 +927,15 @@ const WorkInboxPage = memo(() => {
 
   const listPane = (
     <div className={styles.listColumn}>
-      <Flexbox className={styles.listHeader} gap={4}>
-        <Flexbox horizontal align={'center'} justify={'space-between'}>
+      <div className={cn('flex flex-col gap-1', styles.listHeader)}>
+        <div className="flex items-center justify-between">
           {priorityEnabled ? (
             <TabsRoot
-              size={'small'}
-              style={{ flex: 1, minWidth: 0 }}
+              className="min-w-0 flex-1"
               value={tab}
               onValueChange={(value) => writeInboxParams({ tab: value })}
             >
               <TabsList>
-                <TabsIndicator />
                 <TabsTab value="priority">
                   {t('inbox.priorityTab')}
                   {(summary?.pendingActionCount ?? 0) + (summary?.unreadMentionCount ?? 0)
@@ -938,133 +949,162 @@ const WorkInboxPage = memo(() => {
               </TabsList>
             </TabsRoot>
           ) : (
-            // Unified mode (Linear's "Disable"): no Priority/Other segments —
-            // one list over the whole feed.
-            <Text fontSize={13} style={{ paddingInlineStart: 4 }} type={'secondary'} weight={500}>
-              {t('inbox.all')}
-            </Text>
+            <span className="ps-1 text-sm font-medium text-muted-foreground">{t('inbox.all')}</span>
           )}
-          <Flexbox horizontal align={'center'} flex={'none'}>
-            <Tooltip title={t('inbox.filterUnread')}>
-              <ActionIcon
-                active={filterChip === 'unread'}
-                icon={EyeIcon}
-                size={'small'}
-                style={{ borderRadius: 9999 }}
-                onClick={() =>
-                  writeInboxParams({ filter: filterChip === 'unread' ? 'all' : 'unread' })
+          <div className="flex shrink-0 items-center">
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <Button
+                    aria-label={t('inbox.filterUnread')}
+                    aria-pressed={filterChip === 'unread'}
+                    size="icon"
+                    variant={filterChip === 'unread' ? 'secondary' : 'ghost'}
+                    onClick={() =>
+                      writeInboxParams({ filter: filterChip === 'unread' ? 'all' : 'unread' })
+                    }
+                  />
                 }
-              />
+              >
+                <EyeIcon />
+              </TooltipTrigger>
+              <TooltipContent>{t('inbox.filterUnread')}</TooltipContent>
             </Tooltip>
-            <DropdownMenu
-              placement={'bottomRight'}
-              items={INBOX_FILTER_CHIPS.map((chip) => ({
-                icon: chip === filterChip ? <Icon icon={CheckIcon} size={14} /> : undefined,
-                key: chip,
-                label: filterLabel(chip),
-                onClick: () => writeInboxParams({ filter: chip }),
-              }))}
-            >
-              <Tooltip title={t('inbox.addFilter')}>
-                <ActionIcon icon={ListFilterIcon} size={'small'} style={{ borderRadius: 9999 }} />
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <DropdownMenuTrigger
+                      render={
+                        <Button aria-label={t('inbox.addFilter')} size="icon" variant="ghost" />
+                      }
+                    />
+                  }
+                >
+                  <ListFilterIcon />
+                </TooltipTrigger>
+                <TooltipContent>{t('inbox.addFilter')}</TooltipContent>
               </Tooltip>
+              <DropdownMenuContent align="end">
+                {INBOX_FILTER_CHIPS.map((chip) => (
+                  <DropdownMenuItem key={chip} onClick={() => writeInboxParams({ filter: chip })}>
+                    {chip === filterChip ? <CheckIcon /> : null}
+                    {filterLabel(chip)}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
             </DropdownMenu>
-            <DropdownMenu
-              placement={'bottomRight'}
-              items={[
-                {
-                  checked: priorityEnabled,
-                  closeOnClick: false,
-                  key: 'priorityInbox',
-                  label: t('inbox.displayPriorityInbox'),
-                  onCheckedChange: (checked: boolean) =>
-                    setPriorityMode(checked ? 'priority' : 'all'),
-                  type: 'switch',
-                },
-                {
-                  checked: showSnoozed,
-                  closeOnClick: false,
-                  key: 'showSnoozed',
-                  label: t('inbox.displayShowSnoozed'),
-                  onCheckedChange: (checked: boolean) => setShowSnoozed(checked),
-                  type: 'switch',
-                },
-                // Linear's unread-first ordering still has no backend support
-                // here — omitted rather than faked.
-              ]}
-            >
-              <Tooltip title={t('inbox.displayOptions')}>
-                <ActionIcon
-                  icon={SlidersHorizontalIcon}
-                  size={'small'}
-                  style={{ borderRadius: 9999 }}
-                />
+            <DropdownMenu>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <DropdownMenuTrigger
+                      render={
+                        <Button
+                          aria-label={t('inbox.displayOptions')}
+                          size="icon"
+                          variant="ghost"
+                        />
+                      }
+                    />
+                  }
+                >
+                  <SlidersHorizontalIcon />
+                </TooltipTrigger>
+                <TooltipContent>{t('inbox.displayOptions')}</TooltipContent>
               </Tooltip>
+              <DropdownMenuContent align="end">
+                <DropdownMenuCheckboxItem
+                  checked={priorityEnabled}
+                  closeOnClick={false}
+                  onCheckedChange={(checked) => setPriorityMode(checked ? 'priority' : 'all')}
+                >
+                  {t('inbox.displayPriorityInbox')}
+                </DropdownMenuCheckboxItem>
+                <DropdownMenuCheckboxItem
+                  checked={showSnoozed}
+                  closeOnClick={false}
+                  onCheckedChange={setShowSnoozed}
+                >
+                  {t('inbox.displayShowSnoozed')}
+                </DropdownMenuCheckboxItem>
+              </DropdownMenuContent>
             </DropdownMenu>
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
       {bannerVisible ? (
         <div className={styles.banner}>
-          <Text fontSize={12} weight={500}>
-            {t('inbox.priorityBanner.title')}
-          </Text>
-          <Flexbox horizontal align={'center'} gap={8}>
-            <SplitButton size={'small'}>
-              <SplitButton.Main onClick={() => setPriorityMode('priority')}>
+          <span className="text-sm font-medium">{t('inbox.priorityBanner.title')}</span>
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-px">
+              <Button onClick={() => setPriorityMode('priority')}>
                 {t('inbox.priorityBanner.keep')}
-              </SplitButton.Main>
-              <SplitButton.Menu
-                items={[
-                  {
-                    key: 'disable',
-                    label: t('inbox.priorityBanner.disable'),
-                    onClick: () => setPriorityMode('all'),
-                  },
-                ]}
-              />
-            </SplitButton>
-            <Button size={'small'} onClick={() => setPriorityMode('all')}>
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  render={<Button aria-label={t('inbox.displayOptions')} size="icon" />}
+                >
+                  <ChevronDownIcon />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => setPriorityMode('all')}>
+                    {t('inbox.priorityBanner.disable')}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <Button variant="outline" onClick={() => setPriorityMode('all')}>
               {t('inbox.priorityBanner.disable')}
             </Button>
-          </Flexbox>
+          </div>
         </div>
       ) : null}
       {partial ? (
-        <Alert
-          showIcon
-          description={t('inbox.sourceUnavailable')}
-          style={{ margin: 8 }}
-          type="warning"
-        />
+        <div
+          className="m-2 flex items-center gap-2 rounded-lg border border-border bg-muted p-3 text-sm"
+          role="status"
+        >
+          <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
+          <span>{t('inbox.sourceUnavailable')}</span>
+        </div>
       ) : null}
       {error ? (
-        <Alert
-          showIcon
-          description={t('inbox.loadFailed')}
-          style={{ margin: 8 }}
-          type="error"
-          action={
-            <Button size={'small'} type={'text'} onClick={() => void refresh()}>
-              {tCommon('retry')}
-            </Button>
-          }
-        />
+        <div
+          className="m-2 flex items-center gap-2 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-sm text-destructive"
+          role="alert"
+        >
+          <TriangleAlertIcon aria-hidden className="size-4 shrink-0" />
+          <span className="flex-1">{t('inbox.loadFailed')}</span>
+          <Button variant="ghost" onClick={() => void refresh()}>
+            {tCommon('retry')}
+          </Button>
+        </div>
       ) : null}
       {listMode === 'loading' ? (
-        <SkeletonList padding={12} rows={8} />
+        <div aria-busy className="flex flex-col gap-2 p-3" role="status">
+          {Array.from({ length: 8 }, (_, index) => (
+            <Skeleton className="h-10 w-full" key={index} />
+          ))}
+        </div>
       ) : error && cards.length === 0 ? (
-        <Center flex={1} padding={24}>
+        <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
           <AsyncError error={error} variant={'block'} onRetry={() => void refresh()} />
-        </Center>
+        </div>
       ) : listMode === 'empty' ? (
-        <Center flex={1} padding={48}>
-          <Empty description={t('inbox.empty')} icon={InboxIcon} />
-        </Center>
+        <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 48 }}>
+          <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
+            {createElement(InboxIcon, { 'className': 'size-8 shrink-0', 'aria-hidden': true })}
+            <p>{t('inbox.empty')}</p>
+          </div>
+        </div>
       ) : listMode === 'partial-empty' ? (
-        <Center flex={1} padding={48}>
-          <Empty description={t('inbox.empty')} icon={InboxIcon} />
-        </Center>
+        <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 48 }}>
+          <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
+            {createElement(InboxIcon, { 'className': 'size-8 shrink-0', 'aria-hidden': true })}
+            <p>{t('inbox.empty')}</p>
+          </div>
+        </div>
       ) : (
         <>
           {visibleCards.map((card) => (
@@ -1077,7 +1117,7 @@ const WorkInboxPage = memo(() => {
               type="button"
               onClick={() => selectCard(card.notificationId, true)}
             >
-              <Flexbox horizontal align={'center'} gap={10}>
+              <div className="flex flex-row" style={{ alignItems: 'center', gap: 10 }}>
                 {card.actor || card.agent ? (
                   <span className={styles.avatarSlot}>
                     <Avatar
@@ -1087,58 +1127,61 @@ const WorkInboxPage = memo(() => {
                       size={32}
                     />
                     <span aria-hidden data-inbox-type-badge className={styles.typeBadge}>
-                      <Icon icon={inboxCardIcon(card)} size={10} />
+                      {createElement(inboxCardIcon(card), { className: 'size-3 shrink-0' })}
                     </span>
                   </span>
                 ) : (
                   <span className={styles.typeGlyph}>
-                    <Icon icon={inboxCardIcon(card)} size={14} />
+                    {createElement(inboxCardIcon(card), { className: 'size-4 shrink-0' })}
                   </span>
                 )}
-                <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-                  <Flexbox horizontal align={'center'} gap={6}>
+                <div className="flex flex-col" style={{ gap: 2, flex: 1, minWidth: 0 }}>
+                  <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
                     {card.read ? null : <span className={styles.unreadDot} />}
-                    <Text
-                      ellipsis
-                      className={card.read ? styles.readText : undefined}
-                      fontSize={13}
-                      weight={500}
+                    <span
+                      className={cn(
+                        'text-sm font-medium truncate',
+                        card.read ? styles.readText : undefined,
+                      )}
                     >
                       {titleFor(card)}
-                    </Text>
-                  </Flexbox>
-                  <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                    <Text
-                      className={cx(styles.snippet, card.read && styles.readText)}
-                      fontSize={12}
+                    </span>
+                  </div>
+                  <div
+                    className="flex flex-row"
+                    style={{ alignItems: 'center', justifyContent: 'space-between', gap: 8 }}
+                  >
+                    <span
+                      className={cn('text-sm', cx(styles.snippet, card.read && styles.readText))}
                     >
                       {card.content}
-                    </Text>
-                    <Text
-                      className={cx(styles.time, card.read && styles.readText)}
-                      fontSize={12}
+                    </span>
+                    <span
+                      className={cn('text-sm', cx(styles.time, card.read && styles.readText))}
                       title={dayjs(card.lastActivityAt).format('LLL')}
                     >
                       {formatInboxAge(card.lastActivityAt, { locale: i18n.language })}
-                    </Text>
-                  </Flexbox>
-                </Flexbox>
-              </Flexbox>
+                    </span>
+                  </div>
+                </div>
+              </div>
             </button>
           ))}
           {hasMore || loadMoreError ? (
-            <Center padding={12} style={{ flexDirection: 'column', gap: 8 }}>
+            <div
+              className="flex flex-col items-center justify-center"
+              style={{ padding: 12, flexDirection: 'column', gap: 8 }}
+            >
               {loadMoreError ? (
-                <Text fontSize={12} type={'danger'}>
-                  {t('inbox.loadFailed')}
-                </Text>
+                <span className="text-sm text-destructive">{t('inbox.loadFailed')}</span>
               ) : null}
               {hasMore ? (
-                <Button loading={loadingMore} size={'small'} onClick={() => void loadMore()}>
+                <Button disabled={loadingMore} variant="outline" onClick={() => void loadMore()}>
+                  {loadingMore ? <Spinner /> : <></>}
                   {t('inbox.loadMore')}
                 </Button>
               ) : null}
-            </Center>
+            </div>
           ) : null}
         </>
       )}
@@ -1157,104 +1200,147 @@ const WorkInboxPage = memo(() => {
       <>
         <div className={styles.paneHeader}>
           {surface === 'detail' ? (
-            <ActionIcon
-              icon={ChevronLeftIcon}
-              size={'small'}
+            <Button
+              aria-label={tCommon('back')}
+              size="icon"
               title={tCommon('back')}
+              variant="ghost"
               onClick={() => writeInboxParams({ detail: null, item: null })}
-            />
+            >
+              {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
+            </Button>
           ) : null}
-          <Text ellipsis fontSize={13} style={{ minWidth: 0 }} weight={500}>
+          <span className="text-sm font-medium truncate" style={{ minWidth: 0 }}>
             {selectedIssueIdentifier ?? titleFor(selected)}
-          </Text>
-          <Flexbox horizontal align={'center'} flex={1} gap={4} justify={'flex-end'}>
+          </span>
+          <div
+            className="flex flex-row"
+            style={{ alignItems: 'center', justifyContent: 'flex-end', gap: 4, flex: 1 }}
+          >
             <WorkFavoriteButton
               targetId={selectedIssueIdentifier}
               targetType="task"
               variant={'icon'}
             />
             {selectedOpenTarget ? (
-              <ActionIcon
-                icon={ArrowUpRightIcon}
-                size={'small'}
+              <Button
+                aria-label={t('inbox.open')}
+                size="icon"
                 title={t('inbox.open')}
+                variant="ghost"
                 onClick={() => openTarget(selected)}
-              />
+              >
+                {createElement(ArrowUpRightIcon, { className: 'size-4 shrink-0' })}
+              </Button>
             ) : null}
             {detailMoreItems.length > 0 ? (
-              <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>
-                <ActionIcon
-                  icon={MoreHorizontalIcon}
-                  size={'small'}
+              <SidebarDropdownMenu items={detailMoreItems} placement={'bottomRight'}>
+                <Button
+                  aria-label={t('inbox.moreActions')}
+                  size="icon"
                   title={t('inbox.moreActions')}
-                />
-              </DropdownMenu>
+                  variant="ghost"
+                >
+                  {createElement(MoreHorizontalIcon, { className: 'size-4 shrink-0' })}
+                </Button>
+              </SidebarDropdownMenu>
             ) : null}
-          </Flexbox>
+          </div>
         </div>
         <div className={styles.detail}>
-          <Flexbox gap={4}>
-            <Text fontSize={16} weight={600}>
-              {titleFor(selected)}
-            </Text>
-            <Text className={styles.paneMeta} fontSize={12}>
+          <div className="flex flex-col" style={{ gap: 4 }}>
+            <span className="text-base font-semibold">{titleFor(selected)}</span>
+            <span className={cn('text-sm', styles.paneMeta)}>
               {dayjs(selected.lastActivityAt).fromNow()}
               {!selected.read ? ` · ${t('inbox.unread')}` : ''}
-            </Text>
-          </Flexbox>
-          <Text type={'secondary'}>{selected.content}</Text>
+            </span>
+          </div>
+          <span className="text-sm text-muted-foreground">{selected.content}</span>
           <div className={styles.divider} />
           {decisionVerbs.length > 0 ? (
-            <Flexbox gap={8}>
+            <div className="flex flex-col" style={{ gap: 8 }}>
               {decisionVerbs.includes('submit_input') ? (
                 <Input
+                  aria-label={t('inbox.inputPlaceholder')}
                   placeholder={t('inbox.inputPlaceholder')}
                   value={inputDraft}
                   onChange={(event) => setInputDraft(event.target.value)}
                 />
               ) : null}
-              <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
+              <div className="flex flex-row" style={{ gap: 8, flexWrap: 'wrap' }}>
                 {decisionVerbs.includes('approve') ? (
                   <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
-                    type="primary"
+                    disabled={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                    variant="default"
                     onClick={() => void decide(selected, 'approve')}
                   >
+                    {pendingDecisions.has(`${selected.notificationId}:approve`) ? (
+                      <Spinner />
+                    ) : (
+                      <></>
+                    )}
                     {t('inbox.approve')}
                   </Button>
                 ) : null}
                 {decisionVerbs.includes('decline') ? (
                   <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                    disabled={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                    variant="outline"
                     onClick={() => void decide(selected, 'decline')}
                   >
+                    {pendingDecisions.has(`${selected.notificationId}:decline`) ? (
+                      <Spinner />
+                    ) : (
+                      <></>
+                    )}
                     {t('inbox.decline')}
                   </Button>
                 ) : null}
                 {decisionVerbs.includes('cancel') ? (
                   <Button
-                    loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                    disabled={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                    variant="outline"
                     onClick={() => void decide(selected, 'cancel')}
                   >
+                    {pendingDecisions.has(`${selected.notificationId}:cancel`) ? (
+                      <Spinner />
+                    ) : (
+                      <></>
+                    )}
                     {t('inbox.cancel')}
                   </Button>
                 ) : null}
                 {decisionVerbs.includes('submit_input') ? (
                   <Button
-                    disabled={!inputDraft.trim()}
-                    loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
-                    type="primary"
+                    variant="default"
+                    disabled={
+                      pendingDecisions.has(`${selected.notificationId}:submit_input`) ||
+                      !inputDraft.trim()
+                    }
                     onClick={() =>
                       void decide(selected, 'submit_input', { text: inputDraft.trim() })
                     }
                   >
+                    {pendingDecisions.has(`${selected.notificationId}:submit_input`) ? (
+                      <Spinner />
+                    ) : (
+                      <></>
+                    )}
                     {t('inbox.submitInput')}
                   </Button>
                 ) : null}
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           ) : null}
-          <Suspense fallback={<SkeletonList padding={8} rows={4} />}>
+          <Suspense
+            fallback={
+              <div aria-busy className="flex flex-col gap-2 p-3" role="status">
+                {Array.from({ length: 4 }, (_, index) => (
+                  <Skeleton className="h-10 w-full" key={index} />
+                ))}
+              </div>
+            }
+          >
             <LazyIssueContent taskId={selectedIssueTaskId} />
           </Suspense>
         </div>
@@ -1262,90 +1348,107 @@ const WorkInboxPage = memo(() => {
     ) : (
       <div className={styles.detail}>
         {surface === 'detail' ? (
-          <Flexbox horizontal>
+          <div className="flex flex-row">
             <Button
-              icon={ChevronLeftIcon}
-              size={'small'}
+              variant="outline"
               onClick={() => writeInboxParams({ detail: null, item: null })}
             >
+              {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
               {tCommon('back')}
             </Button>
-          </Flexbox>
+          </div>
         ) : null}
-        <Flexbox gap={4}>
-          <Text fontSize={16} weight={600}>
-            {titleFor(selected)}
-          </Text>
-          <Text className={styles.paneMeta} fontSize={12}>
+        <div className="flex flex-col" style={{ gap: 4 }}>
+          <span className="text-base font-semibold">{titleFor(selected)}</span>
+          <span className={cn('text-sm', styles.paneMeta)}>
             {dayjs(selected.lastActivityAt).fromNow()}
             {!selected.read ? ` · ${t('inbox.unread')}` : ''}
-          </Text>
-        </Flexbox>
-        <Text type={'secondary'}>{selected.content}</Text>
+          </span>
+        </div>
+        <span className="text-sm text-muted-foreground">{selected.content}</span>
         <div className={styles.divider} />
-        <Flexbox gap={8}>
+        <div className="flex flex-col" style={{ gap: 8 }}>
           {decisionVerbs.includes('submit_input') ? (
             <Input
+              aria-label={t('inbox.inputPlaceholder')}
               placeholder={t('inbox.inputPlaceholder')}
               value={inputDraft}
               onChange={(event) => setInputDraft(event.target.value)}
             />
           ) : null}
-          <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
+          <div className="flex flex-row" style={{ gap: 8, flexWrap: 'wrap' }}>
             {decisionVerbs.includes('approve') ? (
               <Button
-                loading={pendingDecisions.has(`${selected.notificationId}:approve`)}
-                type="primary"
+                disabled={pendingDecisions.has(`${selected.notificationId}:approve`)}
+                variant="default"
                 onClick={() => void decide(selected, 'approve')}
               >
+                {pendingDecisions.has(`${selected.notificationId}:approve`) ? <Spinner /> : <></>}
                 {t('inbox.approve')}
               </Button>
             ) : null}
             {decisionVerbs.includes('decline') ? (
               <Button
-                loading={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                disabled={pendingDecisions.has(`${selected.notificationId}:decline`)}
+                variant="outline"
                 onClick={() => void decide(selected, 'decline')}
               >
+                {pendingDecisions.has(`${selected.notificationId}:decline`) ? <Spinner /> : <></>}
                 {t('inbox.decline')}
               </Button>
             ) : null}
             {decisionVerbs.includes('cancel') ? (
               <Button
-                loading={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                disabled={pendingDecisions.has(`${selected.notificationId}:cancel`)}
+                variant="outline"
                 onClick={() => void decide(selected, 'cancel')}
               >
+                {pendingDecisions.has(`${selected.notificationId}:cancel`) ? <Spinner /> : <></>}
                 {t('inbox.cancel')}
               </Button>
             ) : null}
             {decisionVerbs.includes('submit_input') ? (
               <Button
-                disabled={!inputDraft.trim()}
-                loading={pendingDecisions.has(`${selected.notificationId}:submit_input`)}
-                type="primary"
+                variant="default"
+                disabled={
+                  pendingDecisions.has(`${selected.notificationId}:submit_input`) ||
+                  !inputDraft.trim()
+                }
                 onClick={() => void decide(selected, 'submit_input', { text: inputDraft.trim() })}
               >
+                {pendingDecisions.has(`${selected.notificationId}:submit_input`) ? (
+                  <Spinner />
+                ) : (
+                  <></>
+                )}
                 {t('inbox.submitInput')}
               </Button>
             ) : null}
             {selectedOpenTarget ? (
-              <Button icon={ExternalLinkIcon} onClick={() => openTarget(selected)}>
+              <Button variant="outline" onClick={() => openTarget(selected)}>
+                {createElement(ExternalLinkIcon, { className: 'size-4 shrink-0' })}
                 {t('inbox.open')}
               </Button>
             ) : null}
             {detailMoreItems.length > 0 ? (
-              <DropdownMenu items={detailMoreItems} placement={'bottomRight'}>
-                <ActionIcon icon={MoreHorizontalIcon} title={t('inbox.moreActions')} />
-              </DropdownMenu>
+              <SidebarDropdownMenu items={detailMoreItems} placement={'bottomRight'}>
+                <Button
+                  aria-label={t('inbox.moreActions')}
+                  size="icon"
+                  title={t('inbox.moreActions')}
+                  variant="ghost"
+                >
+                  {createElement(MoreHorizontalIcon, { className: 'size-4 shrink-0' })}
+                </Button>
+              </SidebarDropdownMenu>
             ) : null}
             {decisionVerbs.length === 0 && !selectedOpenTarget && detailMoreItems.length === 0 ? (
               // Truthful empty state: the card offers no action the client can
               // perform, so no dead controls render.
-              <Text fontSize={12} type={'secondary'}>
-                {t('inbox.noActions')}
-              </Text>
+              <span className="text-sm text-muted-foreground">{t('inbox.noActions')}</span>
             ) : null}
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       </div>
     )
   ) : deepLink === 'failed' ? (
@@ -1353,39 +1456,43 @@ const WorkInboxPage = memo(() => {
     // honest failure with retry instead of silently dropping the selection.
     <div className={styles.detail}>
       {surface === 'detail' ? (
-        <Flexbox horizontal>
-          <Button
-            icon={ChevronLeftIcon}
-            size={'small'}
-            onClick={() => writeInboxParams({ detail: null, item: null })}
-          >
+        <div className="flex flex-row">
+          <Button variant="outline" onClick={() => writeInboxParams({ detail: null, item: null })}>
+            {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
             {tCommon('back')}
           </Button>
-        </Flexbox>
+        </div>
       ) : null}
-      <Center flex={1} padding={24}>
+      <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
         <AsyncError
           error={fetchCardError}
           retrying={validatingCard}
           variant={'block'}
           onRetry={() => void retryFetchCard()}
         />
-      </Center>
+      </div>
     </div>
   ) : deepLink === 'loading' ? (
     // Deep link still resolving — a skeleton reads truer than "Select an
     // item", and it keeps the pane from flashing a wrong empty state.
     <div className={styles.detail}>
-      <SkeletonList padding={8} rows={6} />
+      <div aria-busy className="flex flex-col gap-2 p-3" role="status">
+        {Array.from({ length: 6 }, (_, index) => (
+          <Skeleton className="h-10 w-full" key={index} />
+        ))}
+      </div>
     </div>
   ) : null;
 
   const detailPlaceholder = (
-    <Center className={styles.detailPlaceholder} flex={1} padding={48}>
-      <Empty
-        icon={InboxIcon}
-        description={
-          listMode === 'list' && filterChip === 'all' && summary
+    <div
+      className={cn('flex flex-col items-center justify-center', styles.detailPlaceholder)}
+      style={{ flex: 1, padding: 48 }}
+    >
+      <div className="flex flex-col items-center gap-3 text-center text-sm text-muted-foreground">
+        {createElement(InboxIcon, { 'className': 'size-8 shrink-0', 'aria-hidden': true })}
+        <p>
+          {listMode === 'list' && filterChip === 'all' && summary
             ? t('inbox.unreadCount', {
                 // `unreadBadgeCount` is already the unique badge-worthy total —
                 // correct for both the Priority tab and the unified list.
@@ -1396,53 +1503,55 @@ const WorkInboxPage = memo(() => {
               })
             : listMode === 'list'
               ? t('inbox.loadedCount', { count: visibleCards.length })
-              : t('inbox.selectItem')
-        }
-      />
-    </Center>
+              : t('inbox.selectItem')}
+        </p>
+      </div>
+    </div>
   );
 
   return (
-    <Flexbox flex={1} height="100%">
-      <NavHeader
-        left={
-          <Text style={{ paddingInlineStart: 4 }} weight={500}>
-            {tCommon('tab.inbox')}
-          </Text>
-        }
-        right={
-          <InboxHeaderMenu
-            onDeleteAll={() => void archiveAll()}
-            onMarkAllRead={() => void markAllRead()}
-          />
-        }
-      />
-      <div className={styles.stage}>
-        <WorkSurfaceSplit
-          detail={surface === 'split' ? (detailPane ?? detailPlaceholder) : undefined}
-          list={listPane}
-          listLabel={tCommon('tab.inbox')}
-          listWidth={400}
-          detailLabel={
-            selected
-              ? titleFor(selected)
-              : deepLink === 'failed'
-                ? t('inbox.loadFailed')
-                : deepLink === 'loading'
-                  ? t('inbox.loading')
-                  : t('inbox.selectItem')
+    <TooltipProvider>
+      <div className="flex flex-col" style={{ flex: 1, height: '100%' }}>
+        <NavHeader
+          left={
+            <span className="text-sm font-medium" style={{ paddingInlineStart: 4 }}>
+              {tCommon('tab.inbox')}
+            </span>
+          }
+          right={
+            <InboxHeaderMenu
+              onDeleteAll={() => void archiveAll()}
+              onMarkAllRead={() => void markAllRead()}
+            />
           }
         />
-        {surface === 'detail' && detailPane ? (
-          <div
-            aria-label={selected ? titleFor(selected) : t('inbox.selectItem')}
-            className={styles.detailOverlay}
-          >
-            {detailPane}
-          </div>
-        ) : null}
+        <div className={styles.stage}>
+          <WorkSurfaceSplit
+            detail={surface === 'split' ? (detailPane ?? detailPlaceholder) : undefined}
+            list={listPane}
+            listLabel={tCommon('tab.inbox')}
+            listWidth={400}
+            detailLabel={
+              selected
+                ? titleFor(selected)
+                : deepLink === 'failed'
+                  ? t('inbox.loadFailed')
+                  : deepLink === 'loading'
+                    ? t('inbox.loading')
+                    : t('inbox.selectItem')
+            }
+          />
+          {surface === 'detail' && detailPane ? (
+            <div
+              aria-label={selected ? titleFor(selected) : t('inbox.selectItem')}
+              className={styles.detailOverlay}
+            >
+              {detailPane}
+            </div>
+          ) : null}
+        </div>
       </div>
-    </Flexbox>
+    </TooltipProvider>
   );
 });
 

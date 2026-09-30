@@ -1,7 +1,4 @@
 'use client';
-
-import { Flexbox, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -11,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import Avatar from '@/components/Avatar';
 import { resolveProjectStatus } from '@/components/ExecutionStatus';
 import { PriorityIcon, resolvePriorityLevel } from '@/components/PriorityIcon';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { PROJECT_HEALTH_META, ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import { ProjectIcon } from '@/features/Projects/ProjectIcon';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
@@ -108,12 +106,12 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
           <div className={styles.column} key={group.key}>
             <div className={styles.columnHeader}>
               <ProjectStatusIcon size={14} status={status} />
-              <Text fontSize={13} weight={500}>
+              <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
                 {t(`status.${status}`)}
-              </Text>
-              <Text fontSize={12} type="secondary">
+              </span>
+              <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
                 {group.items.length}
-              </Text>
+              </span>
             </div>
             <div className={styles.columnBody}>
               {group.items.map((project) => {
@@ -125,7 +123,10 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
                       className={styles.link}
                       to={`/project/${project.slug ?? project.id}`}
                     />
-                    <Flexbox horizontal align="center" gap={8} style={{ minWidth: 0 }}>
+                    <div
+                      className="flex flex-row"
+                      style={{ alignItems: 'center', gap: 8, minWidth: 0 }}
+                    >
                       {project.avatar && project.avatar !== '📦' ? (
                         <Avatar
                           avatar={project.avatar}
@@ -136,10 +137,10 @@ const ProjectBoard = memo<ProjectBoardProps>(({ groups, leadAvatar, leadName, pr
                       ) : (
                         <ProjectIcon color={cssVar.colorTextTertiary} size={14} />
                       )}
-                      <Text ellipsis fontSize={13} weight={500}>
+                      <span className="text-sm truncate" style={{ fontSize: 13, fontWeight: 500 }}>
                         {project.name}
-                      </Text>
-                    </Flexbox>
+                      </span>
+                    </div>
                     {properties.milestones ? <ProjectMilestoneChip projectId={project.id} /> : null}
                     <div className={styles.cardMeta}>
                       {properties.health && project.health ? (
@@ -194,10 +195,15 @@ const ProjectHealthDot = memo<{ health: string }>(({ health }) => {
   const valid = health in PROJECT_HEALTH_META ? (health as ProjectHealth) : null;
   const label = valid ? t(PROJECT_HEALTH_META[valid].key) : t('list.health.noUpdates');
   return (
-    <Tooltip title={label}>
-      <span aria-label={label} role="img">
-        <ProjectHealthIcon health={valid} size={12} />
-      </span>
+    <Tooltip>
+      <TooltipTrigger
+        render={
+          <span aria-label={label} role="img">
+            <ProjectHealthIcon health={valid} size={12} />
+          </span>
+        }
+      />
+      <TooltipContent>{label}</TooltipContent>
     </Tooltip>
   );
 });

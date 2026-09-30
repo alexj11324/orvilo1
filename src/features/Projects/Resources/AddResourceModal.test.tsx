@@ -75,7 +75,7 @@ describe('add project resource picker', () => {
 
     renderPicker();
 
-    expect(screen.getByTestId('picker-skeleton')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText('resources.addModal.empty')).not.toBeInTheDocument();
   });
 

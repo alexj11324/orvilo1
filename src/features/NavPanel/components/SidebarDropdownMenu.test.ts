@@ -15,25 +15,22 @@ describe('SidebarDropdownMenu', () => {
     const disabledCommand = vi.fn();
 
     render(
-      createElement(
-        SidebarDropdownMenu,
-        {
-          items: [
-            {
-              children: [{ key: 'nested', label: 'Nested command', onClick: nestedCommand }],
-              key: 'parent',
-              label: 'Parent command',
-            },
-            {
-              disabled: true,
-              key: 'disabled',
-              label: 'Disabled command',
-              onClick: disabledCommand,
-            },
-          ],
-        },
-        createElement('button', { type: 'button' }, 'Open menu'),
-      ),
+      createElement(SidebarDropdownMenu, {
+        children: createElement('button', { type: 'button' }, 'Open menu'),
+        items: [
+          {
+            children: [{ key: 'nested', label: 'Nested command', onClick: nestedCommand }],
+            key: 'parent',
+            label: 'Parent command',
+          },
+          {
+            disabled: true,
+            key: 'disabled',
+            label: 'Disabled command',
+            onClick: disabledCommand,
+          },
+        ],
+      }),
     );
 
     fireEvent.click(screen.getByRole('button', { name: 'Open menu' }));
@@ -54,18 +51,15 @@ describe('SidebarDropdownMenu', () => {
       createElement(
         MemoryRouter,
         null,
-        createElement(
-          SidebarDropdownMenu,
-          {
-            items: [
-              {
-                key: 'settings',
-                label: createElement(WorkspaceLink, { to: '/settings' }, 'Settings'),
-              },
-            ],
-          },
-          createElement('button', { type: 'button' }, 'Open workspace menu'),
-        ),
+        createElement(SidebarDropdownMenu, {
+          children: createElement('button', { type: 'button' }, 'Open workspace menu'),
+          items: [
+            {
+              key: 'settings',
+              label: createElement(WorkspaceLink, { to: '/settings' }, 'Settings'),
+            },
+          ],
+        }),
       ),
     );
 
@@ -94,11 +88,10 @@ describe('SidebarContextMenu', () => {
     const command = vi.fn();
     vi.mocked(electronSystemService.popupContextMenu).mockResolvedValue({ clickedId: '0' });
     render(
-      createElement(
-        SidebarContextMenu,
-        { items: [{ key: 'copy', label: 'Copy', onClick: command }] },
-        createElement('button', null, 'Native commands'),
-      ),
+      createElement(SidebarContextMenu, {
+        children: createElement('button', null, 'Native commands'),
+        items: [{ key: 'copy', label: 'Copy', onClick: command }],
+      }),
     );
     fireEvent.contextMenu(screen.getByRole('button', { name: 'Native commands' }));
     await vi.waitFor(() => expect(command).toHaveBeenCalledTimes(1));
@@ -110,25 +103,22 @@ describe('SidebarContextMenu', () => {
     const nestedCommand = vi.fn();
     const disabledCommand = vi.fn();
     render(
-      createElement(
-        SidebarContextMenu,
-        {
-          items: [
-            {
-              children: [{ key: 'nested', label: 'Nested command', onClick: nestedCommand }],
-              key: 'parent',
-              label: 'Parent command',
-            },
-            {
-              disabled: true,
-              key: 'disabled',
-              label: 'Disabled command',
-              onClick: disabledCommand,
-            },
-          ],
-        },
-        createElement('button', null, 'Web commands'),
-      ),
+      createElement(SidebarContextMenu, {
+        children: createElement('button', null, 'Web commands'),
+        items: [
+          {
+            children: [{ key: 'nested', label: 'Nested command', onClick: nestedCommand }],
+            key: 'parent',
+            label: 'Parent command',
+          },
+          {
+            disabled: true,
+            key: 'disabled',
+            label: 'Disabled command',
+            onClick: disabledCommand,
+          },
+        ],
+      }),
     );
     fireEvent.contextMenu(screen.getByRole('button', { name: 'Web commands' }));
     const disabled = await screen.findByRole('menuitem', { name: 'Disabled command' });
@@ -148,18 +138,15 @@ describe('SidebarContextMenu', () => {
       createElement(
         MemoryRouter,
         null,
-        createElement(
-          SidebarContextMenu,
-          {
-            items: [
-              {
-                key: 'settings',
-                label: createElement(WorkspaceLink, { to: '/settings' }, 'Settings'),
-              },
-            ],
-          },
-          createElement('button', null, 'Link commands'),
-        ),
+        createElement(SidebarContextMenu, {
+          children: createElement('button', null, 'Link commands'),
+          items: [
+            {
+              key: 'settings',
+              label: createElement(WorkspaceLink, { to: '/settings' }, 'Settings'),
+            },
+          ],
+        }),
       ),
     );
     fireEvent.contextMenu(screen.getByRole('button', { name: 'Link commands' }));

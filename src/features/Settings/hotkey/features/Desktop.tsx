@@ -1,13 +1,14 @@
 'use client';
 
 import { type FormGroupItemType } from '@lobehub/ui';
-import { Form, HotkeyInput, Icon } from '@lobehub/ui';
-import { Skeleton, toast } from '@lobehub/ui/base-ui';
+import { Form, HotkeyInput } from '@lobehub/ui';
+import { toast } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { Loader2Icon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import { DESKTOP_HOTKEYS_REGISTRATION } from '@/const/desktopGlobalShortcuts';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -33,7 +34,14 @@ const HotkeySetting = memo(() => {
 
   const [loading, setLoading] = useState(false);
 
-  if (!isHotkeysInit) return <Skeleton.Text rows={5} />;
+  if (!isHotkeysInit)
+    return (
+      <div aria-busy="true" className="flex flex-col gap-3">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton className="h-4 w-full" key={index} />
+        ))}
+      </div>
+    );
 
   const updateHotkey = async (id: DesktopHotkeyItem['id'], value: string) => {
     setLoading(true);
@@ -71,7 +79,9 @@ const HotkeySetting = memo(() => {
 
   const desktop: FormGroupItemType = {
     children: DESKTOP_HOTKEYS_REGISTRATION.map((item) => mapHotkeyItem(item)),
-    extra: loading && <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />,
+    extra:
+      loading &&
+      createElement(Loader2Icon, { size: 16, style: { opacity: 0.5 }, className: 'animate-spin' }),
     title: (
       <SettingsSearchAnchor id={'hotkey-desktop'}>{t('hotkey.group.desktop')}</SettingsSearchAnchor>
     ),

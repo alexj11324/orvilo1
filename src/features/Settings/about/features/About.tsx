@@ -1,7 +1,7 @@
 'use client';
 
 import { SiDiscord, SiGithub, SiRss, SiX, SiYoutube } from '@icons-pack/react-simple-icons';
-import { Flexbox, Form } from '@lobehub/ui';
+import { Form } from '@lobehub/ui';
 import { BRANDING_EMAIL, BRANDING_NAME, SOCIAL_URL } from '@orvilo/business-const';
 import { Divider } from 'antd';
 import { createStaticStyles } from 'antd-style';
@@ -34,7 +34,10 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
       title={`${t('about')} ${BRANDING_NAME}`}
       variant={'filled'}
     >
-      <Flexbox gap={20} paddingBlock={20} width={'100%'}>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'column', gap: 20, width: '100%', paddingBlock: 20 }}
+      >
         <Version mobile={mobile} />
         <Divider style={{ marginBlock: 0 }} />
         <AboutList
@@ -130,7 +133,7 @@ const About = memo<{ mobile?: boolean }>(({ mobile }) => {
             },
           ]}
         />
-      </Flexbox>
+      </div>
     </Form.Group>
   );
 });

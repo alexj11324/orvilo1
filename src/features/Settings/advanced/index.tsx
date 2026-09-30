@@ -1,16 +1,24 @@
 'use client';
 
 import { type FormGroupItemType, type FormItemProps } from '@lobehub/ui';
-import { Form, Icon } from '@lobehub/ui';
-import { Select, Skeleton, Switch } from '@lobehub/ui/base-ui';
+import { Form } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Loader2Icon } from 'lucide-react';
-import { memo, useCallback, useEffect, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -83,7 +91,13 @@ const Page = memo(() => {
           onRetry={() => refreshUserState()}
         />
       );
-    return <Skeleton.Text rows={5} />;
+    return (
+      <div aria-busy="true" className="flex flex-col gap-3">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton className="h-4 w-full" key={index} />
+        ))}
+      </div>
+    );
   }
 
   const advancedGroup: FormGroupItemType = {
@@ -98,6 +112,7 @@ const Page = memo(() => {
         ),
         minWidth: undefined,
         name: 'isDevMode',
+        trigger: 'onCheckedChange',
         valuePropName: 'checked',
       },
       ...(enableGatewayMode
@@ -106,7 +121,7 @@ const Page = memo(() => {
               children: (
                 <Switch
                   checked={defaultAgentGatewayModeEnabled}
-                  onChange={handleGatewayModeChange}
+                  onCheckedChange={handleGatewayModeChange}
                 />
               ),
               className: styles.labItem,
@@ -121,7 +136,9 @@ const Page = memo(() => {
           ]
         : []),
     ],
-    extra: loading && <Icon spin icon={Loader2Icon} size={16} style={{ opacity: 0.5 }} />,
+    extra:
+      loading &&
+      createElement(Loader2Icon, { size: 16, style: { opacity: 0.5 }, className: 'animate-spin' }),
     title: t('tab.advanced.toolsAndDiagnostics.title'),
   };
 
@@ -134,7 +151,24 @@ const Page = memo(() => {
     children: [
       {
         children: (
-          <Select options={channelOptions} value={channel} onChange={handleChannelChange} />
+          <Select
+            items={channelOptions}
+            value={channel}
+            onValueChange={(value) => {
+              if (value !== null) handleChannelChange(value);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {channelOptions.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ),
         desc: t('tab.advanced.updateChannel.desc'),
         label: (

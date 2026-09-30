@@ -1,7 +1,6 @@
 'use client';
 
-import { Empty, Flexbox, Icon, SearchBar, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, confirmModal, DropdownMenu, Text, toast } from '@lobehub/ui/base-ui';
+import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { type AgentLabelListItem } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import dayjs from 'dayjs';
@@ -15,11 +14,16 @@ import {
   PencilIcon,
   PlusIcon,
   Trash2Icon,
+  XIcon,
 } from 'lucide-react';
-import { memo, useMemo, useState } from 'react';
+import { createElement, memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
 import { usePermission } from '@/hooks/usePermission';
@@ -112,14 +116,22 @@ const LabelRow = memo<LabelRowProps>(
         ? []
         : [
             {
-              icon: <Icon icon={PencilIcon} />,
+              icon: (
+                <span style={{ display: 'inline-flex' }}>
+                  {createElement(PencilIcon, { size: 16 })}
+                </span>
+              ),
               key: 'edit',
               label: t('edit', { ns: 'common' }),
               onClick: () => onEdit(label),
             },
           ]),
       {
-        icon: <Icon icon={label.archived ? ArchiveRestoreIcon : ArchiveIcon} />,
+        icon: (
+          <span style={{ display: 'inline-flex' }}>
+            {createElement(label.archived ? ArchiveRestoreIcon : ArchiveIcon, { size: 16 })}
+          </span>
+        ),
         key: 'archive',
         label: label.archived
           ? t('workspaceSetting.labels.actions.unarchive')
@@ -129,7 +141,9 @@ const LabelRow = memo<LabelRowProps>(
       { type: 'divider' as const },
       {
         danger: true,
-        icon: <Icon icon={Trash2Icon} />,
+        icon: (
+          <span style={{ display: 'inline-flex' }}>{createElement(Trash2Icon, { size: 16 })}</span>
+        ),
         key: 'delete',
         label: t('delete', { ns: 'common' }),
         onClick: () => onDelete(label),
@@ -137,57 +151,91 @@ const LabelRow = memo<LabelRowProps>(
     ];
 
     const actions = canManage ? (
-      <DropdownMenu items={menuItems}>
-        <ActionIcon icon={EllipsisIcon} size={'small'} />
-      </DropdownMenu>
+      <SidebarDropdownMenu items={menuItems}>
+        <Button aria-label={t('more', { ns: 'common' })} size="icon-sm" variant="ghost">
+          <EllipsisIcon aria-hidden size={16} />
+        </Button>
+      </SidebarDropdownMenu>
     ) : (
-      <Tooltip title={manageBlockedReason ?? t('workspaceSetting.labels.manageBlocked')}>
-        <ActionIcon disabled icon={EllipsisIcon} size={'small'} />
+      <Tooltip>
+        <TooltipTrigger render={<span className="inline-flex" />}>
+          <Button disabled aria-label={t('more', { ns: 'common' })} size="icon-sm" variant="ghost">
+            <EllipsisIcon aria-hidden size={16} />
+          </Button>
+        </TooltipTrigger>
+        <TooltipContent>
+          {manageBlockedReason ?? t('workspaceSetting.labels.manageBlocked')}
+        </TooltipContent>
       </Tooltip>
     );
 
     return (
-      <Flexbox horizontal align={'center'} className={styles.row} gap={12}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          flex={'none'}
-          gap={12}
-          style={{ width: NAME_COL_WIDTH }}
+      <div
+        className={styles.row}
+        style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 12 }}
+      >
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            alignItems: 'center',
+            gap: 12,
+            flex: 'none',
+            width: NAME_COL_WIDTH,
+          }}
         >
           <span
             className={styles.dot}
             style={label.color ? { background: label.color } : undefined}
           />
-          <Text ellipsis weight={500}>
+          <span className="block min-w-0 truncate" style={{ fontWeight: 500 }}>
             {label.name}
-          </Text>
-        </Flexbox>
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
+          </span>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
           {label.description ? (
-            <Text ellipsis fontSize={12} type={'secondary'}>
+            <span
+              className="block min-w-0 truncate"
+              style={{ fontSize: 12, color: 'var(--muted-foreground)' }}
+            >
               {label.description}
-            </Text>
+            </span>
           ) : null}
-        </Flexbox>
-        <Text
-          fontSize={12}
-          style={{ flex: 'none', textAlign: 'end', width: USAGE_COL_WIDTH }}
-          type={'secondary'}
+        </div>
+        <span
+          style={{
+            fontSize: 12,
+            color: 'var(--muted-foreground)',
+            flex: 'none',
+            textAlign: 'end',
+            width: USAGE_COL_WIDTH,
+          }}
         >
           {t('workspaceSetting.labels.usage', { count: label.usageCount })}
-        </Text>
-        <Text
-          fontSize={12}
-          style={{ flex: 'none', textAlign: 'end', width: CREATED_COL_WIDTH }}
-          type={'secondary'}
+        </span>
+        <span
+          style={{
+            fontSize: 12,
+            color: 'var(--muted-foreground)',
+            flex: 'none',
+            textAlign: 'end',
+            width: CREATED_COL_WIDTH,
+          }}
         >
           {dayjs(label.createdAt).format('YYYY-MM-DD')}
-        </Text>
-        <Flexbox align={'center'} flex={'none'} style={{ width: ACTION_COL_WIDTH }}>
+        </span>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            flex: 'none',
+            width: ACTION_COL_WIDTH,
+          }}
+        >
           {actions}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -199,29 +247,56 @@ const LabelTableHeader = memo(() => {
   const { t } = useTranslation('setting');
 
   return (
-    <Flexbox horizontal align={'center'} gap={12} paddingInline={12} style={{ paddingBlock: 4 }}>
-      <Text fontSize={12} style={{ flex: 'none', width: NAME_COL_WIDTH }} type={'secondary'}>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+        paddingInline: 12,
+        paddingBlock: 4,
+      }}
+    >
+      <span
+        style={{
+          fontSize: 12,
+          color: 'var(--muted-foreground)',
+          flex: 'none',
+          width: NAME_COL_WIDTH,
+        }}
+      >
         {t('workspaceSetting.labels.columns.name')}
-      </Text>
-      <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} type={'secondary'}>
+      </span>
+      <span
+        className="block min-w-0 truncate"
+        style={{ fontSize: 12, color: 'var(--muted-foreground)', flex: 1, minWidth: 0 }}
+      >
         {t('workspaceSetting.labels.columns.description')}
-      </Text>
-      <Text
-        fontSize={12}
-        style={{ flex: 'none', textAlign: 'end', width: USAGE_COL_WIDTH }}
-        type={'secondary'}
+      </span>
+      <span
+        style={{
+          fontSize: 12,
+          color: 'var(--muted-foreground)',
+          flex: 'none',
+          textAlign: 'end',
+          width: USAGE_COL_WIDTH,
+        }}
       >
         {t('workspaceSetting.labels.columns.usage')}
-      </Text>
-      <Text
-        fontSize={12}
-        style={{ flex: 'none', textAlign: 'end', width: CREATED_COL_WIDTH }}
-        type={'secondary'}
+      </span>
+      <span
+        style={{
+          fontSize: 12,
+          color: 'var(--muted-foreground)',
+          flex: 'none',
+          textAlign: 'end',
+          width: CREATED_COL_WIDTH,
+        }}
       >
         {t('workspaceSetting.labels.columns.created')}
-      </Text>
+      </span>
       <span style={{ flex: 'none', width: ACTION_COL_WIDTH }} />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -276,12 +351,8 @@ const WorkspaceLabelsContent = memo(() => {
   );
 
   const newLabelButton = (
-    <Button
-      disabled={!canManage}
-      icon={PlusIcon}
-      type={'primary'}
-      onClick={() => openLabelFormModal()}
-    >
+    <Button disabled={!canManage} variant="default" onClick={() => openLabelFormModal()}>
+      <PlusIcon aria-hidden size={16} />
       {t('workspaceSetting.labels.actions.create')}
     </Button>
   );
@@ -297,63 +368,110 @@ const WorkspaceLabelsContent = memo(() => {
     value === 'archived' ? t('workspaceSetting.labels.scope.archived') : activeScopeLabel;
 
   const scopeMenuItems = (['workspace', 'archived'] as const).map((value) => ({
-    icon: value === scope ? <Icon icon={CheckIcon} /> : undefined,
+    icon:
+      value === scope ? (
+        <span style={{ display: 'inline-flex' }}>{createElement(CheckIcon, { size: 16 })}</span>
+      ) : undefined,
     key: value,
     label: scopeLabel(value),
     onClick: () => setScope(value),
   }));
 
   return (
-    <Flexbox gap={16}>
-      <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <SearchBar
-            allowClear
-            placeholder={t('workspaceSetting.labels.filterPlaceholder')}
-            style={{ maxWidth: 240 }}
-            value={keyword}
-            onChange={(e) => setKeyword(e.target.value)}
-          />
-          <DropdownMenu items={scopeMenuItems}>
-            <Button icon={ListFilterIcon}>{scopeLabel(scope)}</Button>
-          </DropdownMenu>
-        </Flexbox>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          gap: 12,
+        }}
+      >
+        <div style={{ display: 'flex', flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+          <div className="relative w-full max-w-60">
+            <Input
+              aria-label={t('workspaceSetting.labels.filterPlaceholder')}
+              className="pr-8"
+              placeholder={t('workspaceSetting.labels.filterPlaceholder')}
+              value={keyword}
+              onChange={(event) => setKeyword(event.target.value)}
+            />
+            {keyword && (
+              <Button
+                aria-label={t('reset', { ns: 'common' })}
+                className="absolute right-0 top-0"
+                size="icon"
+                variant="ghost"
+                onClick={() => setKeyword('')}
+              >
+                <XIcon aria-hidden size={14} />
+              </Button>
+            )}
+          </div>
+          <SidebarDropdownMenu items={scopeMenuItems}>
+            <Button variant="outline">
+              <ListFilterIcon aria-hidden size={16} />
+              {scopeLabel(scope)}
+            </Button>
+          </SidebarDropdownMenu>
+        </div>
         {canManage ? (
           newLabelButton
         ) : (
-          <Tooltip title={manageBlockedReason ?? t('workspaceSetting.labels.manageBlocked')}>
-            {newLabelButton}
+          <Tooltip>
+            <TooltipTrigger render={<span className="inline-flex" />}>
+              {newLabelButton}
+            </TooltipTrigger>
+            <TooltipContent>
+              {manageBlockedReason ?? t('workspaceSetting.labels.manageBlocked')}
+            </TooltipContent>
           </Tooltip>
         )}
-      </Flexbox>
+      </div>
       {!isInit && isLoading ? (
         <SkeletonList rows={4} />
       ) : error && !isInit ? (
         // A failed load must not read as "you have no labels" — the two look
         // identical here and lead the user to create duplicates of labels that
         // already exist.
-        <Flexbox align={'center'} gap={12} paddingBlock={40}>
-          <Empty description={t('workspaceSetting.labels.loadFailed')} />
-          <Button onClick={() => mutate()}>{t('retry', { ns: 'common' })}</Button>
-        </Flexbox>
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            gap: 12,
+            paddingBlock: 40,
+          }}
+        >
+          <div
+            className="flex flex-col items-center justify-center py-10 text-muted-foreground"
+            role="status"
+          >
+            {t('workspaceSetting.labels.loadFailed')}
+          </div>
+          <Button variant="outline" onClick={() => mutate()}>
+            {t('retry', { ns: 'common' })}
+          </Button>
+        </div>
       ) : visibleLabels.length === 0 ? (
-        <Empty
-          style={{ paddingBlock: 40 }}
-          description={
-            keyword.trim()
-              ? t('workspaceSetting.labels.filterEmpty')
-              : scope === 'archived'
-                ? t('workspaceSetting.labels.archivedEmpty')
-                : t('workspaceSetting.labels.empty')
-          }
-        />
+        <div
+          className="flex flex-col items-center justify-center py-10 text-muted-foreground"
+          role="status"
+        >
+          {keyword.trim()
+            ? t('workspaceSetting.labels.filterEmpty')
+            : scope === 'archived'
+              ? t('workspaceSetting.labels.archivedEmpty')
+              : t('workspaceSetting.labels.empty')}
+        </div>
       ) : (
-        <Flexbox gap={2}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <LabelTableHeader />
           {visibleLabels.map(renderRow)}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

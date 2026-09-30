@@ -1,18 +1,12 @@
 'use client';
-
-import { Flexbox, Input } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  ModalFooter,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
+import { createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { t as translate } from 'i18next';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import type { ProjectListItem } from '@/store/project';
 import { useProjectStore } from '@/store/project';
 
@@ -45,26 +39,31 @@ const RenameProjectContent = ({ project }: RenameProjectContentProps) => {
 
   return (
     <>
-      <Flexbox gap={6} padding={16}>
-        <Text fontSize={13} weight={500}>
+      <div className="flex flex-col" style={{ gap: 6, padding: 16 }}>
+        <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
           {t('rename.nameLabel')}
-        </Text>
+        </span>
         <Input
           autoFocus
           maxLength={255}
           value={name}
           onChange={(event) => setName(event.target.value)}
-          onPressEnter={handleRename}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.nativeEvent.isComposing) void handleRename();
+          }}
         />
-      </Flexbox>
+      </div>
       <ModalFooter>
-        <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
+        <Button variant="outline" onClick={close}>
+          {t('cancel', { ns: 'common' })}
+        </Button>
         <Button
-          disabled={!normalizedName || normalizedName === project.name}
-          loading={loading}
-          type={'primary'}
+          aria-busy={loading}
+          disabled={!normalizedName || normalizedName === project.name || loading}
+          variant="default"
           onClick={handleRename}
         >
+          {loading && <Spinner />}
           {t('rename.action')}
         </Button>
       </ModalFooter>

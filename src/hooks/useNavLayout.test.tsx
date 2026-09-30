@@ -16,6 +16,7 @@ vi.mock('@/store/serverConfig', () => ({
  * not render from any code path — routes stay reachable, the sidebar does not.
  */
 const RETIRED_SIDEBAR_KEYS = [
+  'drafts',
   'community',
   'image',
   'memory',
@@ -46,7 +47,7 @@ describe('useNavLayout', () => {
     const { result } = renderHook(() => useNavLayout());
     const keys = result.current.topNavItems.map((item) => item.key);
 
-    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'drafts']);
+    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent']);
     expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
     expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe(
       '/my-issues',

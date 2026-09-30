@@ -1,40 +1,27 @@
 'use client';
-
-import { CopyButton, Flexbox, Icon, Input } from '@lobehub/ui';
-import { Button, Select, Text, useModalContext } from '@lobehub/ui/base-ui';
+import { CopyButton } from '@lobehub/ui';
+import { useModalContext } from '@lobehub/ui/base-ui';
 import { Form } from 'antd';
-import { createStaticStyles } from 'antd-style';
 import { type Dayjs } from 'dayjs';
 import dayjs from 'dayjs';
-import { CheckCircle2 } from 'lucide-react';
+import { CheckCircle2, Loader2 } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { API_KEY_FULL_ACCESS_SCOPE, type ApiKeyScope } from '@/const/apiKeyScope';
 import { type CreateApiKeyParams } from '@/types/apiKey';
 
 import ApiKeyDatePicker from '../ApiKeyDatePicker';
 import ScopeSelector from './ScopeSelector';
-
-const styles = createStaticStyles(({ css, cssVar }) => ({
-  keyBlock: css`
-    padding-block: 10px;
-    padding-inline: 12px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadius};
-
-    background: ${cssVar.colorFillQuaternary};
-  `,
-  keyText: css`
-    flex: 1;
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    word-break: break-all;
-  `,
-  successIcon: css`
-    color: ${cssVar.colorSuccess};
-  `,
-}));
 
 type FormValues = Omit<CreateApiKeyParams, 'expiresAt' | 'scopes'>;
 
@@ -103,22 +90,24 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
 
   if (createdKey) {
     return (
-      <Flexbox gap={16}>
-        <Flexbox horizontal align={'center'} gap={8}>
-          <Icon className={styles.successIcon} icon={CheckCircle2} size={18} />
-          <Text style={{ fontWeight: 500 }}>{t('apikey.created.title')}</Text>
-        </Flexbox>
-        <Flexbox horizontal align={'center'} className={styles.keyBlock} gap={8}>
-          <span className={styles.keyText}>{createdKey}</span>
+      <div className="flex flex-col gap-4">
+        <div className="flex items-center gap-2">
+          <CheckCircle2 className={`shrink-0 ${'text-emerald-600'}`} size={18} />
+          <span className="text-sm" style={{ fontWeight: 500 }}>
+            {t('apikey.created.title')}
+          </span>
+        </div>
+        <div className="flex items-center gap-2 rounded-lg border border-border bg-muted/50 px-3 py-2.5">
+          <span className="flex-1 break-all font-mono text-xs">{createdKey}</span>
           <CopyButton content={createdKey} size={'small'} title={t('apikey.display.copy')} />
-        </Flexbox>
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        </div>
+        <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
           {t('apikey.created.hint')}
-        </Text>
-        <Button block type={'primary'} onClick={() => close()}>
+        </span>
+        <Button className="w-full" type="button" variant="default" onClick={() => close()}>
           {t('apikey.created.done')}
         </Button>
-      </Flexbox>
+      </div>
     );
   }
 
@@ -126,7 +115,7 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
 
   return (
     <Form colon={false} form={form} layout={'vertical'} onFinish={handleFinish}>
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         <Form.Item
           label={t('apikey.form.fields.name.label')}
           name={'name'}
@@ -137,15 +126,28 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
         </Form.Item>
 
         <Form.Item label={t('apikey.form.fields.expiresAt.label')} style={itemStyle}>
-          <Flexbox gap={8}>
+          <div className="flex flex-col gap-4">
             <Select
               value={expiryPreset}
-              options={EXPIRY_PRESETS.map((preset) => ({
+              items={EXPIRY_PRESETS.map((preset) => ({
                 label: t(PRESET_LABEL_KEYS[preset]),
                 value: preset,
               }))}
-              onChange={(value) => setExpiryPreset(value as ExpiryPreset)}
-            />
+              onValueChange={(value) => {
+                if (value) setExpiryPreset(value);
+              }}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                {EXPIRY_PRESETS.map((preset) => (
+                  <SelectItem key={preset} value={preset}>
+                    {t(PRESET_LABEL_KEYS[preset])}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {expiryPreset === 'custom' && (
               <ApiKeyDatePicker
                 showNeverExpiresFooter={false}
@@ -154,7 +156,7 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
                 onChange={setCustomDate}
               />
             )}
-          </Flexbox>
+          </div>
         </Form.Item>
 
         <Form.Item
@@ -172,15 +174,15 @@ const ApiKeyModalContent: FC<ApiKeyModalContentProps> = ({ onSubmit }) => {
         </Form.Item>
 
         <Button
-          block
-          disabled={scopeMissing || customDateMissing}
-          htmlType={'submit'}
-          loading={loading}
-          type={'primary'}
+          className="w-full"
+          disabled={loading || scopeMissing || customDateMissing}
+          type={'submit'}
+          variant="default"
         >
+          {loading && <Loader2 className="animate-spin" />}
           {t('apikey.form.submit')}
         </Button>
-      </Flexbox>
+      </div>
     </Form>
   );
 };

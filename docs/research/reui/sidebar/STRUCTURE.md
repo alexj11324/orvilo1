@@ -11,3 +11,5 @@ The user explicitly requests native transparency: macOS Electron sidebar surface
 No old footer icon strip, always-on demo credit/board-progress widget, or Shell 21 conversation tabs. The footer retains the source9 component and actual account/workspace/theme commands. Actual business upgrade content remains conditional on its existing feature gate.
 
 Evidence must cover populated original sidebar contents, main-page and navigation clicks, menus, expanded/collapsed geometry, theme and native transparent material. Local Web startup is blocked by the machine's Electron-only development rule; Web build and Typecheck remain remote CI gates.
+
+Explicit user changes (2026-09-29): remove the midpoint collapse rail and use the existing upper-left native titlebar toggle; use an upper header trigger on Web/non-Mac. In collapsed mode, hide search/account metadata and keep functional icon/avatar triggers. Drafts is intentionally hidden and deferred even though it is present in Linear; its existing data and direct routes remain preserved.

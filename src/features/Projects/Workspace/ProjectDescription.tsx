@@ -1,14 +1,14 @@
 'use client';
-
 import { ReactLinkPlugin, ReactListPlugin } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
+import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import { useEffect, useId, useRef, useState } from 'react';
+import { createElement, useEffect, useId, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { Spinner } from '@/components/ui/spinner';
 import { SECTION_LABEL_PROPS } from '@/features/Projects/sectionLabel';
 import { projectService } from '@/services/project';
 
@@ -101,7 +101,7 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
   };
 
   return (
-    <Flexbox gap={4}>
+    <div className="flex flex-col" style={{ gap: 4 }}>
       <button
         aria-controls={bodyId}
         aria-expanded={open}
@@ -109,8 +109,17 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
         type="button"
         onClick={() => setOpen((value) => !value)}
       >
-        <Text {...SECTION_LABEL_PROPS}>{t('overview.descriptionLabel')}</Text>
-        <Icon icon={open ? ChevronDownIcon : ChevronRightIcon} size={14} />
+        {createElement(open ? ChevronDownIcon : ChevronRightIcon, { size: 14 })}
+        <span
+          className="text-sm"
+          style={{
+            color: SECTION_LABEL_PROPS.color,
+            fontSize: SECTION_LABEL_PROPS.fontSize,
+            fontWeight: SECTION_LABEL_PROPS.weight,
+          }}
+        >
+          {t('overview.descriptionLabel')}
+        </span>
       </button>
       <div hidden={!open} id={bodyId}>
         <Editor
@@ -132,14 +141,22 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
           }}
         />
         {dirty && (
-          <Flexbox gap={8}>
-            <Flexbox horizontal gap={8}>
-              <Button loading={saving} size={'small'} type={'primary'} onClick={() => void save()}>
+          <div className="flex flex-col" style={{ gap: 8 }}>
+            <div className="flex flex-row" style={{ gap: 8 }}>
+              <Button
+                aria-busy={saving}
+                disabled={saving}
+                size="sm"
+                variant="default"
+                onClick={() => void save()}
+              >
+                {saving && <Spinner />}
                 {t('overview.descriptionSave', { defaultValue: 'Save' })}
               </Button>
               <Button
                 disabled={saving}
-                size={'small'}
+                size="sm"
+                variant="outline"
                 onClick={() => {
                   if (pending.current) return;
                   baseline.current = undefined;
@@ -149,11 +166,11 @@ const ProjectDescription = ({ description, onSaved, projectId }: ProjectDescript
               >
                 {t('overview.descriptionCancel', { defaultValue: 'Cancel' })}
               </Button>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
       </div>
-    </Flexbox>
+    </div>
   );
 };
 

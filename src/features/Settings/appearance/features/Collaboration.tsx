@@ -2,12 +2,12 @@
 
 import { type FormGroupItemType } from '@lobehub/ui';
 import { Form } from '@lobehub/ui';
-import { Switch } from '@lobehub/ui/base-ui';
 import { memo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
 import { SettingsSectionSkeleton } from '@/components/Skeleton';
+import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { refreshCollaborationConnections } from '@/features/Collaboration/connection';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -44,7 +44,7 @@ const Collaboration = memo(() => {
           <Switch
             checked={showInCollaboration}
             disabled={saveStatus === 'saving'}
-            onChange={(checked) => {
+            onCheckedChange={(checked) => {
               if (saveInFlight.current) return;
               saveInFlight.current = true;
               void save(async () => {

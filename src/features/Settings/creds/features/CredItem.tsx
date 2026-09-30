@@ -1,7 +1,5 @@
 'use client';
-
-import { DropdownMenu, Flexbox, Icon, stopPropagation } from '@lobehub/ui';
-import { Avatar, Button, confirmModal, Tag } from '@lobehub/ui/base-ui';
+import { confirmModal } from '@lobehub/ui/base-ui';
 import { type OwnCredSummary } from '@orvilo/types';
 import {
   Eye,
@@ -16,9 +14,15 @@ import {
 import { type FC, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Avatar, AvatarImage } from '@/components/ui/avatar';
+import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { usePermission } from '@/hooks/usePermission';
-
-import { styles } from './style';
 
 interface CredItemProps {
   cred: OwnCredSummary;
@@ -47,13 +51,6 @@ const typeIcons: Record<string, React.ReactNode> = {
   'oauth': <Key size={20} />,
 };
 
-const typeColors: Record<string, string> = {
-  'file': 'purple',
-  'kv-env': 'blue',
-  'kv-header': 'cyan',
-  'oauth': 'green',
-};
-
 const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onView }) => {
   const { t } = useTranslation('setting');
   const { allowed: canManageCredentials } = usePermission('manage_provider_key');
@@ -76,7 +73,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
     ...(onView && canView
       ? [
           {
-            icon: <Icon icon={Eye} />,
+            icon: <Eye className="shrink-0" />,
             key: 'view',
             label: t('creds.actions.view'),
             onClick: () => onView(cred),
@@ -86,7 +83,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
     ...(onEdit
       ? [
           {
-            icon: <Icon icon={Pencil} />,
+            icon: <Pencil className="shrink-0" />,
             key: 'edit',
             label: t('creds.actions.edit'),
             disabled: !canManageCredentials,
@@ -99,7 +96,7 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
           {
             danger: true,
             disabled: !canManageCredentials,
-            icon: <Icon icon={Trash2} />,
+            icon: <Trash2 className="shrink-0" />,
             key: 'delete',
             label: t('creds.actions.delete'),
             onClick: handleDelete,
@@ -110,57 +107,86 @@ const CredItem: FC<CredItemProps> = memo(({ cred, extra, onEdit, onDelete, onVie
 
   const renderAvatar = () => {
     if (cred.type === 'oauth' && cred.oauthAvatar) {
-      return <Avatar avatar={cred.oauthAvatar} size={32} />;
+      return (
+        <Avatar>
+          <AvatarImage alt="" src={cred.oauthAvatar} />
+        </Avatar>
+      );
     }
     return (
       // `display: flex` collapses the inline span's line box so the svg sits
       // dead-center in the 48px container instead of on the text baseline.
-      <span style={{ color: 'var(--lobe-color-text-secondary)', display: 'flex' }}>
-        {typeIcons[cred.type]}
-      </span>
+      <span className="flex text-muted-foreground">{typeIcons[cred.type]}</span>
     );
   };
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      className={styles.container}
-      gap={16}
-      justify="space-between"
-    >
-      <Flexbox horizontal align="center" gap={16} style={{ flex: 1, overflow: 'hidden' }}>
-        <div className={styles.icon}>{renderAvatar()}</div>
-        <Flexbox gap={4} style={{ overflow: 'hidden' }}>
-          <Flexbox horizontal align="center" gap={8}>
-            <span className={styles.title}>{cred.name}</span>
-            <Tag color={typeColors[cred.type]}>{t(`creds.types.${cred.type}`)}</Tag>
+    <div className={`flex flex-row gap-[16px] items-center justify-between ${'py-3'}`}>
+      <div
+        className="flex flex-row gap-[16px] items-center"
+        style={{ flex: 1, overflow: 'hidden' }}
+      >
+        <div className="flex size-12 shrink-0 items-center justify-center rounded-xl bg-muted">
+          {renderAvatar()}
+        </div>
+        <div className="flex flex-col gap-[4px]" style={{ overflow: 'hidden' }}>
+          <div>
+            <span className="text-[15px] font-medium">{cred.name}</span>
+            <span className="inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs">
+              {t(`creds.types.${cred.type}`)}
+            </span>
             {/* Only populated by workspace-scoped list responses (workspaceCreds.list) —
                 distinguishes a member's shared personal credential from one the workspace owns directly. */}
             {!!cred.ownerDisplayName && (
-              <Tag>{t('creds.owner.sharedBy', { name: cred.ownerDisplayName })}</Tag>
+              <span className="inline-flex rounded-md border border-border bg-muted px-1.5 py-0.5 text-xs">
+                {t('creds.owner.sharedBy', { name: cred.ownerDisplayName })}
+              </span>
             )}
-          </Flexbox>
-          <Flexbox horizontal align="center" gap={8}>
-            <code className={styles.key}>{cred.key}</code>
+          </div>
+          <div>
+            <code className="font-mono text-xs text-muted-foreground">{cred.key}</code>
             {cred.description && (
               <>
-                <span style={{ color: 'var(--lobe-color-text-quaternary)' }}>·</span>
-                <span className={styles.description}>{cred.description}</span>
+                <span className="text-muted-foreground">·</span>
+                <span className="truncate text-xs text-muted-foreground">{cred.description}</span>
               </>
             )}
-          </Flexbox>
-        </Flexbox>
-      </Flexbox>
-      <Flexbox horizontal align="center" gap={8} onClick={stopPropagation}>
+          </div>
+        </div>
+      </div>
+      <div className="flex flex-row gap-[8px] items-center" onClick={(e) => e.stopPropagation()}>
         {extra}
         {menuItems.length > 0 && (
-          <DropdownMenu items={menuItems} placement="bottomRight">
-            <Button disabled={!canManageCredentials} icon={MoreHorizontalIcon} />
+          <DropdownMenu>
+            <DropdownMenuTrigger
+              render={
+                <Button
+                  aria-label={t('creds.actions.edit')}
+                  disabled={!canManageCredentials}
+                  size="icon-sm"
+                  variant="ghost"
+                />
+              }
+            >
+              <MoreHorizontalIcon />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {menuItems.map((item) => (
+                <DropdownMenuItem
+                  disabled={'disabled' in item && item.disabled}
+                  key={item.key}
+                  variant={'danger' in item && item.danger ? 'destructive' : 'default'}
+                  onClick={item.onClick}
+                >
+                  {item.icon}
+                  {item.label}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
           </DropdownMenu>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

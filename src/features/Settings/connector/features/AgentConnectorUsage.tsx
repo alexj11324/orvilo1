@@ -1,11 +1,11 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Button, Text } from '@lobehub/ui/base-ui';
+import { Avatar } from '@lobehub/ui/base-ui';
 import { ArrowUpRight } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useNavigateToAgent } from '@/hooks/useNavigateToAgent';
 
 /**
@@ -22,37 +22,38 @@ const AgentConnectorUsage = memo<{
   const navigateToAgent = useNavigateToAgent();
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      gap={12}
-      justify="space-between"
+    <div
+      className={'flex min-w-0'}
       style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        gap: 12,
         background: 'var(--ant-color-fill-quaternary)',
         borderRadius: 8,
         marginBottom: 16,
         padding: '10px 12px',
       }}
     >
-      <Flexbox horizontal align="center" gap={10} style={{ flex: 1, overflow: 'hidden' }}>
-        <Avatar avatar={agentAvatar || undefined} size={32} title={agentTitle || undefined} />
-        <Flexbox style={{ overflow: 'hidden' }}>
-          <Text style={{ fontSize: 12 }} type="secondary">
-            {t('agentConnectorUsage.label')}
-          </Text>
-          <Text ellipsis style={{ fontSize: 14, fontWeight: 500 }}>
-            {agentTitle || t('skillGroup.agentConnectors')}
-          </Text>
-        </Flexbox>
-      </Flexbox>
-      <Button
-        icon={<Icon icon={ArrowUpRight} size={14} />}
-        size="small"
-        onClick={() => navigateToAgent(agentId)}
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1, overflow: 'hidden' }}
       >
+        <Avatar avatar={agentAvatar || undefined} size={32} title={agentTitle || undefined} />
+        <div className={'flex min-w-0'} style={{ flexDirection: 'column', overflow: 'hidden' }}>
+          <span className={'text-muted-foreground'} style={{ fontSize: 12 }}>
+            {t('agentConnectorUsage.label')}
+          </span>
+          <span className={'truncate'} style={{ fontSize: 14, fontWeight: 500 }}>
+            {agentTitle || t('skillGroup.agentConnectors')}
+          </span>
+        </div>
+      </div>
+      <Button size="sm" variant="outline" onClick={() => navigateToAgent(agentId)}>
+        {createElement(ArrowUpRight, { size: 14 })}
         {t('agentConnectorUsage.goToAgent')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 

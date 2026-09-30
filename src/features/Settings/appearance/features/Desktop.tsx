@@ -2,11 +2,11 @@
 
 import { type FormGroupItemType } from '@lobehub/ui';
 import { Form } from '@lobehub/ui';
-import { Switch } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { useElectronStore } from '@/store/electron';
@@ -29,9 +29,10 @@ const Desktop = memo(() => {
       {
         children: (
           <Switch
+            aria-busy={loading}
             checked={appTrayVisible}
-            loading={loading}
-            onChange={async (checked: boolean) => {
+            disabled={loading}
+            onCheckedChange={async (checked: boolean) => {
               setLoading(true);
               try {
                 await setAppTrayVisible(checked);

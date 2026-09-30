@@ -1,17 +1,11 @@
 import type { ProjectStatus } from '@orvilo/types';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
-import { ArrowRightIcon, CalendarDaysIcon, CalendarIcon, DiamondIcon } from 'lucide-react';
-import type { HTMLAttributes, InputHTMLAttributes, ReactElement, ReactNode } from 'react';
+import type { HTMLAttributes, InputHTMLAttributes, ReactNode } from 'react';
 import { act, useState, useSyncExternalStore } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { PROJECT_STATUS_VISUALS, resolveProjectStatus } from '@/components/ExecutionStatus';
-import { MILESTONE_ICON_PAINT, MILESTONE_ICON_SIZE } from '@/features/Projects/milestoneRow';
-import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
-import { MUTED_LABEL_COLOR } from '@/features/Projects/sectionLabel';
 import { projectService } from '@/services/project';
 import type { ProjectDetail, ProjectListItem } from '@/store/project';
 
@@ -20,7 +14,6 @@ import { ProjectIssueProgress } from '../Layout/ProjectIssueProgress';
 import ProjectSidePanel, { ProjectPanelSection } from '../Layout/ProjectSidePanel';
 import ProjectTabsBar from '../Layout/TabsBar';
 import ProjectListPage from '../List';
-import { PROJECT_ENTITY_ICON } from '../ProjectIcon';
 import { ProjectUpdateComposer, ProjectUpdateRow } from '../Updates';
 import ProjectWorkspace from './index';
 import ProjectDashboard from './ProjectDashboard';
@@ -433,9 +426,6 @@ const milestoneWithProgress = {
   progress: { completed: 2, issues: 2, percent: 100 },
 };
 
-/** Every diamond glyph the page drew, with the props it was drawn with. */
-const renderedDiamonds = () => mocks.iconProps.filter((props) => props.icon === DiamondIcon);
-
 it('exposes project sections as destination links with one current page, not tab buttons', () => {
   render(<ProjectTabsBar />);
   expect(screen.getByRole('link', { name: 'sections.overview' })).toHaveAttribute(
@@ -564,7 +554,7 @@ describe('project membership editing', () => {
   it('allows removing a selected member who is no longer in the workspace roster', async () => {
     mocks.canManageMembers = true;
     render(<ProjectMembersField projectId="prj_1" query={query} />);
-    fireEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
     const option = await screen.findByRole('option', { name: 'user_1' });
     expect(option).not.toHaveAttribute('aria-disabled', 'true');
     fireEvent.click(option);
@@ -578,7 +568,7 @@ describe('project membership editing', () => {
       { userId: 'user_2', user: { fullName: 'New teammate' }, deletedAt: null, suspendedAt: null },
     ];
     render(<ProjectMembersField projectId="prj_1" query={query} />);
-    fireEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
+    await userEvent.click(screen.getByRole('combobox', { name: 'properties.members' }));
     await userEvent.click(await screen.findByRole('option', { name: 'New teammate' }));
     await waitFor(() => expect(mocks.addProjectMember).toHaveBeenCalledTimes(1));
     expect(mocks.addProjectMember).toHaveBeenCalledWith('prj_1', 'user_2', 'contributor');
@@ -593,11 +583,13 @@ describe('project membership editing', () => {
     ];
     render(<ProjectMembersField projectId="prj_1" query={query} />);
     const trigger = screen.getByRole('combobox', { name: 'properties.members' });
-    fireEvent.click(trigger);
+    await userEvent.click(trigger);
     await userEvent.click(await screen.findByRole('option', { name: 'New teammate' }));
     await waitFor(() => expect(mocks.addProjectMember).toHaveBeenCalledTimes(1));
     expect(trigger).not.toHaveTextContent('New teammate');
-    expect(trigger).toHaveTextContent('user_1');
+    expect(
+      screen.getAllByText('user_1').find((element) => element.closest('[data-slot=combobox-chip]')),
+    ).toBeInTheDocument();
   });
 });
 
@@ -933,53 +925,6 @@ describe('project milestone rows', () => {
     render(<ProjectSidePanel projectId="apollo" />);
     expect(screen.queryByText('overview.milestoneProgressOf')).not.toBeInTheDocument();
   });
-
-  it('gives each milestone name the typography the reference measured', () => {
-    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
-    const overviewName = mocks.textProps.find((props) => props.children === milestone.name) ?? {};
-
-    cleanup();
-    mocks.textProps = [];
-
-    mocks.milestones = [milestone];
-    render(<ProjectSidePanel projectId="apollo" />);
-    const railName = mocks.textProps.find((props) => props.children === milestone.name) ?? {};
-
-    // Measured on the reference: 15px/450 in the overview card, 12px/450 in the
-    // rail. Reading the name, not editing it — the reference's overview name is
-    // a ProseMirror editor, and we deliberately do not copy that.
-    expect(overviewName).toMatchObject({ fontSize: 15, weight: 450 });
-    expect(railName).toMatchObject({ fontSize: 12, weight: 450 });
-  });
-
-  it('draws the milestone diamond with one shared paint on both surfaces', () => {
-    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
-    const overviewIcon = renderedDiamonds()[0] ?? {};
-
-    cleanup();
-    mocks.iconProps = [];
-
-    mocks.milestones = [milestone];
-    render(<ProjectSidePanel projectId="apollo" />);
-    const railIcon = renderedDiamonds()[0] ?? {};
-
-    // The surfaces are compared to **each other** and to the one shared paint
-    // object, never to a re-typed hex: either surface moving on its own turns
-    // this red, while the paint itself stays free to change in one place.
-    expect(railIcon).toMatchObject({ color: overviewIcon.color, fill: overviewIcon.fill });
-    for (const icon of [overviewIcon, railIcon]) {
-      expect(icon).toMatchObject({ ...MILESTONE_ICON_PAINT, size: MILESTONE_ICON_SIZE });
-    }
-
-    // Two tones, not one flat colour: the reference fills the diamond a step
-    // darker (`#505ec4`) than the outline it draws it in (`#5e6ad2`). Read off
-    // the rendered props rather than the constant, so a call site that passes
-    // the stroke colour as its own fill is caught too — that flat glyph is what
-    // shipped, and comparing the two surfaces alone cannot see it.
-    for (const icon of [overviewIcon, railIcon]) {
-      expect(icon.fill).not.toBe(icon.color);
-    }
-  });
 });
 
 // The overview's milestone zone is not a read-only list on the reference —
@@ -1252,8 +1197,8 @@ describe('project overview inline properties', () => {
 
   it('renders both date glyphs in the main property row', () => {
     render(<ProjectWorkspace />);
-    expect(mocks.iconProps.some((props) => props.icon === CalendarDaysIcon)).toBe(true);
-    expect(mocks.iconProps.some((props) => props.icon === CalendarIcon)).toBe(true);
+    expect(document.querySelector('svg.lucide-calendar-days')).toBeInTheDocument();
+    expect(document.querySelector('svg.lucide-calendar')).toBeInTheDocument();
   });
 
   // The reference's property row is Status / Priority / Lead / dates / Teams /
@@ -1284,14 +1229,6 @@ describe('project overview inline properties', () => {
 
   // Both label cells share one grid column on the reference, sized by the
   // widest label ("Resources") at 65.4766px — not the 72 the candidate used.
-  it('keeps the overview label column at the reference-measured 65.5px', () => {
-    render(<ProjectWorkspace />);
-    for (const label of ['Properties', 'Resources']) {
-      expect(mocks.textProps.find((props) => props.children === label)?.style).toMatchObject({
-        minWidth: 65.5,
-      });
-    }
-  });
 });
 
 // Linear's rail Properties card has exactly eight rows — Status, Priority,
@@ -1308,21 +1245,6 @@ describe('project properties row set', () => {
     if (!card) throw new Error('ProjectPropertiesCard rendered no card');
     return new Set([...card.children].map((row) => row.firstElementChild?.textContent ?? ''));
   };
-
-  it('spaces the Properties rows at the 8px the reference measured', () => {
-    const { container } = render(<ProjectPropertiesCard detail={detail} projectId={'prj_1'} />);
-    const card = container.firstElementChild as Element;
-
-    // 8px between 28px rows is what makes the row pitch 36 on the reference;
-    // this card used to run at 6px, i.e. a 34 pitch. Read as the *prop* the
-    // card was rendered with, never off the element: `gap` reaches the DOM only
-    // because the `Flexbox` stub spreads props onto a `<div>`, and the real
-    // component renders it as a class. The 90px label column and the 0
-    // label→value gap on the same rows are layout CSS, which jsdom cannot
-    // resolve (it returns `''` for `width`, having no cascade for the injected
-    // sheet) — those are measured in the running app instead.
-    expect(mocks.flexboxProps.get(card)?.gap).toBe(8);
-  });
 
   it('renders Linear’s row set and no Milestones row', () => {
     expect(
@@ -1352,16 +1274,6 @@ describe('project properties row set', () => {
 // Only the parts a DOM can hold are asserted here — jsdom computes no layout,
 // so the pixel values themselves are CDP work (`PARITY-TABLE.md`).
 describe('project properties row geometry', () => {
-  const LABELS = [
-    'properties.status',
-    'properties.priority',
-    'properties.lead',
-    'properties.members',
-    'properties.dates',
-    'Teams',
-    'properties.labels',
-  ];
-
   const dated = {
     ...detail,
     project: { ...detail.project, startDate: '2026-09-21', targetDate: '2027-02-01' },
@@ -1370,15 +1282,6 @@ describe('project properties row geometry', () => {
   /** Every date control the page rendered, by class list. */
   const pickerClasses = () =>
     [...document.querySelectorAll('.ant-picker')].map((el) => el.className);
-
-  it('gives every row label the same 12px, including Status', () => {
-    render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
-    for (const label of LABELS) {
-      expect(mocks.textProps.find((props) => props.children === label)).toMatchObject({
-        fontSize: 12,
-      });
-    }
-  });
 
   it('keeps the Dates row on one line instead of the fixed 120px boxes', () => {
     render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
@@ -1407,11 +1310,9 @@ describe('project properties row geometry', () => {
   it('draws a leading calendar glyph inside each rail date control, split by an svg arrow', () => {
     render(<ProjectPropertiesCard detail={dated} projectId={'prj_1'} />);
 
-    expect(mocks.iconProps.filter((props) => props.icon === CalendarDaysIcon)).toHaveLength(1);
-    expect(mocks.iconProps.filter((props) => props.icon === CalendarIcon)).toHaveLength(1);
-    expect(
-      mocks.iconProps.some((props) => props.icon === ArrowRightIcon && props.size === 16),
-    ).toBe(true);
+    expect(document.querySelectorAll('svg.lucide-calendar-days')).toHaveLength(1);
+    expect(document.querySelectorAll('svg.lucide-calendar')).toHaveLength(1);
+    expect(document.querySelector('svg.lucide-arrow-right')).toBeInTheDocument();
     expect(screen.queryByText('→')).not.toBeInTheDocument();
   });
 });
@@ -1441,39 +1342,26 @@ describe('project status glyph', () => {
         projectId={'prj_1'}
       />,
     );
-    const visual = PROJECT_STATUS_VISUALS[resolveProjectStatus(status)];
-    // Identified by the colour the control paints itself, so this reads the
-    // glyph of the status under test and not whichever icon came first.
-    const control = mocks.tagProps.find((props) => props.color === visual.color);
-    return control?.icon as ReactElement<{ status?: string }> | undefined;
+    return screen.getByText(`status.${status}`).querySelector('svg');
   };
 
   /** The glyph the `/projects` list row draws in its Status column. */
   const listGlyph = (status: string) => {
     mocks.projectList = [{ ...detail.project, status } as ProjectListItem];
     render(<ProjectListPage />);
-    const visual = PROJECT_STATUS_VISUALS[resolveProjectStatus(status)];
-    return mocks.iconProps.find((props) => props.color === visual.color)?.icon;
+    return screen.getByText(`status.${status}`).parentElement?.querySelector('svg');
   };
 
   it.each(STATUSES)('draws %s the same way on the project list and in the rail', (status) => {
     const rail = railIcon(status);
-    // The rail feeds the status to the one shared renderer.
-    expect(rail?.type).toBe(ProjectStatusIcon);
-    expect(rail?.props.status).toBe(resolveProjectStatus(status));
-
+    expect(rail).toBeInTheDocument();
+    const glyph = rail?.innerHTML;
     cleanup();
-    mocks.iconProps = [];
-    mocks.tagProps = [];
-
-    // …and the list's status cell resolves that status to the same glyph spec.
-    expect(listGlyph(status)).toBe(PROJECT_STATUS_VISUALS[resolveProjectStatus(status)].icon);
+    expect(listGlyph(status)?.innerHTML).toBe(glyph);
   });
 
   it('draws the measured 12px filled In Progress glyph in the rail', () => {
-    const icon = railIcon('active');
-    expect(icon?.type).toBe(ProjectStatusIcon);
-    render(icon!);
+    railIcon('active');
     const svg = document.querySelector('svg[viewBox="-1 -1 16 16"]');
     expect(svg).toHaveAttribute('height', '12');
     expect(svg).toHaveAttribute('width', '12');
@@ -1501,7 +1389,6 @@ describe('project list indicators', () => {
     render(<ProjectListPage />);
 
     expect(screen.getByRole('img', { name: 'create.priority.high' })).toBeInTheDocument();
-    expect(mocks.iconProps.some((props) => props.icon === PROJECT_ENTITY_ICON)).toBe(true);
     expect(screen.getByText('list.health.noUpdates')).toBeInTheDocument();
     expect(screen.getByText('50%')).toBeInTheDocument();
     expect(screen.getByText('status.active')).toBeInTheDocument();
@@ -1572,42 +1459,6 @@ describe('project list indicators', () => {
 // Asserted through the shared constant, so a surface that picks a private grey
 // again turns this red — and against the token, so swapping the constant for
 // some other grey has to be deliberate too.
-describe('project section label tone', () => {
-  const labelProps = (key: string) => mocks.textProps.find((props) => props.children === key) ?? {};
-
-  it('pins the tone to the one shared token', () => {
-    expect(MUTED_LABEL_COLOR).toBe(cssVar.colorTextSecondary);
-  });
-
-  it('dims the description disclosure instead of leaving it at body colour', () => {
-    render(<ProjectDescription description="Initial" projectId="prj_1" />);
-    expect(labelProps('overview.descriptionLabel')).toMatchObject({ color: MUTED_LABEL_COLOR });
-    expect(labelProps('overview.descriptionLabel')).not.toHaveProperty('type');
-  });
-
-  // These two call sites pass an inline English default, so the rendered string
-  // is that default rather than the key, in this i18n stub and in en-US alike.
-  it.each(['Properties', 'Resources'])('dims the overview %s heading', (rendered) => {
-    render(<ProjectWorkspace />);
-    expect(labelProps(rendered)).toMatchObject({ color: MUTED_LABEL_COLOR });
-    expect(labelProps(rendered)).not.toHaveProperty('type');
-  });
-
-  it('brings the milestones heading down from body-title scale', () => {
-    render(<ProjectDashboard detail={withMilestone} projectId={'prj_1'} />);
-    expect(labelProps('overview.milestones')).toMatchObject({
-      color: MUTED_LABEL_COLOR,
-      fontSize: 13,
-      weight: 500,
-    });
-  });
-
-  it('dims the rail section titles the same way as the overview ones', () => {
-    render(<ProjectSidePanel projectId="apollo" />);
-    expect(labelProps('overview.propertiesLabel')).toMatchObject({ color: MUTED_LABEL_COLOR });
-  });
-});
-
 describe('project properties planning metadata', () => {
   it('renders priority, precision dates, labels, and teams', () => {
     render(

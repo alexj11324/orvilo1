@@ -1,9 +1,7 @@
 'use client';
-
-import { Center, Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { ProjectIcon } from './ProjectIcon';
@@ -13,15 +11,20 @@ const ProjectDisabled = () => {
   const navigate = useWorkspaceAwareNavigate();
 
   return (
-    <Center height={'100%'} width={'100%'}>
-      <Flexbox align={'center'} gap={12}>
+    <div
+      className="flex flex-col items-center justify-center"
+      style={{ height: '100%', width: '100%' }}
+    >
+      <div className="flex flex-col" style={{ alignItems: 'center', gap: 12 }}>
         <ProjectIcon size={40} />
-        <Text fontSize={18} weight={600}>
+        <span className="text-sm" style={{ fontSize: 18, fontWeight: 600 }}>
           {t('disabled.title')}
-        </Text>
-        <Button onClick={() => navigate('/settings/labs')}>{t('disabled.action')}</Button>
-      </Flexbox>
-    </Center>
+        </span>
+        <Button variant="outline" onClick={() => navigate('/settings/labs')}>
+          {t('disabled.action')}
+        </Button>
+      </div>
+    </div>
   );
 };
 

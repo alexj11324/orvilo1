@@ -1,11 +1,12 @@
 'use client';
-
-import { Icon } from '@lobehub/ui';
-import { ActionIcon, type DropdownItem, DropdownMenu, Text } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon } from 'lucide-react';
-import { memo, useMemo } from 'react';
+import { createElement, memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import SidebarDropdownMenu, {
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 
 import { INBOX_HEADER_MENU, type InboxHeaderMenuItemKey } from './inboxHeaderMenuModel';
@@ -26,7 +27,7 @@ const InboxHeaderMenu = memo(({ onDeleteAll, onMarkAllRead }: InboxHeaderMenuPro
   const { t } = useTranslation('notification');
   const navigate = useWorkspaceAwareNavigate();
 
-  const items = useMemo<DropdownItem[]>(() => {
+  const items = useMemo<Exclude<SidebarDropdownMenuProps['items'], () => unknown>>(() => {
     const handlers: Record<InboxHeaderMenuItemKey, () => void> = {
       deleteAll: onDeleteAll,
       // Linear lands on account notification settings; the workspace-mirrored
@@ -38,11 +39,9 @@ const InboxHeaderMenu = memo(({ onDeleteAll, onMarkAllRead }: InboxHeaderMenuPro
       if (entry.type === 'divider') return { key: entry.key, type: 'divider' as const };
       return {
         extra: entry.shortcut ? (
-          <Text fontSize={12} type={'secondary'}>
-            {entry.shortcut}
-          </Text>
+          <span className="text-sm text-muted-foreground">{entry.shortcut}</span>
         ) : undefined,
-        icon: <Icon icon={entry.icon} />,
+        icon: createElement(entry.icon, { className: 'size-4 shrink-0' }),
         key: entry.key,
         label: t(entry.labelKey as never),
         onClick: handlers[entry.key],
@@ -51,9 +50,16 @@ const InboxHeaderMenu = memo(({ onDeleteAll, onMarkAllRead }: InboxHeaderMenuPro
   }, [navigate, onDeleteAll, onMarkAllRead, t]);
 
   return (
-    <DropdownMenu items={items} placement={'bottomRight'}>
-      <ActionIcon icon={MoreHorizontalIcon} size={'small'} title={t('inbox.notificationActions')} />
-    </DropdownMenu>
+    <SidebarDropdownMenu items={items} placement={'bottomRight'}>
+      <Button
+        aria-label={t('inbox.notificationActions')}
+        size="icon"
+        title={t('inbox.notificationActions')}
+        variant="ghost"
+      >
+        {createElement(MoreHorizontalIcon, { className: 'size-4 shrink-0' })}
+      </Button>
+    </SidebarDropdownMenu>
   );
 });
 

@@ -1,10 +1,13 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, DropdownMenu, Skeleton, toast } from '@lobehub/ui/base-ui';
+import { toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { EllipsisIcon, Link2Icon, PlusIcon } from 'lucide-react';
+import { createElement } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import DropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useProjectStore } from '@/store/project';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -52,8 +55,8 @@ export function ProjectLinks({
   const canEdit = !!ownerId && userId === ownerId;
   const links = query.data?.data ?? [];
   return (
-    <Flexbox horizontal align="center" gap={4} wrap="wrap">
-      {query.isLoading && !query.data && <Skeleton height={28} width={120} />}
+    <div className="flex flex-row" style={{ alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+      {query.isLoading && !query.data && <Skeleton style={{ height: 28, width: 120 }} />}
       {query.error && (
         <AsyncError
           error={query.error}
@@ -63,7 +66,7 @@ export function ProjectLinks({
         />
       )}
       {links.map((link) => (
-        <Flexbox horizontal align="center" gap={0} key={link.id}>
+        <div className="flex flex-row" key={link.id} style={{ alignItems: 'center', gap: 0 }}>
           <a
             className={styles.link}
             href={link.url}
@@ -71,7 +74,7 @@ export function ProjectLinks({
             target="_blank"
             title={link.title || link.url}
           >
-            <Icon icon={Link2Icon} size={14} />
+            <Link2Icon size={14} />
             <span>{link.title || link.url}</span>
           </a>
           {canEdit && (
@@ -99,35 +102,35 @@ export function ProjectLinks({
             >
               <Button
                 aria-label={t('resources.link.actions', { title: link.title || link.url })}
-                icon={EllipsisIcon}
-                size="small"
-                type="text"
-              />
+                size="icon-sm"
+                variant="ghost"
+              >
+                {createElement(EllipsisIcon, { 'size': 16, 'aria-hidden': true })}
+              </Button>
             </DropdownMenu>
           )}
-        </Flexbox>
+        </div>
       ))}
       {canEdit && (
         <DropdownMenu
           items={[
             {
               key: 'link',
-              icon: <Icon icon={Link2Icon} size={16} />,
+              icon: <Link2Icon size={16} />,
               label: t('resources.link.menu'),
               onClick: () => openProjectLinkModal({ projectId }),
             },
           ]}
         >
-          <Button
-            aria-label={t('overview.resourcesAdd')}
-            icon={links.length ? PlusIcon : Link2Icon}
-            size="small"
-            type="text"
-          >
+          <Button aria-label={t('overview.resourcesAdd')} size="sm" variant="ghost">
+            {createElement(links.length ? PlusIcon : Link2Icon, {
+              'size': 16,
+              'aria-hidden': true,
+            })}
             {links.length ? null : t('overview.resourcesAdd')}
           </Button>
         </DropdownMenu>
       )}
-    </Flexbox>
+    </div>
   );
 }

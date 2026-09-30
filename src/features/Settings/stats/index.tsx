@@ -1,16 +1,17 @@
 'use client';
 
-import { FormGroup, Grid, Icon } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
+import { FormGroup, Grid } from '@lobehub/ui';
 import { ProviderIcon } from '@lobehub/ui/icons';
 import { type DatePickerProps } from 'antd';
 import { DatePicker, Divider } from 'antd';
 import dayjs from 'dayjs';
 import { Brain, UserIcon } from 'lucide-react';
+import { createElement } from 'react';
 import { memo, type ReactNode, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncBoundary from '@/components/AsyncBoundary';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { useClientDataSWR } from '@/libs/swr';
 import { statsKeys } from '@/libs/swr/keys';
@@ -110,31 +111,39 @@ const StatsSetting = memo<StatsSettingProps>(
             <>
               <DatePicker picker="month" value={dateRange} onChange={handleDateChange} />
               <Tabs
-                activeKey={groupBy}
                 style={{ marginLeft: 8 }}
-                items={[
-                  {
-                    icon: <Icon icon={Brain} />,
-                    key: GroupBy.Model,
-                    label: t('usage.welcome.model'),
-                  },
-                  {
-                    icon: <Icon icon={ProviderIcon} />,
-                    key: GroupBy.Provider,
-                    label: t('usage.welcome.provider'),
-                  },
-                  ...(enableUserDimension
-                    ? [
-                        {
-                          icon: <Icon icon={UserIcon} />,
-                          key: GroupBy.User,
-                          label: t('usage.welcome.user'),
-                        },
-                      ]
-                    : []),
-                ]}
-                onChange={(key) => setGroupBy(key as GroupBy)}
-              />
+                value={groupBy}
+                onValueChange={(key) => setGroupBy(key as GroupBy)}
+              >
+                <TabsList>
+                  {[
+                    {
+                      icon: createElement(Brain, {}),
+                      key: GroupBy.Model,
+                      label: t('usage.welcome.model'),
+                    },
+                    {
+                      icon: createElement(ProviderIcon, {}),
+                      key: GroupBy.Provider,
+                      label: t('usage.welcome.provider'),
+                    },
+                    ...(enableUserDimension
+                      ? [
+                          {
+                            icon: createElement(UserIcon, {}),
+                            key: GroupBy.User,
+                            label: t('usage.welcome.user'),
+                          },
+                        ]
+                      : []),
+                  ].map((item) => (
+                    <TabsTrigger key={item.key} value={item.key}>
+                      {item.icon}
+                      {item.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
             </>
           }
           styles={{

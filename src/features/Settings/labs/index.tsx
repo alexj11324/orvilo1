@@ -1,8 +1,8 @@
 'use client';
 
 import { type FormGroupItemType, type FormItemProps } from '@lobehub/ui';
-import { Flexbox, Form, Tooltip } from '@lobehub/ui';
-import { Alert, Skeleton, Switch, Tag } from '@lobehub/ui/base-ui';
+import { Form } from '@lobehub/ui';
+import { Alert } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles } from 'antd-style';
 import { FlaskConicalIcon } from 'lucide-react';
@@ -10,6 +10,10 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { Badge } from '@/components/reui/badge';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -30,10 +34,19 @@ const StageTag = memo<{ stage: LabStage }>(({ stage }) => {
   const { t } = useTranslation('labs');
 
   return (
-    <Tooltip title={t(`stage.${stage}.desc`)}>
-      <Tag color={stage === 'alpha' ? 'warning' : 'info'} size={'small'}>
-        {t(`stage.${stage}.label`)}
-      </Tag>
+    <Tooltip>
+      <TooltipTrigger
+        aria-description={t(`stage.${stage}.desc`)}
+        tabIndex={0}
+        render={
+          <span className="inline-flex min-w-0">
+            <Badge variant={stage === 'alpha' ? 'warning-light' : 'info-light'}>
+              {t(`stage.${stage}.label`)}
+            </Badge>
+          </span>
+        }
+      />
+      <TooltipContent side="top">{t(`stage.${stage}.desc`)}</TooltipContent>
     </Tooltip>
   );
 });
@@ -63,7 +76,13 @@ const LabsForm = memo(() => {
           onRetry={() => refreshUserState()}
         />
       );
-    return <Skeleton.Text rows={5} />;
+    return (
+      <div aria-busy="true" className="flex flex-col gap-3">
+        {Array.from({ length: 5 }, (_, index) => (
+          <Skeleton className="h-4 w-full" key={index} />
+        ))}
+      </div>
+    );
   }
 
   const checkedByFlag = Object.fromEntries(
@@ -73,19 +92,23 @@ const LabsForm = memo(() => {
   const toFormItem = ({ flag, i18nKey, stage }: LabFeatureItem): FormItemProps => ({
     children: (
       <Switch
+        aria-busy={!isPreferenceInit}
         checked={checkedByFlag[flag]}
-        loading={!isPreferenceInit}
-        onChange={(next: boolean) => updateLab({ [flag]: next })}
+        disabled={!isPreferenceInit}
+        onCheckedChange={(next: boolean) => updateLab({ [flag]: next })}
       />
     ),
     className: styles.labItem,
     desc: tLabs(`features.${i18nKey}.desc`),
     label: (
       <SettingsSearchAnchor id={`labs-${flag}`}>
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div
+          className={'flex min-w-0'}
+          style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}
+        >
           {tLabs(`features.${i18nKey}.title`)}
           <StageTag stage={stage} />
-        </Flexbox>
+        </div>
       </SettingsSearchAnchor>
     ),
     minWidth: undefined,
@@ -135,7 +158,7 @@ const Page = ({ showSettingHeader = true }: PageProps) => {
   return (
     <>
       {showSettingHeader && <SettingHeader title={tLabs('title')} />}
-      <Flexbox gap={16}>
+      <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 16 }}>
         <Alert
           showIcon
           icon={FlaskConicalIcon}
@@ -144,7 +167,7 @@ const Page = ({ showSettingHeader = true }: PageProps) => {
           variant={'filled'}
         />
         <LabsForm />
-      </Flexbox>
+      </div>
     </>
   );
 };

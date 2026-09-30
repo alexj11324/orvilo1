@@ -1,10 +1,9 @@
 'use client';
 
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { ProjectHealth } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
-import { Layers2Icon, PanelRightIcon, PlusIcon } from 'lucide-react';
+import { cn } from 'cn';
+import { Layers2Icon, LoaderCircleIcon, PanelRightIcon, PlusIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -12,10 +11,11 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import { mergeWorkQueryPage, workQueryHasMore } from '@/features/MyWork/workQueryPaging';
 import NavHeader from '@/features/NavHeader';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { openCreateProjectModal } from '@/features/Projects/CreateProjectModal';
 import { ProjectHealthIcon } from '@/features/Projects/healthMeta';
 import {
@@ -71,20 +71,6 @@ import { enrichTeamProjects, summarizeTeamProjects, teamProjectsWorkQuery } from
 const styles = createStaticStyles(({ css, cssVar }) => ({
   loadMore: css`
     padding-block: 12px;
-  `,
-  headerAction: css`
-    border: 0;
-    color: ${cssVar.colorTextSecondary};
-    background: transparent;
-    box-shadow: none;
-  `,
-  toolbarAction: css`
-    width: 28px;
-    height: 28px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 50%;
-
-    background: ${cssVar.colorBgContainer};
   `,
   separator: css`
     flex: none;
@@ -385,11 +371,11 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
 
   const sidebar = (
     <aside aria-label={t('list.sidebar.open', { ns: 'project' })} className={styles.sidebar}>
-      <Flexbox gap={16}>
+      <div className="flex flex-col gap-4">
         <div className={styles.sidebarSection}>
-          <Text fontSize={12} type="secondary" weight={500}>
+          <span className="text-sm text-muted-foreground font-medium">
             {t('list.sidebar.health', { ns: 'project' })}
-          </Text>
+          </span>
           {summary.health.map(({ count, state }) => (
             <button
               aria-pressed={activeHealth.has(state)}
@@ -399,17 +385,17 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               onClick={() => toggleHealth(state)}
             >
               <ProjectHealthIcon health={state} size={14} />
-              <Text fontSize={13}>
+              <span className="text-sm">
                 {t(`list.health.${state}`, { defaultValue: state, ns: 'project' })}
-              </Text>
+              </span>
               <span className={styles.sidebarRowCount}>{count}</span>
             </button>
           ))}
         </div>
         <div className={styles.sidebarSection}>
-          <Text fontSize={12} type="secondary" weight={500}>
+          <span className="text-sm text-muted-foreground font-medium">
             {t('list.sidebar.leads', { ns: 'project' })}
-          </Text>
+          </span>
           {summary.leads.map(({ count, userId }) => (
             <button
               aria-pressed={activeLeads.has(userId)}
@@ -428,17 +414,17 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
               ) : (
                 <NoLeadIcon />
               )}
-              <Text ellipsis fontSize={13}>
+              <span className="text-sm truncate">
                 {userId ? memberName(userId) : t('properties.noLead', { ns: 'project' })}
-              </Text>
+              </span>
               <span className={styles.sidebarRowCount}>{count}</span>
             </button>
           ))}
         </div>
         <div className={styles.sidebarSection}>
-          <Text fontSize={12} type="secondary" weight={500}>
+          <span className="text-sm text-muted-foreground font-medium">
             {t('list.sidebar.updateMissing', { ns: 'project' })}
-          </Text>
+          </span>
           <button
             aria-pressed={activeHealth.has(null)}
             className={cx(styles.sidebarRow, activeHealth.has(null) && styles.sidebarRowActive)}
@@ -446,11 +432,11 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
             onClick={() => toggleHealth(null)}
           >
             <ProjectHealthIcon health={null} size={14} />
-            <Text fontSize={13}>{t('list.health.noUpdates', { ns: 'project' })}</Text>
+            <span className="text-sm">{t('list.health.noUpdates', { ns: 'project' })}</span>
             <span className={styles.sidebarRowCount}>{summary.updateMissing}</span>
           </button>
         </div>
-      </Flexbox>
+      </div>
     </aside>
   );
 
@@ -458,7 +444,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
     <WorkSurface>
       <NavHeader
         left={
-          <Flexbox horizontal align={'center'} gap={8} style={{ paddingInlineStart: 4 }}>
+          <div className="flex flex-row items-center gap-2" style={{ paddingInlineStart: 4 }}>
             {team ? (
               <TeamIdentity
                 color={team.color}
@@ -466,21 +452,17 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                 letter={(team.key || team.name).slice(0, 1)}
               />
             ) : null}
-            {team ? <Text type="secondary">{team.name}</Text> : null}
+            {team ? <span className="text-sm text-muted-foreground">{team.name}</span> : null}
             <span aria-hidden className={styles.separator}>
               ›
             </span>
-            <Text weight={500}>{t('list.title', { ns: 'project' })}</Text>
+            <span className="text-sm font-medium">{t('list.title', { ns: 'project' })}</span>
             <WorkFavoriteButton icon="star" targetId={teamId} targetType="team" variant="icon" />
-          </Flexbox>
+          </div>
         }
         right={
-          <Button
-            className={styles.headerAction}
-            icon={PlusIcon}
-            size={'small'}
-            onClick={() => openCreateProjectModal({ teamId })}
-          >
+          <Button size="sm" variant="ghost" onClick={() => openCreateProjectModal({ teamId })}>
+            <PlusIcon aria-hidden className="size-4" />
             {t('create.title', { ns: 'project' })}
           </Button>
         }
@@ -488,7 +470,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
       {teamError ? (
         <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
       ) : (
-        <Flexbox horizontal flex={1} style={{ minHeight: 0 }}>
+        <div className="flex flex-row flex-1 min-h-0">
           <WorkSurfaceCollection
             toolbar={
               <WorkSurfaceToolbar
@@ -510,37 +492,41 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                       onChange={updateOptions}
                       onReset={resetOptions}
                     />
-                    <ActionIcon
-                      active={sidebarOpen}
-                      className={styles.toolbarAction}
-                      icon={PanelRightIcon}
-                      size="small"
+                    <Button
                       aria-label={
                         sidebarOpen
                           ? t('list.sidebar.close', { ns: 'project' })
                           : t('list.sidebar.open', { ns: 'project' })
                       }
+                      aria-pressed={sidebarOpen}
+                      className={cn('rounded-full', sidebarOpen && 'bg-muted')}
+                      size="icon-sm"
                       title={
                         sidebarOpen
                           ? t('list.sidebar.close', { ns: 'project' })
                           : t('list.sidebar.open', { ns: 'project' })
                       }
+                      variant="outline"
                       onClick={() => setSidebarOpen((open) => !open)}
-                    />
+                    >
+                      <PanelRightIcon aria-hidden className="size-4" />
+                    </Button>
                   </>
                 }
               >
                 <span className={cx(styles.viewChip, styles.viewChipActive)}>
                   {t('teams.viewAllProjects', { ns: 'common' })}
                 </span>
-                <ActionIcon
+                <Button
                   aria-label={t('savedViews.newView', { ns: 'common' })}
-                  className={styles.toolbarAction}
-                  icon={Layers2Icon}
-                  size="small"
+                  className="rounded-full"
+                  size="icon-sm"
                   title={t('savedViews.newView', { ns: 'common' })}
+                  variant="outline"
                   onClick={() => setViewBuilderOpen(true)}
-                />
+                >
+                  <Layers2Icon aria-hidden className="size-4" />
+                </Button>
                 <ProjectListFilterChips
                   filters={filters}
                   memberName={memberName}
@@ -554,29 +540,34 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
             {projectsError && projects.length === 0 ? (
               <AsyncError error={projectsError} onRetry={() => revalidateProjects()} />
             ) : projectsLoading && projects.length === 0 ? (
-              <SkeletonList aria-label={t('teams.loading', { ns: 'common' })} rows={8} />
+              <div
+                aria-busy
+                aria-label={t('teams.loading', { ns: 'common' })}
+                className="flex flex-col gap-2"
+              >
+                {Array.from({ length: 8 }, (_, index) => (
+                  <Skeleton className="h-10 w-full" key={index} />
+                ))}
+              </div>
             ) : visibleProjects.length === 0 ? (
-              <Center flex={1} padding={48}>
-                <Flexbox align={'center'} gap={16}>
-                  <Empty
-                    icon={PROJECT_ENTITY_ICON}
-                    description={
-                      filters.length > 0
+              <div className="flex flex-col items-center justify-center flex-1 p-12">
+                <div className="flex flex-col items-center gap-4">
+                  <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                    <PROJECT_ENTITY_ICON aria-hidden className="size-8" />
+                    <p>
+                      {filters.length > 0
                         ? t('list.filter.noResults', { ns: 'project' })
-                        : t('teams.projectsEmpty', { ns: 'common' })
-                    }
-                  />
+                        : t('teams.projectsEmpty', { ns: 'common' })}
+                    </p>
+                  </div>
                   {filters.length === 0 ? (
-                    <Button
-                      icon={PlusIcon}
-                      size="small"
-                      onClick={() => openCreateProjectModal({ teamId })}
-                    >
+                    <Button variant="outline" onClick={() => openCreateProjectModal({ teamId })}>
+                      <PlusIcon aria-hidden className="size-4" />
                       {t('create.title', { ns: 'project' })}
                     </Button>
                   ) : null}
-                </Flexbox>
-              </Center>
+                </div>
+              </div>
             ) : (
               <>
                 {projectsError ? (
@@ -602,7 +593,7 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                     options={options}
                   />
                 ) : (
-                  <Flexbox gap={0} style={{ minWidth: 'max-content' }}>
+                  <div className="flex flex-col gap-0" style={{ minWidth: 'max-content' }}>
                     <ProjectListTableHeader
                       columns={columns}
                       orderBy={options.orderBy}
@@ -610,13 +601,13 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                       onSort={handleHeaderSort}
                     />
                     {groups.map((group) => (
-                      <Flexbox gap={0} key={group.key}>
+                      <div className="flex flex-col gap-0" key={group.key}>
                         {group.key !== 'all' ? (
                           <div className={projectListStyles.groupHeader}>
                             {groupHeader(group.key)}
-                            <Text fontSize={12} type="secondary">
+                            <span className="text-sm text-muted-foreground">
                               {group.items.length}
-                            </Text>
+                            </span>
                           </div>
                         ) : null}
                         {group.items.map((project) => (
@@ -628,9 +619,9 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                             properties={options.properties}
                           />
                         ))}
-                      </Flexbox>
+                      </div>
                     ))}
-                  </Flexbox>
+                  </div>
                 )}
                 {/* A failed tail page keeps the loaded rows — the retry
                     re-issues exactly the request that failed. */}
@@ -638,21 +629,23 @@ const TeamProjectsSurface = memo<TeamProjectsSurfaceProps>(({ teamId }) => {
                   <AsyncError error={loadMoreError} variant={'inline'} onRetry={retryLoadMore} />
                 ) : null}
                 {hasMore ? (
-                  <Center className={styles.loadMore}>
+                  <div className={cn('flex flex-col items-center justify-center', styles.loadMore)}>
                     <Button
-                      loading={loadingMore}
-                      size="small"
+                      aria-busy={loadingMore}
+                      disabled={loadingMore}
+                      variant="outline"
                       onClick={() => runLoadMore(loadMore)}
                     >
+                      {loadingMore ? <LoaderCircleIcon className="animate-spin" /> : null}
                       {t('myWork.loadMore', { ns: 'common' })}
                     </Button>
-                  </Center>
+                  </div>
                 ) : null}
               </>
             )}
           </WorkSurfaceCollection>
           {sidebarOpen ? sidebar : null}
-        </Flexbox>
+        </div>
       )}
       {/* "Add new view" opens the shared view builder scoped to this team —
           the reference routes to a dedicated editor page; the modal carries

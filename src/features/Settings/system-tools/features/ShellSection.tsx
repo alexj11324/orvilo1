@@ -2,12 +2,18 @@
 
 import { type FormGroupItemType } from '@lobehub/ui';
 import { Form } from '@lobehub/ui';
-import { Select, Text } from '@lobehub/ui/base-ui';
 import { type WindowsShellMode } from '@orvilo/electron-client-ipc';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { desktopSettingsService } from '@/services/electron/settings';
@@ -55,10 +61,23 @@ const ShellSection = memo(() => {
         children: (
           <Select
             disabled={!data || updating}
-            options={options}
+            items={options}
             value={data?.mode ?? 'auto'}
-            onChange={handleChange}
-          />
+            onValueChange={(value) => {
+              if (value !== null) handleChange(value);
+            }}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {options.map((option) => (
+                <SelectItem key={option.value} value={option.value}>
+                  {option.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         ),
         desc: (
           <>
@@ -66,9 +85,9 @@ const ShellSection = memo(() => {
             {data && (
               <>
                 {' '}
-                <Text code fontSize={12} type={'secondary'}>
+                <code className={'text-muted-foreground'} style={{ fontSize: 12 }}>
                   {data.currentShell.path}
-                </Text>
+                </code>
               </>
             )}
           </>

@@ -31,25 +31,30 @@ const hoisted = vi.hoisted(() => ({
 
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ...((await importOriginal()) as Record<string, unknown>),
-  // Menu items surface as plain buttons so row actions are reachable in jsdom.
-  DropdownMenu: ({
-    children,
-    items,
-  }: {
-    children?: React.ReactNode;
-    items: { disabled?: boolean; key: string; label: string; onClick?: () => void }[];
-  }) => (
-    <span>
-      {children}
-      {items.map((item) => (
-        <button disabled={item.disabled} key={item.key} type="button" onClick={item.onClick}>
-          {item.label}
-        </button>
-      ))}
-    </span>
-  ),
   confirmModal: hoisted.confirmModal,
   toast: hoisted.toast,
+}));
+
+// Keep row actions visible for permission and mutation tests; menu interaction
+// is covered by the shared primitive and product acceptance.
+vi.mock('@/components/ui/dropdown-menu', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
+  DropdownMenu: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  DropdownMenuTrigger: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  DropdownMenuContent: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
+  DropdownMenuItem: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children: React.ReactNode;
+    disabled?: boolean;
+    onClick?: () => void;
+  }) => (
+    <button disabled={disabled} type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -330,7 +335,7 @@ describe('ApiKey', () => {
     const dialog = await openDetail('My Key');
     expect(within(dialog).getByRole('button', { name: 'edit-text' })).toBeDisabled();
     expect(within(dialog).getByRole('button', { name: 'edit-date' })).toBeDisabled();
-    expect(within(dialog).getByRole('switch')).toBeDisabled();
+    expect(within(dialog).getByRole('switch')).toHaveAttribute('aria-disabled', 'true');
     expect(
       within(dialog).getByRole('button', { name: 'apikey.list.actions.delete' }),
     ).toBeDisabled();
@@ -356,7 +361,7 @@ describe('ApiKey', () => {
     // can rename, disable, or edit the grants.
     const dialog = await openDetail('Other Key');
     expect(within(dialog).getByRole('button', { name: 'edit-text' })).toBeDisabled();
-    expect(within(dialog).getByRole('switch')).toBeDisabled();
+    expect(within(dialog).getByRole('switch')).toHaveAttribute('aria-disabled', 'true');
     expect(
       within(dialog).queryByRole('button', { name: 'apikey.detail.permissions.edit' }),
     ).toBeNull();

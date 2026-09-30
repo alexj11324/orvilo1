@@ -1,15 +1,8 @@
-import { DatePicker, Flexbox, Icon, Input, TextArea } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  ModalFooter,
-  Select,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
+import { DatePicker } from '@lobehub/ui';
+import { ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import type { ProjectStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs, { type Dayjs } from 'dayjs';
 import {
   CalendarIcon,
@@ -20,13 +13,39 @@ import {
   UsersIcon,
   XIcon,
 } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import EmojiPicker from '@/components/EmojiPicker';
 import { isPriorityLevel, PriorityIcon } from '@/components/PriorityIcon';
+import { Button } from '@/components/ui/button';
+import {
+  Combobox,
+  ComboboxChip,
+  ComboboxChips,
+  ComboboxChipsInput,
+  ComboboxClear,
+  ComboboxContent,
+  ComboboxEmpty,
+  ComboboxGroup,
+  ComboboxInput,
+  ComboboxItem,
+  ComboboxLabel,
+  ComboboxList,
+} from '@/components/ui/combobox';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Spinner } from '@/components/ui/spinner';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { type ProjectListItem, useProjectStore } from '@/store/project';
@@ -139,26 +158,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-block: 0 16px;
     padding-inline: 24px;
   `,
-  property: css`
-    width: auto;
-    min-width: 0;
-    height: 24px;
-    padding-inline: 8px;
-    border-radius: 999px;
 
-    font-size: 12px;
-  `,
-  propertyWide: css`
-    min-width: 0;
-  `,
-  labels: css`
-    max-width: 160px;
-
-    input {
-      width: 6ch;
-      min-width: 0;
-    }
-  `,
   date: css`
     width: 88px;
     height: 24px;
@@ -209,64 +209,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     border-block-start: 1px solid ${cssVar.colorBorderSecondary};
   `,
 
-  name: css`
-    padding: 0;
-    border: 0;
-
-    font-size: 24px;
-    font-weight: 600;
-
-    background: transparent;
-    box-shadow: none !important;
-  `,
-  summary: css`
-    padding: 0;
-    border: 0;
-
-    font-size: 16px;
-
-    background: transparent;
-    box-shadow: none !important;
-  `,
-  description: css`
-    padding-block: 16px;
-    padding-inline: 0;
-    border: 0;
-    border-block-start: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: 0;
-
-    background: transparent;
-    box-shadow: none !important;
-  `,
-  precisionTabs: css`
-    display: flex;
-    gap: 4px;
-    padding-block: 8px 4px;
-    padding-inline: 12px;
-  `,
-  precisionTab: css`
-    cursor: pointer;
-
-    padding-block: 3px;
-    padding-inline: 8px;
-    border: 0;
-    border-radius: 9999px;
-
-    font-size: 12px;
-    color: ${cssVar.colorTextSecondary};
-
-    background: transparent;
-
-    &:hover {
-      color: ${cssVar.colorText};
-      background: ${cssVar.colorFillTertiary};
-    }
-  `,
-  precisionTabActive: css`
-    font-weight: 500;
-    color: ${cssVar.colorText};
-    background: ${cssVar.colorFillSecondary};
-  `,
   advanced: css`
     color: ${cssVar.colorTextSecondary};
 
@@ -291,20 +233,21 @@ interface ProjectDatePrecisionTabsProps {
 
 const ProjectDatePrecisionTabs = memo<ProjectDatePrecisionTabsProps>(
   ({ onChange, precision, t }) => (
-    <div className={styles.precisionTabs} role="tablist">
-      {PROJECT_DATE_PRECISIONS.map((item) => (
-        <button
-          aria-selected={item === precision}
-          className={`${styles.precisionTab} ${item === precision ? styles.precisionTabActive : ''}`}
-          key={item}
-          role="tab"
-          type="button"
-          onClick={() => onChange(item)}
-        >
-          {t(`create.datePrecision.${item}`)}
-        </button>
-      ))}
-    </div>
+    <Tabs
+      value={precision}
+      onValueChange={(value) => {
+        if (PROJECT_DATE_PRECISIONS.includes(value as ProjectDatePrecision))
+          onChange(value as ProjectDatePrecision);
+      }}
+    >
+      <TabsList>
+        {PROJECT_DATE_PRECISIONS.map((item) => (
+          <TabsTrigger key={item} value={item}>
+            {t(`create.datePrecision.${item}`)}
+          </TabsTrigger>
+        ))}
+      </TabsList>
+    </Tabs>
   ),
 );
 
@@ -322,6 +265,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
     const labelsSWR = useProjectStore((s) => s.useFetchProjectLabels)();
     const projectLabels = suppliedLabels ?? labelsSWR.data?.data ?? [];
     const createProject = useProjectStore((s) => s.createProject);
+    const [labelQuery, setLabelQuery] = useState('');
     const [form, setForm] = useState<CreateProjectFormState>({
       avatar: '📦',
       dependencies: [],
@@ -417,40 +361,133 @@ const CreateProjectContent = memo<CreateProjectOptions>(
       }
     };
 
+    const teamPickerOptions = (teamsSWR.data?.data ?? [])
+      .filter((team) => team.status === 'active')
+      .map((team) => ({ label: team.name, value: team.id }));
+    const statusPickerOptions = PROJECT_STATUS_OPTIONS.map((option) => ({
+      label: (
+        <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
+          <ProjectStatusIcon size={13} status={option.value} />
+          {t(option.labelKey)}
+        </div>
+      ),
+      value: option.value,
+    }));
+    const priorityPickerOptions = PROJECT_PRIORITY_OPTIONS.map((option) => ({
+      label: (
+        <div className="flex flex-row" style={{ alignItems: 'center', gap: 6 }}>
+          <PriorityIcon priority={option.value} size={16} />
+          {t(option.labelKey)}
+        </div>
+      ),
+      value: option.value,
+    }));
+    const leadPickerOptions = (membersSWR.data ?? [])
+      .filter((member) => !member.deletedAt && !member.suspendedAt)
+      .map((member) => ({
+        label: member.user?.fullName || member.user?.username || member.userId,
+        value: member.userId,
+      }));
+    const memberPickerOptions = (membersSWR.data ?? [])
+      .filter((member) => !member.deletedAt && !member.suspendedAt)
+      .map((member) => ({
+        label: member.user?.fullName || member.user?.username || member.userId,
+        value: member.userId,
+      }));
+    const labelPickerOptions = [
+      ...projectLabels.map((label) => ({ label: label.name, value: label.id })),
+      ...(form.newLabelNames ?? []).map((name) => ({ label: name, value: name })),
+      ...(labelQuery.trim() &&
+      !projectLabels.some(
+        (label) => label.name.trim().toLowerCase() === labelQuery.trim().toLowerCase(),
+      ) &&
+      !(form.newLabelNames ?? []).includes(labelQuery.trim())
+        ? [{ label: labelQuery.trim(), value: labelQuery.trim() }]
+        : []),
+    ];
+    const dependencyPickerOptions = [
+      {
+        label: t('create.dependencies.yourProjects'),
+        options: projectOptions.flatMap((project) => [
+          {
+            label: `${t('create.dependencies.blockedBy')} · ${project.name}`,
+            value: getDependencyValue('blockedBy', project.id),
+          },
+          {
+            label: `${t('create.dependencies.blocking')} · ${project.name}`,
+            value: getDependencyValue('blocking', project.id),
+          },
+        ]),
+      },
+    ][0].options;
     return (
-      <Flexbox className={styles.shell}>
-        <Flexbox horizontal align={'center'} className={styles.header} gap={6}>
+      <div className={cn('flex flex-col', styles.shell)}>
+        <div
+          className={cn('flex flex-row', styles.header)}
+          style={{ alignItems: 'center', gap: 6 }}
+        >
           {workspaceId && (
-            <Select
-              allowClear
-              showSearch
-              className={styles.property}
-              loading={teamsSWR.isLoading}
-              placeholder={t('create.team')}
-              popupMatchSelectWidth={false}
-              prefix={UsersIcon}
-              size={'small'}
-              suffixIcon={null}
+            <Combobox
+              disabled={teamsSWR.isLoading}
+              items={teamPickerOptions.map((option) => option.value)}
               value={form.teamId ?? null}
-              options={(teamsSWR.data?.data ?? [])
-                .filter((team) => team.status === 'active')
-                .map((team) => ({ label: team.name, value: team.id }))}
-              onChange={(value) =>
-                updateForm({ teamId: typeof value === 'string' ? value : undefined })
-              }
-            />
+              itemToStringLabel={(value) => {
+                const option = teamPickerOptions.find((option) => option.value === value);
+                return option && 'title' in option && typeof option.title === 'string'
+                  ? option.title
+                  : typeof option?.label === 'string'
+                    ? option.label
+                    : String(value);
+              }}
+              onValueChange={(value) => {
+                updateForm({ teamId: typeof value === 'string' ? value : undefined });
+              }}
+            >
+              <>
+                <ComboboxInput
+                  aria-label={t('create.team')}
+                  className="min-w-0 max-w-full"
+                  disabled={teamsSWR.isLoading}
+                  placeholder={t('create.team')}
+                  showClear={true}
+                >
+                  <UsersIcon aria-hidden size={16} />
+                </ComboboxInput>
+                <ComboboxContent className="min-w-56">
+                  <ComboboxEmpty>{t('create.team')}</ComboboxEmpty>
+                  <ComboboxList>
+                    {(value: (typeof teamPickerOptions)[number]['value']) => {
+                      const option = teamPickerOptions.find((option) => option.value === value);
+                      return (
+                        <ComboboxItem
+                          disabled={!!option && 'disabled' in option && option.disabled === true}
+                          key={value}
+                          value={value}
+                        >
+                          {option?.label}
+                        </ComboboxItem>
+                      );
+                    }}
+                  </ComboboxList>
+                </ComboboxContent>
+              </>
+            </Combobox>
           )}
-          {workspaceId && <Icon icon={ChevronRightIcon} size={12} />}
-          <Text fontSize={13}>{t('create.title')}</Text>
-          <Flexbox flex={1} />
-          <ActionIcon
+          {workspaceId && <ChevronRightIcon size={12} />}
+          <span className="text-sm" style={{ fontSize: 13 }}>
+            {t('create.title')}
+          </span>
+          <div className="flex flex-col" style={{ flex: 1 }} />
+          <Button
             aria-label={t('close', { ns: 'common' })}
-            icon={XIcon}
-            size={'small'}
+            size="icon-sm"
+            variant="ghost"
             onClick={close}
-          />
-        </Flexbox>
-        <Flexbox className={styles.body} gap={12}>
+          >
+            {createElement(XIcon, { 'size': 16, 'aria-hidden': true })}
+          </Button>
+        </div>
+        <div className={cn('flex flex-col', styles.body)} style={{ gap: 12 }}>
           <EmojiPicker
             allowDelete
             size={28}
@@ -474,114 +511,184 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             )}
             onChange={(avatar) => updateForm({ avatar: avatar || undefined })}
           />
-          <Flexbox gap={8}>
+          <div className="flex flex-col" style={{ gap: 8 }}>
             <Input
               autoFocus
               aria-label={t('create.nameLabel')}
-              className={styles.name}
+
               maxLength={255}
               placeholder={t('create.nameLabel')}
               value={form.name}
               onChange={(event) => updateName(event.target.value)}
-              onPressEnter={handleCreate}
+              onKeyDown={(event) => {
+                if (event.key === 'Enter' && !event.nativeEvent.isComposing) void handleCreate();
+              }}
             />
             <Input
               aria-label={t('create.summary')}
-              className={styles.summary}
+
               maxLength={280}
               placeholder={t('create.summaryPlaceholder')}
               value={form.summary ?? ''}
               onChange={(event) => updateForm({ summary: event.target.value })}
             />
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={8} wrap={'wrap'}>
+          </div>
+          <div className="flex flex-row" style={{ alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
             <Select
-              className={styles.property}
-              size={'small'}
-              suffixIcon={null}
+              disabled={false}
+              items={statusPickerOptions}
               value={form.status ?? 'backlog'}
-              options={PROJECT_STATUS_OPTIONS.map((option) => ({
-                label: (
-                  <Flexbox horizontal align="center" gap={6}>
-                    <ProjectStatusIcon size={13} status={option.value} />
-                    {t(option.labelKey)}
-                  </Flexbox>
-                ),
-                value: option.value,
-              }))}
-              onChange={(value) => {
+              onValueChange={(value) => {
+                if (value === null) return;
                 if (typeof value === 'string') updateForm({ status: value as ProjectStatus });
               }}
-            />
+            >
+              <SelectTrigger className="min-w-0 max-w-full" size="sm">
+                <SelectValue placeholder={undefined} />
+              </SelectTrigger>
+              <SelectContent>
+                {statusPickerOptions.map((option) => (
+                  <SelectItem
+                    disabled={'disabled' in option && option.disabled === true}
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             <Select
-              className={styles.property}
-              size={'small'}
-              suffixIcon={null}
+              disabled={false}
+              items={priorityPickerOptions}
               value={form.priority ?? 0}
-              options={PROJECT_PRIORITY_OPTIONS.map((option) => ({
-                label: (
-                  <Flexbox horizontal align="center" gap={6}>
-                    <PriorityIcon priority={option.value} size={16} />
-                    {t(option.labelKey)}
-                  </Flexbox>
-                ),
-                value: option.value,
-              }))}
-              onChange={(value) => {
+              onValueChange={(value) => {
+                if (value === null) return;
                 if (isPriorityLevel(value)) updateForm({ priority: value });
               }}
-            />
+            >
+              <SelectTrigger className="min-w-0 max-w-full" size="sm">
+                <SelectValue placeholder={undefined} />
+              </SelectTrigger>
+              <SelectContent>
+                {priorityPickerOptions.map((option) => (
+                  <SelectItem
+                    disabled={'disabled' in option && option.disabled === true}
+                    key={option.value}
+                    value={option.value}
+                  >
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
             {workspaceId && (
-              <Select
-                allowClear
-                showSearch
-                className={styles.property}
-                loading={membersSWR.isLoading}
-                placeholder={t('create.lead')}
-                popupMatchSelectWidth={false}
-                prefix={UserRoundIcon}
-                size={'small'}
-                suffixIcon={null}
+              <Combobox
+                disabled={membersSWR.isLoading}
+                items={leadPickerOptions.map((option) => option.value)}
                 value={form.leadUserId ?? null}
-                options={(membersSWR.data ?? [])
-                  .filter((member) => !member.deletedAt && !member.suspendedAt)
-                  .map((member) => ({
-                    label: member.user?.fullName || member.user?.username || member.userId,
-                    value: member.userId,
-                  }))}
-                onChange={(value) =>
-                  updateForm({ leadUserId: typeof value === 'string' ? value : undefined })
-                }
-              />
+                itemToStringLabel={(value) => {
+                  const option = leadPickerOptions.find((option) => option.value === value);
+                  return option && 'title' in option && typeof option.title === 'string'
+                    ? option.title
+                    : typeof option?.label === 'string'
+                      ? option.label
+                      : String(value);
+                }}
+                onValueChange={(value) => {
+                  updateForm({ leadUserId: typeof value === 'string' ? value : undefined });
+                }}
+              >
+                <>
+                  <ComboboxInput
+                    aria-label={t('create.lead')}
+                    className="min-w-0 max-w-full"
+                    disabled={membersSWR.isLoading}
+                    placeholder={t('create.lead')}
+                    showClear={true}
+                  >
+                    <UserRoundIcon aria-hidden size={16} />
+                  </ComboboxInput>
+                  <ComboboxContent className="min-w-56">
+                    <ComboboxEmpty>{t('create.lead')}</ComboboxEmpty>
+                    <ComboboxList>
+                      {(value: (typeof leadPickerOptions)[number]['value']) => {
+                        const option = leadPickerOptions.find((option) => option.value === value);
+                        return (
+                          <ComboboxItem
+                            disabled={!!option && 'disabled' in option && option.disabled === true}
+                            key={value}
+                            value={value}
+                          >
+                            {option?.label}
+                          </ComboboxItem>
+                        );
+                      }}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </>
+              </Combobox>
             )}
             {workspaceId && (
-              <Select
-                allowClear
-                showSearch
-                className={`${styles.property} ${styles.propertyWide}`}
-                loading={membersSWR.isLoading}
-                mode={'multiple'}
-                placeholder={t('create.members')}
-                popupMatchSelectWidth={false}
-                prefix={UsersIcon}
-                size={'small'}
-                suffixIcon={null}
+              <Combobox
+                multiple
+                disabled={membersSWR.isLoading}
+                items={memberPickerOptions.map((option) => option.value)}
                 value={form.memberIds ?? []}
-                options={(membersSWR.data ?? [])
-                  .filter((member) => !member.deletedAt && !member.suspendedAt)
-                  .map((member) => ({
-                    label: member.user?.fullName || member.user?.username || member.userId,
-                    value: member.userId,
-                  }))}
-                onChange={(value) => updateForm({ memberIds: toStringValues(value) })}
-              />
+                itemToStringLabel={(value) => {
+                  const option = memberPickerOptions.find((option) => option.value === value);
+                  return option && 'title' in option && typeof option.title === 'string'
+                    ? option.title
+                    : typeof option?.label === 'string'
+                      ? option.label
+                      : String(value);
+                }}
+                onValueChange={(value) => {
+                  updateForm({ memberIds: toStringValues(value) });
+                }}
+              >
+                <>
+                  <ComboboxChips className="min-w-0 max-w-full">
+                    <UsersIcon aria-hidden size={16} />
+                    {(form.memberIds ?? []).map((value) => (
+                      <ComboboxChip key={value}>
+                        {memberPickerOptions.find((option) => option.value === value)?.label ??
+                          String(value)}
+                      </ComboboxChip>
+                    ))}
+                    <ComboboxChipsInput
+                      aria-label={t('create.members')}
+                      disabled={membersSWR.isLoading}
+                      placeholder={t('create.members')}
+                    />
+                    <ComboboxClear aria-label={t('reset', { ns: 'common' })} />
+                  </ComboboxChips>
+                  <ComboboxContent className="min-w-56">
+                    <ComboboxEmpty>{t('create.members')}</ComboboxEmpty>
+                    <ComboboxList>
+                      {(value: (typeof memberPickerOptions)[number]['value']) => {
+                        const option = memberPickerOptions.find((option) => option.value === value);
+                        return (
+                          <ComboboxItem
+                            disabled={!!option && 'disabled' in option && option.disabled === true}
+                            key={value}
+                            value={value}
+                          >
+                            {option?.label}
+                          </ComboboxItem>
+                        );
+                      }}
+                    </ComboboxList>
+                  </ComboboxContent>
+                </>
+              </Combobox>
             )}
             <DatePicker
               aria-label={t('create.startDate')}
               className={styles.date}
               classNames={{ popup: { root: styles.calendar } }}
               placeholder={t('create.start')}
-              prefix={<Icon icon={CalendarIcon} size={13} />}
+              prefix={<CalendarIcon size={13} />}
               size={'small'}
               suffixIcon={null}
               value={form.startDate ? dayjs(form.startDate) : null}
@@ -595,9 +702,12 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                     t={(key) => t(key)}
                     onChange={(precision) => updateForm({ startDatePrecision: precision })}
                   />
-                  <Text fontSize={12} style={{ display: 'block', padding: '12px 16px' }}>
+                  <span
+                    className="text-sm"
+                    style={{ fontSize: 12, display: 'block', padding: '12px 16px' }}
+                  >
                     {t('create.startDate')}
-                  </Text>
+                  </span>
                   {panel}
                 </>
               )}
@@ -622,7 +732,7 @@ const CreateProjectContent = memo<CreateProjectOptions>(
               className={styles.date}
               classNames={{ popup: { root: styles.calendar } }}
               placeholder={t('create.target')}
-              prefix={<Icon icon={CalendarIcon} size={13} />}
+              prefix={<CalendarIcon size={13} />}
               size={'small'}
               suffixIcon={null}
               value={form.targetDate ? dayjs(form.targetDate) : null}
@@ -636,9 +746,12 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                     t={(key) => t(key)}
                     onChange={(precision) => updateForm({ targetDatePrecision: precision })}
                   />
-                  <Text fontSize={12} style={{ display: 'block', padding: '12px 16px' }}>
+                  <span
+                    className="text-sm"
+                    style={{ fontSize: 12, display: 'block', padding: '12px 16px' }}
+                  >
                     {t('create.targetDate')}
-                  </Text>
+                  </span>
                   {panel}
                 </>
               )}
@@ -658,57 +771,119 @@ const CreateProjectContent = memo<CreateProjectOptions>(
                 )
               }
             />
-            <Select
-              allowClear
-              showSearch
-              className={`${styles.property} ${styles.labels}`}
-              mode={'tags'}
-              placeholder={t('create.labels')}
-              popupMatchSelectWidth={false}
-              prefix={TagsIcon}
-              size={'small'}
-              suffixIcon={null}
+            <Combobox
+              autoHighlight
+              multiple
+              disabled={false}
+              inputValue={labelQuery}
+              items={labelPickerOptions.map((option) => option.value)}
               value={labelValues}
-              options={projectLabels.map((label) => ({
-                label: label.name,
-                value: label.id,
-              }))}
-              onChange={updateLabels}
-            />
-            <Select
-              allowClear
-              showSearch
-              className={`${styles.property} ${styles.propertyWide}`}
-              loading={projectsSWR.isLoading}
-              mode={'multiple'}
-              placeholder={t('create.dependencies.title')}
-              popupMatchSelectWidth={false}
-              prefix={GitBranchIcon}
-              size={'small'}
-              suffixIcon={null}
+              itemToStringLabel={(value) => {
+                const option = labelPickerOptions.find((option) => option.value === value);
+                return option && 'title' in option && typeof option.title === 'string'
+                  ? option.title
+                  : typeof option?.label === 'string'
+                    ? option.label
+                    : String(value);
+              }}
+              onInputValueChange={setLabelQuery}
+              onValueChange={updateLabels}
+            >
+              <>
+                <ComboboxChips className="min-w-0 max-w-full max-w-40">
+                  <TagsIcon aria-hidden size={16} />
+                  {labelValues.map((value) => (
+                    <ComboboxChip key={value}>
+                      {labelPickerOptions.find((option) => option.value === value)?.label ??
+                        String(value)}
+                    </ComboboxChip>
+                  ))}
+                  <ComboboxChipsInput
+                    aria-label={t('create.labels')}
+                    disabled={false}
+                    placeholder={t('create.labels')}
+                  />
+                  <ComboboxClear aria-label={t('reset', { ns: 'common' })} />
+                </ComboboxChips>
+                <ComboboxContent className="min-w-56">
+                  <ComboboxEmpty>{t('create.labels')}</ComboboxEmpty>
+                  <ComboboxList>
+                    {(value: (typeof labelPickerOptions)[number]['value']) => {
+                      const option = labelPickerOptions.find((option) => option.value === value);
+                      return (
+                        <ComboboxItem
+                          disabled={!!option && 'disabled' in option && option.disabled === true}
+                          key={value}
+                          value={value}
+                        >
+                          {option?.label}
+                        </ComboboxItem>
+                      );
+                    }}
+                  </ComboboxList>
+                </ComboboxContent>
+              </>
+            </Combobox>
+            <Combobox
+              multiple
+              disabled={projectsSWR.isLoading}
+              items={dependencyPickerOptions.map((option) => option.value)}
               value={dependencyValues}
-              options={[
-                {
-                  label: t('create.dependencies.yourProjects'),
-                  options: projectOptions.flatMap((project) => [
-                    {
-                      label: `${t('create.dependencies.blockedBy')} · ${project.name}`,
-                      value: getDependencyValue('blockedBy', project.id),
-                    },
-                    {
-                      label: `${t('create.dependencies.blocking')} · ${project.name}`,
-                      value: getDependencyValue('blocking', project.id),
-                    },
-                  ]),
-                },
-              ]}
-              onChange={updateDependencies}
-            />
-          </Flexbox>
+              itemToStringLabel={(value) => {
+                const option = dependencyPickerOptions.find((option) => option.value === value);
+                return option && 'title' in option && typeof option.title === 'string'
+                  ? option.title
+                  : typeof option?.label === 'string'
+                    ? option.label
+                    : String(value);
+              }}
+              onValueChange={updateDependencies}
+            >
+              <>
+                <ComboboxChips className="min-w-0 max-w-full">
+                  <GitBranchIcon aria-hidden size={16} />
+                  {dependencyValues.map((value) => (
+                    <ComboboxChip key={value}>
+                      {dependencyPickerOptions.find((option) => option.value === value)?.label ??
+                        String(value)}
+                    </ComboboxChip>
+                  ))}
+                  <ComboboxChipsInput
+                    aria-label={t('create.dependencies.title')}
+                    disabled={projectsSWR.isLoading}
+                    placeholder={t('create.dependencies.title')}
+                  />
+                  <ComboboxClear aria-label={t('reset', { ns: 'common' })} />
+                </ComboboxChips>
+                <ComboboxContent className="min-w-56">
+                  <ComboboxEmpty>{t('create.dependencies.title')}</ComboboxEmpty>
+                  <ComboboxGroup>
+                    <ComboboxLabel>{t('create.dependencies.yourProjects')}</ComboboxLabel>
+                    <ComboboxList>
+                      {(value: (typeof dependencyPickerOptions)[number]['value']) => {
+                        const option = dependencyPickerOptions.find(
+                          (option) => option.value === value,
+                        );
+                        return (
+                          <ComboboxItem
+                            disabled={!!option && 'disabled' in option && option.disabled === true}
+                            key={value}
+                            value={value}
+                          >
+                            {option?.label}
+                          </ComboboxItem>
+                        );
+                      }}
+                    </ComboboxList>
+                  </ComboboxGroup>
+                </ComboboxContent>
+              </>
+            </Combobox>
+          </div>
           {form.startDate && form.targetDate && form.targetDate < form.startDate && (
-            <Text role={'alert'} type={'danger'}>
+            <span className="text-sm text-destructive" role={'alert'}>
               {t('create.dateOrderInvalid')}
-            </Text>
+            </span>
           )}
           {teamsSWR.error && (
             <AsyncError
@@ -738,9 +913,9 @@ const CreateProjectContent = memo<CreateProjectOptions>(
               onRetry={() => void projectsSWR.mutate()}
             />
           )}
-          <TextArea
+          <Textarea
             aria-label={t('create.description')}
-            className={styles.description}
+
             placeholder={t('create.descriptionPlaceholder')}
             style={{ flex: 1, minHeight: 120, resize: 'none' }}
             value={form.description ?? ''}
@@ -751,70 +926,99 @@ const CreateProjectContent = memo<CreateProjectOptions>(
             onChange={(milestones) => updateForm({ milestones })}
           />
           {(identifierInvalid || !slugValid) && (
-            <Text role={'alert'} type={'danger'}>
+            <span className="text-sm text-destructive" role={'alert'}>
               {t(identifierInvalid ? 'create.identifierInvalid' : 'create.slugInvalid')}
-            </Text>
+            </span>
           )}
           <details className={styles.advanced}>
             <summary>{t('create.advanced')}</summary>
-            <Flexbox gap={12} paddingBlock={12}>
-              <Flexbox gap={4}>
-                <Text fontSize={12} weight={500}>
+            <div className="flex flex-col" style={{ gap: 12, paddingBlock: 12 }}>
+              <div className="flex flex-col" style={{ gap: 4 }}>
+                <span className="text-sm" style={{ fontSize: 12, fontWeight: 500 }}>
                   {t('create.identifierLabel')}
-                </Text>
+                </span>
                 <Input
+                  aria-invalid={(identifierInvalid ? 'error' : undefined) === 'error' || undefined}
                   maxLength={6}
                   placeholder={t('create.identifierPlaceholder')}
-                  status={identifierInvalid ? 'error' : undefined}
                   value={form.identifier}
-                  onPressEnter={handleCreate}
                   onChange={(event) =>
                     updateForm({
                       identifier: event.target.value.toUpperCase(),
                       identifierEdited: true,
                     })
                   }
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.nativeEvent.isComposing)
+                      void handleCreate();
+                  }}
                 />
-                <Text fontSize={12} type={identifierInvalid ? 'danger' : 'secondary'}>
+                <span
+                  className="text-sm"
+                  style={{
+                    fontSize: 12,
+                    color:
+                      (identifierInvalid ? 'danger' : 'secondary') === 'danger'
+                        ? 'var(--destructive)'
+                        : (identifierInvalid ? 'danger' : 'secondary') === 'secondary'
+                          ? 'var(--muted-foreground)'
+                          : undefined,
+                  }}
+                >
                   {t(
                     identifierInvalid ? 'create.identifierInvalid' : 'create.identifierDescription',
                   )}
-                </Text>
-              </Flexbox>
-              <Flexbox gap={6}>
-                <Text fontSize={13} weight={500}>
+                </span>
+              </div>
+              <div className="flex flex-col" style={{ gap: 6 }}>
+                <span className="text-sm" style={{ fontSize: 13, fontWeight: 500 }}>
                   {t('create.slugLabel')}
-                </Text>
+                </span>
                 <Input
+                  aria-invalid={(slugValid ? undefined : 'error') === 'error' || undefined}
                   maxLength={100}
                   placeholder={t('create.slugPlaceholder')}
-                  status={slugValid ? undefined : 'error'}
                   value={form.slug}
-                  onPressEnter={handleCreate}
                   onChange={(event) =>
                     updateForm({ slug: event.target.value.toLowerCase(), slugEdited: true })
                   }
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter' && !event.nativeEvent.isComposing)
+                      void handleCreate();
+                  }}
                 />
-                <Text fontSize={12} type={slugValid ? 'secondary' : 'danger'}>
+                <span
+                  className="text-sm"
+                  style={{
+                    fontSize: 12,
+                    color:
+                      (slugValid ? 'secondary' : 'danger') === 'danger'
+                        ? 'var(--destructive)'
+                        : (slugValid ? 'secondary' : 'danger') === 'secondary'
+                          ? 'var(--muted-foreground)'
+                          : undefined,
+                  }}
+                >
                   {t(slugValid ? 'create.slugDescription' : 'create.slugInvalid')}
-                </Text>
-              </Flexbox>
-            </Flexbox>
+                </span>
+              </div>
+            </div>
           </details>
-        </Flexbox>
+        </div>
         <ModalFooter className={styles.footer}>
           <Button
-            disabled={!createInput}
-            loading={form.loading}
-            size={'small'}
+            aria-busy={form.loading}
+            disabled={!createInput || form.loading}
+            size="sm"
             style={{ borderRadius: 999 }}
-            type="primary"
+            variant="default"
             onClick={handleCreate}
           >
+            {form.loading && <Spinner />}
             {t('create.action')}
           </Button>
         </ModalFooter>
-      </Flexbox>
+      </div>
     );
   },
 );

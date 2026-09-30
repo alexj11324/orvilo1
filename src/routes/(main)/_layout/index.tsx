@@ -16,6 +16,7 @@ import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
 import GlobalOverlays from '@/features/GlobalOverlays';
 import { GlobalOverlayHostContext } from '@/features/GlobalOverlays/globalHostContext';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
+import RoutePanelColumn from '@/features/NavPanel/RoutePanelColumn';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
 import { SidebarShell } from '@/features/ReUIShell/SidebarShell';
 import { RouteMetaBridge } from '@/features/RouteMeta';
@@ -63,6 +64,7 @@ const Layout: FC = () => {
               width={'100%'}
             >
               <SidebarShell />
+              <RoutePanelColumn />
               <DesktopLayoutContainer>
                 <Suspense fallback={<RouteSegmentSkeleton />}>
                   <Outlet />

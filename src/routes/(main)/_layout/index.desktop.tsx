@@ -28,6 +28,7 @@ import TitleBar from '@/features/Electron/titlebar/TitleBar';
 import GlobalOverlays from '@/features/GlobalOverlays';
 import { GlobalOverlayHostContext } from '@/features/GlobalOverlays/globalHostContext';
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
+import RoutePanelColumn from '@/features/NavPanel/RoutePanelColumn';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
 import { SidebarShell } from '@/features/ReUIShell/SidebarShell';
 import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
@@ -87,6 +88,7 @@ const Layout: FC = () => {
               width={'100%'}
             >
               <SidebarShell />
+              <RoutePanelColumn />
               <DesktopLayoutContainer>
                 <Flexbox height={'100%'} style={tabHostContainer} width={'100%'}>
                   <TabHost />

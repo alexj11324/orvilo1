@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { ComponentType, ReactNode } from 'react';
 import { createElement, Fragment, isValidElement, memo } from 'react';
 
@@ -141,9 +141,9 @@ const GroupItem = memo<{
   item: ToolItemData;
 }>(({ detailPopoverDisabled, item, index }) => (
   <Fragment key={item.key || `group-${index}`}>
-    <Text className={toolsListStyles.groupLabel} fontSize={12} type="secondary">
+    <div className={cn('text-[12px] text-muted-foreground', toolsListStyles.groupLabel)}>
       {item.label}
-    </Text>
+    </div>
     {item.children?.map((child, childIndex) => (
       <ToolListItem
         detailPopoverDisabled={detailPopoverDisabled}

@@ -1,13 +1,5 @@
 'use client';
 
-import {
-  ActionIcon,
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { t } from 'i18next';
 import type { LucideIcon } from 'lucide-react';
@@ -28,6 +20,9 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import { useGlobalStore } from '@/store/global';
@@ -100,7 +95,7 @@ const SectionRow = memo<{
     >
       <div className="flex items-center gap-2">
         <config.icon size={18} />
-        <Text>{t(config.labelKey as never)}</Text>
+        <div>{t(config.labelKey as never)}</div>
       </div>
       {config.alwaysVisible ? (
         <TooltipProvider>
@@ -208,10 +203,11 @@ const CustomizeSidebarContent = memo(() => {
         ))}
       </div>
       <div className={styles.footer}>
-        <Button block htmlType="button" icon={<RotateCcw size={14} />} onClick={handleResetDefault}>
+        <Button className="w-full" type="button" variant="outline" onClick={handleResetDefault}>
+          <RotateCcw data-icon="inline-start" size={14} />
           {commonT('navPanel.resetDefault')}
         </Button>
-        <Button block htmlType="button" type="primary" onClick={handleConfirm}>
+        <Button className="w-full" type="button" variant="default" onClick={handleConfirm}>
           {commonT('confirm')}
         </Button>
       </div>

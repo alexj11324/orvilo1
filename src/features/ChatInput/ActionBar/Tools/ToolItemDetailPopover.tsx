@@ -1,5 +1,5 @@
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode } from 'react';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -56,13 +56,11 @@ const ToolItemDetailPopover = memo<ToolItemDetailPopoverProps>(
           {icon}
           <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
             <div className="flex flex-row items-center gap-1.5">
-              <Text ellipsis className={styles.title}>
-                {title}
-              </Text>
+              <div className={cn('truncate', styles.title)}>{title}</div>
               {sourceLabel && (
-                <Tag size={'small'} style={{ flexShrink: 0 }}>
+                <Badge size="sm" style={{ flexShrink: 0 }} variant="secondary">
                   {sourceLabel}
-                </Tag>
+                </Badge>
               )}
             </div>
             {identifier && <span className={styles.identifier}>{identifier}</span>}

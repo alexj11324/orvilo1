@@ -1,10 +1,12 @@
 import type { DraggableSyntheticListeners } from '@dnd-kit/core';
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { GripVertical, PencilLine, Trash } from 'lucide-react';
 import { createContext, memo, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/store/session';
 import { type SessionGroupItem } from '@/types/session';

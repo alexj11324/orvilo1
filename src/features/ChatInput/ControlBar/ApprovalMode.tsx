@@ -1,4 +1,3 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { Check, ChevronDown, Hand, ListChecks, Zap } from 'lucide-react';
 import { type LucideIcon } from 'lucide-react';
@@ -6,6 +5,7 @@ import type { ReactNode } from 'react';
 import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -168,15 +168,9 @@ const ModeSelector = memo(() => {
   );
 
   const button = (
-    <Button
-      className={styles.modeButton}
-      disabled={disabled}
-      icon={ChevronDown}
-      iconPosition="end"
-      size="small"
-      type={'text'}
-    >
+    <Button className={styles.modeButton} disabled={disabled} size="sm" variant="ghost">
       {modeLabels[approvalMode]}
+      <ChevronDown data-icon="inline-end" />
     </Button>
   );
 

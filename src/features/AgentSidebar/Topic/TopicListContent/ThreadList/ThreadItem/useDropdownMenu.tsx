@@ -1,9 +1,9 @@
-import { confirmModal } from '@lobehub/ui/base-ui';
 import { PanelRight, PencilLine, Trash } from 'lucide-react';
 import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type DropdownItem } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 

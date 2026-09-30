@@ -1,4 +1,3 @@
-import { Text, toast } from '@lobehub/ui/base-ui';
 import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
 import { BotIcon, FolderCogIcon, FolderPlus, ListPlusIcon, MonitorSmartphone } from 'lucide-react';
@@ -8,6 +7,7 @@ import useSWRMutation from 'swr/mutation';
 
 import { useGroupTemplates } from '@/components/ChatGroupWizard/templates';
 import type { ItemType } from '@/components/Menu';
+import { toast } from '@/components/toast';
 import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
@@ -278,10 +278,8 @@ export const useCreateMenuItems = () => {
         key: 'newPlatformAgent',
         label: (
           <div className="flex flex-col gap-[1px]">
-            <Text>{t('newPlatformAgent')}</Text>
-            <Text fontSize={12} type={'secondary'}>
-              {t('newPlatformAgentDesc')}
-            </Text>
+            <div>{t('newPlatformAgent')}</div>
+            <div className="text-[12px] text-muted-foreground">{t('newPlatformAgentDesc')}</div>
           </div>
         ),
         sfSymbol: 'laptopcomputer.and.iphone',

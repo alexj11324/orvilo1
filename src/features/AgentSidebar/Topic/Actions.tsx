@@ -1,7 +1,7 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { MoreHorizontal } from 'lucide-react';
 import { memo, useState } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DropdownMenu } from '@/components/ItemsMenu';
 
 import { useTopicActionsDropdownMenu } from './useDropdownMenu';

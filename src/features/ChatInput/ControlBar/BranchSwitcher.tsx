@@ -1,16 +1,3 @@
-import {
-  confirmModal,
-  DropdownMenuFooter,
-  DropdownMenuHeader,
-  DropdownMenuItem,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuRoot,
-  DropdownMenuScrollViewport,
-  DropdownMenuTrigger,
-  toast,
-} from '@lobehub/ui/base-ui';
 import type { DeviceGitWorktreeListItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
@@ -39,6 +26,14 @@ import {
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { deviceKeys } from '@/libs/swr/keys';
 import { gitService } from '@/services/git';
@@ -171,8 +166,10 @@ const styles = createStaticStyles(({ css }) => ({
     color: ${cssVar.colorTextTertiary};
   `,
   list: css`
+    overflow-y: auto;
     flex: 1;
     min-height: 0;
+    max-height: 320px;
   `,
   popup: css`
     width: 300px;
@@ -496,169 +493,162 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
     );
 
     return (
-      <DropdownMenuRoot open={open} onOpenChange={onOpenChange}>
+      <DropdownMenu open={open} onOpenChange={onOpenChange}>
         <DropdownMenuTrigger className={styles.triggerAnchor}>
           <div className={styles.triggerFill}>{children}</div>
         </DropdownMenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuPositioner placement={placement} sideOffset={8}>
-            <DropdownMenuPopup className={styles.popup}>
-              <DropdownMenuHeader className={styles.header}>
-                <div className={styles.searchBar}>
-                  <div className="flex flex-row items-center gap-1.5 px-1.5">
-                    <span className="flex items-center">
-                      <span className="anticon" role="img">
-                        <SearchIcon fill={'transparent'} height={14} size={14} width={14} />
-                      </span>
-                    </span>
-                    <Input
-                      autoFocus
-                      placeholder={t('workingDirectory.branchSearchPlaceholder')}
-                      value={search}
-                      className={
-                        'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
-                      }
-                      onChange={(e) => setSearch(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                </div>
-                <div className={styles.sectionRow}>
-                  <div className={styles.section}>{t('workingDirectory.branchesHeading')}</div>
-                  <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
-                    <span className={cx('anticon', cx(isRefreshing && styles.spinning))} role="img">
-                      <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
-                    </span>
-                  </div>
-                </div>
-              </DropdownMenuHeader>
-
-              {isLoading && branches.length === 0 ? (
-                <div className={styles.emptyState}>{t('workingDirectory.branchesLoading')}</div>
-              ) : !isLoading && branchesError ? (
-                <div className={styles.emptyState}>{t('workingDirectory.branchesLoadFailed')}</div>
-              ) : filtered.length === 0 ? (
-                <div className={styles.emptyState}>
-                  {search.trim()
-                    ? t('workingDirectory.branchesNoMatch')
-                    : t('workingDirectory.branchesEmpty')}
-                </div>
-              ) : (
-                <DropdownMenuScrollViewport
-                  virtual
-                  className={styles.list}
-                  getItemLabel={(_, index) => filtered[index]?.name}
-                  listItemHeight={32}
-                >
-                  {filtered.map((branch) => {
-                    const isCurrent = branch.name === currentBranch;
-                    const isBusy = busyBranch === branch.name;
-                    // A branch another worktree holds can't be checked out here
-                    // (clicking routes into that worktree) and can't be deleted.
-                    const owner = findWorktreeForBranch(worktrees, branch.name);
-                    return (
-                      <DropdownMenuItem
-                        className={styles.item}
-                        closeOnClick={false}
-                        key={branch.name}
-                        ref={isCurrent ? currentRowRef : undefined}
-                        onClick={() => handleCheckout(branch.name)}
-                      >
-                        <span
-                          className={cx('anticon', cx(styles.itemIcon, isBusy && styles.spinning))}
-                          role="img"
-                        >
-                          {createElement(
-                            isBusy ? LoaderIcon : owner ? GitForkIcon : GitBranchIcon,
-                            { size: 14, width: 14, height: 14, fill: 'transparent' },
-                          )}
-                        </span>
-                        <div className={styles.itemMain}>
-                          <div className={styles.branchLabel}>{branch.name}</div>
-                          {isCurrent && workingStatus && !workingStatus.clean && (
-                            <div className={styles.itemMeta}>
-                              {t('workingDirectory.uncommittedChanges', {
-                                count: workingStatus.total,
-                              })}
-                            </div>
-                          )}
-                          {owner && (
-                            <div className={styles.itemMeta}>
-                              {t('workingDirectory.branchInWorktree', {
-                                name: getPathName(owner.path),
-                              })}
-                            </div>
-                          )}
-                        </div>
-                        {isCurrent && (
-                          <span
-                            className={cx('anticon', cx('branch-row-check', styles.itemCheck))}
-                            role="img"
-                          >
-                            <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
-                          </span>
-                        )}
-                        <div className={cx('branch-row-actions', styles.rowActions)}>
-                          <SimpleTooltip title={tCommon('copy')}>
-                            <div
-                              aria-label={tCommon('copy')}
-                              className={styles.rowAction}
-                              role="button"
-                              onClick={(e) => void handleCopy(e, branch.name)}
-                            >
-                              <span className="anticon" role="img">
-                                <CopyIcon fill={'transparent'} height={13} size={13} width={13} />
-                              </span>
-                            </div>
-                          </SimpleTooltip>
-                          <SimpleTooltip title={t('workingDirectory.renameBranchAction')}>
-                            <div
-                              className={styles.rowAction}
-                              role="button"
-                              onClick={(e) => handleRename(e, branch.name)}
-                            >
-                              <span className="anticon" role="img">
-                                <PencilIcon fill={'transparent'} height={13} size={13} width={13} />
-                              </span>
-                            </div>
-                          </SimpleTooltip>
-                          {!isCurrent && !owner && (
-                            <SimpleTooltip title={t('workingDirectory.deleteBranchAction')}>
-                              <div
-                                className={cx(styles.rowAction, styles.rowActionDanger)}
-                                role="button"
-                                onClick={(e) => handleDelete(e, branch.name)}
-                              >
-                                <span className="anticon" role="img">
-                                  <Trash2Icon
-                                    fill={'transparent'}
-                                    height={13}
-                                    size={13}
-                                    width={13}
-                                  />
-                                </span>
-                              </div>
-                            </SimpleTooltip>
-                          )}
-                        </div>
-                      </DropdownMenuItem>
-                    );
-                  })}
-                </DropdownMenuScrollViewport>
-              )}
-
-              <DropdownMenuFooter className={styles.footer}>
-                <DropdownMenuItem className={styles.item} onClick={openCreateBranch}>
-                  <span className={cx('anticon', styles.itemIcon)} role="img">
-                    <GitBranchPlusIcon fill={'transparent'} height={14} size={14} width={14} />
+        <DropdownMenuContent
+          align={placement === 'bottomRight' ? 'end' : 'start'}
+          className={styles.popup}
+          side={placement === 'topLeft' ? 'top' : 'bottom'}
+          sideOffset={8}
+        >
+          <div className={styles.header}>
+            <div className={styles.searchBar}>
+              <div className="flex flex-row items-center gap-1.5 px-1.5">
+                <span className="flex items-center">
+                  <span className="anticon" role="img">
+                    <SearchIcon fill={'transparent'} height={14} size={14} width={14} />
                   </span>
-                  <div className={styles.itemMain}>{t('workingDirectory.createBranchAction')}</div>
-                </DropdownMenuItem>
-              </DropdownMenuFooter>
-            </DropdownMenuPopup>
-          </DropdownMenuPositioner>
-        </DropdownMenuPortal>
-      </DropdownMenuRoot>
+                </span>
+                <Input
+                  autoFocus
+                  placeholder={t('workingDirectory.branchSearchPlaceholder')}
+                  value={search}
+                  className={
+                    'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
+                  }
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
+            <div className={styles.sectionRow}>
+              <div className={styles.section}>{t('workingDirectory.branchesHeading')}</div>
+              <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
+                <span className={cx('anticon', cx(isRefreshing && styles.spinning))} role="img">
+                  <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {isLoading && branches.length === 0 ? (
+            <div className={styles.emptyState}>{t('workingDirectory.branchesLoading')}</div>
+          ) : !isLoading && branchesError ? (
+            <div className={styles.emptyState}>{t('workingDirectory.branchesLoadFailed')}</div>
+          ) : filtered.length === 0 ? (
+            <div className={styles.emptyState}>
+              {search.trim()
+                ? t('workingDirectory.branchesNoMatch')
+                : t('workingDirectory.branchesEmpty')}
+            </div>
+          ) : (
+            <div className={styles.list}>
+              {filtered.map((branch) => {
+                const isCurrent = branch.name === currentBranch;
+                const isBusy = busyBranch === branch.name;
+                // A branch another worktree holds can't be checked out here
+                // (clicking routes into that worktree) and can't be deleted.
+                const owner = findWorktreeForBranch(worktrees, branch.name);
+                return (
+                  <DropdownMenuItem
+                    className={styles.item}
+                    closeOnClick={false}
+                    key={branch.name}
+                    ref={isCurrent ? currentRowRef : undefined}
+                    onClick={() => handleCheckout(branch.name)}
+                  >
+                    <span
+                      className={cx('anticon', cx(styles.itemIcon, isBusy && styles.spinning))}
+                      role="img"
+                    >
+                      {createElement(isBusy ? LoaderIcon : owner ? GitForkIcon : GitBranchIcon, {
+                        size: 14,
+                        width: 14,
+                        height: 14,
+                        fill: 'transparent',
+                      })}
+                    </span>
+                    <div className={styles.itemMain}>
+                      <div className={styles.branchLabel}>{branch.name}</div>
+                      {isCurrent && workingStatus && !workingStatus.clean && (
+                        <div className={styles.itemMeta}>
+                          {t('workingDirectory.uncommittedChanges', {
+                            count: workingStatus.total,
+                          })}
+                        </div>
+                      )}
+                      {owner && (
+                        <div className={styles.itemMeta}>
+                          {t('workingDirectory.branchInWorktree', {
+                            name: getPathName(owner.path),
+                          })}
+                        </div>
+                      )}
+                    </div>
+                    {isCurrent && (
+                      <span
+                        className={cx('anticon', cx('branch-row-check', styles.itemCheck))}
+                        role="img"
+                      >
+                        <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+                      </span>
+                    )}
+                    <div className={cx('branch-row-actions', styles.rowActions)}>
+                      <SimpleTooltip title={tCommon('copy')}>
+                        <div
+                          aria-label={tCommon('copy')}
+                          className={styles.rowAction}
+                          role="button"
+                          onClick={(e) => void handleCopy(e, branch.name)}
+                        >
+                          <span className="anticon" role="img">
+                            <CopyIcon fill={'transparent'} height={13} size={13} width={13} />
+                          </span>
+                        </div>
+                      </SimpleTooltip>
+                      <SimpleTooltip title={t('workingDirectory.renameBranchAction')}>
+                        <div
+                          className={styles.rowAction}
+                          role="button"
+                          onClick={(e) => handleRename(e, branch.name)}
+                        >
+                          <span className="anticon" role="img">
+                            <PencilIcon fill={'transparent'} height={13} size={13} width={13} />
+                          </span>
+                        </div>
+                      </SimpleTooltip>
+                      {!isCurrent && !owner && (
+                        <SimpleTooltip title={t('workingDirectory.deleteBranchAction')}>
+                          <div
+                            className={cx(styles.rowAction, styles.rowActionDanger)}
+                            role="button"
+                            onClick={(e) => handleDelete(e, branch.name)}
+                          >
+                            <span className="anticon" role="img">
+                              <Trash2Icon fill={'transparent'} height={13} size={13} width={13} />
+                            </span>
+                          </div>
+                        </SimpleTooltip>
+                      )}
+                    </div>
+                  </DropdownMenuItem>
+                );
+              })}
+            </div>
+          )}
+
+          <div className={styles.footer}>
+            <DropdownMenuItem className={styles.item} onClick={openCreateBranch}>
+              <span className={cx('anticon', styles.itemIcon)} role="img">
+                <GitBranchPlusIcon fill={'transparent'} height={14} size={14} width={14} />
+              </span>
+              <div className={styles.itemMain}>{t('workingDirectory.createBranchAction')}</div>
+            </DropdownMenuItem>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   },
 );

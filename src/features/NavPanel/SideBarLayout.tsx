@@ -1,7 +1,7 @@
-import { ScrollArea } from '@lobehub/ui/base-ui';
 import { type ReactNode, type UIEvent } from 'react';
 import { memo, Suspense, useCallback, useLayoutEffect, useRef } from 'react';
 
+import { ScrollBar } from '@/components/ui/scroll-area';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { SideBarHeaderSkeleton } from '@/features/NavPanel/components/SideBarSkeleton';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -40,18 +40,23 @@ const SideBarLayout = memo<SidebarLayoutProps>(({ header, body, scrollKey }) => 
   return (
     <div className="flex flex-col gap-[1px]" style={{ height: '100%', overflow: 'hidden' }}>
       <Suspense fallback={<SideBarHeaderSkeleton />}>{header}</Suspense>
-      <ScrollArea
-        disableContentFit
-        scrollFade
+      <ScrollAreaPrimitive.Root
         // Preserve the height chain for sidebar bodies containing virtual lists.
-        contentProps={{ style: { height: '100%' } }}
+        className="relative"
         style={{ flex: 1, minHeight: 0 }}
-        viewportProps={{ onScroll: handleScroll, ref: scrollerRef }}
       >
-        <TooltipProvider>
-          <Suspense fallback={<SkeletonList paddingBlock={8} />}>{body}</Suspense>
-        </TooltipProvider>
-      </ScrollArea>
+        <ScrollAreaPrimitive.Viewport
+          className="size-full"
+          ref={scrollerRef}
+          onScroll={handleScroll}
+        >
+          <TooltipProvider>
+            <Suspense fallback={<SkeletonList paddingBlock={8} />}>{body}</Suspense>
+          </TooltipProvider>
+        </ScrollAreaPrimitive.Viewport>
+        <ScrollBar />
+        <ScrollAreaPrimitive.Corner />
+      </ScrollAreaPrimitive.Root>
     </div>
   );
 });

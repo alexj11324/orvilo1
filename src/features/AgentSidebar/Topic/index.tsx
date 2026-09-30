@@ -1,19 +1,10 @@
 'use client';
 
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { cx } from 'antd-style';
 import React, { memo, Suspense, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { ContextMenuTrigger } from '@/components/ItemsMenu';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useFetchChatTopics } from '@/hooks/useFetchChatTopics';
 import { useChatStore } from '@/store/chat';
@@ -47,43 +38,37 @@ const Topic = memo<TopicProps>(({ expanded, itemKey }) => {
 
   return (
     <AccordionItem value={itemKey}>
-      <ContextMenuTrigger items={dropdownMenu}>
-        <AccordionHeader>
-          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-            <div className="flex items-center gap-1">
-              <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
-                {t('sidebar.title')}
-              </Text>
-              {topicCount > 0 && (
-                <Text fontSize={11} type="secondary">
-                  {topicCount}
-                </Text>
-              )}
-              {isRevalidating && <NeuralNetworkLoading size={14} />}
-            </div>
-          </AccordionTrigger>
-          <div
-            className={cx(
-              'accordion-action',
-              accordionStyles.action,
-              accordionStyles.actionBorderless,
-            )}
-          >
+      <SidebarContextMenu items={dropdownMenu}>
+        <div className="flex items-center">
+          <div className="min-w-0 flex-1">
+            <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
+              <div className="flex items-center gap-1">
+                <div className="truncate text-[12px] text-muted-foreground font-medium">
+                  {t('sidebar.title')}
+                </div>
+                {topicCount > 0 && (
+                  <div className="text-[11px] text-muted-foreground">{topicCount}</div>
+                )}
+                {isRevalidating && <NeuralNetworkLoading size={14} />}
+              </div>
+            </AccordionTrigger>
+          </div>
+          <div className="flex shrink-0 items-center">
             <div className="flex items-center gap-0.5">
               <ToggleGroups />
               <Filter />
               <Actions />
             </div>
           </div>
-        </AccordionHeader>
-      </ContextMenuTrigger>
-      <AccordionPanel contentStyle={{ padding: 0 }}>
+        </div>
+      </SidebarContextMenu>
+      <AccordionContent className="[&>div]:p-0">
         <Suspense fallback={<SkeletonList />}>
           <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
             <List />
           </div>
         </Suspense>
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

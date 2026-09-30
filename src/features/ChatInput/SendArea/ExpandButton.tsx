@@ -1,8 +1,8 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { Maximize2Icon, Minimize2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { useChatInputStore } from '@/features/ChatInput/store';
 import { usePermission } from '@/hooks/usePermission';
 

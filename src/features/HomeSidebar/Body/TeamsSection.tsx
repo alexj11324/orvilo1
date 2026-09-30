@@ -1,6 +1,5 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import {
   EyeOffIcon,
   House,
@@ -16,6 +15,7 @@ import useSWR from 'swr';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { toast } from '@/components/toast';
 import {
   DropdownMenu,
   DropdownMenuContent,

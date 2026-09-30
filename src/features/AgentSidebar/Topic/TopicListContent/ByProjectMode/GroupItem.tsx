@@ -1,12 +1,3 @@
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_URL } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -15,8 +6,10 @@ import { createElement, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import ActionIcon from '@/components/ActionIcon';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import RingLoadingIcon from '@/components/RingLoading';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import UnreadDot from '@/components/UnreadDot';
 import { isDesktop } from '@/const/version';
@@ -274,34 +267,28 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
 
   return (
     <AccordionItem value={id}>
-      <AccordionHeader className={'accordion-header'}>
-        <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-          <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
-            <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[28px]">
-              <ProjectFolderIcon
-                color={cssVar.colorTextTertiary}
-                size={{ size: 15, strokeWidth: 1.5 }}
-              />
+      <div className="flex items-center accordion-header">
+        <div className="min-w-0 flex-1">
+          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
+            <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
+              <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[28px]">
+                <ProjectFolderIcon
+                  color={cssVar.colorTextTertiary}
+                  size={{ size: 15, strokeWidth: 1.5 }}
+                />
+              </div>
+              <div
+                className="truncate text-[14px]"
+                style={{ color: cssVar.colorTextSecondary, flex: 1 }}
+              >
+                {title}
+              </div>
             </div>
-            <Text ellipsis fontSize={14} style={{ color: cssVar.colorTextSecondary, flex: 1 }}>
-              {title}
-            </Text>
-          </div>
-        </AccordionTrigger>
-        {action && (
-          <div
-            className={cx(
-              'accordion-action',
-              accordionStyles.action,
-              accordionStyles.actionBorderless,
-              hasCollapsedIndicators && accordionStyles.actionAlwaysVisible,
-            )}
-          >
-            {action}
-          </div>
-        )}
-      </AccordionHeader>
-      <AccordionPanel contentStyle={{ padding: 0 }}>
+          </AccordionTrigger>
+        </div>
+        {action && <div className="flex shrink-0 items-center">{action}</div>}
+      </div>
+      <AccordionContent className="[&>div]:p-0">
         <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
@@ -315,7 +302,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
             />
           ))}
         </div>
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 }, isEqual);

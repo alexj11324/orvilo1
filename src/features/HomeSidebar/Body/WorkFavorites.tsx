@@ -14,13 +14,13 @@ import {
   sortableKeyboardCoordinates,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { toast } from '@lobehub/ui/base-ui';
 import { Hash, LucideCheck, MoreHorizontalIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
+import { toast } from '@/components/toast';
 import {
   SidebarGroup,
   SidebarGroupAction,

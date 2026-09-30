@@ -1,13 +1,3 @@
-import {
-  confirmModal,
-  DropdownMenuItem,
-  DropdownMenuPopup,
-  DropdownMenuPortal,
-  DropdownMenuPositioner,
-  DropdownMenuRoot,
-  DropdownMenuTrigger,
-  toast,
-} from '@lobehub/ui/base-ui';
 import { deriveWorktreePath, type DeviceGitWorktreeListItem } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
@@ -33,6 +23,14 @@ import {
 } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { gitService } from '@/services/git';
 
@@ -225,6 +223,7 @@ const styles = createStaticStyles(({ css }) => ({
   list: css`
     overflow-y: auto;
     flex: 1;
+    max-height: 320px;
     padding: 6px;
   `,
   createItemWrapper: css`
@@ -648,172 +647,169 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
     );
 
     return (
-      <DropdownMenuRoot open={open} onOpenChange={setOpen}>
+      <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger className={styles.triggerAnchor}>
           <div className={children ? styles.triggerFill : undefined}>
             {open ? trigger : <SimpleTooltip title={triggerTitle}>{trigger}</SimpleTooltip>}
           </div>
         </DropdownMenuTrigger>
-        <DropdownMenuPortal>
-          <DropdownMenuPositioner placement={placement} sideOffset={8}>
-            <DropdownMenuPopup>
-              <div className={styles.container}>
-                <div className={styles.searchBar}>
-                  <div className="flex flex-row items-center gap-1.5 px-1.5">
-                    <span className="flex items-center">
-                      <span className="anticon" role="img">
-                        <SearchIcon fill={'transparent'} height={14} size={14} width={14} />
-                      </span>
-                    </span>
-                    <Input
-                      autoFocus
-                      placeholder={t('workingDirectory.worktreeSearchPlaceholder')}
-                      value={search}
-                      className={
-                        'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
-                      }
-                      onChange={(e) => setSearch(e.target.value)}
-                      onKeyDown={(e) => e.stopPropagation()}
-                    />
-                  </div>
-                </div>
+        <DropdownMenuContent
+          align={placement === 'bottomRight' ? 'end' : 'start'}
+          side={placement === 'topLeft' ? 'top' : 'bottom'}
+          sideOffset={8}
+        >
+          <div className={styles.container}>
+            <div className={styles.searchBar}>
+              <div className="flex flex-row items-center gap-1.5 px-1.5">
+                <span className="flex items-center">
+                  <span className="anticon" role="img">
+                    <SearchIcon fill={'transparent'} height={14} size={14} width={14} />
+                  </span>
+                </span>
+                <Input
+                  autoFocus
+                  placeholder={t('workingDirectory.worktreeSearchPlaceholder')}
+                  value={search}
+                  className={
+                    'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
+                  }
+                  onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => e.stopPropagation()}
+                />
+              </div>
+            </div>
 
-                <div className={styles.list}>
-                  <div className={styles.sectionRow}>
-                    <div className={styles.section}>{t('workingDirectory.worktreesHeading')}</div>
-                    <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
-                      <span
-                        className={cx('anticon', cx(isRefreshing && styles.spinning))}
-                        role="img"
-                      >
-                        <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
-                      </span>
-                    </div>
-                  </div>
-
-                  {filtered.length === 0 ? (
-                    <div className={styles.emptyState}>
-                      {search.trim()
-                        ? t('workingDirectory.worktreesNoMatch')
-                        : t('workingDirectory.worktreesEmpty')}
-                    </div>
-                  ) : (
-                    filtered.map((worktree) => {
-                      const branch = getWorktreeBranch(worktree, currentBranch, (sha) =>
-                        t('workingDirectory.detachedHeadShort', { sha }),
-                      );
-                      const displayPath = getRelativeDisplayPath(worktree.path, sourcePath);
-                      const disabled = isDisabled(worktree);
-                      const removing = removingPaths.has(worktree.path);
-                      const removable =
-                        canRemoveWorktree(worktree, sourcePath, mainWorktree?.path) && !removing;
-
-                      return (
-                        <DropdownMenuItem
-                          aria-disabled={disabled}
-                          className={styles.item}
-                          closeOnClick={false}
-                          data-current={worktree.current}
-                          key={worktree.path}
-                          ref={worktree.path === currentPath ? currentRowRef : undefined}
-                          onClick={() => void commitWorktree(worktree)}
-                        >
-                          <div className={styles.itemMain}>
-                            <div className={styles.rowTitle}>
-                              <span className={styles.name}>{getPathName(worktree.path)}</span>
-                              <span className={styles.branch}>{branch}</span>
-                              {worktree.current && (
-                                <span className={styles.badge}>
-                                  {t('workingDirectory.currentWorktree')}
-                                </span>
-                              )}
-                              {worktree.detached && (
-                                <span className={styles.badge}>
-                                  {t('workingDirectory.detachedWorktree')}
-                                </span>
-                              )}
-                              {worktree.locked && (
-                                <span className={styles.badge}>
-                                  {t('workingDirectory.lockedWorktree')}
-                                </span>
-                              )}
-                              {worktree.prunable && (
-                                <span className={styles.badge}>
-                                  {t('workingDirectory.prunableWorktree')}
-                                </span>
-                              )}
-                              {worktree.bare && (
-                                <span className={styles.badge}>
-                                  {t('workingDirectory.bareWorktree')}
-                                </span>
-                              )}
-                            </div>
-                            <div className={styles.path} title={worktree.path}>
-                              {displayPath}
-                            </div>
-                          </div>
-                          <div className={styles.dirtyCell}>
-                            <DirtyStat status={worktree.status} />
-                          </div>
-                          <div className={styles.actionCell}>
-                            {removing ? (
-                              <span className="anticon animate-spin" role="img">
-                                <LoaderCircleIcon
-                                  fill={'transparent'}
-                                  height={13}
-                                  size={13}
-                                  width={13}
-                                />
-                              </span>
-                            ) : worktree.current ? (
-                              <span className={cx('anticon', styles.check)} role="img">
-                                <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
-                              </span>
-                            ) : (
-                              removable && (
-                                <SimpleTooltip title={t('workingDirectory.removeWorktreeAction')}>
-                                  <div
-                                    aria-label={t('workingDirectory.removeWorktreeAction')}
-                                    className={`${styles.rowAction} worktree-row-action`}
-                                    role="button"
-                                    onClick={(event) => handleRemoveWorktree(event, worktree)}
-                                  >
-                                    <span className="anticon" role="img">
-                                      <Trash2Icon
-                                        fill={'transparent'}
-                                        height={13}
-                                        size={13}
-                                        width={13}
-                                      />
-                                    </span>
-                                  </div>
-                                </SimpleTooltip>
-                              )
-                            )}
-                          </div>
-                        </DropdownMenuItem>
-                      );
-                    })
-                  )}
-                </div>
-
-                <div className={styles.createItemWrapper}>
-                  <DropdownMenuItem
-                    className={styles.createItem}
-                    closeOnClick={false}
-                    onClick={openCreateWorktree}
-                  >
-                    <span className={cx('anticon', styles.createItemIcon)} role="img">
-                      <FolderPlusIcon fill={'transparent'} height={14} size={14} width={14} />
-                    </span>
-                    <div>{t('workingDirectory.createWorktreeAction')}</div>
-                  </DropdownMenuItem>
+            <div className={styles.list}>
+              <div className={styles.sectionRow}>
+                <div className={styles.section}>{t('workingDirectory.worktreesHeading')}</div>
+                <div className={styles.refreshButton} role="button" onClick={handleRefresh}>
+                  <span className={cx('anticon', cx(isRefreshing && styles.spinning))} role="img">
+                    <RefreshCwIcon fill={'transparent'} height={12} size={12} width={12} />
+                  </span>
                 </div>
               </div>
-            </DropdownMenuPopup>
-          </DropdownMenuPositioner>
-        </DropdownMenuPortal>
-      </DropdownMenuRoot>
+
+              {filtered.length === 0 ? (
+                <div className={styles.emptyState}>
+                  {search.trim()
+                    ? t('workingDirectory.worktreesNoMatch')
+                    : t('workingDirectory.worktreesEmpty')}
+                </div>
+              ) : (
+                filtered.map((worktree) => {
+                  const branch = getWorktreeBranch(worktree, currentBranch, (sha) =>
+                    t('workingDirectory.detachedHeadShort', { sha }),
+                  );
+                  const displayPath = getRelativeDisplayPath(worktree.path, sourcePath);
+                  const disabled = isDisabled(worktree);
+                  const removing = removingPaths.has(worktree.path);
+                  const removable =
+                    canRemoveWorktree(worktree, sourcePath, mainWorktree?.path) && !removing;
+
+                  return (
+                    <DropdownMenuItem
+                      aria-disabled={disabled}
+                      className={styles.item}
+                      closeOnClick={false}
+                      data-current={worktree.current}
+                      key={worktree.path}
+                      ref={worktree.path === currentPath ? currentRowRef : undefined}
+                      onClick={() => void commitWorktree(worktree)}
+                    >
+                      <div className={styles.itemMain}>
+                        <div className={styles.rowTitle}>
+                          <span className={styles.name}>{getPathName(worktree.path)}</span>
+                          <span className={styles.branch}>{branch}</span>
+                          {worktree.current && (
+                            <span className={styles.badge}>
+                              {t('workingDirectory.currentWorktree')}
+                            </span>
+                          )}
+                          {worktree.detached && (
+                            <span className={styles.badge}>
+                              {t('workingDirectory.detachedWorktree')}
+                            </span>
+                          )}
+                          {worktree.locked && (
+                            <span className={styles.badge}>
+                              {t('workingDirectory.lockedWorktree')}
+                            </span>
+                          )}
+                          {worktree.prunable && (
+                            <span className={styles.badge}>
+                              {t('workingDirectory.prunableWorktree')}
+                            </span>
+                          )}
+                          {worktree.bare && (
+                            <span className={styles.badge}>
+                              {t('workingDirectory.bareWorktree')}
+                            </span>
+                          )}
+                        </div>
+                        <div className={styles.path} title={worktree.path}>
+                          {displayPath}
+                        </div>
+                      </div>
+                      <div className={styles.dirtyCell}>
+                        <DirtyStat status={worktree.status} />
+                      </div>
+                      <div className={styles.actionCell}>
+                        {removing ? (
+                          <span className="anticon animate-spin" role="img">
+                            <LoaderCircleIcon
+                              fill={'transparent'}
+                              height={13}
+                              size={13}
+                              width={13}
+                            />
+                          </span>
+                        ) : worktree.current ? (
+                          <span className={cx('anticon', styles.check)} role="img">
+                            <CheckIcon fill={'transparent'} height={14} size={14} width={14} />
+                          </span>
+                        ) : (
+                          removable && (
+                            <SimpleTooltip title={t('workingDirectory.removeWorktreeAction')}>
+                              <div
+                                aria-label={t('workingDirectory.removeWorktreeAction')}
+                                className={`${styles.rowAction} worktree-row-action`}
+                                role="button"
+                                onClick={(event) => handleRemoveWorktree(event, worktree)}
+                              >
+                                <span className="anticon" role="img">
+                                  <Trash2Icon
+                                    fill={'transparent'}
+                                    height={13}
+                                    size={13}
+                                    width={13}
+                                  />
+                                </span>
+                              </div>
+                            </SimpleTooltip>
+                          )
+                        )}
+                      </div>
+                    </DropdownMenuItem>
+                  );
+                })
+              )}
+            </div>
+
+            <div className={styles.createItemWrapper}>
+              <DropdownMenuItem
+                className={styles.createItem}
+                closeOnClick={false}
+                onClick={openCreateWorktree}
+              >
+                <span className={cx('anticon', styles.createItemIcon)} role="img">
+                  <FolderPlusIcon fill={'transparent'} height={14} size={14} width={14} />
+                </span>
+                <div>{t('workingDirectory.createWorktreeAction')}</div>
+              </DropdownMenuItem>
+            </div>
+          </div>
+        </DropdownMenuContent>
+      </DropdownMenu>
     );
   },
 );

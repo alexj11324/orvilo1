@@ -1,11 +1,11 @@
 'use client';
 
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronsUpDownIcon } from 'lucide-react';
 import type { ComponentProps, ReactNode } from 'react';
 import { memo, useState } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
@@ -73,9 +73,7 @@ export const SidebarHeaderSelectTrigger = memo<SidebarHeaderSelectTriggerProps>(
       {...rest}
     >
       <Avatar avatar={avatar} background={background} name={name} shape={'square'} size={28} />
-      <Text ellipsis weight={500}>
-        {title}
-      </Text>
+      <div className="truncate font-medium">{title}</div>
       <ActionIcon
         icon={ChevronsUpDownIcon}
         size={DESKTOP_HEADER_ICON_SMALL_SIZE}

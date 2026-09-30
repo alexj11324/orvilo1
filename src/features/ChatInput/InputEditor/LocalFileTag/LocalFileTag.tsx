@@ -1,4 +1,3 @@
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { LexicalEditor } from 'lexical';
@@ -9,6 +8,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useClientDataSWR } from '@/libs/swr';
 import { localFileKeys } from '@/libs/swr/keys';
@@ -207,9 +207,15 @@ const LocalFileTagTrigger = memo<LocalFileTagTriggerProps>(
     }, [editor, nodeKey, onClick]);
 
     return (
-      <Tag {...rest} className={cx(styles.tag, className)} ref={setSpanRef} title={title}>
+      <Badge
+        rest
+        className={cx(styles.tag, className)}
+        ref={setSpanRef}
+        title={title}
+        variant="secondary"
+      >
         {children}
-      </Tag>
+      </Badge>
     );
   },
 );
@@ -310,42 +316,27 @@ export const LocalFileTag = memo<LocalFileTagProps>(({ className, editor, file, 
           />
         </div>
       )}
-      <Text className={styles.path}>{file.path}</Text>
+      <div className={styles.path}>{file.path}</div>
       {isDesktop && (
         <div className={cx('flex flex-row gap-1.5', styles.actionBar)}>
           {canPreview && (
-            <Button
-              size={'small'}
-              icon={
-                <span className="anticon" role="img">
-                  <EyeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-                </span>
-              }
-              onClick={handlePreview}
-            >
+            <Button size={'sm'} variant="outline" onClick={handlePreview}>
+              <span className="anticon" data-icon="inline-start" role="img">
+                <EyeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
               {t('workingPanel.documents.preview')}
             </Button>
           )}
-          <Button
-            size={'small'}
-            icon={
-              <span className="anticon" role="img">
-                <ExternalLink fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-              </span>
-            }
-            onClick={handleOpen}
-          >
+          <Button size={'sm'} variant="outline" onClick={handleOpen}>
+            <span className="anticon" data-icon="inline-start" role="img">
+              <ExternalLink fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
             {t('workingPanel.files.open')}
           </Button>
-          <Button
-            size={'small'}
-            icon={
-              <span className="anticon" role="img">
-                <FolderOpen fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-              </span>
-            }
-            onClick={handleReveal}
-          >
+          <Button size={'sm'} variant="outline" onClick={handleReveal}>
+            <span className="anticon" data-icon="inline-start" role="img">
+              <FolderOpen fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+            </span>
             {t('workingPanel.files.showInSystem')}
           </Button>
         </div>

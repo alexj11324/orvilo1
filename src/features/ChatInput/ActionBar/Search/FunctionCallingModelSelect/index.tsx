@@ -1,9 +1,14 @@
-import { Select, type SelectProps } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
-import { type ReactNode } from 'react';
 import { memo, useMemo } from 'react';
 
 import { ModelItemRender, ProviderItemRender } from '@/components/ModelSelect';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import { useEnabledChatModels } from '@/hooks/useEnabledChatModels';
 import { type WorkingModel } from '@/types/agent';
@@ -19,13 +24,8 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-interface ModelOption {
-  label: ReactNode;
-  provider: string;
-  value: string;
-}
-
-interface ModelSelectProps extends Omit<SelectProps, 'onChange' | 'value'> {
+interface ModelSelectProps {
+  disabled?: boolean;
   onChange?: (props: WorkingModel) => void;
   showAbility?: boolean;
   value?: WorkingModel;
@@ -34,7 +34,7 @@ interface ModelSelectProps extends Omit<SelectProps, 'onChange' | 'value'> {
 const ModelSelect = memo<ModelSelectProps>(({ value, onChange, ...rest }) => {
   const enabledList = useEnabledChatModels();
 
-  const options = useMemo<SelectProps['options']>(() => {
+  const options = useMemo(() => {
     const getChatModels = (provider: EnabledProviderWithModels) =>
       provider.children
         .filter((model) => !!model.abilities.functionCall)
@@ -56,6 +56,7 @@ const ModelSelect = memo<ModelSelectProps>(({ value, onChange, ...rest }) => {
         const options = getChatModels(provider);
 
         return {
+          key: provider.id,
           label: (
             <ProviderItemRender
               logo={provider.logo}
@@ -72,18 +73,36 @@ const ModelSelect = memo<ModelSelectProps>(({ value, onChange, ...rest }) => {
   return (
     <TooltipProvider>
       <Select
-        options={options}
-        popupClassName={styles.select}
-        popupMatchSelectWidth={false}
+        disabled={rest.disabled}
         value={`${value?.provider}/${value?.model}`}
-        variant={'filled'}
-        onChange={(value, option) => {
-          if (!value) return;
-          const model = (value as string).split('/').slice(1).join('/');
-          onChange?.({ model, provider: (option as unknown as ModelOption).provider });
+        onValueChange={(v) => {
+          const model = v.split('/').slice(1).join('/');
+          const provider = v.split('/')[0];
+          onChange?.({ model, provider });
         }}
-        {...rest}
-      />
+      >
+        <SelectTrigger>
+          <SelectValue />
+        </SelectTrigger>
+        <SelectContent className={styles.select}>
+          {options.map((item) =>
+            'options' in item ? (
+              <div key={item.key}>
+                <div className="px-1.5 py-1 text-xs text-muted-foreground">{item.label}</div>
+                {item.options.map((option) => (
+                  <SelectItem key={option.value} label={option.value} value={option.value}>
+                    {option.label}
+                  </SelectItem>
+                ))}
+              </div>
+            ) : (
+              <SelectItem key={item.value} label={item.value} value={item.value}>
+                {item.label}
+              </SelectItem>
+            ),
+          )}
+        </SelectContent>
+      </Select>
     </TooltipProvider>
   );
 });

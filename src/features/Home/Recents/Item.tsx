@@ -1,9 +1,9 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { RecentItem } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { BookmarkIcon, FileTextIcon, HashIcon, MoreHorizontalIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useState } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import InlineRename from '@/components/InlineRename';
 import TaskStatusIcon from '@/features/AgentTasks/features/TaskStatusIcon';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';

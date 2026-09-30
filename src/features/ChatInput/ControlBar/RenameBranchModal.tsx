@@ -1,17 +1,12 @@
 'use client';
 
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 
 interface RenameBranchContentProps {
@@ -71,7 +66,7 @@ const RenameBranchContent = memo<RenameBranchContentProps>(({ currentName, onSub
             if (e.key === 'Enter') handleSubmit();
           }}
         />
-        {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
+        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
       </div>
       <div className="flex flex-row gap-2 justify-end">
         <Button disabled={loading} onClick={close}>
@@ -80,7 +75,7 @@ const RenameBranchContent = memo<RenameBranchContentProps>(({ currentName, onSub
         <Button
           disabled={!trimmed || trimmed === currentName}
           loading={loading}
-          type={'primary'}
+          variant="default"
           onClick={handleSubmit}
         >
           {tDevice('workingDirectory.renameBranchAction')}

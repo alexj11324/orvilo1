@@ -1,10 +1,11 @@
 'use client';
 
-import { ActionIcon, type ActionIconProps } from '@lobehub/ui/base-ui';
 import { isUndefined } from 'es-toolkit/compat';
 import { memo } from 'react';
 import useMergeState from 'use-merge-value';
 
+import ActionIcon from '@/components/ActionIcon';
+import { type ActionIconProps } from '@/components/ActionIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { useServerConfigStore } from '@/store/serverConfig';
 

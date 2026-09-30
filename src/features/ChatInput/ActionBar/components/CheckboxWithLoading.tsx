@@ -1,7 +1,8 @@
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { Loader2 } from 'lucide-react';
 import { type CSSProperties, type ReactNode } from 'react';
 import { memo, useState } from 'react';
+
+import { Checkbox } from '@/components/ui/checkbox';
 
 export interface CheckboxItemProps {
   checked?: boolean;
@@ -99,8 +100,8 @@ const CheckboxItem = memo<CheckboxItemProps>(
           <Checkbox
             checked={checked}
             disabled={disabled}
-            onClick={async (e) => {
-              e.stopPropagation();
+            onClick={(e) => e.stopPropagation()}
+            onCheckedChange={async () => {
               if (disabled) return;
 
               await updateState();

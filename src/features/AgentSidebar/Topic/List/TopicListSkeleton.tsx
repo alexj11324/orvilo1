@@ -1,8 +1,9 @@
 'use client';
 
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 // Mirrors the grouped topic list frame (12px group caption + icon-led 36px
 // rows) so the deferred-mount frame reads as the layout it resolves into,

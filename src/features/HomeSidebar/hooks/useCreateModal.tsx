@@ -1,9 +1,11 @@
-import { ActionIcon, Button, createModal, type ModalInstance, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { Lightbulb, PencilLineIcon, RefreshCw, X } from 'lucide-react';
 import { memo, useCallback, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { createModal, type ModalInstance } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import {
   type ActionKeys,
   type ChatInputEditor,
@@ -37,12 +39,12 @@ const ExampleItem = memo<ExampleItemProps>(({ title, description, onClick, promp
       onClick={() => onClick(prompt)}
     >
       <div className="flex flex-col gap-1 py-3 px-[14px]">
-        <Text ellipsis fontSize={14} style={{ fontWeight: 500 }}>
+        <div className="truncate text-[14px]" style={{ fontWeight: 500 }}>
           {title}
-        </Text>
-        <Text color={cssVar.colorTextTertiary} ellipsis={{ rows: 2 }} fontSize={12}>
+        </div>
+        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
           {description}
-        </Text>
+        </div>
       </div>
     </div>
   );
@@ -65,13 +67,13 @@ const Examples = memo<ExamplesProps>(({ suggestMode, onExampleClick }) => {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Lightbulb color={cssVar.colorTextDescription} size={18} />
-          <Text color={cssVar.colorTextSecondary}>{tCommon('home.suggestQuestions')}</Text>
+          <div style={{ color: cssVar.colorTextSecondary }}>{tCommon('home.suggestQuestions')}</div>
         </div>
         <div className="flex items-center gap-1" style={{ cursor: 'pointer' }} onClick={refresh}>
           <ActionIcon icon={RefreshCw} size={'small'} />
-          <Text color={cssVar.colorTextSecondary} fontSize={12}>
+          <div className="text-[12px]" style={{ color: cssVar.colorTextSecondary }}>
             {tCommon('switch')}
-          </Text>
+          </div>
         </div>
       </div>
       <div
@@ -202,7 +204,8 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
       <div className="flex flex-col gap-6 px-6" style={{ paddingBlock: '16px 24px' }}>
         {/* Header: Start Blank + Close */}
         <div className="flex items-center gap-1 justify-end">
-          <Button icon={<PencilLineIcon size={14} />} type="text" onClick={handleCreateBlank}>
+          <Button variant="ghost" onClick={handleCreateBlank}>
+            <PencilLineIcon data-icon="inline-start" size={14} />
             {t('createModal.createBlank')}
           </Button>
           <ActionIcon icon={X} onClick={handleClose} />

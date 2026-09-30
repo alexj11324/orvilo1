@@ -1,5 +1,4 @@
 import { PreviewCard } from '@base-ui/react/preview-card';
-import { Skeleton, Tag, Text } from '@lobehub/ui/base-ui';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
 import type { ChatTopicMetadata, ChatTopicStatus } from '@orvilo/types';
 import { formatElapsedClockTime } from '@orvilo/utils';
@@ -19,6 +18,7 @@ import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspa
 import DotsLoading from '@/components/DotsLoading';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import RingLoadingIcon from '@/components/RingLoading';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import UnreadDot from '@/components/UnreadDot';
@@ -299,9 +299,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
     const workingDirectoryNode = workingDirectoryDisplay ? (
       <div className="flex items-center gap-1" style={{ overflow: 'hidden' }}>
         <DirIcon repoType={workingDirectoryDisplay.repoType} size={13} />
-        <Text ellipsis fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+        <div className="truncate text-[12px]" style={{ color: cssVar.colorTextDescription }}>
           {workingDirectoryDisplay.label}
-        </Text>
+        </div>
       </div>
     ) : undefined;
 
@@ -330,9 +330,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
     );
     const hasDraft = useHasDraft(draftKey);
     const draftPrefix = hasDraft ? (
-      <Text fontSize={12} style={{ color: cssVar.colorError, flex: 'none' }}>
+      <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>
         {t('draft')}
-      </Text>
+      </div>
     ) : undefined;
 
     // Codex-style hover detail card: when the topic carries git context, hovering
@@ -361,15 +361,13 @@ const TopicItemRow = memo<TopicItemRowProps>(
           title={
             <div className="flex items-center flex-1 gap-1.5">
               {t('defaultTitle')}
-              <Tag
-                size={'small'}
-                style={{
-                  color: cssVar.colorTextDescription,
-                  fontSize: 10,
-                }}
+              <Badge
+                size="sm"
+                style={{ color: cssVar.colorTextDescription, fontSize: 10 }}
+                variant="secondary"
               >
                 {t('temp')}
-              </Tag>
+              </Badge>
             </div>
           }
           onClick={handleClick}
@@ -554,8 +552,8 @@ const TopicItemRow = memo<TopicItemRowProps>(
                 className="flex flex-col gap-2 w-full"
                 style={{ paddingBlock: 8, paddingInline: 24 }}
               >
-                <Skeleton height={18} width={'100%'} />
-                <Skeleton height={18} width={'100%'} />
+                <Skeleton style={{ height: 18, width: '100%' }} />
+                <Skeleton style={{ height: 18, width: '100%' }} />
               </div>
             }
           >

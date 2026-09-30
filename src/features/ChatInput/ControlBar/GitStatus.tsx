@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import type { WorkingDirGitState } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowDownIcon, ArrowUpIcon, GitPullRequest } from 'lucide-react';
@@ -6,6 +5,7 @@ import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import RingLoadingIcon from '@/components/RingLoading';
+import { toast } from '@/components/toast';
 import { electronSystemService } from '@/services/electron/system';
 import { gitService } from '@/services/git';
 import {

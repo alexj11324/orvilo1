@@ -1,4 +1,3 @@
-import { toast, Upload } from '@lobehub/ui/base-ui';
 import { validateVideoFileSize } from '@orvilo/utils/client';
 import { css, cx } from 'antd-style';
 import { FileUp, FolderUp, ImageUp, Paperclip } from 'lucide-react';
@@ -6,6 +5,8 @@ import { memo, Suspense, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import TipGuide from '@/components/TipGuide';
+import { toast } from '@/components/toast';
+import { Upload } from '@/components/Upload';
 import { useMediaUploadAbility } from '@/hooks/useMediaUploadAbility';
 import { usePermission } from '@/hooks/usePermission';
 import { useFileStore } from '@/store/file';

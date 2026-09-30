@@ -205,9 +205,8 @@ vi.mock('@/components/ui/popover', () => {
   };
 });
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...((await importOriginal()) as Record<string, unknown>),
-  ActionIcon: ({
+vi.mock('@/components/ActionIcon', () => ({
+  default: ({
     onClick,
     title,
     disabled,
@@ -224,14 +223,24 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
       onClick={onClick}
     />
   ),
+}));
+
+vi.mock('@/components/Modal', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
   confirmModal: confirmModalMock,
-  Skeleton: ({ height }: { height?: number }) => (
-    <div data-height={height} data-testid="skeleton" />
-  ),
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: {
     error: toastErrorMock,
     success: toastSuccessMock,
   },
+}));
+
+vi.mock('@/components/ui/skeleton', () => ({
+  Skeleton: ({ height }: { height?: number }) => (
+    <div data-height={height} data-testid="skeleton" />
+  ),
 }));
 
 const claudeSnapshot = (

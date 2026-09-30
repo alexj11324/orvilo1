@@ -1,4 +1,3 @@
-import { Avatar, confirmModal, Switch, Tag } from '@lobehub/ui/base-ui';
 import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
 import { getConnectorCatalog, RECOMMENDED_SKILLS, RecommendedSkillType } from '@orvilo/const';
 import { type AgentPluginMode, getDisabledPluginIds } from '@orvilo/types';
@@ -11,7 +10,6 @@ import {
   ChevronDown,
   ChevronRight,
   MoreHorizontal,
-  Package,
   Pin,
   Settings,
   Trash2,
@@ -22,7 +20,10 @@ import type { ReactNode } from 'react';
 import { createElement, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import { confirmModal } from '@/components/Modal';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Switch } from '@/components/ui/switch';
 import { openConnectorEditDrawer } from '@/features/Connectors/CustomConnectorModal/imperative';
 import { openPluginEditDrawer } from '@/features/PluginDevModal/imperative';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -60,15 +61,11 @@ import ToolItemDetailPopover from './ToolItemDetailPopover';
 
 const officialTag = (
   <SimpleTooltip side={'top'} title={'Orvilo'}>
-    <Tag
-      color={'success'}
-      size={'small'}
-      icon={
-        <span className="anticon" role="img">
-          <BadgeCheck fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-        </span>
-      }
-    />
+    <Badge size="sm" variant="success-light">
+      <span className="anticon" data-icon="inline-start" role="img">
+        <BadgeCheck fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+      </span>
+    </Badge>
   </SimpleTooltip>
 );
 
@@ -1493,17 +1490,9 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
         onDelete: () => uninstallPlugin(item.identifier),
       },
       extraTag: isCustom ? (
-        <Tag
-          color={'warning'}
-          size={'small'}
-          icon={
-            <span className="anticon" role="img">
-              <Package fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
-            </span>
-          }
-        >
+        <Badge data-icon="inline-start" size="sm" variant="warning-light">
           {t('store.customPlugin', { ns: 'plugin' })}
-        </Tag>
+        </Badge>
       ) : item.author === 'Orvilo' ? (
         officialTag
       ) : undefined,
@@ -1616,12 +1605,10 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
           >
             <Switch
               checked={isAutoSkillMode}
-              disabled={!canEdit}
-              loading={autoModeLoading}
-              size="small"
-              onClick={(_, event) => event.stopPropagation()}
-              onChange={async (checked, event) => {
-                event?.stopPropagation?.();
+              disabled={!canEdit || autoModeLoading}
+              size="sm"
+              onClick={(event) => event.stopPropagation()}
+              onCheckedChange={async (checked) => {
                 if (!canEdit) return;
                 setAutoModeLoading(true);
                 try {

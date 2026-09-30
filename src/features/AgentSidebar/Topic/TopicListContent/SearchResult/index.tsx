@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +20,7 @@ const SearchResult = memo(() => {
   if (topics.length === 0)
     return (
       <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 12 }}>
-        <Text type={'secondary'}>{t('searchResultEmpty')}</Text>
+        <div className="text-muted-foreground">{t('searchResultEmpty')}</div>
       </div>
     );
 

@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -64,9 +63,9 @@ const User = memo<{ lite?: boolean }>(({ lite }) => {
             {!isSignedIn && !activeIdentity ? (
               <ProductLogo color={cssVar.colorText} size={28} type={'text'} />
             ) : (
-              <Text ellipsis style={{ flex: 1 }} weight={500}>
+              <div className="truncate font-medium" style={{ flex: 1 }}>
                 {displayName}
-              </Text>
+              </div>
             )}
             <ChevronDownIcon color={cssVar.colorTextDescription} id={USER_DROPDOWN_ICON_ID} />
           </div>

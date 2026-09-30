@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { SearchIcon } from 'lucide-react';
 import { memo, useEffect, useMemo, useState } from 'react';
@@ -139,9 +138,9 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
           loading={<SkeletonList rows={4} />}
           empty={
             <div className="flex flex-col items-center p-4">
-              <Text fontSize={13} type={'secondary'}>
+              <div className="text-[13px] text-muted-foreground">
                 {t('navPanel.searchResultEmpty')}
-              </Text>
+              </div>
             </div>
           }
           onRetry={onRetry}
@@ -150,9 +149,9 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
             <div className="flex flex-col">
               {showRecent && (
                 <>
-                  <Text as={'div'} className={styles.section}>
+                  <div className={styles.section}>
                     {t('navPanel.switcherRecent', { defaultValue: 'Recent' })}
-                  </Text>
+                  </div>
                   {recentItems.map((item) => (
                     <SwitcherRow
                       item={item}
@@ -164,9 +163,9 @@ const SwitcherMenu = memo<SwitcherMenuProps>(
                 </>
               )}
               {showRecent && (
-                <Text as={'div'} className={styles.section}>
+                <div className={styles.section}>
                   {t('navPanel.switcherAll', { defaultValue: 'All' })}
-                </Text>
+                </div>
               )}
               {visibleItems.map((item) => (
                 <SwitcherRow

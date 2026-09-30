@@ -1,8 +1,8 @@
-import { Button } from '@lobehub/ui/base-ui';
 import { Plus } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useActionSWR } from '@/libs/swr';
 import { sessionKeys } from '@/libs/swr/keys';
 import { useServerConfigStore } from '@/store/serverConfig';
@@ -19,15 +19,15 @@ const AddButton = memo<{ groupId?: string }>(({ groupId }) => {
   return (
     <div className="flex flex-col flex-1" style={{ padding: mobile ? 16 : 0 }}>
       <Button
-        block
-        icon={Plus}
+        className="w-full"
         loading={isValidating}
-        type={'fill'}
+        variant="secondary"
         style={{
           marginTop: 8,
         }}
         onClick={() => mutate()}
       >
+        <Plus data-icon="inline-start" />
         {t('newAgent')}
       </Button>
     </div>

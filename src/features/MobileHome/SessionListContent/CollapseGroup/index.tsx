@@ -1,7 +1,13 @@
-import { Accordion } from '@lobehub/ui/base-ui';
 import { createStaticStyles, responsive } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   header: css`
@@ -34,19 +40,21 @@ interface CollapseGroupProps {
 
 const CollapseGroup = memo<CollapseGroupProps>(({ activeKey, items, onChange }) => {
   return (
-    <Accordion
-      classNames={{ header: styles.header }}
-      indicatorPlacement={'end'}
-      styles={{ trigger: { paddingInline: '16px 10px' } }}
-      value={activeKey}
-      items={items.map((item) => ({
-        action: item.extra,
-        children: item.children,
-        key: item.key,
-        title: item.label,
-      }))}
-      onValueChange={onChange}
-    />
+    <Accordion multiple value={activeKey} onValueChange={onChange}>
+      {items.map((item) => (
+        <AccordionItem key={item.key} value={item.key}>
+          <div className={styles.header}>
+            <div className="flex min-w-0 flex-1 items-center">
+              <AccordionTrigger style={{ paddingInline: '16px 10px' }}>
+                {item.label}
+              </AccordionTrigger>
+            </div>
+            {item.extra && <div className="flex shrink-0 items-center">{item.extra}</div>}
+          </div>
+          <AccordionContent>{item.children}</AccordionContent>
+        </AccordionItem>
+      ))}
+    </Accordion>
   );
 });
 

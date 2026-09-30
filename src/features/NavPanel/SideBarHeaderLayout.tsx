@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronRightIcon, HomeIcon } from 'lucide-react';
 import type { MouseEvent, ReactNode } from 'react';
@@ -75,9 +74,7 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
       >
         {showBack && <BackButton size={DESKTOP_HEADER_ICON_SMALL_SIZE} to={backTo} />}
         {left && typeof left === 'string' ? (
-          <Text ellipsis fontSize={16} weight={500}>
-            {left}
-          </Text>
+          <div className="truncate text-[16px] font-medium">{left}</div>
         ) : (
           left
         )}

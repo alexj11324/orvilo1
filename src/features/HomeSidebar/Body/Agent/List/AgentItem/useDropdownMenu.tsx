@@ -1,4 +1,3 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { SessionDefaultGroup, type SidebarAgentLabel, type SidebarVisibility } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
@@ -24,6 +23,8 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useAgentTransferMenuItem } from '@/business/client/hooks/useAgentTransferMenuItem';
 import { useAgentTransferToMemberMenuItem } from '@/business/client/hooks/useAgentTransferToMemberMenuItem';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { openEditingPopover } from '@/features/EditingPopover/store';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';

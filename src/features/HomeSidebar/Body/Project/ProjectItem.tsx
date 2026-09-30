@@ -1,10 +1,11 @@
 'use client';
 
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { MoreHorizontalIcon, PencilIcon, TrashIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import NavItem from '@/features/NavPanel/components/NavItem';

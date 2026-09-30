@@ -1,6 +1,5 @@
 'use client';
 
-import { Accordion, Button, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import type {
   CodexQuotaSnapshot,
   CodexQuotaWindow,
@@ -8,10 +7,20 @@ import type {
 } from '@orvilo/electron-client-ipc';
 import { uuid } from '@orvilo/utils';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { RotateCcwIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { heterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
 
 import type { FetchQuotaOptions, QuotaMenuHelpers, QuotaWindowItem } from './QuotaMenu';
@@ -322,9 +331,9 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
               <span className="anticon" role="img">
                 <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
               </span>
-              <Text style={{ fontSize: 12 }} type="secondary">
+              <div className="text-muted-foreground" style={{ fontSize: 12 }}>
                 {t('heteroAgent.codexQuota.resetCreditsUnavailable')}
-              </Text>
+              </div>
             </div>
           </div>
         );
@@ -343,106 +352,102 @@ const CodexQuotaMenu = memo<CodexQuotaMenuProps>(({ command, env }) => {
 
       return (
         <div className={cx('flex flex-col', styles.resetCredits)}>
-          <Accordion
-            className={styles.creditCollapse}
-            defaultValue={[]}
-            indicatorPlacement={'end'}
-            variant={'borderless'}
-            items={[
-              {
-                children: (
-                  <div className="flex flex-col gap-2">
-                    {resetCreditItems.length > 0 && (
-                      <div className={cx('flex flex-col', styles.creditList)}>
-                        {resetCreditItems.map(({ credit, index }) => {
-                          const fallbackExpiry =
-                            index === 1 ? resetCredits.nextExpiresAt : undefined;
-                          const expiresAt = credit ? credit.expiresAt : fallbackExpiry;
-                          const expiresIn = expiresAt ? formatDuration(expiresAt - now) : undefined;
-
-                          return (
-                            <div
-                              className={cx('flex flex-row items-center gap-2', styles.credit)}
-                              key={credit?.id ?? `reset-credit-${index}`}
-                            >
-                              <Text className={styles.creditIndex} style={{ fontSize: 12 }}>
-                                {`#${index}`}
-                              </Text>
-                              <Text strong className={styles.creditTitle} style={{ fontSize: 12 }}>
-                                {credit?.title || t('heteroAgent.codexQuota.resetCreditTitle')}
-                              </Text>
-                              <Text
-                                className={styles.creditExpiry}
-                                style={{ fontSize: 12 }}
-                                type="secondary"
-                              >
-                                {expiresAt
-                                  ? expiresIn
-                                    ? t('heteroAgent.codexQuota.expiresIn', {
-                                        duration: expiresIn,
-                                      })
-                                    : t('heteroAgent.codexQuota.expiresSoon')
-                                  : credit
-                                    ? t('heteroAgent.codexQuota.doesNotExpire')
-                                    : t('heteroAgent.codexQuota.resetCreditDetailsUnavailable')}
-                              </Text>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    )}
-
-                    {resetFeedback && (
-                      <div
-                        aria-live="polite"
-                        className={styles.feedback}
-                        data-kind={resetFeedback.kind}
-                        role={resetFeedback.kind === 'error' ? 'alert' : 'status'}
-                      >
-                        {resetFeedback.text}
-                      </div>
-                    )}
-
-                    {resetCreditCount > 0 && (
-                      <Button
-                        block
-                        icon={RotateCcwIcon}
-                        loading={resetting}
-                        size={'small'}
-                        type={'primary'}
-                        onClick={() => confirmReset(nextCredit?.id ?? undefined, applyQuota)}
-                      >
-                        {resetting
-                          ? t('heteroAgent.codexQuota.resetting')
-                          : t('heteroAgent.codexQuota.resetNow')}
-                      </Button>
-                    )}
-                  </div>
-                ),
-                disabled: !(resetCreditCount > 0 || !!resetFeedback),
-                key: 'reset-credits',
-                title: (
-                  <div className="flex flex-col gap-0.5">
-                    <div className="flex flex-row items-center gap-1">
-                      <span className="anticon" role="img">
-                        <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
-                      </span>
-                      <Text strong style={{ fontSize: 12 }}>
-                        {t('heteroAgent.codexQuota.resetCredits', { count: resetCreditCount })}
-                      </Text>
+          <Accordion className={styles.creditCollapse} defaultValue={[]}>
+            <AccordionItem
+              disabled={!(resetCreditCount > 0 || !!resetFeedback)}
+              value="reset-credits"
+            >
+              <AccordionTrigger>
+                <div className="flex flex-col gap-0.5">
+                  <div className="flex flex-row items-center gap-1">
+                    <span className="anticon" role="img">
+                      <RotateCcwIcon fill={'transparent'} height={14} size={14} width={14} />
+                    </span>
+                    <div className="font-semibold" style={{ fontSize: 12 }}>
+                      {t('heteroAgent.codexQuota.resetCredits', { count: resetCreditCount })}
                     </div>
-                    {resetCredits.totalEarnedCount !== undefined && (
-                      <Text color={cssVar.colorTextTertiary} style={{ fontSize: 12 }}>
-                        {t('heteroAgent.codexQuota.totalEarned', {
-                          count: resetCredits.totalEarnedCount,
-                        })}
-                      </Text>
-                    )}
                   </div>
-                ),
-              },
-            ]}
-          />
+                  {resetCredits.totalEarnedCount !== undefined && (
+                    <div style={{ fontSize: 12, color: cssVar.colorTextTertiary }}>
+                      {t('heteroAgent.codexQuota.totalEarned', {
+                        count: resetCredits.totalEarnedCount,
+                      })}
+                    </div>
+                  )}
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-col gap-2">
+                  {resetCreditItems.length > 0 && (
+                    <div className={cx('flex flex-col', styles.creditList)}>
+                      {resetCreditItems.map(({ credit, index }) => {
+                        const fallbackExpiry = index === 1 ? resetCredits.nextExpiresAt : undefined;
+                        const expiresAt = credit ? credit.expiresAt : fallbackExpiry;
+                        const expiresIn = expiresAt ? formatDuration(expiresAt - now) : undefined;
+
+                        return (
+                          <div
+                            className={cx('flex flex-row items-center gap-2', styles.credit)}
+                            key={credit?.id ?? `reset-credit-${index}`}
+                          >
+                            <div className={styles.creditIndex} style={{ fontSize: 12 }}>
+                              {`#${index}`}
+                            </div>
+                            <div
+                              className={cn('font-semibold', styles.creditTitle)}
+                              style={{ fontSize: 12 }}
+                            >
+                              {credit?.title || t('heteroAgent.codexQuota.resetCreditTitle')}
+                            </div>
+                            <div
+                              className={cn('text-muted-foreground', styles.creditExpiry)}
+                              style={{ fontSize: 12 }}
+                            >
+                              {expiresAt
+                                ? expiresIn
+                                  ? t('heteroAgent.codexQuota.expiresIn', {
+                                      duration: expiresIn,
+                                    })
+                                  : t('heteroAgent.codexQuota.expiresSoon')
+                                : credit
+                                  ? t('heteroAgent.codexQuota.doesNotExpire')
+                                  : t('heteroAgent.codexQuota.resetCreditDetailsUnavailable')}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {resetFeedback && (
+                    <div
+                      aria-live="polite"
+                      className={styles.feedback}
+                      data-kind={resetFeedback.kind}
+                      role={resetFeedback.kind === 'error' ? 'alert' : 'status'}
+                    >
+                      {resetFeedback.text}
+                    </div>
+                  )}
+
+                  {resetCreditCount > 0 && (
+                    <Button
+                      className="w-full"
+                      loading={resetting}
+                      size={'sm'}
+                      variant="default"
+                      onClick={() => confirmReset(nextCredit?.id ?? undefined, applyQuota)}
+                    >
+                      <RotateCcwIcon data-icon="inline-start" />
+                      {resetting
+                        ? t('heteroAgent.codexQuota.resetting')
+                        : t('heteroAgent.codexQuota.resetNow')}
+                    </Button>
+                  )}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          </Accordion>
         </div>
       );
     },

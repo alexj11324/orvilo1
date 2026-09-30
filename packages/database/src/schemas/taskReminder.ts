@@ -34,9 +34,9 @@ export const taskReminders = pgTable(
     remindAt: timestamptz('remind_at').notNull(),
     deliveredAt: timestamptz('delivered_at'),
     // Delivery retry bookkeeping: a failed attempt bumps `attemptCount` and
-    // re-arms `nextAttemptAt` on a bounded backoff; the sweep re-claims the
-    // row then. Rows past the attempt cap get `deliveredAt` so they cannot
-    // head-block the pending index forever.
+    // re-arms `nextAttemptAt` on a bounded backoff; the claim predicate
+    // skips the row until then, so a permanently failing reminder parks
+    // instead of hot-looping or head-blocking the pending queue.
     attemptCount: integer('attempt_count').notNull().default(0),
     nextAttemptAt: timestamptz('next_attempt_at'),
 

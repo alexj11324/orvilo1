@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { type BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Check, LoaderCircle, X } from 'lucide-react';
@@ -60,7 +59,9 @@ export const ExecScriptInspector = memo<BuiltinInspectorProps<ExecScriptParams, 
           </span>
           {description && <span className={highlightTextStyles.primary}>{description}</span>}
           {isLoading ? null : isStillRunning ? (
-            <Icon spin className={styles.statusIcon} icon={LoaderCircle} size={14} />
+            <span className={cx('anticon animate-spin', styles.statusIcon)} role="img">
+              <LoaderCircle fill={'transparent'} height={14} size={14} width={14} />
+            </span>
           ) : pluginState?.success !== undefined ? (
             isSuccess ? (
               <Check className={styles.statusIcon} color={cssVar.colorSuccess} size={14} />

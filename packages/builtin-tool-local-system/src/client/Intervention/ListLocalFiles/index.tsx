@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import type { ListLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
@@ -11,10 +10,10 @@ const ListLocalFiles = memo<BuiltinInterventionProps<ListLocalFileParams>>(({ ar
   const { path } = args;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <OutOfScopeWarning paths={[path]} />
       <LocalFolder path={path} />
-    </Flexbox>
+    </div>
   );
 });
 

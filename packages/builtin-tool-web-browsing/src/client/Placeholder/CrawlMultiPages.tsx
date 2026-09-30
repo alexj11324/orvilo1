@@ -1,6 +1,5 @@
 'use client';
 
-import { ScrollShadow } from '@lobehub/ui';
 import type { BuiltinPlaceholderProps } from '@orvilo/types';
 import { memo } from 'react';
 
@@ -14,16 +13,14 @@ const CrawlMultiPages = memo<BuiltinPlaceholderProps<{ urls: string[] }>>(({ arg
   const isMobile = useIsMobile();
 
   return (
-    <ScrollShadow
-      gap={isMobile ? 4 : 12}
-      horizontal={!isMobile}
-      orientation={'horizontal'}
-      size={8}
+    <div
+      className={`flex overflow-x-auto ${isMobile ? 'flex-col' : 'flex-row'}`}
+      style={{ gap: isMobile ? 4 : 12 }}
     >
       {urls &&
         urls.length > 0 &&
         urls.map((url, index) => <LoadingCard key={`${index}_${url}`} url={url} />)}
-    </ScrollShadow>
+    </div>
   );
 });
 

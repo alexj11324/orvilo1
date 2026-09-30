@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Alert } from '@lobehub/ui/base-ui';
 import { isPathWithinScope } from '@orvilo/tool-runtime';
 import { memo, useMemo } from 'react';
@@ -48,7 +47,7 @@ const OutOfScopeWarning = memo<OutOfScopeWarningProps>(({ paths }) => {
       type="warning"
       variant="borderless"
       description={
-        <Flexbox gap={4} style={{ fontSize: 12 }}>
+        <div className="flex flex-col gap-1" style={{ fontSize: 12 }}>
           <div>
             <strong>{t('localFiles.outOfScope.workingDirectory')}:</strong>{' '}
             <code>{workingDirectory}</code>
@@ -63,7 +62,7 @@ const OutOfScopeWarning = memo<OutOfScopeWarningProps>(({ paths }) => {
               </li>
             ))}
           </ul>
-        </Flexbox>
+        </div>
       }
     />
   );

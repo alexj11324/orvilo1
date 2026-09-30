@@ -1,6 +1,6 @@
 'use client';
 
-import { Block, Flexbox, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Avatar, Tag } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinRenderProps } from '@orvilo/types';
@@ -64,10 +64,10 @@ export const GetAgentDetailRender = memo<
             size={36}
             title={meta.title || undefined}
           />
-          <Flexbox gap={2}>
+          <div className="flex flex-col gap-0.5">
             <span className={styles.title}>{meta.title || 'Untitled'}</span>
             {meta.description && <span className={styles.value}>{meta.description}</span>}
-          </Flexbox>
+          </div>
         </div>
       )}
       {(config?.model || config?.provider) && (
@@ -82,31 +82,34 @@ export const GetAgentDetailRender = memo<
       {config?.plugins && config.plugins.length > 0 && (
         <div className={styles.field}>
           <div className={styles.label}>Plugins</div>
-          <Flexbox horizontal gap={4} wrap={'wrap'}>
+          <div className="flex flex-row gap-1 flex-wrap">
             {config.plugins.map((plugin) => (
               <Tag key={plugin}>{plugin}</Tag>
             ))}
-          </Flexbox>
+          </div>
         </div>
       )}
       {meta?.tags && meta.tags.length > 0 && (
         <div className={styles.field}>
           <div className={styles.label}>Tags</div>
-          <Flexbox horizontal gap={4} wrap={'wrap'}>
+          <div className="flex flex-row gap-1 flex-wrap">
             {meta.tags.map((tag) => (
               <Tag key={tag}>{tag}</Tag>
             ))}
-          </Flexbox>
+          </div>
         </div>
       )}
       {config?.systemRole && (
         <div className={styles.field}>
           <div className={styles.label}>System Prompt</div>
-          <Block paddingBlock={8} paddingInline={12} variant={'outlined'} width="100%">
+          <div
+            className="rounded-md border bg-card"
+            style={{ paddingBlock: 8, paddingInline: 12, width: '100%' }}
+          >
             <Markdown fontSize={13} variant={'chat'}>
               {config.systemRole}
             </Markdown>
-          </Block>
+          </div>
         </div>
       )}
     </div>

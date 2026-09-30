@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 interface RunCommandParams {
   background?: boolean;
@@ -22,10 +23,10 @@ const formatTimeout = (ms?: number) => {
 const RunCommand = memo<BuiltinInterventionProps<RunCommandParams>>(({ args }) => {
   const { command, timeout, background } = args;
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal justify={'space-between'}>
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-row justify-between">
         <Text>Execute command in cloud sandbox</Text>
-        <Flexbox horizontal gap={8}>
+        <div className="flex flex-row gap-2">
           {background && (
             <Text style={{ fontSize: 12 }} type={'secondary'}>
               background
@@ -36,20 +37,18 @@ const RunCommand = memo<BuiltinInterventionProps<RunCommandParams>>(({ args }) =
               timeout: {formatTimeout(timeout)}
             </Text>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
       {command && (
-        <Highlighter
+        <CodeBlock
           wrap
+          code={command}
           language={'sh'}
-          showLanguage={false}
           style={{ padding: '4px 8px' }}
-          variant={'outlined'}
-        >
-          {command}
-        </Highlighter>
+          variant={'default'}
+        />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

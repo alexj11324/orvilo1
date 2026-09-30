@@ -1,5 +1,3 @@
-// eslint-disable-next-line no-restricted-imports -- Base Select does not support multiple selection yet.
-import { Block, Flexbox, SearchBar as Search, Select, Tooltip } from '@lobehub/ui';
 import { CheckboxGroup, Segmented, Text } from '@lobehub/ui/base-ui';
 import type { SearchQuery } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -7,6 +5,8 @@ import type { ReactNode } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import SearchBarUI from '@/components/SearchBar';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { useChatStore } from '@/store/chat';
 import { chatToolSelectors } from '@/store/chat/selectors';
@@ -67,7 +67,7 @@ const SearchBar = memo<SearchBarProps>(
     };
 
     const searchComponent = (
-      <Search
+      <SearchBarUI
         autoFocus
         loading={loading}
         placeholder={t('search.searchBar.placeholder')}
@@ -82,33 +82,24 @@ const SearchBar = memo<SearchBarProps>(
 
     return (
       <>
-        <Flexbox horizontal align={'center'} flex={1} gap={8} height={32} justify={'space-between'}>
+        <div className="flex flex-row items-center flex-1 gap-2 h-[32px] justify-between">
           {tooltip ? (
-            <Tooltip title={t('search.searchBar.tooltip')}>{searchComponent}</Tooltip>
+            <SimpleTooltip title={t('search.searchBar.tooltip')}>{searchComponent}</SimpleTooltip>
           ) : (
             searchComponent
           )}
           {searchAddon}
-        </Flexbox>
-        <Block gap={24} padding={12} variant={'outlined'}>
+        </div>
+        <div className="rounded-md border bg-card flex flex-col" style={{ gap: 24, padding: 12 }}>
           {isMobile ? (
-            <Select
-              mode={'multiple'}
-              placeholder={t('search.searchEngine.placeholder')}
-              size={'small'}
+            <CheckboxGroup
               value={engines}
-              variant={'filled'}
-              optionRender={(item) => (
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <EngineAvatar engine={item.value as string} />
-                  {item.value}
-                </Flexbox>
-              )}
               options={Object.keys(ENGINE_ICON_MAP).map((item) => ({
                 label: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div className="flex flex-row items-center gap-2">
                     <EngineAvatar engine={item} />
-                  </Flexbox>
+                    {item}
+                  </div>
                 ),
                 value: item,
               }))}
@@ -117,7 +108,7 @@ const SearchBar = memo<SearchBarProps>(
               }}
             />
           ) : (
-            <Flexbox horizontal align={'flex-start'} gap={8}>
+            <div className="flex flex-row items-start gap-2">
               <Text className={styles.textHeader} type={'secondary'}>
                 {t('search.searchEngine.title')}
               </Text>
@@ -125,10 +116,10 @@ const SearchBar = memo<SearchBarProps>(
                 value={engines}
                 options={Object.keys(ENGINE_ICON_MAP).map((item) => ({
                   label: (
-                    <Flexbox horizontal align={'center'} gap={8}>
+                    <div className="flex flex-row items-center gap-2">
                       <EngineAvatar engine={item} />
                       {item}
-                    </Flexbox>
+                    </div>
                   ),
                   value: item,
                 }))}
@@ -136,28 +127,18 @@ const SearchBar = memo<SearchBarProps>(
                   setEngines(checkedValue);
                 }}
               />
-            </Flexbox>
+            </div>
           )}
 
           {isMobile ? (
-            <Select
-              mode="multiple"
-              placeholder={t('search.searchCategory.placeholder')}
-              size="small"
+            <CheckboxGroup
               value={categories}
-              variant="filled"
-              optionRender={(item) => (
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <CategoryAvatar category={item.value as string} />
-                  {t(`search.searchCategory.value.${item.value}` as any)}
-                </Flexbox>
-              )}
               options={Object.keys(CATEGORY_ICON_MAP).map((item) => ({
                 label: (
-                  <Flexbox horizontal align={'center'} gap={8}>
+                  <div className="flex flex-row items-center gap-2">
                     <CategoryAvatar category={item as any} />
                     {t(`search.searchCategory.value.${item}` as any)}
-                  </Flexbox>
+                  </div>
                 ),
                 value: item,
               }))}
@@ -166,7 +147,7 @@ const SearchBar = memo<SearchBarProps>(
               }}
             />
           ) : (
-            <Flexbox horizontal align="flex-start" gap={8}>
+            <div className="flex flex-row items-start gap-2">
               <Text className={styles.textHeader} type={'secondary'}>
                 {t('search.searchCategory.title')}
               </Text>
@@ -174,19 +155,19 @@ const SearchBar = memo<SearchBarProps>(
                 value={categories}
                 options={Object.keys(CATEGORY_ICON_MAP).map((item) => ({
                   label: (
-                    <Flexbox horizontal align={'center'} gap={8}>
+                    <div className="flex flex-row items-center gap-2">
                       <CategoryAvatar category={item as any} />
                       {t(`search.searchCategory.value.${item}` as any)}
-                    </Flexbox>
+                    </div>
                   ),
                   value: item,
                 }))}
                 onChange={(checkedValue) => setCategories(checkedValue)}
               />
-            </Flexbox>
+            </div>
           )}
 
-          <Flexbox horizontal align={'center'} gap={16} wrap={'wrap'}>
+          <div className="flex flex-row items-center gap-4 flex-wrap">
             <Text className={styles.textHeader} type={'secondary'}>
               {t('search.searchTimeRange.title')}
             </Text>
@@ -201,8 +182,8 @@ const SearchBar = memo<SearchBarProps>(
               ]}
               onChange={(e) => setTimeRange(e as any)}
             />
-          </Flexbox>
-        </Block>
+          </div>
+        </div>
       </>
     );
   },

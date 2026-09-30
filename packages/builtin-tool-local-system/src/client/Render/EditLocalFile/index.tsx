@@ -1,4 +1,4 @@
-import { Flexbox, PatchDiff } from '@lobehub/ui';
+import { PatchDiff } from '@lobehub/ui';
 import { Alert, Skeleton } from '@lobehub/ui/base-ui';
 import type { EditLocalFileState } from '@orvilo/builtin-tool-local-system';
 import type { BuiltinRenderProps } from '@orvilo/types';
@@ -12,7 +12,7 @@ const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
     const filePath = args.file_path || args.path || '';
 
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         {pluginError ? (
           <Alert
             showIcon
@@ -29,7 +29,7 @@ const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
             viewMode="unified"
           />
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

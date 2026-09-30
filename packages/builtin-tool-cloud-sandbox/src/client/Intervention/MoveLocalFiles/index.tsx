@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
 import { ArrowRight } from 'lucide-react';
@@ -14,11 +13,11 @@ const MoveLocalFiles = memo<BuiltinInterventionProps<MoveLocalFilesParams>>(({ a
   const { operations } = args;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       <Text>Move {operations.length} item(s):</Text>
-      <Flexbox gap={4}>
+      <div className="flex flex-col gap-1">
         {operations.map((op, i) => (
-          <Flexbox horizontal align={'center'} gap={8} key={i}>
+          <div className="flex flex-row items-center gap-2" key={i}>
             <Text code ellipsis as={'span'} fontSize={12} style={{ maxWidth: 200 }}>
               {op.source}
             </Text>
@@ -26,10 +25,10 @@ const MoveLocalFiles = memo<BuiltinInterventionProps<MoveLocalFilesParams>>(({ a
             <Text code ellipsis as={'span'} fontSize={12} style={{ maxWidth: 200 }}>
               {op.destination}
             </Text>
-          </Flexbox>
+          </div>
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

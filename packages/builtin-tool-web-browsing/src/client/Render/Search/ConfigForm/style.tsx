@@ -1,8 +1,6 @@
-import type { CenterProps } from '@lobehub/ui';
-import { Center, Flexbox } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import type { ReactNode } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
 import { memo } from 'react';
 
 export const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -28,7 +26,7 @@ export const FormAction = memo<
     background?: string;
     description: string;
     title: string;
-  } & CenterProps
+  } & ComponentProps<'div'>
 >(
   ({
     children,
@@ -42,21 +40,28 @@ export const FormAction = memo<
     ...rest
   }) => {
     return (
-      <Center className={cx(styles.form, className)} gap={gap} {...rest}>
+      <div
+        className={cx('flex flex-col items-center justify-center', cx(styles.form, className))}
+        style={{ gap }}
+        {...rest}
+      >
         <Avatar
           animation={animation}
           avatar={avatar}
           background={background ?? cssVar.colorFillContent}
           size={80}
         />
-        <Flexbox gap={8} width={'100%'}>
-          <Flexbox style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}>
+        <div className="flex flex-col gap-2 w-[100%]">
+          <div
+            className="flex flex-col"
+            style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}
+          >
             {title}
-          </Flexbox>
-          <Flexbox className={styles.desc}>{description}</Flexbox>
-        </Flexbox>
+          </div>
+          <div className={cx('flex flex-col', styles.desc)}>{description}</div>
+        </div>
         {children}
-      </Center>
+      </div>
     );
   },
 );

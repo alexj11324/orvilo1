@@ -1,4 +1,3 @@
-import { Flexbox, Highlighter, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinInterventionProps } from '@orvilo/types';
@@ -7,6 +6,7 @@ import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { LocalFile, LocalFolder } from '@/features/LocalFile';
 
 import OutOfScopeWarning from '../OutOfScopeWarning';
@@ -39,34 +39,34 @@ const WriteFile = memo<BuiltinInterventionProps<WriteLocalFileParams>>(({ args }
   const contentLength = args.content?.length || 0;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <OutOfScopeWarning paths={[args.path]} />
-      <Flexbox horizontal>
+      <div className="flex flex-row">
         <LocalFolder path={dir} />
-        <Icon icon={ChevronRight} />
+        <span className="anticon" role="img">
+          <ChevronRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
         <LocalFile name={base} path={args.path} />
-      </Flexbox>
+      </div>
 
-      <Flexbox gap={4}>
-        <Flexbox horizontal justify={'space-between'}>
+      <div className="flex flex-col gap-1">
+        <div className="flex flex-row justify-between">
           <Text type="secondary">{t('localFiles.writeFile.preview')}</Text>
           <Text style={{ fontSize: 12 }} type={'secondary'}>
             {contentLength.toLocaleString()} {t('localFiles.writeFile.characters')}
           </Text>
-        </Flexbox>
+        </div>
 
         {args.content && (
-          <Highlighter
+          <CodeBlock
+            code={args.content}
             language={language}
-            showLanguage={false}
             style={{ maxHeight: 400, overflow: 'auto', padding: '8px' }}
-            variant={'outlined'}
-          >
-            {args.content}
-          </Highlighter>
+            variant={'default'}
+          />
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

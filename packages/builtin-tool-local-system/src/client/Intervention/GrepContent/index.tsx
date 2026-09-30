@@ -1,10 +1,10 @@
-import { Flexbox, Highlighter } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { type GrepContentParams } from '@orvilo/electron-client-ipc';
 import { type BuiltinInterventionProps } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 import { LocalFolder } from '@/features/LocalFile';
 
 import OutOfScopeWarning from '../OutOfScopeWarning';
@@ -14,15 +14,13 @@ const GrepContent = memo<BuiltinInterventionProps<GrepContentParams>>(({ args })
   const { pattern, scope, glob, type } = args;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       <OutOfScopeWarning paths={scope ? [scope] : []} />
       {scope && <LocalFolder path={scope} />}
-      <Flexbox gap={4}>
+      <div className="flex flex-col gap-1">
         <Text type="secondary">{t('localFiles.grepContent.pattern')}</Text>
-        <Highlighter language="regex" showLanguage={false} variant="outlined">
-          {pattern}
-        </Highlighter>
-      </Flexbox>
+        <CodeBlock code={pattern} language="regex" variant={'default'} />
+      </div>
       {glob && (
         <Text style={{ fontSize: 12 }} type="secondary">
           {t('localFiles.grepContent.glob')}: {glob}
@@ -33,7 +31,7 @@ const GrepContent = memo<BuiltinInterventionProps<GrepContentParams>>(({ args })
           {t('localFiles.grepContent.type')}: {type}
         </Text>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,6 +1,5 @@
-import { Block, Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import type { CSSProperties } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -31,21 +30,21 @@ const ShowMore = memo<ShowMoreProps>(({ style, messageId, engines, resultsNumber
   const { t } = useTranslation('tool');
 
   return (
-    <Block
-      className={styles.container}
-      gap={2}
-      justify={'space-between'}
+    <div
       style={style}
-      variant={'outlined'}
+      className={cx(
+        styles.container,
+        'flex flex-col gap-0.5 justify-between rounded-md border bg-card cursor-pointer',
+      )}
       onClick={() => {
         openToolUI(messageId, WebBrowsingManifest.identifier);
       }}
     >
       <Text ellipsis={{ rows: 2 }}>{t('search.viewMoreResults', { results: resultsNumber })}</Text>
-      <Flexbox horizontal align={'center'} gap={4}>
+      <div className="flex flex-row items-center gap-1">
         <EngineAvatarGroup engines={engines} />
-      </Flexbox>
-    </Block>
+      </div>
+    </div>
   );
 });
 

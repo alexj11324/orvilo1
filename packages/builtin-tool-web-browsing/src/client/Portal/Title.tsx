@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinPortalTitleProps } from '@orvilo/types';
 import { Globe } from 'lucide-react';
@@ -12,12 +11,14 @@ const PortalTitle = memo<BuiltinPortalTitleProps>(() => {
   const { t } = useTranslation('plugin');
 
   return (
-    <Flexbox horizontal align={'center'} gap={8}>
-      <Icon icon={Globe} size={16} />
+    <div className="flex flex-row items-center gap-2">
+      <span className="anticon" role="img">
+        <Globe fill={'transparent'} height={16} size={16} width={16} />
+      </span>
       <Text style={{ fontSize: 16 }} type={'secondary'}>
         {t('search.title')}
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 

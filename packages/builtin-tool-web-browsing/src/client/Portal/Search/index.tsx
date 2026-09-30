@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import type { SearchQuery, UniformSearchResponse } from '@orvilo/types';
 import { uniq } from 'es-toolkit/compat';
@@ -23,7 +22,7 @@ const Inspector = memo<InspectorUIProps>(({ query: args, messageId, response }) 
 
   if (loading) {
     return (
-      <Flexbox gap={12} height={'100%'}>
+      <div className="flex flex-col gap-3 h-[100%]">
         <SearchBar
           aiSummary={false}
           defaultEngines={defaultEngines}
@@ -32,17 +31,17 @@ const Inspector = memo<InspectorUIProps>(({ query: args, messageId, response }) 
           tooltip={false}
         />
 
-        <Flexbox gap={16} paddingBlock={16} paddingInline={12}>
+        <div className="flex flex-col gap-4 py-4 px-3">
           {[1, 2, 3, 4, 6].map((id) => (
             <Skeleton.Text key={id} rows={3} width={`${(id % 4) + 5}0%`} />
           ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   }
 
   return (
-    <Flexbox gap={12} height={'100%'}>
+    <div className="flex flex-col gap-3 h-[100%]">
       <SearchBar
         aiSummary={false}
         defaultEngines={defaultEngines}
@@ -50,10 +49,10 @@ const Inspector = memo<InspectorUIProps>(({ query: args, messageId, response }) 
         messageId={messageId}
         tooltip={false}
       />
-      <Flexbox height={'100%'} width={'100%'}>
+      <div className="flex flex-col h-[100%] w-[100%]">
         <ResultList dataSources={response.results} />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

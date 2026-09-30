@@ -1,6 +1,6 @@
 'use client';
 
-import { CodeDiff, Flexbox } from '@lobehub/ui';
+import { CodeDiff } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
@@ -21,7 +21,7 @@ const Edit = memo<BuiltinRenderProps<EditArgs>>(({ args }) => {
   const ext = filePath ? path.extname(filePath).slice(1).toLowerCase() : '';
 
   return (
-    <Flexbox gap={12} paddingInline={8}>
+    <div className="flex flex-col gap-3 px-2">
       <CodeDiff
         fileName={fileName || filePath}
         language={ext || undefined}
@@ -31,7 +31,7 @@ const Edit = memo<BuiltinRenderProps<EditArgs>>(({ args }) => {
         variant={'borderless'}
         viewMode={'unified'}
       />
-    </Flexbox>
+    </div>
   );
 });
 

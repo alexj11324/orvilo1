@@ -1,10 +1,12 @@
 'use client';
 
-import { Highlighter, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 interface WriteArgs {
   content?: string;
@@ -29,15 +31,13 @@ const Write = memo<BuiltinRenderProps<WriteArgs>>(({ args }) => {
     }
 
     return (
-      <Highlighter
+      <CodeBlock
         wrap
+        code={args.content}
         language={ext || 'text'}
-        showLanguage={false}
         style={{ maxHeight: 240, overflow: 'auto' }}
-        variant={'borderless'}
-      >
-        {args.content}
-      </Highlighter>
+        variant={'ghost'}
+      />
     );
   };
 

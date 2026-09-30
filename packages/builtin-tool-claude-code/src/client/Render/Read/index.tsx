@@ -1,9 +1,11 @@
 'use client';
 
-import { Flexbox, Highlighter, Image, PreviewGroup } from '@lobehub/ui';
+import { Image, PreviewGroup } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo, useMemo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 interface ReadArgs {
   file_path?: string;
@@ -59,7 +61,7 @@ const Read = memo<BuiltinRenderProps<ReadArgs, ReadPluginState>>(
     if (images.length > 0) {
       return (
         <PreviewGroup>
-          <Flexbox horizontal gap={8} style={{ flexWrap: 'wrap' }}>
+          <div className="flex flex-row gap-2" style={{ flexWrap: 'wrap' }}>
             {images.map((image, index) => (
               <Image
                 alt={filePath || image.mediaType || ''}
@@ -69,7 +71,7 @@ const Read = memo<BuiltinRenderProps<ReadArgs, ReadPluginState>>(
                 style={{ borderRadius: 8 }}
               />
             ))}
-          </Flexbox>
+          </div>
         </PreviewGroup>
       );
     }
@@ -77,15 +79,13 @@ const Read = memo<BuiltinRenderProps<ReadArgs, ReadPluginState>>(
     if (!source) return null;
 
     return (
-      <Highlighter
+      <CodeBlock
         wrap
+        code={source}
         language={ext || 'text'}
-        showLanguage={false}
         style={{ maxHeight: 240, overflow: 'auto' }}
-        variant={'borderless'}
-      >
-        {source}
-      </Highlighter>
+        variant={'ghost'}
+      />
     );
   },
 );

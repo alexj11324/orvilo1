@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { Skeleton } from '@lobehub/ui/base-ui';
 import type { BuiltinPlaceholderProps, SearchQuery } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -34,26 +33,29 @@ export const Search = memo<BuiltinPlaceholderProps<SearchQuery>>(({ args }) => {
 
   const isMobile = useIsMobile();
   return (
-    <Flexbox gap={8}>
-      <Flexbox
-        align={isMobile ? 'flex-start' : 'center'}
-        distribution={'space-between'}
-        gap={isMobile ? 8 : 40}
-        height={isMobile ? undefined : 32}
-        horizontal={!isMobile}
+    <div className="flex flex-col gap-2">
+      <div
+        className="flex flex-row justify-between"
+        style={{
+          alignItems: isMobile ? 'flex-start' : 'center',
+          gap: isMobile ? 8 : 40,
+          height: isMobile ? undefined : 32,
+        }}
       >
-        <Flexbox horizontal align={'center'} className={styles.query} gap={8}>
-          <Icon icon={SearchIcon} />
+        <div className={cx('flex flex-row items-center gap-2', styles.query)}>
+          <span className="anticon" role="img">
+            <SearchIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
           {query ? query : <Skeleton height={20} width={40} />}
-        </Flexbox>
+        </div>
 
         <Skeleton height={20} width={40} />
-      </Flexbox>
-      <Flexbox horizontal gap={12}>
+      </div>
+      <div className="flex flex-row gap-3">
         {['1', '2', '3', '4', '5'].map((id) => (
           <Skeleton height={ITEM_HEIGHT} key={id} radius={8} width={ITEM_WIDTH} />
         ))}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });

@@ -1,9 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
 import type { UniformSearchResult } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import type { MouseEvent } from 'react';
 import { memo } from 'react';
 
@@ -87,26 +86,26 @@ const SearchItem = memo<SearchResultProps>((props) => {
       target={'_blank'}
       onClick={handleClick}
     >
-      <Flexbox distribution={'space-between'} flex={1} gap={8} padding={12}>
-        <Flexbox gap={8}>
-          <Flexbox horizontal align={'center'} distribution={'space-between'}>
-            <Flexbox horizontal align={'center'} gap={8}>
+      <div className="flex flex-col justify-between flex-1 gap-2 p-3">
+        <div className="flex flex-col gap-2">
+          <div className="flex flex-row items-center justify-between">
+            <div className="flex flex-row items-center gap-2">
               <WebFavicon title={title} url={url} />
-              <Flexbox className={styles.title}>{title}</Flexbox>
-            </Flexbox>
+              <div className={cx('flex flex-col', styles.title)}>{title}</div>
+            </div>
             <TitleExtra
               category={category}
               engines={engines}
               highlight={props.highlight}
               score={score}
             />
-          </Flexbox>
+          </div>
           <Text className={styles.url} type={'secondary'}>
             {url}
           </Text>
-          <Flexbox className={styles.desc}>{content}</Flexbox>
-        </Flexbox>
-      </Flexbox>
+          <div className={cx('flex flex-col', styles.desc)}>{content}</div>
+        </div>
+      </div>
     </a>
   );
 });

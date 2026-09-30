@@ -1,7 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
 import { Avatar, Text } from '@lobehub/ui/base-ui';
 import type { UniformSearchResult } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo, useState } from 'react';
 
 import { ENGINE_ICON_MAP } from '../../../../../const';
@@ -69,11 +68,11 @@ const VideoItem = memo<SearchResultProps>(
 
     const videoUrl = iframeSrc || (res as any).iframe_src; // iframe_src is a SearchXNG field, for backward compatibility with old data structure
     return (
-      <Flexbox gap={12}>
-        <Flexbox className={styles.container} onClick={() => setExpand(!expand)}>
-          <Flexbox horizontal flex={1} gap={8} padding={12}>
+      <div className="flex flex-col gap-3">
+        <div className={cx('flex flex-col', styles.container)} onClick={() => setExpand(!expand)}>
+          <div className="flex flex-row flex-1 gap-2 p-3">
             {videoUrl && (
-              <Flexbox>
+              <div className="flex flex-col">
                 <iframe
                   // alt={title}
                   className={styles.iframe}
@@ -91,11 +90,11 @@ const VideoItem = memo<SearchResultProps>(
                     e.preventDefault();
                   }}
                 />
-              </Flexbox>
+              </div>
             )}
-            <Flexbox flex={1} gap={8}>
-              <Flexbox horizontal align={'center'} distribution={'space-between'} gap={12}>
-                <Flexbox horizontal align={'center'} gap={8}>
+            <div className="flex flex-col flex-1 gap-2">
+              <div className="flex flex-row items-center justify-between gap-3">
+                <div className="flex flex-row items-center gap-2">
                   <Avatar.Group
                     shape={'circle'}
                     size={20}
@@ -106,28 +105,28 @@ const VideoItem = memo<SearchResultProps>(
                       title: engine,
                     }))}
                   />
-                  <Flexbox className={styles.title}>{title}</Flexbox>
-                </Flexbox>
+                  <div className={cx('flex flex-col', styles.title)}>{title}</div>
+                </div>
                 <TitleExtra
                   category={category}
                   engines={engines}
                   highlight={highlight}
                   score={score}
                 />
-              </Flexbox>
+              </div>
               <Text className={styles.url} type={'secondary'}>
                 {url}
               </Text>
-              <Flexbox className={styles.desc}>{content}</Flexbox>
-            </Flexbox>
-          </Flexbox>
-        </Flexbox>
+              <div className={cx('flex flex-col', styles.desc)}>{content}</div>
+            </div>
+          </div>
+        </div>
         {expand && videoUrl && (
-          <Flexbox>
+          <div className="flex flex-col">
             <iframe className={styles.iframe} height={440} src={videoUrl} width={'100%'} />
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

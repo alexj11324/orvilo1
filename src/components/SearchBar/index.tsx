@@ -1,7 +1,7 @@
 'use client';
 
 import { cn } from 'cn';
-import { Search, X } from 'lucide-react';
+import { Loader2, Search, X } from 'lucide-react';
 import {
   type ChangeEvent,
   type CSSProperties,
@@ -20,6 +20,7 @@ interface SearchBarProps {
   className?: string;
   defaultValue?: string;
   enableShortKey?: boolean;
+  loading?: boolean;
   onBlur?: (e: React.FocusEvent<HTMLInputElement>) => void;
   onChange?: (e: ChangeEvent<HTMLInputElement>) => void;
   onFocus?: (e: React.FocusEvent<HTMLInputElement>) => void;
@@ -37,6 +38,7 @@ const SearchBar = memo<SearchBarProps>(
     autoFocus,
     className,
     defaultValue,
+    loading,
     enableShortKey,
     onBlur,
     onChange,
@@ -97,7 +99,9 @@ const SearchBar = memo<SearchBarProps>(
             }
           }}
         />
-        {inputValue ? (
+        {loading ? (
+          <Loader2 className="absolute right-2 animate-spin text-muted-foreground" size={12} />
+        ) : inputValue ? (
           <button
             aria-label="Clear search"
             className="absolute right-2 flex items-center text-muted-foreground hover:text-foreground"

@@ -3,6 +3,7 @@
 import { agentDisplayName } from '@orvilo/types';
 import { useHover } from 'ahooks';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { X } from 'lucide-react';
 import { memo, useRef } from 'react';
 

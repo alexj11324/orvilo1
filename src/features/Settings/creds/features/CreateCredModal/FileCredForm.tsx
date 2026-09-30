@@ -103,7 +103,7 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
   };
 
   return (
-    <Form<FormValues> form={form} layout="vertical" onFinish={handleSubmit}>
+    <Form form={form} layout="vertical" onFinish={handleSubmit}>
       <Form.Item required label={t('creds.form.file')}>
         <UploadDragger beforeUpload={handleUpload} disabled={isUploading || disabled} maxCount={1}>
           <p className="ant-upload-drag-icon">

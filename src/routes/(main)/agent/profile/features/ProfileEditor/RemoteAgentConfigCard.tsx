@@ -14,6 +14,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { createModal, useModalContext } from '@/components/Modal';
+import { Badge } from '@/components/reui/badge';
 import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
 import { Button as BaseButton, Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -151,7 +152,8 @@ const ChangeDeviceContent = memo<ChangeDeviceContentProps>(
     );
 
     const handleDeviceSelect = useCallback(
-      (dId: string) => {
+      (dId: string | null) => {
+        if (dId === null) return;
         setSelectedDeviceId(dId);
         void checkCapability(dId);
       },

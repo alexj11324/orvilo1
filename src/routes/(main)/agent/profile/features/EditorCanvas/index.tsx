@@ -433,7 +433,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
             <div className={styles.title}>{t('settingAgent.prompt.title')}</div>
             <InfoTooltip
               iconStyle={{ cursor: 'help' }}
-              size={'small'}
+              size={14}
               title={t('settingAgent.prompt.desc')}
             />
           </div>
@@ -458,7 +458,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
                 aria-label={t('settingAgent.prompt.mode.visual')}
                 aria-pressed={activeEditorMode === 'visual'}
                 icon={LetterTextIcon}
-                size={'small'}
+                size={14}
                 title={t('settingAgent.prompt.mode.visual')}
                 onClick={() => setEditorMode('visual')}
               />
@@ -467,7 +467,7 @@ const AgentEditorCanvas = memo<AgentEditorCanvasProps>(({ agentId }) => {
                 aria-label={t('settingAgent.prompt.mode.source')}
                 aria-pressed={activeEditorMode === 'source'}
                 icon={CodeXmlIcon}
-                size={'small'}
+                size={14}
                 title={t('settingAgent.prompt.mode.source')}
                 onClick={() => setEditorMode('source')}
               />

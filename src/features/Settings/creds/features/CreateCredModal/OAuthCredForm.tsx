@@ -106,7 +106,7 @@ const OAuthCredForm: FC<OAuthCredFormProps> = ({ credsApi, disabled, onBack, onS
   }
 
   return (
-    <Form<FormValues> form={form} layout="vertical" onFinish={handleSubmit}>
+    <Form form={form} layout="vertical" onFinish={handleSubmit}>
       <Form.Item
         label={t('creds.form.selectConnection')}
         name="oauthConnectionId"

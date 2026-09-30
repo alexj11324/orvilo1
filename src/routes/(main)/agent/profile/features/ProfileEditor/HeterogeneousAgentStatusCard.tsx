@@ -436,7 +436,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                           className="inline-flex items-center"
                           style={{ opacity: 0.6 }}
                           type="button"
-                          onClick={() => copyToClipboard(status.path)}
+                          onClick={() => status.path && copyToClipboard(status.path)}
                         >
                           <Copy size={14} />
                         </button>

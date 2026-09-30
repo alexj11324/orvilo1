@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import BusinessNotification from '@/business/client/BusinessSettingPages/Notification';
 import Form from '@/components/GroupForm';
-import { Alert } from '@/components/ui/alert';
+import { Alert, AlertAction, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
   Select,
@@ -207,9 +207,18 @@ export const DesktopNotificationSettings = () => {
                       step={0.1}
                       style={{ width: '100%' }}
                       value={settings.volume}
-                      onValueChange={(volume) => setSettings({ ...settings, volume })}
+                      onValueChange={(volume) =>
+                        setSettings({
+                          ...settings,
+                          volume: typeof volume === 'number' ? volume : volume[0],
+                        })
+                      }
                       onValueCommitted={(volume) =>
-                        run(() => completionSoundService.setSettings({ volume }))
+                        run(() =>
+                          completionSoundService.setSettings({
+                            volume: typeof volume === 'number' ? volume : volume[0],
+                          }),
+                        )
                       }
                     />
                   ),

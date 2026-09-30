@@ -4,12 +4,15 @@ import { createStaticStyles, cssVar, cx } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
 import {
   type ComponentProps,
+  type ComponentType,
   createElement,
   type ElementType,
   type FocusEvent,
+  isValidElement,
   memo,
   type MouseEvent,
   type PointerEvent,
+  type ReactElement,
   type ReactNode,
 } from 'react';
 
@@ -17,10 +20,8 @@ import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
 import { isModifierClick } from '@/utils/navigation';
 
-import { renderSidebarMenuItems, type SidebarDropdownMenuProps } from './SidebarDropdownMenu';
+import { renderSidebarMenuItems, type SidebarMenuItems } from './SidebarDropdownMenu';
 import { type LazyActions, useLazyActions } from './useLazyActions';
-
-type SidebarMenuItemData = Exclude<SidebarDropdownMenuProps['items'], () => unknown>[number];
 
 const ACTION_CLASS_NAME = 'nav-item-actions';
 const CONTENT_CLASS_NAME = 'nav-item-content';
@@ -99,7 +100,7 @@ export interface NavItemProps extends Omit<ComponentProps<'div'>, 'children' | '
    */
   actions?: LazyActions;
   active?: boolean;
-  contextMenuItems?: SidebarMenuItemData[] | (() => SidebarMenuItemData[]);
+  contextMenuItems?: SidebarMenuItems | (() => SidebarMenuItems);
   /**
    * Optional second line rendered under the title (e.g. a topic's project
    * directory). When set, the row grows to fit both lines; when omitted the
@@ -112,7 +113,7 @@ export interface NavItemProps extends Omit<ComponentProps<'div'>, 'children' | '
    * Optional href for cmd+click to open in new tab
    */
   href?: string;
-  icon?: LucideIcon;
+  icon?: ComponentType | LucideIcon | ReactElement;
   iconSize?: number;
   loading?: boolean;
   slots?: NavItemSlots;
@@ -223,8 +224,13 @@ const NavItem = memo<NavItemProps>(
           >
             {loading ? (
               <NeuralNetworkLoading size={iconSize} />
+            ) : isValidElement(icon) ? (
+              icon
             ) : (
-              createElement(icon, { color: iconColor, size: iconSize })
+              createElement(icon as ComponentType<{ color?: string; size?: number }>, {
+                color: iconColor,
+                size: iconSize,
+              })
             )}
           </div>
         )}

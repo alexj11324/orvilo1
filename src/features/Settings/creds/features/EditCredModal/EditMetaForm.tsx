@@ -52,7 +52,7 @@ const EditMetaForm: FC<EditMetaFormProps> = ({ cred, credsApi, onCancel, onSucce
   };
 
   return (
-    <Form<FormValues>
+    <Form
       form={form}
       layout="vertical"
       initialValues={{

@@ -14,6 +14,7 @@ import {
 } from 'react';
 
 import {
+  ContextMenuCheckboxItem,
   ContextMenuGroup,
   ContextMenuItem,
   ContextMenuLabel,
@@ -24,6 +25,7 @@ import {
 } from '@/components/ui/context-menu';
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
@@ -34,6 +36,7 @@ import {
   DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Switch } from '@/components/ui/switch';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
 export interface SidebarMenuInfo {
@@ -44,15 +47,18 @@ export interface SidebarMenuInfo {
 }
 
 export interface SidebarMenuItemData {
+  checked?: boolean;
   children?: SidebarMenuItems;
   closeOnClick?: boolean;
   danger?: boolean;
+  defaultChecked?: boolean;
   desc?: ReactNode;
   disabled?: boolean;
   extra?: ReactNode;
   icon?: ComponentType | ReactElement;
   key?: Key;
   label?: ReactNode;
+  onCheckedChange?: (checked: boolean) => void;
   onClick?: (info: SidebarMenuInfo) => void;
   onTitleMouseEnter?: (info: { domEvent: unknown; key: string }) => void;
   title?: ReactNode;
@@ -141,11 +147,12 @@ export const renderSidebarMenuItems = (
   keyPath: string[] = [],
   variant: 'dropdown' | 'context' = 'dropdown',
 ): ReactNode[] => {
-  const [Group, Item, Label, Separator, Sub, SubContent, SubTrigger] =
+  const [Group, Item, CheckboxItem, Label, Separator, Sub, SubContent, SubTrigger] =
     variant === 'context'
       ? ([
           ContextMenuGroup,
           ContextMenuItem,
+          ContextMenuCheckboxItem,
           ContextMenuLabel,
           ContextMenuSeparator,
           ContextMenuSub,
@@ -155,6 +162,7 @@ export const renderSidebarMenuItems = (
       : ([
           DropdownMenuGroup,
           DropdownMenuItem,
+          DropdownMenuCheckboxItem,
           DropdownMenuLabel,
           DropdownMenuSeparator,
           DropdownMenuSub,
@@ -170,6 +178,47 @@ export const renderSidebarMenuItems = (
     const label = getLabel(item);
 
     if (item.type === 'divider') return <Separator key={key} />;
+
+    if (item.type === 'checkbox')
+      return (
+        <CheckboxItem
+          checked={item.checked}
+          className={cn(item.danger && 'text-destructive')}
+          defaultChecked={item.defaultChecked}
+          disabled={item.disabled}
+          key={key}
+          onCheckedChange={(checked) => item.onCheckedChange?.(checked)}
+        >
+          {renderContent(item, label)}
+        </CheckboxItem>
+      );
+
+    if (item.type === 'switch')
+      return (
+        <Item
+          closeOnClick={item.closeOnClick ?? false}
+          disabled={item.disabled}
+          key={key}
+          variant={item.danger ? 'destructive' : 'default'}
+          onClick={(event) => {
+            if (!item.disabled) item.onCheckedChange?.(!(item.checked ?? item.defaultChecked));
+            event.stopPropagation();
+          }}
+        >
+          {renderIcon(item.icon)}
+          <span className="min-w-0 flex-1">{label}</span>
+          {item.extra && (
+            <span className="ml-auto text-xs text-muted-foreground">{item.extra}</span>
+          )}
+          <Switch
+            checked={item.checked}
+            className="pointer-events-none ml-auto"
+            defaultChecked={item.defaultChecked}
+            disabled={item.disabled}
+            size="sm"
+          />
+        </Item>
+      );
 
     if (item.type === 'group') {
       return (

@@ -87,13 +87,16 @@ const FallbackFontList = ({
       {adding ? (
         <Combobox
           defaultOpen
-          itemToStringLabel={(value) => labelOf(value)}
           items={candidates.map((option) => option.value)}
+          itemToStringLabel={(value) => {
+            const label = labelOf(String(value));
+            return typeof label === 'string' ? label : String(value);
+          }}
           onOpenChange={(open) => {
             if (!open) setAdding(false);
           }}
           onValueChange={(value) => {
-            if (value) add(value);
+            if (typeof value === 'string') add(value);
           }}
         >
           <ComboboxInput

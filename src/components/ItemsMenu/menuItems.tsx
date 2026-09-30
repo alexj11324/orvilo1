@@ -1,6 +1,13 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { cn } from 'cn';
-import type { ElementType, Key, ReactNode, SyntheticEvent } from 'react';
+import {
+  createElement,
+  type ElementType,
+  isValidElement,
+  type Key,
+  type ReactNode,
+  type SyntheticEvent,
+} from 'react';
 
 import {
   DropdownMenuCheckboxItem,
@@ -39,7 +46,7 @@ export interface ActionMenuItem {
   extra?: ReactNode;
   footer?: ReactNode;
   header?: ReactNode;
-  icon?: ReactNode;
+  icon?: ElementType | ReactNode;
   key?: string;
   label?: ReactNode;
   onCheckedChange?: (checked: boolean) => void;
@@ -73,6 +80,9 @@ export interface ActionIconGroupItemType {
 
 const getItemLabel = (item: ActionMenuItem): ReactNode => item.label;
 
+const renderItemIcon = (icon: ActionMenuItem['icon']): ReactNode =>
+  !icon ? null : isValidElement(icon) ? icon : createElement(icon as ElementType);
+
 const ItemContent = ({
   extra,
   icon,
@@ -81,11 +91,11 @@ const ItemContent = ({
 }: {
   desc?: ReactNode;
   extra?: ReactNode;
-  icon?: ReactNode;
+  icon?: ActionMenuItem['icon'];
   label?: ReactNode;
 }) => (
   <>
-    {icon}
+    {renderItemIcon(icon)}
     {desc != null ? (
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate">{label}</span>
@@ -148,7 +158,7 @@ export const renderMenuItems = (items: ActionMenuItem[], keyPath: string[] = [])
             event.stopPropagation();
           }}
         >
-          {item.icon}
+          {renderItemIcon(item.icon)}
           <span className="min-w-0 flex-1">{getItemLabel(item)}</span>
           {item.extra}
           <Switch

@@ -113,8 +113,9 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
         <ToggleGroup
           disabled={isPending}
           size="sm"
-          value={visibility}
-          onValueChange={(value) => {
+          value={[visibility]}
+          onValueChange={(values) => {
+            const value = values[0];
             if (value === 'private' || value === 'public') handleVisibilityChange(value);
           }}
         >

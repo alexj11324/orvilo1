@@ -65,14 +65,12 @@ const StatsSetting = memo<StatsSettingProps>(
       }
     }, [dateStrings]);
 
-    const handleDateChange: DatePickerProps['onChange'] = (dates, dateStrings) => {
+    const handleDateChange: DatePickerProps['onChange'] = (dates) => {
       // Handle both single date and array
       const actualDate = Array.isArray(dates) ? dates[0] : dates;
       if (actualDate) {
         setDateRange(actualDate);
-      }
-      if (typeof dateStrings === 'string') {
-        setDateStrings(dateStrings);
+        setDateStrings(actualDate.format('YYYY-MM'));
       }
     };
 

@@ -18,10 +18,11 @@ export const globalWorkspaceSlice = (set: Setter, get: () => GlobalStore, _api?:
 
 export class GlobalWorkspacePaneActionImpl {
   readonly #get: () => GlobalStore;
+  readonly #set: Setter;
 
   constructor(set: Setter, get: () => GlobalStore, _api?: unknown) {
     void _api;
-    void set;
+    this.#set = set;
     this.#get = get;
   }
 
@@ -81,7 +82,19 @@ export class GlobalWorkspacePaneActionImpl {
     this.#get().updateSystemStatus({ expandSessionGroupKeys: nextExpandSessionGroup });
   };
 
+  setLeftPanelDrawerMode = (enabled: boolean): void => {
+    if (this.#get().leftPanelDrawerMode === enabled) return;
+    this.#set({ leftPanelDrawerMode: enabled, leftPanelDrawerOpen: false });
+  };
+
   toggleLeftPanel = (newValue?: boolean): void => {
+    if (this.#get().leftPanelDrawerMode) {
+      this.#set({
+        leftPanelDrawerOpen:
+          typeof newValue === 'boolean' ? newValue : !this.#get().leftPanelDrawerOpen,
+      });
+      return;
+    }
     const showLeftPanel =
       typeof newValue === 'boolean' ? newValue : !this.#get().status.showLeftPanel;
     this.#get().updateSystemStatus({ showLeftPanel }, n('toggleLeftPanel', newValue));

@@ -3,7 +3,7 @@ import type { ComponentProps, CSSProperties, ReactNode } from 'react';
 import { memo } from 'react';
 
 import { TooltipProvider } from '@/components/ui/tooltip';
-import ToggleLeftPanelButton from '@/features/NavPanel/ToggleLeftPanelButton';
+import ToggleLeftPanelButton, { isMacDesktop } from '@/features/NavPanel/ToggleLeftPanelButton';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
@@ -35,9 +35,13 @@ const NavHeader = memo<NavHeaderProps>(
     styles,
     ...rest
   }) => {
-    const expand = useGlobalStore(systemStatusSelectors.showLeftPanel);
+    const [expand, drawerMode] = useGlobalStore((state) => [
+      systemStatusSelectors.showLeftPanel(state),
+      state.leftPanelDrawerMode,
+    ]);
+    const showToggle = showTogglePanelButton && !isMacDesktop && (drawerMode || !expand);
     const noContent = !left && !right && !children;
-    if (noContent) return;
+    if (noContent && !showToggle) return;
 
     return (
       <div
@@ -50,7 +54,7 @@ const NavHeader = memo<NavHeaderProps>(
             className={cx(slotClassNames?.left, 'flex items-center gap-0.5 justify-start')}
             style={{ minWidth: 0, ...styles?.left }}
           >
-            {showTogglePanelButton && !expand && <ToggleLeftPanelButton />}
+            {showToggle && <ToggleLeftPanelButton />}
             {left}
           </div>
           {children && (

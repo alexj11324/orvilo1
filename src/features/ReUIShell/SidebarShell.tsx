@@ -3,11 +3,12 @@
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { useTheme } from 'next-themes';
-import { type CSSProperties, useEffect } from 'react';
+import { type CSSProperties, useEffect, useLayoutEffect } from 'react';
 
 import { SidebarProvider, useSidebar } from '@/components/ui/sidebar';
 import { isDesktop } from '@/const/version';
 import { NAV_PANEL_RIGHT_DRAWER_ID } from '@/features/NavPanel/constants';
+import { useIsMobile } from '@/hooks/use-mobile';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { isMacOS } from '@/utils/platform';
@@ -140,14 +141,23 @@ export function SidebarShell() {
     : resolvedTheme === 'light'
       ? LIGHT_SOLID_SIDEBAR_STYLE
       : SIDEBAR_STYLE;
-  const [open, setOpen] = useGlobalStore((state) => [
+  const isMobile = useIsMobile();
+  const [open, drawerOpen, setOpen, setDrawerMode] = useGlobalStore((state) => [
     systemStatusSelectors.showLeftPanel(state),
+    state.leftPanelDrawerOpen ?? false,
     state.toggleLeftPanel,
+    state.setLeftPanelDrawerMode,
   ]);
+
+  useLayoutEffect(() => {
+    setDrawerMode(isMobile);
+    return () => setDrawerMode(false);
+  }, [isMobile, setDrawerMode]);
 
   return (
     <SidebarProvider
       open={open}
+      openMobile={isMobile && drawerOpen}
       style={{ ...sidebarStyle, display: 'contents' } as CSSProperties}
       className={cn(
         hostStyles.sidebar,
@@ -156,6 +166,7 @@ export function SidebarShell() {
         useNativeTransparency && '[&_[data-sidebar=sidebar]]:bg-transparent!',
       )}
       onOpenChange={setOpen}
+      onOpenMobileChange={setOpen}
     >
       <AppSidebar />
       <div

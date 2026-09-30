@@ -26,7 +26,7 @@ export function AppSidebar() {
     <>
       <Sidebar collapsible="icon" variant="inset">
         <SidebarHeader className="flex flex-row items-center justify-between in-data-[state=collapsed]:flex-col in-data-[state=collapsed]:items-start in-data-[state=collapsed]:justify-center">
-          {!(isDesktop && isMacOS()) && (
+          {!(isDesktop && isMacOS()) && state === 'expanded' && (
             <SidebarTrigger
               aria-label={t(
                 state === 'expanded' ? 'reuiShell9.collapseSidebar' : 'reuiShell9.expandSidebar',

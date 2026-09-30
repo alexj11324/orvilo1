@@ -597,6 +597,9 @@ export interface GlobalState {
   isServerVersionOutdated?: boolean;
   isStatusInit?: boolean;
   latestVersion?: string;
+  /** Transient responsive drawer state; desktop expansion lives in status. */
+  leftPanelDrawerMode?: boolean;
+  leftPanelDrawerOpen?: boolean;
   /** Imperative router navigate; see `NavigatorRegistrar` in `src/utils/router.tsx`. */
   navigationRef: GlobalNavigationRef;
   /**
@@ -790,7 +793,10 @@ export const createInitialSystemStatus = (): SystemStatus => {
       typeof persistedStatus.showHomeRail === 'boolean'
         ? persistedStatus.showHomeRail
         : INITIAL_STATUS.showHomeRail,
-    showLeftPanel: true,
+    showLeftPanel:
+      typeof persistedStatus.showLeftPanel === 'boolean'
+        ? persistedStatus.showLeftPanel
+        : INITIAL_STATUS.showLeftPanel,
   };
 };
 
@@ -798,6 +804,8 @@ export const initialState: GlobalState = {
   initClientDBStage: DatabaseLoadingState.Idle,
   isMobile: false,
   isStatusInit: false,
+  leftPanelDrawerMode: false,
+  leftPanelDrawerOpen: false,
   navigationRef: createNavigationRef(),
   sidebarKey: SidebarTabKey.Chat,
   status: createInitialSystemStatus(),

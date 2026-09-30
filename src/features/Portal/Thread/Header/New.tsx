@@ -1,7 +1,8 @@
-import { Switch, Text } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { GitBranch } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
+import { Switch } from '@/components/ui/switch';
 import { useChatStore } from '@/store/chat';
 import { portalThreadSelectors } from '@/store/chat/selectors';
 import { oneLineEllipsis } from '@/styles';
@@ -17,15 +18,15 @@ const NewThreadHeader = () => {
       <span className="anticon" role="img">
         <GitBranch fill={'transparent'} height={18} size={18} width={18} />
       </span>
-      <Text ellipsis className={oneLineEllipsis} style={{ fontSize: 14 }}>
+      <div className={cn('truncate min-w-0', oneLineEllipsis)} style={{ fontSize: 14 }}>
         {t('newPortalThread.title')}
-      </Text>
+      </div>
       <div className="flex flex-row items-center gap-2">
         <Switch
           checked={newThreadMode === ThreadType.Continuation}
-          size={'small'}
+          size="sm"
           style={{ marginInlineStart: 12 }}
-          onChange={(e) => {
+          onCheckedChange={(e) => {
             useChatStore.setState({
               newThreadMode: e ? ThreadType.Continuation : ThreadType.Standalone,
             });

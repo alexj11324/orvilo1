@@ -1,12 +1,14 @@
 'use client';
 
-import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { VerifyAgentPlanConfig } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import {
   checkHeadMeta,
   type CheckReviewInput,
@@ -86,7 +88,9 @@ const Body = memo(() => {
       <div className="flex flex-col items-center justify-center h-[100%]">
         <div className="flex flex-col items-center gap-3">
           <SimpleEmpty description={t('taskDetail.acceptance.loadError')} />
-          <Button onClick={() => void mutate()}>{t('taskDetail.acceptance.retry')}</Button>
+          <Button variant="outline" onClick={() => void mutate()}>
+            {t('taskDetail.acceptance.retry')}
+          </Button>
         </div>
       </div>
     );
@@ -110,30 +114,34 @@ const Body = memo(() => {
             width={18}
           />
         </span>
-        <Text fontSize={16} weight={600}>
+        <div className="text-[16px] font-semibold">
           C{check.seq} · {check.title}
-        </Text>
+        </div>
       </div>
       {(verifierType || requiredEvidence.length > 0) && (
         <div className="flex flex-row items-center gap-4 flex-wrap">
           {verifierType && (
             <div className="flex flex-row items-center gap-2">
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskDetail.acceptance.verifier')}
-              </Text>
-              <Tag>{t(`criterion.verifierType.${verifierType}` as const, { ns: 'verify' })}</Tag>
-              {usesMultimodalLlm && <Tag>{t('taskDetail.acceptance.multimodalLlm')}</Tag>}
+              </div>
+              <Badge variant="secondary">
+                {t(`criterion.verifierType.${verifierType}` as const, { ns: 'verify' })}
+              </Badge>
+              {usesMultimodalLlm && (
+                <Badge variant="secondary">{t('taskDetail.acceptance.multimodalLlm')}</Badge>
+              )}
             </div>
           )}
           {requiredEvidence.length > 0 && (
             <div className="flex flex-row items-center gap-2 flex-wrap">
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {t('taskDetail.acceptance.requiredEvidence')}
-              </Text>
+              </div>
               {requiredEvidence.map((evidence) => (
-                <Tag key={evidence.type}>
+                <Badge key={evidence.type} variant="secondary">
                   {t(`report.evidence.medium.${evidence.type}` as const, { ns: 'verify' })}
-                </Tag>
+                </Badge>
               ))}
             </div>
           )}

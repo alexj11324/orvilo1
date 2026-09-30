@@ -1,11 +1,13 @@
 import { Markdown } from '@lobehub/ui';
-import { Button, Tag, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { SquareArrowOutUpRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
 import { ExperimentDetail } from '@/features/AgentGoals/Experiments/Detail';
 import { isExperiment } from '@/features/AgentGoals/Experiments/model';
 import {
@@ -78,28 +80,31 @@ const AttemptLedger = memo<{ view: GoalNodeView }>(({ view }) => {
             className={cx('flex flex-row items-baseline gap-2.5', styles.attempt)}
             key={attempt.index}
           >
-            <Text className={styles.mono} fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-              {dayjs(attempt.startedAt).format('MM-DD HH:mm')}
-            </Text>
-            <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
-              {t('goalProcess.attempts.nth', { index: attempt.index })}
-            </Text>
-            <Text
-              fontSize={12}
+            <div
+              className={cn('text-[12px] text-muted-foreground', styles.mono)}
               style={{ flex: 'none' }}
-              type={
+            >
+              {dayjs(attempt.startedAt).format('MM-DD HH:mm')}
+            </div>
+            <div className="text-[12px] text-muted-foreground" style={{ flex: 'none' }}>
+              {t('goalProcess.attempts.nth', { index: attempt.index })}
+            </div>
+            <div
+              style={{ flex: 'none' }}
+              className={cn(
+                'text-[12px]',
                 attempt.outcome === 'passed'
-                  ? 'success'
+                  ? 'text-success'
                   : attempt.outcome === 'failed'
-                    ? 'danger'
-                    : 'secondary'
-              }
+                    ? 'text-destructive'
+                    : 'text-muted-foreground',
+              )}
             >
               {t(`goalProcess.attempts.${attempt.outcome}` as const)}
-            </Text>
-            <Text fontSize={12} style={{ flex: 1, minWidth: 0 }} type={'secondary'}>
+            </div>
+            <div className="text-[12px] text-muted-foreground" style={{ flex: 1, minWidth: 0 }}>
               {attempt.reason ?? ''}
-            </Text>
+            </div>
           </div>
         ))}
       </div>
@@ -116,9 +121,7 @@ const NodeLinkRow = memo<{ onClick: () => void; text: string; view: GoalNodeView
       onClick={onClick}
     >
       <KindDot kind={view.node.kind} />
-      <Text ellipsis fontSize={12} type={'secondary'}>
-        {text}
-      </Text>
+      <div className="truncate min-w-0 text-[12px] text-muted-foreground">{text}</div>
     </div>
   ),
 );
@@ -157,10 +160,16 @@ const Body = memo(() => {
   return (
     <div className="flex flex-col flex-1 gap-4 p-4" style={{ minHeight: 0, overflowY: 'auto' }}>
       <div className="flex flex-row items-center gap-2">
-        <Tag size={'small'}>{t(`goalProcess.kind.${node.kind}` as const)}</Tag>
-        <Tag size={'small'}>{t(`goalProcess.nodeStatus.${node.status}` as const)}</Tag>
+        <Badge size="sm" variant="secondary">
+          {t(`goalProcess.kind.${node.kind}` as const)}
+        </Badge>
+        <Badge size="sm" variant="secondary">
+          {t(`goalProcess.nodeStatus.${node.status}` as const)}
+        </Badge>
         {nodeView.humanTouches.length > 0 && (
-          <Tag size={'small'}>{t('goalProcess.node.humanTouched')}</Tag>
+          <Badge size="sm" variant="secondary">
+            {t('goalProcess.node.humanTouched')}
+          </Badge>
         )}
       </div>
 
@@ -182,16 +191,16 @@ const Body = memo(() => {
                 : t('goalProcess.node.description')
             }
           >
-            <Text fontSize={13} style={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+            <div className="text-[13px]" style={{ lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
               {node.description}
-            </Text>
+            </div>
           </Section>
         ))}
 
       {node.kind === 'decision' && nodeView.decision && (
         <Section title={t('goalProcess.gate.decisionPointLabel')}>
           {/* State the problem itself; the resolution options carry the choices. */}
-          <Text fontSize={13}>{gateReasonText ?? nodeView.decision.question}</Text>
+          <div className="text-[13px]">{gateReasonText ?? nodeView.decision.question}</div>
         </Section>
       )}
 
@@ -247,20 +256,14 @@ const Body = memo(() => {
 
       {node.taskId && (
         <Button
-          size={'small'}
+          size="sm"
           style={{ alignSelf: 'flex-start' }}
-          icon={
-            <span className="anticon" role="img">
-              <SquareArrowOutUpRight
-                fill={'transparent'}
-                height={'1em'}
-                size={'1em'}
-                width={'1em'}
-              />
-            </span>
-          }
+          variant="outline"
           onClick={() => openTaskDetail(node.taskId!)}
         >
+          <span className="anticon" role="img">
+            <SquareArrowOutUpRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+          </span>
           {t('goalProcess.node.openTask')}
         </Button>
       )}

@@ -1,10 +1,10 @@
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { InboxIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import Balancer from 'react-wrap-balancer';
 
+import Avatar from '@/components/Avatar';
 import SkeletonLoading from '@/components/Loading/SkeletonLoading';
 import { useChatStore } from '@/store/chat';
 import { chatSelectors } from '@/store/chat/selectors';
@@ -36,7 +36,7 @@ const FileList = () => {
         }
       />
       <Balancer>
-        <Text type={'secondary'}>{t('emptyKnowledgeList')}</Text>
+        <div className="text-muted-foreground">{t('emptyKnowledgeList')}</div>
       </Balancer>
     </div>
   ) : (

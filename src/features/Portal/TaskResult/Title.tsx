@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,32 +25,28 @@ const Title = memo(() => {
     return (
       <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
         <AssigneeAvatar agentId={liveRun.agentId} size={20} />
-        <Text fontSize={14} style={{ flexShrink: 0 }} weight={500}>
+        <div className="text-[14px] font-medium" style={{ flexShrink: 0 }}>
           {agentMeta?.title ?? liveRun.activity.author?.name}
-        </Text>
-        <Text
-          className={oneLineEllipsis}
-          fontSize={13}
+        </div>
+        <div
+          className={cn('text-[13px]', oneLineEllipsis)}
           style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}
         >
           {liveRun.activity.title}
-        </Text>
+        </div>
       </div>
     );
 
   return (
     <div className="flex flex-row items-center flex-1 gap-2" style={{ minWidth: 0 }}>
-      <Text fontSize={14} weight={500}>
-        {t('goalDetail.taskResult')}
-      </Text>
+      <div className="text-[14px] font-medium">{t('goalDetail.taskResult')}</div>
       {(detail?.identifier || detail?.name) && (
-        <Text
-          className={oneLineEllipsis}
-          fontSize={13}
+        <div
+          className={cn('text-[13px]', oneLineEllipsis)}
           style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}
         >
           {[detail.identifier, detail.name].filter(Boolean).join(' · ')}
-        </Text>
+        </div>
       )}
     </div>
   );

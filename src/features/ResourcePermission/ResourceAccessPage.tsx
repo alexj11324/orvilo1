@@ -1,6 +1,5 @@
 'use client';
 
-import { Alert, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronRight, InfoIcon, UsersIcon } from 'lucide-react';
 import { memo, type ReactNode, useEffect } from 'react';
@@ -10,6 +9,8 @@ import { Link } from 'react-router';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import AsyncError from '@/components/AsyncError';
 import Loading from '@/components/Loading/BrandTextLoading';
+import { toast } from '@/components/toast';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -54,12 +55,10 @@ const AccessFormGroups = ({ groups }: { groups: FormGroupItemType[] }) => (
     {groups.map((group, index) => (
       <section className="flex flex-col gap-2" key={group.key ?? index}>
         <div className="flex flex-row items-center justify-between">
-          <Text strong as={'span'}>
-            {group.title}
-          </Text>
+          <span className="font-semibold">{group.title}</span>
           {group.extra}
         </div>
-        {group.desc ? <Text type={'secondary'}>{group.desc}</Text> : null}
+        {group.desc ? <div className="text-muted-foreground">{group.desc}</div> : null}
         {Array.isArray(group.children)
           ? group.children.map((item, itemIndex) => (
               <div className="flex flex-row items-center justify-between gap-4" key={itemIndex}>
@@ -68,7 +67,7 @@ const AccessFormGroups = ({ groups }: { groups: FormGroupItemType[] }) => (
                     {item.avatar}
                     <span>{item.label}</span>
                   </div>
-                  {item.desc ? <Text type={'secondary'}>{item.desc}</Text> : null}
+                  {item.desc ? <div className="text-muted-foreground">{item.desc}</div> : null}
                 </div>
                 {item.children}
               </div>
@@ -229,15 +228,12 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
                           />
                         }
                       >
-                        <Text
-                          ellipsis
-                          as={'span'}
-                          color={'inherit'}
-                          style={{ maxWidth: 200 }}
-                          weight={500}
+                        <span
+                          className="truncate min-w-0 font-medium"
+                          style={{ color: 'inherit', maxWidth: 200 }}
                         >
                           {resourceName}
-                        </Text>
+                        </span>
                       </BreadcrumbLink>
                     </BreadcrumbItem>
                     <BreadcrumbSeparator>
@@ -247,9 +243,9 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
                 ) : null}
                 <BreadcrumbItem>
                   <BreadcrumbPage>
-                    <Text as={'span'} color={'inherit'} weight={500}>
+                    <span className="font-medium" style={{ color: 'inherit' }}>
                       {t('permission.page.title')}
-                    </Text>
+                    </span>
                   </BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
@@ -266,21 +262,10 @@ const ResourceAccessPage = memo<ResourceAccessPageProps>(
               ) : (
                 <>
                   {isPrivate ? (
-                    <Alert
-                      style={{ width: '100%' }}
-                      title={copy.privateNotice}
-                      type={'info'}
-                      icon={
-                        <span className="anticon" role="img">
-                          <InfoIcon
-                            fill={'transparent'}
-                            height={'1em'}
-                            size={'1em'}
-                            width={'1em'}
-                          />
-                        </span>
-                      }
-                    />
+                    <Alert style={{ width: '100%' }} variant="info">
+                      <InfoIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                      <AlertTitle>{copy.privateNotice}</AlertTitle>
+                    </Alert>
                   ) : null}
                   <AccessFormGroups groups={formGroups} />
                 </>

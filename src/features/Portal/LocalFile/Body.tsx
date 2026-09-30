@@ -1,8 +1,8 @@
 import type { MarkdownProps } from '@lobehub/ui';
 import { Image, Markdown } from '@lobehub/ui';
-import { Text, ToggleGroup } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CodeIcon, ExternalLinkIcon, EyeIcon, RefreshCwIcon } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -10,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import CodeEditorPane from '@/components/CodeEditorPane';
 import { applyHtmlPreviewBaseUrl, InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
 import Loading from '@/components/Loading/CircleLoading';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import {
   PublishHtmlArtifactLiveBar,
   PublishHtmlArtifactProvider,
@@ -122,8 +123,8 @@ const SkillFrontmatterPreviewCard = memo<SkillFrontmatterPreviewCardProps>(({ me
     <div className={cx('flex flex-col', frontmatterStyles.card)} style={{ flexShrink: 0 }}>
       {metadata.map((item) => (
         <div className={cx('flex flex-row items-start', frontmatterStyles.row)} key={item.key}>
-          <Text className={frontmatterStyles.key}>{item.key}</Text>
-          <Text className={frontmatterStyles.value}>{item.value}</Text>
+          <div className={cn(frontmatterStyles.key)}>{item.key}</div>
+          <div className={cn(frontmatterStyles.value)}>{item.value}</div>
         </div>
       ))}
     </div>
@@ -312,26 +313,25 @@ const TextPreviewPane = memo<TextPreviewPaneProps>(
                 )}
                 {canRender && (
                   <ToggleGroup
-                    value={mode}
-                    variant={'outlined'}
-                    options={[
-                      {
-                        icon: <EyeIcon size={14} />,
-                        label: t('workingPanel.localFile.preview.render'),
-                        value: 'render',
-                      },
-                      {
-                        icon: <CodeIcon size={14} />,
-                        label: t(
-                          isHtml
-                            ? 'workingPanel.localFile.preview.source'
-                            : 'workingPanel.localFile.preview.raw',
-                        ),
-                        value: 'raw',
-                      },
-                    ]}
-                    onChange={(value) => setMode(value as TextPreviewMode)}
-                  />
+                    value={[mode]}
+                    variant="outline"
+                    onValueChange={(value) => {
+                      if (value.length > 0) setMode(value[0] as TextPreviewMode);
+                    }}
+                  >
+                    <ToggleGroupItem value="render">
+                      <EyeIcon size={14} />
+                      {t('workingPanel.localFile.preview.render')}
+                    </ToggleGroupItem>
+                    <ToggleGroupItem value="raw">
+                      <CodeIcon size={14} />
+                      {t(
+                        isHtml
+                          ? 'workingPanel.localFile.preview.source'
+                          : 'workingPanel.localFile.preview.raw',
+                      )}
+                    </ToggleGroupItem>
+                  </ToggleGroup>
                 )}
                 {isHtml && canOpenExternal && (
                   <ToolbarActionButton

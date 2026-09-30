@@ -1,5 +1,5 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { LockIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 
@@ -76,17 +76,11 @@ const MasonryItem = memo<MasonryItemProps>(
                     />
                   </span>
                 )}
-                <Text className={styles.title} ellipsis={{ rows: 2 }}>
-                  {name}
-                </Text>
+                <div className={cn('line-clamp-2', styles.title)}>{name}</div>
               </div>
             </div>
           </div>
-          {description && (
-            <Text className={styles.desc} ellipsis={{ rows: 3 }}>
-              {description}
-            </Text>
-          )}
+          {description && <div className={cn('line-clamp-3', styles.desc)}>{description}</div>}
           <div className="flex flex-col items-center justify-end">
             {action === undefined ? <Actions enabled={enabled} id={id} type={type} /> : action}
           </div>

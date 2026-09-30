@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, confirmModal, type ModalInstance, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -8,7 +7,11 @@ import { ArrowLeftIcon, Clock3Icon } from 'lucide-react';
 import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { confirmModal } from '@/components/Modal';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { DOCUMENT_HISTORY_QUERY_LIST_LIMIT } from '@/const/documentHistory';
 import NavHeader from '@/features/NavHeader';
@@ -220,23 +223,22 @@ const HistoryPanel = memo(() => {
       <NavHeader
         showTogglePanelButton={false}
         left={
-          <Text
-            ellipsis={{ tooltipWhenOverflow: true }}
+          <div
+            className="truncate min-w-0 text-muted-foreground"
             style={{ fontSize: 13, fontWeight: 500, marginLeft: 8 }}
-            type={'secondary'}
           >
             {t('pageEditor.history.title', { ns: 'file' })}
-          </Text>
+          </div>
         }
         right={
           <>
             <Button
-              className={styles.headerButton}
-              icon={ArrowLeftIcon}
-              size={'small'}
-              type={'text'}
+              className={cn(styles.headerButton)}
+              size="sm"
+              variant="ghost"
               onClick={() => setRightPanelMode('copilot')}
             >
+              <ArrowLeftIcon data-icon="inline-start" />
               {t('pageEditor.history.backToCopilot', { ns: 'file' })}
             </Button>
             <ToggleRightPanelButton

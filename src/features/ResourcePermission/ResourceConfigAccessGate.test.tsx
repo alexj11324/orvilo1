@@ -12,7 +12,7 @@ const mocks = vi.hoisted(() => ({
   toastInfo: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   toast: { info: mocks.toastInfo },
 }));

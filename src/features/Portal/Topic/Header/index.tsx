@@ -1,8 +1,8 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import NavHeader from '@/features/NavHeader';
 import { useChatStore } from '@/store/chat';
 

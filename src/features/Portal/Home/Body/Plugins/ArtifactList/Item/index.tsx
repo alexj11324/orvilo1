@@ -1,4 +1,3 @@
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { type ChatPluginPayload } from '@orvilo/types';
 import { cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -6,6 +5,7 @@ import { CircuitBoard } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import PluginAvatar from '@/features/PluginAvatar';
 import { useYamlArguments } from '@/hooks/useYamlArguments';
 import { useChatStore } from '@/store/chat';
@@ -45,12 +45,12 @@ const ArtifactItem = memo<ArtifactItemProps>(({ payload, messageId, identifier =
           <div className="flex flex-col gap-1">
             <div className="flex flex-row items-center gap-2">
               <div>{pluginTitle}</div>
-              <Tag>{payload?.apiName}</Tag>
+              <Badge variant="secondary">{payload?.apiName}</Badge>
             </div>
             <div>
-              <Text ellipsis style={{ fontSize: 12 }} type={'secondary'}>
+              <div className="truncate min-w-0 text-muted-foreground" style={{ fontSize: 12 }}>
                 {args}
-              </Text>
+              </div>
             </div>
           </div>
         </div>

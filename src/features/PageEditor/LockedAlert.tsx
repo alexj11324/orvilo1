@@ -1,10 +1,11 @@
 'use client';
 
-import { Alert } from '@lobehub/ui/base-ui';
+import { InfoIcon, TriangleAlertIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
 
@@ -40,13 +41,11 @@ const LockedAlert = memo(() => {
   // conflict, just the user's own stale lease lingering until expiry.
   if (isLockedBySelf) {
     return (
-      <Alert
-        showIcon
-        description={t('pageEditor.editMode.lockedBySelfDescription')}
-        style={{ marginBlock: 8 }}
-        title={t('pageEditor.editMode.lockedBySelf')}
-        type="info"
-      />
+      <Alert style={{ marginBlock: 8 }} variant="info">
+        <InfoIcon />
+        <AlertTitle>{t('pageEditor.editMode.lockedBySelf')}</AlertTitle>
+        <AlertDescription>{t('pageEditor.editMode.lockedBySelfDescription')}</AlertDescription>
+      </Alert>
     );
   }
 
@@ -55,13 +54,11 @@ const LockedAlert = memo(() => {
     : t('pageEditor.editMode.lockedBySomeone');
 
   return (
-    <Alert
-      showIcon
-      description={t('pageEditor.editMode.lockedDescription')}
-      style={{ marginBlock: 8 }}
-      title={title}
-      type="warning"
-    />
+    <Alert style={{ marginBlock: 8 }} variant="warning">
+      <TriangleAlertIcon />
+      <AlertTitle>{title}</AlertTitle>
+      <AlertDescription>{t('pageEditor.editMode.lockedDescription')}</AlertDescription>
+    </Alert>
   );
 });
 

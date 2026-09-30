@@ -1,11 +1,13 @@
-import { Tag, Text, toast } from '@lobehub/ui/base-ui';
 import type { GoalSpend } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import InputNumber from '@/components/InputNumber';
+import { Badge } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
 import { formatSpan, formatUsd } from '@/features/AgentGoals/goalPresentation';
 import {
   buildGoalGraphView,
@@ -66,14 +68,17 @@ const NodeRow = memo<{
       onClick={() => openGoalNode(goalId, nodeId)}
     >
       {view.seq !== undefined && (
-        <Text className={styles.mono} fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+        <div
+          className={cn('text-[12px] text-muted-foreground', styles.mono)}
+          style={{ flex: 'none' }}
+        >
           #{view.seq}
-        </Text>
+        </div>
       )}
       <KindDot kind={view.node.kind} />
-      <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
+      <div className="truncate min-w-0 font-medium" style={{ flex: 1, minWidth: 0 }}>
         {view.node.title}
-      </Text>
+      </div>
       {extra}
     </div>
   );
@@ -92,9 +97,9 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
 
   if (events.length === 0)
     return (
-      <Text fontSize={13} type={'secondary'}>
+      <div className="text-[13px] text-muted-foreground">
         {t('goalProcess.metricDetail.lifecycle.empty')}
-      </Text>
+      </div>
     );
 
   return (
@@ -106,18 +111,21 @@ const Lifecycle = memo<{ goalId: string; graph: GoalGraphView }>(({ graph }) => 
             className={cx('flex flex-row items-baseline gap-2.5', styles.staticRow)}
             key={event.id}
           >
-            <Text className={styles.mono} fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+            <div
+              className={cn('text-[12px] text-muted-foreground', styles.mono)}
+              style={{ flex: 'none' }}
+            >
               {dayjs(event.createdAt).format('MM-DD HH:mm')}
-            </Text>
+            </div>
             <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
-              <Text fontSize={13}>
+              <div className="text-[13px]">
                 {t(`goalProcess.eventType.${event.eventType}` as const)}
                 {subject ? ` · ${subject}` : ''}
-              </Text>
-              <Text fontSize={12} type={'secondary'}>
+              </div>
+              <div className="text-[12px] text-muted-foreground">
                 {t(`goalProcess.actor.${event.actorType}` as const)}
                 {event.reason ? ` · ${event.reason}` : ''}
-              </Text>
+              </div>
             </div>
           </div>
         );
@@ -149,7 +157,9 @@ const Tasks = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph })
                   topicId={view.integration.topicId}
                 />
               )}
-              <Tag size={'small'}>{t(`goalProcess.nodeStatus.${view.node.status}` as const)}</Tag>
+              <Badge size="sm" variant="secondary">
+                {t(`goalProcess.nodeStatus.${view.node.status}` as const)}
+              </Badge>
             </div>
           }
         />
@@ -178,14 +188,12 @@ const Findings = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
           nodeId={view.node.id}
           extra={
             view.producedBy ? (
-              <Text
-                ellipsis
-                fontSize={12}
+              <div
+                className="truncate min-w-0 text-[12px] text-muted-foreground"
                 style={{ flexShrink: 1, minWidth: 0 }}
-                type={'secondary'}
               >
                 {t('goalProcess.findings.from', { title: view.producedBy.title })}
-              </Text>
+              </div>
             ) : undefined
           }
         />
@@ -275,29 +283,23 @@ const BudgetField = memo<{
     <div className="flex flex-col gap-0.5">
       <span className={styles.label}>{label}</span>
       <div className="flex flex-row items-center gap-2">
-        <Text className={styles.mono} style={{ fontSize: 20 }} weight={600}>
+        <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>
           {money ? formatUsd(used) : used}
-        </Text>
-        <Text className={styles.mono} style={{ fontSize: 20 }} type={'secondary'}>
+        </div>
+        <div className={cn('text-muted-foreground', styles.mono)} style={{ fontSize: 20 }}>
           /
-        </Text>
+        </div>
         <InputNumber
           className={styles.mono}
           controls={false}
           disabled={!canEdit || saving}
           min={meta.min}
           placeholder={placeholder ?? t('goalProcess.metricDetail.budget.uncapped')}
-          size={'small'}
+          prefix={money ? <div className="text-[12px] text-muted-foreground">$</div> : undefined}
+          size="sm"
           style={{ width: 120 }}
+
           value={draft}
-          variant={'filled'}
-          prefix={
-            money ? (
-              <Text fontSize={12} type={'secondary'}>
-                $
-              </Text>
-            ) : undefined
-          }
           onBlur={() => void commit()}
           onChange={setDraft}
           onPressEnter={() => void commit()}
@@ -339,9 +341,9 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
 
     if (rows.length === 0)
       return (
-        <Text fontSize={13} type={'secondary'}>
+        <div className="text-[13px] text-muted-foreground">
           {t('goalProcess.metricDetail.budget.perTaskEmpty')}
-        </Text>
+        </div>
       );
 
     return (
@@ -352,31 +354,27 @@ const CostBreakdown = memo<{ goalId: string; graph: GoalGraphView; spend?: GoalS
             const body = (
               <div className="flex flex-row items-center gap-2" key={row.taskId}>
                 {row.view?.seq !== undefined && (
-                  <Text
-                    className={styles.mono}
-                    fontSize={12}
+                  <div
+                    className={cn('text-[12px] text-muted-foreground', styles.mono)}
                     style={{ flex: 'none' }}
-                    type={'secondary'}
                   >
                     #{row.view.seq}
-                  </Text>
+                  </div>
                 )}
-                <Text ellipsis style={{ flex: 1, minWidth: 0 }}>
+                <div className="truncate min-w-0" style={{ flex: 1, minWidth: 0 }}>
                   {row.view?.node.title ?? row.taskId}
-                </Text>
-                <Text
-                  className={styles.mono}
-                  fontSize={12}
+                </div>
+                <div
+                  className={cn('text-[12px] text-muted-foreground', styles.mono)}
                   style={{ flex: 'none' }}
-                  type={'secondary'}
                 >
                   {t('goalProcess.metricDetail.budget.tokensValue', {
                     value: formatTokens(row.totalTokens),
                   })}
-                </Text>
-                <Text className={styles.mono} style={{ flex: 'none' }} weight={500}>
+                </div>
+                <div className={cn('font-medium', styles.mono)} style={{ flex: 'none' }}>
                   {formatUsd(row.totalCost)}
-                </Text>
+                </div>
               </div>
             );
 
@@ -444,9 +442,9 @@ const Budget = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph }
         {/* Raising a cap is how a user restarts a goal the coordinator parked on
             one — say so, because the alternative gesture (Resume) looks like the
             obvious one and does nothing while the budget is still binding. */}
-        <Text fontSize={12} style={{ lineHeight: 1.7 }} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.7 }}>
           {t('goalProcess.metricDetail.budget.raiseNote')}
-        </Text>
+        </div>
       </div>
       <CostBreakdown goalId={goalId} graph={graph} spend={spend} />
     </div>
@@ -466,15 +464,15 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
       {startedAt && (
         <div className="flex flex-col gap-0.5">
           <span className={styles.label}>{t('goalProcess.metricDetail.duration.total')}</span>
-          <Text className={styles.mono} style={{ fontSize: 20 }} weight={600}>
+          <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>
             {formatSpan(end.getTime() - startedAt.getTime())}
-          </Text>
-          <Text fontSize={12} type={'secondary'}>
+          </div>
+          <div className="text-[12px] text-muted-foreground">
             {dayjs(startedAt).format('MM-DD HH:mm')} →{' '}
             {completedAt
               ? dayjs(completedAt).format('MM-DD HH:mm')
               : t('goalProcess.metricDetail.duration.now')}
-          </Text>
+          </div>
         </div>
       )}
       <div className="flex flex-col gap-1">
@@ -491,16 +489,14 @@ const Duration = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
                 key={view.node.id}
                 nodeId={view.node.id}
                 extra={
-                  <Text
-                    className={styles.mono}
-                    fontSize={12}
+                  <div
+                    className={cn('text-[12px] text-muted-foreground', styles.mono)}
                     style={{ flex: 'none' }}
-                    type={'secondary'}
                   >
                     {dayjs(first.startedAt).format('HH:mm')}–
                     {last.endedAt ? dayjs(last.endedAt).format('HH:mm') : '…'} ·{' '}
                     {formatSpan(spanEnd.getTime() - first.startedAt.getTime())}
-                  </Text>
+                  </div>
                 }
               />
             );
@@ -531,9 +527,9 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
     <div className="flex flex-col gap-[14px]">
       <div className="flex flex-col gap-0.5">
         <span className={styles.label}>{t('goalProcess.metricDetail.liveness.latest')}</span>
-        <Text className={styles.mono} style={{ fontSize: 20 }} weight={600}>
+        <div className={cn('font-semibold', styles.mono)} style={{ fontSize: 20 }}>
           {latest ? dayjs(latest).format('MM-DD HH:mm') : '—'}
-        </Text>
+        </div>
       </div>
       {running.length > 0 && (
         <div className="flex flex-col gap-1">
@@ -547,9 +543,9 @@ const Liveness = memo<{ goalId: string; graph: GoalGraphView }>(({ goalId, graph
       )}
       {/* The contract that makes "walk away" safe: event-driven advancement
           plus the recovery sweep. State it where the user checks for a pulse. */}
-      <Text fontSize={12} style={{ lineHeight: 1.7 }} type={'secondary'}>
+      <div className="text-[12px] text-muted-foreground" style={{ lineHeight: 1.7 }}>
         {t('goalProcess.metricDetail.liveness.driver')}
-      </Text>
+      </div>
     </div>
   );
 });

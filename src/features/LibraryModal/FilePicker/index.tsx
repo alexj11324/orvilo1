@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, createModal, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { t } from 'i18next';
 import { FileSearch, ServerCrash } from 'lucide-react';
@@ -10,7 +9,9 @@ import { Virtuoso } from 'react-virtuoso';
 import useSWRInfinite from 'swr/infinite';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { createModal, useModalContext } from '@/components/Modal';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Button } from '@/components/ui/button';
 import type { ExistingEditorAttachment } from '@/features/EditorCanvas/editorAttachments';
 import { resourceService } from '@/services/resource';
 import { useGlobalStore } from '@/store/global';
@@ -111,7 +112,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
 
   const renderAction = useCallback(
     (file: ResourceItem & { sourceType: 'file'; url: string }) => (
-      <Button type={'primary'} onClick={() => handleSelect(file)}>
+      <Button variant="default" onClick={() => handleSelect(file)}>
         {t('knowledgeBase.library.action.add', { ns: 'chat' })}
       </Button>
     ),
@@ -152,7 +153,9 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
             <ServerCrash fill={'transparent'} height={80} size={80} width={80} />
           </span>
           {t('networkError', { ns: 'file' })}
-          <Button onClick={() => void mutate()}>{t('retry', { ns: 'common' })}</Button>
+          <Button variant="outline" onClick={() => void mutate()}>
+            {t('retry', { ns: 'common' })}
+          </Button>
         </div>
       ) : files.length === 0 ? (
         <div className="flex flex-col items-center justify-center flex-1 p-10">
@@ -185,7 +188,7 @@ const FilePicker = memo<FilePickerProps>(({ onSelect }) => {
             />
           ))}
           {hasMore && (
-            <Button loading={isValidating} type={'text'} onClick={loadMore}>
+            <Button loading={isValidating} variant="ghost" onClick={loadMore}>
               {t('loadMore', { ns: 'file' })}
             </Button>
           )}

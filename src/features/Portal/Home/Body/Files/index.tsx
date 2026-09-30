@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -9,9 +8,7 @@ export const Files = memo(() => {
 
   return (
     <div className="flex flex-col gap-2">
-      <Text as={'h5'} style={{ marginInline: 12 }}>
-        {t('files')}
-      </Text>
+      <h5 style={{ marginInline: 12 }}>{t('files')}</h5>
       <FileList />
     </div>
   );

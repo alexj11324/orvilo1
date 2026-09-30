@@ -1,9 +1,9 @@
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ArrowLeft } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
@@ -51,9 +51,9 @@ const TopicCommentsSidebar = memo(() => {
           size={DESKTOP_HEADER_ICON_SMALL_SIZE}
           onClick={isThread ? goBack : () => openTopicComments(view.topicId)}
         />
-        <Text fontSize={13} weight={500}>
+        <div className="text-[13px] font-medium">
           {t(isThread ? 'topicComment.thread' : 'topicComment.messageComments')}
-        </Text>
+        </div>
       </div>
       {isThread ? <ThreadBody /> : <Body />}
     </div>

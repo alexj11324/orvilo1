@@ -1,10 +1,10 @@
 'use client';
 
-import { Spin } from '@lobehub/ui/base-ui';
 import { BookOpenIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Spinner } from '@/components/ui/spinner';
 import { useFetchNotebookDocuments } from '@/hooks/useFetchNotebookDocuments';
 import { useChatStore } from '@/store/chat';
 
@@ -29,7 +29,7 @@ const NotebookBody = memo(() => {
   if (isLoading) {
     return (
       <div className="flex flex-col items-center justify-center flex-1">
-        <Spin />
+        <Spinner />
       </div>
     );
   }

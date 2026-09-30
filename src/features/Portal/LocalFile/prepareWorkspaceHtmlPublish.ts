@@ -1,4 +1,3 @@
-import { toast } from '@lobehub/ui/base-ui';
 import {
   type EscapedResourceRef,
   type GatheredWorkspaceHtmlArtifact,
@@ -10,6 +9,8 @@ import {
   type WorkspaceHtmlArtifactPublishResult,
 } from '@orvilo/html-artifact';
 import { t } from 'i18next';
+
+import { toast } from '@/components/toast';
 
 import { readExternalAssetForPublish } from './readExternalAssetForPublish';
 import { readWorkspaceAsset } from './readWorkspaceAsset';

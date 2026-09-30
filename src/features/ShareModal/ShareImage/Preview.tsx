@@ -1,9 +1,9 @@
 import { Markdown } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName, type ConversationContext, type UIChatMessage } from '@orvilo/types';
 import { cx } from 'antd-style';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { ProductLogo } from '@/components/Branding';
 import { ModelTag } from '@/components/OrviloIcons';
 import PluginTag from '@/features/PluginTag';
@@ -116,9 +116,7 @@ const Preview = memo<PreviewProps>(
                   size={28}
                   title={displayTitle ?? undefined}
                 />
-                <Text strong fontSize={16}>
-                  {displayTitle}
-                </Text>
+                <div className="font-semibold text-[16px]">{displayTitle}</div>
                 <div className="flex flex-row gap-1">
                   <ModelTag model={displayModel} />
                   {withPluginInfo && displayPlugins?.length > 0 && (

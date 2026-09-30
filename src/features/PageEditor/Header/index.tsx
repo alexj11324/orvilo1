@@ -1,11 +1,12 @@
 'use client';
 
-import { ActionIcon, Avatar, Text } from '@lobehub/ui/base-ui';
 import { ArrowLeftIcon, MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ShareButton from '@/business/client/features/PageShare/ShareButton';
+import ActionIcon from '@/components/ActionIcon';
+import Avatar from '@/components/Avatar';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { AutoSaveHint } from '@/features/EditorCanvas';
 import NavHeader from '@/features/NavHeader';
@@ -51,9 +52,9 @@ const Header = memo(() => {
               {/* Icon */}
               {emoji && <Avatar avatar={emoji} shape={'square'} size={28} />}
               {/* Title */}
-              <Text ellipsis style={{ marginLeft: 4 }} weight={500}>
+              <div className="truncate min-w-0 font-medium" style={{ marginLeft: 4 }}>
                 {title || t('pageEditor.titlePlaceholder')}
-              </Text>
+              </div>
             </>
           )}
           {documentId && <AutoSaveHint documentId={documentId} style={{ marginLeft: 6 }} />}

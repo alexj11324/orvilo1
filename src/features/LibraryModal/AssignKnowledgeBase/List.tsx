@@ -1,4 +1,3 @@
-import { Alert } from '@lobehub/ui/base-ui';
 import { VirtuosoMasonry } from '@virtuoso.dev/masonry';
 import { BookOpen, ServerCrash } from 'lucide-react';
 import React, { memo, useMemo, useState } from 'react';
@@ -6,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Virtuoso } from 'react-virtuoso';
 
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { Alert, AlertTitle } from '@/components/ui/alert';
 import { useAgentStore } from '@/store/agent';
 import { useGlobalStore } from '@/store/global';
 
@@ -104,11 +104,12 @@ export const List = memo(() => {
           <ViewSwitcher view={viewMode} onViewChange={setViewMode} />
         </div>
         {showPublicAgentHint && (
-          <Alert
-            showIcon
-            message={t('resources.knowledgePicker.publicAgentHint', { ns: 'chat' })}
-            type={'info'}
-          />
+          <Alert variant="info">
+            <InfoIcon />
+            <AlertTitle>
+              {t('resources.knowledgePicker.publicAgentHint', { ns: 'chat' })}
+            </AlertTitle>
+          </Alert>
         )}
       </div>
       {isLoading || isTransitioning ? (

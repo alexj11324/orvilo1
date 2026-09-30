@@ -1,11 +1,13 @@
-import { ActionIcon, confirmModal, Text } from '@lobehub/ui/base-ui';
 import { type NotebookDocument } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { FileTextIcon, Trash2Icon } from 'lucide-react';
 import { type MouseEvent } from 'react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
 import { useChatStore } from '@/store/chat';
 import { useNotebookStore } from '@/store/notebook';
 
@@ -68,9 +70,7 @@ const DocumentItem = memo<DocumentItemProps>(({ document, topicId }) => {
       <FileTextIcon size={16} />
       <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
         <div className="flex flex-row items-center justify-between">
-          <Text ellipsis className={styles.title}>
-            {document.title}
-          </Text>
+          <div className={cn('truncate min-w-0', styles.title)}>{document.title}</div>
           <ActionIcon
             icon={Trash2Icon}
             loading={deleting}
@@ -80,9 +80,7 @@ const DocumentItem = memo<DocumentItemProps>(({ document, topicId }) => {
           />
         </div>
         {document.description && (
-          <Text className={styles.description} ellipsis={{ rows: 2 }}>
-            {document.description}
-          </Text>
+          <div className={cn('line-clamp-2', styles.description)}>{document.description}</div>
         )}
       </div>
     </div>

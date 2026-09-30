@@ -1,14 +1,5 @@
 'use client';
 
-import {
-  Avatar,
-  Button,
-  SkeletonAvatar,
-  SkeletonText,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { MAX_RESOURCE_COLLABORATORS_PER_ADD } from '@orvilo/const';
 import { useHover } from 'ahooks';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
@@ -18,8 +9,13 @@ import { useTranslation } from 'react-i18next';
 
 import { useFetchWorkspaceMembers } from '@/business/client/hooks/useFetchWorkspaceMembers';
 import { useWorkspaceMembers } from '@/business/client/hooks/useWorkspaceMembers';
+import Avatar from '@/components/Avatar';
+import { useModalContext } from '@/components/Modal';
 import SearchBar from '@/components/SearchBar';
 import SimpleEmpty from '@/components/SimpleEmpty';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import type { PermissionResourceType, ResourceAccessLevel } from '@/services/resourcePermission';
 
 import { useResourceCollaborators } from '../useResourceCollaborators';
@@ -139,13 +135,9 @@ const MemberRow = memo<{
         title={name}
       />
       <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
-        <Text ellipsis weight={500}>
-          {name}
-        </Text>
+        <div className="truncate min-w-0 font-medium">{name}</div>
         {email && email !== name ? (
-          <Text ellipsis fontSize={12} type={'secondary'}>
-            {email}
-          </Text>
+          <div className="truncate min-w-0 text-[12px] text-muted-foreground">{email}</div>
         ) : null}
       </div>
       {/* Select-option style: the selected state reads as a primary check on
@@ -259,8 +251,8 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
           {isInitialLoading ? (
             [0, 1, 2].map((key) => (
               <div className={cx('flex flex-row items-center gap-3', styles.row)} key={key}>
-                <SkeletonAvatar size={40} />
-                <SkeletonText style={{ marginBottom: 0, width: 180 }} />
+                <Skeleton className="rounded-full" style={{ height: 40, width: 40 }} />
+                <Skeleton style={{ marginBottom: 0, width: 180 }} />
               </div>
             ))
           ) : filtered.length === 0 ? (
@@ -286,16 +278,18 @@ const AddCollaboratorsContent = memo<AddCollaboratorsContentProps>(
         <div className={cx('flex flex-row items-center gap-2', styles.footer)}>
           <div className="flex flex-col flex-1">
             {selected.length > 0 ? (
-              <Text fontSize={13} type={'secondary'}>
+              <div className="text-[13px] text-muted-foreground">
                 {t('permission.collaborators.addModal.selectedCount', { count: selected.length })}
-              </Text>
+              </div>
             ) : null}
           </div>
-          <Button onClick={() => close()}>{t('cancel', { ns: 'common' })}</Button>
+          <Button variant="outline" onClick={() => close()}>
+            {t('cancel', { ns: 'common' })}
+          </Button>
           <Button
             disabled={selected.length === 0}
             loading={mutating}
-            type={'primary'}
+            variant="default"
             onClick={handleConfirm}
           >
             {selected.length > 0

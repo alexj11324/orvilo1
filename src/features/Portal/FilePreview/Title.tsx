@@ -1,6 +1,8 @@
-import { ActionIcon, Skeleton, Text } from '@lobehub/ui/base-ui';
+import { cn } from 'cn';
 import { ArrowLeft } from 'lucide-react';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useFileStore } from '@/store/file';
@@ -21,11 +23,11 @@ const Title = () => {
       <ActionIcon icon={ArrowLeft} size={'small'} onClick={() => closeFilePreview()} />
 
       {isLoading ? (
-        <Skeleton height={28} />
+        <Skeleton style={{ height: 28 }} />
       ) : (
-        <Text className={oneLineEllipsis} style={{ fontSize: 16 }} type={'secondary'}>
+        <div className={cn('text-muted-foreground', oneLineEllipsis)} style={{ fontSize: 16 }}>
           {data?.name}
-        </Text>
+        </div>
       )}
     </div>
   );

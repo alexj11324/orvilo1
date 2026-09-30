@@ -1,7 +1,6 @@
 'use client';
 
 import { Markdown } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -58,13 +57,9 @@ const Body = memo(() => {
         shape="square"
         size={80}
       />
-      <Text align="center" fontSize={24} weight="bold">
-        {displayName}
-      </Text>
+      <div className="text-center text-[24px] font-bold">{displayName}</div>
       {meta.description && (
-        <Text align="center" type="secondary">
-          {meta.description}
-        </Text>
+        <div className="text-center text-muted-foreground">{meta.description}</div>
       )}
       {openingMessage && (
         <div className="flex flex-col" style={{ width: 'min(100%, 560px)' }}>

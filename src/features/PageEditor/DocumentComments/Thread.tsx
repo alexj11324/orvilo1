@@ -1,4 +1,3 @@
-import { Button } from '@lobehub/ui/base-ui';
 import type { DocumentCommentItem, DocumentCommentThread } from '@orvilo/types';
 import { cn } from 'cn';
 import { Fragment, memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -6,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { Button } from '@/components/ui/button';
 import { documentCommentService } from '@/services/documentComment';
 
 import CommentCard from './CommentCard';
@@ -297,8 +297,8 @@ const Thread = memo<ThreadProps>(
                 <div className="flex flex-col items-center justify-center py-2">
                   <Button
                     loading={replies.isLoadingMore}
-                    size={'small'}
-                    type={'text'}
+                    size="sm"
+                    variant="ghost"
                     onClick={() => void replies.loadMore()}
                   >
                     {t('pageEditor.comments.loadMoreReplies')}

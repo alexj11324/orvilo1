@@ -1,8 +1,10 @@
-import { ActionIcon, type DropdownItem, DropdownMenu } from '@lobehub/ui/base-ui';
 import { MoreHorizontal, RefreshCw } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import type { DropdownItem } from '@/components/ItemsMenu';
+import { DropdownMenu } from '@/components/ItemsMenu';
 import { mutate as globalMutate } from '@/libs/swr';
 import { verifyKeys } from '@/libs/swr/keys';
 import { useChatStore } from '@/store/chat';
@@ -42,12 +44,7 @@ const AcceptanceHeader = memo(() => {
       title={
         <div className="flex flex-row items-center gap-0.5" style={{ minWidth: 0 }}>
           <Title />
-          <DropdownMenu
-            iconSpaceMode={'group'}
-            items={menuItems}
-            placement={'bottomLeft'}
-            popupProps={{ style: { minWidth: 140 } }}
-          >
+          <DropdownMenu items={menuItems} placement={'bottomLeft'} popupClassName="min-w-[140px]">
             <ActionIcon
               icon={MoreHorizontal}
               size={'small'}

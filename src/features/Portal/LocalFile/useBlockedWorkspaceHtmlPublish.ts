@@ -1,4 +1,3 @@
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type {
   GatheredWorkspaceHtmlResource,
   WorkspaceHtmlArtifactPublisher,
@@ -8,6 +7,9 @@ import { isPathInsideWorkspace } from '@orvilo/html-artifact';
 import debug from 'debug';
 import { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 
 import { copyWorkspaceHtmlArtifactIntoWorkspace } from './copyWorkspaceHtmlArtifactIntoWorkspace';
 import {

@@ -1,7 +1,8 @@
-import { Flexbox, Highlighter, Snippet } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -40,12 +41,12 @@ const AuthRequiredState = ({
       }
     >
       {isDesktop && (
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text strong style={{ fontSize: 12 }}>
             {t('cliAuthGuide.runCommand')}
           </Text>
-          <Snippet language={'bash'}>{config.signInCommand}</Snippet>
-        </Flexbox>
+          <CodeBlock wrap code={config.signInCommand} language="bash" variant="ghost" />
+        </div>
       )}
 
       <Text style={{ fontSize: 12 }} type="secondary">
@@ -53,24 +54,17 @@ const AuthRequiredState = ({
       </Text>
 
       {rawErrorDetails && (
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text strong style={{ fontSize: 12 }}>
             {t('cliAuthGuide.errorDetails')}
           </Text>
-          <Highlighter
+          <CodeBlock
             wrap
-            actionIconSize={'small'}
-            language={'log'}
-            padding={12}
-            variant={'outlined'}
-            style={{
-              maxHeight: 200,
-              overflow: 'auto',
-            }}
-          >
-            {rawErrorDetails}
-          </Highlighter>
-        </Flexbox>
+            code={rawErrorDetails}
+            language="log"
+            style={{ maxHeight: 200, overflow: 'auto' }}
+          />
+        </div>
       )}
     </GuideShell>
   );

@@ -1,8 +1,9 @@
-import { Flexbox, Highlighter } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { ClockAlert } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -43,21 +44,17 @@ const CliDetectionTimeoutState = ({
       </Text>
 
       {rawErrorDetails && (
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text strong style={{ fontSize: 12 }}>
             {t('cliDetectionTimeoutGuide.errorDetails')}
           </Text>
-          <Highlighter
+          <CodeBlock
             wrap
-            actionIconSize={'small'}
-            language={'log'}
-            padding={0}
+            code={rawErrorDetails}
+            language="log"
             style={{ maxHeight: 160, overflow: 'auto' }}
-            variant={'outlined'}
-          >
-            {rawErrorDetails}
-          </Highlighter>
-        </Flexbox>
+          />
+        </div>
       )}
     </GuideShell>
   );

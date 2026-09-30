@@ -1,8 +1,8 @@
 'use client';
 
 // Highlighter is intentionally avoided: it pulls every shiki grammar (~10 MB) into the auth bundle
-import { Block, Flexbox, FluentEmoji } from '@lobehub/ui';
 import { Button, Result, Text } from '@lobehub/ui/base-ui';
+import { FrownIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
 
@@ -15,7 +15,7 @@ const FailedPage = () => {
 
   return (
     <Result
-      icon={<FluentEmoji emoji={'🥵'} size={96} type={'anim'} />}
+      icon={<FrownIcon size={96} />}
       status="error"
       extra={
         <a href="/">
@@ -25,14 +25,14 @@ const FailedPage = () => {
         </a>
       }
       subTitle={
-        <Flexbox gap={8}>
+        <div className="flex flex-col gap-2">
           <Text fontSize={16} type="secondary">
             {t('error.desc', {
               reason: t(`error.reason.${reason}` as any, { defaultValue: reason ?? '' }),
             })}
           </Text>
           {!!errorMessage && (
-            <Block padding={12} style={{ maxHeight: 240, overflowY: 'auto' }} variant={'filled'}>
+            <div className="flex flex-col p-3" style={{ maxHeight: 240, overflowY: 'auto' }}>
               <pre
                 style={{
                   fontFamily: 'monospace',
@@ -45,9 +45,9 @@ const FailedPage = () => {
               >
                 {errorMessage}
               </pre>
-            </Block>
+            </div>
           )}
-        </Flexbox>
+        </div>
       }
       title={
         <Text fontSize={32} weight={'bold'}>

@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { Avatar, Button, Skeleton, Text } from '@lobehub/ui/base-ui';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -43,7 +42,7 @@ const LoginConfirmClient = memo<LoginConfirmProps>(({ uid, clientMetadata }) => 
   const buttonText = t('login.button'); // Or "Continue"
 
   return (
-    <Flexbox gap={16} width={'min(100%,400px)'}>
+    <div className="flex flex-col gap-4" style={{ width: 'min(100%,400px)' }}>
       <OAuthApplicationLogo
         clientDisplayName={clientDisplayName}
         isFirstParty={clientMetadata.isFirstParty}
@@ -77,23 +76,26 @@ const LoginConfirmClient = memo<LoginConfirmProps>(({ uid, clientMetadata }) => 
           </form>
         }
       >
-        <Block padding={16} variant={'outlined'}>
+        <div
+          className="flex flex-col p-4 border"
+          style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+        >
           {isUserStateInit ? (
-            <Flexbox horizontal align={'center'} gap={16}>
+            <div className="flex items-center gap-4">
               <Avatar alt={nickName || ''} avatar={avatar} shape={'square'} size={40} />
               <Text fontSize={18} weight={500}>
                 {nickName}
               </Text>
-            </Flexbox>
+            </div>
           ) : (
-            <Flexbox horizontal gap={16}>
+            <div className="flex gap-4">
               <Skeleton.Avatar shape={'square'} size={40} />
               <Skeleton height={36} />
-            </Flexbox>
+            </div>
           )}
-        </Block>
+        </div>
       </AuthCard>
-    </Flexbox>
+    </div>
   );
 });
 

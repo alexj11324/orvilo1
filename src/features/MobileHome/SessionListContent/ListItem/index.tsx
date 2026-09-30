@@ -1,14 +1,17 @@
-import { type ListItemProps } from '@lobehub/ui';
-import { List } from '@lobehub/ui';
 import { Avatar } from '@lobehub/ui/base-ui';
 import { useHover } from 'ahooks';
 import { createStaticStyles, cx } from 'antd-style';
-import { memo, useMemo, useRef } from 'react';
+import type { type ComponentProps, memo, ReactNode, useMemo, useRef } from 'react';
 
 import GroupAvatar from '@/features/GroupAvatar';
 import { useServerConfigStore } from '@/store/serverConfig';
 
-const { Item } = List;
+interface ListItemProps extends ComponentProps<'div'> {
+  actions?: ReactNode;
+  active?: boolean;
+  showAction?: boolean;
+  title?: ReactNode;
+}
 
 const styles = createStaticStyles(({ css, cssVar }) => {
   return {
@@ -55,16 +58,24 @@ const ListItem = memo<
   }, [isHovering, avatar, avatarBackground, type]);
 
   return (
-    <Item
-      actions={actions}
-      active={mobile ? false : active}
-      avatar={avatarRender}
-      className={cx(styles.container, mobile && styles.mobile)}
+    <div
       ref={ref}
-      showAction={actions && (isHovering || showAction || mobile)}
-      title={<span className={styles.title}>{title}</span>}
+      className={cx(
+        'relative flex items-center gap-3',
+        !mobile && active && 'bg-[var(--ant-color-fill-tertiary)]',
+        styles.container,
+        mobile && styles.mobile,
+      )}
       {...(props as any)}
-    />
+    >
+      {avatarRender}
+      <div className="min-w-0 flex-1">
+        <span className={styles.title}>{title}</span>
+      </div>
+      {actions && (isHovering || showAction || mobile) && (
+        <div className="flex items-center gap-1">{actions}</div>
+      )}
+    </div>
   );
 });
 

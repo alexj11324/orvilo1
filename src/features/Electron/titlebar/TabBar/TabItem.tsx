@@ -1,7 +1,6 @@
 'use client';
 
 import { useSortable } from '@dnd-kit/sortable';
-import { ContextMenuTrigger, type GenericItemType, Icon, Tooltip } from '@lobehub/ui';
 import { ActionIcon } from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { X } from 'lucide-react';
@@ -11,6 +10,12 @@ import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { ContextMenu, ContextMenuContent, ContextMenuTrigger } from '@/components/ui/context-menu';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import {
+  renderSidebarMenuItems,
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { electronStylish } from '@/styles/electron';
 
 import { type ResolvedTab } from './hooks/useResolvedTabs';
@@ -165,7 +170,7 @@ const TabItem = memo<TabItemProps>(
     );
 
     const contextMenuItems = useCallback(
-      (): GenericItemType[] =>
+      (): Exclude<SidebarDropdownMenuProps['items'], () => unknown>[number][] =>
         buildTabContextMenuItems({
           id,
           index,
@@ -279,23 +284,26 @@ const TabItem = memo<TabItemProps>(
     // component only bails on a nullish one (`title == null`), so a full-width tab used to
     // pop a blank bubble on hover.
     return (
-      <ContextMenuTrigger items={contextMenuItems}>
-        <Tooltip
-          disabled={tier === 'full' && !preview}
-          title={
-            preview ? (
-              <span className={styles.previewCard}>
-                <img alt={meta.title} className={styles.previewImage} src={preview} />
-                <span className={styles.previewTitle}>{meta.title}</span>
-              </span>
-            ) : (
-              meta.title
-            )
-          }
-        >
-          {face}
-        </Tooltip>
-      </ContextMenuTrigger>
+      <ContextMenu>
+        <TooltipProvider>
+          <Tooltip>
+            <ContextMenuTrigger render={<TooltipTrigger render={face} />} />
+            {tier === 'full' && !preview ? null : (
+              <TooltipContent>
+                {preview ? (
+                  <span className={styles.previewCard}>
+                    <img alt={meta.title} className={styles.previewImage} src={preview} />
+                    <span className={styles.previewTitle}>{meta.title}</span>
+                  </span>
+                ) : (
+                  meta.title
+                )}
+              </TooltipContent>
+            )}
+          </Tooltip>
+        </TooltipProvider>
+        <ContextMenuContent>{renderSidebarMenuItems(contextMenuItems())}</ContextMenuContent>
+      </ContextMenu>
     );
   },
 );

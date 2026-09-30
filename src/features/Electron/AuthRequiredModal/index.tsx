@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import type { ImperativeModalProps, ModalInstance } from '@lobehub/ui/base-ui';
 import { Button, createModal, ModalFooter } from '@lobehub/ui/base-ui';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
@@ -66,7 +65,7 @@ const AuthRequiredFooter = memo<FooterProps>(({ isSigningIn, onSignIn }) => {
   const { t } = useTranslation('auth');
   return (
     <ModalFooter>
-      <Button icon={<Icon icon={LogIn} />} loading={isSigningIn} type="primary" onClick={onSignIn}>
+      <Button icon={<LogIn />} loading={isSigningIn} type="primary" onClick={onSignIn}>
         {isSigningIn ? t('authModal.signingIn') : t('authModal.signIn')}
       </Button>
     </ModalFooter>
@@ -78,10 +77,10 @@ const AuthRequiredModalTitle = memo(() => {
   const { t } = useTranslation('auth');
 
   return (
-    <Flexbox horizontal align="center" gap={8}>
-      <Icon icon={AlertCircle} />
+    <div className="flex items-center gap-2">
+      <AlertCircle />
       {t('authModal.title')}
-    </Flexbox>
+    </div>
   );
 });
 AuthRequiredModalTitle.displayName = 'AuthRequiredModalTitle';

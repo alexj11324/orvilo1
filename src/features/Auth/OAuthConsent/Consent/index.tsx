@@ -1,6 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import React, { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -42,7 +41,7 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
   }
 
   return (
-    <Flexbox gap={16} width={'min(100%,400px)'}>
+    <div className="flex flex-col gap-4" style={{ width: 'min(100%,400px)' }}>
       <OAuthApplicationLogo
         clientDisplayName={clientDisplayName}
         isFirstParty={clientMetadata.isFirstParty}
@@ -55,7 +54,7 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
           <form action="/oidc/consent" method="post" style={{ width: '100%' }}>
             <input name="uid" type="hidden" value={uid} />
             <input defaultValue="accept" name="consent" ref={consentInputRef} type="hidden" />
-            <Flexbox gap={12}>
+            <div className="flex flex-col gap-3">
               <Button
                 data-testid="oauth-consent-accept"
                 htmlType="submit"
@@ -79,30 +78,30 @@ const ConsentClient = memo<ClientProps>(({ uid, clientId, scopes, clientMetadata
               >
                 {t('consent.buttons.deny')}
               </Button>
-            </Flexbox>
+            </div>
           </form>
         }
       >
         {clientMetadata.isFirstParty === false && (
-          <Flexbox style={{ marginBottom: 16 }}>
+          <div className="flex flex-col" style={{ marginBottom: 16 }}>
             <ThirdPartyNotice
               developerName={clientMetadata.developerName}
               policyUri={clientMetadata.policyUri}
             />
-          </Flexbox>
+          </div>
         )}
         <Text fontSize={16} type={'secondary'}>
           {t('consent.permissionsTitle')}
         </Text>
-        <Flexbox gap={4} style={{ marginTop: 8 }} width={'100%'}>
+        <div className="flex flex-col gap-1 w-full" style={{ marginTop: 8 }}>
           {scopes.map((scope) => (
-            <Block key={scope} padding={16} variant={'filled'}>
+            <div className="flex flex-col p-4" key={scope}>
               <Text>{getScopeDescription(scope, t)}</Text>
-            </Block>
+            </div>
           ))}
-        </Flexbox>
+        </div>
       </AuthCard>
-    </Flexbox>
+    </div>
   );
 });
 

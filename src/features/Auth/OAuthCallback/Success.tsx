@@ -1,7 +1,7 @@
 'use client';
 
-import { FluentEmoji } from '@lobehub/ui';
 import { Result, Text } from '@lobehub/ui/base-ui';
+import { CircleCheckIcon } from 'lucide-react';
 import React, { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
@@ -47,7 +47,7 @@ const SuccessPage = memo(() => {
 
   return (
     <Result
-      icon={<FluentEmoji emoji={'✅'} size={96} type={'anim'} />}
+      icon={<CircleCheckIcon size={96} />}
       status="success"
       subTitle={
         <Text fontSize={16} type="secondary">

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { ExternalLink, RotateCcw, Settings2 } from 'lucide-react';
@@ -33,7 +32,7 @@ const GuideActions = ({
   if (!showDocsButton && !showSystemToolsButton && !showRetryButton) return null;
 
   return (
-    <Flexbox horizontal gap={8} justify="flex-end" style={{ flexWrap: 'wrap' }}>
+    <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
       {showRetryButton && (
         <Button
           icon={<RotateCcw size={14} />}
@@ -65,7 +64,7 @@ const GuideActions = ({
           {openDocsLabel}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

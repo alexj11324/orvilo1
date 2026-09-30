@@ -1,9 +1,9 @@
-import { Flexbox, Input } from '@lobehub/ui';
 import { Button, createModal, ModalFooter, toast, useModalContext } from '@lobehub/ui/base-ui';
 import { t as translate } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Input } from '@/components/ui/input';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { useSessionStore } from '@/store/session';
@@ -48,16 +48,18 @@ const CreateGroupContent = memo<CreateGroupContentProps>(({ id }) => {
 
   return (
     <>
-      <Flexbox paddingBlock={16} paddingInline={16}>
+      <div className="flex flex-col py-4 px-4">
         <Input
           autoFocus
           disabled={!canCreate || loading}
           placeholder={t('sessionGroup.inputPlaceholder')}
           value={input}
           onChange={(e) => setInput(e.target.value)}
-          onPressEnter={handleCreate}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleCreate();
+          }}
         />
-      </Flexbox>
+      </div>
       <ModalFooter>
         <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
         <Button disabled={!canCreate} loading={loading} type={'primary'} onClick={handleCreate}>

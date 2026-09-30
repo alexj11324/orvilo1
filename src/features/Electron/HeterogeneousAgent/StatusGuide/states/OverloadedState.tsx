@@ -1,8 +1,9 @@
-import { Flexbox, Highlighter, Icon } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { Ban, Loader2, RotateCcw } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -34,18 +35,18 @@ const OverloadedState = ({
     return (
       <GuideShell
         compact
-        icon={<Icon spin icon={Loader2} size={18} />}
+        icon={<Loader2 className="animate-spin" size={18} />}
         title={t('cliOverloadedGuide.autoRetry.title', { name: config.title })}
         variant={variant}
         actions={
-          <Flexbox horizontal gap={8} justify="flex-end" style={{ flexWrap: 'wrap' }}>
+          <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
             <Button icon={<Ban size={14} />} size="small" type="text" onClick={autoRetry.onCancel}>
               {t('cliOverloadedGuide.autoRetry.actions.cancel')}
             </Button>
             <Button icon={<RotateCcw size={14} />} size="small" onClick={autoRetry.onRetryNow}>
               {t('cliOverloadedGuide.autoRetry.actions.retryNow')}
             </Button>
-          </Flexbox>
+          </div>
         }
         headerDescription={
           <Text style={{ fontSize: 12 }} type="secondary">
@@ -77,21 +78,18 @@ const OverloadedState = ({
       </Text>
 
       {rawErrorDetails && (
-        <Flexbox gap={6}>
+        <div className="flex flex-col gap-1.5">
           <Text strong style={{ fontSize: 12 }}>
             {t('cliOverloadedGuide.errorDetails')}
           </Text>
-          <Highlighter
+          <CodeBlock
             wrap
-            actionIconSize={'small'}
-            classNames={{ content: styles.errorDetails }}
-            language={'log'}
+            className={styles.errorDetails}
+            code={rawErrorDetails}
+            language="log"
             style={{ maxHeight: 200, overflow: 'auto' }}
-            variant={'outlined'}
-          >
-            {rawErrorDetails}
-          </Highlighter>
-        </Flexbox>
+          />
+        </div>
       )}
     </GuideShell>
   );

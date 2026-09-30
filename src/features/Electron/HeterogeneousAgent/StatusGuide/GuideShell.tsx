@@ -1,9 +1,10 @@
-import { Block, Flexbox, Tooltip } from '@lobehub/ui';
 import { ActionIcon, Avatar, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import type { HeterogeneousAgentStatusGuideVariant } from './types';
 
@@ -39,20 +40,15 @@ const GuideShell = ({
   // wrapping them below it in narrow conversation panes.
   const actionsInHeader = compact && showHeader;
   const content = (
-    <Flexbox gap={compact ? 8 : 12}>
+    <div className="flex flex-col" style={{ gap: compact ? 8 : 12 }}>
       {showHeader ? (
-        <Flexbox
-          horizontal
-          align="center"
-          gap={compact ? 8 : 12}
-          justify="space-between"
-          style={compact ? { flexWrap: 'wrap' } : undefined}
+        <div
+          className="flex items-center justify-between"
+          style={{ gap: compact ? 8 : 12, ...(compact ? { flexWrap: 'wrap' } : undefined) }}
         >
-          <Flexbox
-            horizontal
-            align="center"
-            gap={compact ? 8 : 12}
-            style={{ flex: compact ? '1 1 260px' : undefined, minWidth: 0 }}
+          <div
+            className="flex items-center"
+            style={{ gap: compact ? 8 : 12, flex: compact ? '1 1 260px' : undefined, minWidth: 0 }}
           >
             <Avatar
               avatar={icon}
@@ -61,51 +57,65 @@ const GuideShell = ({
               size={compact ? 32 : 48}
               style={{ color: cssVar.colorText }}
             />
-            <Flexbox gap={2} style={{ minWidth: 0 }}>
+            <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
               <Text style={{ fontSize: compact ? 14 : 16, fontWeight: 600 }}>{title}</Text>
               {headerDescription}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
           {(actionsInHeader || onDismiss) && (
-            <Flexbox
-              horizontal
-              align="center"
-              gap={8}
+            <div
+              className="flex items-center gap-2"
               style={{ flexShrink: 0, marginInlineStart: 'auto', maxWidth: '100%' }}
             >
               {actionsInHeader && actions}
               {onDismiss && (
-                <Tooltip title={t('close')}>
-                  <ActionIcon aria-label={t('close')} icon={X} size="small" onClick={onDismiss} />
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span className="inline-flex">
+                          <ActionIcon
+                            aria-label={t('close')}
+                            icon={X}
+                            size="small"
+                            onClick={onDismiss}
+                          />
+                        </span>
+                      }
+                    />
+                    <TooltipContent>{t('close')}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               )}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       ) : (
         headerDescription
       )}
 
       {children}
       {!actionsInHeader && actions}
-    </Flexbox>
+    </div>
   );
 
   if (variant !== 'inline') return content;
 
   return (
-    <Block
-      gap={compact ? 12 : 16}
-      padding={compact ? 12 : 16}
-      variant={'outlined'}
+    <div
+      className="flex flex-col border"
       style={{
+        gap: compact ? 12 : 16,
+        padding: compact ? 12 : 16,
+        borderColor: cssVar.colorBorderSecondary,
+        background: cssVar.colorBgContainer,
         background: cssVar.colorBgElevated,
         overflow: 'hidden',
         width: '100%',
       }}
     >
       {content}
-    </Block>
+    </div>
   );
 };
 

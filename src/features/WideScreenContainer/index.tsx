@@ -1,10 +1,8 @@
 'use client';
 
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { type CSSProperties } from 'react';
+import { type ComponentProps, type CSSProperties } from 'react';
 import { memo, useEffect } from 'react';
 
 import { CONVERSATION_MIN_WIDTH } from '@/const/layoutTokens';
@@ -19,7 +17,7 @@ const styles = createStaticStyles(({ css }) => ({
   `,
 }));
 
-interface WideScreenContainerProps extends FlexboxProps {
+interface WideScreenContainerProps extends ComponentProps<'div'> {
   /**
    * Force the inner column to span the full available width, bypassing the
    * centered `min(CONVERSATION_MIN_WIDTH, 100%)` cap. Used e.g. while
@@ -40,18 +38,21 @@ const WideScreenContainer = memo<WideScreenContainerProps>(
     }, [wideScreen]);
 
     return (
-      <Flexbox style={wrapperStyle} width={'100%'} onClick={onClick}>
-        <Flexbox
-          className={cx(styles.container, className)}
-          paddingInline={fullWidth ? 0 : 16}
-          width={
-            fullWidth || wideScreen ? '100%' : `min(${minWidth || CONVERSATION_MIN_WIDTH}px, 100%)`
-          }
+      <div className="flex flex-col w-full" style={{ ...wrapperStyle }} onClick={onClick}>
+        <div
+          className={cx(cx(styles.container, className), 'flex flex-col')}
+          style={{
+            paddingInline: fullWidth ? 0 : 16,
+            width:
+              fullWidth || wideScreen
+                ? '100%'
+                : `min(${minWidth || CONVERSATION_MIN_WIDTH}px, 100%)`,
+          }}
           {...rest}
         >
           {children}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
   isEqual,

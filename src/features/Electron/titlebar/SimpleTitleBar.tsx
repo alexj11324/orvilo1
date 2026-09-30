@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
+import { cx } from 'antd-style';
 import { type FC } from 'react';
 
 import { ProductLogo } from '@/components/Branding/ProductLogo';
@@ -25,19 +25,19 @@ const SimpleTitleBar: FC = () => {
   const showWinControl = isLinux && !isMac;
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={electronStylish.draggable}
-      height={TITLE_BAR_HEIGHT}
-      justify={showWinControl ? 'space-between' : 'center'}
-      style={{ minHeight: TITLE_BAR_HEIGHT, padding: '0 12px' }}
-      width={'100%'}
+    <div
+      className={cx(electronStylish.draggable, 'flex items-center w-full')}
+      style={{
+        height: TITLE_BAR_HEIGHT,
+        justifyContent: showWinControl ? 'space-between' : 'center',
+        minHeight: TITLE_BAR_HEIGHT,
+        padding: '0 12px',
+      }}
     >
       {showWinControl && <div style={{ width: WINDOW_CONTROL_WIDTH }} />}
       <ProductLogo size={16} type={'text'} />
       {showWinControl && <WinControl />}
-    </Flexbox>
+    </div>
   );
 };
 

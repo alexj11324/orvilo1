@@ -1,15 +1,13 @@
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox } from '@lobehub/ui';
 import { type TypewriterEffectProps } from '@lobehub/ui/awesome';
 import { TypewriterEffect } from '@lobehub/ui/awesome';
 import { Text } from '@lobehub/ui/base-ui';
 import { LoadingDots } from '@lobehub/ui/chat';
-import { memo } from 'react';
+import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ProductLogo } from '@/components/Branding';
 
-interface OrviloMessageProps extends Omit<FlexboxProps, 'children'> {
+interface OrviloMessageProps extends Omit<ComponentProps<'div'>, 'children'> {
   fontSize?: number;
   sentences: TypewriterEffectProps['sentences'];
 }
@@ -19,7 +17,7 @@ const OrviloMessage = memo<OrviloMessageProps>(({ sentences, fontSize = 24, ...r
   const locale = i18n.language;
 
   return (
-    <Flexbox gap={8} {...rest}>
+    <div className="flex flex-col gap-2" {...rest}>
       <ProductLogo size={fontSize * 2} />
       <Text as={'h1'} fontSize={fontSize} weight={'bold'}>
         <TypewriterEffect
@@ -34,7 +32,7 @@ const OrviloMessage = memo<OrviloMessageProps>(({ sentences, fontSize = 24, ...r
           typingSpeed={64}
         />
       </Text>
-    </Flexbox>
+    </div>
   );
 });
 

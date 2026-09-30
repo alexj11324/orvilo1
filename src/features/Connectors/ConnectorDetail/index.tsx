@@ -1,4 +1,3 @@
-import { Tooltip } from '@lobehub/ui';
 import { Button, confirmModal, toast } from '@lobehub/ui/base-ui';
 import { getComposioAppByIdentifier, getOrviloSkillProviderById } from '@orvilo/const';
 import { PencilIcon, RefreshCwIcon, Trash2 } from 'lucide-react';
@@ -6,6 +5,7 @@ import type { ReactNode } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import type { ConnectorToolPermission } from '@/database/schemas';
 import { ConnectorSourceType } from '@/database/schemas';
 import { useResourceManageable } from '@/hooks/useResourceManageable';
@@ -41,9 +41,12 @@ interface ConnectorDetailProps {
  */
 const ManageTooltip = ({ children, title }: { children: ReactNode; title?: string }) =>
   title ? (
-    <Tooltip title={title}>
-      <span style={{ display: 'inline-flex' }}>{children}</span>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger render={<span style={{ display: 'inline-flex' }}>{children}</span>} />
+        <TooltipContent>{title}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   ) : (
     children
   );

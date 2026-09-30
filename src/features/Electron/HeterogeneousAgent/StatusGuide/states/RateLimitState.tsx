@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button, Text } from '@lobehub/ui/base-ui';
 import { CalendarClock, Play, RotateCcw } from 'lucide-react';
 import { useMemo } from 'react';
@@ -102,19 +101,19 @@ const RateLimitState = ({
 
     if (schedule.isScheduled) {
       return (
-        <Flexbox horizontal gap={8} justify="flex-end" style={{ flexWrap: 'wrap' }}>
+        <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
           <Button size="small" onClick={schedule.onCancel}>
             {t('cliRateLimitGuide.schedule.cancel')}
           </Button>
           <Button icon={<Play size={14} />} size="small" type="primary" onClick={schedule.onRunNow}>
             {t('cliRateLimitGuide.schedule.runNow')}
           </Button>
-        </Flexbox>
+        </div>
       );
     }
 
     return (
-      <Flexbox horizontal gap={8} justify="flex-end" style={{ flexWrap: 'wrap' }}>
+      <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
         {onRetry && (
           <Button icon={<RotateCcw size={14} />} size="small" onClick={onRetry}>
             {t('cliRateLimitGuide.schedule.retryNow')}
@@ -130,7 +129,7 @@ const RateLimitState = ({
             ? t('cliRateLimitGuide.schedule.continueAfter', { duration: relativeDuration })
             : t('cliRateLimitGuide.schedule.continueAfterReset')}
         </Button>
-      </Flexbox>
+      </div>
     );
   }, [onRetry, relativeDuration, schedule, t]);
 
@@ -180,15 +179,14 @@ const RateLimitState = ({
       }
       onDismiss={onDismiss}
     >
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {formattedResetAt && (
-          <Flexbox horizontal gap={8} style={{ alignItems: 'baseline' }}>
+          <div className="flex gap-2" style={{ alignItems: 'baseline' }}>
             <Text strong style={{ fontSize: 12 }}>
               {t('cliRateLimitGuide.resetAt')}
             </Text>
-            <Flexbox
-              horizontal
-              gap={8}
+            <div
+              className="flex gap-2"
               style={{ alignItems: 'baseline', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}
             >
               <Text>{`${formattedResetAt}${timezoneLabel ? ` (${timezoneLabel})` : ''}`}</Text>
@@ -197,19 +195,19 @@ const RateLimitState = ({
                   {relativeResetText}
                 </Text>
               )}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
 
         {rateLimitTypeLabel && (
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex items-center gap-2">
             <Text strong style={{ fontSize: 12 }}>
               {t('cliRateLimitGuide.limitType')}
             </Text>
             <Text>{rateLimitTypeLabel}</Text>
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     </GuideShell>
   );
 };

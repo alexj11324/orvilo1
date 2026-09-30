@@ -1,10 +1,10 @@
 'use client';
 
 import { BarChart, ChartTooltipFrame, ChartTooltipRow } from '@lobehub/charts';
-import { Divider } from 'antd';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { type AgentUsageBucket } from '@/types/usage/usageRecord';
@@ -89,7 +89,10 @@ const UsageTrendChart = memo<UsageTrendChartProps>(({ buckets, isLoading }) => {
                 </div>
                 {visibleItems.length > 0 && (
                   <>
-                    <Divider style={{ margin: 0 }} />
+                    <Separator
+                      className="bg-transparent border-t border-border"
+                      style={{ margin: 0 }}
+                    />
                     <div className="flex flex-col gap-1 py-2 px-4">
                       {visibleItems.map(({ color, name, value }) => (
                         <ChartTooltipRow

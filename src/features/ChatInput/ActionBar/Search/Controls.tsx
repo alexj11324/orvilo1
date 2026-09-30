@@ -1,7 +1,5 @@
-import { GlobeOffIcon } from '@lobehub/ui/icons';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
-import { type LucideIcon } from 'lucide-react';
-import { SparkleIcon } from 'lucide-react';
+import { GlobeOff, type LucideIcon, SparkleIcon } from 'lucide-react';
 import { createElement, memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -153,7 +151,7 @@ const Controls = memo(() => {
     : [
         {
           description: t('search.mode.off.desc'),
-          icon: GlobeOffIcon,
+          icon: GlobeOff,
           label: t('search.mode.off.title'),
           value: 'off',
         },

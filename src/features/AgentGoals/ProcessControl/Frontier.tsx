@@ -1,7 +1,6 @@
 'use client';
 
 import type { AcceptanceStatus, GoalDecisionOption } from '@orvilo/types';
-import { Divider } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronDown, ChevronRight, Plus } from 'lucide-react';
@@ -11,6 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import { Badge } from '@/components/reui/badge';
 import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { openAddGoalTaskModal } from '@/features/AgentGoals/AddTaskModal';
@@ -551,7 +551,12 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
             ))}
           {graph.frontier.map((item, index) => (
             <Fragment key={item.key}>
-              {index > 0 && <Divider dashed style={{ margin: 0 }} />}
+              {index > 0 && (
+                <Separator
+                  className="bg-transparent border-t border-dashed border-border"
+                  style={{ margin: 0 }}
+                />
+              )}
               <FrontierRow
                 actions={actions}
                 canEdit={canEdit}
@@ -565,7 +570,10 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
         </div>
         {graph.blocked.length > 0 && (
           <>
-            <Divider dashed style={{ margin: 0 }} />
+            <Separator
+              className="bg-transparent border-t border-dashed border-border"
+              style={{ margin: 0 }}
+            />
             <div className={styles.blockedHead} onClick={() => setShowBlocked(!showBlocked)}>
               {createElement(showBlocked ? ChevronDown : ChevronRight, { size: 12 })}
               <span>{t('goalProcess.frontier.blocked', { count: graph.blocked.length })}</span>
@@ -574,7 +582,12 @@ const Frontier = memo<FrontierProps>(({ actions, canEdit, graph, onSelect, plann
               <div className="flex flex-col gap-0 p-0.5">
                 {graph.blocked.map((view, index) => (
                   <Fragment key={view.node.id}>
-                    {index > 0 && <Divider dashed style={{ margin: 0 }} />}
+                    {index > 0 && (
+                      <Separator
+                        className="bg-transparent border-t border-dashed border-border"
+                        style={{ margin: 0 }}
+                      />
+                    )}
                     <FrontierRow
                       actions={actions}
                       canEdit={canEdit}

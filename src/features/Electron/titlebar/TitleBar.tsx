@@ -1,8 +1,8 @@
 import { TITLE_BAR_HEIGHT } from '@orvilo/desktop-bridge';
-import { Divider } from 'antd';
 import { cn } from 'cn';
 import { memo } from 'react';
 
+import { Separator } from '@/components/ui/separator';
 import { useDeferredMount } from '@/hooks/useDeferredMount';
 import { electronStylish } from '@/styles/electron';
 import { getPlatform } from '@/utils/platform';
@@ -45,7 +45,7 @@ const TitleBar = memo(() => {
         </div>
         {showCustomWinControl && (
           <>
-            <Divider orientation={'vertical'} />
+            <Separator orientation="vertical" />
             <WinControl />
           </>
         )}

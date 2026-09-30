@@ -8,11 +8,16 @@ import { memo } from 'react';
 
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 
-import { type ActionMenuItem, type MenuInfo, renderMenuItems } from './menuItems';
+import {
+  type ActionIconGroupItemType,
+  type ActionMenuItem,
+  type MenuInfo,
+  renderMenuItems,
+} from './menuItems';
 import { popoverPlacement } from './placement';
 
 export type DropdownItem = ActionMenuItem;
-export type { MenuInfo };
+export type { ActionIconGroupItemType, MenuInfo };
 
 export interface MenuProps {
   items?: DropdownItem[];

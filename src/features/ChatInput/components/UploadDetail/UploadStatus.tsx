@@ -1,12 +1,40 @@
-import { CheckCircleFilled } from '@ant-design/icons';
-import { Progress, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
-import { CircleAlertIcon, Loader2Icon } from 'lucide-react';
+import { CircleAlertIcon, CircleCheck, Loader2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { type FileUploadState, type FileUploadStatus } from '@/types/files/upload';
 import { formatSize } from '@/utils/format';
+
+const CircleProgress = memo<{ percent: number; size: number }>(({ percent, size }) => {
+  const strokeWidth = 2;
+  const radius = (size - strokeWidth) / 2;
+  const circumference = 2 * Math.PI * radius;
+  return (
+    <svg height={size} width={size}>
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        fill="none"
+        r={radius}
+        stroke={cssVar.colorSplit}
+        strokeWidth={strokeWidth}
+      />
+      <circle
+        cx={size / 2}
+        cy={size / 2}
+        fill="none"
+        r={radius}
+        stroke={cssVar.colorPrimary}
+        strokeDasharray={circumference}
+        strokeDashoffset={circumference * (1 - percent / 100)}
+        strokeLinecap="round"
+        strokeWidth={strokeWidth}
+        transform={`rotate(-90 ${size / 2} ${size / 2})`}
+      />
+    </svg>
+  );
+});
 
 interface UploadStateProps {
   error?: string;
@@ -26,9 +54,9 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
           <span className="anticon animate-spin" role="img">
             <Loader2Icon fill={'transparent'} height={12} size={12} width={12} />
           </span>
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <span className="text-[12px] text-muted-foreground">
             {t('upload.preview.status.pending')}
-          </Text>
+          </span>
         </div>
       );
     }
@@ -36,10 +64,10 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
     case 'uploading': {
       return (
         <div className="flex flex-row items-center gap-1">
-          <Progress percent={uploadState?.progress ?? 0} size={14} type="circle" />
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
+          <CircleProgress percent={uploadState?.progress ?? 0} size={14} />
+          <span className="text-[12px] text-muted-foreground">
             {formatSize(size * ((uploadState?.progress || 0) / 100), 0)}
-          </Text>
+          </span>
         </div>
       );
     }
@@ -47,10 +75,8 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
     case 'processing': {
       return (
         <div className="flex flex-row items-center gap-1">
-          <Progress percent={uploadState?.progress ?? 0} size={14} type="circle" />
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
-            {formatSize(size)}
-          </Text>
+          <CircleProgress percent={uploadState?.progress ?? 0} size={14} />
+          <span className="text-[12px] text-muted-foreground">{formatSize(size)}</span>
         </div>
       );
     }
@@ -58,10 +84,8 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
     case 'success': {
       return (
         <div className="flex flex-row items-center gap-1">
-          <CheckCircleFilled style={{ color: cssVar.colorSuccess, fontSize: 12 }} />
-          <Text style={{ fontSize: 12 }} type={'secondary'}>
-            {formatSize(size)}
-          </Text>
+          <CircleCheck size={12} style={{ color: cssVar.colorSuccess }} />
+          <span className="text-[12px] text-muted-foreground">{formatSize(size)}</span>
         </div>
       );
     }
@@ -72,21 +96,22 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
           <span className="anticon" role="img" style={{ color: cssVar.colorError }}>
             <CircleAlertIcon fill={'transparent'} height={12} size={12} width={12} />
           </span>
-          <Text
-            ellipsis={{ tooltip: error }}
+          <span
+            className="truncate block"
             style={{ color: cssVar.colorError, fontSize: 12, maxWidth: 110 }}
+            title={error}
           >
             {error || t('upload.preview.status.error')}
-          </Text>
+          </span>
         </div>
       );
     }
 
     case 'cancelled': {
       return (
-        <Text style={{ fontSize: 12 }} type={'secondary'}>
+        <span className="text-[12px] text-muted-foreground">
           {t('upload.preview.status.cancelled')}
-        </Text>
+        </span>
       );
     }
   }

@@ -1,8 +1,8 @@
 'use client';
-import { CaretDownFilled } from '@ant-design/icons';
+
 import { DERIVED_DOCUMENT_SOURCE_TYPE } from '@orvilo/const';
 import { cx } from 'antd-style';
-import { FileText, FolderIcon, FolderOpenIcon, LockIcon } from 'lucide-react';
+import { ChevronDown, FileText, FolderIcon, FolderOpenIcon, LockIcon } from 'lucide-react';
 import * as m from 'motion/react-m';
 import React, {
   createElement,
@@ -334,7 +334,7 @@ export const HierarchyNode = memo<HierarchyNodeProps>(
                 transition={{ duration: 0.2, ease: 'easeInOut' }}
               >
                 <ActionIcon
-                  icon={CaretDownFilled as any}
+                  icon={ChevronDown}
                   size={'small'}
                   style={{ width: 20 }}
                   onClick={(e) => {

@@ -1,15 +1,10 @@
 'use client';
 
-import { Suspense } from 'react';
+import SideBarLayout from '@/features/NavPanel/SideBarLayout';
 
 import Body from './Body';
 import Header from './Header';
 
-const SidebarContent = () => (
-  <Suspense>
-    <Header />
-    <Body />
-  </Suspense>
-);
+const SidebarContent = () => <SideBarLayout body={<Body />} header={<Header />} />;
 
 export default SidebarContent;

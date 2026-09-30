@@ -1,4 +1,3 @@
-import { type ContextMenuItem, copyToClipboard, Icon, type MenuInfo } from '@lobehub/ui';
 import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import type { TaskLabelSummary, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import {
@@ -59,6 +58,24 @@ import { PRIORITY_META } from './TaskPriorityTag';
 import { openTaskScheduleDialog } from './TaskScheduleDialog';
 import { useIssueStatusMove } from './useIssueStatusMove';
 import { useTaskStatusChange } from './useTaskStatusChange';
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    document.body.append(textArea);
+    textArea.focus();
+    textArea.select();
+    document.execCommand('copy');
+    textArea.remove();
+  }
+};
+
+type MenuInfo = {
+  domEvent: { stopPropagation: () => void };
+};
 
 type ActiveSubmenu = 'status' | 'priority' | null;
 type TaskItemRouteScope = 'agent' | 'global';
@@ -197,10 +214,11 @@ export const useTaskContextMenuActions = (
         const pickable = Boolean(choice.status || choice.workflowCategory);
         const isCurrent = choice.column.key === currentColumnKey;
         const visual = WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
+        const VisualIcon = visual.icon;
         if (pickable) pickIndex += 1;
         return {
           extra: pickable ? renderMenuExtra(String(pickIndex), isCurrent) : undefined,
-          icon: <Icon color={visual.color} icon={visual.icon} />,
+          icon: <VisualIcon color={visual.color} size="1em" />,
           key: `status-${choice.column.key}`,
           label: t(COLUMN_I18N_KEYS[choice.column.key] as never),
           disabled: !canEditTask || !pickable,
@@ -210,7 +228,7 @@ export const useTaskContextMenuActions = (
             if (isCurrent) return;
             applyStatusChoice(choice);
           },
-        } as ContextMenuItem;
+        } as NativeContextMenuItem;
       });
 
       const priorityChildren = PRIORITY_LEVELS.map((level, index) => {
@@ -230,7 +248,7 @@ export const useTaskContextMenuActions = (
             await updateTask(task.identifier, { priority: level });
             await refreshTaskList();
           },
-        } as ContextMenuItem;
+        } as NativeContextMenuItem;
       });
 
       const taskUrl = `${appOrigin}${buildWorkspaceAwarePath(
@@ -319,7 +337,7 @@ export const useTaskContextMenuActions = (
         ...(canOpenRun
           ? ([
               {
-                icon: <Icon icon={MessageSquareTextIcon} />,
+                icon: <MessageSquareTextIcon size="1em" />,
                 key: 'openRun',
                 label: t('taskList.contextMenu.openRun', { defaultValue: 'Open run' }),
                 onClick: ({ domEvent }: MenuInfo) => {
@@ -337,7 +355,7 @@ export const useTaskContextMenuActions = (
         ...(canRunNow
           ? ([
               {
-                icon: <Icon icon={PlayIcon} />,
+                icon: <PlayIcon size="1em" />,
                 key: 'runNow',
                 label: t('taskList.contextMenu.runNow'),
                 disabled: !canEditTask,
@@ -357,7 +375,7 @@ export const useTaskContextMenuActions = (
         {
           children: statusChildren,
           disabled: !canEditTask,
-          icon: <Icon icon={STATUS_PROPERTY_ICON} />,
+          icon: <STATUS_PROPERTY_ICON size="1em" />,
           key: 'status',
           label: t('taskList.contextMenu.status'),
           onTitleMouseEnter: () => {
@@ -367,7 +385,7 @@ export const useTaskContextMenuActions = (
         {
           children: priorityChildren,
           disabled: !canEditTask,
-          icon: <Icon icon={BarChart3Icon} />,
+          icon: <BarChart3Icon size="1em" />,
           key: 'priority',
           label: t('taskList.contextMenu.priority'),
           onTitleMouseEnter: () => {
@@ -379,7 +397,7 @@ export const useTaskContextMenuActions = (
               {
                 children: labelChildren,
                 disabled: !canEditTask,
-                icon: <Icon icon={TagsIcon} />,
+                icon: <TagsIcon size="1em" />,
                 key: 'labels',
                 label: t('taskList.contextMenu.labels', { defaultValue: 'Labels' }),
                 onTitleMouseEnter: () => {
@@ -393,7 +411,7 @@ export const useTaskContextMenuActions = (
               {
                 children: projectChildren,
                 disabled: !canEditTask,
-                icon: <Icon icon={PROJECT_ENTITY_ICON} />,
+                icon: <PROJECT_ENTITY_ICON size="1em" />,
                 key: 'project',
                 label: t('taskList.contextMenu.project', { defaultValue: 'Project' }),
                 onTitleMouseEnter: () => {
@@ -407,7 +425,7 @@ export const useTaskContextMenuActions = (
         {
           children: [
             {
-              icon: <Icon icon={CopyIcon} />,
+              icon: <CopyIcon size="1em" />,
               key: 'copyId',
               label: t('taskList.contextMenu.copyId'),
               onClick: async ({ domEvent }: MenuInfo) => {
@@ -418,7 +436,7 @@ export const useTaskContextMenuActions = (
               sfSymbol: 'doc.on.doc',
             },
             {
-              icon: <Icon icon={LinkIcon} />,
+              icon: <LinkIcon size="1em" />,
               key: 'copyLink',
               label: t('taskList.contextMenu.copyLink'),
               onClick: async ({ domEvent }: MenuInfo) => {
@@ -429,7 +447,7 @@ export const useTaskContextMenuActions = (
               sfSymbol: 'doc.on.doc',
             },
             {
-              icon: <Icon icon={TypeIcon} />,
+              icon: <TypeIcon size="1em" />,
               key: 'copyTitle',
               label: t('taskList.contextMenu.copyIssueTitle', { defaultValue: 'Copy title' }),
               onClick: async ({ domEvent }: MenuInfo) => {
@@ -442,7 +460,7 @@ export const useTaskContextMenuActions = (
               sfSymbol: 'doc.on.doc',
             },
             {
-              icon: <Icon icon={LinkIcon} />,
+              icon: <LinkIcon size="1em" />,
               key: 'copyTitleAsLink',
               label: t('taskList.contextMenu.copyTitleAsLink', {
                 defaultValue: 'Copy title as link',
@@ -455,7 +473,7 @@ export const useTaskContextMenuActions = (
               sfSymbol: 'doc.on.doc',
             },
             {
-              icon: <Icon icon={FileTextIcon} />,
+              icon: <FileTextIcon size="1em" />,
               key: 'copyMarkdown',
               label: t('taskList.contextMenu.copyMarkdown', {
                 defaultValue: 'Copy as Markdown',
@@ -474,7 +492,7 @@ export const useTaskContextMenuActions = (
               sfSymbol: 'doc.on.doc',
             },
           ] satisfies NativeContextMenuItem[],
-          icon: <Icon icon={CopyIcon} />,
+          icon: <CopyIcon size="1em" />,
           key: 'copy',
           label: t('taskList.contextMenu.copy', { defaultValue: 'Copy' }),
           onTitleMouseEnter: () => {
@@ -487,7 +505,7 @@ export const useTaskContextMenuActions = (
         {
           danger: true,
           disabled: !canEditTask,
-          icon: <Icon icon={Trash2Icon} />,
+          icon: <Trash2Icon size="1em" />,
           key: 'delete',
           label: t('delete', { ns: 'common' }),
           onClick: ({ domEvent }: MenuInfo) => {
@@ -627,7 +645,7 @@ export const useTaskItemContextMenu = (
     routeScope,
     onStatusChange,
   );
-  const transferItems = useTaskTransferMenuItem(task.identifier) as ContextMenuItem[] | null;
+  const transferItems = useTaskTransferMenuItem(task.identifier) as NativeContextMenuItem[] | null;
   const { t } = useTranslation('chat');
   const { allowed: canEditTask } = usePermission('create_content');
   const updateTask = useTaskStore((s) => s.updateTask);
@@ -675,12 +693,12 @@ export const useTaskItemContextMenu = (
         item !== null && typeof item === 'object' && 'key' in item && item.key === 'priority',
     );
     const insertIndex = priorityIndex === -1 ? 1 : priorityIndex;
-    const insertedItems: ContextMenuItem[] = [];
+    const insertedItems: NativeContextMenuItem[] = [];
     if (showAssignee) {
       insertedItems.push({
         children: assigneeItems,
         disabled: !canEditTask,
-        icon: <Icon icon={UserRoundIcon} />,
+        icon: <UserRoundIcon size="1em" />,
         key: 'assignee',
         label: t('taskList.contextMenu.assignee'),
         onTitleMouseEnter: resetActiveSubmenu,
@@ -689,7 +707,7 @@ export const useTaskItemContextMenu = (
     if (task.dueDate !== undefined) {
       insertedItems.push({
         disabled: !canEditTask,
-        icon: <Icon icon={CalendarIcon} />,
+        icon: <CalendarIcon size="1em" />,
         key: 'dueDate',
         label: t('taskList.contextMenu.dueDate', { defaultValue: 'Due date…' }),
         onClick: ({ domEvent }: MenuInfo) => {
@@ -717,11 +735,11 @@ export const useTaskItemContextMenu = (
 
     const tailItems = [
       ...(transferItems ?? []),
-      ...(transferItems?.length ? ([{ type: 'divider' }] as ContextMenuItem[]) : []),
+      ...(transferItems?.length ? ([{ type: 'divider' }] as NativeContextMenuItem[]) : []),
       ...(task.id
         ? [
             {
-              icon: <Icon fill={isFavorite ? 'currentColor' : 'none'} icon={StarIcon} />,
+              icon: <StarIcon fill={isFavorite ? 'currentColor' : 'none'} size="1em" />,
               key: 'favorite',
               label: isFavorite
                 ? t('taskList.contextMenu.unfavorite', { defaultValue: 'Unfavorite' })
@@ -730,23 +748,23 @@ export const useTaskItemContextMenu = (
                 domEvent.stopPropagation();
                 void toggleFavorite();
               },
-            } satisfies ContextMenuItem,
+            } satisfies NativeContextMenuItem,
           ]
         : []),
       {
         // Read-ACL command — a reminder touches only the caller's own row,
         // so it stays enabled for viewers (unlike the write-gated actions).
-        icon: <Icon icon={BellIcon} />,
+        icon: <BellIcon size="1em" />,
         key: 'remindMe',
         label: t('taskList.contextMenu.remindMe', { defaultValue: 'Remind me…' }),
         onClick: ({ domEvent }: MenuInfo) => {
           domEvent.stopPropagation();
           openTaskScheduleDialog({ dueDate: task.dueDate ?? null, identifier: task.identifier });
         },
-      } satisfies ContextMenuItem,
+      } satisfies NativeContextMenuItem,
       {
         disabled: !canEditTask,
-        icon: <Icon icon={PencilIcon} />,
+        icon: <PencilIcon size="1em" />,
         key: 'rename',
         label: t('rename', { ns: 'common' }),
         onClick: ({ domEvent }: MenuInfo) => {
@@ -761,8 +779,8 @@ export const useTaskItemContextMenu = (
             title: t('rename', { ns: 'common' }),
           });
         },
-      } satisfies ContextMenuItem,
-      { type: 'divider' } as ContextMenuItem,
+      } satisfies NativeContextMenuItem,
+      { type: 'divider' } as NativeContextMenuItem,
     ];
 
     if (deleteAnchor === -1) return [...withInserted, ...tailItems];

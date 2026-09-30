@@ -23,11 +23,6 @@ const mocks = vi.hoisted(() => ({
   updateTaskStatus: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  copyToClipboard: mocks.copyToClipboard,
-}));
-
 vi.mock('@/libs/contextMenu', () => ({
   closeContextMenu: mocks.closeContextMenu,
 }));
@@ -94,6 +89,10 @@ vi.mock('react-i18next', () => ({
 describe('useTaskItemContextMenu', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText: mocks.copyToClipboard },
+    });
   });
 
   it('does not render adjacent dividers around transfer actions', () => {

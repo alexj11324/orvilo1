@@ -1,6 +1,5 @@
-import { Block, Icon } from '@lobehub/ui';
 import { Text } from '@lobehub/ui/base-ui';
-import { cssVar } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { type ComponentProps, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -10,9 +9,24 @@ import {
   TASK_VISIBILITY_ICONS,
 } from './taskVisibilityLabel';
 
-type BlockProps = ComponentProps<typeof Block>;
+const styles = createStaticStyles(({ css, cssVar }) => ({
+  chip: css`
+    cursor: pointer;
 
-interface TaskVisibilityChipLabelProps extends Omit<BlockProps, 'children' | 'variant'> {
+    display: flex;
+    align-items: center;
+
+    padding-block: 4px;
+    padding-inline: 8px;
+    border-radius: ${cssVar.borderRadius};
+
+    &:hover {
+      background: ${cssVar.colorFillTertiary};
+    }
+  `,
+}));
+
+interface TaskVisibilityChipLabelProps extends Omit<ComponentProps<'div'>, 'children' | 'variant'> {
   /** Render mode: 'chip' shows the [icon + text] pill used in create forms;
    *  'tag' shows a tighter [icon + text] used in the detail panel. They only
    *  differ in spacing. */
@@ -26,7 +40,7 @@ interface TaskVisibilityChipLabelProps extends Omit<BlockProps, 'children' | 'va
  * `TaskProperties`) used to inline this same JSX; centralizing keeps the
  * icon/label mapping in one place when we add new visibility values later.
  *
- * Extra props and `ref` are forwarded to the underlying `Block` so that when
+ * Extra props and `ref` are forwarded to the underlying `div` so that when
  * this component is used as the `DropdownMenu` trigger inside
  * `TaskVisibilityTag`, the menu's click/aria/ref props reach a real DOM node.
  */
@@ -42,19 +56,10 @@ const TaskVisibilityChipLabel = memo<TaskVisibilityChipLabelProps>(
     const iconSize = variant === 'tag' ? 16 : 14;
 
     return (
-      <Block
-        clickable
-        horizontal
-        align="center"
-        gap={variant === 'tag' ? 10 : 6}
-        paddingBlock={4}
-        paddingInline={8}
-        variant={'borderless'}
-        {...rest}
-      >
-        <Icon color={iconColor} icon={IconComp} size={iconSize} />
+      <div className={styles.chip} style={{ gap: variant === 'tag' ? 10 : 6 }} {...rest}>
+        <IconComp color={iconColor} size={iconSize} />
         {variant === 'tag' ? <Text weight={500}>{label}</Text> : <Text fontSize={12}>{label}</Text>}
-      </Block>
+      </div>
     );
   },
 );

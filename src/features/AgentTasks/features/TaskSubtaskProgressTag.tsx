@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import type { DropdownMenuProps } from '@lobehub/ui/base-ui';
 import { DropdownMenu, Progress, Text, toast } from '@lobehub/ui/base-ui';
 import type { TaskDetailSubtask, TaskSubtaskProgress } from '@orvilo/types';
@@ -136,21 +135,22 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
         subtask.task.workflowStateId && subtask.task.workflowCategory
           ? WORKFLOW_CATEGORY_VISUALS[subtask.task.workflowCategory]
           : undefined;
+      const WorkflowIcon = workflowVisual?.icon;
 
       return {
         key: subtask.task.identifier,
         label: (
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex items-center gap-2">
             {subtask.depth > 0 && <div style={{ flex: 'none', width: subtask.depth * 16 }} />}
-            {workflowVisual ? (
-              <Icon color={workflowVisual.color} icon={workflowVisual.icon} size={16} />
+            {WorkflowIcon && workflowVisual ? (
+              <WorkflowIcon color={workflowVisual.color} size={16} />
             ) : (
               <TaskStatusIcon size={16} status={itemStatus} />
             )}
             <Text ellipsis weight={isActive ? 'bold' : undefined}>
               {subtask.task.name || subtask.task.identifier}
             </Text>
-          </Flexbox>
+          </div>
         ),
         onClick: () =>
           onSubtaskClick?.(

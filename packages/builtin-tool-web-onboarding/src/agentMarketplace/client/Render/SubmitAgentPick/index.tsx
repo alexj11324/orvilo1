@@ -1,9 +1,11 @@
 'use client';
 
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import Avatar from '@/components/Avatar';
 
 import type { InstallMarketplaceAgentSummary } from '../../../pickResult';
 import type { SubmitAgentPickArgs } from '../../../types';
@@ -89,26 +91,6 @@ export type SubmitAgentPickRenderProps = Pick<
   'pluginState'
 >;
 
-const AgentAvatar = ({ avatar }: { avatar: string }) => {
-  const tileStyle = {
-    alignItems: 'center',
-    background: cssVar.colorFillSecondary,
-    borderRadius: 8,
-    display: 'flex',
-    flexShrink: 0,
-    fontSize: 20,
-    height: 36,
-    justifyContent: 'center',
-    lineHeight: 1,
-    overflow: 'hidden',
-    width: 36,
-  } as const;
-  if (/^https?:\/\//.test(avatar)) {
-    return <img alt="" src={avatar} style={{ ...tileStyle, objectFit: 'cover' }} />;
-  }
-  return <span style={tileStyle}>{avatar}</span>;
-};
-
 const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
   const { t } = useTranslation('tool');
   const summaries = pluginState?.summaries ?? [];
@@ -120,18 +102,18 @@ const SubmitAgentPick = memo<SubmitAgentPickRenderProps>(({ pluginState }) => {
 
   return (
     <div className="flex flex-col gap-3">
-      <span style={{ color: cssVar.colorTextSecondary, fontSize: 13 }}>
+      <div className="text-[13px] text-muted-foreground">
         {t('agentMarketplace.inspector.pickCount', { count: installedCount })}
         {skippedCount > 0 &&
           ` · ${t('agentMarketplace.render.alreadyInLibrary', { count: skippedCount })}`}
-      </span>
+      </div>
       <div className={styles.list}>
         {summaries.map((summary) => (
           <div
             className={cx(styles.card, summary.skipped && styles.cardSkipped)}
             key={summary.templateId}
           >
-            <AgentAvatar avatar={summary.avatar || '🤖'} />
+            <Avatar avatar={summary.avatar || '🤖'} shape="square" size={36} />
             <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0 }}>
               <div className={styles.titleRow}>
                 <span className={styles.title}>{summary.title || summary.templateId}</span>

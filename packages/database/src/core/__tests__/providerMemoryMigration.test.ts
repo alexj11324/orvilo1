@@ -9,7 +9,9 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 const migrations = readMigrationFiles({
   migrationsFolder: path.join(__dirname, '../../../migrations'),
 });
-const additions = migrations.slice(196, 198);
+// The provider-binding and experience-memory additions ship as one consolidated
+// 0196_cloud_control_plane migration alongside the event/handoff tables.
+const additions = migrations.slice(196);
 const db = new PGlite({ extensions: { vector } });
 const applyAdditions = async () => {
   for (const migration of additions) {
@@ -33,7 +35,7 @@ describe('provider and experience forward migrations', () => {
   });
 
   it('rolls back a failed upgrade without deleting existing memories', async () => {
-    expect(additions).toHaveLength(2);
+    expect(additions).toHaveLength(1);
     await db.exec('BEGIN');
     await applyAdditions();
     await expect(

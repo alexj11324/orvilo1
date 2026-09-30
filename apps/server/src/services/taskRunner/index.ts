@@ -28,8 +28,8 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
 import { ActionApprovalService, AgentDelegationService } from '@/server/services/agentDelegation';
 import { AiAgentService } from '@/server/services/aiAgent';
-import type {
-  EventDispatchEvidence,
+import {
+  type EventDispatchEvidence,
   type PreparedTaskDispatch,
   TaskDispatchConflictError,
   TaskDispatchService,

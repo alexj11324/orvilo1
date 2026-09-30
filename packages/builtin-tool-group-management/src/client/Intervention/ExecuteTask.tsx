@@ -158,10 +158,12 @@ const ExecuteTaskIntervention = memo<BuiltinInterventionProps<ExecuteTaskParams>
               className={styles.timeoutInput}
               max={120}
               min={1}
-              suffix={t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
               value={Math.round(timeout / 60_000)}
               onChange={handleTimeoutChange}
             />
+            <span className="text-muted-foreground">
+              {t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
+            </span>
           </div>
         </div>
 

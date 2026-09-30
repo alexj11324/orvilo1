@@ -2,7 +2,7 @@
 import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { fromNow } from '@orvilo/utils/time';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { ExternalLink, Link2 } from 'lucide-react';
 import type { ReactNode } from 'react';

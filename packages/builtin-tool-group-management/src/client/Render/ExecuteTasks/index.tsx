@@ -3,7 +3,7 @@
 import { Markdown } from '@lobehub/ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { AgentGroupMember, BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles, useTheme } from 'antd-style';
+import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import { cn } from 'cn';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';

@@ -47,7 +47,7 @@ const AddItemRow = memo<AddItemRowProps>(({ placeholder, showDragHandle = true, 
   useEffect(() => {
     // Only restore cursor when focus changes TO this input (not on every cursorPosition change)
     if (focusedId === ADD_ITEM_ID && prevFocusedIdRef.current !== ADD_ITEM_ID) {
-      const input = inputRef.current?.input;
+      const input = inputRef.current;
       if (input) {
         input.focus();
         // Clamp cursor position to text length

@@ -1,13 +1,13 @@
-import { Block, type DropdownItem, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
 import { ActionIcon, confirmModal, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskDetailWorkspaceNode } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { FileLock2Icon, FileTextIcon, MoreHorizontal, Package, Trash } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { openDocumentModal } from '@/features/DocumentModal/loader';
 import Time from '@/features/Home/components/Time';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
@@ -46,11 +46,11 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
     });
   }, [activeTaskId, node.documentId, node.sourceTaskId, t, unpinDocument]);
 
-  const menuItems = useMemo<DropdownItem[]>(
+  const menuItems = useMemo(
     () => [
       {
         danger: true,
-        icon: <Icon icon={Trash} />,
+        icon: <Trash />,
         key: 'delete',
         label: t('taskDetail.artifactMenu.delete'),
         onClick: handleDelete,
@@ -60,22 +60,21 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
   );
 
   return (
-    <Block
-      clickable
-      horizontal
-      align="center"
-      gap={10}
-      paddingBlock={8}
-      paddingInline={12}
-      variant="outlined"
+    <div
+      className="flex items-center gap-2.5 px-3 py-2"
+      style={{
+        border: `1px solid ${cssVar.colorBorder}`,
+        borderRadius: cssVar.borderRadiusLG,
+        cursor: 'pointer',
+      }}
       onClick={() => void openDocumentModal(node.documentId)}
     >
-      <Icon
-        color={cssVar.colorTextSecondary}
-        icon={inaccessible ? FileLock2Icon : FileTextIcon}
-        size={{ size: 18, strokeWidth: 1.5 }}
-        style={{ flexShrink: 0 }}
-      />
+      {createElement(inaccessible ? FileLock2Icon : FileTextIcon, {
+        color: cssVar.colorTextSecondary,
+        size: 18,
+        strokeWidth: 1.5,
+        style: { flexShrink: 0 },
+      })}
       <Text ellipsis style={{ flex: 1, minWidth: 0 }} type={inaccessible ? 'secondary' : undefined}>
         {title}
       </Text>
@@ -98,7 +97,7 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
         </Tag>
       )}
       {node.createdAt && <Time date={node.createdAt} />}
-      <DropdownMenu items={menuItems}>
+      <SidebarDropdownMenu items={menuItems}>
         <ActionIcon
           icon={MoreHorizontal}
           size="small"
@@ -106,8 +105,8 @@ const ArtifactCard = memo<{ node: TaskDetailWorkspaceNode }>(({ node }) => {
             e.stopPropagation();
           }}
         />
-      </DropdownMenu>
-    </Block>
+      </SidebarDropdownMenu>
+    </div>
   );
 });
 
@@ -129,35 +128,29 @@ const TaskArtifacts = memo(() => {
   if (items.length === 0) return null;
 
   return (
-    <Flexbox gap={8}>
-      <Flexbox horizontal align="center" justify="space-between">
-        <Block
-          clickable
-          horizontal
-          align="center"
-          gap={8}
-          paddingBlock={4}
-          paddingInline={8}
+    <div className="flex flex-col gap-2">
+      <div className="flex items-center justify-between">
+        <div
+          className="flex items-center gap-2 px-2 py-1"
           style={{ cursor: 'pointer', width: 'fit-content' }}
-          variant="borderless"
           onClick={() => setIsExpanded((prev) => !prev)}
         >
-          <Icon color={cssVar.colorTextDescription} icon={Package} size={16} />
+          <Package color={cssVar.colorTextDescription} size={16} />
           <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
             {t('taskDetail.artifacts')}
           </Text>
           <Tag size="small">{items.length}</Tag>
           <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
-        </Block>
-      </Flexbox>
+        </div>
+      </div>
       {isExpanded && (
-        <Flexbox gap={8} paddingInline={12}>
+        <div className="flex flex-col gap-2 px-3">
           {items.map((node) => (
             <ArtifactCard key={node.documentId} node={node} />
           ))}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

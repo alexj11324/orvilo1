@@ -37,11 +37,14 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@lobehub/ui', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  DropdownMenu: ({ children, items }: { children?: ReactNode; items: MenuItem[] }) => {
+  copyToClipboard: vi.fn(),
+}));
+
+vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
+  default: ({ children, items }: { children?: ReactNode; items: MenuItem[] }) => {
     mocks.dropdownItems = items;
     return <>{children}</>;
   },
-  copyToClipboard: vi.fn(),
 }));
 
 vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({

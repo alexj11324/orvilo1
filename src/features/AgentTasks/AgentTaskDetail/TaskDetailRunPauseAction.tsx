@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { Button, confirmModal, SplitButton, Text } from '@lobehub/ui/base-ui';
 import { CalendarOffIcon, PlayIcon, RotateCcwIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
@@ -181,7 +180,7 @@ const TaskDetailRunPauseAction = memo(() => {
 
   if (isScheduled) {
     return (
-      <Flexbox horizontal align={'center'} gap={12}>
+      <div className="flex items-center gap-3">
         <SplitButton disabled={!canEditTask || isCancellingSchedule} loading={isRunningNow}>
           <SplitButton.Main
             disabled={!canEditTask || isRunningNow}
@@ -211,7 +210,7 @@ const TaskDetailRunPauseAction = memo(() => {
               : t('taskDetail.nextRunCountdown', countdownText)}
           </Text>
         )}
-      </Flexbox>
+      </div>
     );
   }
 

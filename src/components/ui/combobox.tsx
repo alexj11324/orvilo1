@@ -13,6 +13,8 @@ import {
   InputGroupInput,
 } from '@/components/ui/input-group';
 
+import { POPUP_Z_CLASS } from './zIndex';
+
 const Combobox = ComboboxPrimitive.Root;
 
 function ComboboxValue({ ...props }: ComboboxPrimitive.Value.Props) {
@@ -96,7 +98,7 @@ function ComboboxContent({
         align={align}
         alignOffset={alignOffset}
         anchor={anchor}
-        className="isolate z-50"
+        className={cn('isolate', POPUP_Z_CLASS)}
         side={side}
         sideOffset={sideOffset}
       >

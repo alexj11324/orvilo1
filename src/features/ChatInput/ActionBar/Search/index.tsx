@@ -1,6 +1,5 @@
-import { GlobeOffIcon } from '@lobehub/ui/icons';
 import { cssVar } from 'antd-style';
-import { Globe } from 'lucide-react';
+import { Globe, GlobeOff } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,12 +24,12 @@ const Search = memo(() => {
   const isAgentEnableSearch = useAgentEnableSearch();
   const isMobile = useIsMobile();
 
-  if (isLoading) return <ChatInputAction disabled icon={GlobeOffIcon} />;
+  if (isLoading) return <ChatInputAction disabled icon={GlobeOff} />;
 
   return (
     <ChatInputAction
       color={isAgentEnableSearch ? cssVar.colorInfo : undefined}
-      icon={isAgentEnableSearch ? Globe : GlobeOffIcon}
+      icon={isAgentEnableSearch ? Globe : GlobeOff}
       showTooltip={false}
       title={t('search.title')}
       popover={{

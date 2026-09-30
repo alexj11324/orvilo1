@@ -1,6 +1,5 @@
 'use client';
 
-import { Table } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { CheckCircle } from 'lucide-react';
 import React, { memo } from 'react';
@@ -15,6 +14,14 @@ import {
   EmptyMedia,
   EmptyTitle,
 } from '@/components/ui/empty';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 
 const styles = createStaticStyles(({ css, cssVar }) => {
   return {
@@ -39,7 +46,7 @@ interface SuccessResultProps {
 const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickFinish }) => {
   const { t } = useTranslation('common');
 
-  const cellRender = (text: string) => {
+  const cellRender = (text: number | string) => {
     return text ? text : <span className={styles.zeroCell}>0</span>;
   };
   return (
@@ -57,36 +64,28 @@ const SuccessResult = memo<SuccessResultProps>(({ duration, dataSource, onClickF
             ) : (
               <div className="flex flex-col gap-4" style={{ width: 500 }}>
                 {t('importModal.finish.subTitle', { duration: (duration / 1000).toFixed(2) })}
-                <Table
-                  bordered
-                  dataSource={dataSource}
-                  pagination={false}
-                  rowKey={'title'}
-                  size={'small'}
-                  columns={[
-                    { dataIndex: 'title', render: cellRender, title: t('importModal.result.type') },
-                    {
-                      dataIndex: 'added',
-                      render: cellRender,
-                      title: t('importModal.result.added'),
-                    },
-                    {
-                      dataIndex: 'skips',
-                      render: cellRender,
-                      title: t('importModal.result.skips'),
-                    },
-                    {
-                      dataIndex: 'error',
-                      render: cellRender,
-                      title: t('importModal.result.errors'),
-                    },
-                    {
-                      dataIndex: 'updated',
-                      render: cellRender,
-                      title: t('importModal.result.update'),
-                    },
-                  ]}
-                />
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>{t('importModal.result.type')}</TableHead>
+                      <TableHead>{t('importModal.result.added')}</TableHead>
+                      <TableHead>{t('importModal.result.skips')}</TableHead>
+                      <TableHead>{t('importModal.result.errors')}</TableHead>
+                      <TableHead>{t('importModal.result.update')}</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {dataSource.map((row) => (
+                      <TableRow key={row.title}>
+                        <TableCell>{cellRender(row.title)}</TableCell>
+                        <TableCell>{cellRender(row.added)}</TableCell>
+                        <TableCell>{cellRender(row.skips)}</TableCell>
+                        <TableCell>{cellRender(row.error)}</TableCell>
+                        <TableCell>{cellRender(row.updated)}</TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
               </div>
             )
           }

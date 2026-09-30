@@ -1,7 +1,7 @@
-import { Divider } from 'antd';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 
+import { Separator } from '@/components/ui/separator';
 import { Skeleton } from '@/components/ui/skeleton';
 
 /** Loading placeholder for {@link BriefCard}. */
@@ -33,7 +33,10 @@ const BriefCardSkeleton = memo(() => {
         />
       </div>
 
-      <Divider dashed style={{ marginBlock: 0 }} />
+      <Separator
+        className="bg-transparent border-t border-dashed border-border"
+        style={{ marginBlock: 0 }}
+      />
 
       <div className="flex flex-col gap-2" style={{ marginBottom: 0 }}>
         <Skeleton className="h-3.5" />

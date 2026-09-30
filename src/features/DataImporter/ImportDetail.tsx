@@ -1,6 +1,5 @@
 'use client';
 
-import { Table } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { Info } from 'lucide-react';
@@ -9,6 +8,14 @@ import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
 import { Button } from '@/components/ui/button';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '@/components/ui/table';
 import { type ImportPgDataStructure } from '@/types/export';
 
 const getNonEmptyTables = (data: ImportPgDataStructure) => {
@@ -102,21 +109,6 @@ const ImportPreviewModal = ({
   const tables = getNonEmptyTables(importData);
   const totalRecords = getTotalRecords(tables);
 
-  // Table column definitions
-  const columns = [
-    {
-      dataIndex: 'name',
-      key: 'name',
-      render: (text: string) => <div className={styles.tableName}>{text}</div>,
-      title: t('importPreview.tables.name'),
-    },
-    {
-      dataIndex: 'count',
-      key: 'count',
-      title: t('importPreview.tables.count'),
-    },
-  ];
-
   const handleConfirm = () => {
     onConfirm(duplicateAction === 'overwrite');
     onOpenChange(false);
@@ -165,14 +157,26 @@ const ImportPreviewModal = ({
           </div>
 
           <div className={styles.tableContainer}>
-            <Table
-              columns={columns}
-              dataSource={tables}
-              pagination={false}
-              rowKey="name"
-              scroll={{ y: 350 }}
-              size="small"
-            />
+            <div style={{ maxHeight: 350, overflowY: 'auto' }}>
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>{t('importPreview.tables.name')}</TableHead>
+                    <TableHead>{t('importPreview.tables.count')}</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {tables.map((table) => (
+                    <TableRow key={table.name}>
+                      <TableCell>
+                        <div className={styles.tableName}>{table.name}</div>
+                      </TableCell>
+                      <TableCell>{table.count}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           </div>
         </div>
       </div>

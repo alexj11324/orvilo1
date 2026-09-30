@@ -1,7 +1,13 @@
 'use client';
 
-import { BotPromptIcon } from '@lobehub/ui/icons';
-import { DnaIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
+import {
+  BotMessageSquareIcon,
+  DnaIcon,
+  ListTodoIcon,
+  MessageSquarePlusIcon,
+  SearchIcon,
+  TargetIcon,
+} from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
@@ -82,7 +88,7 @@ const Nav = memo(() => {
       {!hideProfile && (
         <NavItem
           active={isProfileActive}
-          icon={BotPromptIcon}
+          icon={BotMessageSquareIcon}
           title={t('tab.profile')}
           onClick={() => {
             switchTopic(null, { skipRefreshMessage: true });

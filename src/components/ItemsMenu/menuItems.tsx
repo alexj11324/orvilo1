@@ -1,6 +1,6 @@
 import { Menu as MenuPrimitive } from '@base-ui/react/menu';
 import { cn } from 'cn';
-import type { ReactNode, SyntheticEvent } from 'react';
+import type { ElementType, Key, ReactNode, SyntheticEvent } from 'react';
 
 import {
   DropdownMenuCheckboxItem,
@@ -48,6 +48,27 @@ export interface ActionMenuItem {
   open?: boolean;
   openOnHover?: boolean;
   type?: 'checkbox' | 'divider' | 'group' | 'submenu' | 'switch';
+}
+
+/**
+ * Equivalent of lobehub's `ActionIconGroupItemType` (its `MenuItemType`):
+ * a single icon+label action row for action bars and menus.
+ */
+export interface ActionIconGroupItemType {
+  children?: ActionIconGroupItemType[];
+  className?: string;
+  closeOnClick?: boolean;
+  danger?: boolean;
+  desc?: ReactNode;
+  disabled?: boolean;
+  extra?: ReactNode;
+  icon?: ElementType | ReactNode;
+  key?: Key;
+  label?: ReactNode;
+  loading?: boolean;
+  onClick?: (info: MenuInfo) => void;
+  spin?: boolean;
+  title?: string;
 }
 
 const getItemLabel = (item: ActionMenuItem): ReactNode => item.label;

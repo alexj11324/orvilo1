@@ -1,7 +1,7 @@
 'use client';
 
 import { Popover as PopoverPrimitive } from '@base-ui/react/popover';
-import { GlobeOffIcon, SkillsIcon } from '@lobehub/ui/icons';
+import { SkillsIcon } from '@lobehub/ui/icons';
 import { validateVideoFileSize } from '@orvilo/utils/client';
 import { css, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
@@ -13,6 +13,7 @@ import {
   CloudCog,
   FileUp,
   Globe,
+  GlobeOff,
   LibraryBig,
   PlusIcon,
   SearchCheck,
@@ -24,6 +25,7 @@ import type { ComponentType, ReactNode } from 'react';
 import { createElement, memo, Suspense, useCallback, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { Upload } from '@/components/Upload';
@@ -499,7 +501,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
       <span className={cx(gatewayModeLabel)}>
         {/* Brand name — same in every language, so no i18n. */}
         <span className="title">Agent Gateway</span>
-        <Badge size="sm" variant="secondary">
+        <Badge size="sm" variant="info">
           {t('gatewayMode.beta')}
         </Badge>
       </span>
@@ -646,7 +648,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                       key: 'search-off',
                       label: renderSearchOption(
                         <span className="anticon" role="img">
-                          <GlobeOffIcon fill={'transparent'} height={18} size={18} width={18} />
+                          <GlobeOff size={18} />
                         </span>,
                         t('plus.search.off'),
                         t('plus.search.offDesc'),
@@ -700,7 +702,7 @@ const usePlusMenuItems = ({ close }: { close: () => void }): ActionDropdownMenuI
                     </span>
                   ),
                   icon: activeIcon(
-                    activeSearchOption === 'off' ? GlobeOffIcon : Globe,
+                    activeSearchOption === 'off' ? GlobeOff : Globe,
                     activeSearchOption !== 'off',
                   ),
                   key: 'search-group',

@@ -1,13 +1,14 @@
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
-import { Form as AForm } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import { EditIcon, LinkIcon, Settings2Icon, TerminalIcon } from 'lucide-react';
 import { useImperativeHandle, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Form from '@/components/GroupForm';
 import KeyValueEditor from '@/components/KeyValueEditor';
 import MCPStdioCommandInput from '@/components/MCPStdioCommandInput';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import ArgsInput from '@/features/PluginDevModal/MCPManifestForm/ArgsInput';
 import { useToolStore } from '@/store/tool';
@@ -166,8 +167,8 @@ const Settings = ({
   hideFooter,
 }: SettingsProps & { ref?: React.RefObject<SettingsRef | null> }) => {
   const { t } = useTranslation(['plugin', 'common']);
-  const [connectionForm] = AForm.useForm();
-  const [envForm] = AForm.useForm();
+  const [connectionForm] = Form.useForm();
+  const [envForm] = Form.useForm();
   const [loading, setLoading] = useState(false);
   const [connectionLoading, setConnectionLoading] = useState(false);
   const [isEditingConnection, setIsEditingConnection] = useState(false);
@@ -245,11 +246,11 @@ const Settings = ({
             {!isEditingConnection && (
               <Button
                 className={styles.editButton}
-                icon={<EditIcon size={12} />}
-                size="small"
-                type="text"
+                size="sm"
+                variant="ghost"
                 onClick={() => setIsEditingConnection(true)}
               >
+                <EditIcon data-icon="inline-start" size={12} />
                 {t('settings.edit')}
               </Button>
             )}
@@ -262,9 +263,9 @@ const Settings = ({
                 <span className={styles.previewLabel}>{t('settings.connection.type')}</span>
                 <div className="flex">
                   <TerminalIcon />
-                  <Text className={styles.previewValue}>
+                  <span className={styles.previewValue}>
                     {customParams?.type?.toUpperCase() || 'Unknown'}
-                  </Text>
+                  </span>
                 </div>
               </div>
 
@@ -298,7 +299,7 @@ const Settings = ({
           ) : (
             // Edit mode
             <div className={styles.connectionForm}>
-              <AForm
+              <Form
                 className={styles.compactForm}
                 form={connectionForm}
                 initialValues={customParams}
@@ -306,18 +307,18 @@ const Settings = ({
                 onFinish={handleConnectionSubmit}
               >
                 {customParams?.type === 'http' && (
-                  <AForm.Item
+                  <Form.Item
                     label={t('settings.connection.url')}
                     name={'url'}
                     rules={[{ message: t('settings.rules.urlRequired'), required: true }]}
                   >
                     <Input placeholder="https://mcp.example.com/server" />
-                  </AForm.Item>
+                  </Form.Item>
                 )}
 
                 {customParams?.type === 'stdio' && (
                   <>
-                    <AForm.Item
+                    <Form.Item
                       label={t('settings.connection.command')}
                       name={'command'}
                       rules={[{ message: t('settings.rules.commandRequired'), required: true }]}
@@ -332,24 +333,24 @@ const Settings = ({
                           ]);
                         }}
                       />
-                    </AForm.Item>
+                    </Form.Item>
 
-                    <AForm.Item
+                    <Form.Item
                       label={t('settings.connection.args')}
                       name={'args'}
                       rules={[{ message: t('settings.rules.argsRequired'), required: true }]}
                     >
                       <ArgsInput placeholder="e.g: mcp-hello-world" />
-                    </AForm.Item>
+                    </Form.Item>
                   </>
                 )}
                 <div className={cn('flex gap-2', styles.footer)}>
-                  <Button htmlType="submit" loading={connectionLoading} type="primary">
+                  <Button loading={connectionLoading} type="submit" variant="default">
                     {t('common:save')}
                   </Button>
                   <Button onClick={handleCancelEdit}>{t('common:cancel')}</Button>
                 </div>
-              </AForm>
+              </Form>
             </div>
           )}
         </div>
@@ -361,30 +362,30 @@ const Settings = ({
               <Settings2Icon size={16} />
               {t('settings.configuration.title')}
             </div>
-            <Text style={{ fontSize: 12 }} type="secondary">
+            <div className="text-[12px] text-muted-foreground">
               {t('settings.envConfigDescription')}
-            </Text>
-            <AForm
+            </div>
+            <Form
               form={envForm}
               initialValues={{ env: pluginSettings }}
               layout="vertical"
               onFinish={handleEnvSubmit}
             >
-              <AForm.Item name="env" style={{ marginBottom: 0 }}>
+              <Form.Item name="env" style={{ marginBottom: 0 }}>
                 <KeyValueEditor
                   addButtonText={t('dev.mcp.env.add')}
                   keyPlaceholder="VARIABLE_NAME"
                 />
-              </AForm.Item>
+              </Form.Item>
               {!hideFooter && (
                 <div className={cn('flex gap-2', styles.footer)}>
-                  <Button htmlType="submit" loading={loading} type="primary">
+                  <Button loading={loading} type="submit" variant="default">
                     {t('common:save')}
                   </Button>
                   <Button onClick={() => envForm.resetFields()}>{t('common:reset')}</Button>
                 </div>
               )}
-            </AForm>
+            </Form>
           </div>
         )}
 
@@ -396,7 +397,7 @@ const Settings = ({
               {t('settings.configuration.title')}
             </div>
             <div className={styles.emptyState}>
-              <Text type="secondary">{t('settings.httpTypeNotice')}</Text>
+              <span className="text-muted-foreground">{t('settings.httpTypeNotice')}</span>
             </div>
           </div>
         )}

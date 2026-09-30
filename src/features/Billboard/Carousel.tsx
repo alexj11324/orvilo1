@@ -1,25 +1,23 @@
 'use client';
 
-import { Carousel as AntCarousel } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
+import Autoplay from 'embla-carousel-autoplay';
 import { X } from 'lucide-react';
 import * as m from 'motion/react-m';
-import {
-  type ComponentRef,
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { Button } from '@/components/ui/button';
+import {
+  Carousel,
+  type CarouselApi,
+  CarouselContent,
+  CarouselItem,
+} from '@/components/ui/carousel';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSingleton } from '@/hooks/useSingleton';
 import { useAnalytics } from '@/libs/analytics/client';
 import type { GlobalBillboard, GlobalBillboardItem } from '@/types/serverConfig';
 
@@ -270,7 +268,9 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
   ({ set, onClose, closing, exitTarget, onAnimationFinish, cardAttr }) => {
     const [paused, setPaused] = useState(false);
     const [current, setCurrent] = useState(0);
-    const carouselRef = useRef<ComponentRef<typeof AntCarousel>>(null);
+    const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+    const autoplay = useSingleton(() => Autoplay({ delay: 6000, stopOnInteraction: false }));
+    const [slideHeight, setSlideHeight] = useState<number>();
     const { analytics } = useAnalytics();
 
     useEffect(() => {
@@ -291,6 +291,31 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
         },
       });
     }, [analytics, set.slug, set.items.length]);
+
+    useEffect(() => {
+      if (!carouselApi) return;
+      const onSelect = () => {
+        const idx = carouselApi.selectedScrollSnap();
+        setCurrent(idx);
+        const slide = carouselApi.slideNodes()[idx];
+        if (slide) setSlideHeight(slide.offsetHeight);
+      };
+      onSelect();
+      carouselApi.on('select', onSelect);
+      carouselApi.on('reInit', onSelect);
+      return () => {
+        carouselApi.off('select', onSelect);
+        carouselApi.off('reInit', onSelect);
+      };
+    }, [carouselApi]);
+
+    useEffect(() => {
+      if (paused) {
+        autoplay.stop();
+      } else {
+        autoplay.play();
+      }
+    }, [autoplay, paused]);
 
     if (set.items.length === 0) return null;
 
@@ -325,31 +350,36 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
           />
         ) : (
           <>
-            <AntCarousel
-              adaptiveHeight
-              autoplay={!paused}
-              autoplaySpeed={6000}
-              beforeChange={(_: number, next: number) => setCurrent(next)}
-              dots={false}
-              ref={carouselRef}
+            <Carousel
+              opts={{ align: 'start', loop: true }}
+              plugins={[autoplay]}
+              setApi={setCarouselApi}
             >
-              {set.items.map((item, idx) => (
-                <div key={item.id}>
-                  <ItemContent
-                    billboardSlug={set.slug}
-                    item={item}
-                    position={idx}
-                    onClose={onClose}
-                  />
-                </div>
-              ))}
-            </AntCarousel>
+              <CarouselContent
+                className="items-start"
+                viewportStyle={{
+                  height: slideHeight,
+                  transition: 'height 0.3s ease',
+                }}
+              >
+                {set.items.map((item, idx) => (
+                  <CarouselItem key={item.id}>
+                    <ItemContent
+                      billboardSlug={set.slug}
+                      item={item}
+                      position={idx}
+                      onClose={onClose}
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
             <div className={cn('flex gap-1.5 justify-center', styles.dots)}>
               {set.items.map((item, idx) => (
                 <div
                   className={`${styles.dot} ${current === idx ? styles.dotActive : ''}`}
                   key={item.id}
-                  onClick={() => carouselRef.current?.goTo(idx)}
+                  onClick={() => carouselApi?.scrollTo(idx)}
                 />
               ))}
             </div>

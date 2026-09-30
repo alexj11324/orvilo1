@@ -1,7 +1,6 @@
 'use client';
 
-import { BotPromptIcon } from '@lobehub/ui/icons';
-import { MessageSquarePlusIcon, SearchIcon } from 'lucide-react';
+import { BotMessageSquareIcon, MessageSquarePlusIcon, SearchIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
@@ -42,7 +41,7 @@ const Nav = memo(() => {
       {isAgentEditable && isAccessResolved && canEditContent && canEditResource && (
         <NavItem
           active={isProfileActive}
-          icon={BotPromptIcon}
+          icon={BotMessageSquareIcon}
           title={t('tab.groupProfile')}
           onClick={() => {
             switchTopic(null, { skipRefreshMessage: true });

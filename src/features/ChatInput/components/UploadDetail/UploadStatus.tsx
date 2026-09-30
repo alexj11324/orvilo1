@@ -1,6 +1,5 @@
-import { CheckCircleFilled } from '@ant-design/icons';
 import { cssVar } from 'antd-style';
-import { CircleAlertIcon, Loader2Icon } from 'lucide-react';
+import { CircleAlertIcon, CircleCheck, Loader2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -80,7 +79,7 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
     case 'success': {
       return (
         <div className="flex flex-row items-center gap-1">
-          <CheckCircleFilled style={{ color: cssVar.colorSuccess, fontSize: 12 }} />
+          <CircleCheck size={12} style={{ color: cssVar.colorSuccess }} />
           <div className="text-muted-foreground" style={{ fontSize: 12 }}>
             {formatSize(size)}
           </div>
@@ -97,6 +96,7 @@ const UploadStatus = memo<UploadStateProps>(({ error, status, size, uploadState 
           <div
             className="truncate"
             style={{ color: cssVar.colorError, fontSize: 12, maxWidth: 110 }}
+            title={error}
           >
             {error || t('upload.preview.status.error')}
           </div>

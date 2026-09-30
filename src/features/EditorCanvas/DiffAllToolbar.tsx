@@ -2,7 +2,6 @@
 
 import type { IEditor } from '@lobehub/editor';
 import { DiffAction, LITEXML_DIFFNODE_ALL_COMMAND } from '@lobehub/editor';
-import { Space } from 'antd';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import { Check, X } from 'lucide-react';
@@ -133,7 +132,7 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
           cx(styles.toolbar, isDarkMode ? styles.toolbarDark : styles.toolbarLight),
         )}
       >
-        <Space>
+        <div className="flex items-center gap-2">
           <Button
             size="sm"
             variant="ghost"
@@ -160,7 +159,7 @@ const DiffAllToolbar = memo<DiffAllToolbarProps>(({ documentId, editor }) => {
             <Check color={'green'} size={16} />
             {t('modifier.acceptAll')}
           </Button>
-        </Space>
+        </div>
       </div>
     </div>
   );

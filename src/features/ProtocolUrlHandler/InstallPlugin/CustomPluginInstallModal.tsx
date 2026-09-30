@@ -1,13 +1,15 @@
 'use client';
 
-import { Alert, Text, toast } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+import { CircleAlert, TriangleAlert, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ImperativeModal from '@/components/ImperativeModal';
 import PluginAvatar from '@/components/Plugins/PluginAvatar';
 import PluginTag from '@/components/Plugins/PluginTag';
+import { toast } from '@/components/toast';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { useToolStore } from '@/store/tool';
@@ -26,7 +28,7 @@ interface CustomPluginInstallModalProps {
 
 const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
   ({ installRequest, isMarketplace = false, onComplete }) => {
-    const { t } = useTranslation('plugin');
+    const { t } = useTranslation(['plugin', 'common']);
     const [loading, setLoading] = useState(false);
     const { allowed: canCreate } = usePermission('create_content');
     const { allowed: canEdit } = usePermission('edit_own_content');
@@ -44,6 +46,8 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
     // Generate a unique identifier for custom plugin connection testing
     const identifier = installRequest?.schema?.identifier || '';
     const testState = useToolStore(mcpStoreSelectors.getMCPConnectionTestState(identifier));
+    const [errorDismissed, setErrorDismissed] = useState(false);
+    useEffect(() => setErrorDismissed(false), [testState.error]);
 
     const schema = installRequest?.schema;
     const isStdioMcp = schema?.config.type === 'stdio';
@@ -137,32 +141,28 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
     // Render different Alert components based on type
     const renderAlert = () => {
       const sourceAlert = !isMarketplace ? (
-        <Alert
-          showIcon
-          title={t('protocolInstall.custom.security.description')}
-          type="warning"
-          variant={'borderless'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert />
+          <AlertTitle>{t('protocolInstall.custom.security.description')}</AlertTitle>
+        </Alert>
       ) : (
-        <Alert
-          showIcon
-          title={t('protocolInstall.marketplace.unverified.warning')}
-          type="warning"
-          variant={'borderless'}
-        />
+        <Alert variant="warning">
+          <TriangleAlert />
+          <AlertTitle>{t('protocolInstall.marketplace.unverified.warning')}</AlertTitle>
+        </Alert>
       );
 
       return (
         <div className="flex flex-col gap-2">
           {sourceAlert}
           {isStdioMcp && (
-            <Alert
-              showIcon
-              description={t('protocolInstall.stdio.commandExecution.description')}
-              title={t('protocolInstall.stdio.commandExecution.title')}
-              type="warning"
-              variant={'borderless'}
-            />
+            <Alert variant="warning">
+              <TriangleAlert />
+              <AlertTitle>{t('protocolInstall.stdio.commandExecution.title')}</AlertTitle>
+              <AlertDescription>
+                {t('protocolInstall.stdio.commandExecution.description')}
+              </AlertDescription>
+            </Alert>
           )}
         </div>
       );
@@ -206,9 +206,7 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
                   {schema.name}
                   <PluginTag type={'customPlugin'} />
                 </div>
-                <Text style={{ fontSize: 12 }} type={'secondary'}>
-                  {schema.description}
-                </Text>
+                <span className="text-[12px] text-muted-foreground">{schema.description}</span>
               </div>
             </div>
           </div>
@@ -216,15 +214,22 @@ const CustomPluginInstallModal = memo<CustomPluginInstallModalProps>(
           <div className="flex flex-col">
             <ConfigDisplay schema={schema} onConfigUpdate={setUpdatedConfig} />
             {/* Show connection test error */}
-            {testState.error && (
-              <Alert
-                closable
-                showIcon
-                description={testState.error}
-                title={t('protocolInstall.messages.connectionTestFailed')}
-                type="error"
-                variant={'filled'}
-              />
+            {testState.error && !errorDismissed && (
+              <Alert variant="destructive">
+                <CircleAlert />
+                <AlertTitle>{t('protocolInstall.messages.connectionTestFailed')}</AlertTitle>
+                <AlertDescription>{testState.error}</AlertDescription>
+                <AlertAction>
+                  <button
+                    aria-label={t('common:close')}
+                    className="text-muted-foreground"
+                    type="button"
+                    onClick={() => setErrorDismissed(true)}
+                  >
+                    <X size={16} />
+                  </button>
+                </AlertAction>
+              </Alert>
             )}
           </div>
         </div>

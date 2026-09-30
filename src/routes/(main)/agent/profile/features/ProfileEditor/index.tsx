@@ -6,7 +6,7 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
 import { Wrench } from 'lucide-react';
-import React, { memo } from 'react';
+import React, { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';

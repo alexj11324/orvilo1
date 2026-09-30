@@ -86,7 +86,7 @@ const HeteroPlus = memo(() => {
         // Trailing chevron (replaces base-ui's default triangle submenu arrow,
         // which ActionDropdown hides via the .orvilo-submenu-chevron rule).
         extra: <ChevronRight className="orvilo-submenu-chevron" size={16} />,
-        icon: CalendarClockIcon,
+        icon: <CalendarClockIcon size={16} />,
         key: 'scheduleSend',
         label: t('input.schedule.title'),
       },
@@ -94,7 +94,7 @@ const HeteroPlus = memo(() => {
       // Formatting toolbar toggle — same trailing-switch row as the agent Plus.
       {
         checked: Boolean(showTypoBar),
-        icon: TypeIcon,
+        icon: <TypeIcon size={16} />,
         key: 'typo',
         label: tEditor('actions.typobar.title'),
         onCheckedChange: (checked: boolean) => setShowTypoBar(checked),
@@ -105,7 +105,7 @@ const HeteroPlus = memo(() => {
         ? ([
             { type: 'divider' },
             {
-              icon: TargetIcon,
+              icon: <TargetIcon size={16} />,
               key: 'set-topic-goal',
               // Same string as the chip it inserts — see the agent composer's Plus.
               label: tEditor('slash.goal'),

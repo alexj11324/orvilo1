@@ -6,8 +6,8 @@ import { useCallback, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { Kbd, KbdGroup } from '@/components/ui/kbd';
+import { type ActionDropdownMenuItems } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
 import { useConversationStore, useConversationStoreApi } from '@/features/Conversation';
-import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useUserStore } from '@/store/user';
 import { preferenceSelectors, settingsSelectors } from '@/store/user/selectors';
 
@@ -19,7 +19,7 @@ import { preferenceSelectors, settingsSelectors } from '@/store/user/selectors';
  * - Add AI Message
  * - Add User Message
  */
-export const useSendMenuItems = (): SidebarMenuItems => {
+export const useSendMenuItems = (): ActionDropdownMenuItems => {
   const { t } = useTranslation('chat');
 
   const storeApi = useConversationStoreApi();

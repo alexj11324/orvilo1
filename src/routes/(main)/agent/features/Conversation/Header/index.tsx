@@ -152,7 +152,7 @@ const Header = memo(() => {
     <div className={headerStyles.container}>
       <NavHeader
         left={
-          <div allowShrink className={cn('flex items-center gap-1', headerStyles.leftContent)}>
+          <div className={cn('flex items-center gap-1', headerStyles.leftContent)}>
             {splitView && agentMeta && (
               <Avatar
                 alt={agentMeta.title}

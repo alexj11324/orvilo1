@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { Plus, UserRoundIcon, UsersIcon } from 'lucide-react';
 import { useMemo, useState } from 'react';

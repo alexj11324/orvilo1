@@ -18,6 +18,7 @@ import { useTranslation } from 'react-i18next';
 import { useLocation, useParams } from 'react-router';
 
 import { useAuthorInfo } from '@/business/client/hooks/useAuthorInfo';
+import type { DropdownItem } from '@/components/ItemsMenu';
 import { confirmModal } from '@/components/Modal';
 import { type ModalInstance } from '@/components/Modal';
 import { openRenameModal } from '@/components/RenameModal';
@@ -26,7 +27,6 @@ import { DOCUMENT_HISTORY_QUERY_LIST_LIMIT } from '@/const/documentHistory';
 import { isDesktop } from '@/const/version';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
-import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openDocumentCompareModal } from '@/features/PageEditor/History/CompareModal';
 import { formatHistoryAbsoluteTime } from '@/features/PageEditor/History/formatHistoryDate';
 import type {
@@ -63,7 +63,7 @@ const TopicInfoHeader = ({ authorName, title, updatedAtLabel }: TopicInfoHeaderP
   </div>
 );
 
-export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => SidebarMenuItemData[] } => {
+export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => DropdownItem[] } => {
   const { t } = useTranslation(['chat', 'topic', 'common', 'file']);
 
   const { pathname } = useLocation();
@@ -209,8 +209,8 @@ export const useMenu = (): { menuHeader?: ReactNode; menuItems: () => SidebarMen
     );
   }, [activeTopic?.updatedAt, authorInfo?.fullName, topicId, t]);
 
-  const menuItems = useCallback((): SidebarMenuItemData[] => {
-    const items: SidebarMenuItemData[] = [];
+  const menuItems = useCallback((): DropdownItem[] => {
+    const items: DropdownItem[] = [];
 
     if (topicId) {
       items.push(

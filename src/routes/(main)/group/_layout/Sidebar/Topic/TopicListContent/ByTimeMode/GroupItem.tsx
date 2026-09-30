@@ -2,7 +2,7 @@ import dayjs from 'dayjs';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { type GroupedTopic } from '@/types/topic';
 
 import TopicItem from '../../List/Item';

@@ -5,6 +5,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Badge } from '@/components/reui/badge';
 import { DEFAULT_AVATAR } from '@/const/meta';
 import NavItem from '@/features/NavPanel/components/NavItem';
 
@@ -20,7 +21,6 @@ interface GroupMemberItemProps {
 const GroupMemberItem = memo<GroupMemberItemProps>(
   ({ title, avatar, background, actions, isExternal }) => {
     const { t } = useTranslation('chat');
-
     return (
       <NavItem
         actions={actions}

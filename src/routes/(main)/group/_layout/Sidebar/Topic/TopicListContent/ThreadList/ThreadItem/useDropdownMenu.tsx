@@ -3,7 +3,7 @@ import { useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { confirmModal } from '@/components/Modal';
-import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
+import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { useChatStore } from '@/store/chat';
 
@@ -15,7 +15,7 @@ interface ThreadItemDropdownMenuProps {
 export const useThreadItemDropdownMenu = ({
   id,
   toggleEditing,
-}: ThreadItemDropdownMenuProps): (() => SidebarMenuItems) => {
+}: ThreadItemDropdownMenuProps): (() => SidebarMenuItemData[]) => {
   const { t } = useTranslation(['thread', 'common']);
   const { allowed: canEditThread } = usePermission('edit_own_content');
 
@@ -56,6 +56,6 @@ export const useThreadItemDropdownMenu = ({
         },
         sfSymbol: 'trash',
       },
-    ].filter(Boolean) as SidebarMenuItems;
+    ].filter(Boolean) as SidebarMenuItemData[];
   }, [id, canEditThread, removeThread, toggleEditing, t]);
 };

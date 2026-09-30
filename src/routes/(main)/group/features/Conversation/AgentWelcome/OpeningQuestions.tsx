@@ -1,6 +1,6 @@
 'use client';
 
-import { createStaticStyles, cx, responsive } from 'antd-style';
+import { createStaticStyles, cssVar, cx, responsive } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';

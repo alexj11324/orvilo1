@@ -113,9 +113,10 @@ const ShareToggle: FC<ShareToggleProps> = ({ cred, onChange }) => {
         <ToggleGroup
           disabled={isPending}
           size="sm"
-          value={visibility}
+          value={visibility ? [visibility] : []}
           onValueChange={(value) => {
-            if (value === 'private' || value === 'public') handleVisibilityChange(value);
+            const next = value[0];
+            if (next === 'private' || next === 'public') handleVisibilityChange(next);
           }}
         >
           <ToggleGroupItem value="private">{t('creds.share.visibility.private')}</ToggleGroupItem>

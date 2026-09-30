@@ -4,6 +4,7 @@ import { MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
 
 import ActionIcon from '@/components/ActionIcon';
+import { renderMenuItems } from '@/components/ItemsMenu/menuItems';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -11,7 +12,6 @@ import {
   DropdownMenuLabel,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { renderSidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import HeaderSlot from '@/routes/(main)/agent/(chat)/_layout/HeaderSlot';
 
 import { useMenu } from './useMenu';
@@ -30,7 +30,7 @@ const HeaderActions = memo(() => {
               <DropdownMenuLabel>{menuHeader}</DropdownMenuLabel>
             </DropdownMenuGroup>
           )}
-          {renderSidebarMenuItems(typeof menuItems === 'function' ? menuItems() : menuItems)}
+          {renderMenuItems(typeof menuItems === 'function' ? menuItems() : menuItems)}
         </DropdownMenuContent>
       </DropdownMenu>
     </>

@@ -1,3 +1,5 @@
+import { Accordion } from '@/components/ui/accordion';
+
 import Members from './Members';
 import Topic from './Topic';
 

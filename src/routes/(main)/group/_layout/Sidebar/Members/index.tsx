@@ -6,7 +6,7 @@ import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useInitGroupConfig } from '@/hooks/useInitGroupConfig';
 import { usePermission } from '@/hooks/usePermission';

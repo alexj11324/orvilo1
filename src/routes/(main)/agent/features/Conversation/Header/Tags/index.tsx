@@ -32,7 +32,7 @@ const TitleTags = memo(() => {
 
   if (isGroupSession) {
     return (
-      <div allowShrink className="flex items-center gap-3" style={{ minWidth: 0 }}>
+      <div className="flex items-center gap-3" style={{ minWidth: 0 }}>
         <MemberCountTag />
       </div>
     );
@@ -42,7 +42,7 @@ const TitleTags = memo(() => {
   const fallbackThreadTitle = threadTitle || t('thread.title', { ns: 'chat' });
 
   return (
-    <div allowShrink className="flex items-center gap-1.5" style={{ marginLeft: 8, minWidth: 0 }}>
+    <div className="flex items-center gap-1.5" style={{ marginLeft: 8, minWidth: 0 }}>
       {threadId ? (
         <>
           {/* The topic crumb keeps the reference's title-trigger behavior:

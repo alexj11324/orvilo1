@@ -40,7 +40,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  lt,
   ne,
   notInArray,
   or,
@@ -838,13 +837,7 @@ const attentionGroupExpr = (ctx: {
 END`;
 
 type BoardLaneAxis =
-  | 'agent'
-  | 'assignee'
-  | 'milestone'
-  | 'priority'
-  | 'project'
-  | 'status'
-  | 'workflowCategory';
+  'agent' | 'assignee' | 'milestone' | 'priority' | 'project' | 'status' | 'workflowCategory';
 
 /**
  * Local-day recency buckets matching `activityBucketKey`: day:0–6, then
@@ -942,16 +935,22 @@ const listGroupKeys = (
 };
 
 /** Keyset for board-ordered groups: position asc, then createdAt/seq desc —
- * the same total order TASK_BOARD_ORDER applies on the task-store board. */
-const keysetAfterBoardPosition = (cursor: typeof tasks.$inferSelect): SQL => {
-  const curPos = cursor.position ?? -(new Date(cursor.createdAt).getTime() / 1000);
+ * the same total order TASK_BOARD_ORDER applies on the task-store board.
+ * Cursor columns stay in SQL so timestamp equality is exact. */
+const keysetAfterBoardPosition = (afterId: string): SQL => {
+  const cursorPos = sql`(SELECT ${taskEffectivePosition} FROM ${tasks} WHERE ${tasks.id} = ${afterId})`;
+  const cursorCreated = sql`(SELECT ${tasks.createdAt} FROM ${tasks} WHERE ${tasks.id} = ${afterId})`;
+  const cursorSeq = sql`(SELECT ${tasks.seq} FROM ${tasks} WHERE ${tasks.id} = ${afterId})`;
   return or(
-    sql`${taskEffectivePosition} > ${curPos}`,
-    and(sql`${taskEffectivePosition} = ${curPos}`, lt(tasks.createdAt, cursor.createdAt)),
+    sql`${taskEffectivePosition} > ${cursorPos}`,
     and(
-      sql`${taskEffectivePosition} = ${curPos}`,
-      eq(tasks.createdAt, cursor.createdAt),
-      lt(tasks.seq, cursor.seq),
+      sql`${taskEffectivePosition} IS NOT DISTINCT FROM ${cursorPos}`,
+      sql`${tasks.createdAt} < ${cursorCreated}`,
+    ),
+    and(
+      sql`${taskEffectivePosition} IS NOT DISTINCT FROM ${cursorPos}`,
+      sql`${tasks.createdAt} IS NOT DISTINCT FROM ${cursorCreated}`,
+      sql`${tasks.seq} < ${cursorSeq}`,
     ),
   )!;
 };
@@ -1014,71 +1013,55 @@ const sortColumn = (field: WorkQuerySort['field']) => {
   return taskColumn(field);
 };
 
-const sortValue = (
-  row: typeof tasks.$inferSelect,
-  field: WorkQuerySort['field'],
-): Date | number | string | null => {
-  if (field === 'updatedAt') return row.updatedAt;
-  if (field === 'createdAt') return row.createdAt;
-  if (field === 'name') return row.name;
-  if (field === 'id') return row.id;
-  if (field === 'cycleId') return row.cycleRefId;
-  if (
-    field === 'closedAt' ||
-    field === 'delegatedByUserId' ||
-    field === 'hasActivity' ||
-    field === 'labelId' ||
-    field === 'ownerUserId' ||
-    field === 'reviewerUserId' ||
-    field === 'subscribed' ||
-    field === 'text' ||
-    field === 'visibility'
-  ) {
-    throw new WorkQueryError('INVALID_QUERY', `Cannot sort tasks by ${field}`);
-  }
-  return row[field];
-};
-
-/** Keyset: (c1, c2, …, id) compared with the cursor row using each column's direction. */
-const keysetEq = (column: AnyPgColumn, value: Date | number | string | null): SQL =>
-  value == null ? isNull(column) : eq(column, value as never);
-
-const keysetBeyond = (
-  column: AnyPgColumn,
-  direction: WorkQuerySort['direction'],
-  value: Date | number | string | null,
-): SQL | undefined => {
-  if (direction === 'asc') {
-    if (value == null) return undefined;
-    return or(gt(column, value as never), isNull(column))!;
-  }
-  if (value == null) return isNotNull(column);
-  return lt(column, value as never);
-};
-
-const keysetAfter = (
+/**
+ * Keyset against the cursor row in SQL. A Date round-trip drops microseconds,
+ * so two rows that share `now()` stop looking equal and the next page is empty.
+ * ASC is NULLS LAST; DESC is NULLS FIRST — the same order Postgres applies.
+ */
+const keysetAfterCursor = (
   sort: WorkQuerySort[],
   columnFor: (field: WorkQuerySort['field']) => AnyPgColumn,
-  valueOf: (field: WorkQuerySort['field']) => Date | number | string | null,
+  idColumn: AnyPgColumn,
+  afterId: string,
 ): SQL => {
+  const cursorValue = (field: WorkQuerySort['field']) => {
+    const column = columnFor(field);
+    return sql`(SELECT ${column} FROM ${idColumn.table} WHERE ${idColumn} = ${afterId})`;
+  };
   const parts: SQL[] = [];
   for (let index = 0; index < sort.length; index += 1) {
     const equalities: SQL[] = [];
     for (let prior = 0; prior < index; prior += 1) {
       const field = sort[prior]!.field;
-      equalities.push(keysetEq(columnFor(field), valueOf(field)));
+      equalities.push(sql`${columnFor(field)} IS NOT DISTINCT FROM ${cursorValue(field)}`);
     }
     const current = sort[index]!;
-    const beyond = keysetBeyond(
-      columnFor(current.field),
-      current.direction,
-      valueOf(current.field),
+    const column = columnFor(current.field);
+    const cursor = cursorValue(current.field);
+    const beyond =
+      current.direction === 'asc'
+        ? sql`(${column} > ${cursor} OR (${cursor} IS NOT NULL AND ${column} IS NULL))`
+        : sql`(${column} < ${cursor} OR (${cursor} IS NULL AND ${column} IS NOT NULL))`;
+    parts.push(
+      equalities.length > 0 ? sql`(${sql.join(equalities, sql` AND `)} AND ${beyond})` : beyond,
     );
-    if (!beyond) continue;
-    parts.push(equalities.length ? and(...equalities, beyond)! : beyond);
   }
-  return parts.length ? or(...parts)! : sql`false`;
+  return parts.length > 0 ? sql`(${sql.join(parts, sql` OR `)})` : sql`false`;
 };
+
+const taskActivityAtFor = (userId: string, taskId: SQL | string) =>
+  sql`(select max(coalesce(${notifications.lastActivityAt}, ${notifications.createdAt}))
+    from ${notifications}
+    where ${notifications.userId} = ${userId}
+      and ${notifications.resourceType} = 'task'
+      and ${notifications.resourceId} = ${taskId})`;
+
+/** Compare an ordering expression to the same expression on the cursor row. */
+const keysetAfterExpr = (expr: SQL, cursorExpr: SQL, afterId: string): SQL =>
+  or(
+    sql`${expr} < ${cursorExpr}`,
+    and(sql`${expr} IS NOT DISTINCT FROM ${cursorExpr}`, gt(tasks.id, afterId)),
+  )!;
 
 const PROJECT_SORT_FIELDS = new Set<WorkQuerySort['field']>([
   'createdAt',
@@ -1105,17 +1088,6 @@ const normalizeProjectSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[
   }
   return next;
 };
-
-const projectValueOf =
-  (cursor: typeof projects.$inferSelect) =>
-  (field: WorkQuerySort['field']): Date | number | string | null => {
-    if (field === 'createdAt') return cursor.createdAt;
-    if (field === 'id') return cursor.id;
-    if (field === 'name') return cursor.name;
-    if (field === 'status') return cursor.status;
-    if (field === 'updatedAt') return cursor.updatedAt;
-    return null;
-  };
 
 const PROJECT_OPTION_SORT: WorkQuerySort[] = [
   { direction: 'desc', field: 'updatedAt' },
@@ -1325,24 +1297,15 @@ export class WorkQueryModel {
       if (!cursor) {
         throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
       }
-      if (activityOrdered) {
-        const [activityCursor] = await this.db
-          .select({ at: sql<Date | null>`${activityExpr}` })
-          .from(tasks)
-          .where(eq(tasks.id, cursor.id))
-          .limit(1);
-        const at = activityCursor?.at ?? null;
-        listConditions.push(
-          at
-            ? or(
-                sql`${activityExpr} < ${at}`,
-                and(sql`${activityExpr} = ${at}`, gt(tasks.id, cursor.id)),
-              )!
-            : and(sql`${activityExpr} is null`, gt(tasks.id, cursor.id))!,
-        );
-      } else {
-        listConditions.push(keysetAfter(sort, sortColumn, (f) => sortValue(cursor, f)));
-      }
+      listConditions.push(
+        activityOrdered
+          ? keysetAfterExpr(
+              activityExpr,
+              taskActivityAtFor(this.userId, params.afterId),
+              params.afterId,
+            )
+          : keysetAfterCursor(sort, sortColumn, tasks.id, params.afterId),
+      );
     }
 
     const orderBy = activityOrdered
@@ -1501,28 +1464,20 @@ export class WorkQueryModel {
           if (!cursor) {
             throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
           }
-          if (activityOrdered) {
-            const [activityCursor] = await this.db
-              .select({ at: sql<Date | null>`${axisCtx.activity}`.mapWith(tasks.updatedAt) })
-              .from(tasks)
-              .where(eq(tasks.id, cursor.id))
-              .limit(1);
-            const at = activityCursor?.at ?? null;
-            groupConditions.push(
-              at
-                ? or(
-                    sql`${axisCtx.activity} < ${at}`,
-                    and(sql`${axisCtx.activity} = ${at}`, gt(tasks.id, cursor.id)),
-                  )!
-                : and(sql`${axisCtx.activity} is null`, gt(tasks.id, cursor.id))!,
-            );
-          } else {
-            groupConditions.push(
-              boardOrdered
-                ? keysetAfterBoardPosition(cursor)
-                : keysetAfter(params.sort, sortColumn, (f) => sortValue(cursor, f)),
-            );
-          }
+          groupConditions.push(
+            activityOrdered
+              ? keysetAfterExpr(
+                  axisCtx.activity,
+                  sql`coalesce(
+                    ${taskActivityAtFor(this.userId, params.afterId)},
+                    (SELECT ${tasks.updatedAt} FROM ${tasks} WHERE ${tasks.id} = ${params.afterId})
+                  )`,
+                  params.afterId,
+                )
+              : boardOrdered
+                ? keysetAfterBoardPosition(params.afterId)
+                : keysetAfterCursor(params.sort, sortColumn, tasks.id, params.afterId),
+          );
         }
 
         const fetched = activityOrdered
@@ -1694,7 +1649,9 @@ export class WorkQueryModel {
             if (!cursor) {
               throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
             }
-            groupConditions.push(keysetAfter(sort, projectSortColumn, projectValueOf(cursor)));
+            groupConditions.push(
+              keysetAfterCursor(sort, projectSortColumn, projects.id, params.afterId),
+            );
           }
           const fetched = await this.db
             .select()
@@ -1732,7 +1689,7 @@ export class WorkQueryModel {
         .where(and(...conditions, eq(projects.id, params.afterId)))
         .limit(1);
       if (!cursor) throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
-      listConditions.push(keysetAfter(sort, projectSortColumn, projectValueOf(cursor)));
+      listConditions.push(keysetAfterCursor(sort, projectSortColumn, projects.id, params.afterId));
     }
 
     const [countRow] = await this.db
@@ -1962,7 +1919,9 @@ export class WorkQueryModel {
         .where(and(readable, eq(projects.id, params.afterId)))
         .limit(1);
       if (!cursor) throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
-      conditions.push(keysetAfter(PROJECT_OPTION_SORT, projectSortColumn, projectValueOf(cursor)));
+      conditions.push(
+        keysetAfterCursor(PROJECT_OPTION_SORT, projectSortColumn, projects.id, params.afterId),
+      );
     }
     const rows = await this.db
       .select({ id: projects.id, name: projects.name })

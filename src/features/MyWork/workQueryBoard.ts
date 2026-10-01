@@ -1,9 +1,18 @@
-import type { TaskWorkflowCategory } from '@orvilo/types';
-import { WORK_QUERY_STATUS_COLUMNS, WORK_QUERY_WORKFLOW_COLUMNS } from '@orvilo/types';
+import type { TaskWorkflowCategory, WorkQueryGroupBy } from '@orvilo/types';
+import {
+  prefixWorkQueryBoardKey,
+  rawWorkQueryBoardKey,
+  WORK_QUERY_BOARD_KEY_SEP,
+  WORK_QUERY_PRIORITY_KEYS,
+  WORK_QUERY_STATUS_COLUMNS,
+  WORK_QUERY_WORKFLOW_COLUMNS,
+} from '@orvilo/types';
 
 import {
+  boardCellKey,
   externalTaskColumnKey,
   type KanbanColumnDefinition,
+  parseBoardCellKey,
   type WorkQueryBoardGroupBy,
   workQueryKeyForKanbanColumn,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
@@ -53,15 +62,26 @@ export type WorkQueryMovePlan =
 export const workQueryBoardGroups = (
   groups: readonly WorkQueryGroupPage<WorkQueryResultTask>[] | undefined,
   groupBy: WorkQueryBoardGroupBy,
+  laneAxis?: WorkQueryBoardGroupBy,
 ): TaskGroupItem[] => {
   return (groups ?? []).map((group): TaskGroupItem => {
     const tasks = group.tasks.map((task) => ({
       ...task,
       participants: task.participants ?? [],
     }));
+    let key = prefixWorkQueryBoardKey(groupBy, group.key);
+    if (laneAxis) {
+      const separator = group.key.indexOf(WORK_QUERY_BOARD_KEY_SEP);
+      const columnRaw = separator === -1 ? group.key : group.key.slice(0, separator);
+      const laneRaw = separator === -1 ? group.key : group.key.slice(separator + 1);
+      key = boardCellKey(
+        prefixWorkQueryBoardKey(groupBy, columnRaw),
+        prefixWorkQueryBoardKey(laneAxis, laneRaw),
+      );
+    }
     return {
       hasMore: group.hasMore,
-      key: `${groupBy === 'workflowCategory' ? 'wf' : 'st'}:${group.key}`,
+      key,
       limit: tasks.length,
       offset: 0,
       tasks,
@@ -89,14 +109,42 @@ export const workQueryTaskColumnKey = (
  * never re-buckets under status. Missing `groupBy` follows the status
  * dimension for backwards compatibility with pre-groupBy saved views.
  */
-export type WorkQueryListGroupBy = 'attention' | 'none' | 'status' | 'workflowCategory';
+export type WorkQueryListGroupBy =
+  | 'activityDate'
+  | 'assignee'
+  | 'attention'
+  | 'cycle'
+  | 'none'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 
 export const workQueryListGroupBy = (
-  groupBy: 'attention' | 'none' | 'status' | 'workflowCategory' | undefined,
-): WorkQueryListGroupBy => groupBy ?? 'status';
+  groupBy: WorkQueryGroupBy | undefined,
+): WorkQueryListGroupBy => {
+  if (
+    groupBy === 'none' ||
+    groupBy === 'attention' ||
+    groupBy === 'status' ||
+    groupBy === 'workflowCategory' ||
+    groupBy === 'priority' ||
+    groupBy === 'assignee' ||
+    groupBy === 'project' ||
+    groupBy === 'cycle' ||
+    groupBy === 'activityDate'
+  ) {
+    return groupBy;
+  }
+  return 'status';
+};
 
-const groupKeyOrder = (groupBy: WorkQueryBoardGroupBy): readonly string[] =>
-  groupBy === 'workflowCategory' ? WORK_QUERY_WORKFLOW_COLUMNS : WORK_QUERY_STATUS_COLUMNS;
+const groupKeyOrder = (groupBy: WorkQueryBoardGroupBy): readonly string[] => {
+  if (groupBy === 'workflowCategory') return WORK_QUERY_WORKFLOW_COLUMNS;
+  if (groupBy === 'priority') return WORK_QUERY_PRIORITY_KEYS;
+  if (groupBy === 'status') return WORK_QUERY_STATUS_COLUMNS;
+  return [];
+};
 
 export const workQueryListGroups = (
   tasks: readonly WorkQueryResultTask[],
@@ -104,10 +152,7 @@ export const workQueryListGroups = (
 ): { key: string; tasks: WorkQueryResultTask[] }[] => {
   const buckets = new Map<string, WorkQueryResultTask[]>();
   for (const task of tasks) {
-    const key =
-      groupBy === 'workflowCategory'
-        ? (task.workflowCategory ?? 'backlog')
-        : (task.status ?? 'backlog');
+    const key = rawWorkQueryBoardKey(externalTaskColumnKey(task, groupBy));
     const bucket = buckets.get(key);
     if (bucket) bucket.push(task);
     else buckets.set(key, [task]);
@@ -130,7 +175,7 @@ export const workQueryListGroups = (
 export const workQueryListSections = (
   groups: readonly WorkQueryGroupPage<WorkQueryResultTask>[] | undefined,
   tasks: readonly WorkQueryResultTask[],
-  groupBy: 'attention' | WorkQueryBoardGroupBy,
+  groupBy: WorkQueryListGroupBy,
 ): {
   hasMore?: boolean;
   key: string;
@@ -149,6 +194,10 @@ export const workQueryListSections = (
   }
   // 'attention' can't be derived client-side (it reads the dependency graph),
   // so a groups-less response degrades to its tail axis — workflow state.
+  // Activity, cycle and project have no client bucket.
+  if (groupBy === 'activityDate' || groupBy === 'cycle' || groupBy === 'project' || groupBy === 'none') {
+    return [];
+  }
   return workQueryListGroups(tasks, groupBy === 'attention' ? 'workflowCategory' : groupBy);
 };
 
@@ -197,7 +246,12 @@ export const workQueryTargetKeyFromKanbanColumn = (
 export const workQuerySourceKeysForKanbanColumn = (
   _groupBy: WorkQueryBoardGroupBy,
   columnKey: string,
-): string[] => [workQueryKeyForKanbanColumn(columnKey)];
+): string[] => {
+  const parsed = parseBoardCellKey(columnKey);
+  const column = rawWorkQueryBoardKey(parsed.columnKey);
+  if (!parsed.laneKey) return [column];
+  return [`${column}${WORK_QUERY_BOARD_KEY_SEP}${rawWorkQueryBoardKey(parsed.laneKey)}`];
+};
 
 export const workQueryMovePlan = (input: {
   groupBy: WorkQueryBoardGroupBy;

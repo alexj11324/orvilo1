@@ -14,6 +14,7 @@ import {
   myWorkDirectoryNullaryActive,
   myWorkDirectorySelectedValues,
   toggleMyWorkDirectoryEnum,
+  toggleMyWorkDirectoryMulti,
   toggleMyWorkDirectoryNullary,
   toggleMyWorkDirectoryValue,
   workQueryFilterHasPredicates,
@@ -22,19 +23,81 @@ import {
 const builderWith = (rows: FilterRow[]): BuilderState => ({ any: [], rows, slots: [] });
 
 describe('myWorkComposedQuery', () => {
-  it('returns null for modes the generic query endpoint cannot express', () => {
-    for (const mode of ['subscribed', 'activity'] as const) {
-      expect(
-        myWorkComposedQuery({
-          delegated: false,
-          groupBy: 'none',
-          layout: 'list',
-          mode,
-          noProject: false,
-          ordering: 'default',
-        }),
-      ).toBeNull();
-    }
+  it('expresses subscribed and activity as predicates the generic query can compile', () => {
+    const subscribed = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'none',
+      layout: 'list',
+      mode: 'subscribed',
+      noProject: false,
+      ordering: 'default',
+    });
+    expect(subscribed?.filter?.all).toEqual([
+      { field: 'subscribed', op: 'eq', value: { ref: 'currentUser' } },
+    ]);
+    const activity = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'none',
+      layout: 'list',
+      mode: 'activity',
+      noProject: false,
+      ordering: 'default',
+    });
+    expect(activity?.filter?.all).toEqual([
+      { field: 'hasActivity', op: 'eq', value: { ref: 'currentUser' } },
+    ]);
+    expect(
+      myWorkComposedQuery({
+        delegated: false,
+        groupBy: 'none',
+        layout: 'list',
+        mode: 'delegated',
+        noProject: false,
+        ordering: 'default',
+      }),
+    ).toBeNull();
+  });
+
+  it('puts a board lane and the completed window on the query', () => {
+    const query = myWorkComposedQuery({
+      completed: 'none',
+      delegated: false,
+      groupBy: 'workflowCategory',
+      layout: 'board',
+      mode: 'assigned',
+      noProject: false,
+      ordering: 'default',
+      subGroupBy: 'priority',
+    });
+    expect(query?.groupBy).toBe('workflowCategory');
+    expect(query?.subGroupBy).toBe('priority');
+    expect(query?.filter?.all).toEqual([
+      { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
+      { field: 'status', op: 'notIn', value: ['completed', 'canceled'] },
+    ]);
+    const conflict = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'workflowCategory',
+      layout: 'board',
+      mode: 'assigned',
+      noProject: false,
+      ordering: 'default',
+      subGroupBy: 'status',
+    });
+    expect(conflict?.subGroupBy).toBeUndefined();
+    const listed = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'activityDate',
+      layout: 'list',
+      mode: 'activity',
+      noProject: false,
+      ordering: 'default',
+      subGroupBy: 'priority',
+      timeZone: 'UTC',
+    });
+    expect(listed?.groupBy).toBe('activityDate');
+    expect(listed?.subGroupBy).toBe('priority');
+    expect(listed?.timeZone).toBe('UTC');
   });
 
   it('keeps the mode predicate and AND-merges builder predicates', () => {
@@ -150,6 +213,17 @@ describe('filter directory', () => {
       ref: 'currentUser',
     });
     expect(myWorkDirectoryFieldActive(cleared, 'assigneeUserId')).toBe(false);
+  });
+
+  it('collects priority picks into one numeric in predicate', () => {
+    const picked = toggleMyWorkDirectoryMulti(
+      toggleMyWorkDirectoryMulti(builderWith([]), 'priority', 1),
+      'priority',
+      4,
+    );
+    expect(builderToFilter('task', picked)).toEqual({
+      all: [{ field: 'priority', op: 'in', value: [1, 4] }],
+    });
   });
 
   it('collects enum picks into a single in predicate', () => {

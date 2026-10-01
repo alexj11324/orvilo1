@@ -8,9 +8,6 @@ import { SettingsTabs } from '@/store/global/initialState';
 const loading = (_debugId: string) => () => createElement(SettingsSectionSkeleton);
 
 export const componentMap = {
-  [SettingsTabs.Provider]: dynamic(() => import('../ProviderBindings'), {
-    loading: loading('Settings > Provider'),
-  }),
   [SettingsTabs.Advanced]: dynamic(() => import('../advanced'), {
     loading: loading('Settings > Advanced'),
   }),
@@ -19,6 +16,12 @@ export const componentMap = {
   }),
   [SettingsTabs.Appearance]: dynamic(() => import('../appearance'), {
     loading: loading('Settings > Appearance'),
+  }),
+  [SettingsTabs.Provider]: dynamic(() => import('../provider'), {
+    loading: loading('Settings > Provider'),
+  }),
+  [SettingsTabs.ServiceModel]: dynamic(() => import('../service-model'), {
+    loading: loading('Settings > ServiceModel'),
   }),
   [SettingsTabs.Memory]: dynamic(() => import('../memory'), {
     loading: loading('Settings > Memory'),

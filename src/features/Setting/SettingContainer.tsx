@@ -1,7 +1,7 @@
 'use client';
 
 import { cssVar, useTheme } from 'antd-style';
-import { type HTMLAttributes, type PropsWithChildren, type ReactNode } from 'react';
+import { type HTMLAttributes, type PropsWithChildren, type ReactNode, type Ref } from 'react';
 import { memo } from 'react';
 
 interface SettingContainerProps extends HTMLAttributes<HTMLDivElement> {
@@ -10,6 +10,7 @@ interface SettingContainerProps extends HTMLAttributes<HTMLDivElement> {
   maxWidth?: number | string;
   paddingBlock?: string | number;
   paddingInline?: string | number;
+  ref?: Ref<HTMLDivElement>;
   variant?: 'default' | 'secondary';
 }
 const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
@@ -22,6 +23,7 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
     paddingBlock,
     paddingInline,
     style,
+    ref,
     ...rest
   }) => {
     const theme = useTheme(); // Keep for colorBgContainerSecondary (not in cssVar)
@@ -29,6 +31,7 @@ const SettingContainer = memo<PropsWithChildren<SettingContainerProps>>(
       <div
         className="flex flex-col items-center h-full w-full"
         {...rest}
+        ref={ref}
         style={{
           background:
             variant === 'secondary' ? theme.colorBgContainerSecondary : cssVar.colorBgContainer,

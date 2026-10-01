@@ -6,6 +6,7 @@ export interface SettingsSearchContext {
   enableBusinessFeatures: boolean;
   enableComposio: boolean;
   enableGatewayMode: boolean;
+  enableSTT: boolean;
   /** Whether the signed-in user has an email on their profile */
   hasEmail: boolean;
   hideDocs: boolean;
@@ -68,6 +69,15 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
   [SettingsTabs.Hotkey]: ['hotkey', 'shortcut', 'keyboard'],
   [SettingsTabs.Labs]: ['labs', 'experiment', 'beta', 'preview', 'developer'],
   [SettingsTabs.Memory]: ['memory', 'memories', 'personalization'],
+  [SettingsTabs.Messenger]: [
+    'messenger',
+    'chat platform',
+    'bot',
+    'telegram',
+    'slack',
+    'discord',
+    'wechat',
+  ],
   [SettingsTabs.Notification]: ['notification', 'email', 'push', 'alerts', 'inbox'],
   [SettingsTabs.Plans]: ['subscription', 'plan', 'upgrade', 'pricing', 'membership'],
   [SettingsTabs.Profile]: [
@@ -80,7 +90,40 @@ export const TAB_SEARCH_EN_KEYWORDS: Partial<Record<SettingsTabs, string[]>> = {
     'sign out',
     'logout',
   ],
+  [SettingsTabs.Provider]: [
+    'provider',
+    'model',
+    'llm',
+    'api',
+    'api key',
+    'apikey',
+    'byok',
+    'bring your own key',
+    'endpoint',
+    'model provider',
+    'language model',
+    'custom provider',
+  ],
   [SettingsTabs.Proxy]: ['proxy', 'network', 'connection', 'proxy settings'],
+  [SettingsTabs.Referral]: ['referral', 'invite', 'rewards', 'bonus'],
+  [SettingsTabs.ServiceModel]: [
+    'service model',
+    'model assignment',
+    'topic naming',
+    'translation',
+    'tts',
+    'tts settings',
+    'voice',
+    'speech',
+    'image',
+    'image generation',
+    'embedding',
+    'prompt rewrite',
+    'suggestion',
+    'search',
+    'search model',
+  ],
+  [SettingsTabs.Skill]: ['skill', 'skills', 'plugins', 'tools'],
   [SettingsTabs.Stats]: ['analytics', 'statistics', 'stats'],
   [SettingsTabs.Storage]: [
     'storage',
@@ -128,10 +171,15 @@ export const TAB_SEARCH_KEYWORDS_KEYS: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Hotkey]: 'settingsSearch.tabKeywords.hotkey',
   [SettingsTabs.Labs]: 'settingsSearch.tabKeywords.labs',
   [SettingsTabs.Memory]: 'settingsSearch.tabKeywords.memory',
+  [SettingsTabs.Messenger]: 'settingsSearch.tabKeywords.messenger',
   [SettingsTabs.Notification]: 'settingsSearch.tabKeywords.notification',
   [SettingsTabs.Plans]: 'settingsSearch.tabKeywords.plans',
   [SettingsTabs.Profile]: 'settingsSearch.tabKeywords.profile',
+  [SettingsTabs.Provider]: 'settingsSearch.tabKeywords.provider',
   [SettingsTabs.Proxy]: 'settingsSearch.tabKeywords.proxy',
+  [SettingsTabs.Referral]: 'settingsSearch.tabKeywords.referral',
+  [SettingsTabs.ServiceModel]: 'settingsSearch.tabKeywords.serviceModel',
+  [SettingsTabs.Skill]: 'settingsSearch.tabKeywords.skill',
   [SettingsTabs.Stats]: 'settingsSearch.tabKeywords.stats',
   [SettingsTabs.Storage]: 'settingsSearch.tabKeywords.storage',
   [SettingsTabs.SystemTools]: 'settingsSearch.tabKeywords.systemTools',
@@ -373,6 +421,32 @@ export const SETTINGS_SEARCH_ITEMS: SettingsSearchItem[] = [
     tab: SettingsTabs.Labs,
     ...(desktopOnly ? { visible: (ctx: SettingsSearchContext) => ctx.isDesktop } : {}),
   })),
+  // Service Model
+  {
+    anchor: 'service-model-assignments',
+    keywords: ['model assignment', 'topic naming', 'translation', 'default model'],
+    labelKey: 'serviceModel.modelAssignments.title',
+    tab: SettingsTabs.ServiceModel,
+  },
+  {
+    anchor: 'service-model-memory',
+    keywords: ['memory', 'embedding', 'vector'],
+    labelKey: 'serviceModel.memoryModels.title',
+    tab: SettingsTabs.ServiceModel,
+  },
+  {
+    anchor: 'service-model-optional-features',
+    keywords: ['follow up', 'input completion', 'prompt rewrite', 'suggestion'],
+    labelKey: 'serviceModel.optionalFeatures.title',
+    tab: SettingsTabs.ServiceModel,
+  },
+  {
+    anchor: 'service-model-tts',
+    keywords: ['tts', 'tts settings', 'voice', 'speech', 'text to speech'],
+    labelKey: 'settingTTS.openai.ttsModel',
+    tab: SettingsTabs.ServiceModel,
+    visible: (ctx) => ctx.enableSTT,
+  },
   // Storage
   {
     anchor: 'storage-export',

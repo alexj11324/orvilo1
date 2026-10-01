@@ -86,6 +86,7 @@ export enum SettingsTabs {
   Labs = 'labs',
   LLM = 'llm',
   Memory = 'memory',
+  Messenger = 'messenger',
   Notification = 'notification',
   OAuthApps = 'oauth-apps',
   // business
@@ -117,6 +118,31 @@ export enum ProfileTabs {
   Stats = 'stats',
   Usage = 'usage',
 }
+
+export const MODEL_DETAIL_PANEL_EXPANDED_KEYS = [
+  'rating',
+  'context',
+  'abilities',
+  'pricing',
+  'config',
+] as const;
+
+export type ModelDetailPanelExpandedKey = (typeof MODEL_DETAIL_PANEL_EXPANDED_KEYS)[number];
+
+/**
+ * Expandable sections of the ModelDetailPanel Accordion, all expanded by default.
+ *
+ * Persistence stores the COLLAPSED keys (`modelDetailPanelCollapsedKeys`) instead of the
+ * expanded ones: an expanded-keys array persisted before a section shipped would keep that
+ * section collapsed forever (this happened to `rating`), while a collapsed-keys array lets
+ * newly added sections default to expanded automatically.
+ */
+export const MODEL_DETAIL_PANEL_EXPANDABLE_KEYS = [
+  'rating',
+  'abilities',
+  'pricing',
+  'config',
+] as const satisfies readonly ModelDetailPanelExpandedKey[];
 
 export type TaskViewMode = 'kanban' | 'list';
 
@@ -306,6 +332,21 @@ export interface SystemStatus {
   leftPanelWidth: number;
   mobileShowPortal?: boolean;
   mobileShowTopic?: boolean;
+  /**
+   * (Rating / Abilities / Pricing / Model Config). Single shared preference
+   * across all entries (model picker submenu, ChatInput extend-params popover).
+   * Collapsed (not expanded) keys are stored so new sections default to expanded
+   * — see MODEL_DETAIL_PANEL_EXPANDABLE_KEYS.
+   */
+  modelDetailPanelCollapsedKeys?: ModelDetailPanelExpandedKey[];
+  /**
+   * ModelSwitchPanel grouping mode
+   */
+  modelSwitchPanelGroupMode?: 'byModel' | 'byProvider';
+  /**
+   * ModelSwitchPanel width
+   */
+  modelSwitchPanelWidth?: number;
   /**
    * Per (user, workspace) My issues display options, keyed by the same
    * `userId:workspaceId` scope key as `inboxPriorityMode`, then by tab
@@ -673,6 +714,9 @@ export const INITIAL_STATUS = {
   // why the persisted `leftPanelWidth` in localStorage wins over this value.
   leftPanelWidth: 244,
   mobileShowTopic: false,
+  modelDetailPanelCollapsedKeys: [],
+  modelSwitchPanelGroupMode: 'byProvider',
+  modelSwitchPanelWidth: 460,
   noWideScreen: true,
   pageAgentPanelWidth: 360,
   pagePageSize: 20,

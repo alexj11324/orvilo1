@@ -6,8 +6,7 @@ import { ArticleSkeleton } from '@/components/Skeleton';
 import ConversationListSkeleton from '@/components/Skeleton/Conversation/List';
 import TaskItemSkeleton from '@/features/AgentTasks/AgentTaskList/TaskItemSkeleton';
 import { BriefCardSkeleton } from '@/features/DailyBrief/BriefCardSkeleton';
-import MemoryDetailLoading from '@/routes/(main)/memory/features/DetailLoading';
-import MemoryLoading from '@/routes/(main)/memory/features/Loading';
+import ModelSkeletonList from '@/features/Settings/provider/features/ModelList/SkeletonList';
 
 const Case = ({ children, title }: { children: ReactNode; title: string }) => (
   <div
@@ -37,11 +36,8 @@ createRoot(document.querySelector('#root')!).render(
       <Case title="AgentTasks / TaskItemSkeleton">
         <TaskItemSkeleton />
       </Case>
-      <Case title="memory / Loading">
-        <MemoryLoading />
-      </Case>
-      <Case title="memory / DetailLoading">
-        <MemoryDetailLoading />
+      <Case title="Settings / provider ModelList SkeletonList">
+        <ModelSkeletonList />
       </Case>
       <Case title="Conversation / List skeleton">
         <ConversationListSkeleton />

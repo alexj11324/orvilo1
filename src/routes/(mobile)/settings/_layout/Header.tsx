@@ -3,7 +3,7 @@
 import { ChatHeader } from '@lobehub/ui/mobile';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
-import { useMatch, useParams } from 'react-router';
+import { useMatch, useParams, useSearchParams } from 'react-router';
 
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useShowMobileWorkspace } from '@/hooks/useShowMobileWorkspace';
@@ -22,8 +22,7 @@ const TAB_TITLE_KEY: Partial<Record<SettingsTabs, string>> = {
   [SettingsTabs.Labs]: 'labs:title',
   [SettingsTabs.Plans]: 'subscription:tab.plans',
   [SettingsTabs.Profile]: 'auth:profile.title',
-  // No Referral entry: the page is retired and nothing routes to it any more,
-  // so this map would only ever title a not-found.
+  [SettingsTabs.Referral]: 'subscription:tab.referral',
   // Legacy deep-links still hit `:tab` briefly before the redirect kicks in —
   // keep the title mapping so the header never flashes a raw key.
   [SettingsTabs.ServiceModel]: 'setting:tab.serviceModel',
@@ -44,14 +43,27 @@ const Header = memo(() => {
   const { t } = useTranslation(['setting', 'auth', 'labs', 'subscription']);
   const showMobileWorkspace = useShowMobileWorkspace();
   const navigate = useWorkspaceAwareNavigate();
-  const params = useParams<{ tab?: string }>();
+  const params = useParams<{ providerId?: string; tab?: string }>();
+  const [searchParams] = useSearchParams();
   const workspaceSettingsMatch = useMatch('/:workspaceSlug/settings/:workspaceTab/*');
 
   const isSessionActive = useSessionStore((s) => !!s.activeId);
+  // Personal provider details carry the id in the path; the workspace provider
+  // page canonicalizes it into the `provider` query param instead.
+  const queryProvider = searchParams.get('provider');
+  const providerId =
+    params.providerId ?? (queryProvider && queryProvider !== 'all' ? queryProvider : undefined);
+  const isProvider = providerId && providerId !== 'all';
 
   const handleBackClick = () => {
     if (isSessionActive && showMobileWorkspace) {
       navigate('/agent');
+    } else if (params.providerId && params.providerId !== 'all') {
+      navigate('/settings/provider/all', { escape: true });
+    } else if (isProvider) {
+      // Query-selected provider (workspace form): back to the workspace
+      // provider list instead of escaping to personal settings.
+      navigate('/settings/provider');
     } else {
       navigate('/me/settings', { escape: true });
     }
@@ -75,7 +87,7 @@ const Header = memo(() => {
         <ChatHeader.Title
           title={
             <div className="flex items-center gap-2">
-              <span style={{ lineHeight: 1.2 }}>{tabTitle}</span>
+              <span style={{ lineHeight: 1.2 }}>{isProvider ? providerId : tabTitle}</span>
             </div>
           }
         />

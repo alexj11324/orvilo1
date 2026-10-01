@@ -178,7 +178,13 @@ export interface TaskListViewOptionsState {
  * lockstep. `properties` keys are the `MyWorkRowProperty` ids.
  */
 export interface MyWorkViewOptionsState {
-  boardGrouping?: 'status' | 'workflowCategory';
+  boardGrouping?: 'assignee' | 'priority' | 'status' | 'workflowCategory';
+  /** Board swimlane. Mirrors `MyWorkDisplay.boardLane`. */
+  boardLane?: 'assignee' | 'none' | 'priority' | 'project' | 'status';
+  /** User-collapsed board column keys. Mirrors `MyWorkDisplay.collapsedColumns`. */
+  collapsedColumns?: string[];
+  /** User-collapsed list group keys. Mirrors `MyWorkDisplay.collapsedGroups`. */
+  collapsedGroups?: string[];
   completed?: 'all' | 'none' | 'pastDay';
   grouping?:
     | 'activityDate'

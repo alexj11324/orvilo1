@@ -14,6 +14,7 @@ import {
   COLUMN_STATUS_VISUAL,
   computeKanbanPosition,
   effectiveTaskPosition,
+  externalKanbanTaskPatch,
   externalVisibleKanbanColumns,
   findKanbanColumn,
   getKanbanAssigneeUpdate,
@@ -719,6 +720,16 @@ describe('kanbanColumnAllowsCreate', () => {
       workflowCategory: 'in_progress',
     });
     expect(kanbanColumnCreatePreset('st:paused')).toEqual({ status: 'paused' });
+    expect(kanbanColumnCreatePreset('pr:2')).toEqual({ priority: 2 });
+    expect(kanbanColumnCreatePreset('as:none')).toEqual({ assigneeUserId: null });
+    expect(kanbanColumnCreatePreset('ag:agt_1')).toEqual({ assigneeAgentId: 'agt_1' });
+    expect(externalKanbanTaskPatch('agent', { droppable: true, key: 'ag:none', targetStatus: null })).toEqual({
+      assigneeAgentId: null,
+    });
+    expect(kanbanColumnCreatePreset(`wf:todo${'\u001F'}pj:proj_1`)).toEqual({
+      projectId: 'proj_1',
+      workflowCategory: 'todo',
+    });
   });
 
   it('refuses create in my-task scope and on external boards without a team context', () => {

@@ -182,9 +182,12 @@ export interface AgentExecutionError {
 /**
  * Dispatch transport an admission was sent over. `agent_run_request` is the
  * device CLI path; `tool_call` is the platform-agent path (`runHeteroTask`
- * for openclaw / hermes); `cloud_sandbox` is the managed sandbox spawn.
+ * for openclaw / hermes); `cloud_sandbox` is the managed sandbox spawn;
+ * `embedded` is the server-hosted canonical runtime (Prime embedded harness)
+ * — no remote execution host exists to address, so `device*` fields stay
+ * empty for it.
  */
-export type RemoteRunChannel = 'agent_run_request' | 'cloud_sandbox' | 'tool_call';
+export type RemoteRunChannel = 'agent_run_request' | 'cloud_sandbox' | 'embedded' | 'tool_call';
 
 /**
  * Durable admission record for a remotely-executed run (P20). Persisted on

@@ -11,11 +11,6 @@ export const taskDetailFullPageStyles = createStaticStyles(({ css }) => ({
       padding-block-start: 5px;
     }
 
-    [data-task-detail-header] textarea.ant-input {
-      font-size: 24px;
-      line-height: 1.6;
-    }
-
     /* Keep a readable main column until the rail fits beside it. */
     @container work-surface (width < 1136px) {
       [data-task-detail-header] {

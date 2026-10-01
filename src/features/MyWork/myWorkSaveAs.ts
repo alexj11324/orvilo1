@@ -1,11 +1,12 @@
 import type { MyWorkMode, WorkQuery, WorkQueryLayout } from '@orvilo/types';
 
 /**
- * My issues tabs whose WorkQuery AST is self-contained. `subscribed` and
- * `activity` resolve through mode-injected EXISTS clauses server-side, so
- * saving them as a bare query would silently change their semantics.
+ * My issues tabs whose WorkQuery AST is self-contained. Subscribed and
+ * activity carry their EXISTS predicate (`subscribed` / `hasActivity` =
+ * currentUser), so a saved view keeps the tab's membership. Activity sort
+ * still needs the query `mode` when the list should follow notification time.
  */
-export const MY_WORK_SAVEABLE_MODES = ['assigned', 'created'] as const;
+export const MY_WORK_SAVEABLE_MODES = ['activity', 'assigned', 'created', 'subscribed'] as const;
 
 export type MyWorkSaveableMode = (typeof MY_WORK_SAVEABLE_MODES)[number];
 
@@ -40,6 +41,26 @@ export const myWorkSaveAsQuery = (
         schemaVersion: 1,
         sort: [
           { direction: 'desc', field: 'createdAt' },
+          { direction: 'asc', field: 'id' },
+        ],
+        ...board,
+      };
+    }
+    case 'subscribed': {
+      return {
+        entityType: 'task',
+        filter: { all: [{ field: 'subscribed', op: 'eq', value: current }] },
+        schemaVersion: 1,
+        ...board,
+      };
+    }
+    case 'activity': {
+      return {
+        entityType: 'task',
+        filter: { all: [{ field: 'hasActivity', op: 'eq', value: current }] },
+        schemaVersion: 1,
+        sort: [
+          { direction: 'desc', field: 'updatedAt' },
           { direction: 'asc', field: 'id' },
         ],
         ...board,

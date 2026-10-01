@@ -12,6 +12,7 @@ import {
   createProviderConfigurationBroker,
 } from '@orvilo/agent-execution/controlPlane';
 import type { CredentialKVPayload, ProviderBindingConfig } from '@orvilo/types';
+import { isRecord } from '@orvilo/utils/object';
 import { eq } from 'drizzle-orm';
 
 import { CredentialModel } from '@/database/models/credential';
@@ -22,6 +23,12 @@ import type { OrviloDatabase } from '@/database/type';
 import type { ProviderConfigurationComposition } from './configuration';
 
 const PROVIDER_REQUEST_TIMEOUT_MS = 15_000;
+/**
+ * Real completions take far longer than the catalog/check budget. Bounded by
+ * the caller's iterator cancellation (broker.cancel unwinds the fetch) plus
+ * this ceiling for a provider that never finishes.
+ */
+const PROVIDER_INFER_TIMEOUT_MS = 300_000;
 /** Headers a credential may never override through stored values. */
 const RESERVED_HEADERS = new Set(['content-length', 'host', 'transfer-encoding']);
 /**
@@ -29,6 +36,45 @@ const RESERVED_HEADERS = new Set(['content-length', 'host', 'transfer-encoding']
  * model catalog publishes no limits — understates rather than fabricates.
  */
 const CAPABILITY_OUTPUT_FLOOR = 4096;
+
+/**
+ * Decrypt the referenced personal credential and map it onto provider request
+ * headers. `kv-header` secrets forward their stored headers verbatim (minus
+ * reserved hop-by-hop names); `kv-env` secrets fold into the two de-facto auth
+ * headers (`Authorization: Bearer` + `x-api-key`). The mapping stays inside
+ * this trusted boundary — the returned headers are request material, never a
+ * client-facing representation.
+ */
+export const resolveProviderCredentialHeaders = async (
+  db: OrviloDatabase,
+  ownerId: string,
+  secretReference: string,
+): Promise<Record<string, string> | undefined> => {
+  const credentials = new CredentialModel(db, ownerId);
+  const credential = await credentials.findPersonalById(
+    secretReference.slice('credential:'.length),
+  );
+  if (!credential) return undefined;
+  const payload = await credentials.decryptPayload(credential);
+  if (!payload || typeof payload !== 'object' || !('values' in payload)) return undefined;
+  const headers: Record<string, string> = {};
+  const values = (payload as CredentialKVPayload).values ?? {};
+  if (credential.type === 'kv-header') {
+    for (const [name, value] of Object.entries(values)) {
+      if (!RESERVED_HEADERS.has(name.toLowerCase())) headers[name] = value;
+    }
+  } else {
+    // Env-style keys become the two de-facto provider auth headers.
+    const secret =
+      Object.entries(values).find(([key]) => /KEY|TOKEN|SECRET|AUTH/i.test(key))?.[1] ??
+      Object.values(values)[0];
+    if (secret) {
+      headers.Authorization = `Bearer ${secret}`;
+      headers['x-api-key'] = secret;
+    }
+  }
+  return Object.keys(headers).length === 0 ? undefined : headers;
+};
 
 /**
  * Personal-scope convention: a binding is tenant-scoped to its owning user,
@@ -74,7 +120,7 @@ const toContractBinding = (
  * never cross it. `check` must make a real provider request; a stored
  * configuration row alone never yields `ready`.
  */
-class SqlTrustedProviderBackend implements TrustedProviderBackend {
+export class SqlTrustedProviderBackend implements TrustedProviderBackend {
   constructor(private readonly db: OrviloDatabase) {}
 
   private async resolveConnection(binding: ProviderBinding) {
@@ -82,30 +128,12 @@ class SqlTrustedProviderBackend implements TrustedProviderBackend {
     const row = await bindings.find(binding.bindingId);
     const config = row?.config;
     if (!config || row?.revision !== binding.revision) return undefined;
-    const credentials = new CredentialModel(this.db, binding.ownerId);
-    const credential = await credentials.findPersonalById(
-      binding.secretReference.slice('credential:'.length),
+    const headers = await resolveProviderCredentialHeaders(
+      this.db,
+      binding.ownerId,
+      binding.secretReference,
     );
-    if (!credential) return undefined;
-    const payload = await credentials.decryptPayload(credential);
-    if (!payload || typeof payload !== 'object' || !('values' in payload)) return undefined;
-    const headers: Record<string, string> = {};
-    const values = (payload as CredentialKVPayload).values ?? {};
-    if (credential.type === 'kv-header') {
-      for (const [name, value] of Object.entries(values)) {
-        if (!RESERVED_HEADERS.has(name.toLowerCase())) headers[name] = value;
-      }
-    } else {
-      // Env-style keys become the two de-facto provider auth headers.
-      const secret =
-        Object.entries(values).find(([key]) => /KEY|TOKEN|SECRET|AUTH/i.test(key))?.[1] ??
-        Object.values(values)[0];
-      if (secret) {
-        headers.Authorization = `Bearer ${secret}`;
-        headers['x-api-key'] = secret;
-      }
-    }
-    if (Object.keys(headers).length === 0) return undefined;
+    if (!headers) return undefined;
     return { endpoint: config.endpoint.replace(/\/+$/, ''), headers, model: config.model };
   }
 
@@ -156,42 +184,157 @@ class SqlTrustedProviderBackend implements TrustedProviderBackend {
       }));
   }
 
-  async *infer(binding: ProviderBinding, request: InferenceRequest): AsyncIterable<InferenceEvent> {
-    const response = await this.request(binding, '/chat/completions', {
-      body: JSON.stringify({
-        max_tokens: request.maxOutputTokens,
-        messages: request.messages,
-        model: request.modelRoute,
-        stream: false,
-      }),
-      headers: { 'content-type': 'application/json' },
-      method: 'POST',
-    });
-    if (!response?.ok) {
+  async *infer(
+    binding: ProviderBinding,
+    request: InferenceRequest,
+    options?: { signal?: AbortSignal },
+  ): AsyncIterable<InferenceEvent> {
+    const connection = await this.resolveConnection(binding);
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), PROVIDER_INFER_TIMEOUT_MS);
+    // Callers (broker.cancel, session.abort) abort us here — the fetch signal
+    // drops the held upstream request immediately.
+    options?.signal?.addEventListener('abort', () => controller.abort(), { once: true });
+    if (options?.signal?.aborted) controller.abort();
+    try {
+      if (!connection) {
+        yield {
+          error: { code: 'runtime_failed', message: 'Provider request failed', retryable: true },
+          type: 'error',
+        };
+        return;
+      }
+      let response: Response | undefined;
+      try {
+        response = await fetch(`${connection.endpoint}/chat/completions`, {
+          body: JSON.stringify({
+            max_tokens: request.maxOutputTokens,
+            messages: request.messages,
+            model: request.modelRoute,
+            stream: true,
+            stream_options: { include_usage: true },
+          }),
+          headers: { 'content-type': 'application/json', ...connection.headers },
+          method: 'POST',
+          signal: controller.signal,
+        });
+      } catch {
+        response = undefined;
+      }
+      if (!response?.ok) {
+        yield {
+          error: { code: 'runtime_failed', message: 'Provider request failed', retryable: true },
+          type: 'error',
+        };
+        return;
+      }
+      const contentType = response.headers.get('content-type') ?? '';
+      if (contentType.includes('text/event-stream')) {
+        yield* this.streamCompletions(response);
+        return;
+      }
+      // Some providers silently ignore `stream` and answer JSON instead.
+      const body: unknown = await response.json().catch(() => undefined);
+      if (isRecord(body)) {
+        const first = Array.isArray(body.choices) ? body.choices[0] : undefined;
+        const text = isRecord(first) && isRecord(first.message) ? first.message.content : undefined;
+        if (typeof text === 'string' && text.length > 0) yield { text, type: 'text' };
+        const usage = isRecord(body.usage) ? body.usage : undefined;
+        if (
+          typeof usage?.prompt_tokens === 'number' &&
+          typeof usage?.completion_tokens === 'number'
+        ) {
+          yield {
+            inputTokens: usage.prompt_tokens,
+            outputTokens: usage.completion_tokens,
+            type: 'usage',
+          };
+        }
+      }
+    } finally {
+      // On early iterator exit (broker.cancel / revocation), abort the open
+      // provider call rather than letting it run to its own timeout.
+      clearTimeout(timer);
+      controller.abort();
+    }
+  }
+
+  private async *streamCompletions(response: Response): AsyncIterable<InferenceEvent> {
+    if (!response.body) {
       yield {
-        error: { code: 'runtime_failed', message: 'Provider request failed', retryable: true },
+        error: { code: 'runtime_failed', message: 'Provider stream ended', retryable: true },
         type: 'error',
       };
       return;
     }
-    const body = (await response.json().catch(() => undefined)) as
-      | {
-          choices?: { message?: { content?: string } }[];
-          usage?: { completion_tokens?: number; prompt_tokens?: number };
+    const reader = response.body.getReader();
+    const decoder = new TextDecoder();
+    let buffer = '';
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        buffer = buffer.replaceAll('\r\n', '\n');
+        for (;;) {
+          const end = buffer.indexOf('\n\n');
+          if (end === -1) break;
+          const frame = buffer.slice(0, end);
+          buffer = buffer.slice(end + 2);
+          const event = parseCompletionFrame(frame);
+          if (event === 'end') return;
+          if (event) yield event;
         }
-      | undefined;
-    const text = body?.choices?.[0]?.message?.content;
-    if (typeof text === 'string' && text.length > 0) yield { text, type: 'text' };
-    const usage = body?.usage;
+      }
+      const remaining = buffer.trim();
+      if (remaining.length > 0) {
+        const event = parseCompletionFrame(remaining);
+        if (event !== 'end' && event) yield event;
+      }
+    } finally {
+      try {
+        await reader.cancel();
+      } catch {
+        /* Provider stream teardown is best-effort. */
+      }
+    }
+  }
+}
+
+/**
+ * One OpenAI-compatible SSE frame → one contract event. Providers emit a single
+ * `data:` line per frame; extra/keepalive lines are ignored and `[DONE]` closes.
+ * Malformed JSON throws — the inference broker sanitizes it to a loud error.
+ */
+const parseCompletionFrame = (frame: string): InferenceEvent | 'end' | undefined => {
+  for (const line of frame.split('\n')) {
+    if (!line.startsWith('data:')) continue;
+    const data = line.slice(5).trim();
+    if (!data) continue;
+    if (data === '[DONE]') return 'end';
+    const parsed: unknown = JSON.parse(data);
+    if (!isRecord(parsed)) return undefined;
+    if (parsed.error !== undefined) {
+      return {
+        error: { code: 'runtime_failed', message: 'Provider stream error', retryable: true },
+        type: 'error',
+      };
+    }
+    const choices = parsed.choices;
+    const first = isRecord(choices) ? undefined : Array.isArray(choices) ? choices[0] : undefined;
+    const delta = isRecord(first) && isRecord(first.delta) ? first.delta.content : undefined;
+    if (typeof delta === 'string' && delta.length > 0) return { text: delta, type: 'text' };
+    const usage = isRecord(parsed.usage) ? parsed.usage : undefined;
     if (typeof usage?.prompt_tokens === 'number' && typeof usage?.completion_tokens === 'number') {
-      yield {
+      return {
         inputTokens: usage.prompt_tokens,
         outputTokens: usage.completion_tokens,
         type: 'usage',
       };
     }
   }
-}
+  return undefined;
+};
 
 /** Deployment composition for the canonical configuration broker. */
 export function createProviderBindingComposition(

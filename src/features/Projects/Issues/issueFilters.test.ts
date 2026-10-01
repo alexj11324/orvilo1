@@ -368,42 +368,49 @@ describe('projectIssuesViewFilterSeed', () => {
       all: [
         { field: 'projectId', op: 'eq', value: 'p1' },
         { field: 'status', op: 'in', value: ['running', 'backlog'] },
+        { field: 'priority', op: 'in', value: [1, 4] },
         {
           any: [
-            { field: 'priority', op: 'eq', value: 1 },
-            { field: 'priority', op: 'eq', value: 4 },
-          ],
-        },
-        {
-          any: [
-            { field: 'assigneeUserId', op: 'eq', value: 'u1' },
+            { field: 'assigneeUserId', op: 'in', value: ['u1'] },
             { field: 'assigneeUserId', op: 'isNull' },
           ],
         },
-        { field: 'labelId', op: 'eq', value: 'l1' },
-        { field: 'triageStatus', op: 'eq', value: 'untriaged' },
+        { field: 'labelId', op: 'in', value: ['l1'] },
+        { field: 'triageStatus', op: 'in', value: ['untriaged'] },
       ],
     });
   });
 
-  it('only emits fields the task work-query registry knows', () => {
-    // agent / date / text / null-creator have no task work-query field — they
-    // stay URL-only and never leak into a saved view's predicate.
+  it('compiles agent, date, text and an empty creator into the saved view', () => {
     const seed = projectIssuesViewFilterSeed('p1', [
       { type: 'agent', values: ['agent-1'] },
       { type: 'creator', values: [null] },
       { field: 'created', type: 'date', window: 'past' },
       { query: 'billing', type: 'text' },
     ]);
-    expect(seed).toEqual({ all: [{ field: 'projectId', op: 'eq', value: 'p1' }] });
+    expect(seed.all?.[0]).toEqual({ field: 'projectId', op: 'eq', value: 'p1' });
+    expect(seed.all).toEqual(
+      expect.arrayContaining([
+        { field: 'assigneeAgentId', op: 'in', value: ['agent-1'] },
+        { field: 'createdByUserId', op: 'isNull' },
+        { field: 'text', op: 'contains', value: 'billing' },
+      ]),
+    );
+    const created = seed.all?.find((node) => 'field' in node && node.field === 'createdAt');
+    expect(created).toMatchObject({ field: 'createdAt', op: 'lt' });
   });
 
-  it('keeps expressible creator values while dropping the null choice', () => {
+  it('keeps a creator id and the empty choice together', () => {
     const seed = projectIssuesViewFilterSeed('p1', [{ type: 'creator', values: ['u1', null] }]);
     expect(seed).toEqual({
       all: [
         { field: 'projectId', op: 'eq', value: 'p1' },
-        { field: 'createdByUserId', op: 'eq', value: 'u1' },
+        {
+          any: [
+            { field: 'createdByUserId', op: 'in', value: ['u1'] },
+            { field: 'createdByUserId', op: 'isNull' },
+          ],
+        },
       ],
     });
   });

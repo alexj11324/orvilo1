@@ -5,6 +5,8 @@ export * from './fileActionExecutor';
 export * from './handoff';
 export * from './index';
 export * from './isolation';
+export * from './primeEmbeddedArtifact';
+export * from './primeEmbeddedRuntime';
 export * from './primeRuntime';
 export * from './primeStdioTransport';
 export * from './scopedFileWriter';

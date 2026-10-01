@@ -37,7 +37,7 @@
       "disposition": "KEEP",
       "reason": "ACP is the only production execution path (P70/P21). Harness binding, gateway, device control stay.",
       "globs": [
-        "packages/{agent-execution,agent-gateway-client,agent-manager-runtime,agent-mock,agent-signal,agent-templates,agent-tracing,heterogeneous-agents,device-control,device-gateway-client,device-identity,device-sandbox,desktop-bridge,electron-client-ipc,electron-mac-notifications,electron-server-ipc,tool-runtime,mecha}/**",
+        "packages/{agent-execution,agent-gateway-client,agent-manager-runtime,agent-mock,agent-signal,agent-templates,agent-tracing,heterogeneous-agents,device-control,device-gateway-client,device-identity,device-sandbox,desktop-bridge,electron-client-ipc,electron-mac-notifications,electron-server-ipc,tool-runtime,mecha,prime-harness}/**",
         "apps/server/src/services/{agentExecution,aiAgent,agentRuntime}/**",
         "apps/server/src/modules/AgentExecution/**",
         "apps/server/src/routers/lambda/{agent,aiAgent,agentSignal,agentTrace,device,deviceWorkingDirs,deviceWorkspaceGuard}.ts"

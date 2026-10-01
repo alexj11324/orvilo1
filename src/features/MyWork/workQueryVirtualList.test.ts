@@ -5,6 +5,7 @@ import { myWorkPriorityGroupRank } from './myWorkDisplay';
 import {
   flattenWorkQueryVirtualItems,
   nestWorkQueryListGroups,
+  stickyVirtualSections,
 } from './workQueryVirtualList';
 
 const task = (id: string) =>
@@ -126,5 +127,53 @@ describe('flattenWorkQueryVirtualItems', () => {
     expect(
       laneFlat.items.filter((item) => item.depth === 1).map((item) => item.labelKey),
     ).toEqual(['a', 'b', 'none']);
+  });
+});
+
+describe('stickyVirtualSections', () => {
+  it('keeps a collapsed header as an empty sticky group', () => {
+    const groups = nestWorkQueryListGroups(
+      [{ hasMore: true, key: 'todo', tasks: [task('a')], total: 2 }],
+      false,
+    );
+    const flat = flattenWorkQueryVirtualItems({
+      allTasks: [task('a')],
+      collapsed: new Set(['todo']),
+      groups,
+      nestRows: false,
+      primaryAxis: 'status',
+    });
+    const sections = stickyVirtualSections(flat.items);
+    expect(sections?.groupCounts).toEqual([0]);
+    expect(sections?.headers.map((stack) => stack.map((header) => header.labelKey))).toEqual([
+      ['todo'],
+    ]);
+    expect(sections?.items).toEqual([]);
+  });
+
+  it('sticks the parent header with each lane and leaves rows in the group', () => {
+    const sep = WORK_QUERY_BOARD_KEY_SEP;
+    const groups = nestWorkQueryListGroups(
+      [
+        { hasMore: false, key: `todo${sep}a`, tasks: [task('a')], total: 1 },
+        { hasMore: true, key: `todo${sep}b`, tasks: [task('b')], total: 2 },
+      ],
+      true,
+    );
+    const flat = flattenWorkQueryVirtualItems({
+      allTasks: [task('a'), task('b')],
+      collapsed: new Set(),
+      groups,
+      laneAxis: 'assignee',
+      nestRows: false,
+      primaryAxis: 'status',
+    });
+    const sections = stickyVirtualSections(flat.items);
+    expect(sections?.headers.map((stack) => stack.map((header) => header.depth))).toEqual([
+      [0, 1],
+      [0, 1],
+    ]);
+    expect(sections?.items.every((item) => item.kind !== 'header')).toBe(true);
+    expect(sections?.groupCounts).toEqual([1, 2]);
   });
 });

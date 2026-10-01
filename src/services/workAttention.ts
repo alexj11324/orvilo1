@@ -47,7 +47,13 @@ class WorkAttentionService {
     queryHash?: string;
     subGroupBy?: WorkQuerySubGroupBy;
     timeZone?: string;
-  }) => lambdaClient.workAttention.myWork.query(input);
+  }) => {
+    const { subGroupBy, ...rest } = input;
+    // myWork lanes are member, priority, project, status, and workflow.
+    // Agent and milestone axes belong on the generic work query.
+    const lane = subGroupBy === 'agent' || subGroupBy === 'milestone' ? undefined : subGroupBy;
+    return lambdaClient.workAttention.myWork.query(lane ? { ...rest, subGroupBy: lane } : rest);
+  };
 
   reviews = (input: {
     afterId?: string;
@@ -86,6 +92,7 @@ class WorkAttentionService {
     id: string;
     limit?: number;
     queryHash?: string;
+    timeZone?: string;
   }) => lambdaClient.workAttention.savedViewEvaluate.query(input);
 
   savedViewGet = (id: string) => lambdaClient.workAttention.savedViewGet.query({ id });

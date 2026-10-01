@@ -1,11 +1,16 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
+import { useUserStore } from '@/store/user';
 import { useUserMemoryStore } from '@/store/userMemory';
 import { initialState } from '@/store/userMemory/initialState';
+import { getMemorySession } from '@/store/userMemory/utils/session';
 
 interface GuardCase {
-  accept: (request: { page: number; pageSize: number; q?: string }) => void;
-  fail: (error: Error, request: { page: number; pageSize: number; q?: string }) => void;
+  accept: (request: { page: number; pageSize: number; q?: string; session?: number }) => void;
+  fail: (
+    error: Error,
+    request: { page: number; pageSize: number; q?: string; session?: number },
+  ) => void;
   name: string;
   readList: () => unknown[];
   readSearchError: () => unknown;
@@ -116,7 +121,28 @@ beforeEach(() => {
   useUserMemoryStore.setState(initialState, false);
 });
 
+afterEach(() => {
+  useUserStore.getState().reset();
+});
+
 describe('memory list request guards', () => {
+  it.each(cases)(
+    'rejects old $name success and failure after signing back into the same user',
+    (testCase) => {
+      useUserStore.setState({ user: { id: 'alice' } as never });
+      const session = getMemorySession();
+      useUserStore.setState({ user: { id: 'bob' } as never });
+      useUserStore.setState({ user: { id: 'alice' } as never });
+      testCase.resetWithSearch();
+      const request = { page: 1, pageSize: 12, q: 'late night', session };
+      testCase.accept(request);
+      testCase.fail(new Error('obsolete session'), request);
+      expect(testCase.readList()).toEqual([]);
+      expect(testCase.readSearchError()).toBeUndefined();
+      expect(testCase.readSearchLoading()).toBe(true);
+    },
+  );
+
   it.each(cases)('ignores a late $name response after a search reset', (testCase) => {
     testCase.seedPageTwo();
     testCase.resetWithSearch();

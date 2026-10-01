@@ -4,6 +4,7 @@ import {
   AsyncTaskStatus,
   AsyncTaskType,
   CreateUserMemoryIdentitySchema,
+  LayersEnum,
   UpdateUserMemoryIdentitySchema,
   type UserMemoryExtractionMetadata,
 } from '@orvilo/types';
@@ -30,6 +31,7 @@ import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { cancelHatchetWorkflow } from '@/server/services/hatchet/workflows';
 import { disableUserMemoryExtraction } from '@/server/services/memory/userMemory/gate';
+import { createManualMemory } from '@/server/services/memory/userMemory/manual';
 
 const userMemoryProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;
@@ -63,6 +65,24 @@ const personalUserMemoryWriteProcedure = personalUserMemoryProcedure.use(
 );
 
 export const userMemoryRouter = router({
+  createManual: personalUserMemoryWriteProcedure
+    .input(
+      z
+        .object({
+          layer: z.nativeEnum(LayersEnum),
+          content: z
+            .string()
+            .trim()
+            .min(1)
+            .max(16384)
+            .refine((value) => Buffer.byteLength(value) <= 16384),
+        })
+        .strict(),
+    )
+    .mutation(({ ctx, input }) =>
+      createManualMemory(ctx.userMemoryModel, input.layer, input.content),
+    ),
+
   // ============ Identity CRUD ============
   createIdentity: userMemoryWriteProcedure
     .input(CreateUserMemoryIdentitySchema)
@@ -87,7 +107,7 @@ export const userMemoryRouter = router({
       return ctx.activityModel.delete(input.id);
     }),
 
-  deleteAll: userMemoryWriteProcedure.mutation(async ({ ctx }) => {
+  deleteAll: personalUserMemoryWriteProcedure.mutation(async ({ ctx }) => {
     await ctx.userMemoryModel.deleteAll();
     await ctx.personaModel.deletePersona();
 

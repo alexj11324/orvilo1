@@ -202,6 +202,16 @@ export class MCPService {
   }
 
   // listTools now accepts MCPClientParams
+  async requestEventProtocol(
+    params: MCPClientParams,
+    method: Parameters<MCPClient['requestEventProtocol']>[0],
+    arguments_: Record<string, unknown> | undefined,
+    options?: { signal: AbortSignal },
+  ): Promise<unknown> {
+    const client = await this.getClient(params);
+    return client.requestEventProtocol(method, arguments_, options);
+  }
+
   async listRawTools(params: MCPClientParams): Promise<McpTool[]> {
     const client = await this.getClient(params); // Get client using params
     const loggableParams = this.sanitizeForLogging(params);

@@ -17,8 +17,10 @@ import Labs from '../labs';
 import Memory from '../memory';
 import { DesktopNotificationSettings } from '../notification';
 import Profile from '../profile';
+import Provider from '../provider';
 import Proxy from '../proxy';
 import Security from '../security';
+import ServiceModel from '../service-model';
 import Stats from '../stats';
 import Storage from '../storage';
 import SystemTools from '../system-tools';
@@ -27,6 +29,8 @@ export const componentMap = {
   [SettingsTabs.Advanced]: Advanced,
   [SettingsTabs.Labs]: Labs,
   [SettingsTabs.Appearance]: Appearance,
+  [SettingsTabs.Provider]: Provider,
+  [SettingsTabs.ServiceModel]: ServiceModel,
   [SettingsTabs.Memory]: Memory,
   [SettingsTabs.Notification]: DesktopNotificationSettings,
   [SettingsTabs.About]: About,

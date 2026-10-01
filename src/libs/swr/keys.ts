@@ -588,10 +588,19 @@ export const agentConfigKeys = {
   available: def('agent:available', () => ['agent:available']),
   config: def('agent:config', (agentId: string) => ['agent:config', agentId]),
   search: def('agent:search', (keyword?: string) => ['agent:search', keyword]),
+  serverDefaultHeterogeneousCapability: def('agent:serverDefaultHeterogeneousCapability', () => [
+    'agent:serverDefaultHeterogeneousCapability',
+  ]),
 };
 
 // ---- aiModel ------------------------------------------------------------
 export const aiModelKeys = {
+  disabledModelsPage: def('aiModel:disabledModelsPage', (providerId: string, offset: number) => [
+    'aiModel:disabledModelsPage',
+    providerId,
+    offset,
+  ]),
+  list: def('aiModel:list', (provider: string | undefined) => ['aiModel:list', provider]),
   reasoningConfig: def('aiModel:reasoningConfig', (provider: string, model: string) => [
     'aiModel:reasoningConfig',
     provider,
@@ -1215,6 +1224,12 @@ export const resourceKeys = {
     workspaceId,
   ]),
 };
+export const providerKeys = {
+  clientConfig: def('provider:clientConfig', (id: string) => ['provider:clientConfig', id]),
+};
+export const ollamaKeys = {
+  downloadModel: def('ollama:downloadModel', (model: string) => ['ollama:downloadModel', model]),
+};
 export const recommendationsKeys = {
   heteroDetections: def('recommendations:heteroDetections', () => [
     'recommendations:heteroDetections',
@@ -1294,9 +1309,11 @@ export const swrKeys = {
   localFile: localFileKeys,
   message: messageKeys,
   notebook: notebookSWRKeys,
+  ollama: ollamaKeys,
   onboarding: onboardingKeys,
   openInApp: openInAppKeys,
   portal: portalKeys,
+  provider: providerKeys,
   ragEval: ragEvalKeys,
   recent: recentKeys,
   recommendations: recommendationsKeys,
@@ -1321,4 +1338,11 @@ export const swrKeys = {
   verify: verifyKeys,
   pullRequest: pullRequestKeys,
   workAttention: workAttentionKeys,
+};
+
+export const mcpEventsKeys = {
+  triggers: (taskId: string) => ['mcpEvents:triggers', taskId] as const,
+  sources: (taskId: string) => ['mcpEvents:sources', taskId] as const,
+  definitions: (taskId: string, connectorId: string) =>
+    ['mcpEvents:definitions', taskId, connectorId] as const,
 };

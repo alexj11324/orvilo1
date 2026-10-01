@@ -159,11 +159,11 @@
     ],
     "*.{js,jsx}": [
       "eslint --fix",
-      "stylelint --fix",
+      "stylelint --fix --allow-empty-input",
       "prettier --write"
     ],
     "*.{ts,tsx}": [
-      "stylelint --fix",
+      "stylelint --fix --allow-empty-input",
       "eslint --fix",
       "prettier --parser=typescript --write"
     ],
@@ -236,6 +236,7 @@
     "@orvilo/agent-execution": "workspace:*",
     "@orvilo/agent-gateway-client": "workspace:*",
     "@orvilo/agent-mock": "workspace:*",
+    "@orvilo/agent-runtime": "workspace:*",
     "@orvilo/agent-signal": "workspace:*",
     "@orvilo/agent-templates": "workspace:*",
     "@orvilo/artifact-template": "workspace:*",

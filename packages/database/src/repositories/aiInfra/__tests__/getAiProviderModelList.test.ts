@@ -1,7 +1,7 @@
 import type { EnabledAiModel } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AiInfraRepos } from '../index';
+import { AiInfraCatalogRepos } from '../index';
 
 // vitest.config.server.mts runs with isolate:false, so one file's module mock
 // serves every file; delegate through a per-test-installed global instead.
@@ -39,22 +39,22 @@ beforeEach(() => {
     ]);
 });
 
-describe('AiInfraRepos', () => {
+describe('AiInfraCatalogRepos', () => {
   describe('getAiProviderModelList', () => {
     it('returns visible builtin models of the provider', async () => {
-      const repo = new AiInfraRepos({});
+      const repo = new AiInfraCatalogRepos({});
       const models = await repo.getAiProviderModelList('openai');
 
       expect(models.map((m) => m.id)).toEqual(['m-1', 'm-2', 'm-search', 'm-img', 'm-off']);
     });
 
     it('returns an empty list for an unknown provider', async () => {
-      const repo = new AiInfraRepos({});
+      const repo = new AiInfraCatalogRepos({});
       expect(await repo.getAiProviderModelList('nope')).toEqual([]);
     });
 
     it('filters by type and enabled', async () => {
-      const repo = new AiInfraRepos({});
+      const repo = new AiInfraCatalogRepos({});
 
       expect(
         (await repo.getAiProviderModelList('openai', { type: 'tts' })).map((m) => m.id),
@@ -65,14 +65,14 @@ describe('AiInfraRepos', () => {
     });
 
     it('supports offset/limit pagination', async () => {
-      const repo = new AiInfraRepos({});
+      const repo = new AiInfraCatalogRepos({});
       const models = await repo.getAiProviderModelList('openai', { limit: 2, offset: 1 });
 
       expect(models.map((m) => m.id)).toEqual(['m-2', 'm-search']);
     });
 
     it('injects search settings for builtin-search models', async () => {
-      const repo = new AiInfraRepos({});
+      const repo = new AiInfraCatalogRepos({});
       const models = await repo.getAiProviderModelList('openai');
 
       expect(models.find((m) => m.id === 'm-search')?.settings?.searchImpl).toBeDefined();

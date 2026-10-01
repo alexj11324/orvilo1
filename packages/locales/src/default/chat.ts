@@ -406,6 +406,32 @@ export default {
   'heteroAgent.fullAccess.label': 'Full access',
   'heteroAgent.fullAccess.tooltip':
     'The local coding agent runs with full read/write access to the working directory. Switching permission modes is not available yet.',
+  'heteroAgent.apiMode.agentUnsupported': '{{name}} does not support Orvilo Provider binding.',
+  'heteroAgent.apiMode.configMissing':
+    'Provider binding requires a provider and model. Open the agent profile to configure it.',
+  'heteroAgent.apiMode.defaultProviderConfigMissing':
+    'Orvilo requires a compatible model. Open the agent profile to select one.',
+  'heteroAgent.apiMode.credentialUnsupported':
+    'The provider "{{providerId}}" uses an authentication method this agent does not support.',
+  'heteroAgent.apiMode.credentialsMissing':
+    'The provider "{{providerId}}" has no API key configured.',
+  'heteroAgent.apiMode.endpointMissing':
+    'The provider "{{providerId}}" requires a base URL for this agent.',
+  'heteroAgent.apiMode.endpointUnsupported':
+    'The provider "{{providerId}}" has an unsupported base URL.',
+  'heteroAgent.apiMode.labDisabled.action': 'Enable in Labs',
+  'heteroAgent.apiMode.labDisabled.desc':
+    'Turn it on in Settings → Labs, or switch this agent to Subscription authentication.',
+  'heteroAgent.apiMode.labDisabled.title': 'Provider binding is a Labs experiment',
+  'heteroAgent.apiMode.localOnly.desc':
+    'Switch the execution environment to Local device, or use Subscription authentication.',
+  'heteroAgent.apiMode.localOnly.title': 'API mode requires Desktop local execution',
+  'heteroAgent.apiMode.modelUnavailable':
+    'The model "{{providerId}}/{{model}}" is disabled or no longer available.',
+  'heteroAgent.apiMode.protocolMismatch':
+    'The provider "{{providerId}}" does not expose a protocol supported by {{agentType}}.',
+  'heteroAgent.apiMode.providerUnavailable':
+    'The provider "{{providerId}}" is disabled or no longer available.',
   'heteroAgent.claudeQuota.accounts': 'Accounts',
   'heteroAgent.claudeQuota.calendar.burnout.exhausted': 'Exhausted — resets {{time}}',
   'heteroAgent.claudeQuota.calendar.burnout.safe':
@@ -1743,6 +1769,7 @@ export default {
   'taskDetail.topicMenu.stopConfirm.content':
     'The current run will be canceled. Generated messages are kept and you can re-run the task later.',
   'taskDetail.topicMenu.stopConfirm.title': 'Stop Run?',
+  'taskDetail.runTrigger.event': 'Event',
   'taskDetail.runTrigger.goal': 'Goal loop',
   'taskDetail.runTrigger.heartbeat': 'Heartbeat',
   'taskDetail.runTrigger.orchestrator': 'Orchestrator',

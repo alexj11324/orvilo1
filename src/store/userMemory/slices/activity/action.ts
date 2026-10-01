@@ -11,6 +11,8 @@ import { type StoreSetter } from '@/store/types';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type UserMemoryStore } from '../../store';
+import { invalidateMemoryCaches } from '../../utils/invalidate';
+import { getMemorySession, memorySessionKey, useMemorySession } from '../../utils/session';
 import { isMemoryListRequestCurrent } from '../utils/isMemoryListRequestCurrent';
 import { shouldSurfaceMemoryListError } from '../utils/shouldSurfaceMemoryListError';
 
@@ -25,7 +27,7 @@ export interface ActivityQueryParams {
   types?: string[];
 }
 
-type ActivityListRequest = ActivityQueryParams & { page: number };
+type ActivityListRequest = ActivityQueryParams & { page: number; session?: number };
 
 type Setter = StoreSetter<UserMemoryStore>;
 export const createActivitySlice = (set: Setter, get: () => UserMemoryStore, _api?: unknown) =>
@@ -42,11 +44,14 @@ export class ActivityActionImpl {
   }
 
   deleteActivity = async (id: string): Promise<void> => {
+    const session = getMemorySession();
     await memoryCRUDService.deleteActivity(id);
+    if (session !== getMemorySession()) return;
     this.#get().resetActivitiesList({
       q: this.#get().activitiesQuery,
       sort: this.#get().activitiesSort,
     });
+    await invalidateMemoryCaches(session);
   };
 
   loadMoreActivities = (): void => {
@@ -66,6 +71,7 @@ export class ActivityActionImpl {
     data: ActivityListResult,
     request: ActivityListRequest,
   ): void => {
+    if (request.session !== undefined && request.session !== getMemorySession()) return;
     const state = this.#get();
     if (
       !isMemoryListRequestCurrent(
@@ -103,6 +109,7 @@ export class ActivityActionImpl {
   };
 
   internal_failActivitiesList = (error: unknown, request: ActivityListRequest): void => {
+    if (request.session !== undefined && request.session !== getMemorySession()) return;
     const state = this.#get();
     if (
       !isMemoryListRequestCurrent(
@@ -153,8 +160,9 @@ export class ActivityActionImpl {
    */
   useFetchActivities = (params: ActivityQueryParams): SWRResponse<ActivityListResult> => {
     const page = params.page ?? 1;
+    const session = useMemorySession();
     const response = useSWR(
-      userMemoryKeys.activities(params),
+      memorySessionKey(userMemoryKeys.activities(params), session),
       async () => {
         return userMemoryService.queryActivities({
           page: params.page,
@@ -166,19 +174,20 @@ export class ActivityActionImpl {
         });
       },
       {
+        keepPreviousData: false,
         revalidateOnFocus: false,
       },
     );
 
     useEffect(() => {
       if (response.data !== undefined)
-        this.internal_acceptActivitiesList(response.data, { ...params, page });
-    }, [page, params.pageSize, params.q, params.sort, response.data]);
+        this.internal_acceptActivitiesList(response.data, { ...params, page, session });
+    }, [session, page, params.pageSize, params.q, params.sort, response.data]);
 
     useEffect(() => {
       if (response.error !== undefined)
-        this.internal_failActivitiesList(response.error, { ...params, page });
-    }, [page, params.pageSize, params.q, params.sort, response.error]);
+        this.internal_failActivitiesList(response.error, { ...params, page, session });
+    }, [session, page, params.pageSize, params.q, params.sort, response.error]);
 
     return response;
   };

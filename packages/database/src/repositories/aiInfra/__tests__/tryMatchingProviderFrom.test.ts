@@ -2,14 +2,16 @@ import type { AiProviderRuntimeState } from '@orvilo/types';
 import type { EnabledAiModel } from 'model-bank';
 import { describe, expect, it, vi } from 'vitest';
 
-import { AiInfraRepos } from '../index';
+import { AiInfraCatalogRepos } from '../index';
 
-describe('AiInfraRepos', () => {
-  describe('AiInfraRepos.tryMatchingProviderFrom', () => {
+describe('AiInfraCatalogRepos', () => {
+  describe('AiInfraCatalogRepos.tryMatchingProviderFrom', () => {
     const createRuntimeState = (models: EnabledAiModel[]): AiProviderRuntimeState => ({
       enabledAiModels: models,
       enabledAiProviders: [],
       enabledChatAiProviders: [],
+      enabledImageAiProviders: [],
+      enabledVideoAiProviders: [],
       runtimeConfig: {},
     });
 
@@ -19,7 +21,7 @@ describe('AiInfraRepos', () => {
         { abilities: {}, enabled: true, id: 'm-1', type: 'chat', providerId: 'provider-a' },
       ]);
 
-      const providerId = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
+      const providerId = await AiInfraCatalogRepos.tryMatchingProviderFrom(runtimeState, {
         modelId: 'm-1',
         preferredProviders: ['provider-b', 'provider-a'],
       });
@@ -33,7 +35,7 @@ describe('AiInfraRepos', () => {
         { abilities: {}, enabled: true, id: 'm-1', type: 'chat', providerId: 'provider-a' },
       ]);
 
-      const providerId = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
+      const providerId = await AiInfraCatalogRepos.tryMatchingProviderFrom(runtimeState, {
         modelId: 'm-1',
         preferredProviders: ['provider-disabled', 'provider-a'],
       });
@@ -45,7 +47,7 @@ describe('AiInfraRepos', () => {
       const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
       const runtimeState = createRuntimeState([]);
 
-      const providerId = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
+      const providerId = await AiInfraCatalogRepos.tryMatchingProviderFrom(runtimeState, {
         modelId: 'm-1',
         fallbackProvider: 'provider-fallback',
       });

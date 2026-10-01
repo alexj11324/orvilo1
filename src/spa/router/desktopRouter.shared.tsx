@@ -9,6 +9,7 @@ import {
   LayoutPanelTopIcon,
   LibraryBigIcon,
   Mic2,
+  Settings,
   SquarePlay,
 } from 'lucide-react';
 import {
@@ -526,15 +527,68 @@ export const sharedMainAreaChildren: RouteObject[] = [
 
   // Memory routes
   //
-  // The browsing layers — home, identities, contexts, experiences, activities —
-  // are retired. What survives is the manager the user needs in order to read,
-  // correct and delete what was remembered about them, so the index keeps that
-  // reachable instead of falling through to the catch-all.
+  // Legacy browsing stays available during the Prime experience shadow rollout.
   {
     children: [
       {
-        element: redirectElement('preferences'),
+        element: redirectElement('home'),
         index: true,
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/home'),
+          'Desktop > Memory > Home',
+          { preloadId: 'memory' },
+        ),
+        path: 'home',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/identities'),
+          'Desktop > Memory > Identities',
+          { preloadId: 'memory' },
+        ),
+        path: 'identities',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/contexts'),
+          'Desktop > Memory > Contexts',
+          { preloadId: 'memory' },
+        ),
+        path: 'contexts',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/experiences'),
+          'Desktop > Memory > Experiences',
+          { preloadId: 'memory' },
+        ),
+        path: 'experiences',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/activities'),
+          'Desktop > Memory > Activities',
+          { preloadId: 'memory' },
+        ),
+        path: 'activities',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/search'),
+          'Desktop > Memory > Search',
+          { preloadId: 'memory' },
+        ),
+        path: 'search',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/prime'),
+          'Desktop > Memory > Prime',
+          { preloadId: 'memory' },
+        ),
+        path: 'prime',
       },
       {
         element: dynamicElement(
@@ -554,9 +608,13 @@ export const sharedMainAreaChildren: RouteObject[] = [
       { preloadId: 'memory' },
     ),
     errorElement: <ErrorBoundary />,
-    // On the parent rather than the index child: the index only redirects, so
-    // this is the deepest meta `/memory` and `/memory/preferences` resolve to.
-    handle: { meta: routeMeta({ Skeleton: MemorySkeleton }) },
+    handle: {
+      meta: routeMeta({
+        icon: BrainCircuit,
+        titleKey: 'navigation.memory',
+        Skeleton: MemorySkeleton,
+      }),
+    },
     path: 'memory',
   },
 
@@ -772,13 +830,35 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
         element: redirectElement('/settings/profile'),
         index: true,
       },
-      // Retired LLM Provider surface — legacy deep-links land on the settings root.
+      // Provider routes with nested structure
       {
-        element: redirectElement('/settings'),
+        children: [
+          {
+            element: redirectElement('/settings/provider/all'),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderDetailPage),
+              'Desktop > Settings > Provider > Detail',
+            ),
+            handle: {
+              meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
+            },
+            path: ':providerId',
+          },
+        ],
+        element: dynamicElement(
+          () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderLayout),
+          'Desktop > Settings > Provider > Layout',
+        ),
+        handle: {
+          meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
+        },
         path: 'provider',
       },
       {
-        element: redirectElement('/settings'),
+        element: redirectElement('/settings/provider'),
         path: 'provider/:providerId',
       },
       {

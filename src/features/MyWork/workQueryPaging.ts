@@ -39,18 +39,34 @@ export const workQueryResponseGroups = <T extends { id: string }>(
   data: { groups?: WorkQueryGroupPage<T>[] | undefined } | { projects?: unknown } | undefined,
 ): WorkQueryGroupPage<T>[] => (data && 'groups' in data ? (data.groups ?? []) : []);
 
+const groupWithLoadedHasMore = <T extends { id: string }>(
+  group: WorkQueryGroupPage<T>,
+  tasks: T[],
+): WorkQueryGroupPage<T> => ({
+  ...group,
+  // A page that comes back exactly full used to keep `hasMore` after the
+  // loaded rows already matched `total`.
+  hasMore: tasks.length < group.total && group.hasMore,
+  tasks,
+});
+
 export const mergeWorkQueryGroups = <T extends { id: string }>(
   current: WorkQueryGroupPage<T>[],
   incoming: WorkQueryGroupPage<T>[],
 ): WorkQueryGroupPage<T>[] => {
-  if (current.length === 0) return incoming;
+  if (current.length === 0) {
+    return incoming.map((group) => groupWithLoadedHasMore(group, group.tasks));
+  }
   const byKey = new Map(current.map((group) => [group.key, group]));
   for (const group of incoming) {
     const previous = byKey.get(group.key);
-    byKey.set(group.key, {
-      ...group,
-      tasks: previous ? mergeWorkQueryPage(previous.tasks, group.tasks) : group.tasks,
-    });
+    byKey.set(
+      group.key,
+      groupWithLoadedHasMore(
+        group,
+        previous ? mergeWorkQueryPage(previous.tasks, group.tasks) : group.tasks,
+      ),
+    );
   }
   const seen = new Set<string>();
   const next: WorkQueryGroupPage<T>[] = [];

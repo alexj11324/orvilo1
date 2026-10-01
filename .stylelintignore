@@ -4,6 +4,9 @@
 # dependencies
 node_modules
 
+# vendored upstream sources — upstream's own styles
+vendor
+
 # ci
 coverage
 .coverage

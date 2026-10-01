@@ -2499,9 +2499,11 @@ export class TaskModel {
       startedAt?: Date;
     },
     mutation: TaskMutationContext = {},
+    beforeMutation?: (tx: OrviloDatabase) => Promise<boolean>,
   ): Promise<TaskItem | null> {
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
+      if (beforeMutation && !(await beforeMutation(runner))) return null;
       const [task] = await runner
         .update(tasks)
         .set({

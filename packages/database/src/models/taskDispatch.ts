@@ -82,8 +82,62 @@ export class TaskDispatchSettlementGrantError extends Error {
   }
 }
 
+/** Denial codes mirror DispatchAdmissionErrorCode in @orvilo/agent-execution. */
+export type EventDispatchEvidenceCode =
+  | 'stale-binding'
+  | 'revoked'
+  | 'tenant-mismatch'
+  | 'loop'
+  | 'admission-held'
+  | 'runtime-unavailable'
+  | 'idempotency-conflict'
+  | 'invalid-event';
+
+/**
+ * Persisted event-admission evidence an `event`-triggered claim must cite.
+ * The trigger run, trigger, binding, inbox row, connector and saved scope
+ * are all re-verified under the same task lock that mints the dispatch —
+ * verify association, never marker presence.
+ */
+export interface EventDispatchEvidence {
+  /** Upstream dispatch ids the event names as its cause, when carried. */
+  causationIds?: string[];
+  eventId: string;
+  /** Stable occurrence key — must equal the claim's idempotency key. */
+  idempotencyKey: string;
+  /** Inbox row the delivery was claimed under (`mcp_event_inbox.id`). */
+  inboxRef: string;
+  sourceId: string;
+  subscriptionId: string;
+  tenantId: string;
+  triggerId: string;
+  triggerRevision: number;
+  /** Durable fan-out row (`mcp_event_trigger_runs.id`). */
+  triggerRunId: string;
+  userId: string;
+  workspaceId: string;
+}
+
+/**
+ * An `event` claim whose cited evidence no longer verifies — stale trigger
+ * revision, settled or missing receipt, lost lease, revoked subscription,
+ * dead connector, drifted scope, or a causation loop. The claim is refused
+ * like a stale settlement grant, never silently downgraded to another origin.
+ */
+export class TaskDispatchEventEvidenceError extends Error {
+  readonly code: EventDispatchEvidenceCode;
+
+  constructor(code: EventDispatchEvidenceCode, message: string) {
+    super(message);
+    this.name = 'TaskDispatchEventEvidenceError';
+    this.code = code;
+  }
+}
+
 export interface RequestTaskDispatchInput {
   dispatchId?: string;
+  /** Server-verified admission evidence for `trigger: 'event'` rows. */
+  eventEvidence?: EventDispatchEvidence;
   idempotencyKey: string;
   /** Raw actor identity persisted separately from the `trigger:actor`
    *  `requestedBy` audit string (SA05-B). */
@@ -174,7 +228,10 @@ export class TaskDispatchModel {
     excludeDispatchId?: string,
   ): Promise<string | null> {
     const appliesProjectPolicy =
-      trigger === 'orchestrator' || trigger === 'schedule' || trigger === 'heartbeat';
+      trigger === 'orchestrator' ||
+      trigger === 'schedule' ||
+      trigger === 'heartbeat' ||
+      trigger === 'event';
     if (!appliesProjectPolicy || !task.projectId || !this.workspaceId) return null;
 
     const [project] = await db
@@ -516,7 +573,7 @@ export class TaskDispatchModel {
       if (active?.phase === 'waiting') {
         const requestedTrigger = active.requestedBy.split(':', 1)[0];
         const activeTrigger = (
-          ['goal', 'heartbeat', 'manual', 'orchestrator', 'schedule'] as const
+          ['event', 'goal', 'heartbeat', 'manual', 'orchestrator', 'schedule'] as const
         ).includes(requestedTrigger as TaskRunTrigger)
           ? (requestedTrigger as TaskRunTrigger)
           : input.trigger;
@@ -564,6 +621,15 @@ export class TaskDispatchModel {
           grant: input.settlementGrant,
         });
         if (settlementStale) throw new TaskDispatchSettlementGrantError(settlementStale);
+      }
+
+      // Persisted-claim verification for `event` writers: the durable
+      // trigger run, trigger, subscription binding, inbox lease and saved
+      // ownership scope must all still match under the task lock that mints
+      // the dispatch — a bare `event` trigger string is never evidence.
+      if (input.trigger === 'event') {
+        const evidenceStale = await this.verifyEventEvidence(tx, task, input.eventEvidence);
+        if (evidenceStale) throw evidenceStale;
       }
 
       const waitingReason =
@@ -827,10 +893,13 @@ export class TaskDispatchModel {
           matchesDispatchAssignee(task, dispatch),
         );
         const requestedTrigger = dispatch.requestedBy.split(':', 1)[0];
-        const automatedTrigger = ['heartbeat', 'orchestrator', 'schedule'].includes(
+        const automatedTrigger = ['event', 'heartbeat', 'orchestrator', 'schedule'].includes(
           requestedTrigger,
         )
-          ? (requestedTrigger as Extract<TaskRunTrigger, 'heartbeat' | 'orchestrator' | 'schedule'>)
+          ? (requestedTrigger as Extract<
+              TaskRunTrigger,
+              'event' | 'heartbeat' | 'orchestrator' | 'schedule'
+            >)
           : null;
         const policyWaitingReason =
           currentContract && task && automatedTrigger
@@ -1034,6 +1103,157 @@ export class TaskDispatchModel {
         source.generation !== input.expectedSourceGeneration)
     ) {
       return 'settlement_grant_source_stale';
+    }
+    return null;
+  }
+
+  /**
+   * Verify the durable event admission evidence an `event` claim cites:
+   * the trigger run must still be pending, its trigger still enabled at the
+   * cited revision, the subscription binding active and unexpired, the
+   * inbox lease live, and the saved tenant/member/connector ownership scope
+   * unchanged. Denial codes mirror the canonical DispatchAdmissionErrorCode.
+   */
+  private async verifyEventEvidence(
+    tx: Transaction,
+    task: TaskItem,
+    evidence: EventDispatchEvidence | undefined,
+  ): Promise<TaskDispatchEventEvidenceError | null> {
+    const denied = (code: EventDispatchEvidenceCode, message: string) =>
+      new TaskDispatchEventEvidenceError(code, message);
+    if (!evidence) return denied('invalid-event', 'Event admission evidence missing');
+    const now = Date.now();
+    const result = await tx.execute<{
+      binding_expires: string | null;
+      binding_state: string | null;
+      connector_agent: string | null;
+      connector_enabled: boolean | null;
+      connector_status: string | null;
+      connector_user: string | null;
+      inbox_event: string | null;
+      inbox_status: string | null;
+      lease_until: string | null;
+      member_deleted: Date | null;
+      member_role: string | null;
+      member_suspended: Date | null;
+      run_status: string | null;
+      task_creator: string | null;
+      task_deleted: Date | null;
+      trigger_enabled: boolean | null;
+      trigger_now: number | null;
+      trigger_source: string | null;
+      trigger_subscription: string | null;
+      trigger_task: string | null;
+      trigger_user: string | null;
+      trigger_workspace: string | null;
+    }>(sql`
+      SELECT run.status AS run_status,
+             t.revision AS trigger_now,
+             t.enabled AS trigger_enabled,
+             t.task_id AS trigger_task,
+             t.workspace_id AS trigger_workspace,
+             t.user_id AS trigger_user,
+             t.subscription_id AS trigger_subscription,
+             t.source_id AS trigger_source,
+             i.status AS inbox_status,
+             i.event_id AS inbox_event,
+             i.lease_until AS lease_until,
+             b.state AS binding_state,
+             b.binding->>'expiresAt' AS binding_expires,
+             connector.is_enabled AS connector_enabled,
+             connector.status AS connector_status,
+             connector.agent_id AS connector_agent,
+             connector.user_id AS connector_user,
+             member.role AS member_role,
+             member.deleted_at AS member_deleted,
+             member.suspended_at AS member_suspended,
+             task.created_by_user_id AS task_creator,
+             task.deleted_at AS task_deleted
+      FROM mcp_event_trigger_runs run
+      LEFT JOIN mcp_event_triggers t
+        ON t.id = run.trigger_id AND t.tenant_id = run.tenant_id
+      LEFT JOIN mcp_event_inbox i
+        ON i.id = run.inbox_id AND i.tenant_id = run.tenant_id
+      LEFT JOIN mcp_event_bindings b
+        ON b.id = t.subscription_id AND b.tenant_id = t.tenant_id
+      LEFT JOIN user_connectors connector
+        ON connector.id::text = t.source_id AND connector.workspace_id = t.workspace_id
+      LEFT JOIN workspace_members member
+        ON member.workspace_id = t.workspace_id AND member.user_id = t.user_id
+      LEFT JOIN tasks task
+        ON task.id = t.task_id AND task.workspace_id = t.workspace_id
+      WHERE run.id = ${evidence.triggerRunId}
+        AND run.tenant_id = ${evidence.tenantId}
+        AND run.trigger_id = ${evidence.triggerId}
+        AND run.inbox_id = ${evidence.inboxRef}
+        AND run.idempotency_key = ${evidence.idempotencyKey}
+      LIMIT 1`);
+    const row = result.rows[0];
+    if (!row) return denied('invalid-event', 'Event admission receipt not found');
+    if (row.run_status !== 'pending') {
+      return denied('invalid-event', 'Event admission receipt already settled');
+    }
+    if (
+      row.trigger_task !== task.id ||
+      row.trigger_workspace !== evidence.workspaceId ||
+      row.trigger_user !== evidence.userId ||
+      row.trigger_subscription !== evidence.subscriptionId ||
+      row.trigger_source !== evidence.sourceId
+    ) {
+      return denied('tenant-mismatch', 'Event admission scope drifted');
+    }
+    if (row.trigger_now !== evidence.triggerRevision) {
+      return denied('stale-binding', 'Event trigger revision drifted');
+    }
+    if (row.trigger_enabled !== true) return denied('revoked', 'Event trigger disabled');
+    if (
+      row.inbox_status !== 'processing' ||
+      row.inbox_event !== evidence.eventId ||
+      !row.lease_until ||
+      Number(row.lease_until) <= now
+    ) {
+      return denied('invalid-event', 'Event inbox claim no longer held');
+    }
+    if (
+      row.binding_state !== 'active' ||
+      (row.binding_expires !== null && Number(row.binding_expires) <= now)
+    ) {
+      return denied('revoked', 'Event subscription revoked or expired');
+    }
+    if (
+      row.connector_enabled !== true ||
+      row.connector_status !== 'connected' ||
+      row.connector_agent !== null
+    ) {
+      return denied('revoked', 'Event source connector unavailable');
+    }
+    if (
+      row.member_deleted !== null ||
+      row.member_suspended !== null ||
+      !['owner', 'member'].includes(row.member_role ?? '') ||
+      row.task_creator === null
+    ) {
+      return denied('revoked', 'Event scope member no longer active');
+    }
+    if (
+      row.member_role !== 'owner' &&
+      !(row.task_creator === row.trigger_user && row.connector_user === row.trigger_user)
+    ) {
+      return denied('tenant-mismatch', 'Event scope ownership drifted');
+    }
+    if (row.task_deleted !== null) {
+      return denied('revoked', 'Event target task deleted');
+    }
+    const causation = evidence.causationIds?.filter((id) => id.length > 0) ?? [];
+    if (causation.length > 0) {
+      const ancestors = await tx
+        .select({ taskId: taskDispatches.taskId })
+        .from(taskDispatches)
+        .where(inArray(taskDispatches.id, causation))
+        .limit(10);
+      if (ancestors.some((ancestor) => ancestor.taskId === task.id)) {
+        return denied('loop', 'Event causation loops into the same task');
+      }
     }
     return null;
   }

@@ -144,4 +144,21 @@ describe('TaskProperties', () => {
     delete detail.workflowCategory;
     delete detail.workflowStateId;
   });
+
+  it('renders a Plane label beside each property value', () => {
+    render(<TaskProperties />);
+
+    expect(screen.getByText('taskDetail.property.state')).toBeTruthy();
+    expect(screen.getByText('taskDetail.status.backlog')).toBeTruthy();
+    expect(screen.getByText('taskDetail.assignee')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.addAssignee')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.priority')).toBeTruthy();
+    expect(screen.getByText('priority')).toBeTruthy();
+    expect(screen.getByText('taskDetail.dueDate')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
+    expect(screen.getByText('taskDetail.labels.title')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.addLabels')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.schedule')).toBeTruthy();
+    expect(screen.queryByText('taskDetail.property.addReviewer')).toBeNull();
+  });
 });

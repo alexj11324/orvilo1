@@ -596,10 +596,19 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
   ): Promise<void> {
     const broker = this.options?.inferenceBroker;
     if (!broker) return;
+    const cancelController = new AbortController();
     const cancelled = new Promise<'cancelled'>((resolve) => {
-      entry.brokerCancels?.set(requestId, () => resolve('cancelled'));
+      entry.brokerCancels?.set(requestId, () => {
+        // Closing the broker generator's iterator alone cannot abort the
+        // backend: while it is suspended on a pending provider read, .return()
+        // queues behind that read instead of running its finally block. The
+        // signal reaches the backend's own abort path directly.
+        cancelController.abort();
+        resolve('cancelled');
+      });
     });
-    const iterator = broker.infer(request)[Symbol.asyncIterator]();
+    const inference = broker.infer(request, { signal: cancelController.signal });
+    const iterator = inference[Symbol.asyncIterator]();
     try {
       for (;;) {
         // `for await` cannot interrupt a pending next() — race it against the
@@ -611,10 +620,25 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         }
         if (step.done) break;
         if (entry.stopping || !entry.brokerStreams?.has(requestId)) {
+          cancelController.abort();
           await iterator.return?.();
           return;
         }
-        entry.transport.notify(BROKER_EVENT_NOTIFICATION, { requestId, event: step.value });
+        // The broker stream contract is InferenceEvent; the wire contract is
+        // BrokerStreamEvent, whose error shape is flat ({code, message}). The
+        // runner drops error events in any other shape, so translate here —
+        // a missed error event leaves the runner's infer pump hung.
+        entry.transport.notify(BROKER_EVENT_NOTIFICATION, {
+          requestId,
+          event:
+            step.value.type === 'error'
+              ? {
+                  type: 'error',
+                  code: step.value.error.code,
+                  message: step.value.error.message,
+                }
+              : step.value,
+        });
       }
       if (entry.stopping || !entry.brokerStreams?.has(requestId)) return;
       entry.transport.notify(BROKER_EVENT_NOTIFICATION, { requestId, event: { type: 'end' } });

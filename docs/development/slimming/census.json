@@ -1,6 +1,6 @@
 {
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "95105c9b795fdaeca86ff83947c28618f50917af",
+  "baseSha": "c6aad5f4489a5901e46a22f4d9b5f4e2f4102e46",
   "capabilities": [
     {
       "id": "workspace",
@@ -4040,8 +4040,8 @@
         "packages/tool-runtime/vitest.config.mts"
       ],
       "inbound": {
-        "total": 602,
-        "explained": 142,
+        "total": 609,
+        "explained": 147,
         "unexplained": [
           {
             "importer": "apps/server/src/services/resourceEvents/index.ts",
@@ -4388,6 +4388,26 @@
               "packages/agent-execution/src/controlPlane/harnessTransport.ts",
               "packages/agent-execution/src/controlPlane/server.ts",
               "packages/agent-execution/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/embeddedAcceptance.support.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/harnessTransport.ts",
+              "packages/agent-execution/src/controlPlane/index.ts",
+              "packages/agent-execution/src/controlPlane/server.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/embeddedDispatch.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/index.ts",
+              "packages/agent-execution/src/controlPlane/server.ts",
+              "packages/agent-gateway-client/src/index.ts",
+              "packages/heterogeneous-agents/src/index.ts",
+              "packages/heterogeneous-agents/src/spawn/index.ts"
             ]
           },
           {
@@ -10545,7 +10565,7 @@
         "src/features/AuthShell/style.ts"
       ],
       "inbound": {
-        "total": 163,
+        "total": 164,
         "explained": 23,
         "unexplained": [
           {
@@ -10682,6 +10702,11 @@
           },
           {
             "importer": "apps/server/src/featureFlags/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/app-config/src/featureFlags/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/featureFlags/primeEmbeddedDispatch.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/app-config/src/featureFlags/index.ts"]
           },
@@ -12626,8 +12651,8 @@
         "packages/utils/vitest.config.mts"
       ],
       "inbound": {
-        "total": 3778,
-        "explained": 714,
+        "total": 3783,
+        "explained": 718,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -20155,6 +20180,16 @@
               "packages/database/src/models/taskDispatch.ts",
               "packages/database/src/schemas/index.ts",
               "packages/database/src/type.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/embeddedDispatch.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/taskDispatch.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/database/src/type.ts",
+              "packages/types/src/index.ts"
             ]
           },
           {
@@ -39020,7 +39055,7 @@
     }
   ],
   "counts": {
-    "sourceFiles": 12741,
+    "sourceFiles": 12751,
     "workspacePackages": 110,
     "nextRoutes": 39,
     "spaRouteEntries": 131,
@@ -39030,8 +39065,8 @@
     "migrationSqlFiles": 199,
     "localeFiles": 880,
     "defaultNamespaceFiles": 48,
-    "docFiles": 657,
-    "testFiles": 3406,
+    "docFiles": 659,
+    "testFiles": 3412,
     "storeFiles": 837,
     "unresolvedImports": 404
   },
@@ -40983,6 +41018,8 @@
       "docs/development/others/lighthouse.zh-CN.mdx",
       "docs/development/pr-delivery-gate.md",
       "docs/development/prime-embedded-broker-bridge.md",
+      "docs/development/prime-embedded-dispatch-routing.md",
+      "docs/development/prime-embedded-host-integration.md",
       "docs/development/product-scope.md",
       "docs/development/provider-memory-cloud-handoff.md",
       "docs/development/provider-memory-devin-handoff.md",
@@ -41382,7 +41419,7 @@
       "docs/wiki/HOME.zh-CN.md"
     ]
   },
-  "generatedAt": "2026-10-01T07:38:30.025Z",
+  "generatedAt": "2026-10-01T11:13:31.366Z",
   "packageConsumers": {
     "@orvilo/web-crawler": [
       "apps/server/src/services/search/index.test.ts",
@@ -41449,6 +41486,8 @@
       "apps/server/src/services/connector/exec.ts",
       "apps/server/src/services/connector/refresh.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.dispatch.test.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.test.ts",
       "apps/server/src/services/document/diff/json.ts",
       "apps/server/src/services/file/downloadRemoteImage.ts",
       "apps/server/src/services/file/index.ts",
@@ -41867,8 +41906,12 @@
       "apps/server/src/services/collaboration/service.ts",
       "apps/server/src/services/collaboration/snapshot.ts",
       "apps/server/src/services/collaboration/ticket.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.dispatch.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.inference.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.isolation.test.ts",
       "apps/server/src/services/controlPlane/embeddedBroker.test.ts",
       "apps/server/src/services/controlPlane/embeddedBroker.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.ts",
       "apps/server/src/services/creds/index.ts",
       "apps/server/src/services/deviceGateway/dispatchAuthorization.ts",
       "apps/server/src/services/deviceGateway/scopedDevicePresence.ts",
@@ -44682,6 +44725,7 @@
       "apps/server/src/services/aiAgent/pipeline/heteroDispatch.ts",
       "apps/server/src/services/aiAgent/pipeline/resolveExecutionBinding.ts",
       "apps/server/src/services/aiAgent/pipeline/turnSetup.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.ts",
       "apps/server/src/services/deviceGateway/index.ts",
       "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts",
       "apps/server/src/services/heterogeneousAgent/index.ts",
@@ -45134,6 +45178,10 @@
       "apps/server/src/services/controlPlane/coreRuntimeHandoff.acceptance.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.acceptance.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.dispatch.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.inference.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.isolation.test.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.test.ts",
       "apps/server/src/services/creds/index.ts",
       "apps/server/src/services/deviceGateway/authorizedToolCall.test.ts",
       "apps/server/src/services/deviceGateway/authorizedToolCall.ts",
@@ -46773,6 +46821,7 @@
       "apps/server/src/modules/AgentExecution/types.ts",
       "apps/server/src/routers/lambda/__tests__/aiAgent.heteroIngest.test.ts",
       "apps/server/src/routers/lambda/aiAgent.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.ts",
       "apps/server/src/services/heterogeneousAgent/HeteroTraceRecorder.ts",
       "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts",
       "apps/server/src/services/heterogeneousAgent/__tests__/HeteroTraceRecorder.test.ts",
@@ -46853,8 +46902,15 @@
       "apps/server/src/services/controlPlane/coreRuntimeHost.acceptance.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.compaction.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.inference.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.isolation.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.protocol.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.support.ts",
       "apps/server/src/services/controlPlane/embeddedBroker.test.ts",
       "apps/server/src/services/controlPlane/embeddedBroker.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.test.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.ts",
       "apps/server/src/services/controlPlane/receiptRecovery.postgres.test.ts",
       "apps/server/src/services/mcpEvents/admission.ts",
       "apps/server/src/services/mcpEvents/runtime.ts",
@@ -46917,7 +46973,7 @@
     "orvilo": []
   },
   "uncoveredByArea": {
-    "apps/server/src": 865,
+    "apps/server/src": 874,
     "src/routes/(main)": 293,
     "apps/cli/src": 190,
     "src/features/Settings": 189,
@@ -47216,6 +47272,7 @@
     "plugins/vite/watchOptions.ts": 1,
     "scripts/_shared/checkDeprecatedAuth.js": 1,
     "scripts/_shared/checkDeprecatedAuth.test.ts": 1,
+    "scripts/acceptance/prime-embedded-netguard.mjs": 1,
     "scripts/acceptance/prime-nonempty-harness.mjs": 1,
     "scripts/acceptance/prime-nonempty.ts": 1,
     "scripts/acceptance/prime-protocol.ts": 1,
@@ -47803,5 +47860,5 @@
     "tests/setup.ts": 1,
     "tests/utils.tsx": 1
   },
-  "uncoveredFiles": 4863
+  "uncoveredFiles": 4873
 }

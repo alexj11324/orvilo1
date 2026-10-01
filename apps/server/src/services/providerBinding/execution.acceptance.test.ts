@@ -95,6 +95,7 @@ beforeEach(async () => {
 afterEach(cleanup);
 
 const SANDBOX: OrviloBindingTarget = { kind: 'sandbox' };
+const DEVICE: OrviloBindingTarget = { deviceId: 'dev-1', kind: 'device' };
 
 const seedEnabled = async (
   selection: Partial<BindingSelection> = {},
@@ -110,10 +111,20 @@ const seedEnabled = async (
 };
 
 describe('resolveOrviloProviderBinding — applies enabled bindings', () => {
-  it('kv-env + claude-sdk mints Anthropic env for the sandbox target', async () => {
-    const row = await seedEnabled();
+  it('kv-env + claude-sdk mints Anthropic env only for the device target', async () => {
+    const row = await seedEnabled({ target: 'local' });
 
-    const resolution = await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', SANDBOX);
+    // Sandbox dispatch issues the descriptor alone — credentials are served
+    // through the embedded inference broker, never through process env.
+    const sandboxResolution = await resolveOrviloProviderBinding(
+      db,
+      OWNER,
+      'claude-sdk',
+      SANDBOX,
+    );
+    expect(sandboxResolution.status).toBe('none');
+
+    const resolution = await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', DEVICE);
 
     expect(resolution.status).toBe('applied');
     if (resolution.status !== 'applied') return;
@@ -143,7 +154,7 @@ describe('resolveOrviloProviderBinding — applies enabled bindings', () => {
 
   it('kv-header + claude-sdk forwards stored headers verbatim, minus reserved ones', async () => {
     await seedEnabled(
-      {},
+      { target: 'local' },
       {
         'Authorization': 'Bearer hdr-tok',
         'Host': 'spoof.invalid',
@@ -152,7 +163,7 @@ describe('resolveOrviloProviderBinding — applies enabled bindings', () => {
       'kv-header',
     );
 
-    const resolution = await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', SANDBOX);
+    const resolution = await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', DEVICE);
 
     expect(resolution.status).toBe('applied');
     if (resolution.status !== 'applied') return;
@@ -164,9 +175,9 @@ describe('resolveOrviloProviderBinding — applies enabled bindings', () => {
   });
 
   it('kv-env + codex-app-server mints a codex provider via env_key + env_http_headers', async () => {
-    await seedEnabled();
+    await seedEnabled({ target: 'local' });
 
-    const resolution = await resolveOrviloProviderBinding(db, OWNER, 'codex-app-server', SANDBOX);
+    const resolution = await resolveOrviloProviderBinding(db, OWNER, 'codex-app-server', DEVICE);
 
     expect(resolution.status).toBe('applied');
     if (resolution.status !== 'applied') return;
@@ -189,6 +200,19 @@ describe('resolveOrviloProviderBinding — applies enabled bindings', () => {
       execArgs.some((arg) => arg.includes('env_http_headers') && arg.includes('ORVILO_BYOK_H_1')),
     ).toBe(true);
     expect(env.ORVILO_BYOK_H_1).toBe('sk-live');
+  });
+
+  it('sandbox dispatch issues the descriptor alone — empty env and execArgs', async () => {
+    const row = await seedEnabled();
+
+    const resolution = await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', SANDBOX);
+
+    expect(resolution.status).toBe('applied');
+    if (resolution.status !== 'applied') return;
+    expect(resolution.execution.bindingId).toBe(row.id);
+    expect(resolution.execution.endpoint).toBe('https://byok.test/v1');
+    expect(resolution.execution.env).toEqual({});
+    expect(resolution.execution.execArgs).toEqual([]);
   });
 });
 

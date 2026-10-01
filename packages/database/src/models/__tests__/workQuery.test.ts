@@ -108,6 +108,22 @@ describe('applyWorkQueryLayout', () => {
     expect(applyWorkQueryLayout(assigned, 'board', 'activityDate').groupBy).toBe(
       'workflowCategory',
     );
+    expect(applyWorkQueryLayout(assigned, 'list', 'milestone').groupBy).toBe('milestone');
+    expect(applyWorkQueryLayout(assigned, 'list', 'agent').groupBy).toBe('agent');
+    expect(applyWorkQueryLayout(assigned, 'board', 'milestone').groupBy).toBe('workflowCategory');
+    expect(applyWorkQueryLayout(assigned, 'board', 'agent').groupBy).toBe('agent');
+    expect(
+      applyWorkQueryLayout(
+        { entityType: 'project', groupBy: 'none', layout: 'board', schemaVersion: 1 },
+        'board',
+      ).groupBy,
+    ).toBe('status');
+    expect(
+      applyWorkQueryLayout(
+        { entityType: 'project', groupBy: 'status', layout: 'list', schemaVersion: 1 },
+        'list',
+      ).groupBy,
+    ).toBe('status');
   });
 });
 
@@ -813,6 +829,50 @@ describe('WorkQueryModel', () => {
       },
     });
     expect(onMilestone.tasks.map((row) => row.id)).toEqual([marked.id]);
+
+    const byMilestone = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        filter: { all: [{ field: 'projectId', op: 'eq', value: 'wq-grouped-project' }] },
+        groupBy: 'milestone',
+        layout: 'list',
+        schemaVersion: 1,
+      },
+    });
+    expect(byMilestone.groupBy).toBe('milestone');
+    expect(byMilestone.groups?.find((group) => group.key === milestone!.id)?.total).toBe(1);
+    expect(byMilestone.groups?.find((group) => group.key === 'none')?.total).toBe(2);
+  });
+
+  it('groups a list by the agent assignee and keeps that axis on a board', async () => {
+    await serverDB.insert(agents).values({ id: 'agt_axis', slug: 'axis', userId });
+    const owned = await createTask(userId, { assigneeAgentId: 'agt_axis', name: 'Owned' });
+    await createTask(userId, { name: 'Open' });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const listed = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        groupBy: 'agent',
+        layout: 'list',
+        schemaVersion: 1,
+      },
+    });
+    expect(listed.groupBy).toBe('agent');
+    expect(listed.groups?.find((group) => group.key === 'agt_axis')?.tasks.map((row) => row.id)).toEqual([
+      owned.id,
+    ]);
+    expect(listed.groups?.find((group) => group.key === 'none')?.total).toBe(1);
+
+    const board = await model.queryTasks({
+      query: {
+        entityType: 'task',
+        groupBy: 'agent',
+        layout: 'board',
+        schemaVersion: 1,
+      },
+    });
+    expect(board.groupBy).toBe('agent');
+    expect(board.layout).toBe('board');
   });
 
   it('buckets activity dates in the caller time zone and pages list sub-groups', async () => {
@@ -1571,6 +1631,63 @@ describe('WorkQueryModel', () => {
     // visible rather than collapsing to populated states only.
     expect(result.projectGroups?.map((group) => group.key)).toContain('backlog');
     expect(result.projects).toHaveLength(3);
+  });
+
+  it('pages a status-grouped project list by group and rejects a flat cursor', async () => {
+    await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+    await serverDB.insert(projects).values([
+      {
+        id: 'wq-list-a',
+        identifier: 'WLA',
+        name: 'List alpha',
+        status: 'active',
+        userId,
+        workspaceId,
+      },
+      {
+        id: 'wq-list-b',
+        identifier: 'WLB',
+        name: 'List beta',
+        status: 'active',
+        userId,
+        workspaceId,
+      },
+    ]);
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const query = {
+      entityType: 'project' as const,
+      groupBy: 'status' as const,
+      layout: 'list' as const,
+      schemaVersion: 1 as const,
+    };
+    const listed = await model.queryProjects({ limit: 1, query });
+    const active = listed.projectGroups?.find((group) => group.key === 'active');
+    expect(listed.layout).toBe('list');
+    expect(listed.groupBy).toBe('status');
+    expect(active?.total).toBe(2);
+    expect(active?.hasMore).toBe(true);
+    expect(active?.projects).toHaveLength(1);
+
+    await expect(
+      model.queryProjects({
+        afterId: active!.projects[0]!.id,
+        limit: 1,
+        query,
+        queryHash: listed.queryHash,
+      }),
+    ).rejects.toMatchObject({ code: 'CURSOR_INVALID' });
+
+    const next = await model.queryProjects({
+      afterId: active!.projects[0]!.id,
+      groupKey: 'active',
+      limit: 1,
+      query,
+      queryHash: listed.queryHash,
+    });
+    const activeNext = next.projectGroups?.find((group) => group.key === 'active');
+    expect(activeNext?.projects).toHaveLength(1);
+    expect(activeNext?.hasMore).toBe(false);
+    expect(activeNext?.projects[0]?.id).not.toBe(active!.projects[0]!.id);
   });
 
   it('honours project sort by name and rejects a task-only groupBy', async () => {

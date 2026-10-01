@@ -271,9 +271,11 @@ export type WorkQueryLayout = 'board' | 'list';
 
 export type WorkQueryGroupBy =
   | 'activityDate'
+  | 'agent'
   | 'assignee'
   | 'attention'
   | 'cycle'
+  | 'milestone'
   | 'none'
   | 'priority'
   | 'project'
@@ -281,20 +283,34 @@ export type WorkQueryGroupBy =
   | 'workflowCategory';
 
 /**
- * Second board axis (swimlane). `project` is lane-only — a project column
- * would invent an empty column per readable project. `none` is the same as
- * omitting the field.
+ * Second axis (board swimlane or list sub-group). `project` is lane-only — a
+ * project column would invent an empty column per readable project. `milestone`
+ * is list-only. `agent` is the agent assignee (`assigneeAgentId`); `assignee`
+ * is the member. `none` is the same as omitting the field.
  */
 export type WorkQuerySubGroupBy =
-  'assignee' | 'none' | 'priority' | 'project' | 'status' | 'workflowCategory';
+  | 'agent'
+  | 'assignee'
+  | 'milestone'
+  | 'none'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 
 /** Unit separator between a board column key and its swimlane key. */
 export const WORK_QUERY_BOARD_KEY_SEP = '\u001F';
 
 export type WorkQueryBoardAxis =
-  'assignee' | 'priority' | 'project' | 'status' | 'workflowCategory';
+  | 'agent'
+  | 'assignee'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 
 export const WORK_QUERY_BOARD_AXIS_PREFIX: Record<WorkQueryBoardAxis, string> = {
+  agent: 'ag',
   assignee: 'as',
   priority: 'pr',
   project: 'pj',

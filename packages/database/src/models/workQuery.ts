@@ -677,6 +677,7 @@ const limitPage = <T>(rows: T[], limit: number): { hasMore: boolean; rows: T[] }
 };
 
 const BOARD_GROUP_BY = new Set<WorkQueryGroupBy>([
+  'agent',
   'assignee',
   'attention',
   'priority',
@@ -686,9 +687,11 @@ const BOARD_GROUP_BY = new Set<WorkQueryGroupBy>([
 
 const LIST_GROUP_BY = new Set<WorkQueryGroupBy>([
   'activityDate',
+  'agent',
   'assignee',
   'attention',
   'cycle',
+  'milestone',
   'priority',
   'project',
   'status',
@@ -701,6 +704,18 @@ export const applyWorkQueryLayout = (
   groupBy?: WorkQueryGroupBy,
 ): WorkQuery => {
   const nextLayout = layout ?? query.layout ?? 'list';
+  // Projects only have a status axis. A board with no grouping still draws
+  // status columns; a task axis such as workflow would be rejected later.
+  if (query.entityType === 'project') {
+    const requested = groupBy ?? query.groupBy;
+    const projectGroupBy = nextLayout === 'board' || requested === 'status' ? 'status' : 'none';
+    return {
+      ...query,
+      groupBy: projectGroupBy,
+      layout: nextLayout === 'board' ? 'board' : 'list',
+      subGroupBy: undefined,
+    };
+  }
   if (nextLayout !== 'board') {
     const nextGroupBy = groupBy ?? query.groupBy;
     if (nextGroupBy === 'none') {
@@ -723,9 +738,11 @@ export const applyWorkQueryLayout = (
 
 export type WorkQueryBoardDimension =
   | 'activityDate'
+  | 'agent'
   | 'assignee'
   | 'attention'
   | 'cycle'
+  | 'milestone'
   | 'priority'
   | 'project'
   | 'status'
@@ -737,6 +754,7 @@ export const workQueryBoardGroupBy = (query: WorkQuery): WorkQueryBoardDimension
       query.groupBy === 'status' ||
       query.groupBy === 'priority' ||
       query.groupBy === 'assignee' ||
+      query.groupBy === 'agent' ||
       query.groupBy === 'attention'
     ) {
       return query.groupBy;
@@ -819,7 +837,14 @@ const attentionGroupExpr = (ctx: {
   ELSE ${tasks.workflowCategory}
 END`;
 
-type BoardLaneAxis = 'assignee' | 'priority' | 'project' | 'status' | 'workflowCategory';
+type BoardLaneAxis =
+  | 'agent'
+  | 'assignee'
+  | 'milestone'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 
 /**
  * Local-day recency buckets matching `activityBucketKey`: day:0–6, then
@@ -858,6 +883,12 @@ const axisExpr = (
     }
     case 'assignee': {
       return sql`coalesce(${tasks.assigneeUserId}, 'none')`;
+    }
+    case 'agent': {
+      return sql`coalesce(${tasks.assigneeAgentId}, 'none')`;
+    }
+    case 'milestone': {
+      return sql`coalesce(${tasks.projectMilestoneId}::text, 'none')`;
     }
     case 'cycle': {
       return sql`coalesce(${tasks.cycleRefId}::text, 'none')`;

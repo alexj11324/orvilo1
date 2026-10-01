@@ -209,25 +209,45 @@ export const WORK_SEARCH_MAX_PER_TYPE = 200;
 export type WorkQueryEntityType = 'project' | 'task';
 
 export type WorkQueryField =
+  | 'assigneeAgentId'
   | 'assigneeUserId'
+  | 'closedAt'
+  | 'completedAt'
+  | 'createdAt'
   | 'createdByUserId'
   | 'cycleId'
   | 'delegatedByUserId'
+  | 'hasActivity'
   | 'id'
   | 'labelId'
   | 'ownerUserId'
+  | 'parentTaskId'
   | 'priority'
   | 'projectId'
+  | 'projectMilestoneId'
   | 'reviewerUserId'
   | 'status'
+  | 'subscribed'
   | 'teamId'
+  | 'text'
   | 'triageStatus'
+  | 'updatedAt'
   | 'visibility'
   | 'workflowCategory';
 
-export type WorkQueryOp = 'eq' | 'in' | 'isNotNull' | 'isNull' | 'neq' | 'notIn';
+export type WorkQueryOp =
+  'between' | 'contains' | 'eq' | 'gte' | 'in' | 'isNotNull' | 'isNull' | 'lt' | 'neq' | 'notIn';
 
-export type WorkQueryValue = { ref: 'currentUser' } | boolean | null | number | string | string[];
+/** Inclusive date window. `between` compiles to `gte from AND lte to`. */
+export interface WorkQueryDateRange {
+  from: string;
+  to: string;
+}
+
+export type WorkQueryScalar = { ref: 'currentUser' } | boolean | null | number | string;
+
+export type WorkQueryValue =
+  WorkQueryDateRange | WorkQueryScalar | Array<number | string | { ref: 'currentUser' }>;
 
 export interface WorkQueryPredicate {
   field: WorkQueryField;
@@ -249,7 +269,86 @@ export interface WorkQuerySort {
 
 export type WorkQueryLayout = 'board' | 'list';
 
-export type WorkQueryGroupBy = 'attention' | 'none' | 'status' | 'workflowCategory';
+export type WorkQueryGroupBy =
+  | 'activityDate'
+  | 'assignee'
+  | 'attention'
+  | 'cycle'
+  | 'none'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
+
+/**
+ * Second board axis (swimlane). `project` is lane-only — a project column
+ * would invent an empty column per readable project. `none` is the same as
+ * omitting the field.
+ */
+export type WorkQuerySubGroupBy =
+  'assignee' | 'none' | 'priority' | 'project' | 'status' | 'workflowCategory';
+
+/** Unit separator between a board column key and its swimlane key. */
+export const WORK_QUERY_BOARD_KEY_SEP = '\u001F';
+
+export type WorkQueryBoardAxis =
+  'assignee' | 'priority' | 'project' | 'status' | 'workflowCategory';
+
+export const WORK_QUERY_BOARD_AXIS_PREFIX: Record<WorkQueryBoardAxis, string> = {
+  assignee: 'as',
+  priority: 'pr',
+  project: 'pj',
+  status: 'st',
+  workflowCategory: 'wf',
+};
+
+/** Sentinel for an empty assignee or project bucket. Not a real id. */
+export const WORK_QUERY_BOARD_NONE_KEY = 'none';
+
+export const WORK_QUERY_PRIORITY_KEYS = ['0', '1', '2', '3', '4'] as const;
+
+export const prefixWorkQueryBoardKey = (axis: WorkQueryBoardAxis, raw: string): string =>
+  `${WORK_QUERY_BOARD_AXIS_PREFIX[axis]}:${raw}`;
+
+export const workQueryBoardAxisOfKey = (key: string): WorkQueryBoardAxis | undefined => {
+  const prefix = key.slice(0, key.indexOf(':'));
+  const match = (
+    Object.entries(WORK_QUERY_BOARD_AXIS_PREFIX) as [WorkQueryBoardAxis, string][]
+  ).find(([, value]) => value === prefix);
+  return match?.[0];
+};
+
+/** Strip `wf:` / `st:` / `pr:` / `as:` / `pj:`. Unknown keys pass through. */
+export const rawWorkQueryBoardKey = (key: string): string => {
+  const separator = key.indexOf(':');
+  if (separator <= 0) return key;
+  return workQueryBoardAxisOfKey(key) ? key.slice(separator + 1) : key;
+};
+
+/**
+ * Status and workflow category are one state machine. Using both as the two
+ * board axes would write the same transition twice.
+ */
+export const workQueryAxesConflict = (
+  column: string | undefined,
+  lane: string | undefined,
+): boolean => {
+  if (!column || !lane || lane === 'none') return false;
+  return (
+    (column === 'status' && lane === 'workflowCategory') ||
+    (column === 'workflowCategory' && lane === 'status')
+  );
+};
+
+/** Drop a lane that repeats the column or pairs the two status axes. */
+export const normalizeWorkQuerySubGroupBy = (
+  column: WorkQueryGroupBy | undefined,
+  lane: WorkQuerySubGroupBy | undefined,
+): Exclude<WorkQuerySubGroupBy, 'none'> | undefined => {
+  if (!lane || lane === 'none' || lane === column) return undefined;
+  if (workQueryAxesConflict(column, lane)) return undefined;
+  return lane;
+};
 
 /**
  * Board ordering mode. `manual` orders a board column by the persisted
@@ -288,6 +387,15 @@ export interface WorkQuery {
   schemaVersion: 1;
   sort?: WorkQuerySort[];
   sortMode?: WorkQuerySortMode;
+  /**
+   * Board swimlane and list sub-group. Composite keys are the column key,
+   * the unit separator, then the lane key.
+   */
+  subGroupBy?: WorkQuerySubGroupBy;
+  /**
+   * IANA time zone for `activityDate` buckets. Omitted queries bucket in UTC.
+   */
+  timeZone?: string;
 }
 
 /**
@@ -295,7 +403,8 @@ export interface WorkQuery {
  * builder may offer per entity. Server compile keeps its own allow-list; a
  * field absent here must still round-trip untouched (preserved, not dropped).
  */
-export type WorkQueryValueKind = 'cycle' | 'enum' | 'label' | 'project' | 'team' | 'user';
+export type WorkQueryValueKind =
+  'agent' | 'cycle' | 'date' | 'enum' | 'label' | 'project' | 'team' | 'text' | 'user';
 
 export interface WorkQueryFieldSpec {
   /**
@@ -372,12 +481,17 @@ export const WORK_QUERY_TASK_FIELD_SPECS: readonly WorkQueryFieldSpec[] = [
   },
   {
     field: 'assigneeUserId',
-    ops: ['eq', 'neq', 'isNull', 'isNotNull'],
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
     valueKind: 'user',
   },
   {
+    field: 'assigneeAgentId',
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
+    valueKind: 'agent',
+  },
+  {
     field: 'createdByUserId',
-    ops: ['eq', 'neq'],
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
     valueKind: 'user',
   },
   {
@@ -388,17 +502,17 @@ export const WORK_QUERY_TASK_FIELD_SPECS: readonly WorkQueryFieldSpec[] = [
   },
   {
     field: 'projectId',
-    ops: ['eq', 'neq', 'isNull', 'isNotNull'],
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
     valueKind: 'project',
   },
   {
     field: 'teamId',
-    ops: ['eq', 'neq', 'isNull', 'isNotNull'],
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
     valueKind: 'team',
   },
   {
     field: 'cycleId',
-    ops: ['eq', 'isNull', 'isNotNull'],
+    ops: ['eq', 'in', 'notIn', 'isNull', 'isNotNull'],
     valueKind: 'cycle',
   },
   {
@@ -411,6 +525,38 @@ export const WORK_QUERY_TASK_FIELD_SPECS: readonly WorkQueryFieldSpec[] = [
     field: 'labelId',
     ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
     valueKind: 'label',
+  },
+  {
+    field: 'createdAt',
+    ops: ['isNull', 'isNotNull', 'lt', 'gte', 'between'],
+    valueKind: 'date',
+  },
+  {
+    field: 'updatedAt',
+    ops: ['isNull', 'isNotNull', 'lt', 'gte', 'between'],
+    valueKind: 'date',
+  },
+  {
+    field: 'completedAt',
+    ops: ['isNull', 'isNotNull', 'lt', 'gte', 'between'],
+    valueKind: 'date',
+  },
+  {
+    field: 'text',
+    ops: ['contains'],
+    valueKind: 'text',
+  },
+  {
+    currentUserOnly: true,
+    field: 'subscribed',
+    ops: ['eq'],
+    valueKind: 'user',
+  },
+  {
+    currentUserOnly: true,
+    field: 'hasActivity',
+    ops: ['eq'],
+    valueKind: 'user',
   },
 ];
 

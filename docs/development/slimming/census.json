@@ -1,6 +1,6 @@
 {
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "88b2e4f74396fa48f7607b0d7bd9cf8df49b05cd",
+  "baseSha": "444ed59c46745fc9e2c286fbb63330d6b9d22ec6",
   "capabilities": [
     {
       "id": "workspace",
@@ -13,7 +13,7 @@
         "apps/server/src/services/workspace*/**",
         "apps/server/src/routers/lambda/{project,resourcePermission,resourceTransferRequest,workspace*}.ts"
       ],
-      "fileCount": 206,
+      "fileCount": 204,
       "files": [
         "apps/server/src/routers/lambda/project.ts",
         "apps/server/src/routers/lambda/resourcePermission.ts",
@@ -179,8 +179,6 @@
         "src/features/WorkspaceSetting/Layout.test.tsx",
         "src/features/WorkspaceSetting/Layout.tsx",
         "src/features/WorkspaceSetting/Linear/index.tsx",
-        "src/features/WorkspaceSetting/Linear/oauthPopup.test.ts",
-        "src/features/WorkspaceSetting/Linear/oauthPopup.ts",
         "src/features/WorkspaceSetting/LinearImport/index.tsx",
         "src/features/WorkspaceSetting/SideBar/Body.tsx",
         "src/features/WorkspaceSetting/SideBar/Content.tsx",
@@ -223,7 +221,7 @@
         "src/routes/(main)/[workspaceSlug]/settings/usage/index.tsx"
       ],
       "inbound": {
-        "total": 285,
+        "total": 287,
         "explained": 15,
         "unexplained": [
           {
@@ -282,6 +280,11 @@
             "targets": ["apps/server/src/services/workspacePermission/index.ts"]
           },
           {
+            "importer": "apps/server/src/routers/lambda/teamResource.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/services/workspacePermission/index.ts"]
+          },
+          {
             "importer": "apps/server/src/routers/lambda/topicComment.ts",
             "disposition": "UNCOVERED",
             "targets": ["apps/server/src/services/workspacePermission/index.ts"]
@@ -307,14 +310,10 @@
             "targets": ["src/features/Members/MembersPage.tsx"]
           },
           {
-            "importer": "src/spa/router/desktopRouter.shared.tsx",
+            "importer": "src/spa/router/sharedMainAreaLeaves.tsx",
             "disposition": "UNCOVERED",
             "targets": [
               "src/features/Members/routeMeta.ts",
-              "src/features/Projects/routeMeta.ts",
-              "src/features/Workspace/routeMeta.ts",
-              "src/routes/(main)/[workspaceSlug]/settings/_content-layout/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/_layout/index.tsx",
               "src/routes/(main)/[workspaceSlug]/settings/about/index.tsx",
               "src/routes/(main)/[workspaceSlug]/settings/advanced/index.tsx",
               "src/routes/(main)/[workspaceSlug]/settings/apikey/index.tsx",
@@ -640,6 +639,16 @@
             "importer": "src/features/MyWork/WorkQueryResults.tsx",
             "disposition": "UNCOVERED",
             "targets": ["src/features/Projects/milestoneFilter.ts"]
+          },
+          {
+            "importer": "src/spa/router/desktopRouter.shared.tsx",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "src/features/Projects/routeMeta.ts",
+              "src/features/Workspace/routeMeta.ts",
+              "src/routes/(main)/[workspaceSlug]/settings/_content-layout/index.tsx",
+              "src/routes/(main)/[workspaceSlug]/settings/_layout/index.tsx"
+            ]
           },
           {
             "importer": "src/routes/(main)/agent/profile/features/Header/index.tsx",
@@ -994,6 +1003,14 @@
             "importer": "src/features/MobileHome/SessionListContent/AgentSearchList.tsx",
             "disposition": "UNCOVERED",
             "targets": ["src/features/Workspace/WorkspaceLink.tsx"]
+          },
+          {
+            "importer": "src/features/Reviews/ReviewsPage.tsx",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "src/features/Workspace/WorkspaceLink.tsx",
+              "src/features/Workspace/useWorkspaceAwareNavigate.ts"
+            ]
           },
           {
             "importer": "src/features/TaskDrafts/TaskDraftsPage.tsx",
@@ -1467,11 +1484,6 @@
             "targets": ["src/features/Workspace/useWorkspaceAwareNavigate.ts"]
           },
           {
-            "importer": "src/features/Reviews/ReviewsPage.tsx",
-            "disposition": "UNCOVERED",
-            "targets": ["src/features/Workspace/useWorkspaceAwareNavigate.ts"]
-          },
-          {
             "importer": "src/features/SavedViews/NewViewModal.tsx",
             "disposition": "UNCOVERED",
             "targets": ["src/features/Workspace/useWorkspaceAwareNavigate.ts"]
@@ -1498,6 +1510,11 @@
           },
           {
             "importer": "src/features/Settings/Layout/Body/index.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["src/features/Workspace/useWorkspaceAwareNavigate.ts"]
+          },
+          {
+            "importer": "src/features/Settings/ProviderBindings/BindingEditor.tsx",
             "disposition": "UNCOVERED",
             "targets": ["src/features/Workspace/useWorkspaceAwareNavigate.ts"]
           },
@@ -1776,27 +1793,6 @@
             "targets": ["src/features/WorkspaceSetting/Labels/index.tsx"]
           },
           {
-            "importer": "src/spa/router/mobileRouter.config.tsx",
-            "disposition": "UNCOVERED",
-            "targets": [
-              "src/routes/(main)/[workspaceSlug]/settings/about/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/advanced/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/appearance/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/billing/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/budget/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/credits/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/general/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/hotkey/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/labels/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/labs/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/members/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/notification/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/plans/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/profile/index.tsx",
-              "src/routes/(main)/[workspaceSlug]/settings/usage/index.tsx"
-            ]
-          },
-          {
             "importer": "src/spa/router/desktopRouter.config.desktop.tsx",
             "disposition": "UNCOVERED",
             "targets": ["src/routes/(main)/[workspaceSlug]/settings/index.tsx"]
@@ -1821,7 +1817,7 @@
         "src/features/Acceptance/**",
         "packages/eval-rubric/**"
       ],
-      "fileCount": 768,
+      "fileCount": 790,
       "files": [
         "apps/server/src/router-hono/workflows/agent-eval-run/handlers/onThreadComplete.ts",
         "apps/server/src/router-hono/workflows/agent-eval-run/handlers/onTrajectoryComplete.ts",
@@ -1948,6 +1944,8 @@
         "apps/server/src/services/taskLifecycle/onTopicComplete.test.ts",
         "apps/server/src/services/taskLifecycle/synthesize.test.ts",
         "apps/server/src/services/taskLifecycle/synthesize.ts",
+        "apps/server/src/services/taskOwnership/index.test.ts",
+        "apps/server/src/services/taskOwnership/index.ts",
         "apps/server/src/services/taskRecommendation/config.test.ts",
         "apps/server/src/services/taskRecommendation/config.ts",
         "apps/server/src/services/taskRecommendation/materializer.test.ts",
@@ -2416,6 +2414,8 @@
         "src/features/AgentTasks/AgentTaskDetail/TaskDetailPage.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/TaskDetailRunPauseAction.tsx",
+        "src/features/AgentTasks/AgentTaskDetail/TaskDetailScope.test.ts",
+        "src/features/AgentTasks/AgentTaskDetail/TaskDetailScope.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskDetailSections.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskDetailSkeleton.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskDetailTitleInput.tsx",
@@ -2425,6 +2425,7 @@
         "src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.test.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskProjectSection.tsx",
+        "src/features/AgentTasks/AgentTaskDetail/TaskProperties.test.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskProperties.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskRailActions.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskRunReport.tsx",
@@ -2433,7 +2434,6 @@
         "src/features/AgentTasks/AgentTaskDetail/TaskSubtasks.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TaskVerifyConfig.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/TaskVerifyConfig.tsx",
-        "src/features/AgentTasks/AgentTaskDetail/TaskWorkflowStatusRow.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TopicCard.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/TopicCard.test.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TopicCard.tsx",
@@ -2462,9 +2462,13 @@
         "src/features/AgentTasks/AgentTaskDetail/taskDetailLayoutStyles.ts",
         "src/features/AgentTasks/AgentTaskDetail/taskStatusRow.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/taskStatusRow.ts",
+        "src/features/AgentTasks/AgentTaskDetail/taskTitleSaveQueue.test.ts",
+        "src/features/AgentTasks/AgentTaskDetail/taskTitleSaveQueue.ts",
         "src/features/AgentTasks/AgentTaskDetail/useActiveTaskDetail.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/useActiveTaskDetail.ts",
         "src/features/AgentTasks/AgentTaskDetail/useActiveTaskResult.ts",
+        "src/features/AgentTasks/AgentTaskDetail/useAttachInstructionFiles.test.ts",
+        "src/features/AgentTasks/AgentTaskDetail/useAttachInstructionFiles.ts",
         "src/features/AgentTasks/AgentTaskDetail/useOpenAcceptanceInPanel.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/useOpenAcceptanceInPanel.ts",
         "src/features/AgentTasks/AgentTaskDetail/useTaskCommentDraft.test.ts",
@@ -2473,6 +2477,8 @@
         "src/features/AgentTasks/AgentTaskDetail/useTaskCopyActions.ts",
         "src/features/AgentTasks/AgentTaskDetail/useTaskInstructionAutosave.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/useTaskInstructionAutosave.ts",
+        "src/features/AgentTasks/AgentTaskDetail/useTaskTitleAutosave.test.ts",
+        "src/features/AgentTasks/AgentTaskDetail/useTaskTitleAutosave.ts",
         "src/features/AgentTasks/AgentTaskList/AgentTasksPage.test.ts",
         "src/features/AgentTasks/AgentTaskList/AgentTasksPage.tsx",
         "src/features/AgentTasks/AgentTaskList/CreateTaskInlineEntry.test.tsx",
@@ -2540,10 +2546,17 @@
         "src/features/AgentTasks/features/taskStatusMeta.ts",
         "src/features/AgentTasks/features/taskVisibilityLabel.ts",
         "src/features/AgentTasks/features/useCascadeApply.test.ts",
+        "src/features/AgentTasks/features/useIssueStatusMove.test.ts",
+        "src/features/AgentTasks/features/useIssueStatusMove.ts",
+        "src/features/AgentTasks/features/useMenuDigitShortcuts.test.ts",
+        "src/features/AgentTasks/features/useMenuDigitShortcuts.ts",
         "src/features/AgentTasks/features/useTaskItemContextMenu.test.tsx",
         "src/features/AgentTasks/features/useTaskItemContextMenu.tsx",
+        "src/features/AgentTasks/features/useTaskPriorityChange.test.ts",
+        "src/features/AgentTasks/features/useTaskPriorityChange.ts",
         "src/features/AgentTasks/features/useTaskStatusChange.test.ts",
         "src/features/AgentTasks/features/useTaskStatusChange.ts",
+        "src/features/AgentTasks/features/useTeamWorkflowStates.ts",
         "src/features/AgentTasks/index.tsx",
         "src/features/AgentTasks/routeMeta.ts",
         "src/features/AgentTasks/shared/AccordionArrowIcon.tsx",
@@ -2570,6 +2583,8 @@
         "src/features/AgentTasks/shared/useAgentVisibility.ts",
         "src/features/AgentTasks/shared/useCanonicalTaskSlug.test.ts",
         "src/features/AgentTasks/shared/useCanonicalTaskSlug.ts",
+        "src/features/AgentTasks/shared/useTaskProjectChange.test.ts",
+        "src/features/AgentTasks/shared/useTaskProjectChange.ts",
         "src/features/AgentTasks/shared/useUserDisplayMeta.ts",
         "src/features/Automations/AutomationBreadcrumb.tsx",
         "src/features/Automations/AutomationCreatePage.test.tsx",
@@ -2584,16 +2599,19 @@
         "src/features/Automations/AutomationTemplateGallery.tsx",
         "src/features/Automations/AutomationTriggerDraft.tsx",
         "src/features/Automations/AutomationsPage.tsx",
+        "src/features/Automations/McpEventTriggerSettings.tsx",
         "src/features/Automations/RunStatusBadge.tsx",
         "src/features/Automations/automationTemplates.ts",
         "src/features/Automations/routeMeta.ts",
         "src/features/Automations/shared.test.ts",
         "src/features/Automations/shared.ts",
         "src/features/Automations/useAutomationActions.ts",
+        "src/features/Automations/useSavedEventTrigger.test.ts",
+        "src/features/Automations/useSavedEventTrigger.ts",
         "src/features/Automations/useScheduledTaskPage.ts"
       ],
       "inbound": {
-        "total": 135,
+        "total": 139,
         "explained": 19,
         "unexplained": [
           {
@@ -2731,6 +2749,19 @@
             ]
           },
           {
+            "importer": "apps/server/src/services/mcpEvents/admission.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "apps/server/src/services/taskDispatch/index.ts",
+              "apps/server/src/services/taskRunner/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/linearSync/integrationTask.ts",
+            "disposition": "KEEP",
+            "targets": ["apps/server/src/services/taskOwnership/index.ts"]
+          },
+          {
             "importer": "apps/server/src/routers/lambda/_helpers/onboardingError.ts",
             "disposition": "UNCOVERED",
             "targets": [
@@ -2772,6 +2803,11 @@
             "importer": "apps/server/src/services/toolExecution/serverRuntimes/verifyResult.ts",
             "disposition": "KEEP",
             "targets": ["apps/server/src/services/verify/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/canonicalCompletion.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/services/verify/settle.ts"]
           },
           {
             "importer": "apps/server/src/routers/lambda/agentEval.ts",
@@ -2951,6 +2987,14 @@
             ]
           },
           {
+            "importer": "src/spa/router/sharedMainAreaLeaves.tsx",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "src/features/AgentGoals/routeMeta.ts",
+              "src/features/AgentTasks/routeMeta.ts"
+            ]
+          },
+          {
             "importer": "src/features/HomeInbox/UnreadTopicList.tsx",
             "disposition": "REWRITE_FOR_ACP",
             "targets": [
@@ -3004,21 +3048,12 @@
             "disposition": "UNCOVERED",
             "targets": [
               "src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx",
+              "src/features/AgentTasks/AgentTaskList/kanbanBoardModel.ts",
               "src/features/AgentTasks/CreateTaskModal/index.tsx",
               "src/features/AgentTasks/features/AssigneeUserAvatar.tsx",
               "src/features/AgentTasks/features/useTaskStatusChange.ts",
               "src/features/AgentTasks/shared/taskDetailPath.ts"
             ]
-          },
-          {
-            "importer": "src/features/SavedViews/SavedViewDetailsPanel.tsx",
-            "disposition": "UNCOVERED",
-            "targets": ["src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx"]
-          },
-          {
-            "importer": "src/features/SavedViews/SavedViewPage.tsx",
-            "disposition": "UNCOVERED",
-            "targets": ["src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx"]
           },
           {
             "importer": "src/components/Skeleton/Tasks.tsx",
@@ -3043,6 +3078,16 @@
               "src/features/AgentTasks/features/TaskStatusCascadeModal.tsx",
               "src/features/AgentTasks/features/useTaskStatusChange.ts"
             ]
+          },
+          {
+            "importer": "src/features/SavedViews/SavedViewDetailsPanel.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["src/features/AgentTasks/AgentTaskList/kanbanBoardModel.ts"]
+          },
+          {
+            "importer": "src/features/SavedViews/SavedViewPage.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["src/features/AgentTasks/AgentTaskList/kanbanBoardModel.ts"]
           },
           {
             "importer": "src/features/MyWork/workQueryHierarchy.ts",
@@ -3380,7 +3425,7 @@
         "apps/server/src/modules/AgentExecution/**",
         "apps/server/src/routers/lambda/{agent,aiAgent,agentSignal,agentTrace,device,deviceWorkingDirs,deviceWorkspaceGuard}.ts"
       ],
-      "fileCount": 542,
+      "fileCount": 570,
       "files": [
         "apps/server/src/modules/AgentExecution/AgentStateManager.ts",
         "apps/server/src/modules/AgentExecution/GatewayStreamNotifier.ts",
@@ -3515,6 +3560,34 @@
         "packages/agent-execution/src/audit/globalAudit.ts",
         "packages/agent-execution/src/audit/index.ts",
         "packages/agent-execution/src/contractBoundary.test.ts",
+        "packages/agent-execution/src/controlPlane/actionGateway.test.ts",
+        "packages/agent-execution/src/controlPlane/actionGateway.ts",
+        "packages/agent-execution/src/controlPlane/contracts.ts",
+        "packages/agent-execution/src/controlPlane/dockerSupervisor.test.ts",
+        "packages/agent-execution/src/controlPlane/dockerSupervisor.ts",
+        "packages/agent-execution/src/controlPlane/fileActionExecutor.test.ts",
+        "packages/agent-execution/src/controlPlane/fileActionExecutor.ts",
+        "packages/agent-execution/src/controlPlane/handoff.boundary.test.ts",
+        "packages/agent-execution/src/controlPlane/handoff.test.ts",
+        "packages/agent-execution/src/controlPlane/handoff.ts",
+        "packages/agent-execution/src/controlPlane/independent.test.ts",
+        "packages/agent-execution/src/controlPlane/index.ts",
+        "packages/agent-execution/src/controlPlane/inferenceBroker.test.ts",
+        "packages/agent-execution/src/controlPlane/inferenceBroker.ts",
+        "packages/agent-execution/src/controlPlane/isolation.test.ts",
+        "packages/agent-execution/src/controlPlane/isolation.ts",
+        "packages/agent-execution/src/controlPlane/primeRuntime.test.ts",
+        "packages/agent-execution/src/controlPlane/primeRuntime.ts",
+        "packages/agent-execution/src/controlPlane/primeStdioTransport.test.ts",
+        "packages/agent-execution/src/controlPlane/primeStdioTransport.ts",
+        "packages/agent-execution/src/controlPlane/receiptRecovery.test.ts",
+        "packages/agent-execution/src/controlPlane/scopedFileWriter.test.ts",
+        "packages/agent-execution/src/controlPlane/scopedFileWriter.ts",
+        "packages/agent-execution/src/controlPlane/server.ts",
+        "packages/agent-execution/src/controlPlane/sqlReceiptStore.test.ts",
+        "packages/agent-execution/src/controlPlane/sqlReceiptStore.ts",
+        "packages/agent-execution/src/controlPlane/verification.boundary.test.ts",
+        "packages/agent-execution/src/controlPlane/verification.ts",
         "packages/agent-execution/src/index.ts",
         "packages/agent-execution/src/transport/index.ts",
         "packages/agent-execution/src/transport/message.ts",
@@ -3926,8 +3999,8 @@
         "packages/tool-runtime/vitest.config.mts"
       ],
       "inbound": {
-        "total": 581,
-        "explained": 135,
+        "total": 599,
+        "explained": 140,
         "unexplained": [
           {
             "importer": "apps/server/src/services/resourceEvents/index.ts",
@@ -4226,6 +4299,72 @@
             "targets": ["apps/server/src/services/aiAgent/shareGate.ts"]
           },
           {
+            "importer": "scripts/acceptance/sql-receipt-recovery.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/contracts.ts",
+              "packages/agent-execution/src/controlPlane/sqlReceiptStore.ts"
+            ]
+          },
+          {
+            "importer": "scripts/acceptance/prime-nonempty.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/dockerSupervisor.ts",
+              "packages/agent-execution/src/controlPlane/primeRuntime.ts"
+            ]
+          },
+          {
+            "importer": "scripts/acceptance/prime-protocol.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/dockerSupervisor.ts",
+              "packages/agent-execution/src/controlPlane/primeRuntime.ts",
+              "packages/agent-execution/src/controlPlane/primeStdioTransport.ts"
+            ]
+          },
+          {
+            "importer": "scripts/acceptance/prime-resume.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/dockerSupervisor.ts",
+              "packages/agent-execution/src/controlPlane/primeRuntime.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/admission.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/agent-execution/src/controlPlane/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/runtime.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/agent-execution/src/controlPlane/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/worker.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/agent-execution/src/controlPlane/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/providerBinding/configuration.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/agent-execution/src/controlPlane/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/providerBinding/controlPlane.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/agent-execution/src/controlPlane/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/server.ts",
+              "packages/agent-execution/src/index.ts"
+            ]
+          },
+          {
             "importer": "apps/cli/src/runtime/CliMessageTransport.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/agent-execution/src/index.ts"]
@@ -4252,6 +4391,21 @@
           },
           {
             "importer": "apps/server/src/services/agentSignal/services/selfIteration/finalStateExtractor.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/agent-execution/src/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/canonicalCompletion.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/agent-execution/src/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/canonicalRun.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/agent-execution/src/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/canonicalSessionSnapshot.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/agent-execution/src/index.ts"]
           },
@@ -6486,7 +6640,7 @@
         "src/features/{Connectors,GitHub*,Linear*}/**",
         "packages/connector-data/**"
       ],
-      "fileCount": 142,
+      "fileCount": 143,
       "files": [
         "apps/server/src/routers/lambda/connector.ts",
         "apps/server/src/routers/lambda/linearSync.ts",
@@ -6626,14 +6780,15 @@
         "src/features/Connectors/CustomConnectorModal/index.tsx",
         "src/features/Connectors/CustomConnectorModal/legacyPluginMigration.test.ts",
         "src/features/Connectors/CustomConnectorModal/legacyPluginMigration.ts",
-        "src/features/Connectors/CustomConnectorModal/oauthPopup.ts",
         "src/features/Connectors/index.ts",
+        "src/features/Connectors/oauthSession.test.ts",
+        "src/features/Connectors/oauthSession.ts",
         "src/features/Connectors/useSkillConnect.test.ts",
         "src/features/Connectors/useSkillConnect.ts"
       ],
       "inbound": {
-        "total": 53,
-        "explained": 15,
+        "total": 58,
+        "explained": 16,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -6666,6 +6821,11 @@
               "apps/server/src/services/connector/sync.ts",
               "apps/server/src/services/connector/tokens.ts"
             ]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/connector.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/services/connector/sync.ts"]
           },
           {
             "importer": "packages/openapi/src/services/mcp-server.service.ts",
@@ -6860,11 +7020,6 @@
             "targets": ["src/features/Connectors/CustomConnectorModal/imperative.tsx"]
           },
           {
-            "importer": "src/features/Settings/connector/features/connectLinearMcpPreset.ts",
-            "disposition": "UNCOVERED",
-            "targets": ["src/features/Connectors/CustomConnectorModal/oauthPopup.ts"]
-          },
-          {
             "importer": "src/features/Settings/connector/features/ConnectorDetail/index.tsx",
             "disposition": "UNCOVERED",
             "targets": [
@@ -6876,6 +7031,26 @@
             "importer": "src/features/Settings/connector/features/LeftPanel.tsx",
             "disposition": "UNCOVERED",
             "targets": ["src/features/Connectors/index.ts"]
+          },
+          {
+            "importer": "src/features/Settings/connector/features/connectLinearMcpPreset.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["src/features/Connectors/oauthSession.ts"]
+          },
+          {
+            "importer": "src/features/Settings/connector/features/useGitHubMcpConnect.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["src/features/Connectors/oauthSession.ts"]
+          },
+          {
+            "importer": "src/features/WorkspaceSetting/Linear/index.tsx",
+            "disposition": "KEEP",
+            "targets": ["src/features/Connectors/oauthSession.ts"]
+          },
+          {
+            "importer": "src/features/WorkspaceSetting/LinearImport/index.tsx",
+            "disposition": "KEEP",
+            "targets": ["src/features/Connectors/oauthSession.ts"]
           }
         ]
       }
@@ -8099,7 +8274,7 @@
         "src/store/chat/utils/unescapeMarkdown.ts"
       ],
       "inbound": {
-        "total": 372,
+        "total": 371,
         "explained": 35,
         "unexplained": [
           {
@@ -9881,11 +10056,6 @@
             "targets": ["src/store/chat/index.ts", "src/store/chat/slices/operation/selectors.ts"]
           },
           {
-            "importer": "src/routes/(main)/agent/_layout/PortalAutoCollapse.tsx",
-            "disposition": "UNCOVERED",
-            "targets": ["src/store/chat/index.ts", "src/store/chat/selectors.ts"]
-          },
-          {
             "importer": "src/routes/(main)/agent/_layout/useAgentIdStoreSync.ts",
             "disposition": "UNCOVERED",
             "targets": ["src/store/chat/index.ts"]
@@ -10158,7 +10328,7 @@
         "apps/server/src/services/{auth*,apiKey*}/**",
         "apps/server/src/routers/lambda/apiKey.ts"
       ],
-      "fileCount": 146,
+      "fileCount": 147,
       "files": [
         "apps/auth/app/entry.client.tsx",
         "apps/auth/app/entry.server.tsx",
@@ -10213,6 +10383,8 @@
         "apps/auth/app/shell/loadAuthNamespace.ts",
         "apps/auth/app/stubs/loadAuthNamespace.ts",
         "apps/auth/app/virtual-modules.d.ts",
+        "apps/auth/cf/cloudflare.config.ts",
+        "apps/auth/cf/vite.config.ts",
         "apps/auth/react-router.config.ts",
         "apps/auth/scripts/build.mjs",
         "apps/auth/scripts/deploy.ts",
@@ -10221,11 +10393,11 @@
         "apps/auth/staticCssOptions.mjs",
         "apps/auth/vite.config.rr.mts",
         "apps/auth/vite.config.shared.mts",
-        "apps/auth/vite.config.worker.mts",
         "apps/auth/workers/app.ts",
         "apps/auth/workers/document.test.ts",
         "apps/auth/workers/document.ts",
         "apps/server/src/routers/lambda/apiKey.ts",
+        "apps/server/src/services/auth/clerk.test.ts",
         "apps/server/src/services/auth/clerk.ts",
         "apps/server/src/services/auth/index.ts",
         "apps/server/src/services/auth/session.ts",
@@ -10245,7 +10417,6 @@
         "packages/edge-config/src/types.ts",
         "packages/env/src/__tests__/analytics.test.ts",
         "packages/env/src/__tests__/app.test.ts",
-        "packages/env/src/__tests__/auth.test.ts",
         "packages/env/src/__tests__/client.test.ts",
         "packages/env/src/__tests__/ftsSearch.test.ts",
         "packages/env/src/__tests__/sandbox.test.ts",
@@ -10308,8 +10479,8 @@
         "src/features/AuthShell/style.ts"
       ],
       "inbound": {
-        "total": 160,
-        "explained": 22,
+        "total": 163,
+        "explained": 23,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -10529,18 +10700,12 @@
           {
             "importer": "src/spa/router/desktopRouter.shared.tsx",
             "disposition": "UNCOVERED",
-            "targets": [
-              "packages/app-config/src/routes/index.ts",
-              "packages/app-config/src/routes/settings.ts"
-            ]
+            "targets": ["packages/app-config/src/routes/index.ts"]
           },
           {
             "importer": "src/spa/router/mobileRouter.config.tsx",
             "disposition": "UNCOVERED",
-            "targets": [
-              "packages/app-config/src/routes/index.ts",
-              "packages/app-config/src/routes/settings.ts"
-            ]
+            "targets": ["packages/app-config/src/routes/index.ts"]
           },
           {
             "importer": "src/features/Settings/features/SettingsContent.tsx",
@@ -10559,6 +10724,11 @@
           },
           {
             "importer": "src/routes/(mobile)/me/settings/features/useCategory.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/app-config/src/routes/settings.ts"]
+          },
+          {
+            "importer": "src/spa/router/sharedMainAreaLeaves.tsx",
             "disposition": "UNCOVERED",
             "targets": ["packages/app-config/src/routes/settings.ts"]
           },
@@ -10626,6 +10796,11 @@
             "importer": "apps/server/src/routers/async/caller.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/env/src/app.ts", "packages/env/src/auth.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/mcpEvents.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/env/src/app.ts"]
           },
           {
             "importer": "apps/server/src/services/agentDocuments/documentWork.ts",
@@ -11055,7 +11230,7 @@
         "apps/server/src/services/{file*,storage*,s3*,upload*}/**",
         "apps/server/src/routers/lambda/{file,chunk,document,documentComment,documentLike,notification,pushToken,recent,metric}.ts"
       ],
-      "fileCount": 1295,
+      "fileCount": 1323,
       "files": [
         "apps/server/src/routers/lambda/chunk.ts",
         "apps/server/src/routers/lambda/document.ts",
@@ -11162,6 +11337,7 @@
         "packages/const/vitest.config.mts",
         "packages/database/src/core/__tests__/getTestDB.test.ts",
         "packages/database/src/core/__tests__/migrationJournal.test.ts",
+        "packages/database/src/core/__tests__/providerMemoryMigration.test.ts",
         "packages/database/src/core/db-adaptor.ts",
         "packages/database/src/core/getTestDB.ts",
         "packages/database/src/core/web-server.ts",
@@ -11206,8 +11382,10 @@
         "packages/database/src/models/__tests__/connector.test.ts",
         "packages/database/src/models/__tests__/connectorAgentScope.test.ts",
         "packages/database/src/models/__tests__/connectorTool.test.ts",
+        "packages/database/src/models/__tests__/credential.test.ts",
         "packages/database/src/models/__tests__/device.test.ts",
         "packages/database/src/models/__tests__/document.privateVisibility.workspace.test.ts",
+        "packages/database/src/models/__tests__/document.teamVisibility.workspace.test.ts",
         "packages/database/src/models/__tests__/document.test.ts",
         "packages/database/src/models/__tests__/documentComment.test.ts",
         "packages/database/src/models/__tests__/documentHistory.test.ts",
@@ -11218,11 +11396,13 @@
         "packages/database/src/models/__tests__/embedding.test.ts",
         "packages/database/src/models/__tests__/eventConsumerReceipt.test.ts",
         "packages/database/src/models/__tests__/eventOutbox.test.ts",
+        "packages/database/src/models/__tests__/experienceMemory.test.ts",
         "packages/database/src/models/__tests__/expertise.test.ts",
         "packages/database/src/models/__tests__/file.test.ts",
         "packages/database/src/models/__tests__/fileUpload.test.ts",
         "packages/database/src/models/__tests__/fileUploaderJoin.test.ts",
         "packages/database/src/models/__tests__/fixtures/embedding.ts",
+        "packages/database/src/models/__tests__/fixtures/handoffCrashChild.ts",
         "packages/database/src/models/__tests__/goal.test.ts",
         "packages/database/src/models/__tests__/goalExploration.test.ts",
         "packages/database/src/models/__tests__/goalGraph.test.ts",
@@ -11260,6 +11440,7 @@
         "packages/database/src/models/__tests__/projectMember.test.ts",
         "packages/database/src/models/__tests__/projectMilestone.test.ts",
         "packages/database/src/models/__tests__/projectMilestoneMigration.test.ts",
+        "packages/database/src/models/__tests__/providerBinding.test.ts",
         "packages/database/src/models/__tests__/pullRequestReviewReceipt.test.ts",
         "packages/database/src/models/__tests__/pushToken.test.ts",
         "packages/database/src/models/__tests__/ragEval.workspace.test.ts",
@@ -11279,11 +11460,14 @@
         "packages/database/src/models/__tests__/taskDependency.test.ts",
         "packages/database/src/models/__tests__/taskDispatch.test.ts",
         "packages/database/src/models/__tests__/taskDomainContract.test.ts",
+        "packages/database/src/models/__tests__/taskExecutionControl.test.ts",
         "packages/database/src/models/__tests__/taskLabel.test.ts",
+        "packages/database/src/models/__tests__/taskOwnership.test.ts",
         "packages/database/src/models/__tests__/taskPrDeliveryGate.test.ts",
         "packages/database/src/models/__tests__/taskSubscription.test.ts",
         "packages/database/src/models/__tests__/taskTopic.test.ts",
         "packages/database/src/models/__tests__/taskWorkspaceClaim.test.ts",
+        "packages/database/src/models/__tests__/teamResource.test.ts",
         "packages/database/src/models/__tests__/thread.test.ts",
         "packages/database/src/models/__tests__/topic.test.ts",
         "packages/database/src/models/__tests__/topicComment.test.ts",
@@ -11374,6 +11558,7 @@
         "packages/database/src/models/chunk.ts",
         "packages/database/src/models/connector.ts",
         "packages/database/src/models/connectorTool.ts",
+        "packages/database/src/models/credential.ts",
         "packages/database/src/models/device.ts",
         "packages/database/src/models/document.ts",
         "packages/database/src/models/documentComment.ts",
@@ -11384,6 +11569,7 @@
         "packages/database/src/models/embedding.ts",
         "packages/database/src/models/eventConsumerReceipt.ts",
         "packages/database/src/models/eventOutbox.ts",
+        "packages/database/src/models/experienceMemory.ts",
         "packages/database/src/models/expertise.ts",
         "packages/database/src/models/file.ts",
         "packages/database/src/models/fileUpload.ts",
@@ -11407,6 +11593,8 @@
         "packages/database/src/models/plugin.ts",
         "packages/database/src/models/project.ts",
         "packages/database/src/models/projectMember.ts",
+        "packages/database/src/models/projectOrchestrationPolicy.ts",
+        "packages/database/src/models/providerBinding.ts",
         "packages/database/src/models/pullRequestReviewReceipt.ts",
         "packages/database/src/models/pushToken.ts",
         "packages/database/src/models/ragEval/__tests__/dataset.test.ts",
@@ -11431,11 +11619,13 @@
         "packages/database/src/models/taskDependency.ts",
         "packages/database/src/models/taskDispatch.ts",
         "packages/database/src/models/taskDomainMutation.ts",
+        "packages/database/src/models/taskExecutionControl.ts",
         "packages/database/src/models/taskLabel.ts",
         "packages/database/src/models/taskSubscription.ts",
         "packages/database/src/models/taskTopic.ts",
         "packages/database/src/models/taskWorkspaceClaim.ts",
         "packages/database/src/models/team.ts",
+        "packages/database/src/models/teamResource.ts",
         "packages/database/src/models/thread.ts",
         "packages/database/src/models/topic.ts",
         "packages/database/src/models/topicComment.ts",
@@ -11526,8 +11716,10 @@
         "packages/database/src/repositories/dataImporter/deprecated/index.ts",
         "packages/database/src/repositories/dataImporter/index.ts",
         "packages/database/src/repositories/ftsSearch/__tests__/elasticsearch.test.ts",
+        "packages/database/src/repositories/ftsSearch/__tests__/teamDocumentAccess.test.ts",
         "packages/database/src/repositories/ftsSearch/boundary.test.ts",
         "packages/database/src/repositories/ftsSearch/elasticsearch.ts",
+        "packages/database/src/repositories/ftsSearch/elasticsearch/candidates.test.ts",
         "packages/database/src/repositories/ftsSearch/elasticsearch/candidates.ts",
         "packages/database/src/repositories/ftsSearch/elasticsearch/hydration.ts",
         "packages/database/src/repositories/ftsSearch/elasticsearch/query-fields.test.ts",
@@ -11609,6 +11801,7 @@
         "packages/database/src/schemas/agentOperationLaunch.ts",
         "packages/database/src/schemas/agentOperations.ts",
         "packages/database/src/schemas/agentQuota.ts",
+        "packages/database/src/schemas/agentResource.ts",
         "packages/database/src/schemas/agentShare.ts",
         "packages/database/src/schemas/agentSkill.ts",
         "packages/database/src/schemas/apiKey.ts",
@@ -11616,6 +11809,7 @@
         "packages/database/src/schemas/betterAuth.ts",
         "packages/database/src/schemas/chatGroup.ts",
         "packages/database/src/schemas/connector.ts",
+        "packages/database/src/schemas/credential.ts",
         "packages/database/src/schemas/device.ts",
         "packages/database/src/schemas/documentComment.ts",
         "packages/database/src/schemas/documentHistory.ts",
@@ -11623,6 +11817,7 @@
         "packages/database/src/schemas/documentShare.ts",
         "packages/database/src/schemas/eventOutbox.ts",
         "packages/database/src/schemas/executionGrant.ts",
+        "packages/database/src/schemas/experienceMemory.ts",
         "packages/database/src/schemas/expertise.ts",
         "packages/database/src/schemas/file.ts",
         "packages/database/src/schemas/ftsSearchSyncOutbox.ts",
@@ -11638,16 +11833,19 @@
         "packages/database/src/schemas/linearImport.ts",
         "packages/database/src/schemas/linearSync.ts",
         "packages/database/src/schemas/llmGenerationTracing.ts",
+        "packages/database/src/schemas/mcpEvents.ts",
         "packages/database/src/schemas/message.ts",
         "packages/database/src/schemas/metric.ts",
         "packages/database/src/schemas/nextauth.ts",
         "packages/database/src/schemas/notification.ts",
         "packages/database/src/schemas/oidc.ts",
         "packages/database/src/schemas/project.ts",
+        "packages/database/src/schemas/projectKnowledgeBase.ts",
         "packages/database/src/schemas/projectLink.ts",
         "packages/database/src/schemas/projectMember.ts",
         "packages/database/src/schemas/projectUpdate.ts",
         "packages/database/src/schemas/projectWork.ts",
+        "packages/database/src/schemas/providerBinding.ts",
         "packages/database/src/schemas/pullRequestReview.ts",
         "packages/database/src/schemas/pushToken.ts",
         "packages/database/src/schemas/rag.ts",
@@ -11660,10 +11858,12 @@
         "packages/database/src/schemas/session.ts",
         "packages/database/src/schemas/task.ts",
         "packages/database/src/schemas/taskCommentDraft.ts",
+        "packages/database/src/schemas/taskExecutionControl.ts",
         "packages/database/src/schemas/taskInput.ts",
         "packages/database/src/schemas/taskLabel.ts",
         "packages/database/src/schemas/taskWorkspace.ts",
         "packages/database/src/schemas/team.ts",
+        "packages/database/src/schemas/teamResource.ts",
         "packages/database/src/schemas/topic.ts",
         "packages/database/src/schemas/topicComment.ts",
         "packages/database/src/schemas/trash.ts",
@@ -11699,6 +11899,7 @@
         "packages/database/src/utils/copiedTranscript.ts",
         "packages/database/src/utils/copyMessagesInDatabase.test.ts",
         "packages/database/src/utils/copyMessagesInDatabase.ts",
+        "packages/database/src/utils/documentAccess.ts",
         "packages/database/src/utils/fileTypeCategory.ts",
         "packages/database/src/utils/genWhere.test.ts",
         "packages/database/src/utils/genWhere.ts",
@@ -12097,6 +12298,7 @@
         "packages/types/src/knowledgeBase/index.ts",
         "packages/types/src/linearSync.ts",
         "packages/types/src/llm.ts",
+        "packages/types/src/mcpEvents.ts",
         "packages/types/src/message/common/base.ts",
         "packages/types/src/message/common/contextSelection.ts",
         "packages/types/src/message/common/image.ts",
@@ -12129,6 +12331,7 @@
         "packages/types/src/plugins/mcp.ts",
         "packages/types/src/plugins/mcpDeps.ts",
         "packages/types/src/project/index.ts",
+        "packages/types/src/providerBinding.ts",
         "packages/types/src/pullRequestReview.ts",
         "packages/types/src/rag.ts",
         "packages/types/src/recent.ts",
@@ -12354,8 +12557,8 @@
         "packages/utils/vitest.config.mts"
       ],
       "inbound": {
-        "total": 3695,
-        "explained": 690,
+        "total": 3764,
+        "explained": 709,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -12403,6 +12606,7 @@
               "packages/database/src/models/user.ts",
               "packages/database/src/models/verifyRun.ts",
               "packages/database/src/models/workspaceMember.ts",
+              "packages/database/src/schemas/task.ts",
               "packages/database/src/type.ts",
               "packages/types/src/index.ts"
             ]
@@ -12724,6 +12928,18 @@
               "packages/database/src/models/message.ts",
               "packages/database/src/models/topic.ts",
               "packages/utils/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/creds/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "apps/server/src/services/file/index.ts",
+              "packages/database/src/index.ts",
+              "packages/database/src/models/credential.ts",
+              "packages/database/src/models/file.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/types/src/index.ts"
             ]
           },
           {
@@ -13154,6 +13370,7 @@
               "packages/database/src/models/metric.ts",
               "packages/database/src/models/project.ts",
               "packages/database/src/models/task.ts",
+              "packages/database/src/models/taskDispatch.ts",
               "packages/database/src/models/taskTopic.ts",
               "packages/database/src/models/work/index.ts",
               "packages/database/src/type.ts",
@@ -13274,16 +13491,6 @@
             "importer": "src/features/MobileHome/Layout/SessionSearchBar.tsx",
             "disposition": "UNCOVERED",
             "targets": ["packages/const/src/hotkeys.ts"]
-          },
-          {
-            "importer": "src/features/NavPanel/ToggleLeftPanelButton.tsx",
-            "disposition": "UNCOVERED",
-            "targets": [
-              "packages/const/src/hotkeys.ts",
-              "packages/const/src/layoutTokens.ts",
-              "packages/const/src/version.ts",
-              "packages/utils/src/platform.ts"
-            ]
           },
           {
             "importer": "src/features/ResourceLibrary/Layout/Header/LibrarySearchBar.tsx",
@@ -13540,6 +13747,19 @@
             "disposition": "KEEP",
             "targets": [
               "packages/const/src/index.ts",
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/teamResource.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/const/src/index.ts",
+              "packages/database/src/models/document.ts",
+              "packages/database/src/models/team.ts",
+              "packages/database/src/models/teamResource.ts",
+              "packages/database/src/type.ts",
               "packages/trpc/src/lambda/index.ts",
               "packages/trpc/src/lambda/middleware/index.ts"
             ]
@@ -13937,6 +14157,7 @@
               "packages/database/src/models/brief.ts",
               "packages/database/src/models/task.ts",
               "packages/database/src/models/taskDependency.ts",
+              "packages/database/src/models/taskDispatch.ts",
               "packages/database/src/models/taskTopic.ts",
               "packages/database/src/type.ts",
               "packages/types/src/index.ts"
@@ -15359,7 +15580,7 @@
           {
             "importer": "src/features/Settings/connector/features/useGitHubMcpConnect.ts",
             "disposition": "UNCOVERED",
-            "targets": ["packages/const/src/index.ts"]
+            "targets": ["packages/const/src/index.ts", "packages/trpc/src/client/index.ts"]
           },
           {
             "importer": "src/features/Settings/hooks/useCategory.tsx",
@@ -16873,6 +17094,8 @@
             "targets": [
               "packages/const/src/rbac.ts",
               "packages/database/src/models/resourcePermission.ts",
+              "packages/database/src/models/team.ts",
+              "packages/database/src/models/workspace.ts",
               "packages/database/src/schemas/index.ts",
               "packages/database/src/type.ts"
             ]
@@ -17372,6 +17595,11 @@
             "targets": ["packages/const/src/version.ts"]
           },
           {
+            "importer": "src/components/AsyncError/recoverAuthentication.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/const/src/version.ts"]
+          },
+          {
             "importer": "src/components/Branding/OrgBrand/index.tsx",
             "disposition": "UNCOVERED",
             "targets": ["packages/const/src/version.ts"]
@@ -17674,10 +17902,7 @@
           {
             "importer": "src/app/(backend)/api/auth/clerk/route.ts",
             "disposition": "UNCOVERED",
-            "targets": [
-              "packages/database/src/core/db-adaptor.ts",
-              "packages/database/src/models/authSession.ts"
-            ]
+            "targets": ["packages/database/src/core/db-adaptor.ts"]
           },
           {
             "importer": "src/app/(backend)/api/auth/session/route.ts",
@@ -17868,7 +18093,12 @@
           {
             "importer": "apps/server/src/services/document/history.ts",
             "disposition": "KEEP",
-            "targets": ["packages/database/src/index.ts", "packages/database/src/schemas/index.ts"]
+            "targets": [
+              "packages/database/src/index.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/database/src/type.ts",
+              "packages/database/src/utils/documentAccess.ts"
+            ]
           },
           {
             "importer": "apps/server/src/services/ftsSearch/index.ts",
@@ -19056,6 +19286,18 @@
             ]
           },
           {
+            "importer": "apps/server/src/routers/lambda/mcpEvents.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/connector.ts",
+              "packages/database/src/models/task.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts",
+              "packages/utils/src/index.ts"
+            ]
+          },
+          {
             "importer": "apps/server/src/routers/tools/composio.ts",
             "disposition": "KEEP",
             "targets": [
@@ -19119,6 +19361,24 @@
             ]
           },
           {
+            "importer": "apps/server/src/services/mcpEvents/connector.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/connector.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/database/src/type.ts",
+              "packages/utils/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/maintenance.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/connector.ts",
+              "packages/database/src/type.ts"
+            ]
+          },
+          {
             "importer": "packages/openapi/src/services/mcp-server.service.ts",
             "disposition": "REWRITE_FOR_ACP",
             "targets": [
@@ -19144,6 +19404,17 @@
             "targets": [
               "packages/database/src/models/connector.ts",
               "packages/database/src/schemas/index.ts",
+              "packages/types/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/providerBinding/controlPlane.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/credential.ts",
+              "packages/database/src/models/providerBinding.ts",
+              "packages/database/src/schemas/user.ts",
+              "packages/database/src/type.ts",
               "packages/types/src/index.ts"
             ]
           },
@@ -19225,6 +19496,20 @@
               "packages/database/src/type.ts",
               "packages/utils/src/object.ts"
             ]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/experienceMemory.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/experienceMemory.ts",
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/memory/experience/primeLexical.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/database/src/models/experienceMemory.ts"]
           },
           {
             "importer": "apps/server/src/routers/lambda/expertise.ts",
@@ -19599,6 +19884,21 @@
             ]
           },
           {
+            "importer": "apps/server/src/routers/lambda/providerBinding.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/providerBinding.ts",
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts",
+              "packages/types/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/providerBinding/configuration.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/database/src/models/providerBinding.ts"]
+          },
+          {
             "importer": "apps/server/src/routers/lambda/pullRequest.ts",
             "disposition": "UNCOVERED",
             "targets": [
@@ -19739,6 +20039,17 @@
             ]
           },
           {
+            "importer": "apps/server/src/services/taskOwnership/index.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/database/src/models/task.ts",
+              "packages/database/src/models/taskDispatch.ts",
+              "packages/database/src/schemas/task.ts",
+              "packages/database/src/type.ts",
+              "packages/types/src/index.ts"
+            ]
+          },
+          {
             "importer": "apps/server/src/services/toolExecution/serverRuntimes/agentDocuments.ts",
             "disposition": "KEEP",
             "targets": [
@@ -19753,6 +20064,24 @@
               "packages/database/src/models/taskCommentDraft.ts",
               "packages/trpc/src/lambda/index.ts",
               "packages/trpc/src/lambda/middleware/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/canonicalCompletion.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/taskDispatch.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/database/src/type.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/admission.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/taskDispatch.ts",
+              "packages/database/src/schemas/task.ts",
+              "packages/database/src/type.ts"
             ]
           },
           {
@@ -19771,6 +20100,24 @@
               "packages/database/src/schemas/task.ts",
               "packages/database/src/type.ts",
               "packages/types/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/canonicalRun.test-utils.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/taskExecutionControl.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/database/src/schemas/taskExecutionControl.ts",
+              "packages/database/src/type.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/taskExecutionControl.ts",
+              "packages/database/src/type.ts"
             ]
           },
           {
@@ -19834,11 +20181,6 @@
             ]
           },
           {
-            "importer": "apps/server/src/services/githubRepo/index.ts",
-            "disposition": "KEEP",
-            "targets": ["packages/database/src/models/user.ts", "packages/database/src/type.ts"]
-          },
-          {
             "importer": "apps/server/src/services/goal/modelConfig.ts",
             "disposition": "KEEP",
             "targets": [
@@ -19892,6 +20234,14 @@
               "packages/database/src/schemas/index.ts",
               "packages/trpc/src/lambda/index.ts",
               "packages/trpc/src/lambda/middleware/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/memory/userMemory/manual.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/userMemory/index.ts",
+              "packages/types/src/index.ts"
             ]
           },
           {
@@ -20370,6 +20720,16 @@
             "targets": ["packages/database/src/schemas/index.ts"]
           },
           {
+            "importer": "apps/server/src/services/controlPlane/canonicalRun.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/database/src/schemas/index.ts", "packages/database/src/type.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/canonicalSessionSnapshot.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/database/src/schemas/index.ts", "packages/database/src/type.ts"]
+          },
+          {
             "importer": "apps/server/src/services/document/taskReferences.ts",
             "disposition": "KEEP",
             "targets": ["packages/database/src/schemas/index.ts", "packages/database/src/type.ts"]
@@ -20533,6 +20893,11 @@
             "targets": ["packages/database/src/schemas/index.ts", "packages/types/src/index.ts"]
           },
           {
+            "importer": "src/features/PageEditor/usePageDocumentMetadata.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/database/src/schemas/index.ts"]
+          },
+          {
             "importer": "src/features/SavedViews/SavedViewDetailsPanel.tsx",
             "disposition": "UNCOVERED",
             "targets": ["packages/database/src/schemas/index.ts", "packages/types/src/index.ts"]
@@ -20623,6 +20988,14 @@
             "targets": ["packages/database/src/schemas/rbac.ts", "packages/database/src/type.ts"]
           },
           {
+            "importer": "apps/server/src/services/controlPlane/candidateSchema.test-utils.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/schemas/taskExecutionControl.ts",
+              "packages/database/src/type.ts"
+            ]
+          },
+          {
             "importer": "scripts/resetOnboarding/index.ts",
             "disposition": "UNCOVERED",
             "targets": [
@@ -20670,6 +21043,11 @@
           },
           {
             "importer": "apps/server/src/router-hono/webhooks/handlers/logto.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/database/src/server/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/router-hono/webhooks/handlers/mcpEvents.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/database/src/server/index.ts"]
           },
@@ -20873,6 +21251,11 @@
             "targets": ["packages/database/src/type.ts"]
           },
           {
+            "importer": "apps/server/src/services/githubRepo/index.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/database/src/type.ts"]
+          },
+          {
             "importer": "apps/server/src/services/linearSync/provider.ts",
             "disposition": "KEEP",
             "targets": [
@@ -20880,6 +21263,11 @@
               "packages/types/src/index.ts",
               "packages/utils/src/index.ts"
             ]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/runtime.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/database/src/type.ts"]
           },
           {
             "importer": "packages/business-server/src/lambda-routers/file.ts",
@@ -21649,6 +22037,11 @@
             "targets": ["packages/trpc/src/client/index.ts"]
           },
           {
+            "importer": "src/features/AgentTasks/features/useTeamWorkflowStates.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/trpc/src/client/index.ts", "packages/types/src/index.ts"]
+          },
+          {
             "importer": "src/features/AgentTasks/shared/LinearTaskSyncStatus.tsx",
             "disposition": "KEEP",
             "targets": ["packages/trpc/src/client/index.ts", "packages/types/src/index.ts"]
@@ -21747,6 +22140,21 @@
             "importer": "src/features/WorkTeams/TeamsPage.tsx",
             "disposition": "UNCOVERED",
             "targets": ["packages/trpc/src/client/index.ts", "packages/types/src/index.ts"]
+          },
+          {
+            "importer": "src/features/WorkTeams/home/TeamResourceDialogs.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/trpc/src/client/index.ts"]
+          },
+          {
+            "importer": "src/features/WorkTeams/home/TeamResources.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/trpc/src/client/index.ts"]
+          },
+          {
+            "importer": "src/features/WorkTeams/home/useTeamResources.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/trpc/src/client/index.ts"]
           },
           {
             "importer": "src/features/WorkTeams/triage/TeamTriageRow.tsx",
@@ -21902,6 +22310,11 @@
             "targets": ["packages/trpc/src/client/index.ts"]
           },
           {
+            "importer": "src/services/experienceMemory.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/trpc/src/client/index.ts"]
+          },
+          {
             "importer": "src/services/expertise.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/trpc/src/client/index.ts"]
@@ -21961,6 +22374,11 @@
             ]
           },
           {
+            "importer": "src/services/mcpEvents.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/trpc/src/client/index.ts"]
+          },
+          {
             "importer": "src/services/message/index.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/trpc/src/client/index.ts", "packages/types/src/index.ts"]
@@ -21993,6 +22411,11 @@
             "importer": "src/services/projectSkill.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/trpc/src/client/index.ts"]
+          },
+          {
+            "importer": "src/services/providerBinding.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/trpc/src/client/index.ts", "packages/types/src/index.ts"]
           },
           {
             "importer": "src/services/pullRequest.ts",
@@ -22224,14 +22647,6 @@
             "targets": ["packages/trpc/src/lambda/index.ts"]
           },
           {
-            "importer": "apps/server/src/routers/lambda/market/creds.ts",
-            "disposition": "KEEP",
-            "targets": [
-              "packages/trpc/src/lambda/index.ts",
-              "packages/trpc/src/lambda/middleware/index.ts"
-            ]
-          },
-          {
             "importer": "apps/server/src/routers/lambda/market/index.ts",
             "disposition": "KEEP",
             "targets": [
@@ -22296,6 +22711,14 @@
             "targets": ["packages/trpc/src/lambda/index.ts", "packages/types/src/index.ts"]
           },
           {
+            "importer": "packages/business-server/src/lambda-routers/creds.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts"
+            ]
+          },
+          {
             "importer": "packages/business-server/src/lambda-routers/invitation.ts",
             "disposition": "UNCOVERED",
             "targets": [
@@ -22354,7 +22777,10 @@
           {
             "importer": "packages/business-server/src/lambda-routers/workspaceCreds.ts",
             "disposition": "UNCOVERED",
-            "targets": ["packages/trpc/src/lambda/index.ts"]
+            "targets": [
+              "packages/trpc/src/lambda/index.ts",
+              "packages/trpc/src/lambda/middleware/index.ts"
+            ]
           },
           {
             "importer": "packages/business-server/src/lambda-routers/workspaceData.ts",
@@ -23164,6 +23590,16 @@
             "importer": "apps/server/src/services/mcp/index.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/types/src/index.ts", "packages/utils/src/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/deliveryTypes.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/filter.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/index.ts", "packages/utils/src/object.ts"]
           },
           {
             "importer": "apps/server/src/services/memory/userMemory/searchParams.ts",
@@ -26670,11 +27106,6 @@
             "targets": ["packages/types/src/index.ts"]
           },
           {
-            "importer": "src/features/AgentTasks/AgentTaskDetail/TaskWorkflowStatusRow.tsx",
-            "disposition": "KEEP",
-            "targets": ["packages/types/src/index.ts"]
-          },
-          {
             "importer": "src/features/AgentTasks/AgentTaskDetail/assignmentActivityCopy.ts",
             "disposition": "KEEP",
             "targets": ["packages/types/src/index.ts"]
@@ -26686,11 +27117,6 @@
           },
           {
             "importer": "src/features/AgentTasks/AgentTaskList/KanbanBoard.tsx",
-            "disposition": "KEEP",
-            "targets": ["packages/types/src/index.ts"]
-          },
-          {
-            "importer": "src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx",
             "disposition": "KEEP",
             "targets": ["packages/types/src/index.ts"]
           },
@@ -26751,6 +27177,11 @@
           },
           {
             "importer": "src/features/AgentTasks/features/taskStatusMeta.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/types/src/index.ts"]
+          },
+          {
+            "importer": "src/features/AgentTasks/features/useIssueStatusMove.ts",
             "disposition": "KEEP",
             "targets": ["packages/types/src/index.ts"]
           },
@@ -28203,6 +28634,21 @@
             "targets": ["packages/types/src/index.ts"]
           },
           {
+            "importer": "src/features/Settings/ProviderBindings/BindingEditor.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/index.ts"]
+          },
+          {
+            "importer": "src/features/Settings/ProviderBindings/BindingRow.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/index.ts"]
+          },
+          {
+            "importer": "src/features/Settings/ProviderBindings/ProviderCard.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/index.ts"]
+          },
+          {
             "importer": "src/features/Settings/apikey/WorkspaceApiKeyPolicyContext.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/types/src/index.ts"]
@@ -28986,6 +29432,11 @@
             "targets": ["packages/types/src/index.ts"]
           },
           {
+            "importer": "src/store/providerBinding/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/index.ts"]
+          },
+          {
             "importer": "src/store/serverConfig/store.ts",
             "disposition": "UNCOVERED",
             "targets": [
@@ -29622,7 +30073,47 @@
             "targets": ["packages/types/src/user/settings/modelProvider.ts"]
           },
           {
+            "importer": "src/features/Memory/activities/index.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
+          },
+          {
+            "importer": "src/features/Memory/contexts/index.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
+          },
+          {
+            "importer": "src/features/Memory/experiences/index.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
+          },
+          {
+            "importer": "src/features/Memory/identities/index.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
+          },
+          {
+            "importer": "src/features/Memory/legacy/MemoryDetail.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
+          },
+          {
+            "importer": "src/features/Memory/legacy/index.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
+          },
+          {
+            "importer": "src/features/Memory/legacy/loadEditValue.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
+          },
+          {
             "importer": "src/routes/(main)/memory/features/EditableModal/index.tsx",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
+          },
+          {
+            "importer": "src/routes/(main)/memory/preferences/index.tsx",
             "disposition": "UNCOVERED",
             "targets": ["packages/types/src/userMemory/index.ts"]
           },
@@ -29651,6 +30142,11 @@
               "packages/types/src/userMemory/index.ts",
               "packages/utils/src/storeDebug.ts"
             ]
+          },
+          {
+            "importer": "src/store/userMemory/useLegacyMemoryPage.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/types/src/userMemory/index.ts"]
           },
           {
             "importer": "src/store/userMemory/utils/cacheKey.ts",
@@ -30112,7 +30608,42 @@
             "targets": ["packages/utils/src/mimeType.ts"]
           },
           {
+            "importer": "apps/server/src/services/mcpEvents/adapter.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/utils/src/object.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/receiver.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/utils/src/object.ts"]
+          },
+          {
+            "importer": "apps/server/src/services/mcpEvents/subscription.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["packages/utils/src/object.ts"]
+          },
+          {
             "importer": "apps/server/src/services/toolExecution/errorClassification.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/utils/src/object.ts"]
+          },
+          {
+            "importer": "packages/agent-execution/src/controlPlane/actionGateway.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/utils/src/object.ts"]
+          },
+          {
+            "importer": "packages/agent-execution/src/controlPlane/inferenceBroker.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/utils/src/object.ts"]
+          },
+          {
+            "importer": "packages/agent-execution/src/controlPlane/primeRuntime.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/utils/src/object.ts"]
+          },
+          {
+            "importer": "packages/agent-execution/src/controlPlane/primeStdioTransport.ts",
             "disposition": "KEEP",
             "targets": ["packages/utils/src/object.ts"]
           },
@@ -33144,7 +33675,7 @@
         "src/features/{AgentDocument*,PageEditor,Portal,ResourceManager,AgentDocumentsExplorer}/**",
         "apps/server/src/services/{document*,page*}/**"
       ],
-      "fileCount": 401,
+      "fileCount": 404,
       "files": [
         "apps/server/src/services/document/__tests__/history.integration.test.ts",
         "apps/server/src/services/document/__tests__/index.test.ts",
@@ -33248,8 +33779,11 @@
         "src/features/PageEditor/store/selectors.ts",
         "src/features/PageEditor/useDocumentLock.test.ts",
         "src/features/PageEditor/useDocumentLock.ts",
+        "src/features/PageEditor/usePageDocumentMetadata.test.ts",
+        "src/features/PageEditor/usePageDocumentMetadata.ts",
         "src/features/PageEditor/usePageDraft.test.ts",
         "src/features/PageEditor/usePageDraft.ts",
+        "src/features/PageEditor/usePageEditable.test.ts",
         "src/features/PageEditor/usePageEditable.ts",
         "src/features/PageEditor/usePageLockedByOther.test.ts",
         "src/features/PageEditor/usePageLockedByOther.ts",
@@ -33549,7 +34083,7 @@
         "src/features/ResourceManager/store/selectors.ts"
       ],
       "inbound": {
-        "total": 84,
+        "total": 85,
         "explained": 8,
         "unexplained": [
           {
@@ -33653,6 +34187,11 @@
           {
             "importer": "apps/server/src/routers/lambda/documentLike.ts",
             "disposition": "KEEP",
+            "targets": ["apps/server/src/services/documentAccess/index.ts"]
+          },
+          {
+            "importer": "apps/server/src/routers/lambda/teamResource.ts",
+            "disposition": "UNCOVERED",
             "targets": ["apps/server/src/services/documentAccess/index.ts"]
           },
           {
@@ -33761,7 +34300,10 @@
           {
             "importer": "src/features/PageExplorer/index.tsx",
             "disposition": "UNCOVERED",
-            "targets": ["src/features/PageEditor/index.ts"]
+            "targets": [
+              "src/features/PageEditor/index.ts",
+              "src/features/PageEditor/usePageDocumentMetadata.ts"
+            ]
           },
           {
             "importer": "src/features/Conversation/WorkingSidebar/Files/index.tsx",
@@ -33988,7 +34530,7 @@
       "reason": "Desktop/Web parity is in the boundary; workbench (mobile doc reader) and share hosts stay per P00 §N.",
       "issue": "ORV-100",
       "globs": ["apps/{desktop,workbench,share}/**", "src/features/Electron/**"],
-      "fileCount": 565,
+      "fileCount": 569,
       "files": [
         "apps/desktop/.i18nrc.js",
         "apps/desktop/.remarkrc.mjs",
@@ -34356,6 +34898,7 @@
         "apps/share/app/stubs/trpcClient.ts",
         "apps/share/app/stubs/userStore.ts",
         "apps/share/app/virtual-modules.d.ts",
+        "apps/share/cloudflare.config.ts",
         "apps/share/react-router.config.ts",
         "apps/share/scripts/deploy.ts",
         "apps/share/scripts/emit-static-css.mjs",
@@ -34385,6 +34928,7 @@
         "apps/share/staticCssOptions.mjs",
         "apps/share/vite.config.rr.mts",
         "apps/share/vite.config.shared.mts",
+        "apps/share/vite.config.spa.mts",
         "apps/share/vite.config.ts",
         "apps/share/workers/app.ts",
         "apps/workbench/app/components/agentDocReader.client.tsx",
@@ -34418,6 +34962,7 @@
         "apps/workbench/app/stubs/trpcClient.client.ts",
         "apps/workbench/app/stubs/trpcClient.ts",
         "apps/workbench/app/virtual-modules.d.ts",
+        "apps/workbench/cloudflare.config.ts",
         "apps/workbench/react-router.config.ts",
         "apps/workbench/scripts/deploy.ts",
         "apps/workbench/scripts/emit-static-css.mjs",
@@ -34435,6 +34980,7 @@
         "apps/workbench/src/vite-env.d.ts",
         "apps/workbench/staticCssOptions.mjs",
         "apps/workbench/vite.config.rr.mts",
+        "apps/workbench/vite.config.spa.mts",
         "apps/workbench/vite.config.ts",
         "apps/workbench/workers/app.ts",
         "src/features/Electron/ActiveConversationBridge/coordinate.test.ts",
@@ -35333,12 +35879,12 @@
     {
       "id": "provider-byok",
       "disposition": "DELETE",
-      "reason": "User-managed LLM provider/BYOK/baseURL/model-selection product surface was retired in P05/P06; residual route/store/API/service/locale/docs are swept per ORV-101. Generic credential infra for connectors stays.",
+      "reason": "User-managed LLM provider/BYOK/baseURL/model-selection product surface was retired in P05/P06; residual route/store/API/service/locale/docs are swept per ORV-101. Generic credential infra for connectors stays. The control-plane providerBinding service is a living replacement and stays outside this capability.",
       "issue": "ORV-101",
       "globs": [
         "apps/server/src/routers/lambda/{aiProvider,aiModel}.ts",
         "apps/server/src/routers/lambda/__tests__/{aiProvider,aiModel}.test.ts",
-        "apps/server/src/services/{aiProvider,aiModel,modelProvider*,provider*}/**",
+        "apps/server/src/services/{aiProvider,aiModel,modelProvider*}/**",
         "src/services/{aiModel,aiProvider}/**",
         "src/utils/aiProvider*",
         "src/types/aiProvider*",
@@ -36031,11 +36577,9 @@
         "apps/server/src/routers/tools/market.ts",
         "packages/trpc/src/lambda/middleware/marketSDK.ts"
       ],
-      "fileCount": 13,
+      "fileCount": 11,
       "files": [
         "apps/server/src/routers/lambda/market/agent.ts",
-        "apps/server/src/routers/lambda/market/creds.test.ts",
-        "apps/server/src/routers/lambda/market/creds.ts",
         "apps/server/src/routers/lambda/market/index.test.ts",
         "apps/server/src/routers/lambda/market/index.ts",
         "apps/server/src/routers/lambda/market/oidc.ts",
@@ -36048,8 +36592,8 @@
         "packages/trpc/src/lambda/middleware/marketSDK.ts"
       ],
       "inbound": {
-        "total": 28,
-        "explained": 10,
+        "total": 29,
+        "explained": 9,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -36087,13 +36631,13 @@
             "targets": ["apps/server/src/services/market/index.ts"]
           },
           {
-            "importer": "apps/server/src/services/discover/index.ts",
+            "importer": "apps/server/src/services/creds/index.ts",
             "disposition": "UNCOVERED",
             "targets": ["apps/server/src/services/market/index.ts"]
           },
           {
-            "importer": "apps/server/src/services/githubRepo/index.ts",
-            "disposition": "KEEP",
+            "importer": "apps/server/src/services/discover/index.ts",
+            "disposition": "UNCOVERED",
             "targets": ["apps/server/src/services/market/index.ts"]
           },
           {
@@ -36133,6 +36677,16 @@
           },
           {
             "importer": "apps/server/src/services/workRegistration/registerWorksForOperation.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/services/market/index.ts"]
+          },
+          {
+            "importer": "packages/business-server/src/lambda-routers/creds.ts",
+            "disposition": "UNCOVERED",
+            "targets": ["apps/server/src/services/market/index.ts"]
+          },
+          {
+            "importer": "packages/business-server/src/lambda-routers/workspaceCreds.ts",
             "disposition": "UNCOVERED",
             "targets": ["apps/server/src/services/market/index.ts"]
           },
@@ -36913,7 +37467,7 @@
         "packages/prompts/vitest.config.mts"
       ],
       "inbound": {
-        "total": 368,
+        "total": 369,
         "explained": 129,
         "unexplained": [
           {
@@ -37733,6 +38287,14 @@
             "targets": ["packages/model-bank/src/index.ts"]
           },
           {
+            "importer": "src/features/Settings/ProviderBindings/useProviderCatalog.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/model-bank/src/index.ts",
+              "packages/model-bank/src/modelProviders/index.ts"
+            ]
+          },
+          {
             "importer": "src/store/aiInfra/action.ts",
             "disposition": "REWRITE_FOR_ACP",
             "targets": [
@@ -38336,19 +38898,19 @@
     }
   ],
   "counts": {
-    "sourceFiles": 12386,
-    "workspacePackages": 108,
+    "sourceFiles": 12597,
+    "workspacePackages": 109,
     "nextRoutes": 39,
-    "spaRouteEntries": 200,
-    "lambdaRouters": 87,
-    "dbTables": 225,
+    "spaRouteEntries": 131,
+    "lambdaRouters": 90,
+    "dbTables": 236,
     "migrationDirs": 1,
-    "migrationSqlFiles": 194,
+    "migrationSqlFiles": 198,
     "localeFiles": 880,
     "defaultNamespaceFiles": 48,
-    "docFiles": 568,
-    "testFiles": 3306,
-    "storeFiles": 826,
+    "docFiles": 648,
+    "testFiles": 3385,
+    "storeFiles": 836,
     "unresolvedImports": 405
   },
   "enumerations": {
@@ -38417,14 +38979,6 @@
       {
         "file": "src/spa/router/desktopRouter.shared.tsx",
         "path": "files"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "community/*"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "page/*"
       },
       {
         "file": "src/spa/router/desktopRouter.shared.tsx",
@@ -38560,15 +39114,39 @@
       },
       {
         "file": "src/spa/router/desktopRouter.shared.tsx",
+        "path": "home"
+      },
+      {
+        "file": "src/spa/router/desktopRouter.shared.tsx",
+        "path": "identities"
+      },
+      {
+        "file": "src/spa/router/desktopRouter.shared.tsx",
+        "path": "contexts"
+      },
+      {
+        "file": "src/spa/router/desktopRouter.shared.tsx",
+        "path": "experiences"
+      },
+      {
+        "file": "src/spa/router/desktopRouter.shared.tsx",
+        "path": "activities"
+      },
+      {
+        "file": "src/spa/router/desktopRouter.shared.tsx",
+        "path": "search"
+      },
+      {
+        "file": "src/spa/router/desktopRouter.shared.tsx",
+        "path": "prime"
+      },
+      {
+        "file": "src/spa/router/desktopRouter.shared.tsx",
         "path": "preferences"
       },
       {
         "file": "src/spa/router/desktopRouter.shared.tsx",
         "path": "memory"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "agents"
       },
       {
         "file": "src/spa/router/desktopRouter.shared.tsx",
@@ -38609,66 +39187,6 @@
       {
         "file": "src/spa/router/desktopRouter.shared.tsx",
         "path": "project/:projectId"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "tasks"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "inbox"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "drafts"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "my-issues"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "my-work"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "reviews/:reviewId?"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "members"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": ":viewId"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "views"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": ":teamId"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "teams"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": ":taskId/:slug?"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "task"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": ":goalId"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "goal"
       },
       {
         "file": "src/spa/router/desktopRouter.shared.tsx",
@@ -38732,106 +39250,6 @@
       },
       {
         "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "connector"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "linear"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "imports"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "imports/linear"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "general"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "members"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "notification"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "notification/:sub"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "statistics"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "plans"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "billing"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "budget"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "credits"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "usage"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "credential"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "apikey"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "labels"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "storage"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "devices"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "profile"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "appearance"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "hotkey"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "advanced"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "labs"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
-        "path": "about"
-      },
-      {
-        "file": "src/spa/router/desktopRouter.shared.tsx",
         "path": "settings"
       },
       {
@@ -38892,11 +39310,11 @@
       },
       {
         "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "community/*"
+        "path": ":aid/task/:taskId/:slug?"
       },
       {
         "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "page/*"
+        "path": "agent"
       },
       {
         "file": "src/spa/router/mobileRouter.config.tsx",
@@ -38917,66 +39335,6 @@
       {
         "file": "src/spa/router/mobileRouter.config.tsx",
         "path": "agent"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "agents"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "tasks"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": ":taskId/:slug?"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "task"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": ":aid/task/:taskId/:slug?"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "agent"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "inbox"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "my-issues"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "my-work"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "reviews/:reviewId?"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "members"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": ":viewId"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "views"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": ":teamId"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "teams"
       },
       {
         "file": "src/spa/router/mobileRouter.config.tsx",
@@ -39017,78 +39375,6 @@
       {
         "file": "src/spa/router/mobileRouter.config.tsx",
         "path": "me"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "general"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "profile"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "appearance"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "hotkey"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "advanced"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "labs"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "about"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "members"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "notification"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "notification/:sub"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "labels"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "provider"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "linear"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "plans"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "billing"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "budget"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "credits"
-      },
-      {
-        "file": "src/spa/router/mobileRouter.config.tsx",
-        "path": "usage"
       },
       {
         "file": "src/spa/router/mobileRouter.config.tsx",
@@ -39228,6 +39514,7 @@
       "apps/server/src/routers/lambda/documentComment.ts",
       "apps/server/src/routers/lambda/documentLike.ts",
       "apps/server/src/routers/lambda/evalRunConfig.schema.ts",
+      "apps/server/src/routers/lambda/experienceMemory.ts",
       "apps/server/src/routers/lambda/expertise.ts",
       "apps/server/src/routers/lambda/exporter.ts",
       "apps/server/src/routers/lambda/file.ts",
@@ -39243,16 +39530,17 @@
       "apps/server/src/routers/lambda/linearSync.ts",
       "apps/server/src/routers/lambda/llmGenerationTracing.ts",
       "apps/server/src/routers/lambda/market/agent.ts",
-      "apps/server/src/routers/lambda/market/creds.ts",
       "apps/server/src/routers/lambda/market/index.ts",
       "apps/server/src/routers/lambda/market/oidc.ts",
       "apps/server/src/routers/lambda/market/user.ts",
+      "apps/server/src/routers/lambda/mcpEvents.ts",
       "apps/server/src/routers/lambda/message.ts",
       "apps/server/src/routers/lambda/metric.ts",
       "apps/server/src/routers/lambda/notebook.ts",
       "apps/server/src/routers/lambda/notification.ts",
       "apps/server/src/routers/lambda/plugin.ts",
       "apps/server/src/routers/lambda/project.ts",
+      "apps/server/src/routers/lambda/providerBinding.ts",
       "apps/server/src/routers/lambda/pullRequest.ts",
       "apps/server/src/routers/lambda/pushToken.ts",
       "apps/server/src/routers/lambda/ragEval.ts",
@@ -39270,6 +39558,7 @@
       "apps/server/src/routers/lambda/taskLabel.ts",
       "apps/server/src/routers/lambda/taskTemplate.ts",
       "apps/server/src/routers/lambda/team.ts",
+      "apps/server/src/routers/lambda/teamResource.ts",
       "apps/server/src/routers/lambda/thread.ts",
       "apps/server/src/routers/lambda/topic.ts",
       "apps/server/src/routers/lambda/topicComment.ts",
@@ -39307,14 +39596,6 @@
       },
       {
         "table": "agents",
-        "file": "packages/database/src/schemas/agent.ts"
-      },
-      {
-        "table": "agents_knowledge_bases",
-        "file": "packages/database/src/schemas/agent.ts"
-      },
-      {
-        "table": "agents_files",
         "file": "packages/database/src/schemas/agent.ts"
       },
       {
@@ -39418,6 +39699,14 @@
         "file": "packages/database/src/schemas/agentQuota.ts"
       },
       {
+        "table": "agents_knowledge_bases",
+        "file": "packages/database/src/schemas/agentResource.ts"
+      },
+      {
+        "table": "agents_files",
+        "file": "packages/database/src/schemas/agentResource.ts"
+      },
+      {
         "table": "agent_shares",
         "file": "packages/database/src/schemas/agentShare.ts"
       },
@@ -39478,6 +39767,10 @@
         "file": "packages/database/src/schemas/connector.ts"
       },
       {
+        "table": "credentials",
+        "file": "packages/database/src/schemas/credential.ts"
+      },
+      {
         "table": "devices",
         "file": "packages/database/src/schemas/device.ts"
       },
@@ -39508,6 +39801,10 @@
       {
         "table": "execution_grants",
         "file": "packages/database/src/schemas/executionGrant.ts"
+      },
+      {
+        "table": "user_experience_memories",
+        "file": "packages/database/src/schemas/experienceMemory.ts"
       },
       {
         "table": "expertise_domains",
@@ -39686,6 +39983,26 @@
         "file": "packages/database/src/schemas/llmGenerationTracing.ts"
       },
       {
+        "table": "mcp_event_bindings",
+        "file": "packages/database/src/schemas/mcpEvents.ts"
+      },
+      {
+        "table": "mcp_event_inbox",
+        "file": "packages/database/src/schemas/mcpEvents.ts"
+      },
+      {
+        "table": "mcp_event_challenges",
+        "file": "packages/database/src/schemas/mcpEvents.ts"
+      },
+      {
+        "table": "mcp_event_triggers",
+        "file": "packages/database/src/schemas/mcpEvents.ts"
+      },
+      {
+        "table": "mcp_event_trigger_runs",
+        "file": "packages/database/src/schemas/mcpEvents.ts"
+      },
+      {
         "table": "message_groups",
         "file": "packages/database/src/schemas/message.ts"
       },
@@ -39810,12 +40127,12 @@
         "file": "packages/database/src/schemas/project.ts"
       },
       {
-        "table": "project_knowledge_bases",
+        "table": "project_completion_reviews",
         "file": "packages/database/src/schemas/project.ts"
       },
       {
-        "table": "project_completion_reviews",
-        "file": "packages/database/src/schemas/project.ts"
+        "table": "project_knowledge_bases",
+        "file": "packages/database/src/schemas/projectKnowledgeBase.ts"
       },
       {
         "table": "project_links",
@@ -39832,6 +40149,10 @@
       {
         "table": "project_works",
         "file": "packages/database/src/schemas/projectWork.ts"
+      },
+      {
+        "table": "provider_bindings",
+        "file": "packages/database/src/schemas/providerBinding.ts"
       },
       {
         "table": "pull_request_review_receipts",
@@ -39978,6 +40299,10 @@
         "file": "packages/database/src/schemas/taskCommentDraft.ts"
       },
       {
+        "table": "task_execution_handoffs",
+        "file": "packages/database/src/schemas/taskExecutionControl.ts"
+      },
+      {
         "table": "task_inputs",
         "file": "packages/database/src/schemas/taskInput.ts"
       },
@@ -40016,6 +40341,14 @@
       {
         "table": "project_teams",
         "file": "packages/database/src/schemas/team.ts"
+      },
+      {
+        "table": "team_resource_sections",
+        "file": "packages/database/src/schemas/teamResource.ts"
+      },
+      {
+        "table": "team_resource_placements",
+        "file": "packages/database/src/schemas/teamResource.ts"
       },
       {
         "table": "topics",
@@ -40189,7 +40522,7 @@
     "migrations": {
       "dir": "packages/database/migrations",
       "migrationDirs": 1,
-      "sqlFiles": 194
+      "sqlFiles": 198
     },
     "locales": {
       "localeDirs": {
@@ -40383,6 +40716,8 @@
       "docs/changelog/2026-09-27-accounts-portal.zh-CN.mdx",
       "docs/changelog/2026-09-27-debug-proxy-route.mdx",
       "docs/changelog/2026-09-27-debug-proxy-route.zh-CN.mdx",
+      "docs/changelog/2026-09-27-drop-legacy-better-auth-cookie.mdx",
+      "docs/changelog/2026-09-27-drop-legacy-better-auth-cookie.zh-CN.mdx",
       "docs/changelog/2026-09-27-loading-screen-font.mdx",
       "docs/changelog/2026-09-27-loading-screen-font.zh-CN.mdx",
       "docs/changelog/2026-09-27-onboarding-invite-row.mdx",
@@ -40391,8 +40726,57 @@
       "docs/changelog/2026-09-27-workspace-url-autofill.zh-CN.mdx",
       "docs/changelog/2026-09-28-accounts-portal-fixups.mdx",
       "docs/changelog/2026-09-28-accounts-portal-fixups.zh-CN.mdx",
+      "docs/changelog/2026-09-28-board-column-surface.mdx",
+      "docs/changelog/2026-09-28-board-column-surface.zh-CN.mdx",
+      "docs/changelog/2026-09-28-clerk-env-check.mdx",
+      "docs/changelog/2026-09-28-clerk-env-check.zh-CN.mdx",
+      "docs/changelog/2026-09-28-clerk-legacy-user-link.mdx",
+      "docs/changelog/2026-09-28-clerk-legacy-user-link.zh-CN.mdx",
       "docs/changelog/2026-09-28-clerk-session-layer.mdx",
       "docs/changelog/2026-09-28-clerk-session-layer.zh-CN.mdx",
+      "docs/changelog/2026-09-28-lobe-ui-components.mdx",
+      "docs/changelog/2026-09-28-lobe-ui-components.zh-CN.mdx",
+      "docs/changelog/2026-09-28-mobile-router-shared-leaves.mdx",
+      "docs/changelog/2026-09-28-mobile-router-shared-leaves.zh-CN.mdx",
+      "docs/changelog/2026-09-28-mobile-settings-nav.mdx",
+      "docs/changelog/2026-09-28-mobile-settings-nav.zh-CN.mdx",
+      "docs/changelog/2026-09-28-onboarding-chrome.mdx",
+      "docs/changelog/2026-09-28-onboarding-chrome.zh-CN.mdx",
+      "docs/changelog/2026-09-28-own-creds-client.mdx",
+      "docs/changelog/2026-09-28-own-creds-client.zh-CN.mdx",
+      "docs/changelog/2026-09-28-own-creds-server.mdx",
+      "docs/changelog/2026-09-28-own-creds-server.zh-CN.mdx",
+      "docs/changelog/2026-09-29-accounts-portal.mdx",
+      "docs/changelog/2026-09-29-accounts-portal.zh-CN.mdx",
+      "docs/changelog/2026-09-29-agent-rename-and-issue-relations.mdx",
+      "docs/changelog/2026-09-29-agent-rename-and-issue-relations.zh-CN.mdx",
+      "docs/changelog/2026-09-29-favorites-async-states.mdx",
+      "docs/changelog/2026-09-29-favorites-async-states.zh-CN.mdx",
+      "docs/changelog/2026-09-29-github-mcp-pat-fallback.mdx",
+      "docs/changelog/2026-09-29-github-mcp-pat-fallback.zh-CN.mdx",
+      "docs/changelog/2026-09-29-issue-attachment-edit-lock.mdx",
+      "docs/changelog/2026-09-29-issue-attachment-edit-lock.zh-CN.mdx",
+      "docs/changelog/2026-09-29-issue-menu-shortcut-guard.mdx",
+      "docs/changelog/2026-09-29-issue-menu-shortcut-guard.zh-CN.mdx",
+      "docs/changelog/2026-09-29-issue-precise-workflow-state.mdx",
+      "docs/changelog/2026-09-29-issue-precise-workflow-state.zh-CN.mdx",
+      "docs/changelog/2026-09-29-issue-project-picker.mdx",
+      "docs/changelog/2026-09-29-issue-project-picker.zh-CN.mdx",
+      "docs/changelog/2026-09-29-issue-status-board-parity.mdx",
+      "docs/changelog/2026-09-29-issue-status-board-parity.zh-CN.mdx",
+      "docs/changelog/2026-09-29-mobile-chat-tab-and-agent-dup-fixes.mdx",
+      "docs/changelog/2026-09-29-mobile-chat-tab-and-agent-dup-fixes.zh-CN.mdx",
+      "docs/changelog/2026-09-29-mobile-duplicate-sessions.mdx",
+      "docs/changelog/2026-09-29-mobile-duplicate-sessions.zh-CN.mdx",
+      "docs/changelog/2026-09-29-oauth-session-terminal-states.mdx",
+      "docs/changelog/2026-09-29-oauth-session-terminal-states.zh-CN.mdx",
+      "docs/changelog/2026-09-29-task-status-picker-parity.mdx",
+      "docs/changelog/2026-09-29-task-status-picker-parity.zh-CN.mdx",
+      "docs/changelog/2026-09-29-team-resources-and-favorites-drag.mdx",
+      "docs/changelog/2026-09-29-team-resources-and-favorites-drag.zh-CN.mdx",
+      "docs/core-runtime-host-acceptance.md",
+      "docs/core-session-recovery.md",
+      "docs/core-typecheck-comparison.md",
       "docs/development/README.md",
       "docs/development/acp-external-tool-mounting.md",
       "docs/development/acp-judgment-closure.md",
@@ -40431,6 +40815,15 @@
       "docs/development/caid-workspace-isolation.md",
       "docs/development/child-run-delivery.md",
       "docs/development/conversation-scroll-pin.md",
+      "docs/development/core-canonical-authority-mapping.md",
+      "docs/development/core-cloud-recovery.md",
+      "docs/development/core-devin-handoff.md",
+      "docs/development/core-handoff-integration.md",
+      "docs/development/core-isolation-cloud-evidence.md",
+      "docs/development/core-prime-inference-integration.md",
+      "docs/development/core-prime-protocol.md",
+      "docs/development/core-recovery-postgres-evidence.md",
+      "docs/development/core-sql-receipts.md",
       "docs/development/dependency-pins.md",
       "docs/development/desktop-dev-html-routing.md",
       "docs/development/desktop-main-bootstrap-order.md",
@@ -40464,7 +40857,10 @@
       "docs/development/others/lighthouse.zh-CN.mdx",
       "docs/development/pr-delivery-gate.md",
       "docs/development/product-scope.md",
+      "docs/development/provider-memory-cloud-handoff.md",
+      "docs/development/provider-memory-devin-handoff.md",
       "docs/development/provider-retirement.md",
+      "docs/development/provider-settings-ui.md",
       "docs/development/quality-gate-mirror-handoff.md",
       "docs/development/quota-control-plane-retirement.md",
       "docs/development/quota-identity-observation.md",
@@ -40496,10 +40892,12 @@
       "docs/development/task-first-changes.md",
       "docs/development/task-first-rollout.md",
       "docs/development/task-integration-lease.md",
+      "docs/development/task-ownership-transfer.md",
       "docs/development/task-worktree-ownership.md",
       "docs/development/tests/integration-testing.mdx",
       "docs/development/tests/integration-testing.zh-CN.mdx",
       "docs/development/tool-surface-outcomes.md",
+      "docs/development/ui-error-recovery.md",
       "docs/development/unified-execution-targets.md",
       "docs/development/workspace-context.md",
       "docs/environments.md",
@@ -40531,11 +40929,15 @@
       "docs/implementation/orvilo-acp-caid/inventory.md",
       "docs/implementation/pr-review-contract-v6.md",
       "docs/linear-parity-handoff.md",
+      "docs/mcp-events-acceptance.md",
+      "docs/mcp-events-devin-handoff.md",
+      "docs/mcp-events-restoration-provenance.md",
       "docs/orchestrator-session-handoff.md",
       "docs/orchestrator-workspace-plan.md",
       "docs/prod-verification-handoff.md",
       "docs/research/connector-oauth-20260926/README.md",
       "docs/research/connector-oauth-20260926/github-mcp-readonly-acceptance.md",
+      "docs/research/kanban-no-project-query-20260929.md",
       "docs/research/linear/PAGE-INVENTORY.md",
       "docs/research/linear/PARITY-MATRIX.md",
       "docs/research/linear/TRIAGE.md",
@@ -40596,6 +40998,13 @@
       "docs/research/linear/project-overview/reference-inventory.md",
       "docs/research/linear/project-overview/right-rail-verification.md",
       "docs/research/linear/project-overview/typography.spec.md",
+      "docs/research/linear/project-team-parity-20260926/ACCEPTANCE.md",
+      "docs/research/linear/project-team-parity-20260926/FINDINGS.md",
+      "docs/research/linear/project-team-parity-20260926/PLAN.md",
+      "docs/research/linear/project-team-parity-20260926/components/sidebar-affordances.spec.md",
+      "docs/research/linear/project-team-parity-20260926/components/sidebar-pinned.spec.md",
+      "docs/research/linear/project-team-parity-20260926/components/team-home-layout.spec.md",
+      "docs/research/linear/project-team-parity-20260926/components/team-resources-data.spec.md",
       "docs/research/linear/ref-2026-09-23/NEW-FINDINGS.md",
       "docs/research/linear/ref-sweep.md",
       "docs/research/linear/reviews/PLAN.md",
@@ -40637,6 +41046,10 @@
       "docs/research/plane/linear-import/PLAN.md",
       "docs/research/plane/linear-import/REFERENCE_FLOW.md",
       "docs/research/plane/linear-import/components/import-wizard.spec.md",
+      "docs/research/reviews-query-identity-20260929.md",
+      "docs/research/task-detail-scope-active-task-20260929.md",
+      "docs/research/title-autosave-task-identity-20260929.md",
+      "docs/research/topic-list-stale-fetch-20260926.md",
       "docs/self-hosting/advanced/analytics.mdx",
       "docs/self-hosting/advanced/analytics.zh-CN.mdx",
       "docs/self-hosting/advanced/desktop.mdx",
@@ -40834,7 +41247,7 @@
       "docs/wiki/HOME.zh-CN.md"
     ]
   },
-  "generatedAt": "2026-09-28T09:52:14.825Z",
+  "generatedAt": "2026-10-01T00:25:12.070Z",
   "packageConsumers": {
     "@orvilo/web-crawler": [
       "apps/server/src/services/search/index.test.ts",
@@ -40872,6 +41285,7 @@
       "apps/server/src/routers/lambda/agent.ts",
       "apps/server/src/routers/lambda/aiChat.ts",
       "apps/server/src/routers/lambda/documentComment.ts",
+      "apps/server/src/routers/lambda/mcpEvents.ts",
       "apps/server/src/routers/lambda/message.ts",
       "apps/server/src/routers/lambda/topic.ts",
       "apps/server/src/routers/lambda/topicComment.ts",
@@ -40911,6 +41325,11 @@
       "apps/server/src/services/linearSync/planning.ts",
       "apps/server/src/services/linearSync/provider.ts",
       "apps/server/src/services/mcp/index.ts",
+      "apps/server/src/services/mcpEvents/adapter.ts",
+      "apps/server/src/services/mcpEvents/connector.ts",
+      "apps/server/src/services/mcpEvents/filter.ts",
+      "apps/server/src/services/mcpEvents/receiver.ts",
+      "apps/server/src/services/mcpEvents/subscription.ts",
       "apps/server/src/services/message/index.ts",
       "apps/server/src/services/onboarding/index.test.ts",
       "apps/server/src/services/onboarding/index.ts",
@@ -40932,6 +41351,10 @@
       "apps/server/src/services/workAttention/notificationProjection.ts",
       "apps/server/src/utils/commentMentions.ts",
       "apps/server/src/workflows/onboardingTaskRecommendation/process.ts",
+      "packages/agent-execution/src/controlPlane/actionGateway.ts",
+      "packages/agent-execution/src/controlPlane/inferenceBroker.ts",
+      "packages/agent-execution/src/controlPlane/primeRuntime.ts",
+      "packages/agent-execution/src/controlPlane/primeStdioTransport.ts",
       "packages/agent-execution/src/utils/messageSelectors.ts",
       "packages/builtin-tool-agent-builder/src/executor.ts",
       "packages/builtin-tool-agent-builder/src/normalizeUpdateConfigParams.ts",
@@ -41177,6 +41600,7 @@
       "apps/server/src/routers/lambda/__tests__/integration/aiAgent.task.integration.test.ts",
       "apps/server/src/routers/lambda/__tests__/message.test.ts",
       "apps/server/src/routers/lambda/__tests__/user.test.ts",
+      "apps/server/src/routers/lambda/__tests__/userMemory.manual.test.ts",
       "apps/server/src/routers/lambda/_helpers/projectSharedTopicMessages.test.ts",
       "apps/server/src/routers/lambda/_helpers/projectSharedTopicMessages.ts",
       "apps/server/src/routers/lambda/acceptance.ts",
@@ -41199,6 +41623,7 @@
       "apps/server/src/routers/lambda/notebook.ts",
       "apps/server/src/routers/lambda/plugin.ts",
       "apps/server/src/routers/lambda/project.ts",
+      "apps/server/src/routers/lambda/providerBinding.ts",
       "apps/server/src/routers/lambda/ragEval.ts",
       "apps/server/src/routers/lambda/recent.ts",
       "apps/server/src/routers/lambda/resourceTransferRequest.ts",
@@ -41296,6 +41721,7 @@
       "apps/server/src/services/collaboration/service.ts",
       "apps/server/src/services/collaboration/snapshot.ts",
       "apps/server/src/services/collaboration/ticket.ts",
+      "apps/server/src/services/creds/index.ts",
       "apps/server/src/services/deviceGateway/dispatchAuthorization.ts",
       "apps/server/src/services/deviceGateway/scopedDevicePresence.ts",
       "apps/server/src/services/deviceGateway/scopedDevices.ts",
@@ -41341,9 +41767,13 @@
       "apps/server/src/services/linearSync/sweeper.ts",
       "apps/server/src/services/linearSync/worker.ts",
       "apps/server/src/services/mcp/index.ts",
+      "apps/server/src/services/mcpEvents/admission.test.ts",
+      "apps/server/src/services/mcpEvents/deliveryTypes.ts",
+      "apps/server/src/services/mcpEvents/filter.ts",
       "apps/server/src/services/memory/userMemory/__tests__/extract.runtime.test.ts",
       "apps/server/src/services/memory/userMemory/embedding.ts",
       "apps/server/src/services/memory/userMemory/extract.ts",
+      "apps/server/src/services/memory/userMemory/manual.ts",
       "apps/server/src/services/memory/userMemory/persona/service.ts",
       "apps/server/src/services/memory/userMemory/searchParams.test.ts",
       "apps/server/src/services/memory/userMemory/searchParams.ts",
@@ -41354,6 +41784,8 @@
       "apps/server/src/services/onboarding/index.ts",
       "apps/server/src/services/onboarding/nodeSchema.ts",
       "apps/server/src/services/onboardingProgress/index.ts",
+      "apps/server/src/services/providerBinding/controlPlane.acceptance.test.ts",
+      "apps/server/src/services/providerBinding/controlPlane.ts",
       "apps/server/src/services/pullRequestReview/index.ts",
       "apps/server/src/services/resourceTransferRequest/index.ts",
       "apps/server/src/services/search/impls/anspire/index.ts",
@@ -41385,6 +41817,7 @@
       "apps/server/src/services/taskLifecycle/index.ts",
       "apps/server/src/services/taskLifecycle/onTopicComplete.test.ts",
       "apps/server/src/services/taskLifecycle/synthesize.ts",
+      "apps/server/src/services/taskOwnership/index.ts",
       "apps/server/src/services/taskRecommendation/materializer.test.ts",
       "apps/server/src/services/taskRecommendation/materializer.ts",
       "apps/server/src/services/taskRecommendation/providers/github.ts",
@@ -42017,6 +42450,7 @@
       "packages/database/src/models/__tests__/messages/queryWithMessageGroup.test.ts",
       "packages/database/src/models/__tests__/messages/regenerateBranchPrune.test.ts",
       "packages/database/src/models/__tests__/notification.test.ts",
+      "packages/database/src/models/__tests__/providerBinding.test.ts",
       "packages/database/src/models/__tests__/thread.test.ts",
       "packages/database/src/models/__tests__/user.test.ts",
       "packages/database/src/models/__tests__/userMemories.test.ts",
@@ -42037,6 +42471,7 @@
       "packages/database/src/models/brief.ts",
       "packages/database/src/models/builtinSavedViews.ts",
       "packages/database/src/models/chunk.ts",
+      "packages/database/src/models/credential.ts",
       "packages/database/src/models/device.ts",
       "packages/database/src/models/documentComment.ts",
       "packages/database/src/models/documentLike.ts",
@@ -42059,6 +42494,8 @@
       "packages/database/src/models/notificationFeed.ts",
       "packages/database/src/models/plugin.ts",
       "packages/database/src/models/project.ts",
+      "packages/database/src/models/projectOrchestrationPolicy.ts",
+      "packages/database/src/models/providerBinding.ts",
       "packages/database/src/models/pullRequestReviewReceipt.ts",
       "packages/database/src/models/pushToken.ts",
       "packages/database/src/models/ragEval/__tests__/evaluation.test.ts",
@@ -42150,6 +42587,7 @@
       "packages/database/src/schemas/agentShare.ts",
       "packages/database/src/schemas/agentSkill.ts",
       "packages/database/src/schemas/connector.ts",
+      "packages/database/src/schemas/credential.ts",
       "packages/database/src/schemas/device.ts",
       "packages/database/src/schemas/documentComment.ts",
       "packages/database/src/schemas/expertise.ts",
@@ -42159,11 +42597,13 @@
       "packages/database/src/schemas/hatchetDispatch.ts",
       "packages/database/src/schemas/integrationLease.ts",
       "packages/database/src/schemas/linearImport.ts",
+      "packages/database/src/schemas/mcpEvents.ts",
       "packages/database/src/schemas/message.ts",
       "packages/database/src/schemas/metric.ts",
       "packages/database/src/schemas/notification.ts",
       "packages/database/src/schemas/project.ts",
       "packages/database/src/schemas/projectUpdate.ts",
+      "packages/database/src/schemas/providerBinding.ts",
       "packages/database/src/schemas/pullRequestReview.ts",
       "packages/database/src/schemas/pushToken.ts",
       "packages/database/src/schemas/ragEvals.ts",
@@ -42539,7 +42979,6 @@
       "src/features/AgentTasks/AgentTaskDetail/TaskRunReport.tsx",
       "src/features/AgentTasks/AgentTaskDetail/TaskScheduleConfig.tsx",
       "src/features/AgentTasks/AgentTaskDetail/TaskSubtasks.tsx",
-      "src/features/AgentTasks/AgentTaskDetail/TaskWorkflowStatusRow.tsx",
       "src/features/AgentTasks/AgentTaskDetail/TopicCard.test.tsx",
       "src/features/AgentTasks/AgentTaskDetail/TopicCard.tsx",
       "src/features/AgentTasks/AgentTaskDetail/TopicChatDrawer/index.test.tsx",
@@ -42549,9 +42988,9 @@
       "src/features/AgentTasks/AgentTaskList/AgentTasksPage.tsx",
       "src/features/AgentTasks/AgentTaskList/CreateTaskInlineEntry.tsx",
       "src/features/AgentTasks/AgentTaskList/KanbanBoard.tsx",
-      "src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx",
       "src/features/AgentTasks/AgentTaskList/TaskBoardCard.tsx",
       "src/features/AgentTasks/AgentTaskList/TaskIntentReview.tsx",
+      "src/features/AgentTasks/AgentTaskList/kanbanBoardModel.test.ts",
       "src/features/AgentTasks/AgentTaskList/kanbanBoardModel.ts",
       "src/features/AgentTasks/AgentTaskList/listViewOptions.ts",
       "src/features/AgentTasks/AgentTaskList/taskIntent.test.ts",
@@ -42565,8 +43004,10 @@
       "src/features/AgentTasks/features/TaskStatusTag.tsx",
       "src/features/AgentTasks/features/TaskSubtaskProgressTag.tsx",
       "src/features/AgentTasks/features/taskStatusMeta.ts",
+      "src/features/AgentTasks/features/useIssueStatusMove.ts",
       "src/features/AgentTasks/features/useTaskItemContextMenu.tsx",
       "src/features/AgentTasks/features/useTaskStatusChange.ts",
+      "src/features/AgentTasks/features/useTeamWorkflowStates.ts",
       "src/features/AgentTasks/shared/Breadcrumb.tsx",
       "src/features/AgentTasks/shared/LinearTaskSyncStatus.tsx",
       "src/features/AgentTasks/shared/TaskWorkflowBadge.test.tsx",
@@ -42978,6 +43419,9 @@
       "src/features/SavedViews/savedViewTitle.ts",
       "src/features/SavedViews/workQueryBuilder.test.ts",
       "src/features/SavedViews/workQueryBuilder.ts",
+      "src/features/Settings/ProviderBindings/BindingEditor.tsx",
+      "src/features/Settings/ProviderBindings/BindingRow.tsx",
+      "src/features/Settings/ProviderBindings/ProviderCard.tsx",
       "src/features/Settings/apikey/WorkspaceApiKeyPolicyContext.ts",
       "src/features/Settings/connector/features/ConnectorDetail/index.tsx",
       "src/features/Settings/connector/features/LeftPanel.tsx",
@@ -43123,6 +43567,7 @@
       "src/services/plugin/index.ts",
       "src/services/project.ts",
       "src/services/projectFile.ts",
+      "src/services/providerBinding.ts",
       "src/services/python.ts",
       "src/services/ragEval.ts",
       "src/services/recent/index.ts",
@@ -43293,6 +43738,7 @@
       "src/store/notebook/action.ts",
       "src/store/notebook/initialState.ts",
       "src/store/project/store.ts",
+      "src/store/providerBinding/index.ts",
       "src/store/serverConfig/store.ts",
       "src/store/task/selectors/activitySelectors.test.ts",
       "src/store/task/selectors/activitySelectors.ts",
@@ -43356,6 +43802,7 @@
       "src/store/userMemory/slices/experience/initialState.ts",
       "src/store/userMemory/slices/identity/action.ts",
       "src/store/userMemory/slices/identity/initialState.ts",
+      "src/store/userMemory/slices/userSession.test.ts",
       "src/utils/clientWorkIntentStash.ts",
       "src/utils/errorResponse.test.ts",
       "src/utils/errorResponse.ts",
@@ -43947,6 +44394,7 @@
       "src/features/Conversation/Messages/components/Extras/Usage/UsageDetail/ModelCard.tsx",
       "src/features/Conversation/Messages/components/Extras/Usage/UsageDetail/pricing.ts",
       "src/features/Conversation/Messages/components/Extras/Usage/UsageDetail/tokens.ts",
+      "src/features/Settings/ProviderBindings/useProviderCatalog.ts",
       "src/helpers/getSearchConfig.ts",
       "src/hooks/useProviderName.ts",
       "src/store/aiInfra/action.ts",
@@ -44498,6 +44946,7 @@
       "apps/server/src/routers/lambda/__tests__/integration/project.integration.test.ts",
       "apps/server/src/routers/lambda/__tests__/integration/task.integration.test.ts",
       "apps/server/src/routers/lambda/__tests__/integration/taskDraft.integration.test.ts",
+      "apps/server/src/routers/lambda/__tests__/integration/teamResource.integration.test.ts",
       "apps/server/src/routers/lambda/__tests__/integration/topic.integration.test.ts",
       "apps/server/src/routers/lambda/__tests__/integration/topicComment.integration.test.ts",
       "apps/server/src/routers/lambda/__tests__/integration/topicShare.integration.test.ts",
@@ -44533,6 +44982,11 @@
       "apps/server/src/services/collaboration/__tests__/roomAuthz.test.ts",
       "apps/server/src/services/collaboration/__tests__/snapshot.test.ts",
       "apps/server/src/services/composio/index.ts",
+      "apps/server/src/services/controlPlane/canonicalCompletion.test.ts",
+      "apps/server/src/services/controlPlane/canonicalRun.test.ts",
+      "apps/server/src/services/controlPlane/coreRuntimeHandoff.acceptance.test.ts",
+      "apps/server/src/services/controlPlane/coreRuntimeHost.acceptance.test.ts",
+      "apps/server/src/services/creds/index.ts",
       "apps/server/src/services/deviceGateway/authorizedToolCall.test.ts",
       "apps/server/src/services/deviceGateway/authorizedToolCall.ts",
       "apps/server/src/services/deviceGateway/dispatchAuthorization.test.ts",
@@ -44620,6 +45074,7 @@
       "src/app/(backend)/f/[id]/route.test.ts",
       "src/app/(backend)/oidc/clear-session/route.ts",
       "src/business/client/hooks/useActiveWorkspace.ts",
+      "src/features/PageEditor/usePageDocumentMetadata.ts",
       "src/features/SavedViews/SavedViewDetailsPanel.tsx",
       "src/features/SavedViews/SavedViewPage.tsx",
       "src/features/SavedViews/SavedViewsPage.tsx",
@@ -44750,6 +45205,7 @@
       "apps/server/src/routers/lambda/share.ts",
       "apps/server/src/routers/lambda/shareChat.ts",
       "apps/server/src/routers/lambda/taskTemplate.ts",
+      "apps/server/src/routers/lambda/teamResource.ts",
       "apps/server/src/routers/lambda/topic.ts",
       "apps/server/src/routers/lambda/upload.test.ts",
       "apps/server/src/routers/lambda/upload.ts",
@@ -45113,7 +45569,6 @@
       "src/features/MobileHome/SessionListContent/AgentSearchList.tsx",
       "src/features/MobileHome/SessionListContent/Inbox/index.tsx",
       "src/features/MoveTopicsModal/Content.tsx",
-      "src/features/NavPanel/ToggleLeftPanelButton.tsx",
       "src/features/Onboarding/config.ts",
       "src/features/OpenInAppButton/index.tsx",
       "src/features/OpenInAppButton/useOpenInApp.ts",
@@ -46242,6 +46697,19 @@
       "apps/server/src/services/aiAgent/intervention/InterventionController.ts",
       "apps/server/src/services/aiAgent/orchestrationRunners.ts",
       "apps/server/src/services/aiAgent/pipeline/approvalResume.ts",
+      "apps/server/src/services/controlPlane/canonicalCompletion.test.ts",
+      "apps/server/src/services/controlPlane/canonicalCompletion.ts",
+      "apps/server/src/services/controlPlane/canonicalRun.ts",
+      "apps/server/src/services/controlPlane/canonicalSessionSnapshot.ts",
+      "apps/server/src/services/controlPlane/coreRuntimeHandoff.acceptance.test.ts",
+      "apps/server/src/services/controlPlane/coreRuntimeHost.acceptance.test.ts",
+      "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
+      "apps/server/src/services/controlPlane/receiptRecovery.postgres.test.ts",
+      "apps/server/src/services/mcpEvents/admission.ts",
+      "apps/server/src/services/mcpEvents/runtime.ts",
+      "apps/server/src/services/mcpEvents/worker.ts",
+      "apps/server/src/services/providerBinding/configuration.ts",
+      "apps/server/src/services/providerBinding/controlPlane.ts",
       "apps/server/src/services/queue/types.ts",
       "apps/server/src/services/toolExecution/__tests__/index.test.ts",
       "packages/achaos/runtime/src/runtime.test.ts",
@@ -46289,32 +46757,33 @@
     "@orvilo/collaboration-gateway": [],
     "@orvilo/cli": [],
     "@orvilo/auth": [],
+    "@orvilo/auth-cf": [],
     "orvilo": []
   },
   "uncoveredByArea": {
-    "apps/server/src": 803,
-    "src/routes/(main)": 287,
+    "apps/server/src": 860,
+    "src/routes/(main)": 293,
+    "src/features/Settings": 194,
     "apps/cli/src": 190,
-    "src/features/Settings": 182,
     "src/business/client": 117,
-    "src/features/HomeSidebar": 93,
+    "src/features/HomeSidebar": 95,
     "src/features/AgentSidebar": 63,
-    "packages/business-server/src": 60,
+    "packages/business-server/src": 61,
     "src/app/(backend)": 59,
-    "src/features/WorkTeams": 50,
+    "src/features/WorkTeams": 55,
+    "src/store/userMemory": 45,
     "src/store/file": 43,
     "src/store/user": 43,
     "src/features/DevPanel": 39,
-    "src/store/userMemory": 38,
     "src/features/DevDock": 37,
     "src/routes/(mobile)": 36,
     "src/features/MyWork": 33,
     "src/features/CommandMenu": 32,
     "src/features/WorkInbox": 32,
     "src/features/EditorCanvas": 31,
+    "src/features/Reviews": 31,
     "src/store/agent": 30,
-    "src/features/NavPanel": 29,
-    "src/features/Reviews": 29,
+    "src/features/NavPanel": 28,
     "src/features/ShareModal": 28,
     "src/services/electron": 28,
     "src/store/task": 28,
@@ -46325,14 +46794,15 @@
     "src/features/AgentSetting": 26,
     "src/features/ResourceHome": 26,
     "src/layout/AuthProvider": 26,
+    "src/spa/router": 26,
     "src/store/home": 26,
+    "src/libs/swr": 25,
     "src/features/RecommendTaskTemplates": 23,
-    "src/libs/swr": 23,
-    "src/spa/router": 23,
     "src/features/User": 22,
     "src/libs/document-loaders": 22,
     "src/store/session": 22,
     "src/features/Home": 20,
+    "src/features/Memory": 20,
     "src/layout/GlobalProvider": 20,
     "src/store/electron": 20,
     "src/features/SelfLearning": 19,
@@ -46389,7 +46859,6 @@
     "src/components/HtmlPreview": 7,
     "src/components/mdx": 7,
     "src/features/GroupPermission": 7,
-    "src/features/Memory": 7,
     "src/features/ProtocolUrlHandler": 7,
     "src/features/SuggestQuestions": 7,
     "src/features/TaskDock": 7,
@@ -46460,6 +46929,7 @@
     "scripts/cdnWorkflow/s3": 3,
     "src/app/spa": 3,
     "src/business/server": 3,
+    "src/components/AsyncError": 3,
     "src/components/ChatGroupWizard": 3,
     "src/components/DiscreteSlider": 3,
     "src/components/ErrorBoundary": 3,
@@ -46538,6 +47008,7 @@
     "src/services/utils": 2,
     "src/spa/atoms": 2,
     "src/store/middleware": 2,
+    "src/store/providerBinding": 2,
     "src/utils/locale": 2,
     "apps/cli/tests": 1,
     "apps/cli/tsdown.config.test.ts": 1,
@@ -46550,6 +47021,7 @@
     "e2e/scripts/setup.ts": 1,
     "e2e/vitest.config.mts": 1,
     "packages/config/src": 1,
+    "plugins/vite/cfReactRouterManifestBridge.ts": 1,
     "plugins/vite/completionSounds.test.ts": 1,
     "plugins/vite/completionSounds.ts": 1,
     "plugins/vite/customBrandingLoadingScreen.test.ts": 1,
@@ -46581,6 +47053,12 @@
     "plugins/vite/watchOptions.ts": 1,
     "scripts/_shared/checkDeprecatedAuth.js": 1,
     "scripts/_shared/checkDeprecatedAuth.test.ts": 1,
+    "scripts/acceptance/prime-nonempty-harness.mjs": 1,
+    "scripts/acceptance/prime-nonempty.ts": 1,
+    "scripts/acceptance/prime-protocol.ts": 1,
+    "scripts/acceptance/prime-resume-harness.mjs": 1,
+    "scripts/acceptance/prime-resume.ts": 1,
+    "scripts/acceptance/sql-receipt-recovery.ts": 1,
     "scripts/backfillWorkspaceKnowledgeBaseVisibility.ts": 1,
     "scripts/cdnWorkflow/index.ts": 1,
     "scripts/cdnWorkflow/optimized.ts": 1,
@@ -46590,6 +47068,7 @@
     "scripts/changelogWorkflow/const.ts": 1,
     "scripts/changelogWorkflow/generateChangelog.ts": 1,
     "scripts/changelogWorkflow/index.ts": 1,
+    "scripts/checkCloudflareAssets.mjs": 1,
     "scripts/checkConsoleLog.mts": 1,
     "scripts/ci/checkChineseUiFont.mjs": 1,
     "scripts/ci/checkChineseUiFont.test.mjs": 1,
@@ -46713,7 +47192,6 @@
     "src/app/robots.tsx": 1,
     "src/business/model-config.test.ts": 1,
     "src/components/404": 1,
-    "src/components/AsyncError": 1,
     "src/components/AuthIcons.tsx": 1,
     "src/components/AvatarUpload": 1,
     "src/components/BrandWatermark": 1,
@@ -46978,6 +47456,7 @@
     "src/services/documentHistoryQueue.test.ts": 1,
     "src/services/documentHistoryQueue.ts": 1,
     "src/services/documentLike.ts": 1,
+    "src/services/experienceMemory.ts": 1,
     "src/services/expertise.ts": 1,
     "src/services/export": 1,
     "src/services/followUpAction.ts": 1,
@@ -46996,13 +47475,16 @@
     "src/services/knowledgeBase.ts": 1,
     "src/services/mcp.test.ts": 1,
     "src/services/mcp.ts": 1,
+    "src/services/mcpEvents.ts": 1,
     "src/services/metric.ts": 1,
     "src/services/notebook.ts": 1,
     "src/services/notification.ts": 1,
+    "src/services/personalMemory.test.ts": 1,
     "src/services/project.ts": 1,
     "src/services/projectFile.test.ts": 1,
     "src/services/projectFile.ts": 1,
     "src/services/projectSkill.ts": 1,
+    "src/services/providerBinding.ts": 1,
     "src/services/pullRequest.ts": 1,
     "src/services/python.ts": 1,
     "src/services/rag.ts": 1,
@@ -47041,6 +47523,7 @@
     "src/spa/loadingScreen.ts": 1,
     "src/spa/runtime.test.ts": 1,
     "src/spa/runtime.ts": 1,
+    "src/store/mcpEvents": 1,
     "src/store/types.ts": 1,
     "src/styles/antdOverride.ts": 1,
     "src/styles/electron.ts": 1,
@@ -47141,8 +47624,10 @@
     "tests/mocks/orviloUiMotionProvider.tsx": 1,
     "tests/mocks/storeWorkspace.ts": 1,
     "tests/openapi/knowledge-base-delete.test.ts": 1,
+    "tests/provider-memory-evaluation/score.mjs": 1,
+    "tests/provider-memory-evaluation/score.test.mjs": 1,
     "tests/setup.ts": 1,
     "tests/utils.tsx": 1
   },
-  "uncoveredFiles": 4626
+  "uncoveredFiles": 4754
 }

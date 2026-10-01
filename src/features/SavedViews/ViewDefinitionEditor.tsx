@@ -58,10 +58,11 @@ const sortKey = (sort: WorkQuerySort[] | undefined): string => {
   return `${first.field === 'updatedAt' ? 'updated' : first.field === 'createdAt' ? 'created' : first.field}${first.direction === 'desc' ? 'Desc' : 'Asc'}`;
 };
 
-// 'attention' is the My-issues default grouping, not a view-editor choice.
-type EditableGroupBy = Exclude<WorkQueryGroupBy, 'attention'>;
+// Menu copy exists for these keys. activityDate, cycle, project, and attention
+// are list axes elsewhere; this editor does not offer them.
+type SavedViewGroupByOption = 'assignee' | 'none' | 'priority' | 'status' | 'workflowCategory';
 
-const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, EditableGroupBy[]> = {
+const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, readonly SavedViewGroupByOption[]> = {
   project: ['none', 'status'],
   task: ['none', 'status', 'workflowCategory', 'priority', 'assignee'],
 };
@@ -196,7 +197,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 if (
                   (GROUP_BY_OPTIONS[value.entityType] as readonly string[]).includes(next as string)
                 ) {
-                  const groupBy = next as EditableGroupBy;
+                  const groupBy = next as SavedViewGroupByOption;
                   set({
                     groupBy,
                     subGroupBy: normalizeWorkQuerySubGroupBy(groupBy, value.subGroupBy),

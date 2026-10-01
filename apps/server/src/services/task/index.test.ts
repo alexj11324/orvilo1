@@ -2045,6 +2045,8 @@ describe('TaskService', () => {
           runReservationExpiresAt: null,
           runReservationId: null,
         }),
+        {},
+        undefined,
       );
       expect(cascadeMock).not.toHaveBeenCalled();
     });

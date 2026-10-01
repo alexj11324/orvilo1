@@ -2,15 +2,35 @@ import { createStaticStyles } from 'antd-style';
 
 export const styles = createStaticStyles(({ css, cssVar }) => ({
   titleInput: css`
-    &.ant-input {
+    /* Plane's issue title: 20px medium, no field chrome. Doubled class so this
+       beats the textarea primitive's border, padding and text-base utilities. */
+    && {
       resize: none;
 
-      min-height: auto;
+      min-height: 0;
       padding: 0;
+      border: none;
+      border-radius: 0;
 
-      font-size: 24px;
-      font-weight: 600;
-      line-height: 1.25;
+      font-size: 20px;
+      font-weight: 500;
+      line-height: 1.4;
+
+      background: transparent;
+      box-shadow: none;
+
+      &:focus,
+      &:focus-visible {
+        border: none;
+        outline: none;
+        box-shadow: none;
+      }
+
+      &:disabled {
+        cursor: text;
+        opacity: 1;
+        background: transparent;
+      }
     }
   `,
 

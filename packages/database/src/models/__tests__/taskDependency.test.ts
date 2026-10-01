@@ -168,6 +168,15 @@ describe('task prerequisite invariants', () => {
     });
   });
 
+  it('lets the blocking issue remove the edge from its own detail', async () => {
+    const upstream = await create('upstream');
+    const dependent = await create('dependent');
+    await model.addDependency(dependent.id, upstream.id, 'blocks');
+    const [edge] = await model.getDependencies(dependent.id);
+    await model.removeDependencyByRelationId(upstream.id, edge.id);
+    expect(await model.getDependencies(dependent.id)).toEqual([]);
+  });
+
   it('shows one ordinary relation from both issues and removes it from either side', async () => {
     const a = await create('A');
     const b = await create('B');

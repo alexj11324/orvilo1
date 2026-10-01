@@ -88,10 +88,6 @@ vi.mock('../shared/useUserDisplayMeta', () => ({
   useUserDisplayMeta: () => undefined,
 }));
 
-vi.mock('./TaskAcceptanceStateRow', () => ({
-  default: () => <div>acceptance</div>,
-}));
-
 vi.mock('./TaskScheduleConfig', () => ({
   default: () => <div>schedule</div>,
 }));

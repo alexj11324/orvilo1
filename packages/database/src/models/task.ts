@@ -3230,14 +3230,16 @@ export class TaskModel {
       .from(taskDependencies)
       .where(and(eq(taskDependencies.id, relationId), this.issueRelationOwnership()))
       .limit(1);
-    if (
-      !relation ||
-      (relation.taskId !== taskId &&
-        !(relation.type === 'relates' && relation.dependsOnId === taskId))
-    ) {
+    if (!relation || (relation.taskId !== taskId && relation.dependsOnId !== taskId)) {
       throw new TaskDependencyError('Relation not found.');
     }
     const peerId = relation.taskId === taskId ? relation.dependsOnId : relation.taskId;
+    // A "blocking" row is stored on the other issue. Remove it from that
+    // owner so the blocker can unlink it from its own detail page.
+    if (relation.type === 'blocks' && relation.taskId !== taskId) {
+      await this.removeDependency(relation.taskId, relation.dependsOnId, mutation, 'blocks');
+      return;
+    }
     await this.removeDependency(
       taskId,
       peerId,

@@ -24,6 +24,19 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
       column-gap: 40px;
     }
   `,
+  /**
+   * Description sits under the title on every width. On a narrow pane the
+   * properties rail follows it, so the issue text is not buried under the
+   * property stack.
+   */
+  description: css`
+    grid-column: 1;
+    min-width: 0;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      grid-row: 2;
+    }
+  `,
   main: css`
     min-width: 0;
   `,
@@ -38,6 +51,10 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     grid-column: 1;
     min-width: 0;
     padding-block-end: 120px;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      grid-row: 3;
+    }
   `,
   side: css`
     display: flex;
@@ -47,12 +64,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
 
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
       grid-column: 2;
-
-      /* Span both rows: the rail is a persistent column, so the prose body in
-         row 2 starts directly under the controls instead of waiting for the
-         rail's height to end. (1 / -1 can't resolve — the rows are
-         implicit; the grid always has exactly two by construction.) */
-      grid-row: 1 / 3;
+      grid-row: 1 / 4;
       padding-block-start: 0;
     }
   `,

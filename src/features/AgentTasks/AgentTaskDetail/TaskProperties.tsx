@@ -23,8 +23,8 @@ import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import { useTeamWorkflowStates } from '../features/useTeamWorkflowStates';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
 import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
+import { isDueDateOverdue } from './isDueDateOverdue';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
-import TaskAcceptanceStateRow from './TaskAcceptanceStateRow';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskScheduleConfig from './TaskScheduleConfig';
@@ -211,11 +211,16 @@ const TaskProperties = memo(() => {
           <div
             className="font-medium"
             style={{
-              color: dueDate
-                ? parseISO(dueDate).getTime() < Date.now() - 24 * 60 * 60 * 1000
+              color:
+                dueDate &&
+                isDueDateOverdue(dueDate) &&
+                status !== 'completed' &&
+                status !== 'canceled' &&
+                workflowCategory !== 'done'
                   ? cssVar.colorWarning
-                  : undefined
-                : cssVar.colorTextDescription,
+                  : dueDate
+                    ? undefined
+                    : cssVar.colorTextDescription,
               fontSize: RAIL_VALUE_FONT_SIZE,
             }}
           >
@@ -312,11 +317,6 @@ const TaskProperties = memo(() => {
             )}
           </div>
         </TaskLabelSelector>
-
-        {/* The human layer: whether the delivery is accepted. Read-only here —
-            the decision itself is made on the acceptance page this links to.
-            Recurring tasks have no delivery acceptance, so no state to show. */}
-        {!automationMode && <TaskAcceptanceStateRow />}
 
         <TaskScheduleConfig>
           <div className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}>

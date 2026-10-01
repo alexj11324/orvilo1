@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import type { TaskDetailData } from '@orvilo/types';
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TaskStore } from '@/store/task';
@@ -8,10 +9,13 @@ import type { TaskStore } from '@/store/task';
 import TaskPrerequisites from './TaskPrerequisites';
 
 const mocks = vi.hoisted(() => ({
+  addDependency: vi.fn(),
   allowed: true,
   navigate: vi.fn(),
+  refreshTaskDetail: vi.fn(),
   removeDependency: vi.fn(),
   removeIssueRelation: vi.fn(),
+  search: vi.fn(),
   state: {} as TaskStore,
 }));
 
@@ -35,32 +39,56 @@ vi.mock('@/hooks/usePermission', () => ({
 vi.mock('@/store/task', () => ({
   useTaskStore: (selector: (state: TaskStore) => unknown) => selector(mocks.state),
 }));
+vi.mock('@/services/workAttention', () => ({
+  workAttentionService: { search: mocks.search },
+}));
+vi.mock('@/components/ui/dropdown-menu', () => ({
+  DropdownMenu: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuContent: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  DropdownMenuItem: ({
+    children,
+    onClick,
+    ...props
+  }: { children: ReactNode; onClick?: () => void } & ButtonHTMLAttributes<HTMLButtonElement>) => (
+    <button type="button" {...props} onClick={() => onClick?.()}>
+      {children}
+    </button>
+  ),
+  DropdownMenuTrigger: ({ render }: { render?: ReactNode }) => <>{render}</>,
+}));
 
 const setTask = (dependencies: TaskDetailData['dependencies'] = [], id = 'T-4') => {
   mocks.state = {
     activeTaskId: id,
+    addDependency: mocks.addDependency,
+    internal_refreshTaskDetail: mocks.refreshTaskDetail,
     removeDependency: mocks.removeDependency,
     removeIssueRelation: mocks.removeIssueRelation,
     taskDetailMap: { [id]: { dependencies, identifier: id, status: 'backlog' } },
   } as unknown as TaskStore;
 };
 const key = (suffix: string) => `taskDetail.prerequisites.${suffix}`;
+const relation = (suffix: string) => `taskDetail.relations.${suffix}`;
 
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.allowed = true;
+  mocks.addDependency.mockResolvedValue(undefined);
+  mocks.refreshTaskDetail.mockResolvedValue(undefined);
   mocks.removeDependency.mockResolvedValue(undefined);
   mocks.removeIssueRelation.mockResolvedValue(undefined);
+  mocks.search.mockResolvedValue({ data: [] });
   setTask();
 });
 afterEach(cleanup);
 
 describe('TaskPrerequisites', () => {
-  it('renders the prerequisite rail without manual relate affordances', () => {
+  it('renders a relations section with an add menu and no search until a type is chosen', () => {
     render(<TaskPrerequisites />);
-    expect(screen.getByText(key('title'))).toBeTruthy();
-    expect(screen.getByRole('status').textContent).toBe(key('empty'));
+    expect(screen.getByText(relation('title'))).toBeTruthy();
+    expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
+    expect(screen.getByRole('button', { name: relation('add') })).toBeTruthy();
   });
 
   it('shows blocking state until every prerequisite completes', () => {
@@ -70,7 +98,9 @@ describe('TaskPrerequisites', () => {
     ]);
     const view = render(<TaskPrerequisites />);
     expect(screen.getByRole('status').textContent).toBe(key('blocked'));
-    expect(screen.getAllByText(key('blockedBy'))).toHaveLength(2);
+    expect(screen.getByText('T-1')).toBeTruthy();
+    expect(screen.getByText('T-2')).toBeTruthy();
+    expect(screen.getAllByText(relation('blockedBy')).length).toBeGreaterThan(0);
     setTask([
       { dependsOn: 'T-1', status: 'completed', type: 'blocks' },
       { dependsOn: 'T-2', status: 'completed', type: 'blocks' },
@@ -79,14 +109,38 @@ describe('TaskPrerequisites', () => {
     expect(screen.getByRole('status').textContent).toBe(key('ready'));
   });
 
-  it('does not list non-blocking relates edges', () => {
+  it('lists relates edges in their own group', () => {
     setTask([
       { dependsOn: 'T-1', status: 'backlog', type: 'blocks' },
       { dependsOn: 'T-3', status: 'backlog', type: 'relates' },
     ]);
     render(<TaskPrerequisites />);
     expect(screen.getByText('T-1')).toBeTruthy();
-    expect(screen.queryByText('T-3')).toBeNull();
+    expect(screen.getByText('T-3')).toBeTruthy();
+    expect(screen.getAllByText(relation('relates')).length).toBeGreaterThan(0);
+  });
+
+  it('adds a relates edge from search and a blocking edge from the other side', async () => {
+    mocks.search.mockResolvedValue({
+      data: [{ description: 'T-9', id: 'tsk_9', title: 'Ship it', type: 'task' }],
+    });
+    render(<TaskPrerequisites />);
+    const addMenu = screen.getByRole('button', { name: relation('add') }).parentElement;
+    if (!addMenu) throw new Error('Expected the add menu');
+    fireEvent.click(within(addMenu).getByRole('button', { name: relation('relates') }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ship' } });
+    await waitFor(() => expect(screen.getByText('Ship it')).toBeTruthy());
+    fireEvent.click(screen.getByText('Ship it'));
+    await waitFor(() => expect(mocks.addDependency).toHaveBeenCalledWith('T-4', 'T-9', 'relates'));
+
+    fireEvent.click(within(addMenu).getByRole('button', { name: relation('blocking') }));
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ship' } });
+    await waitFor(() => expect(screen.getByText('Ship it')).toBeTruthy());
+    fireEvent.click(screen.getByText('Ship it'));
+    await waitFor(() => {
+      expect(mocks.addDependency).toHaveBeenCalledWith('T-9', 'T-4', 'blocks');
+      expect(mocks.refreshTaskDetail).toHaveBeenCalledWith('T-4');
+    });
   });
 
   it('uses the board workflow glyph for a prerequisite with a provider state', () => {

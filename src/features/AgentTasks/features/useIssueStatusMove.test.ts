@@ -9,6 +9,11 @@ const mocks = vi.hoisted(() => ({
   moveBoardMaybePickingState: vi.fn(),
   mutate: vi.fn(),
   refreshDetail: vi.fn(),
+  runTask: vi.fn(),
+  taskDetailMap: {} as Record<
+    string,
+    { dependencies?: Array<{ dependsOn: string; status?: string | null; type: string }> }
+  >,
   toastError: vi.fn(),
   toastKey: vi.fn(() => 'myWork.moveConflict'),
   updateTask: vi.fn(),
@@ -29,11 +34,14 @@ vi.mock('@/store/task', () => ({
   useTaskStore: (
     selector: (state: {
       internal_refreshTaskDetail: typeof mocks.refreshDetail;
+      runTask: typeof mocks.runTask;
       updateTask: typeof mocks.updateTask;
     }) => unknown,
   ) =>
     selector({
       internal_refreshTaskDetail: mocks.refreshDetail,
+      runTask: mocks.runTask,
+      taskDetailMap: mocks.taskDetailMap,
       updateTask: mocks.updateTask,
     }),
 }));
@@ -64,6 +72,8 @@ describe('useIssueStatusMove', () => {
     mocks.moveBoardMaybePickingState.mockResolvedValue(true);
     mocks.mutate.mockResolvedValue(undefined);
     mocks.refreshDetail.mockResolvedValue(undefined);
+    mocks.runTask.mockResolvedValue({ success: true });
+    mocks.taskDetailMap = {};
     mocks.updateTask.mockResolvedValue('T-9');
   });
 
@@ -128,6 +138,43 @@ describe('useIssueStatusMove', () => {
     expect(mocks.toastKey).toHaveBeenCalledWith(conflict);
     expect(mocks.toastError).toHaveBeenCalled();
     expect(mocks.refreshDetail).not.toHaveBeenCalled();
+  });
+
+  it('starts the agent when the issue enters in progress', async () => {
+    mocks.find.mockResolvedValue(
+      teamTask({ automationMode: null, status: 'backlog', workflowCategory: 'todo' }),
+    );
+    const { result } = renderHook(() => useIssueStatusMove());
+    await result.current({
+      taskIdentifier: 'T-9',
+      target: target({ category: 'in_progress' }),
+    });
+    expect(mocks.runTask).toHaveBeenCalledWith('T-9');
+  });
+
+  it('does not start a run while an open blocker is still on the issue', async () => {
+    mocks.find.mockResolvedValue(
+      teamTask({ automationMode: null, status: 'backlog', workflowCategory: 'todo' }),
+    );
+    mocks.taskDetailMap = {
+      'T-9': { dependencies: [{ dependsOn: 'T-1', status: 'backlog', type: 'blocks' }] },
+    };
+    const { result } = renderHook(() => useIssueStatusMove());
+    await result.current({
+      taskIdentifier: 'T-9',
+      target: target({ category: 'in_progress' }),
+    });
+    expect(mocks.runTask).not.toHaveBeenCalled();
+  });
+
+  it('does not start a run for a todo move or an already running issue', async () => {
+    mocks.find.mockResolvedValue(teamTask({ status: 'running', workflowCategory: 'todo' }));
+    const { result } = renderHook(() => useIssueStatusMove());
+    await result.current({
+      taskIdentifier: 'T-9',
+      target: target({ category: 'in_progress' }),
+    });
+    expect(mocks.runTask).not.toHaveBeenCalled();
   });
 
   it('reports success even when the post-write read-back fails', async () => {

@@ -8,7 +8,6 @@ import {
   LinkIcon,
   MessageSquareTextIcon,
   PencilIcon,
-  PlayIcon,
   StarIcon,
   TagsIcon,
   Trash2Icon,
@@ -38,8 +37,6 @@ import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys } from '@/libs/swr/keys';
 import { taskLabelService } from '@/services/taskLabel';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useCurrentProjectList } from '@/store/project';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
@@ -119,8 +116,6 @@ export interface TaskContextMenuTarget {
   workflowStateId?: string | null;
 }
 
-const RUN_NOW_STATUSES = new Set<TaskStatus>(['backlog', 'completed']);
-
 export interface TaskContextMenuActions {
   buildItems: (task: TaskContextMenuTarget) => NativeContextMenuItem[];
   installKeyboardHandlers: (task: TaskContextMenuTarget, closeMenu?: () => void) => void;
@@ -147,10 +142,8 @@ export const useTaskContextMenuActions = (
   const updateTask = useTaskStore((s) => s.updateTask);
   const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
   const deleteTask = useTaskStore((s) => s.deleteTask);
-  const runTask = useTaskStore((s) => s.runTask);
   const toggleTaskLabel = useTaskStore((s) => s.toggleTaskLabel);
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const projects = useCurrentProjectList();
   const isLogin = useUserStore(authSelectors.isLogin);
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -260,7 +253,6 @@ export const useTaskContextMenuActions = (
         ),
         activeWorkspaceSlug,
       )}`;
-      const canRunNow = RUN_NOW_STATUSES.has(currentStatus);
       const canOpenRun = currentStatus === 'running' && !!task.currentTopicId;
 
       // Linear's Labels submenu toggles rows in place — the menu stays open
@@ -349,26 +341,6 @@ export const useTaskContextMenuActions = (
                     title: task.name ?? undefined,
                   });
                 },
-              },
-              { type: 'divider' },
-            ] satisfies NativeContextMenuItem[])
-          : []),
-        ...(canRunNow
-          ? ([
-              {
-                icon: <PlayIcon size="1em" />,
-                key: 'runNow',
-                label: t('taskList.contextMenu.runNow'),
-                disabled: !canEditTask,
-                onClick: async ({ domEvent }: MenuInfo) => {
-                  domEvent.stopPropagation();
-                  if (!canEditTask) return;
-                  if (!task.assigneeAgentId && !task.assigneeUserId && inboxAgentId) {
-                    await updateTask(task.identifier, { assigneeAgentId: inboxAgentId });
-                  }
-                  await runTask(task.identifier);
-                },
-                sfSymbol: 'play.fill',
               },
               { type: 'divider' },
             ] satisfies NativeContextMenuItem[])
@@ -626,10 +598,8 @@ export const useTaskContextMenuActions = (
     updateTask,
     refreshTaskList,
     deleteTask,
-    runTask,
     toggleTaskLabel,
     openTopicDrawer,
-    inboxAgentId,
     projects,
     labelRegistryData,
     onStatusChange,

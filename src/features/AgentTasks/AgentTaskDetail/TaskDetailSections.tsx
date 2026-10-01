@@ -3,12 +3,10 @@ import { memo } from 'react';
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import { taskDetailSelectors } from '@/store/task/selectors';
 
-import TaskAcceptance from './TaskAcceptance';
 import TaskActivities from './TaskActivities';
 import TaskArtifacts from './TaskArtifacts';
 import TaskDetailAssignee from './TaskDetailAssignee';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
-import TaskDetailRunPauseAction from './TaskDetailRunPauseAction';
 import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
 import TaskInstruction from './TaskInstruction';
@@ -38,26 +36,19 @@ const TaskDetailSections = memo(() => {
             <TaskDetailTitleInput />
             <TaskParentBar />
             <div className="flex items-center gap-2 flex-wrap" style={{ maxWidth: '100%' }}>
-              <TaskDetailRunPauseAction />
               <TaskDetailAssignee />
             </div>
           </div>
+          <div className={styles.description}>
+            <TaskInstruction />
+          </div>
           <div data-task-detail-side className={styles.side}>
-            {/* Rail, top to bottom, matching the reference: round quick
-                actions, then the labeled Properties / Project / Related
-                groups. */}
             <TaskRailActions />
             <TaskProperties />
             <TaskProjectSection />
-            <TaskPrerequisites />
           </div>
-          {/* Third grid child: the prose column lives inside the same grid so
-              the wide layout bounds it to the left track beside the rail —
-              matching the reference, where body text never runs under the
-              properties column. */}
           <div className={`flex flex-col gap-6 ${styles.body}`}>
-            <TaskInstruction />
-            <TaskAcceptance />
+            <TaskPrerequisites />
             <TaskSubtasks />
             <TaskArtifacts />
             <TaskActivities />

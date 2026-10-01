@@ -49,7 +49,11 @@ export interface ConfigurationAuthority {
 export interface TrustedProviderBackend {
   capabilities: (binding: ProviderBinding) => Promise<ProviderModelCapability[]>;
   check: (binding: ProviderBinding) => Promise<boolean>;
-  infer: (binding: ProviderBinding, request: InferenceRequest) => AsyncIterable<InferenceEvent>;
+  infer: (
+    binding: ProviderBinding,
+    request: InferenceRequest,
+    options?: { signal?: AbortSignal },
+  ) => AsyncIterable<InferenceEvent>;
 }
 
 const error = (code: ControlError['code'], message: string): ControlError => ({
@@ -138,7 +142,7 @@ export function createInferenceBroker(deps: {
 }): InferenceBroker {
   const now = deps.now ?? Date.now;
   return {
-    async *infer(input) {
+    async *infer(input, options?: { signal?: AbortSignal }) {
       try {
         const request: InferenceRequest = structuredClone(input);
         if (request.schemaVersion !== CONTROL_PLANE_VERSION) {
@@ -172,9 +176,13 @@ export function createInferenceBroker(deps: {
           yield { type: 'error', error: denied };
           return;
         }
+        // `for await` close does not reach a backend suspended on a pending
+        // provider read (return() queues behind it), so the caller's signal is
+        // threaded through to the backend's own abort path instead.
         for await (const event of deps.backend.infer(
           structuredClone(snapshot.binding),
           structuredClone(request),
+          options,
         )) {
           const fresh = structuredClone(await deps.authority.resolve(structuredClone(request)));
           const revoked = checkInference(request, fresh, now());

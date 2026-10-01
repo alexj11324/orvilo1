@@ -163,10 +163,18 @@ export class SqlTrustedProviderBackend implements TrustedProviderBackend {
       }));
   }
 
-  async *infer(binding: ProviderBinding, request: InferenceRequest): AsyncIterable<InferenceEvent> {
+  async *infer(
+    binding: ProviderBinding,
+    request: InferenceRequest,
+    options?: { signal?: AbortSignal },
+  ): AsyncIterable<InferenceEvent> {
     const connection = await this.resolveConnection(binding);
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), PROVIDER_INFER_TIMEOUT_MS);
+    // Callers (broker.cancel, session.abort) abort us here — the fetch signal
+    // drops the held upstream request immediately.
+    options?.signal?.addEventListener('abort', () => controller.abort(), { once: true });
+    if (options?.signal?.aborted) controller.abort();
     try {
       if (!connection) {
         yield {

@@ -32,11 +32,15 @@ import { type z } from 'zod';
 
 import { createWorkspaceLambdaClient, lambdaClient } from '@/libs/trpc/client';
 
-const personalClient = createWorkspaceLambdaClient(null);
+let cachedPersonalClient: ReturnType<typeof createWorkspaceLambdaClient> | undefined;
+const personalClient = () => {
+  cachedPersonalClient ??= createWorkspaceLambdaClient(null);
+  return cachedPersonalClient;
+};
 
 class UserMemoryService {
   createManual = (layer: LayersEnum, content: string) =>
-    personalClient.userMemory.createManual.mutate({ layer, content });
+    personalClient().userMemory.createManual.mutate({ layer, content });
 
   addActivityMemory = async (
     params: z.infer<typeof ActivityMemoryItemSchema>,

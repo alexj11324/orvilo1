@@ -83,6 +83,9 @@ expose('userMemory', useUserMemoryStore);
 export const getUserMemoryStoreState = () => useUserMemoryStore.getState();
 
 // Clear private settled state synchronously on logout or account replacement.
-useUserStore.subscribe((state, previous) => {
-  if (state.user?.id !== previous.user?.id) useUserMemoryStore.getState().reset();
-});
+// `useUserStore` may be a bare mocked function without `.subscribe` under vitest.
+if (typeof useUserStore.subscribe === 'function') {
+  useUserStore.subscribe((state, previous) => {
+    if (state.user?.id !== previous.user?.id) useUserMemoryStore.getState().reset();
+  });
+}

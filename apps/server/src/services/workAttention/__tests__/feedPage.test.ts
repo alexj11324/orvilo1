@@ -88,12 +88,18 @@ describe('buildInboxFeed', () => {
       },
       projectModel: { findByIds: async () => [{ id: 'p1', name: 'Live project' }] },
       taskModel: {
-        findByIds: async () => [{ id: 't1', instruction: 'ignored', name: 'Live task' }],
+        findByIds: async () => [
+          { id: 't1', identifier: 'T-1', instruction: 'ignored', name: 'Live task' },
+        ],
       },
     });
 
     expect(page.partial).toBe(false);
     expect(page.cards.map((card) => card.title)).toEqual(['Live task', 'Live project']);
+    // The Plane row's second line renders `IDENT title` — tasks carry their
+    // workspace display identifier, projects overlay the title alone.
+    expect(page.cards[0]?.resourceIdentifier).toBe('T-1');
+    expect(page.cards[1]?.resourceIdentifier).toBeUndefined();
   });
 
   it('keeps stored titles when live lookup fails instead of emptying the feed', async () => {
@@ -177,7 +183,9 @@ describe('buildInboxFeedCard', () => {
           listFeed: async () => [],
         },
         taskModel: {
-          findByIds: async () => [{ id: 't1', instruction: 'ignored', name: 'Live task' }],
+          findByIds: async () => [
+            { id: 't1', identifier: 'T-1', instruction: 'ignored', name: 'Live task' },
+          ],
         },
       }),
       'n1',
@@ -185,6 +193,7 @@ describe('buildInboxFeedCard', () => {
 
     expect(found?.notificationId).toBe('n1');
     expect(found?.title).toBe('Live task');
+    expect(found?.resourceIdentifier).toBe('T-1');
   });
 
   it('runs the pending-source projection before the row lookup', async () => {

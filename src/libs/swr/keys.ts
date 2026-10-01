@@ -932,15 +932,11 @@ export const inboxKeys = {
     'inbox:unreadCount',
     workspaceId,
   ]),
-  feed: def(
+  feed: def('inbox:feed', (workspaceId: string | null, scope: string) => [
     'inbox:feed',
-    (
-      workspaceId: string | null,
-      kind: string | undefined,
-      filter: string | undefined,
-      variant: string | undefined,
-    ) => ['inbox:feed', workspaceId, kind, filter, variant],
-  ),
+    workspaceId,
+    scope,
+  ]),
   feedSummary: def('inbox:feedSummary', (workspaceId: string | null) => [
     'inbox:feedSummary',
     workspaceId,

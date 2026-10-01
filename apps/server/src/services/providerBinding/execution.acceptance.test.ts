@@ -367,6 +367,7 @@ describe('issueBindingExecution — mint-time fence', () => {
       OWNER,
       { id: row.id, revision: stale },
       'claude-sdk',
+      SANDBOX,
     );
     expect(issued).toBeUndefined();
   });
@@ -380,6 +381,7 @@ describe('issueBindingExecution — mint-time fence', () => {
       OWNER,
       { id: row.id, revision: row.revision },
       'claude-sdk',
+      SANDBOX,
     );
     expect(issued).toBeUndefined();
   });
@@ -393,6 +395,7 @@ describe('issueBindingExecution — mint-time fence', () => {
       OWNER,
       { id: row.id, revision: row.revision },
       'claude-sdk',
+      SANDBOX,
     );
     expect(issued).toBeUndefined();
   });

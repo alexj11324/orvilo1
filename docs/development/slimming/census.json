@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-01T18:52:02.650Z",
+  "generatedAt": "2026-10-01T20:30:26.804Z",
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "3547e736aa738ceb7ab4a7716b4bd15601845115",
+  "baseSha": "7c730ecdfcb670325b51cd7304262eed7e493fe9",
   "counts": {
-    "sourceFiles": 13207,
+    "sourceFiles": 13217,
     "workspacePackages": 111,
     "nextRoutes": 43,
     "spaRouteEntries": 132,
@@ -13,8 +13,8 @@
     "migrationSqlFiles": 200,
     "localeFiles": 886,
     "defaultNamespaceFiles": 53,
-    "docFiles": 662,
-    "testFiles": 3540,
+    "docFiles": 665,
+    "testFiles": 3544,
     "storeFiles": 895,
     "unresolvedImports": 402
   },
@@ -1908,6 +1908,8 @@
       "docs/changelog/2026-09-29-task-status-picker-parity.zh-CN.mdx",
       "docs/changelog/2026-09-29-team-resources-and-favorites-drag.mdx",
       "docs/changelog/2026-09-29-team-resources-and-favorites-drag.zh-CN.mdx",
+      "docs/changelog/2026-10-01-settings-workspace-switcher.mdx",
+      "docs/changelog/2026-10-01-settings-workspace-switcher.zh-CN.mdx",
       "docs/core-runtime-host-acceptance.md",
       "docs/core-session-recovery.md",
       "docs/core-typecheck-comparison.md",
@@ -1979,6 +1981,7 @@
       "docs/development/internationalization/glossary.zh-CN.md",
       "docs/development/internationalization/internationalization-implementation.mdx",
       "docs/development/internationalization/internationalization-implementation.zh-CN.mdx",
+      "docs/development/issue-detail-plane-layout.md",
       "docs/development/linear-parity-project-audit.md",
       "docs/development/linear-parity-project-tabs-audit.md",
       "docs/development/linear-parity-stack.md",
@@ -4231,6 +4234,7 @@
       "src/features/AgentTasks/AgentTaskDetail/TopicCard.tsx",
       "src/features/AgentTasks/AgentTaskDetail/TopicChatDrawer/index.test.tsx",
       "src/features/AgentTasks/AgentTaskDetail/TopicChatDrawer/index.tsx",
+      "src/features/AgentTasks/AgentTaskDetail/activityFeedFilter.ts",
       "src/features/AgentTasks/AgentTaskDetail/assignmentActivityCopy.ts",
       "src/features/AgentTasks/AgentTaskDetail/taskStatusRow.ts",
       "src/features/AgentTasks/AgentTaskList/AgentTasksPage.tsx",
@@ -4251,6 +4255,7 @@
       "src/features/AgentTasks/features/TaskStatusIcon.tsx",
       "src/features/AgentTasks/features/TaskStatusTag.tsx",
       "src/features/AgentTasks/features/TaskSubtaskProgressTag.tsx",
+      "src/features/AgentTasks/features/shouldAutoRunForWorkflowMove.ts",
       "src/features/AgentTasks/features/taskStatusMeta.ts",
       "src/features/AgentTasks/features/useIssueStatusMove.ts",
       "src/features/AgentTasks/features/useTaskItemContextMenu.tsx",
@@ -8545,7 +8550,7 @@
         "src/routes/(main)/[workspaceSlug]/settings/usage/index.tsx"
       ],
       "inbound": {
-        "total": 299,
+        "total": 301,
         "explained": 18,
         "unexplained": [
           {
@@ -9702,7 +9707,8 @@
             "importer": "src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.tsx",
             "disposition": "KEEP",
             "targets": [
-              "src/features/Workspace/useWorkspaceAwareNavigate.ts"
+              "src/features/Workspace/useWorkspaceAwareNavigate.ts",
+              "src/features/Workspace/workspaceAwarePath.ts"
             ]
           },
           {
@@ -10075,6 +10081,13 @@
             ]
           },
           {
+            "importer": "src/features/ReUIShell/WorkspaceSwitcher.tsx",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "src/features/Workspace/useWorkspaceAwareNavigate.ts"
+            ]
+          },
+          {
             "importer": "src/features/RecommendTaskTemplates/useTaskTemplateCreate.ts",
             "disposition": "UNCOVERED",
             "targets": [
@@ -10230,6 +10243,13 @@
           },
           {
             "importer": "src/features/Settings/Layout/Body/index.tsx",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "src/features/Workspace/useWorkspaceAwareNavigate.ts"
+            ]
+          },
+          {
+            "importer": "src/features/Settings/Layout/Header.tsx",
             "disposition": "UNCOVERED",
             "targets": [
               "src/features/Workspace/useWorkspaceAwareNavigate.ts"
@@ -10657,7 +10677,7 @@
         "src/features/Acceptance/**",
         "packages/eval-rubric/**"
       ],
-      "fileCount": 796,
+      "fileCount": 804,
       "files": [
         "apps/server/src/router-hono/workflows/agent-eval-run/handlers/onThreadComplete.ts",
         "apps/server/src/router-hono/workflows/agent-eval-run/handlers/onTrajectoryComplete.ts",
@@ -11284,6 +11304,8 @@
         "src/features/AgentTasks/AgentTaskDetail/TopicChatDrawer/index.test.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TopicChatDrawer/index.tsx",
         "src/features/AgentTasks/AgentTaskDetail/TopicStatusIcon.tsx",
+        "src/features/AgentTasks/AgentTaskDetail/activityFeedFilter.test.ts",
+        "src/features/AgentTasks/AgentTaskDetail/activityFeedFilter.ts",
         "src/features/AgentTasks/AgentTaskDetail/assignmentActivityCopy.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/assignmentActivityCopy.ts",
         "src/features/AgentTasks/AgentTaskDetail/commentComposerKey.test.ts",
@@ -11291,8 +11313,12 @@
         "src/features/AgentTasks/AgentTaskDetail/draftEditorData.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/draftEditorData.ts",
         "src/features/AgentTasks/AgentTaskDetail/index.tsx",
+        "src/features/AgentTasks/AgentTaskDetail/isDueDateOverdue.test.ts",
+        "src/features/AgentTasks/AgentTaskDetail/isDueDateOverdue.ts",
         "src/features/AgentTasks/AgentTaskDetail/railText.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/railText.ts",
+        "src/features/AgentTasks/AgentTaskDetail/relationGroups.test.ts",
+        "src/features/AgentTasks/AgentTaskDetail/relationGroups.ts",
         "src/features/AgentTasks/AgentTaskDetail/resolveTaskAcceptanceGoal.test.ts",
         "src/features/AgentTasks/AgentTaskDetail/resolveTaskAcceptanceGoal.ts",
         "src/features/AgentTasks/AgentTaskDetail/resolveTaskAcceptanceProjection.test.ts",
@@ -11387,6 +11413,8 @@
         "src/features/AgentTasks/features/menuExtra.tsx",
         "src/features/AgentTasks/features/pickerTriggerStyles.test.ts",
         "src/features/AgentTasks/features/pickerTriggerStyles.ts",
+        "src/features/AgentTasks/features/shouldAutoRunForWorkflowMove.test.ts",
+        "src/features/AgentTasks/features/shouldAutoRunForWorkflowMove.ts",
         "src/features/AgentTasks/features/taskCardListDisplay.test.ts",
         "src/features/AgentTasks/features/taskCardListDisplay.ts",
         "src/features/AgentTasks/features/taskStatusMeta.ts",
@@ -23972,7 +24000,7 @@
         "packages/utils/vitest.config.mts"
       ],
       "inbound": {
-        "total": 3950,
+        "total": 3952,
         "explained": 764,
         "unexplained": [
           {
@@ -30541,7 +30569,7 @@
             ]
           },
           {
-            "importer": "src/features/ReUIShell/AppSidebar.tsx",
+            "importer": "src/features/ReUIShell/SidebarShell.tsx",
             "disposition": "UNCOVERED",
             "targets": [
               "packages/const/src/version.ts",
@@ -30549,7 +30577,7 @@
             ]
           },
           {
-            "importer": "src/features/ReUIShell/SidebarShell.tsx",
+            "importer": "src/features/ReUIShell/WorkspaceSwitcher.tsx",
             "disposition": "UNCOVERED",
             "targets": [
               "packages/const/src/version.ts",
@@ -43092,6 +43120,13 @@
             ]
           },
           {
+            "importer": "src/features/AgentTasks/AgentTaskDetail/activityFeedFilter.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/types/src/index.ts"
+            ]
+          },
+          {
             "importer": "src/features/AgentTasks/AgentTaskDetail/assignmentActivityCopy.ts",
             "disposition": "KEEP",
             "targets": [
@@ -43184,6 +43219,13 @@
           },
           {
             "importer": "src/features/AgentTasks/features/TaskSubtaskProgressTag.tsx",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/types/src/index.ts"
+            ]
+          },
+          {
+            "importer": "src/features/AgentTasks/features/shouldAutoRunForWorkflowMove.ts",
             "disposition": "KEEP",
             "targets": [
               "packages/types/src/index.ts"
@@ -58954,7 +58996,7 @@
       }
     }
   ],
-  "uncoveredFiles": 5108,
+  "uncoveredFiles": 5110,
   "uncoveredByArea": {
     "apps/server/src": 891,
     "src/routes/(main)": 294,
@@ -59031,6 +59073,7 @@
     "src/components/Analytics": 12,
     "src/features/AgentViewAll": 12,
     "src/features/PluginDevModal": 12,
+    "src/features/ReUIShell": 12,
     "src/features/ResourceTransferRequest": 12,
     "src/store/document": 12,
     "src/store/serverConfig": 12,
@@ -59040,7 +59083,6 @@
     "src/features/AgentMockDevtools": 10,
     "src/features/DesktopOnboarding": 10,
     "src/features/FloatingChatPanel": 10,
-    "src/features/ReUIShell": 10,
     "src/hooks/useHotkeys": 10,
     "src/libs/mcp": 10,
     "src/spa/BootShell": 10,

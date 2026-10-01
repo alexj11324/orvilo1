@@ -3362,6 +3362,7 @@ export default {
   'workspace.onboarding.step4.marketProfileCreate':
     "We couldn't set up your Community profile automatically. <cta>Create one in Community</cta> so workspace agents can be shared.",
   'workspace.onboarding.step4.cta': 'Enter workspace',
+  'workspaceSetting.breadcrumb.backToApp': 'Back to app',
   'workspaceSetting.breadcrumb.settings': 'Settings',
   'workspaceSetting.devices.connectTitlePrivate': 'Add private device',
   'workspaceSetting.devices.connectTitlePublic': 'Add public device',
@@ -3797,6 +3798,10 @@ export default {
   'workspaceSetting.storage.telemetry.desc':
     'Help us improve {{appName}} with anonymous workspace usage data',
   'workspaceSetting.storage.telemetry.title': 'Send Anonymous Workspace Usage Data',
+  'workspaceSetting.switcher.memberCount': '{{count}} member',
+  'workspaceSetting.switcher.memberCount_other': '{{count}} members',
+  'workspaceSetting.switcher.newWorkspace': 'New Workspace',
+  'workspaceSetting.switcher.newWorkspaceDesc': 'Collaborate with others.',
   'workspaceSetting.tab.connector': 'Connectors',
   'workspaceSetting.tab.skill': 'Skills',
   'tools.add': 'Add Skill',

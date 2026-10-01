@@ -10,6 +10,7 @@ export type WorkspaceListItem = WorkspaceItem & {
    * open-source stub leaves it absent.
    */
   lockedOut?: boolean;
+  memberCount?: number;
   plan?: 'business' | 'free' | 'pro';
   role?: string;
 };

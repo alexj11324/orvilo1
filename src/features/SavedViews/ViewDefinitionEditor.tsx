@@ -7,7 +7,9 @@ import type {
   WorkQueryLayout,
   WorkQuerySort,
   WorkQuerySortMode,
+  WorkQuerySubGroupBy,
 } from '@orvilo/types';
+import { normalizeWorkQuerySubGroupBy } from '@orvilo/types';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -35,6 +37,8 @@ export interface ViewEditorState {
   sort?: WorkQuerySort[];
   /** Board ordering: `manual` = drag position, `field` = `sort`. Board-only. */
   sortMode?: WorkQuerySortMode;
+  /** Board swimlane. Absent means a single row of columns. */
+  subGroupBy?: WorkQuerySubGroupBy;
   teamId: string | null;
   visibility: SavedViewVisibility;
 }
@@ -54,15 +58,16 @@ const sortKey = (sort: WorkQuerySort[] | undefined): string => {
   return `${first.field === 'updatedAt' ? 'updated' : first.field === 'createdAt' ? 'created' : first.field}${first.direction === 'desc' ? 'Desc' : 'Asc'}`;
 };
 
-// 'attention' is the My-issues default grouping, not a view-editor choice —
-// keep it out of the option union so the savedViews.groupBy.* key set stays
-// exactly the three translated groups.
-type EditableGroupBy = Exclude<WorkQueryGroupBy, 'attention'>;
+// Menu copy exists for these keys. activityDate, cycle, project, and attention
+// are list axes elsewhere; this editor does not offer them.
+type SavedViewGroupByOption = 'assignee' | 'none' | 'priority' | 'status' | 'workflowCategory';
 
-const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, EditableGroupBy[]> = {
+const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, readonly SavedViewGroupByOption[]> = {
   project: ['none', 'status'],
-  task: ['none', 'status', 'workflowCategory'],
+  task: ['none', 'status', 'workflowCategory', 'priority', 'assignee'],
 };
+
+const TASK_LANES: WorkQuerySubGroupBy[] = ['none', 'status', 'priority', 'assignee', 'project'];
 
 interface ViewDefinitionEditorProps {
   onChange: (next: ViewEditorState) => void;
@@ -120,6 +125,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                   builder: { any: [], rows: [], slots: [] },
                   entityType: next,
                   groupBy: 'none',
+                  subGroupBy: undefined,
                 });
               }}
             />
@@ -188,11 +194,42 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 value: groupBy,
               }))}
               onChange={(next) => {
-                if (next === 'none' || next === 'status' || next === 'workflowCategory') {
-                  set({ groupBy: next });
+                if (
+                  (GROUP_BY_OPTIONS[value.entityType] as readonly string[]).includes(next as string)
+                ) {
+                  const groupBy = next as SavedViewGroupByOption;
+                  set({
+                    groupBy,
+                    subGroupBy: normalizeWorkQuerySubGroupBy(groupBy, value.subGroupBy),
+                  });
                 }
               }}
             />
+            {value.entityType === 'task' && value.layout === 'board' ? (
+              <Select
+                size="small"
+                style={{ minWidth: 150 }}
+                value={value.subGroupBy ?? 'none'}
+                options={TASK_LANES.filter(
+                  (lane) => lane === 'none' || normalizeWorkQuerySubGroupBy(value.groupBy, lane),
+                ).map((lane) => ({
+                  label:
+                    lane === 'none'
+                      ? t('savedViews.groupBy.none')
+                      : t(`savedViews.groupBy.${lane}` as never, {
+                          defaultValue: t(`myWork.grouping.${lane}` as never),
+                        }),
+                  value: lane,
+                }))}
+                onChange={(next) => {
+                  if ((TASK_LANES as readonly string[]).includes(next as string)) {
+                    set({
+                      subGroupBy: next === 'none' ? undefined : (next as WorkQuerySubGroupBy),
+                    });
+                  }
+                }}
+              />
+            ) : null}
             <Select
               size="small"
               style={{ minWidth: 170 }}

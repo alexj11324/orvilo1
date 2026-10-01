@@ -1,6 +1,11 @@
 'use client';
 
-import type { WorkQuery, WorkQueryEntityType, WorkQueryFilter } from '@orvilo/types';
+import {
+  normalizeWorkQuerySubGroupBy,
+  type WorkQuery,
+  type WorkQueryEntityType,
+  type WorkQueryFilter,
+} from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -41,6 +46,10 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   schemaVersion: 1,
   sort: state.sort,
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
+  subGroupBy:
+    state.layout === 'board'
+      ? normalizeWorkQuerySubGroupBy(state.groupBy, state.subGroupBy)
+      : undefined,
 });
 
 /**

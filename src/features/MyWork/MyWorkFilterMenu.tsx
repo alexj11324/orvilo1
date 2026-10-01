@@ -39,11 +39,15 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { resolveLabelColor } from '@/features/Labels/labelColor';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
-import WorkQueryFilterBuilder from '@/features/SavedViews/WorkQueryFilterBuilder';
+import WorkQueryFilterBuilder, {
+  useCycleOptions,
+} from '@/features/SavedViews/WorkQueryFilterBuilder';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys } from '@/libs/swr/keys';
 import { taskLabelService } from '@/services/taskLabel';
+import { useHomeStore } from '@/store/home';
+import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
 
@@ -52,8 +56,12 @@ import {
   MY_WORK_FILTER_DIRECTORY_FIELDS,
   myWorkDirectoryFieldActive,
   myWorkDirectoryNullaryActive,
+  myWorkDirectoryRowsFor,
   myWorkDirectorySelectedValues,
+  setMyWorkDirectoryDateWindow,
+  setMyWorkDirectoryText,
   toggleMyWorkDirectoryEnum,
+  toggleMyWorkDirectoryMulti,
   toggleMyWorkDirectoryNullary,
   toggleMyWorkDirectoryValue,
 } from './myWorkFilters';
@@ -230,6 +238,16 @@ const DirectoryFieldPane = memo<{
   // Label picker — same registry fetch the filter builder uses (workspace-scoped).
   const workspaceId = useActiveWorkspaceId();
   const isLogin = useUserStore(authSelectors.isLogin);
+  const cycleTeamId = builder.rows.find(
+    (row) => row.field === 'teamId' && row.op === 'eq' && typeof row.value === 'string',
+  )?.value as string | undefined;
+  const workspaceIdForCycles = useActiveWorkspaceId();
+  const cycleOptions = useCycleOptions(
+    cycleTeamId,
+    spec?.valueKind === 'cycle',
+    workspaceIdForCycles,
+  );
+  const agents = useHomeStore(homeAgentListSelectors.allAgents);
   const { data: labelsData } = useClientDataSWR(
     spec?.valueKind === 'label' && isLogin ? taskLabelKeys.list(isLogin, workspaceId) : null,
     () => taskLabelService.getLabels(),
@@ -244,9 +262,7 @@ const DirectoryFieldPane = memo<{
   if (spec) {
     switch (spec.valueKind) {
       case 'enum': {
-        const multi =
-          spec.ops.includes('in') &&
-          (spec.enumValues ?? []).every((value) => typeof value === 'string');
+        const multi = spec.ops.includes('in');
         for (const value of spec.enumValues ?? []) {
           let icon: ReactNode;
           if (field === 'priority') {
@@ -277,7 +293,11 @@ const DirectoryFieldPane = memo<{
             onClick: () =>
               onBuilderChange(
                 multi
-                  ? toggleMyWorkDirectoryEnum(builder, field, String(value))
+                  ? toggleMyWorkDirectoryMulti(
+                      builder,
+                      field,
+                      typeof value === 'number' ? value : String(value),
+                    )
                   : toggleMyWorkDirectoryValue(builder, field, value),
               ),
           });
@@ -307,7 +327,11 @@ const DirectoryFieldPane = memo<{
             key: typeof option.value === 'string' ? option.value : 'me',
             label: option.label,
             onClick: () =>
-              onBuilderChange(toggleMyWorkDirectoryValue(builder, field, option.value)),
+              onBuilderChange(
+                spec.ops.includes('in')
+                  ? toggleMyWorkDirectoryMulti(builder, field, option.value)
+                  : toggleMyWorkDirectoryValue(builder, field, option.value),
+              ),
           });
         }
         break;
@@ -319,7 +343,12 @@ const DirectoryFieldPane = memo<{
             icon: createElement(PROJECT_ENTITY_ICON, { className: 'size-4 shrink-0' }),
             key: project.id,
             label: project.name || project.id,
-            onClick: () => onBuilderChange(toggleMyWorkDirectoryValue(builder, field, project.id)),
+            onClick: () =>
+              onBuilderChange(
+                spec.ops.includes('in')
+                  ? toggleMyWorkDirectoryMulti(builder, field, project.id)
+                  : toggleMyWorkDirectoryValue(builder, field, project.id),
+              ),
           });
         }
         break;
@@ -330,9 +359,56 @@ const DirectoryFieldPane = memo<{
             checked: isSelected(team.id),
             key: team.id,
             label: team.name || team.id,
-            onClick: () => onBuilderChange(toggleMyWorkDirectoryValue(builder, field, team.id)),
+            onClick: () =>
+              onBuilderChange(
+                spec.ops.includes('in')
+                  ? toggleMyWorkDirectoryMulti(builder, field, team.id)
+                  : toggleMyWorkDirectoryValue(builder, field, team.id),
+              ),
           });
         }
+        break;
+      }
+      case 'cycle': {
+        for (const cycle of cycleOptions) {
+          valueRows.push({
+            checked: isSelected(cycle.value),
+            key: cycle.value,
+            label: cycle.label,
+            onClick: () => onBuilderChange(toggleMyWorkDirectoryMulti(builder, field, cycle.value)),
+          });
+        }
+        break;
+      }
+      case 'agent': {
+        for (const agent of agents) {
+          valueRows.push({
+            checked: isSelected(agent.id),
+            key: agent.id,
+            label: agent.title || agent.id,
+            onClick: () => onBuilderChange(toggleMyWorkDirectoryMulti(builder, field, agent.id)),
+          });
+        }
+        break;
+      }
+      case 'date': {
+        const current = myWorkDirectoryRowsFor(builder, field)[0];
+        for (const window of ['set', 'unset', 'past', 'past30'] as const) {
+          const active =
+            (window === 'set' && current?.op === 'isNotNull') ||
+            (window === 'unset' && current?.op === 'isNull') ||
+            (window === 'past' && current?.op === 'lt') ||
+            (window === 'past30' && current?.op === 'between');
+          valueRows.push({
+            checked: active,
+            key: window,
+            label: t(`myWork.dateWindow.${window}` as never, { defaultValue: window }),
+            onClick: () => onBuilderChange(setMyWorkDirectoryDateWindow(builder, field, window)),
+          });
+        }
+        break;
+      }
+      case 'text': {
         break;
       }
       case 'label': {
@@ -381,8 +457,22 @@ const DirectoryFieldPane = memo<{
 
   if (!spec) return null;
 
+  const textValue = myWorkDirectoryRowsFor(builder, field)[0]?.value;
   return (
     <div className="flex flex-col">
+      {spec.valueKind === 'text' ? (
+        <input
+          className="mx-2 my-1 rounded border border-border bg-transparent px-2 py-1 text-sm"
+          defaultValue={typeof textValue === 'string' ? textValue : ''}
+          placeholder={t('savedViews.filters.textPlaceholder')}
+          onBlur={(event) =>
+            onBuilderChange(setMyWorkDirectoryText(builder, field, event.target.value))
+          }
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur();
+          }}
+        />
+      ) : null}
       {valueRows.map((row) => (
         <MenuRow
           checked={row.checked}

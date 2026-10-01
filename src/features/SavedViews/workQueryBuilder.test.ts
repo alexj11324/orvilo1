@@ -194,8 +194,13 @@ describe('workQueryBuilder', () => {
     });
   });
 
-  it('keeps an in/notIn predicate with non-string members as a locked node', () => {
-    const mixedIn = { field: 'priority', op: 'in', value: ['a', 2] };
+  it('round-trips a numeric in and locks a member the builder cannot edit', () => {
+    const numeric = { field: 'priority' as const, op: 'in' as const, value: [1, 2] };
+    const numericState = filterToBuilder('task', { all: [numeric] });
+    expect(numericState.rows).toHaveLength(1);
+    expect(builderToFilter('task', numericState)).toEqual({ all: [numeric] });
+
+    const mixedIn = { field: 'priority', op: 'in', value: [2, { nope: true }] };
     const state = filterToBuilder('task', { all: [mixedIn] } as never);
     expect(state.rows).toHaveLength(0);
     expect(state.slots).toEqual([{ node: mixedIn, type: 'node' }]);

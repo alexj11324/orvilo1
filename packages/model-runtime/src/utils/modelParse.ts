@@ -34,6 +34,12 @@ export const MODEL_LIST_CONFIGS = {
     reasoningKeywords: ['-3-7', '3.7', '-4'],
     visionKeywords: ['claude'],
   },
+  comfyui: {
+    // ComfyUI models are image generation models, no chat capabilities
+    functionCallKeywords: [],
+    reasoningKeywords: [],
+    visionKeywords: [],
+  },
   deepseek: {
     functionCallKeywords: ['v3', 'v4', 'r1', 'deepseek-chat'],
     reasoningKeywords: ['r1', 'deepseek-reasoner', 'v3.', 'v4'],
@@ -111,6 +117,18 @@ export const MODEL_LIST_CONFIGS = {
     reasoningKeywords: ['qvq', 'qwq', 'qwen3', '!-instruct-', '!-coder-'],
     visionKeywords: ['qvq', '-vl', '-omni', 'qwen3.'],
   },
+  replicate: {
+    imageOutputKeywords: [
+      'flux',
+      'stable-diffusion',
+      'sdxl',
+      'ideogram',
+      'canny',
+      'depth',
+      'fill',
+      'redux',
+    ],
+  },
   v0: {
     functionCallKeywords: ['v0'],
     reasoningKeywords: ['v0-1.5'],
@@ -153,6 +171,7 @@ export const MODEL_LIST_CONFIGS = {
 // Model owner (provider) keyword configuration
 export const MODEL_OWNER_DETECTION_CONFIG = {
   anthropic: ['claude'],
+  comfyui: ['comfyui/'], // ComfyUI models detection - all ComfyUI models have comfyui/ prefix
   deepseek: ['deepseek'],
   google: ['gemini', 'imagen', 'gemma'],
   inclusionai: ['ling-', 'ming-', 'ring-'],
@@ -164,6 +183,7 @@ export const MODEL_OWNER_DETECTION_CONFIG = {
   moonshot: ['moonshot', 'kimi'],
   openai: ['o1', 'o3', 'o4', 'gpt-'],
   qwen: ['qwen', 'qwq', 'qvq'],
+  replicate: [],
   v0: ['v0'],
   volcengine: ['doubao'],
   wenxin: ['ernie', 'qianfan'],

@@ -60,6 +60,7 @@ import {
   readProjectMilestoneFilter,
   type TaskMilestoneRef,
 } from '@/features/Projects/milestoneFilter';
+import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -82,6 +83,8 @@ import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
 import { createTaskModal } from '../CreateTaskModal';
+import AssigneeAvatar from '../features/AssigneeAvatar';
+import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
 import Breadcrumb from '../shared/Breadcrumb';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import CreateTaskInlineEntry from './CreateTaskInlineEntry';
@@ -514,6 +517,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
             layout: 'list',
             milestoneId: milestoneFilterId,
             projectId,
+            showSubTasks: viewOptions.showSubTasks,
             sort: projectIssueListSort(viewOptions.orderBy, viewOptions.orderDirection),
             subGroupBy: issueListAxes?.subGroupBy,
           })
@@ -529,6 +533,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
       viewOptions.hideCompleted,
       viewOptions.orderBy,
       viewOptions.orderDirection,
+      viewOptions.showSubTasks,
     ],
   );
   const {
@@ -547,12 +552,23 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
         ? projectIssueWorkQuery({
             filters: issueFilters,
             groupBy: issueBoardAxis,
+            hideCompleted: viewOptions.hideCompleted,
             layout: 'board',
             milestoneId: milestoneFilterId,
             projectId,
+            showSubTasks: viewOptions.showSubTasks,
           })
         : null,
-    [issueBoardAxis, issueFilters, issueQueryActive, milestoneFilterId, ordinarySurface, projectId],
+    [
+      issueBoardAxis,
+      issueFilters,
+      issueQueryActive,
+      milestoneFilterId,
+      ordinarySurface,
+      projectId,
+      viewOptions.hideCompleted,
+      viewOptions.showSubTasks,
+    ],
   );
   const issueListPages = useProjectIssuePages(issueListQuery);
   const issueBoardPages = useProjectIssuePages(issueBoardQuery);
@@ -583,15 +599,39 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
         if (key === 'none') return t('taskList.unassigned');
         return memberName(key);
       }
+      if (axis === 'agent') {
+        if (key === 'none') return t('taskList.unassigned');
+        return agentName(key);
+      }
+      if (axis === 'milestone') {
+        if (key === 'none') return t('taskList.noMilestone');
+        return projectMilestones?.find((milestone) => milestone.id === key)?.name;
+      }
       return undefined;
     },
-    [memberName, t],
+    [agentName, memberName, projectMilestones, t],
+  );
+  const issueGroupRank = useCallback(
+    (axis: string, key: string) => {
+      if (axis !== 'milestone') return undefined;
+      if (key === 'none') return Number.MAX_SAFE_INTEGER;
+      const index = projectMilestones?.findIndex((milestone) => milestone.id === key) ?? -1;
+      return index >= 0 ? index : Number.MAX_SAFE_INTEGER - 1;
+    },
+    [projectMilestones],
   );
   const issueGroupIcon = useCallback(
-    (axis: string, key: string) =>
-      axis === 'priority' ? (
-        <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />
-      ) : undefined,
+    (axis: string, key: string) => {
+      if (axis === 'priority') {
+        return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
+      }
+      if (axis === 'milestone') return <MilestoneIcon muted={key === 'none'} size={14} />;
+      if (axis === 'agent') {
+        if (key === 'none') return <UnassignedAssigneeIcon kind={'human'} size={14} />;
+        return <AssigneeAvatar agentId={key} size={18} />;
+      }
+      return undefined;
+    },
     [],
   );
   const useFetchMyTaskList = useTaskStore((s) => s.useFetchMyTaskList);
@@ -1021,6 +1061,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                     ) : (
                       <WorkQueryResults
                         nestInGroups
+                        axisKeyRank={issueGroupRank}
                         emptyLabel={t('taskList.empty')}
                         flatNested={viewOptions.showSubTasks && viewOptions.nestedSubTasks}
                         groupBy={issueListQuery?.groupBy}

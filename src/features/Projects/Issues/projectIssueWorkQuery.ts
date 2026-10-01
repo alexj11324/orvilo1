@@ -34,21 +34,23 @@ export const projectIssueQueryFilter = (
 };
 
 /**
- * Board columns the project view can express. Milestone stays a filter —
- * there is no milestone axis, so those boards use status columns.
+ * Board columns the project view can express. Milestone has no board column,
+ * so those boards use status. Agent grouping is the agent assignee, not the
+ * member.
  */
 export const projectIssueBoardGroupBy = (
   groupBy: TaskGroupBy,
-): Extract<WorkQueryGroupBy, 'assignee' | 'priority' | 'status'> => {
+): Extract<WorkQueryGroupBy, 'agent' | 'assignee' | 'priority' | 'status'> => {
   if (groupBy === 'priority') return 'priority';
-  if (groupBy === 'assignee' || groupBy === 'member') return 'assignee';
+  if (groupBy === 'member') return 'assignee';
+  if (groupBy === 'assignee') return 'agent';
   return 'status';
 };
 
 /**
- * List axes the work query can page. Status, priority, and member (the user
- * assignee) match a server axis. Milestone and the agent assignee do not, so
- * those lists keep arranging the loaded page.
+ * List axes the work query can page. Status, priority, member, the agent
+ * assignee, and milestone each have a server axis, so a filtered list pages
+ * the whole set instead of the loaded page.
  */
 export const projectIssueListAxes = (
   groupBy: TaskGroupBy,
@@ -68,12 +70,16 @@ const projectIssueServerListAxis = (groupBy: TaskGroupBy): WorkQueryGroupBy | un
   if (groupBy === 'status') return 'status';
   if (groupBy === 'priority') return 'priority';
   if (groupBy === 'member') return 'assignee';
+  if (groupBy === 'assignee') return 'agent';
+  if (groupBy === 'milestone') return 'milestone';
   return undefined;
 };
 
 const projectIssueServerListLane = (groupBy: TaskGroupBy): WorkQuerySubGroupBy | undefined => {
   if (groupBy === 'status' || groupBy === 'priority') return groupBy;
   if (groupBy === 'member') return 'assignee';
+  if (groupBy === 'assignee') return 'agent';
+  if (groupBy === 'milestone') return 'milestone';
   return undefined;
 };
 
@@ -115,6 +121,7 @@ export const projectIssueWorkQuery = (input: {
   layout: 'board' | 'list';
   milestoneId?: string;
   projectId: string;
+  showSubTasks?: boolean;
   sort?: WorkQuerySort[];
   subGroupBy?: WorkQuerySubGroupBy;
 }): WorkQuery => {
@@ -126,9 +133,14 @@ export const projectIssueWorkQuery = (input: {
         value: ['completed', 'canceled'],
       }
     : undefined;
+  const roots =
+    input.showSubTasks === false
+      ? { field: 'parentTaskId' as const, op: 'isNull' as const }
+      : undefined;
+  const visibility = [hidden, roots].filter((predicate) => predicate !== undefined);
   return {
     entityType: 'task',
-    filter: hidden ? { all: [...(filter.all ?? []), hidden] } : filter,
+    filter: visibility.length > 0 ? { all: [...(filter.all ?? []), ...visibility] } : filter,
     groupBy: input.layout === 'board' ? (input.groupBy ?? 'status') : (input.groupBy ?? 'none'),
     layout: input.layout,
     schemaVersion: 1,

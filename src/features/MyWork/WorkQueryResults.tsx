@@ -131,6 +131,11 @@ export interface WorkQuerySubSection {
 
 interface WorkQueryResultsProps {
   /**
+   * Override the default rank for one axis. Milestone lists pass catalog
+   * order; other axes keep their built-in rank.
+   */
+  axisKeyRank?: (axis: string, key: string) => number | undefined;
+  /**
    * Multi-selected task ids — rows paint checked + highlight and reveal
    * their checkbox without waiting for hover. Absent = no bulk affordance.
    */
@@ -759,6 +764,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     emptyLabel,
     collapsedColumns,
     collapsedGroups,
+    axisKeyRank,
     groupIcon,
     groupRank,
     groupTitle,
@@ -821,13 +827,24 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       Boolean(flatNested) &&
       (Boolean(nestInGroups) || listGroupBy === 'none' || listGroupBy === 'attention');
     const axisRank = (axis: string | undefined): ((key: string) => number) | undefined => {
-      if (axis === 'activityDate') return activityBucketRank;
-      if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
-      if (axis === 'assignee' || axis === 'project') {
-        return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
-      }
-      if (axis === 'cycle') return groupRank;
-      return undefined;
+      if (!axis) return undefined;
+      const builtin = (): ((key: string) => number) | undefined => {
+        if (axis === 'activityDate') return activityBucketRank;
+        if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
+        if (
+          axis === 'agent' ||
+          axis === 'assignee' ||
+          axis === 'milestone' ||
+          axis === 'project'
+        ) {
+          return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
+        }
+        if (axis === 'cycle' && groupRank) return groupRank;
+        return undefined;
+      };
+      const base = builtin();
+      if (!axisKeyRank) return base;
+      return (key) => axisKeyRank(axis, key) ?? base?.(key) ?? 0;
     };
     const serverGroupKey = (columnKey: string) =>
       workQuerySourceKeysForKanbanColumn(boardGroupBy, columnKey)[0];

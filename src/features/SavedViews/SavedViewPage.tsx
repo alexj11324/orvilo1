@@ -65,7 +65,7 @@ import SavedViewActionsMenu from './SavedViewActionsMenu';
 import { type SavedViewControl, transitionSavedViewControl } from './savedViewControlState';
 import { buildSavedViewCsv, fetchAllSavedViewRows, SAVED_VIEW_CSV_MAX_ROWS } from './savedViewCsv';
 import SavedViewDetailsPanel from './SavedViewDetailsPanel';
-import { savedViewGroupByForLayout } from './savedViewDisplay';
+import { savedViewGroupByForLayout, savedViewProjectsPageByGroup } from './savedViewDisplay';
 import { savedViewProjectPath } from './savedViewProjectPath';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
 import { savedViewTitle } from './savedViewTitle';
@@ -223,7 +223,7 @@ SavedViewProjectRow.displayName = 'SavedViewProjectRow';
 /** Read-only status board for project views — the kanban columns Linear
  *  renders for project status. Project cards are not draggable here:
  *  status changes flow through the project surface. */
-const SavedViewProjectBoard = memo<{
+export const SavedViewProjectBoard = memo<{
   groups: WorkQueryGroupPage<SavedViewProjectRowData>[];
   /** Per-column tail-page failures keyed by group key — swaps that column's
    *  load-more button for an inline retry scoped to the failed page. */
@@ -268,6 +268,54 @@ const SavedViewProjectBoard = memo<{
 });
 
 SavedViewProjectBoard.displayName = 'SavedViewProjectBoard';
+
+/** Status groups for a project list. Empty statuses stay off the list. */
+export const SavedViewProjectGroupList = memo<{
+  groups: WorkQueryGroupPage<SavedViewProjectRowData>[];
+  loadMoreGroupErrors?: Record<string, unknown>;
+  loadMoreLabel: string;
+  onLoadMoreGroup?: (key: string) => void;
+  onRetryLoadMoreGroup?: (key: string) => void;
+}>(({ groups, loadMoreGroupErrors, loadMoreLabel, onLoadMoreGroup, onRetryLoadMoreGroup }) => {
+  const { t } = useTranslation('project');
+  const visible = groups.filter((group) => group.total > 0 || group.tasks.length > 0);
+  return (
+    <div className="flex flex-col gap-4">
+      {visible.map((group) => {
+        const status = resolveProjectStatus(group.key);
+        return (
+          <div className="flex flex-col gap-0.5" key={group.key}>
+            <div className="flex flex-row items-center gap-2 px-2">
+              <ProjectStatusIcon size={14} status={status} />
+              <div className="text-[13px] font-medium">{t(`status.${status}`)}</div>
+              <div className="text-[12px] text-muted-foreground">{group.total}</div>
+            </div>
+            {group.tasks.map((project) => (
+              <SavedViewProjectRow key={project.id} project={project} />
+            ))}
+            {loadMoreGroupErrors?.[group.key] ? (
+              <AsyncError
+                error={loadMoreGroupErrors[group.key]}
+                variant={'inline'}
+                onRetry={
+                  onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined
+                }
+              />
+            ) : group.hasMore && onLoadMoreGroup ? (
+              <div className="flex flex-row justify-center">
+                <Button size="sm" onClick={() => onLoadMoreGroup(group.key)}>
+                  {loadMoreLabel}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+});
+
+SavedViewProjectGroupList.displayName = 'SavedViewProjectGroupList';
 
 const viewToEditorState = (view: SavedViewItem): ViewEditorState => ({
   builder: filterToBuilder(view.entityType, view.queryAst.filter),
@@ -669,9 +717,11 @@ const SavedViewPage = memo(() => {
     }
   }, [exporting, t, view, viewId]);
 
-  const projectBoard =
-    view?.entityType === 'project' && (evaluation?.layout ?? view?.layout) === 'board';
   const resolvedLayout = evaluation?.layout ?? view?.layout ?? 'list';
+  const projectBoard = view?.entityType === 'project' && resolvedLayout === 'board';
+  const projectGrouped =
+    view?.entityType === 'project' &&
+    savedViewProjectsPageByGroup(resolvedLayout, evaluation?.groupBy);
   const boardActive = resolvedLayout === 'board';
   const viewTitle = view ? savedViewTitle(view.id, view.name, t) : t('tab.views');
   const detailGroups = view?.entityType === 'project' ? projectGroups : groups;
@@ -889,6 +939,25 @@ const SavedViewPage = memo(() => {
                         pagedMore.runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
                       }
                     />
+                  ) : projectGrouped ? (
+                    projectGroups.some((group) => group.total > 0 || group.tasks.length > 0) ? (
+                      <SavedViewProjectGroupList
+                        groups={projectGroups}
+                        loadMoreGroupErrors={pagedMore.loadMoreGroupErrors}
+                        loadMoreLabel={t('savedViews.loadMore')}
+                        onRetryLoadMoreGroup={pagedMore.retryLoadMoreGroup}
+                        onLoadMoreGroup={(key) =>
+                          pagedMore.runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
+                        }
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center flex-1 p-12">
+                        <SimpleEmpty
+                          description={t('savedViews.emptyResults')}
+                          icon={PROJECT_ENTITY_ICON}
+                        />
+                      </div>
+                    )
                   ) : projectRows.length === 0 ? (
                     <div className="flex flex-col items-center justify-center flex-1 p-12">
                       <SimpleEmpty
@@ -910,7 +979,7 @@ const SavedViewPage = memo(() => {
                       onRetry={pagedMore.retryLoadMore}
                     />
                   ) : null}
-                  {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
+                  {!projectGrouped && workQueryHasMore(projectRows.length, evaluation?.total) ? (
                     <div className="flex flex-row justify-center">
                       <Button size="sm" onClick={() => pagedMore.runLoadMore(loadMore)}>
                         {t('savedViews.loadMore')}

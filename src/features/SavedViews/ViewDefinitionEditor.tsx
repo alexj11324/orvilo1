@@ -116,7 +116,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 set({
                   builder: { any: [], rows: [], slots: [] },
                   entityType: next,
-                  groupBy: 'none',
+                  groupBy: next === 'project' && value.layout === 'board' ? 'status' : 'none',
                   subGroupBy: undefined,
                 });
               }}

@@ -55,11 +55,22 @@ group total matches the rows the list is allowed to draw. A client pass still
 drops a stale row on an already loaded page and does not rewrite the total.
 
 A project issue list with filters, or with a milestone selected, loads pages
-of 50 through the work query. The milestone is `projectMilestoneId eq`. When
-the display grouping is status, priority, or member, that list groups on the
-server: each group keeps its total and loads its own next page. Hiding
-completed issues adds `status notIn completed, canceled`, so the total matches
-the rows on screen. Milestone grouping and the agent assignee still arrange
-only the loaded page — the work query has no axis for them. The same query
-feeds the project board. An unfiltered project list and board still read the
-local task store.
+of 50 through the work query. The milestone filter is `projectMilestoneId eq`.
+Status, priority, member, the agent assignee, and milestone grouping each use
+a server axis: each group keeps its total and loads its own next page. Hiding
+completed issues adds `status notIn completed, canceled`. Hiding sub-issues
+adds `parentTaskId is null`. Both apply to the filtered list and the filtered
+board, so each total matches the rows on screen. Agent grouping draws agent
+columns. Milestone grouping stays on the list; a milestone board uses status
+columns. An unfiltered project list and board still read the local task store.
+
+A saved project list grouped by status pages each status. The load-more control
+sends that status as `groupKey`. A flat cursor on that query is rejected. A
+project board always groups by status, including when the saved grouping was
+empty. A team-view preview and the new-view title preview send the viewer's
+time zone only while the axis is activity date; the saved query does not store
+it. The team-view preview loads the next page of a group instead of stopping
+after the first page.
+
+The virtual list measures its scroll parent before paint and once more on the
+next frame. When neither pass finds one, the rows still render.

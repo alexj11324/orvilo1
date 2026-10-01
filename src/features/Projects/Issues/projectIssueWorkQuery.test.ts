@@ -39,9 +39,20 @@ describe('projectIssueWorkQuery', () => {
     });
     expect(projectIssueListAxes('status', 'status')).toEqual({ groupBy: 'status' });
     expect(projectIssueListAxes('none', 'priority')).toEqual({ groupBy: 'none' });
-    expect(projectIssueListAxes('milestone', 'none')).toBeUndefined();
-    expect(projectIssueListAxes('assignee', 'none')).toBeUndefined();
-    expect(projectIssueListAxes('status', 'milestone')).toBeUndefined();
+    expect(projectIssueListAxes('milestone', 'none')).toEqual({ groupBy: 'milestone' });
+    expect(projectIssueListAxes('assignee', 'priority')).toEqual({
+      groupBy: 'agent',
+      subGroupBy: 'priority',
+    });
+    expect(projectIssueListAxes('status', 'milestone')).toEqual({
+      groupBy: 'status',
+      subGroupBy: 'milestone',
+    });
+    expect(projectIssueListAxes('status', 'assignee')).toEqual({
+      groupBy: 'status',
+      subGroupBy: 'agent',
+    });
+    expect(projectIssueListAxes('automationMode', 'none')).toBeUndefined();
 
     const query = projectIssueWorkQuery({
       filters: [],
@@ -69,11 +80,33 @@ describe('projectIssueWorkQuery', () => {
       { direction: 'asc', field: 'id' },
     ]);
     expect(projectIssueListSort('manual', 'asc')).toBeUndefined();
+
+    const roots = projectIssueWorkQuery({
+      filters: [],
+      layout: 'list',
+      projectId: 'p1',
+      showSubTasks: false,
+    });
+    expect(roots.filter?.all).toEqual(
+      expect.arrayContaining([{ field: 'parentTaskId', op: 'isNull' }]),
+    );
+    const shown = projectIssueWorkQuery({
+      filters: [],
+      layout: 'list',
+      projectId: 'p1',
+      showSubTasks: true,
+    });
+    expect(
+      shown.filter?.all?.some(
+        (predicate) => 'field' in predicate && predicate.field === 'parentTaskId',
+      ),
+    ).toBe(false);
   });
 
   it('maps a filtered board onto a work-query axis and falls back to status', () => {
     expect(projectIssueBoardGroupBy('priority')).toBe('priority');
     expect(projectIssueBoardGroupBy('member')).toBe('assignee');
+    expect(projectIssueBoardGroupBy('assignee')).toBe('agent');
     expect(projectIssueBoardGroupBy('milestone')).toBe('status');
     const board = projectIssueWorkQuery({
       filters: [],
@@ -84,5 +117,19 @@ describe('projectIssueWorkQuery', () => {
     });
     expect(board.layout).toBe('board');
     expect(board.groupBy).toBe('status');
+    const narrowed = projectIssueWorkQuery({
+      filters: [],
+      groupBy: 'status',
+      hideCompleted: true,
+      layout: 'board',
+      projectId: 'p1',
+      showSubTasks: false,
+    });
+    expect(narrowed.filter?.all).toEqual(
+      expect.arrayContaining([
+        { field: 'status', op: 'notIn', value: ['completed', 'canceled'] },
+        { field: 'parentTaskId', op: 'isNull' },
+      ]),
+    );
   });
 });

@@ -1,4 +1,4 @@
-import type { WorkQueryEntityType, WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
+import type { WorkQuery, WorkQueryEntityType, WorkQueryGroupBy, WorkQueryLayout } from '@orvilo/types';
 
 /** Board columns the work query actually draws. Activity date, cycle, and project stay on lists. */
 export const SAVED_VIEW_BOARD_GROUP_BY = [
@@ -22,7 +22,7 @@ export const savedViewGroupByOptions = (
   entityType: WorkQueryEntityType,
   layout: WorkQueryLayout,
 ): readonly SavedViewGroupByOption[] => {
-  if (entityType === 'project') return ['none', 'status'];
+  if (entityType === 'project') return layout === 'board' ? ['status'] : ['none', 'status'];
   return layout === 'board' ? SAVED_VIEW_BOARD_GROUP_BY : SAVED_VIEW_LIST_GROUP_BY;
 };
 
@@ -34,6 +34,21 @@ export const savedViewGroupByForLayout = (
 ): WorkQueryGroupBy => {
   const options = savedViewGroupByOptions(entityType, layout);
   if ((options as readonly string[]).includes(groupBy)) return groupBy;
-  if (layout === 'board') return 'workflowCategory';
-  return 'status';
+  if (entityType === 'project' || layout !== 'board') return 'status';
+  return 'workflowCategory';
 };
+
+/**
+ * A project board, and a project list grouped by status, pages each status.
+ * A flat cursor on that query is rejected.
+ */
+export const savedViewProjectsPageByGroup = (
+  layout: WorkQueryLayout | undefined,
+  groupBy: WorkQueryGroupBy | undefined,
+): boolean => layout === 'board' || groupBy === 'status';
+
+/** Activity-date buckets follow the viewer. The saved query does not store the zone. */
+export const workQueryWithViewerTimeZone = <T extends Pick<WorkQuery, 'groupBy' | 'timeZone'>>(
+  query: T,
+  timeZone: string | undefined,
+): T => (query.groupBy === 'activityDate' && timeZone ? { ...query, timeZone } : query);

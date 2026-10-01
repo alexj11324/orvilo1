@@ -92,7 +92,7 @@ const WorkQueryVirtualList = ({
   tasks,
 }: WorkQueryVirtualListProps) => {
   const { t } = useTranslation(['common', 'chat']);
-  const { ref: anchorRef, scrollParent } = useClosestScrollParent();
+  const { ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
   const [sessionCollapsed, setSessionCollapsed] = useState<readonly string[]>([]);
   const collapsedKeys = collapsedGroups ?? sessionCollapsed;
   const collapsed = useMemo(() => new Set(collapsedKeys), [collapsedKeys]);
@@ -115,7 +115,7 @@ const WorkQueryVirtualList = ({
     if (listGroupBy === 'none') return flattenWorkQueryFlatItems(tasks, nestRows);
     const nested = nestWorkQueryListGroups(groups ?? [], Boolean(laneAxis));
     const nameTitle = (axis: string) =>
-      axis === 'assignee' || axis === 'project'
+      axis === 'agent' || axis === 'assignee' || axis === 'milestone' || axis === 'project'
         ? (key: string) => groupTitle?.(axis, key) ?? key
         : undefined;
     return flattenWorkQueryVirtualItems({
@@ -278,7 +278,13 @@ const WorkQueryVirtualList = ({
           increaseViewportBy={{ bottom: 600, top: 600 }}
           itemContent={(_index, item) => renderItem(item)}
         />
-      ) : null}
+      ) : unresolved ? null : (
+        <div className="flex flex-col">
+          {items.map((item) => (
+            <div key={item.key}>{renderItem(item)}</div>
+          ))}
+        </div>
+      )}
     </div>
   );
 };

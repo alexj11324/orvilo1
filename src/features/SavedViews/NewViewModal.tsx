@@ -18,6 +18,7 @@ import { mutate } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
 
+import { workQueryWithViewerTimeZone } from './savedViewDisplay';
 import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEditor';
 import { builderToFilter, filterToBuilder } from './workQueryBuilder';
 
@@ -94,12 +95,20 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
   }, [defaultEntityType, defaultTeamId, open, seedBuilder]);
 
   const query = useMemo(() => draftQuery(state), [state]);
+  const viewerTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+    [],
+  );
+  const previewQuery = useMemo(
+    () => workQueryWithViewerTimeZone(query, viewerTimeZone),
+    [query, viewerTimeZone],
+  );
 
   useEffect(() => {
     if (!open) return;
     const timer = setTimeout(() => {
       void workAttentionService
-        .query({ limit: 5, query })
+        .query({ limit: 5, query: previewQuery })
         .then((result) => {
           const data = result?.data;
           if (!data) {
@@ -118,7 +127,7 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
         .catch(() => setPreview(null));
     }, 300);
     return () => clearTimeout(timer);
-  }, [open, query]);
+  }, [open, previewQuery]);
 
   const ready =
     state.name.trim().length > 0 && (state.visibility !== 'team' || Boolean(state.teamId));

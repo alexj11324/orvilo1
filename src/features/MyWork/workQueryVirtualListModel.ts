@@ -169,11 +169,7 @@ export const flattenWorkQueryVirtualItems = (input: {
   const groups = orderedGroups(input.groups, input.rankOf, input.titleOf);
   const items: WorkQueryVirtualItem[] = [];
   const orderedIds: string[] = [];
-  const pushRows = (
-    tasks: readonly WorkQueryResultTask[],
-    collapseKey: string,
-    nest: boolean,
-  ) => {
+  const pushRows = (tasks: readonly WorkQueryResultTask[], collapseKey: string, nest: boolean) => {
     for (const item of rowItems(tasks, input.allTasks, nest, collapseKey)) {
       items.push(item);
       if (item.taskId && !item.parentContext) orderedIds.push(item.taskId);
@@ -306,8 +302,6 @@ export const flattenWorkQueryFlatItems = (
   const items = rowItems(tasks, tasks, nest, 'flat');
   return {
     items,
-    orderedIds: items.flatMap((item) =>
-      item.taskId && !item.parentContext ? [item.taskId] : [],
-    ),
+    orderedIds: items.flatMap((item) => (item.taskId && !item.parentContext ? [item.taskId] : [])),
   };
 };

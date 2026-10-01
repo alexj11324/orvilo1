@@ -8,7 +8,9 @@ import { useSearchParams } from 'react-router';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import ActionIcon from '@/components/ActionIcon';
+import AsyncError from '@/components/AsyncError';
 import { DropdownMenu } from '@/components/ItemsMenu';
+import { PriorityIcon } from '@/components/PriorityIcon';
 import TablePagination from '@/components/TablePagination';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -29,7 +31,9 @@ import {
 import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPage';
 import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
 import { resolveMineCollectionRedirect } from '@/features/MyWork/mineCollectionRedirect';
+import { MY_WORK_PRIORITY_LABEL_KEYS } from '@/features/MyWork/myWorkDisplay';
 import { workQueryBoardGroups, workQuerySourceKeysForKanbanColumn } from '@/features/MyWork/workQueryBoard';
+import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import IssueDetailPane from '@/features/Projects/Issues/IssueDetailPane';
 import IssueFilterChips from '@/features/Projects/Issues/IssueFilterChips';
@@ -44,6 +48,8 @@ import {
 import ProjectIssuesControls from '@/features/Projects/Issues/ProjectIssuesControls';
 import {
   projectIssueBoardGroupBy,
+  projectIssueListAxes,
+  projectIssueListSort,
   projectIssueWorkQuery,
 } from '@/features/Projects/Issues/projectIssueWorkQuery';
 import { useProjectIssuePages } from '@/features/Projects/Issues/useProjectIssuePages';
@@ -60,6 +66,7 @@ import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useIsMobile } from '@/hooks/useIsMobile';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { usePermission } from '@/hooks/usePermission';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys } from '@/libs/swr/keys';
@@ -80,7 +87,11 @@ import { taskDetailPath } from '../shared/taskDetailPath';
 import CreateTaskInlineEntry from './CreateTaskInlineEntry';
 import KanbanBoard from './KanbanBoard';
 import type { TaskListViewOptions } from './listViewOptions';
-import { getVisibleTaskStatuses, normalizeTaskListViewOptions } from './listViewOptions';
+import {
+  collapseSubTasks,
+  getVisibleTaskStatuses,
+  normalizeTaskListViewOptions,
+} from './listViewOptions';
 import { shouldRenderTaskAgentPanelToggle } from './taskAgentPanelToggle';
 import TaskList from './TaskList';
 import TaskListVisibilityFilter from './TaskListVisibilityFilter';
@@ -410,8 +421,17 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   // only while a filter clause actually references them.
   const isLogin = useUserStore(authSelectors.isLogin);
   const agents = useHomeStore(homeAgentListSelectors.allAgents);
+  const rosterViewOptions = normalizeTaskListViewOptions(
+    useGlobalStore(systemStatusSelectors.taskListViewOptions),
+  );
+  const rosterAxes = projectIssueListAxes(rosterViewOptions.groupBy, rosterViewOptions.subGroupBy);
   const membersSWR = useWorkspaceMembersQuery({
-    enabled: !!projectId && hasIssueFilters && !!activeWorkspaceId,
+    enabled:
+      !!projectId &&
+      !!activeWorkspaceId &&
+      (hasIssueFilters ||
+        rosterAxes?.groupBy === 'assignee' ||
+        rosterAxes?.subGroupBy === 'assignee'),
   });
   const { data: issueLabelsData } = useClientDataSWR(
     projectId && hasIssueFilters && isLogin ? taskLabelKeys.list(isLogin, activeWorkspaceId) : null,
@@ -477,18 +497,49 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   const issueQueryActive = Boolean(
     projectId && isOrdinaryCollection && (issueFilters.length > 0 || milestoneFilterId),
   );
+  const issueListAxes = useMemo(
+    () =>
+      issueQueryActive && ordinarySurface === 'list'
+        ? projectIssueListAxes(viewOptions.groupBy, viewOptions.subGroupBy)
+        : undefined,
+    [issueQueryActive, ordinarySurface, viewOptions.groupBy, viewOptions.subGroupBy],
+  );
   const issueListQuery = useMemo(
     () =>
       issueQueryActive && ordinarySurface === 'list' && projectId
         ? projectIssueWorkQuery({
             filters: issueFilters,
+            groupBy: issueListAxes?.groupBy,
+            hideCompleted: viewOptions.hideCompleted,
             layout: 'list',
             milestoneId: milestoneFilterId,
             projectId,
+            sort: projectIssueListSort(viewOptions.orderBy, viewOptions.orderDirection),
+            subGroupBy: issueListAxes?.subGroupBy,
           })
         : null,
-    [issueFilters, issueQueryActive, milestoneFilterId, ordinarySurface, projectId],
+    [
+      issueFilters,
+      issueListAxes?.groupBy,
+      issueListAxes?.subGroupBy,
+      issueQueryActive,
+      milestoneFilterId,
+      ordinarySurface,
+      projectId,
+      viewOptions.hideCompleted,
+      viewOptions.orderBy,
+      viewOptions.orderDirection,
+    ],
   );
+  const {
+    loadMoreGroupErrors: issueListGroupErrors,
+    resetLoadMoreError: resetIssueListPaging,
+    retryLoadMoreGroup: retryIssueListGroup,
+    runLoadMoreGroup: runIssueListGroup,
+  } = usePagedLoadMore();
+  useEffect(() => {
+    resetIssueListPaging();
+  }, [issueListQuery, resetIssueListPaging]);
   const issueBoardAxis = projectIssueBoardGroupBy(viewOptions.groupBy);
   const issueBoardQuery = useMemo(
     () =>
@@ -506,6 +557,43 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   const issueListPages = useProjectIssuePages(issueListQuery);
   const issueBoardPages = useProjectIssuePages(issueBoardQuery);
   const filteredIssueTasks = issueListQuery ? issueListPages.tasks : milestoneTasks;
+  const serverGroupedList = Boolean(issueListQuery && issueListQuery.groupBy !== 'none');
+  const issueListGroups = useMemo(() => {
+    const groups = issueListPages.groups;
+    if (viewOptions.showSubTasks) return groups;
+    const visibleIds = new Set(
+      collapseSubTasks(
+        groups.flatMap((group) =>
+          group.tasks.map((task) => ({ ...task, participants: task.participants ?? [] })),
+        ),
+      ).map((task) => task.id),
+    );
+    return groups.map((group) => ({
+      ...group,
+      tasks: group.tasks.filter((task) => visibleIds.has(task.id)),
+    }));
+  }, [issueListPages.groups, viewOptions.showSubTasks]);
+  const issueGroupTitle = useCallback(
+    (axis: string, key: string) => {
+      if (axis === 'priority') {
+        const label = MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
+        return t(label as never);
+      }
+      if (axis === 'assignee') {
+        if (key === 'none') return t('taskList.unassigned');
+        return memberName(key);
+      }
+      return undefined;
+    },
+    [memberName, t],
+  );
+  const issueGroupIcon = useCallback(
+    (axis: string, key: string) =>
+      axis === 'priority' ? (
+        <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />
+      ) : undefined,
+    [],
+  );
   const useFetchMyTaskList = useTaskStore((s) => s.useFetchMyTaskList);
   const mineSWR = useFetchMyTaskList({
     enabled: isMineCollection && !isMineBoard,
@@ -923,33 +1011,81 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                       projectId={projectId}
                     />
                   )}
-                  <TaskList
-                    error={issueListQuery ? issueListPages.error : error}
-                    items={filteredIssueTasks}
-                    milestones={projectId ? projectMilestones : undefined}
-                    options={viewOptions}
-                    peekOnSelect={peekOnSelect}
-                    routeScope={routeScope}
-                    selectedIdentifier={selectedIdentifier ?? undefined}
-                    data={
-                      issueListQuery
-                        ? issueListPages.settled || undefined
-                        : isTaskListInit || undefined
-                    }
-                    isLoading={
-                      issueListQuery
-                        ? issueListPages.isLoading ||
+                  {serverGroupedList ? (
+                    issueListPages.error && issueListGroups.length === 0 ? (
+                      <AsyncError
+                        error={issueListPages.error}
+                        variant={'block'}
+                        onRetry={() => issueListPages.refresh()}
+                      />
+                    ) : (
+                      <WorkQueryResults
+                        nestInGroups
+                        emptyLabel={t('taskList.empty')}
+                        flatNested={viewOptions.showSubTasks && viewOptions.nestedSubTasks}
+                        groupBy={issueListQuery?.groupBy}
+                        groupIcon={issueGroupIcon}
+                        groupTitle={issueGroupTitle}
+                        groups={issueListGroups}
+                        layout={'list'}
+                        loadMoreGroupErrors={issueListGroupErrors}
+                        loadMoreLabel={t('topicComment.loadMore')}
+                        loadingLabel={t('taskList.filter.loading')}
+                        peekOnSelect={peekOnSelect}
+                        selectedTaskId={selectedIdentifier ?? undefined}
+                        subGroupBy={issueListQuery?.subGroupBy}
+                        tasks={filteredIssueTasks}
+                        total={issueListPages.total}
+                        loading={
+                          issueListPages.isLoading ||
                           (!issueListPages.settled && !issueListPages.error)
-                        : isLoading || (!isTaskListInit && !error)
-                    }
-                    onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
-                    onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
-                    onShowHiddenCompleted={handleShowHiddenCompleted}
-                    onOpenTask={(task) =>
-                      navigate(taskDetailPath(task.identifier, undefined, task.name))
-                    }
-                  />
-                  {issueListQuery && issueListPages.hasMore ? (
+                        }
+                        milestoneFor={(task) =>
+                          viewOptions.showMilestone && task.projectMilestoneId
+                            ? projectMilestones?.find(
+                                (milestone) => milestone.id === task.projectMilestoneId,
+                              )
+                            : undefined
+                        }
+                        onRetryLoadMoreGroup={retryIssueListGroup}
+                        onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                        onLoadMoreGroup={(key) =>
+                          runIssueListGroup(key, () => issueListPages.loadMoreGroup(key))
+                        }
+                        onOpenTask={(task) =>
+                          navigate(taskDetailPath(task.identifier, undefined, task.name))
+                        }
+                      />
+                    )
+                  ) : (
+                    <TaskList
+                      error={issueListQuery ? issueListPages.error : error}
+                      items={filteredIssueTasks}
+                      milestones={projectId ? projectMilestones : undefined}
+                      options={viewOptions}
+                      peekOnSelect={peekOnSelect}
+                      routeScope={routeScope}
+                      selectedIdentifier={selectedIdentifier ?? undefined}
+                      data={
+                        issueListQuery
+                          ? issueListPages.settled || undefined
+                          : isTaskListInit || undefined
+                      }
+                      isLoading={
+                        issueListQuery
+                          ? issueListPages.isLoading ||
+                            (!issueListPages.settled && !issueListPages.error)
+                          : isLoading || (!isTaskListInit && !error)
+                      }
+                      onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
+                      onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
+                      onShowHiddenCompleted={handleShowHiddenCompleted}
+                      onOpenTask={(task) =>
+                        navigate(taskDetailPath(task.identifier, undefined, task.name))
+                      }
+                    />
+                  )}
+                  {issueListQuery && !serverGroupedList && issueListPages.hasMore ? (
                     <div className="flex justify-center py-2">
                       <Button
                         disabled={issueListPages.loadingMore}

@@ -151,8 +151,9 @@ interface WorkQueryResultsProps {
   emptyLabel: string;
   externalReviews?: WorkQueryExternalReview[];
   /**
-   * Flat lists nest children under parents already in the set — Linear's
-   * "nested sub-issues: Show matching" for Created/Subscribed/Activity.
+   * Nest children under parents already in the set. On My Work this is the
+   * flat list and the attention groups. `nestInGroups` also nests inside a
+   * server group, which the project issue list does.
    */
   flatNested?: boolean;
   /**
@@ -204,6 +205,7 @@ interface WorkQueryResultsProps {
    */
   milestoneFor?: (task: WorkQueryResultTask) => TaskMilestoneRef | undefined;
   movable?: boolean;
+  nestInGroups?: boolean;
   /**
    * Multi-select row gesture: cmd/ctrl-click `toggle`, shift-click `range`.
    * The row passes the rendered `data-bulk-row-id` order so ranges follow
@@ -247,7 +249,7 @@ interface WorkQueryResultsProps {
   selectedTaskId?: string;
   /** Saved-view sort mode — `field` boards refuse same-column position writes. */
   sortMode?: WorkQuerySortMode;
-  /** Board swimlane. Ignored on the list layout. */
+  /** Second axis. A board draws it as swimlanes; a list draws it as nested headers. */
   subGroupBy?: WorkQuery['subGroupBy'];
   /**
    * Second-level grouping inside each list section — Linear's "Sub-grouping"
@@ -764,6 +766,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     bulkSelectedIds,
     createContext,
     flatNested,
+    nestInGroups,
     flatSections,
     groupBy,
     groups,
@@ -815,7 +818,8 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup && listGroupBy !== 'none');
     const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
     const nestRows =
-      Boolean(flatNested) && (listGroupBy === 'none' || listGroupBy === 'attention');
+      Boolean(flatNested) &&
+      (Boolean(nestInGroups) || listGroupBy === 'none' || listGroupBy === 'attention');
     const axisRank = (axis: string | undefined): ((key: string) => number) | undefined => {
       if (axis === 'activityDate') return activityBucketRank;
       if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);

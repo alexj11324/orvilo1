@@ -56,4 +56,13 @@ describe('mergeWorkQueryGroups', () => {
     expect(next.find((group) => group.key === 'todo')?.hasMore).toBe(false);
     expect(next.find((group) => group.key === 'done')).toEqual(first[1]);
   });
+
+  it('clears hasMore when a full page already reached the group total', () => {
+    const next = mergeWorkQueryGroups(
+      [{ hasMore: true, key: 'todo', tasks: [{ id: 'a' }], total: 2 }],
+      [{ hasMore: true, key: 'todo', tasks: [{ id: 'b' }], total: 2 }],
+    );
+    expect(next[0]?.tasks.map((row) => row.id)).toEqual(['a', 'b']);
+    expect(next[0]?.hasMore).toBe(false);
+  });
 });

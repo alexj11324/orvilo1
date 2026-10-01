@@ -186,9 +186,11 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
   groupBy: z
     .enum([
       'activityDate',
+      'agent',
       'assignee',
       'attention',
       'cycle',
+      'milestone',
       'none',
       'priority',
       'project',
@@ -226,7 +228,16 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
     .optional(),
   sortMode: z.enum(['field', 'manual']).optional(),
   subGroupBy: z
-    .enum(['assignee', 'none', 'priority', 'project', 'status', 'workflowCategory'])
+    .enum([
+      'agent',
+      'assignee',
+      'milestone',
+      'none',
+      'priority',
+      'project',
+      'status',
+      'workflowCategory',
+    ])
     .optional(),
   timeZone: z.string().min(1).max(100).optional(),
 }).superRefine((query, ctx) => {
@@ -414,9 +425,11 @@ export const workAttentionRouter = router({
         groupBy: z
           .enum([
             'activityDate',
+            'agent',
             'assignee',
             'attention',
             'cycle',
+            'milestone',
             'none',
             'priority',
             'project',
@@ -559,6 +572,7 @@ export const workAttentionRouter = router({
         if (input.query.entityType === 'project') {
           const result = await ctx.workQueryModel.queryProjects({
             afterId: input.afterId,
+            groupKey: input.groupKey,
             limit: input.limit,
             query: input.query,
             queryHash: input.queryHash,
@@ -669,6 +683,7 @@ export const workAttentionRouter = router({
         id: z.string().min(1),
         limit: z.number().min(1).max(100).default(50),
         queryHash: z.string().min(1).optional(),
+        timeZone: z.string().min(1).max(100).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -680,6 +695,7 @@ export const workAttentionRouter = router({
           groupKey: input.groupKey,
           limit: input.limit,
           queryHash: input.queryHash,
+          timeZone: input.timeZone,
         });
         return {
           data: { evaluation, view: await ctx.savedViewModel.present(view) },

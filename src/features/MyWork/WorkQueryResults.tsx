@@ -131,6 +131,11 @@ export interface WorkQuerySubSection {
 
 interface WorkQueryResultsProps {
   /**
+   * Override the default rank for one axis. Milestone lists pass catalog
+   * order; other axes keep their built-in rank.
+   */
+  axisKeyRank?: (axis: string, key: string) => number | undefined;
+  /**
    * Multi-selected task ids — rows paint checked + highlight and reveal
    * their checkbox without waiting for hover. Absent = no bulk affordance.
    */
@@ -151,8 +156,9 @@ interface WorkQueryResultsProps {
   emptyLabel: string;
   externalReviews?: WorkQueryExternalReview[];
   /**
-   * Flat lists nest children under parents already in the set — Linear's
-   * "nested sub-issues: Show matching" for Created/Subscribed/Activity.
+   * Nest children under parents already in the set. On My Work this is the
+   * flat list and the attention groups. `nestInGroups` also nests inside a
+   * server group, which the project issue list does.
    */
   flatNested?: boolean;
   /**
@@ -204,6 +210,7 @@ interface WorkQueryResultsProps {
    */
   milestoneFor?: (task: WorkQueryResultTask) => TaskMilestoneRef | undefined;
   movable?: boolean;
+  nestInGroups?: boolean;
   /**
    * Multi-select row gesture: cmd/ctrl-click `toggle`, shift-click `range`.
    * The row passes the rendered `data-bulk-row-id` order so ranges follow
@@ -247,7 +254,7 @@ interface WorkQueryResultsProps {
   selectedTaskId?: string;
   /** Saved-view sort mode — `field` boards refuse same-column position writes. */
   sortMode?: WorkQuerySortMode;
-  /** Board swimlane. Ignored on the list layout. */
+  /** Second axis. A board draws it as swimlanes; a list draws it as nested headers. */
   subGroupBy?: WorkQuery['subGroupBy'];
   /**
    * Second-level grouping inside each list section — Linear's "Sub-grouping"
@@ -757,6 +764,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     emptyLabel,
     collapsedColumns,
     collapsedGroups,
+    axisKeyRank,
     groupIcon,
     groupRank,
     groupTitle,
@@ -764,6 +772,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     bulkSelectedIds,
     createContext,
     flatNested,
+    nestInGroups,
     flatSections,
     groupBy,
     groups,
@@ -805,8 +814,10 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       groupBy === 'status' || groupBy === 'priority' || groupBy === 'assignee'
         ? groupBy
         : 'workflowCategory';
-    const laneAxis =
+    const requestedLane =
       layout === 'board' ? normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy) : undefined;
+    // Milestone groups a list. A board lane has no milestone columns.
+    const laneAxis = requestedLane === 'milestone' ? undefined : requestedLane;
     const listGroupBy = workQueryListGroupBy(groupBy);
     const listLane =
       layout === 'list' ? normalizeWorkQuerySubGroupBy(listGroupBy, subGroupBy) : undefined;
@@ -815,15 +826,27 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup && listGroupBy !== 'none');
     const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
     const nestRows =
-      Boolean(flatNested) && (listGroupBy === 'none' || listGroupBy === 'attention');
+      Boolean(flatNested) &&
+      (Boolean(nestInGroups) || listGroupBy === 'none' || listGroupBy === 'attention');
     const axisRank = (axis: string | undefined): ((key: string) => number) | undefined => {
-      if (axis === 'activityDate') return activityBucketRank;
-      if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
-      if (axis === 'assignee' || axis === 'project') {
-        return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
-      }
-      if (axis === 'cycle') return groupRank;
-      return undefined;
+      if (!axis) return undefined;
+      const builtin = (): ((key: string) => number) | undefined => {
+        if (axis === 'activityDate') return activityBucketRank;
+        if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
+        if (
+          axis === 'agent' ||
+          axis === 'assignee' ||
+          axis === 'milestone' ||
+          axis === 'project'
+        ) {
+          return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
+        }
+        if (axis === 'cycle' && groupRank) return groupRank;
+        return undefined;
+      };
+      const base = builtin();
+      if (!axisKeyRank) return base;
+      return (key) => axisKeyRank(axis, key) ?? base?.(key) ?? 0;
     };
     const serverGroupKey = (columnKey: string) =>
       workQuerySourceKeysForKanbanColumn(boardGroupBy, columnKey)[0];

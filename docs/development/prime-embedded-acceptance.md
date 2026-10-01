@@ -145,9 +145,11 @@ superset, so the merge resolves to zero compile breaks for `execAgent`.
   The #367 caller surface is overlaid as leading overloads:
   - `resolveOrviloProviderBinding(db, userId, engine, target: OrviloBindingTarget)`
     → `OrviloBindingResolution` (`none` / `unavailable` / `applied:{execution}`).
-    The canonical `(…, target: string, match?)` overload is declared **last**
-    so `typeof resolveOrviloProviderBinding` in `embeddedBroker.ts` keeps the
-    canonical signature — preserve the ordering if the file is ever refactored.
+    `typeof` an overloaded function covers the whole overload set, so the
+    `EmbeddedInferenceBridgeDeps` seams instead name the exported alias types
+    `ResolveOrviloProviderBindingForTarget` / `IssueBindingExecutionForClaim`
+    (the canonical signatures) — keep those aliases in sync with the canonical
+    overloads if the file is ever refactored.
   - `issueBindingExecution(db, userId, candidate:{id,revision}, engine, target)`
     → `IssuedByokSpawnExecution | undefined`; canonical `(db, claim)` stays last.
   - `OrviloBindingTarget`, `OrviloBindingResolution`, `IssuedByokSpawnExecution`,

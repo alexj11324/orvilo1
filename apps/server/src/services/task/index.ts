@@ -1683,7 +1683,12 @@ export class TaskService {
 
     // Outgoing edges plus the issues this one blocks. `relates` is already
     // symmetric in getIssueRelations, so dependents only contribute blocks.
-    const dependencies = [
+    const dependencies: {
+      dependsOnId: string;
+      id?: string;
+      relationDirection?: 'blockedBy' | 'blocking';
+      type: string;
+    }[] = [
       ...issueRelations.map((row) =>
         row.type === 'blocks' ? { ...row, relationDirection: 'blockedBy' as const } : row,
       ),
@@ -1948,7 +1953,7 @@ export class TaskService {
       config: taskConfig,
       createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : undefined,
       createdByUserId: task.createdByUserId,
-      dependencies: dependencies.map((d) => {
+      dependencies: dependencies.map((d): NonNullable<TaskDetailData['dependencies']>[number] => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
           dependsOn:
@@ -1959,9 +1964,7 @@ export class TaskService {
           name: info?.name,
           status: info?.status ?? null,
           type: d.type,
-          ...('relationDirection' in d && d.relationDirection
-            ? { direction: d.relationDirection }
-            : {}),
+          ...(d.relationDirection ? { direction: d.relationDirection } : {}),
           ...(info?.workflowCategory ? { workflowCategory: info.workflowCategory } : {}),
           ...(info?.workflowStateId ? { workflowStateId: info.workflowStateId } : {}),
         };

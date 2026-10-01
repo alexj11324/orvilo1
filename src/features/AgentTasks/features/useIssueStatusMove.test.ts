@@ -35,6 +35,7 @@ vi.mock('@/store/task', () => ({
     selector: (state: {
       internal_refreshTaskDetail: typeof mocks.refreshDetail;
       runTask: typeof mocks.runTask;
+      taskDetailMap: typeof mocks.taskDetailMap;
       updateTask: typeof mocks.updateTask;
     }) => unknown,
   ) =>

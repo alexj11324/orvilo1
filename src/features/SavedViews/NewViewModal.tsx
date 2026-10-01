@@ -47,7 +47,7 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   sort: state.sort,
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
   subGroupBy:
-    state.layout === 'board'
+    state.entityType === 'task' && state.groupBy !== 'none'
       ? normalizeWorkQuerySubGroupBy(state.groupBy, state.subGroupBy)
       : undefined,
 });

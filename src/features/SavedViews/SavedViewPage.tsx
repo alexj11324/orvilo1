@@ -64,6 +64,7 @@ import SavedViewActionsMenu from './SavedViewActionsMenu';
 import { type SavedViewControl, transitionSavedViewControl } from './savedViewControlState';
 import { buildSavedViewCsv, fetchAllSavedViewRows, SAVED_VIEW_CSV_MAX_ROWS } from './savedViewCsv';
 import SavedViewDetailsPanel from './SavedViewDetailsPanel';
+import { savedViewGroupByForLayout } from './savedViewDisplay';
 import { savedViewProjectPath } from './savedViewProjectPath';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
 import { savedViewTitle } from './savedViewTitle';
@@ -270,7 +271,11 @@ SavedViewProjectBoard.displayName = 'SavedViewProjectBoard';
 const viewToEditorState = (view: SavedViewItem): ViewEditorState => ({
   builder: filterToBuilder(view.entityType, view.queryAst.filter),
   entityType: view.entityType,
-  groupBy: view.queryAst.groupBy ?? 'none',
+  groupBy: savedViewGroupByForLayout(
+    view.entityType,
+    view.layout ?? 'list',
+    view.queryAst.groupBy ?? 'none',
+  ),
   layout: view.layout ?? 'list',
   name: view.name,
   sort: view.queryAst.sort,
@@ -289,7 +294,7 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   // Board ordering is explicit — the field is meaningless off-board.
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
   subGroupBy:
-    state.layout === 'board'
+    state.entityType === 'task' && state.groupBy !== 'none'
       ? normalizeWorkQuerySubGroupBy(state.groupBy, state.subGroupBy)
       : undefined,
 });
@@ -302,9 +307,13 @@ const SavedViewPage = memo(() => {
   const origin = useAppOrigin();
   const navigate = useWorkspaceAwareNavigate();
   const currentUserId = useUserStore(userProfileSelectors.userId);
+  const viewerTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+    [],
+  );
   const { data, error, isLoading } = useClientDataSWR(
     viewId ? workAttentionKeys.savedView(workspaceId, viewId) : null,
-    () => workAttentionService.savedViewEvaluate({ id: viewId! }),
+    () => workAttentionService.savedViewEvaluate({ id: viewId!, timeZone: viewerTimeZone }),
   );
   const view = data?.data.view;
   const evaluation = data?.data.evaluation;
@@ -419,6 +428,7 @@ const SavedViewPage = memo(() => {
         afterId: last.id,
         id: viewId,
         queryHash,
+        timeZone: viewerTimeZone,
       });
       if (pageTokenRef.current !== started) return;
       setProjectTail((current) => mergeWorkQueryPage(current, next.data.evaluation.projects ?? []));
@@ -430,10 +440,11 @@ const SavedViewPage = memo(() => {
       afterId: last.id,
       id: viewId,
       queryHash,
+      timeZone: viewerTimeZone,
     });
     if (pageTokenRef.current !== started) return;
     setTail((current) => mergeWorkQueryPage(current, next.data.evaluation.tasks ?? []));
-  }, [projectRows, queryHash, tasks, view?.entityType, viewId]);
+  }, [projectRows, queryHash, tasks, view?.entityType, viewId, viewerTimeZone]);
 
   const loadMoreGroup = useCallback(
     async (groupKey: string) => {
@@ -446,11 +457,12 @@ const SavedViewPage = memo(() => {
         groupKey,
         id: viewId,
         queryHash,
+        timeZone: viewerTimeZone,
       });
       if (pageTokenRef.current !== started) return;
       setGroupTail((current) => mergeWorkQueryGroups(current, next.data.evaluation.groups ?? []));
     },
-    [groups, queryHash, viewId],
+    [groups, queryHash, viewId, viewerTimeZone],
   );
 
   const loadMoreProjectGroup = useCallback(
@@ -464,6 +476,7 @@ const SavedViewPage = memo(() => {
         groupKey,
         id: viewId,
         queryHash,
+        timeZone: viewerTimeZone,
       });
       if (pageTokenRef.current !== started) return;
       setProjectGroupTail((current) =>
@@ -478,7 +491,7 @@ const SavedViewPage = memo(() => {
         ),
       );
     },
-    [projectGroups, queryHash, viewId],
+    [projectGroups, queryHash, viewId, viewerTimeZone],
   );
 
   const saveView = useCallback(async (): Promise<boolean> => {

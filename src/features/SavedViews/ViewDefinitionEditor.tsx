@@ -20,6 +20,7 @@ import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
 
+import { savedViewGroupByForLayout, savedViewGroupByOptions } from './savedViewDisplay';
 import type { BuilderState } from './workQueryBuilder';
 import WorkQueryFilterBuilder from './WorkQueryFilterBuilder';
 
@@ -56,15 +57,6 @@ const sortKey = (sort: WorkQuerySort[] | undefined): string => {
   const first = sort?.find((item) => item.field !== 'id');
   if (!first) return 'default';
   return `${first.field === 'updatedAt' ? 'updated' : first.field === 'createdAt' ? 'created' : first.field}${first.direction === 'desc' ? 'Desc' : 'Asc'}`;
-};
-
-// Menu copy exists for these keys. activityDate, cycle, project, and attention
-// are list axes elsewhere; this editor does not offer them.
-type SavedViewGroupByOption = 'assignee' | 'none' | 'priority' | 'status' | 'workflowCategory';
-
-const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, readonly SavedViewGroupByOption[]> = {
-  project: ['none', 'status'],
-  task: ['none', 'status', 'workflowCategory', 'priority', 'assignee'],
 };
 
 const TASK_LANES: WorkQuerySubGroupBy[] = ['none', 'status', 'priority', 'assignee', 'project'];
@@ -176,28 +168,30 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 { label: t('savedViews.layoutBoard'), value: 'board' },
               ]}
               onChange={(next) => {
-                if (next === 'board' || next === 'list') {
-                  set({
-                    groupBy:
-                      next === 'board' && value.groupBy === 'none' ? 'status' : value.groupBy,
-                    layout: next,
-                  });
-                }
+                if (next !== 'board' && next !== 'list') return;
+                const groupBy =
+                  next === 'board' && value.groupBy === 'none'
+                    ? 'status'
+                    : savedViewGroupByForLayout(value.entityType, next, value.groupBy);
+                set({
+                  groupBy,
+                  layout: next,
+                  subGroupBy: normalizeWorkQuerySubGroupBy(groupBy, value.subGroupBy),
+                });
               }}
             />
             <Select
               size="small"
               style={{ minWidth: 150 }}
               value={value.groupBy}
-              options={GROUP_BY_OPTIONS[value.entityType].map((groupBy) => ({
+              options={savedViewGroupByOptions(value.entityType, value.layout).map((groupBy) => ({
                 label: t(`savedViews.groupBy.${groupBy}`),
                 value: groupBy,
               }))}
               onChange={(next) => {
-                if (
-                  (GROUP_BY_OPTIONS[value.entityType] as readonly string[]).includes(next as string)
-                ) {
-                  const groupBy = next as SavedViewGroupByOption;
+                const options = savedViewGroupByOptions(value.entityType, value.layout);
+                if ((options as readonly string[]).includes(next as string)) {
+                  const groupBy = next as (typeof options)[number];
                   set({
                     groupBy,
                     subGroupBy: normalizeWorkQuerySubGroupBy(groupBy, value.subGroupBy),
@@ -205,7 +199,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 }
               }}
             />
-            {value.entityType === 'task' && value.layout === 'board' ? (
+            {value.entityType === 'task' && value.groupBy !== 'none' ? (
               <Select
                 size="small"
                 style={{ minWidth: 150 }}

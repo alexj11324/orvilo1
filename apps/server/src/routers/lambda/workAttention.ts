@@ -669,6 +669,7 @@ export const workAttentionRouter = router({
         id: z.string().min(1),
         limit: z.number().min(1).max(100).default(50),
         queryHash: z.string().min(1).optional(),
+        timeZone: z.string().min(1).max(100).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -680,6 +681,7 @@ export const workAttentionRouter = router({
           groupKey: input.groupKey,
           limit: input.limit,
           queryHash: input.queryHash,
+          timeZone: input.timeZone,
         });
         return {
           data: { evaluation, view: await ctx.savedViewModel.present(view) },

@@ -24,10 +24,20 @@ the board's existing empty-column rules.
 
 ## Virtual list
 
-Work-query lists render through a virtual list. Group headers are items in
-that list, so collapsing a group removes its rows from the window. My Work
-stores collapsed groups with the display options. Team issues store them in
-the `groups` URL parameter. A saved view keeps them for the session.
+Work-query lists render through a virtual list. Group headers stick to the
+top of the scroll area. A nested lane keeps its parent header in that sticky
+stack. Collapsing a group removes its rows from the window. My Work stores
+collapsed groups with the display options. Team issues store them in the
+`groups` URL parameter. A saved view keeps them for the session.
+
+A saved task list can group by activity date, project, or cycle, and can set
+a second axis. A board stays on status, workflow, priority, or assignee.
+Activity-date buckets for a saved view use the viewer's time zone.
+
+A group page asks for one extra row. That row is not shown. `hasMore` stays
+on only while the loaded rows are still short of the group total and the
+server still has a following row. A page that lands exactly on the total does
+not keep a load-more control.
 
 Header order for priority, assignee, project, cycle, and activity date follows
 the same ranks the list already used for those axes. Status, workflow, and

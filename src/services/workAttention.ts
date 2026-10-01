@@ -86,6 +86,7 @@ class WorkAttentionService {
     id: string;
     limit?: number;
     queryHash?: string;
+    timeZone?: string;
   }) => lambdaClient.workAttention.savedViewEvaluate.query(input);
 
   savedViewGet = (id: string) => lambdaClient.workAttention.savedViewGet.query({ id });

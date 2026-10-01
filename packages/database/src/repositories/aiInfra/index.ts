@@ -23,8 +23,22 @@ import { merge, mergeArrayById } from '@/utils/merge';
 import { AiModelModel } from '../../models/aiModel';
 import { AiProviderModel } from '../../models/aiProvider';
 import type { OrviloDatabase } from '../../type';
+import { ProviderBindingPlane } from './providerBindings';
 
 type DecryptUserKeyVaults = (encryptKeyVaultsStr: string | null) => Promise<any>;
+
+type DefinedFields<T> = {
+  [K in keyof T as undefined extends T[K] ? (T[K] extends undefined ? never : K) : K]: T[K];
+};
+
+/** Keep only fields the anchor actually carries (undefined = fall back). */
+const pickDefined = <T extends object>(value: T): DefinedFields<T> => {
+  const picked: Record<string, unknown> = {};
+  for (const [key, field] of Object.entries(value)) {
+    if (field !== undefined) picked[key] = field;
+  }
+  return picked as DefinedFields<T>;
+};
 
 const normalizeProvider = (provider: string) => provider.toLowerCase();
 
@@ -77,6 +91,13 @@ export class AiInfraRepos {
   private readonly providerConfigs: Record<string, ProviderConfig>;
   aiModelModel: AiModelModel;
   private modelBankModelsPromise?: ReturnType<typeof loadModels>;
+  /**
+   * Dual-read overlay for the provider_bindings plane. Bindings are a
+   * personal credential surface (no workspace ownership — `tenantId` is
+   * stamped at issuance), so the overlay applies in every scope;
+   * `workspaceId` only scopes the plane's legacy-row handling.
+   */
+  private readonly bindingPlane?: ProviderBindingPlane;
 
   constructor(
     db: OrviloDatabase,
@@ -89,6 +110,7 @@ export class AiInfraRepos {
     this.aiProviderModel = new AiProviderModel(db, userId, workspaceId);
     this.aiModelModel = new AiModelModel(db, userId, workspaceId);
     this.providerConfigs = providerConfigs;
+    this.bindingPlane = new ProviderBindingPlane(db, userId, { workspaceId });
   }
 
   /**
@@ -113,11 +135,41 @@ export class AiInfraRepos {
     const mergedProviders = mergeArrayById(builtinProviders, userProviders);
 
     // 3. Sort based on orderMap
-    return mergedProviders.sort((a, b) => {
+    const sorted = mergedProviders.sort((a, b) => {
       const orderA = orderMap.get(a.id) ?? Number.MAX_SAFE_INTEGER;
       const orderB = orderMap.get(b.id) ?? Number.MAX_SAFE_INTEGER;
       return orderA - orderB;
     });
+
+    // 4. Dual-read overlay: providers that migrated onto the binding plane
+    // report from their anchor row (bindings preferred); everything else
+    // keeps the legacy/builtin computation.
+    const bound = await this.bindingPlane?.listManagedProviders();
+    if (!bound || bound.size === 0) return sorted;
+
+    const overlaid = sorted.map((item) => {
+      const managed = bound.get(item.id);
+      if (!managed?.anchor) return item;
+      const anchorItem = this.bindingPlane!.materializeListItem(item.id, managed.anchor);
+      return {
+        ...item,
+        ...pickDefined(anchorItem),
+        // Deployment config keeps its force-enable OR on top of user state.
+        enabled: anchorItem.enabled || item.enabled,
+      };
+    });
+
+    for (const [providerId, managed] of bound) {
+      if (managed.anchor && !sorted.some((item) => item.id === providerId)) {
+        const anchorItem = this.bindingPlane!.materializeListItem(providerId, managed.anchor);
+        overlaid.push({
+          ...anchorItem,
+          enabled: anchorItem.enabled || Boolean(this.providerConfigs[providerId]?.enabled),
+        });
+      }
+    }
+
+    return overlaid;
   };
 
   /**
@@ -223,6 +275,20 @@ export class AiInfraRepos {
     ]);
 
     const runtimeConfig = result;
+
+    // Binding-managed providers hydrate their runtime config from the
+    // credential store instead of the deleted legacy row.
+    const bound = await this.bindingPlane?.listManagedProviders();
+    if (bound) {
+      for (const [providerId, managed] of bound) {
+        if (!managed.anchor) continue;
+        runtimeConfig[providerId] = await this.bindingPlane!.materializeRuntimeConfig(
+          providerId,
+          managed.anchor,
+        );
+      }
+    }
+
     Object.entries(result).forEach(([key, value]) => {
       runtimeConfig[key] = merge(this.providerConfigs[key] || {}, value);
     });
@@ -420,6 +486,12 @@ export class AiInfraRepos {
    * use in the `/settings/provider/[id]` page
    */
   getAiProviderDetail = async (id: string, decryptor?: DecryptUserKeyVaults) => {
+    const managed = await this.bindingPlane?.getManaged(id);
+    if (managed?.anchor) {
+      const detail = await this.bindingPlane!.materializeDetail(id, managed.anchor);
+      return merge(this.providerConfigs[id] || {}, detail) as AiProviderDetailItem;
+    }
+
     const config = await this.aiProviderModel.getAiProviderById(id, decryptor);
 
     return merge(this.providerConfigs[id] || {}, config) as AiProviderDetailItem;
@@ -456,3 +528,8 @@ export class AiInfraRepos {
 }
 
 export { AiInfraCatalogRepos } from './catalog';
+export {
+  ProviderBindingConflictError,
+  ProviderBindingPlane,
+  resolveBindingManagedProviderDetail,
+} from './providerBindings';

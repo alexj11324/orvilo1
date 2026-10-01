@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-01T16:54:34.131Z",
+  "generatedAt": "2026-10-01T18:14:17.841Z",
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "ae1a30a8831d161c761ee15f8e734b92e73e8fb1",
+  "baseSha": "2f3e7f376f8a6f92fa32c01e8b174e3d79b33624",
   "counts": {
-    "sourceFiles": 13193,
+    "sourceFiles": 13205,
     "workspacePackages": 111,
     "nextRoutes": 43,
     "spaRouteEntries": 132,
@@ -13,8 +13,8 @@
     "migrationSqlFiles": 200,
     "localeFiles": 886,
     "defaultNamespaceFiles": 53,
-    "docFiles": 660,
-    "testFiles": 3531,
+    "docFiles": 662,
+    "testFiles": 3538,
     "storeFiles": 895,
     "unresolvedImports": 402
   },
@@ -1990,7 +1990,9 @@
       "docs/development/others/lighthouse.mdx",
       "docs/development/others/lighthouse.zh-CN.mdx",
       "docs/development/pr-delivery-gate.md",
+      "docs/development/prime-embedded-acceptance.md",
       "docs/development/prime-embedded-broker-bridge.md",
+      "docs/development/prime-embedded-dispatch-routing.md",
       "docs/development/prime-embedded-harness-design.md",
       "docs/development/prime-embedded-host-integration.md",
       "docs/development/product-scope.md",
@@ -2459,6 +2461,7 @@
       "apps/server/src/services/connector/exec.ts",
       "apps/server/src/services/connector/refresh.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.test.ts",
       "apps/server/src/services/document/diff/json.ts",
       "apps/server/src/services/file/downloadRemoteImage.ts",
       "apps/server/src/services/file/index.ts",
@@ -2539,6 +2542,7 @@
       "packages/database/src/models/work/toolResultParsing.ts",
       "packages/database/src/models/workspaceUserSettings.ts",
       "packages/database/src/repositories/agentGroup/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/repositories/home/index.ts",
       "packages/database/src/repositories/onboardingUnderstanding/repository.ts",
       "packages/database/src/server/models/__tests__/adapter.test.ts",
@@ -2898,8 +2902,12 @@
       "apps/server/src/services/collaboration/service.ts",
       "apps/server/src/services/collaboration/snapshot.ts",
       "apps/server/src/services/collaboration/ticket.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.dispatch.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.inference.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.isolation.test.ts",
       "apps/server/src/services/controlPlane/embeddedBroker.test.ts",
       "apps/server/src/services/controlPlane/embeddedBroker.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.ts",
       "apps/server/src/services/creds/index.ts",
       "apps/server/src/services/deviceGateway/dispatchAuthorization.ts",
       "apps/server/src/services/deviceGateway/scopedDevicePresence.ts",
@@ -3774,9 +3782,11 @@
       "packages/database/src/models/workspaceUserSettings.ts",
       "packages/database/src/repositories/agentGroup/index.ts",
       "packages/database/src/repositories/aiInfra/__tests__/getAiProviderDetail.test.ts",
+      "packages/database/src/repositories/aiInfra/__tests__/providerBindings.test.ts",
       "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
       "packages/database/src/repositories/aiInfra/catalog.ts",
       "packages/database/src/repositories/aiInfra/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/repositories/compression/index.test.ts",
       "packages/database/src/repositories/compression/index.ts",
       "packages/database/src/repositories/dataImporter/__tests__/index.test.ts",
@@ -5515,6 +5525,7 @@
       "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
       "packages/database/src/repositories/aiInfra/catalog.ts",
       "packages/database/src/repositories/aiInfra/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/schemas/aiInfra.ts",
       "packages/fetch-sse/src/parseError.ts",
       "packages/locales/src/default/models.ts",
@@ -5931,6 +5942,7 @@
       "apps/server/src/services/aiAgent/pipeline/heteroDispatch.ts",
       "apps/server/src/services/aiAgent/pipeline/resolveExecutionBinding.ts",
       "apps/server/src/services/aiAgent/pipeline/turnSetup.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.ts",
       "apps/server/src/services/deviceGateway/index.ts",
       "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts",
       "apps/server/src/services/heterogeneousAgent/index.ts",
@@ -6393,6 +6405,10 @@
       "apps/server/src/services/controlPlane/coreRuntimeHandoff.acceptance.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.acceptance.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.dispatch.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.inference.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.isolation.test.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.test.ts",
       "apps/server/src/services/creds/index.ts",
       "apps/server/src/services/deviceGateway/authorizedToolCall.test.ts",
       "apps/server/src/services/deviceGateway/authorizedToolCall.ts",
@@ -8143,6 +8159,7 @@
       "apps/server/src/modules/AgentExecution/types.ts",
       "apps/server/src/routers/lambda/__tests__/aiAgent.heteroIngest.test.ts",
       "apps/server/src/routers/lambda/aiAgent.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.ts",
       "apps/server/src/services/heterogeneousAgent/HeteroTraceRecorder.ts",
       "apps/server/src/services/heterogeneousAgent/HeterogeneousPersistenceHandler.ts",
       "apps/server/src/services/heterogeneousAgent/__tests__/HeteroTraceRecorder.test.ts",
@@ -8223,8 +8240,15 @@
       "apps/server/src/services/controlPlane/coreRuntimeHost.acceptance.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.compaction.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.inference.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.isolation.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.protocol.test.ts",
+      "apps/server/src/services/controlPlane/embeddedAcceptance.support.ts",
       "apps/server/src/services/controlPlane/embeddedBroker.test.ts",
       "apps/server/src/services/controlPlane/embeddedBroker.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.test.ts",
+      "apps/server/src/services/controlPlane/embeddedDispatch.ts",
       "apps/server/src/services/controlPlane/receiptRecovery.postgres.test.ts",
       "apps/server/src/services/mcpEvents/admission.ts",
       "apps/server/src/services/mcpEvents/runtime.ts",
@@ -13039,8 +13063,8 @@
         "packages/tool-runtime/vitest.config.mts"
       ],
       "inbound": {
-        "total": 609,
-        "explained": 142,
+        "total": 616,
+        "explained": 147,
         "unexplained": [
           {
             "importer": "apps/server/src/services/resourceEvents/index.ts",
@@ -13439,6 +13463,25 @@
               "packages/agent-execution/src/controlPlane/harnessTransport.ts",
               "packages/agent-execution/src/controlPlane/server.ts",
               "packages/agent-execution/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/embeddedAcceptance.support.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/harnessTransport.ts",
+              "packages/agent-execution/src/controlPlane/server.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/embeddedDispatch.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/index.ts",
+              "packages/agent-execution/src/controlPlane/server.ts",
+              "packages/agent-gateway-client/src/index.ts",
+              "packages/heterogeneous-agents/src/index.ts",
+              "packages/heterogeneous-agents/src/spawn/index.ts"
             ]
           },
           {
@@ -21543,7 +21586,7 @@
         "src/features/AuthShell/style.ts"
       ],
       "inbound": {
-        "total": 163,
+        "total": 164,
         "explained": 23,
         "unexplained": [
           {
@@ -21730,6 +21773,13 @@
           },
           {
             "importer": "apps/server/src/featureFlags/index.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/app-config/src/featureFlags/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/featureFlags/primeEmbeddedDispatch.ts",
             "disposition": "UNCOVERED",
             "targets": [
               "packages/app-config/src/featureFlags/index.ts"
@@ -22573,7 +22623,7 @@
         "apps/server/src/services/{file*,storage*,s3*,upload*}/**",
         "apps/server/src/routers/lambda/{file,chunk,document,documentComment,documentLike,notification,pushToken,recent,metric}.ts"
       ],
-      "fileCount": 1341,
+      "fileCount": 1343,
       "files": [
         "apps/server/src/routers/lambda/chunk.ts",
         "apps/server/src/routers/lambda/document.ts",
@@ -23055,9 +23105,11 @@
         "packages/database/src/repositories/aiInfra/__tests__/getAiProviderRuntimeState.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/getEnabledModels.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/getUserEnabledProviderList.test.ts",
+        "packages/database/src/repositories/aiInfra/__tests__/providerBindings.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
         "packages/database/src/repositories/aiInfra/catalog.ts",
         "packages/database/src/repositories/aiInfra/index.ts",
+        "packages/database/src/repositories/aiInfra/providerBindings.ts",
         "packages/database/src/repositories/compression/index.test.ts",
         "packages/database/src/repositories/compression/index.ts",
         "packages/database/src/repositories/dataExporter/index.test.ts",
@@ -23918,8 +23970,8 @@
         "packages/utils/vitest.config.mts"
       ],
       "inbound": {
-        "total": 3943,
-        "explained": 758,
+        "total": 3948,
+        "explained": 762,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -32009,6 +32061,7 @@
             "disposition": "KEEP",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/database/src/type.ts",
               "packages/types/src/index.ts",
               "packages/utils/src/index.ts"
@@ -32019,6 +32072,7 @@
             "disposition": "UNCOVERED",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/trpc/src/lambda/index.ts",
               "packages/trpc/src/lambda/middleware/index.ts"
             ]
@@ -32028,6 +32082,7 @@
             "disposition": "UNCOVERED",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/database/src/type.ts",
               "packages/types/src/aiProvider.ts",
               "packages/types/src/index.ts"
@@ -33041,6 +33096,16 @@
               "packages/database/src/models/taskDispatch.ts",
               "packages/database/src/schemas/index.ts",
               "packages/database/src/type.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/embeddedDispatch.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/taskDispatch.ts",
+              "packages/database/src/schemas/index.ts",
+              "packages/database/src/type.ts",
+              "packages/types/src/index.ts"
             ]
           },
           {
@@ -56461,7 +56526,7 @@
         "packages/prompts/vitest.config.mts"
       ],
       "inbound": {
-        "total": 462,
+        "total": 463,
         "explained": 154,
         "unexplained": [
           {
@@ -56932,6 +56997,13 @@
             "targets": [
               "packages/model-bank/src/index.ts",
               "packages/model-bank/src/modelProviders/index.ts"
+            ]
+          },
+          {
+            "importer": "packages/database/src/repositories/aiInfra/providerBindings.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/model-bank/src/index.ts"
             ]
           },
           {
@@ -58880,9 +58952,9 @@
       }
     }
   ],
-  "uncoveredFiles": 5096,
+  "uncoveredFiles": 5106,
   "uncoveredByArea": {
-    "apps/server/src": 880,
+    "apps/server/src": 889,
     "src/routes/(main)": 294,
     "src/features/Settings": 269,
     "apps/cli/src": 190,
@@ -59187,6 +59259,7 @@
     "plugins/vite/watchOptions.ts": 1,
     "scripts/_shared/checkDeprecatedAuth.js": 1,
     "scripts/_shared/checkDeprecatedAuth.test.ts": 1,
+    "scripts/acceptance/prime-embedded-netguard.mjs": 1,
     "scripts/acceptance/prime-nonempty-harness.mjs": 1,
     "scripts/acceptance/prime-nonempty.ts": 1,
     "scripts/acceptance/prime-protocol.ts": 1,

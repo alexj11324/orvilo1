@@ -181,7 +181,10 @@ export type InferenceEvent =
   | { type: 'error'; error: ControlError };
 
 export interface InferenceBroker {
-  infer: (request: InferenceRequest) => AsyncIterable<InferenceEvent>;
+  infer: (
+    request: InferenceRequest,
+    options?: { signal?: AbortSignal },
+  ) => AsyncIterable<InferenceEvent>;
 }
 
 /** Settings requests have their own server-derived scope; no fabricated task fence. */

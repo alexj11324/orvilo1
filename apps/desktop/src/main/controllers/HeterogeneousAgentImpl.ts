@@ -2308,6 +2308,8 @@ export default class HeterogeneousAgentCtr {
     /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
     builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
+    /** Server-minted spawn env (e.g. BYOK credentials) merged into the exec env. */
+    env?: Record<string, string>;
     /** Image attachments (signed URLs) appended as image content blocks. */
     imageList?: HeteroExecImageRef[];
     jwt: string;
@@ -2411,6 +2413,7 @@ export default class HeterogeneousAgentCtr {
     const env = {
       ...process.env,
       ...buildProxyEnv(this.app.storeManager.get('networkProxy')),
+      ...params.env,
       ELECTRON_RUN_AS_NODE: '1',
       [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
       ORVILO_JWT: jwt,

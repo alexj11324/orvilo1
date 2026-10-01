@@ -33,6 +33,8 @@ export interface SandboxRunParams {
    */
   builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
+  /** Server-minted spawn env (e.g. BYOK credentials) appended to the run's env. */
+  env?: Record<string, string>;
   /** GitHub OAuth token for cloning private repos. */
   githubToken?: string;
   /**
@@ -228,6 +230,7 @@ export async function spawnHeteroSandbox(params: SandboxRunParams): Promise<void
     // Inject GitHub token so CC can authenticate git operations and GitHub API
     // calls inside the sandbox (e.g. gh CLI, git push, API requests).
     ...(githubToken ? [`GITHUB_TOKEN=${shellQuote(githubToken)}`] : []),
+    ...Object.entries(params.env ?? {}).map(([name, value]) => `${name}=${shellQuote(value)}`),
   ].join(' ');
   const shellArgs = args.map(shellQuote).join(' ');
   const mainCommand = `echo ${shellQuote(base64Payload)} | base64 -d | ${envVars} ${shellArgs}`;

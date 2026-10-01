@@ -66,12 +66,15 @@ export const providerBindingActions = {
   remove: (binding: ProviderBinding) =>
     change(binding.id, () => providerBindingService.delete(binding.id, binding.revision)),
 };
-useUserStore.subscribe((state, previous) => {
-  if (userProfileSelectors.userId(state) !== userProfileSelectors.userId(previous)) {
-    useProviderBindingStore.setState((s) => ({
-      generation: s.generation + 1,
-      bindings: [],
-      pending: {},
-    }));
-  }
-});
+// `useUserStore` may be a bare mocked function without `.subscribe` under vitest.
+if (typeof useUserStore.subscribe === 'function') {
+  useUserStore.subscribe((state, previous) => {
+    if (userProfileSelectors.userId(state) !== userProfileSelectors.userId(previous)) {
+      useProviderBindingStore.setState((s) => ({
+        generation: s.generation + 1,
+        bindings: [],
+        pending: {},
+      }));
+    }
+  });
+}

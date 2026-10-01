@@ -1,8 +1,10 @@
 // @vitest-environment node
+import { isRecord } from '@orvilo/utils/object';
 import { expect, it } from 'vitest';
 
 import type { ExecutionFence, InferenceEvent } from './contracts';
 import {
+  BROKER_CANCEL_METHOD,
   BROKER_EVENT_NOTIFICATION,
   BROKER_INFER_METHOD,
   HARNESS_ABORT_METHOD,
@@ -251,6 +253,7 @@ it('round-trips a prompt: text deltas stream, end_turn closes the turn', async (
   expect(events).toEqual([
     { type: 'text', sessionId: 'session-1', text: 'hello ' },
     { type: 'text', sessionId: 'session-1', text: 'world' },
+    { type: 'usage', sessionId: 'session-1', inputTokens: 10, outputTokens: 2 },
     { type: 'turn-ended', sessionId: 'session-1', reason: 'end_turn' },
   ]);
   expect(runtime.capabilities()).toMatchObject({ prompt: true, stream: true });
@@ -334,6 +337,44 @@ it('rejects broker.infer params that fail validation or name another session', a
       },
     }),
   ).toEqual({ error: { code: -32602, message: 'Broker session mismatch' } });
+});
+
+it('pins initModel into the handshake for the runner model registry', async () => {
+  const channel = fakeChannel();
+  const terminated: string[] = [];
+  const runtime = new PrimeEmbeddedRuntime({
+    artifact: '/harness.mjs',
+    executable: '/usr/local/bin/node',
+    home: '/tmp',
+    temp: '/tmp',
+    now: () => 100,
+    initModel: { id: 'claude-sonnet-4-5', maxOutputTokens: 4096 },
+    async authorize() {
+      return { ok: true, value: true };
+    },
+    async verifyArtifact() {
+      return { ok: true, value: true };
+    },
+    supervisor: {
+      async launch() {
+        return { ok: true, value: okIsolation() };
+      },
+      async terminate(treeId) {
+        terminated.push(treeId);
+        return { ok: true, value: okProof(treeId) };
+      },
+    },
+    async connect() {
+      return channel;
+    },
+  });
+  const started = await runtime.start({ fence, workspace: '/workspace' });
+  expect(started.ok).toBe(true);
+  const init = channel.requests.find((r) => r.method === HARNESS_INIT_METHOD);
+  expect(init?.params).toMatchObject({
+    model: { id: 'claude-sonnet-4-5', maxOutputTokens: 4096 },
+  });
+  if (started.ok) await runtime.cancel(started.value);
 });
 
 it('streams broker events to the runner after a valid broker.infer', async () => {
@@ -474,4 +515,103 @@ it('keeps one session when concurrent starts return the same ID across final adm
   if (!winner?.ok) throw new Error('Missing winning session');
   expect((await runtime.shutdown(winner.value)).ok).toBe(true);
   expect(new Set(terminated)).toEqual(new Set(['tree-1', 'tree-2']));
+});
+
+it('broker.cancel unwinds the in-flight backend stream immediately', async () => {
+  const channel = fakeChannel();
+  let returned = false;
+  const { runtime } = makeRuntime({
+    channel,
+    inferenceBroker: {
+      infer() {
+        return {
+          [Symbol.asyncIterator]() {
+            let sent = 0;
+            return {
+              async next() {
+                // Events only while the pump asks; cancel must not wait for one.
+                sent += 1;
+                if (sent === 1) return { done: false, value: { type: 'text', text: 'partial' } };
+                return new Promise<IteratorResult<InferenceEvent>>(() => {});
+              },
+              async return() {
+                returned = true;
+                return { done: true, value: undefined };
+              },
+            };
+          },
+        };
+      },
+    },
+  });
+  const started = await runtime.start({ fence, workspace: '/workspace' });
+  expect(started.ok).toBe(true);
+  const outcome = channel.reverseHandler?.(BROKER_INFER_METHOD, {
+    sessionId: 'session-1',
+    request: {
+      requestId: 'r1',
+      modelRoute: 'orvilo-broker',
+      messages: [{ role: 'user', content: 'hi' }],
+      maxOutputTokens: 100,
+    },
+  });
+  expect(outcome).toEqual({ result: { requestId: 'r1', accepted: true } });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  channel.reverseHandler?.(BROKER_CANCEL_METHOD, { requestId: 'r1' });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  expect(returned).toBe(true);
+  // No dangling 'end' after cancellation.
+  expect(
+    channel.notified.some(
+      (n) =>
+        n.method === BROKER_EVENT_NOTIFICATION &&
+        isRecord(n.params) &&
+        isRecord(n.params.event) &&
+        n.params.event.type === 'end',
+    ),
+  ).toBe(false);
+});
+
+it('session cancel wakes in-flight infer pumps before closing the channel', async () => {
+  const channel = fakeChannel();
+  let returned = false;
+  const terminated: string[] = [];
+  const { runtime } = makeRuntime({
+    channel,
+    terminated,
+    inferenceBroker: {
+      infer() {
+        return {
+          [Symbol.asyncIterator]() {
+            return {
+              async next() {
+                return new Promise<IteratorResult<InferenceEvent>>(() => {});
+              },
+              async return() {
+                returned = true;
+                return { done: true, value: undefined };
+              },
+            };
+          },
+        };
+      },
+    },
+  });
+  const started = await runtime.start({ fence, workspace: '/workspace' });
+  expect(started.ok).toBe(true);
+  if (!started.ok) return;
+  channel.reverseHandler?.(BROKER_INFER_METHOD, {
+    sessionId: 'session-1',
+    request: {
+      requestId: 'r1',
+      modelRoute: 'orvilo-broker',
+      messages: [{ role: 'user', content: 'hi' }],
+      maxOutputTokens: 100,
+    },
+  });
+  await new Promise((resolve) => setTimeout(resolve, 10));
+  const cancelled = await runtime.cancel(started.value);
+  expect(cancelled.ok).toBe(true);
+  expect(returned).toBe(true);
+  expect(terminated).toEqual(['tree']);
 });

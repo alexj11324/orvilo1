@@ -53,9 +53,14 @@ const RUNNER_PIN = {
   license: 'MIT',
 } as const;
 
-const BROKER_MODEL: Model = {
-  id: 'orvilo-broker',
-  name: 'Orvilo Broker',
+/**
+ * The runner presents the host-pinned route from `harness.init` upstream — the
+ * model.id on the wire is the route the run's issued binding actually granted,
+ * not a placeholder. baseUrl/api/provider stay inert: no egress exists.
+ */
+const brokerModel = (init: HarnessInitParams['model']): Model => ({
+  id: init.id,
+  name: `Orvilo Broker (${init.id})`,
   api: 'orvilo-broker',
   provider: 'orvilo-broker',
   baseUrl: 'orvilo-broker://local',
@@ -63,8 +68,8 @@ const BROKER_MODEL: Model = {
   input: ['text'],
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
   contextWindow: 128_000,
-  maxTokens: 8_192,
-};
+  maxTokens: init.maxOutputTokens,
+});
 
 /** In-memory MCP connection store — keeps the manager away from the fs. */
 const emptyConnectionStore = (): McpConnectionStoreLike => ({
@@ -100,19 +105,25 @@ const isInitParams = (params: unknown): params is HarnessInitParams =>
   params.protocolVersion === HARNESS_PROTOCOL_VERSION &&
   isNonEmptyString(params.workspace) &&
   isRecord(params.pin) &&
-  isNonEmptyString(params.pin.commit);
+  isNonEmptyString(params.pin.commit) &&
+  isRecord(params.model) &&
+  isNonEmptyString(params.model.id) &&
+  typeof params.model.maxOutputTokens === 'number' &&
+  Number.isSafeInteger(params.model.maxOutputTokens) &&
+  params.model.maxOutputTokens >= 1;
 
 const buildSession = async (init: HarnessInitParams, sessionId: string): Promise<RunnerSession> => {
   const authStorage = AuthStorage.inMemory({});
   const modelRegistry = ModelRegistry.inMemory(authStorage);
 
+  const model = brokerModel(init.model);
   const bridge = createBrokerBridge(link, sessionId);
   modelRegistry.registerProvider('orvilo-broker', {
     api: 'orvilo-broker',
     baseUrl: 'orvilo-broker://local',
     apiKey: 'embedded',
     streamSimple: bridge.streamSimple,
-    models: [BROKER_MODEL],
+    models: [model],
   });
 
   const settingsManager = SettingsManager.inMemory({ telemetry: { enabled: false } });
@@ -130,7 +141,7 @@ const buildSession = async (init: HarnessInitParams, sessionId: string): Promise
     customTools: [],
     cwd: init.workspace,
     mcpManager,
-    model: BROKER_MODEL,
+    model,
     modelRegistry,
     noTools: 'all',
     resourceLoader: new EmptyResourceLoader(),

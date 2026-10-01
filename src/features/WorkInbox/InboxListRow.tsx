@@ -137,13 +137,13 @@ const stopRowClick = (event: MouseEvent) => {
   event.stopPropagation();
 };
 
-const SNOOZE_LABEL: Record<InboxSnoozeDays, string> = {
+const SNOOZE_LABEL = {
   1: 'inbox.snoozePreset.1day',
   3: 'inbox.snoozePreset.3days',
   5: 'inbox.snoozePreset.5days',
   7: 'inbox.snoozePreset.1week',
   14: 'inbox.snoozePreset.2weeks',
-};
+} as const satisfies Record<InboxSnoozeDays, string>;
 
 const InboxListRow = memo((props: InboxListRowProps) => {
   const {

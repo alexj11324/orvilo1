@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-01T16:11:54.580Z",
+  "generatedAt": "2026-10-01T16:54:34.131Z",
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "048b495350aac0fff55f6ddc994d1fe359129853",
+  "baseSha": "ae1a30a8831d161c761ee15f8e734b92e73e8fb1",
   "counts": {
-    "sourceFiles": 13185,
+    "sourceFiles": 13193,
     "workspacePackages": 111,
     "nextRoutes": 43,
     "spaRouteEntries": 132,
@@ -13,8 +13,8 @@
     "migrationSqlFiles": 200,
     "localeFiles": 886,
     "defaultNamespaceFiles": 53,
-    "docFiles": 658,
-    "testFiles": 3527,
+    "docFiles": 660,
+    "testFiles": 3531,
     "storeFiles": 895,
     "unresolvedImports": 402
   },
@@ -1990,7 +1990,9 @@
       "docs/development/others/lighthouse.mdx",
       "docs/development/others/lighthouse.zh-CN.mdx",
       "docs/development/pr-delivery-gate.md",
+      "docs/development/prime-embedded-broker-bridge.md",
       "docs/development/prime-embedded-harness-design.md",
+      "docs/development/prime-embedded-host-integration.md",
       "docs/development/product-scope.md",
       "docs/development/provider-memory-cloud-handoff.md",
       "docs/development/provider-memory-devin-handoff.md",
@@ -2456,6 +2458,7 @@
       "apps/server/src/services/aiChat/index.ts",
       "apps/server/src/services/connector/exec.ts",
       "apps/server/src/services/connector/refresh.ts",
+      "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
       "apps/server/src/services/document/diff/json.ts",
       "apps/server/src/services/file/downloadRemoteImage.ts",
       "apps/server/src/services/file/index.ts",
@@ -2477,6 +2480,7 @@
       "apps/server/src/services/onboarding/index.test.ts",
       "apps/server/src/services/onboarding/index.ts",
       "apps/server/src/services/onboarding/nodeSchema.ts",
+      "apps/server/src/services/providerBinding/controlPlane.ts",
       "apps/server/src/services/push/PushChannel.ts",
       "apps/server/src/services/sandbox/providers/onlyboxes.ts",
       "apps/server/src/services/search/impls/jina/index.ts",
@@ -2498,6 +2502,8 @@
       "packages/agent-execution/src/controlPlane/harnessProtocol.ts",
       "packages/agent-execution/src/controlPlane/harnessTransport.ts",
       "packages/agent-execution/src/controlPlane/inferenceBroker.ts",
+      "packages/agent-execution/src/controlPlane/primeEmbeddedArtifact.ts",
+      "packages/agent-execution/src/controlPlane/primeEmbeddedRuntime.test.ts",
       "packages/agent-execution/src/controlPlane/primeEmbeddedRuntime.ts",
       "packages/agent-execution/src/controlPlane/primeRuntime.ts",
       "packages/agent-execution/src/controlPlane/primeStdioTransport.ts",
@@ -2892,6 +2898,8 @@
       "apps/server/src/services/collaboration/service.ts",
       "apps/server/src/services/collaboration/snapshot.ts",
       "apps/server/src/services/collaboration/ticket.ts",
+      "apps/server/src/services/controlPlane/embeddedBroker.test.ts",
+      "apps/server/src/services/controlPlane/embeddedBroker.ts",
       "apps/server/src/services/creds/index.ts",
       "apps/server/src/services/deviceGateway/dispatchAuthorization.ts",
       "apps/server/src/services/deviceGateway/scopedDevicePresence.ts",
@@ -2959,6 +2967,8 @@
       "apps/server/src/services/onboardingProgress/index.ts",
       "apps/server/src/services/providerBinding/controlPlane.acceptance.test.ts",
       "apps/server/src/services/providerBinding/controlPlane.ts",
+      "apps/server/src/services/providerBinding/execution.test.ts",
+      "apps/server/src/services/providerBinding/execution.ts",
       "apps/server/src/services/pullRequestReview/index.ts",
       "apps/server/src/services/resourceTransferRequest/index.ts",
       "apps/server/src/services/search/impls/anspire/index.ts",
@@ -6382,6 +6392,7 @@
       "apps/server/src/services/controlPlane/canonicalRun.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHandoff.acceptance.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.acceptance.test.ts",
+      "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
       "apps/server/src/services/creds/index.ts",
       "apps/server/src/services/deviceGateway/authorizedToolCall.test.ts",
       "apps/server/src/services/deviceGateway/authorizedToolCall.ts",
@@ -8210,13 +8221,17 @@
       "apps/server/src/services/controlPlane/canonicalSessionSnapshot.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHandoff.acceptance.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.acceptance.test.ts",
+      "apps/server/src/services/controlPlane/coreRuntimeHost.embedded.test.ts",
       "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
+      "apps/server/src/services/controlPlane/embeddedBroker.test.ts",
+      "apps/server/src/services/controlPlane/embeddedBroker.ts",
       "apps/server/src/services/controlPlane/receiptRecovery.postgres.test.ts",
       "apps/server/src/services/mcpEvents/admission.ts",
       "apps/server/src/services/mcpEvents/runtime.ts",
       "apps/server/src/services/mcpEvents/worker.ts",
       "apps/server/src/services/providerBinding/configuration.ts",
       "apps/server/src/services/providerBinding/controlPlane.ts",
+      "apps/server/src/services/providerBinding/execution.ts",
       "apps/server/src/services/queue/types.ts",
       "apps/server/src/services/toolExecution/__tests__/index.test.ts",
       "packages/achaos/runtime/src/runtime.test.ts",
@@ -12423,7 +12438,7 @@
         "apps/server/src/modules/AgentExecution/**",
         "apps/server/src/routers/lambda/{agent,aiAgent,agentSignal,agentTrace,device,deviceWorkingDirs,deviceWorkspaceGuard}.ts"
       ],
-      "fileCount": 594,
+      "fileCount": 597,
       "files": [
         "apps/server/src/modules/AgentExecution/AgentStateManager.ts",
         "apps/server/src/modules/AgentExecution/GatewayStreamNotifier.ts",
@@ -12577,6 +12592,7 @@
         "packages/agent-execution/src/controlPlane/inferenceBroker.ts",
         "packages/agent-execution/src/controlPlane/isolation.test.ts",
         "packages/agent-execution/src/controlPlane/isolation.ts",
+        "packages/agent-execution/src/controlPlane/primeEmbeddedArtifact.ts",
         "packages/agent-execution/src/controlPlane/primeEmbeddedRuntime.test.ts",
         "packages/agent-execution/src/controlPlane/primeEmbeddedRuntime.ts",
         "packages/agent-execution/src/controlPlane/primeRuntime.test.ts",
@@ -13002,6 +13018,7 @@
         "packages/prime-harness/scripts/build.mjs",
         "packages/prime-harness/scripts/smoke-host.mjs",
         "packages/prime-harness/scripts/vendor-manifest.mjs",
+        "packages/prime-harness/src/broker.test.ts",
         "packages/prime-harness/src/broker.ts",
         "packages/prime-harness/src/emptyResourceLoader.ts",
         "packages/prime-harness/src/events.test.ts",
@@ -13010,6 +13027,7 @@
         "packages/prime-harness/src/ndjson.ts",
         "packages/prime-harness/src/runner.ts",
         "packages/prime-harness/src/vendor.d.ts",
+        "packages/prime-harness/test/piAiStreamStub.ts",
         "packages/prime-harness/vitest.config.mts",
         "packages/tool-runtime/src/ComputerRuntime.ts",
         "packages/tool-runtime/src/LocalSystemExecutionRuntime.ts",
@@ -13021,8 +13039,8 @@
         "packages/tool-runtime/vitest.config.mts"
       ],
       "inbound": {
-        "total": 605,
-        "explained": 140,
+        "total": 609,
+        "explained": 142,
         "unexplained": [
           {
             "importer": "apps/server/src/services/resourceEvents/index.ts",
@@ -13406,6 +13424,24 @@
             ]
           },
           {
+            "importer": "apps/server/src/services/controlPlane/embeddedBroker.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/harnessProtocol.ts",
+              "packages/agent-execution/src/controlPlane/index.ts",
+              "packages/agent-execution/src/controlPlane/server.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/agent-execution/src/controlPlane/harnessTransport.ts",
+              "packages/agent-execution/src/controlPlane/server.ts",
+              "packages/agent-execution/src/index.ts"
+            ]
+          },
+          {
             "importer": "apps/server/src/services/mcpEvents/admission.ts",
             "disposition": "UNCOVERED",
             "targets": [
@@ -13441,11 +13477,10 @@
             ]
           },
           {
-            "importer": "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
+            "importer": "apps/server/src/services/providerBinding/execution.ts",
             "disposition": "UNCOVERED",
             "targets": [
-              "packages/agent-execution/src/controlPlane/server.ts",
-              "packages/agent-execution/src/index.ts"
+              "packages/agent-execution/src/controlPlane/index.ts"
             ]
           },
           {
@@ -23883,8 +23918,8 @@
         "packages/utils/vitest.config.mts"
       ],
       "inbound": {
-        "total": 3936,
-        "explained": 754,
+        "total": 3943,
+        "explained": 758,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -32297,7 +32332,8 @@
               "packages/database/src/models/providerBinding.ts",
               "packages/database/src/schemas/user.ts",
               "packages/database/src/type.ts",
-              "packages/types/src/index.ts"
+              "packages/types/src/index.ts",
+              "packages/utils/src/object.ts"
             ]
           },
           {
@@ -32814,6 +32850,15 @@
             "disposition": "UNCOVERED",
             "targets": [
               "packages/database/src/models/providerBinding.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/providerBinding/execution.ts",
+            "disposition": "UNCOVERED",
+            "targets": [
+              "packages/database/src/models/providerBinding.ts",
+              "packages/database/src/type.ts",
+              "packages/types/src/index.ts"
             ]
           },
           {
@@ -34404,6 +34449,14 @@
           {
             "importer": "apps/server/src/services/collaboration/snapshot.ts",
             "disposition": "KEEP",
+            "targets": [
+              "packages/database/src/type.ts",
+              "packages/types/src/index.ts"
+            ]
+          },
+          {
+            "importer": "apps/server/src/services/controlPlane/embeddedBroker.ts",
+            "disposition": "UNCOVERED",
             "targets": [
               "packages/database/src/type.ts",
               "packages/types/src/index.ts"
@@ -48230,6 +48283,13 @@
             ]
           },
           {
+            "importer": "packages/agent-execution/src/controlPlane/primeEmbeddedArtifact.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/utils/src/object.ts"
+            ]
+          },
+          {
             "importer": "packages/agent-execution/src/controlPlane/primeEmbeddedRuntime.ts",
             "disposition": "KEEP",
             "targets": [
@@ -58820,9 +58880,9 @@
       }
     }
   ],
-  "uncoveredFiles": 5091,
+  "uncoveredFiles": 5096,
   "uncoveredByArea": {
-    "apps/server/src": 875,
+    "apps/server/src": 880,
     "src/routes/(main)": 294,
     "src/features/Settings": 269,
     "apps/cli/src": 190,

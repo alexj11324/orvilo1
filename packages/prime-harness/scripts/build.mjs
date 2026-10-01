@@ -110,4 +110,25 @@ await esbuild.build({
 
 const sha = createHash('sha256').update(fs.readFileSync(outfile)).digest('hex');
 const bytes = fs.statSync(outfile).size;
+
+// The trusted artifact manifest host composition pins: runner digest + the
+// vendored upstream provenance (single source: vendor/prime/MANIFEST.json).
+// `embeddedArtifactVerifier` re-hashes the bundle and requires these fields to
+// equal PRIME_EMBEDDED_PIN before the supervisor may launch it. The image
+// recipe (../Dockerfile) stamps the same digest as a label.
+const provenance = JSON.parse(fs.readFileSync(path.join(VENDOR, 'MANIFEST.json'), 'utf8'));
+const manifest = {
+  artifact: 'runner.mjs',
+  bytes,
+  prime: {
+    commit: provenance.commit,
+    license: provenance.license,
+    version: provenance.version,
+  },
+  schemaVersion: 1,
+  sha256: sha,
+};
+const manifestFile = path.join(PKG, 'dist/runner.manifest.json');
+fs.writeFileSync(manifestFile, `${JSON.stringify(manifest, null, 2)}\n`);
 console.log(`dist/runner.mjs: ${bytes} bytes, sha256:${sha}`);
+console.log(`dist/runner.manifest.json: prime ${manifest.prime.version}@${manifest.prime.commit}`);

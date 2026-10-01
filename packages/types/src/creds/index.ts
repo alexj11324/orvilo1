@@ -50,6 +50,11 @@ export interface CredentialMetadata {
   oauthEmail?: string;
   oauthProvider?: string;
   oauthUsername?: string;
+  /**
+   * Set on credentials the provider-binding plane created for a provider —
+   * marks them safe to delete once no binding row references them anymore.
+   */
+  providerBindingProviderId?: string;
 }
 
 /**

@@ -37,6 +37,10 @@ import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { loadModels } from '@/business/client/model-bank/loadModels';
 import { getBusinessModelRuntimeHooks } from '@/business/server/model-runtime';
 import { AiProviderModel } from '@/database/models/aiProvider';
+import {
+  ProviderBindingPlane,
+  resolveBindingManagedProviderDetail,
+} from '@/database/repositories/aiInfra/providerBindings';
 import { type OrviloDatabase } from '@/database/type';
 import { getLLMConfig } from '@/envs/llm';
 import { getServerGlobalConfig } from '@/server/globalConfig';
@@ -483,11 +487,13 @@ export const initModelRuntimeFromDB = async (
   // 1. Get user's provider configuration from database
   const aiProviderModel = new AiProviderModel(db, userId, workspaceId);
 
-  // Use getAiProviderById with KeyVaultsGateKeeper.getUserKeyVaults as decryptor
-  const providerConfig = await aiProviderModel.getAiProviderById(
-    provider,
-    KeyVaultsGateKeeper.getUserKeyVaults,
-  );
+  // Every scope prefers the provider_bindings plane: providers that migrated
+  // there no longer need an ai_providers row. Bindings are a personal
+  // credential surface, so `workspaceId` only scopes the legacy fallback read.
+  const providerBindings = new ProviderBindingPlane(db, userId, { workspaceId });
+  const providerConfig =
+    (await resolveBindingManagedProviderDetail(providerBindings, provider)) ??
+    (await aiProviderModel.getAiProviderById(provider, KeyVaultsGateKeeper.getUserKeyVaults));
 
   // 2. Resolve the runtime provider for custom providers
   // For custom providers, use sdkType from settings (defaults to 'openai')
@@ -511,6 +517,7 @@ export const initModelRuntimeFromDB = async (
       db,
       keyVaults,
       providerId: provider,
+      providerBindings,
       userId,
       workspaceId,
     });

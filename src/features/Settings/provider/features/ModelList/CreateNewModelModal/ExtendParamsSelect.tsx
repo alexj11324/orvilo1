@@ -1,6 +1,6 @@
 import { Flexbox, Popover } from '@lobehub/ui';
-import { Select, Switch, Tag } from '@lobehub/ui/base-ui';
-import { Space, theme, Typography } from 'antd';
+import { Select, Switch, Tag, Text } from '@lobehub/ui/base-ui';
+import { Space, theme } from 'antd';
 import { type ExtendParamsType } from 'model-bank';
 import { memo, type ReactNode, type SyntheticEvent, useMemo } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
@@ -445,9 +445,9 @@ const PreviewContent = ({
       onPointerUpCapture={stop}
     >
       <Flexbox gap={12} style={containerStyle}>
-        <Typography.Text style={{ whiteSpace: 'normal' }} type={'secondary'}>
+        <Text style={{ whiteSpace: 'normal' }} type={'secondary'}>
           {hint}
-        </Typography.Text>
+        </Text>
         <Flexbox gap={12}>
           <Flexbox
             gap={8}
@@ -460,20 +460,20 @@ const PreviewContent = ({
             }}
           >
             <Flexbox horizontal align={'center'} gap={8}>
-              <Typography.Text strong>{label}</Typography.Text>
+              <Text strong>{label}</Text>
               {parameterTag ? <Tag color={'cyan'}>{parameterTag}</Tag> : null}
             </Flexbox>
             {desc ? (
-              <Typography.Text style={{ fontSize: 12, whiteSpace: 'normal' }} type={'secondary'}>
+              <Text style={{ fontSize: 12, whiteSpace: 'normal' }} type={'secondary'}>
                 {desc}
-              </Typography.Text>
+              </Text>
             ) : null}
             {preview ? (
               <div aria-hidden style={{ opacity: 0.72, pointerEvents: 'none', width: '100%' }}>
                 {preview}
               </div>
             ) : (
-              <Typography.Text type={'secondary'}>{previewFallback}</Typography.Text>
+              <Text type={'secondary'}>{previewFallback}</Text>
             )}
           </Flexbox>
         </Flexbox>
@@ -650,10 +650,10 @@ const ExtendParamsSelect = memo<ExtendParamsSelectProps>(({ value, onChange }) =
               }
             >
               <Flexbox gap={4}>
-                <Typography.Text>{def.label}</Typography.Text>
-                <Typography.Text style={{ fontSize: 12 }} type={'secondary'}>
+                <Text>{def.label}</Text>
+                <Text style={{ fontSize: 12 }} type={'secondary'}>
                   {def.hint}
-                </Typography.Text>
+                </Text>
               </Flexbox>
             </Popover>
           );

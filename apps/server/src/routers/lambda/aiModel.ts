@@ -16,7 +16,7 @@ import {
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AiModelModel } from '@/database/models/aiModel';
 import { UserModel } from '@/database/models/user';
-import { AiInfraRepos } from '@/database/repositories/aiInfra';
+import { AiInfraRepos, ProviderBindingPlane } from '@/database/repositories/aiInfra';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerGlobalConfig } from '@/server/globalConfig';
@@ -54,17 +54,31 @@ const aiModelProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) 
 
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
   const { aiProvider } = await getServerGlobalConfig();
+  const aiInfraRepos = new AiInfraRepos(
+    ctx.serverDB,
+    ctx.userId,
+    aiProvider as Record<string, ProviderConfig>,
+    wsId,
+  );
+
+  // Model-enable mirrors keep the provider_bindings route rows in sync for
+  // binding-managed providers (every scope — see the aiProvider router for
+  // why provider settings are a personal credential surface).
+  const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
+    decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
+    resolveEnabledModelIds: async (providerId) =>
+      (await aiInfraRepos.getEnabledModels(false))
+        .filter((model) => model.providerId === providerId && model.enabled === true)
+        .map((model) => model.id),
+    workspaceId: wsId,
+  });
 
   return opts.next({
     ctx: {
-      aiInfraRepos: new AiInfraRepos(
-        ctx.serverDB,
-        ctx.userId,
-        aiProvider as Record<string, ProviderConfig>,
-        wsId,
-      ),
+      aiInfraRepos,
       aiModelModel: new AiModelModel(ctx.serverDB, ctx.userId, wsId),
       gateKeeper,
+      providerBindings,
       userModel: new UserModel(ctx.serverDB, ctx.userId),
     },
   });
@@ -81,7 +95,13 @@ export const aiModelRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
-      return ctx.aiModelModel.batchToggleAiModels(input.id, input.models, input.enabled);
+      const result = await ctx.aiModelModel.batchToggleAiModels(
+        input.id,
+        input.models,
+        input.enabled,
+      );
+      await ctx.providerBindings?.setModelsEnabled(input.id, input.models, input.enabled);
+      return result;
     }),
   batchUpdateAiModels: aiModelProcedure
     .use(withScopedPermission('ai_model:update'))
@@ -104,14 +124,21 @@ export const aiModelRouter = router({
     .use(requireWorkspaceRoleWhenScoped('admin'))
     .input(z.object({ providerId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      return ctx.aiModelModel.clearModelsByProvider(input.providerId);
+      const result = await ctx.aiModelModel.clearModelsByProvider(input.providerId);
+      await ctx.providerBindings?.removeModelBindings(input.providerId);
+      return result;
     }),
   clearRemoteModels: aiModelProcedure
     .use(withScopedPermission('ai_model:delete'))
     .use(requireWorkspaceRoleWhenScoped('admin'))
     .input(z.object({ providerId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      return ctx.aiModelModel.clearRemoteModels(input.providerId);
+      const result = await ctx.aiModelModel.clearRemoteModels(input.providerId);
+      // Remote rows that kept a personal preference survive the clear in a
+      // demoted (disabled) shape — the plane drops route rows for anything no
+      // longer in the enabled set rather than only the hard-deleted ids.
+      await ctx.providerBindings?.syncModelBindings(input.providerId);
+      return result;
     }),
 
   createAiModel: aiModelProcedure
@@ -135,12 +162,16 @@ export const aiModelRouter = router({
           enabled: true,
           source: 'custom',
         });
+        await ctx.providerBindings?.setModelEnabled(input.providerId, input.id, true);
         return input.id;
       }
 
       try {
         const data = await ctx.aiModelModel.create(input);
 
+        if (data?.id) {
+          await ctx.providerBindings?.setModelEnabled(input.providerId, input.id, true);
+        }
         return data?.id;
       } catch (error) {
         if (isDuplicateAiModelError(error)) throwDuplicateAiModelError(input.id);
@@ -193,14 +224,18 @@ export const aiModelRouter = router({
     .use(requireWorkspaceRoleWhenScoped('admin'))
     .input(z.object({ id: z.string(), providerId: z.string() }))
     .mutation(async ({ input, ctx }) => {
-      return ctx.aiModelModel.delete(input.id, input.providerId);
+      const result = await ctx.aiModelModel.delete(input.id, input.providerId);
+      await ctx.providerBindings?.removeModelBindings(input.providerId, [input.id]);
+      return result;
     }),
 
   toggleModelEnabled: aiModelProcedure
     .use(withScopedPermission('ai_model:update'))
     .input(ToggleAiModelEnableSchema)
     .mutation(async ({ input, ctx }) => {
-      return ctx.aiModelModel.toggleModelEnabled(input);
+      const result = await ctx.aiModelModel.toggleModelEnabled(input);
+      await ctx.providerBindings?.setModelEnabled(input.providerId, input.id, input.enabled);
+      return result;
     }),
 
   updateAiModel: aiModelProcedure

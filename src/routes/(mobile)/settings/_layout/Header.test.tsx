@@ -46,11 +46,27 @@ describe('mobile settings Header', () => {
     expect(within(screen.getByRole('banner')).getByText(title)).toBeInTheDocument();
   });
 
-  it('goes back to personal settings root', () => {
-    renderHeader('general');
+  it('recognizes a query-selected workspace provider and titles it', () => {
+    render(
+      <MemoryRouter initialEntries={['/acme/settings/provider?active=provider&provider=openai']}>
+        <Header />
+      </MemoryRouter>,
+    );
+
+    expect(within(screen.getByRole('banner')).getByText('openai')).toBeInTheDocument();
+  });
+
+  it('goes back to the workspace provider list from a query-selected provider', () => {
+    render(
+      <MemoryRouter initialEntries={['/acme/settings/provider?active=provider&provider=openai']}>
+        <Header />
+      </MemoryRouter>,
+    );
 
     fireEvent.click(within(screen.getByRole('banner')).getByRole('button'));
 
-    expect(navigateMock).toHaveBeenCalledWith('/me/settings', { escape: true });
+    // Workspace-aware navigate without `escape` keeps the `/acme` prefix, so the
+    // user lands on the workspace provider list instead of personal settings.
+    expect(navigateMock).toHaveBeenCalledWith('/settings/provider');
   });
 });

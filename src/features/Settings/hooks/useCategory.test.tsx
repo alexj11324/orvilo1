@@ -22,6 +22,7 @@ vi.hoisted(() => {
 });
 
 const createWrapper = (
+  showProvider: boolean,
   extraFlags: Record<string, unknown> = {},
   serverConfig: Partial<GlobalServerConfig> = {},
 ) => {
@@ -30,7 +31,10 @@ const createWrapper = (
       createStore={() =>
         initServerConfigStore({
           featureFlags: {
-            ...mapFeatureFlagsEnvToState({}),
+            ...mapFeatureFlagsEnvToState({
+              provider_settings: true,
+            }),
+            showProvider,
             ...extraFlags,
           },
           serverConfig: { aiProvider: {}, telemetry: {}, ...serverConfig },
@@ -46,7 +50,7 @@ const createWrapper = (
 
 const getItemKeys = () => {
   const { result } = renderHook(() => useCategory(), {
-    wrapper: createWrapper(),
+    wrapper: createWrapper(true),
   });
 
   return result.current.flatMap((group) => group.items.map((item) => item.key));
@@ -65,7 +69,7 @@ describe('settings useCategory', () => {
   // it configures.
   it('leads with the account group', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(true),
     });
     const accountGroup = result.current.find((group) => group.key === SettingsGroupKey.Account);
 
@@ -81,7 +85,7 @@ describe('settings useCategory', () => {
   // used to live. Stats is usage, Storage/Devices are data.
   it('files each tab under the capability it configures', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(true),
     });
     const keysOf = (key: SettingsGroupKey) =>
       result.current.find((group) => group.key === key)?.items.map((item) => item.key);
@@ -94,11 +98,19 @@ describe('settings useCategory', () => {
     expect(keysOf(SettingsGroupKey.Tools)).toEqual([SettingsTabs.Connector, SettingsTabs.Labels]);
   });
 
-  it('lists Provider configuration but not the retired service-model tab', () => {
+  it('keeps Provider visible when provider settings are enabled', () => {
     const keys = getItemKeys();
-
     expect(keys).toContain(SettingsTabs.Provider);
-    expect(keys).not.toContain(SettingsTabs.ServiceModel);
+    expect(keys).toContain(SettingsTabs.ServiceModel);
+  });
+
+  it('hides Provider when provider settings are disabled', () => {
+    const { result } = renderHook(() => useCategory(), {
+      wrapper: createWrapper(false),
+    });
+
+    const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
+    expect(keys).not.toContain(SettingsTabs.Provider);
   });
 
   it('hides OAuth Apps by default', () => {
@@ -116,7 +128,7 @@ describe('settings useCategory', () => {
     });
 
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(true),
     });
     const toolsGroup = result.current.find((group) => group.key === SettingsGroupKey.Tools);
     const developerGroup = result.current.find((group) => group.key === SettingsGroupKey.Developer);
@@ -146,7 +158,7 @@ describe('settings useCategory', () => {
 
   it('lists the business tabs on a deployment that ships them', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper({}, { enableBusinessFeatures: true }),
+      wrapper: createWrapper(true, {}, { enableBusinessFeatures: true }),
     });
     const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
 
@@ -163,7 +175,7 @@ describe('settings useCategory', () => {
     });
 
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper({ showApiKeyManage: true }),
+      wrapper: createWrapper(true, { showApiKeyManage: true }),
     });
     const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
 

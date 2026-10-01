@@ -98,16 +98,19 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // ids stay in `SettingsTabs` because stored URLs and persisted tab state
   // still reference them, and `getSettingsCapability` must keep resolving them
   // to a safe target instead of throwing.
-  [SettingsTabs.Agent]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+  // The restored P30 provider surface revived `service-model` as a live tab,
+  // so the withdrawn agent/tts/image tabs point at it again exactly as the
+  // legacy redirect map did.
+  [SettingsTabs.Agent]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
   [SettingsTabs.ChatAppearance]: { aliasOf: SettingsTabs.Appearance, status: 'retired' },
   [SettingsTabs.Common]: { aliasOf: SettingsTabs.Appearance, status: 'retired' },
-  [SettingsTabs.Image]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+  [SettingsTabs.Image]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
   // `llm` was the old provider page and has no live equivalent at all. It used
   // to fall through to Appearance; it must not, so it deliberately names no
   // alias and answers not-found.
   [SettingsTabs.LLM]: { status: 'retired' },
-  [SettingsTabs.ServiceModel]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
-  [SettingsTabs.TTS]: { aliasOf: SettingsTabs.Profile, status: 'retired' },
+  [SettingsTabs.ServiceModel]: { status: 'enabled' },
+  [SettingsTabs.TTS]: { aliasOf: SettingsTabs.ServiceModel, status: 'retired' },
 
   // Personal configuration uses the broker; it does not revive legacy execution.
   [SettingsTabs.Provider]: { gate: ({ mobile }) => !mobile, status: 'enabled' },
@@ -138,6 +141,8 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // connections, not agent skills, so a stored `/settings/skill` is an honest
   // dead end rather than a redirect to a page that never owned this.
   [SettingsTabs.Skill]: { status: 'retired' },
+  // Messenger/IM adapters were retired as a product surface; stored links are dead ends.
+  [SettingsTabs.Messenger]: { status: 'retired' },
   [SettingsTabs.Connector]: { status: 'enabled' },
   [SettingsTabs.Labels]: { status: 'enabled' },
   // The user-built OAuth application console was retired. First-party clients
@@ -269,16 +274,14 @@ export interface WorkspaceSettingsAlias {
 
 export const WORKSPACE_SETTINGS_ALIASES: readonly WorkspaceSettingsAlias[] = [
   { alias: 'creds', target: 'credential' },
-  // `provider` and `service-model` are here because their capability *moved* —
-  // the provider surface folded into the workspace settings root, so the old
-  // URL has an honest successor to land on.
+  // `provider` and `service-model` are live workspace tabs again (restored P30
+  // provider surface), so they are registered by the leaves list, not here —
+  // an alias redirect would shadow the real pages.
   //
   // The skill marketplace and the OAuth-app console are deliberately absent:
   // nothing succeeded them. A redirect to the settings root would imply the
   // capability still exists somewhere, so their URLs stay unprefixed and answer
   // the same not-found the personal sidebar answers (see
   // `SettingsTabs.Skill` / `SettingsTabs.OAuthApps` in `SETTINGS_CAPABILITIES`).
-  { alias: 'provider', subPaths: true, target: 'root' },
-  { alias: 'service-model', target: 'root' },
   { alias: 'stats', target: 'statistics' },
 ];

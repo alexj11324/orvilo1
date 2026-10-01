@@ -1,5 +1,6 @@
 import { isDesktop, ORVILO_SKILL_PROVIDERS } from '@orvilo/const';
 import type { LucideIcon } from 'lucide-react';
+import { DEFAULT_MODEL_PROVIDER_LIST } from 'model-bank/modelProviders';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -46,7 +47,8 @@ interface IndexedEntry extends SettingsSearchResult {
   pinyinBase: string[];
 }
 
-export const getTabUrl = (tab: SettingsTabs) => `/settings/${tab}`;
+export const getTabUrl = (tab: SettingsTabs) =>
+  tab === SettingsTabs.Provider ? '/settings/provider/all' : `/settings/${tab}`;
 
 /** Split a localized comma-separated keyword string (supports CJK commas) */
 const splitKeywords = (text: string) =>
@@ -76,7 +78,7 @@ export const useSettingsSearch = (
 } => {
   const { t } = useTranslation(['setting', 'labs', 'electron', 'subscription', 'spend', 'auth']);
   const categoryGroups = useCategory();
-  const { hideDocs } = useServerConfigStore(featureFlagsSelectors);
+  const { enableSTT, hideDocs } = useServerConfigStore(featureFlagsSelectors);
   const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
   const enableGatewayMode = useServerConfigStore(serverConfigSelectors.enableGatewayMode);
   const enableComposio = useServerConfigStore(serverConfigSelectors.enableComposio);
@@ -96,6 +98,7 @@ export const useSettingsSearch = (
       enableBusinessFeatures: !!enableBusinessFeatures,
       enableComposio: !!enableComposio,
       enableGatewayMode: !!enableGatewayMode,
+      enableSTT: !!enableSTT,
       hasEmail,
       hideDocs: !!hideDocs,
       isDesktop,
@@ -194,6 +197,24 @@ export const useSettingsSearch = (
         });
       }
 
+    // Model providers rank last: builtin names/ids (e.g. "OpenAI") link straight
+    // to the provider detail page. Custom providers need an async store fetch and
+    // are intentionally not indexed.
+    const providerTab = visibleTabs.get(SettingsTabs.Provider);
+    if (providerTab)
+      for (const provider of DEFAULT_MODEL_PROVIDER_LIST) {
+        entries.push({
+          breadcrumb: `${providerTab.groupTitle} › ${providerTab.label}`,
+          haystack: [provider.name.toLowerCase(), provider.id.toLowerCase()],
+          icon: providerTab.icon,
+          key: `provider-${provider.id}`,
+          label: provider.name,
+          pinyinBase: [],
+          tab: SettingsTabs.Provider,
+          url: `/settings/provider/${provider.id}`,
+        });
+      }
+
     return entries;
   }, [
     categoryGroups,
@@ -202,6 +223,7 @@ export const useSettingsSearch = (
     enableBusinessFeatures,
     enableComposio,
     enableGatewayMode,
+    enableSTT,
     hasEmail,
     hideDocs,
     isLogin,

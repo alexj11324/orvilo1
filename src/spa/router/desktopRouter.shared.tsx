@@ -9,6 +9,7 @@ import {
   LayoutPanelTopIcon,
   LibraryBigIcon,
   Mic2,
+  Settings,
   SquarePlay,
 } from 'lucide-react';
 import {
@@ -829,12 +830,31 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
         element: redirectElement('/settings/profile'),
         index: true,
       },
+      // Provider routes with nested structure
       {
+        children: [
+          {
+            element: redirectElement('/settings/provider/all'),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderDetailPage),
+              'Desktop > Settings > Provider > Detail',
+            ),
+            handle: {
+              meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
+            },
+            path: ':providerId',
+          },
+        ],
         element: dynamicElement(
-          () => import('@/routes/(main)/settings'),
-          'Desktop > Settings > Provider Bindings',
+          () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderLayout),
+          'Desktop > Settings > Provider > Layout',
         ),
-        handle: { meta: settingsRouteMeta, settingsTab: SettingsTabs.Provider },
+        handle: {
+          meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
+        },
         path: 'provider',
       },
       {

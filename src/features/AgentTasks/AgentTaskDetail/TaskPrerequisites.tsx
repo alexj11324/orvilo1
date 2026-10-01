@@ -346,7 +346,7 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
                         <TaskStatusIcon size={16} status={toTaskStatus(edge.status)} />
                       )}
                       <span
-                        className="shrink-0 font-medium text-muted-foreground"
+                        className="shrink-0 font-mono text-muted-foreground"
                         style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
                       >
                         {edge.dependsOn}

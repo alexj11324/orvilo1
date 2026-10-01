@@ -9,7 +9,6 @@ import {
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useSearchParams } from 'react-router';
@@ -25,8 +24,6 @@ import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tabs as TabsRoot, TabsList, TabsTrigger as TabsTab } from '@/components/ui/tabs';
-import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
-import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
@@ -66,20 +63,16 @@ import {
   activityBucketTitle,
   completedWindowQueryFilter,
   filterMyWorkTaskRows,
-  isMyWorkClientGrouping,
   MY_WORK_PRIORITY_LABEL_KEYS,
   MY_WORK_ROW_PROPERTIES,
   type MyWorkDisplay,
   myWorkListGroupingOptions,
   myWorkOrderingOptions,
-  myWorkPriorityGroupRank,
   type MyWorkRowProperty,
   myWorkServerGroupBy,
-  myWorkStatusGroupRank,
+  myWorkVisibilityQueryFilter,
   normalizeMyWorkDisplay,
   sortTasksByImportance,
-  workQueryActivitySections,
-  workQueryFieldSections,
 } from './myWorkDisplay';
 import {
   EMPTY_FILTER_BUILDER,
@@ -294,34 +287,54 @@ const MyWorkPage = memo(() => {
           display.boardLane === 'none' ? undefined : display.boardLane,
         )
       : undefined;
+  const listLane =
+    layout === 'list'
+      ? normalizeWorkQuerySubGroupBy(
+          serverGroupBy,
+          display.subGrouping === 'none' ? undefined : display.subGrouping,
+        )
+      : undefined;
+  const activeLane = layout === 'board' ? boardLane : listLane;
+  const activityTimeZone =
+    serverGroupBy === 'activityDate'
+      ? Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+      : undefined;
+  const { completed, ordering, showSubIssues, showTriage } = display;
+  const visibilityFilter = useMemo(
+    () => myWorkVisibilityQueryFilter({ showSubIssues, showTriage }),
+    [showSubIssues, showTriage],
+  );
   const queryFilter = mergeWorkQueryFilters(
-    builderFilter,
-    completedWindowQueryFilter(display.completed),
+    mergeWorkQueryFilters(builderFilter, completedWindowQueryFilter(completed)),
+    visibilityFilter,
   );
   // A non-default ordering needs the generic endpoint. Filters, the completed
   // window, priority/assignee columns and swimlanes ride `myWork` so the
   // follow bells stay on the mode feed.
   const composedQuery = useMemo(
     () =>
-      display.ordering !== 'default'
+      ordering !== 'default'
         ? myWorkComposedQuery({
-            completed: display.completed,
+            completed,
             delegated,
-            filter: builderFilter,
+            filter: mergeWorkQueryFilters(builderFilter, visibilityFilter),
             groupBy: serverGroupBy,
             layout,
             mode,
             noProject,
-            ordering: display.ordering,
-            subGroupBy: boardLane,
+            ordering,
+            subGroupBy: activeLane,
+            timeZone: activityTimeZone,
           })
         : null,
     [
-      boardLane,
+      activeLane,
+      activityTimeZone,
       builderFilter,
+      completed,
       delegated,
-      display.completed,
-      display.ordering,
+      ordering,
+      visibilityFilter,
       layout,
       mode,
       noProject,
@@ -334,7 +347,7 @@ const MyWorkPage = memo(() => {
   // One feed powers both layouts: list rows and the board's external groups
   // come from the same work query, so the two never disagree. The key carries
   // the resolved grouping + composed query so option changes refetch.
-  const pageLimit = boardLane ? 10 : undefined;
+  const pageLimit = activeLane ? (layout === 'board' ? 10 : 25) : undefined;
   const swrKey = useMemo(
     () => [
       'workAttention:myWork',
@@ -344,12 +357,14 @@ const MyWorkPage = memo(() => {
       noProject,
       delegated,
       serverGroupBy,
-      boardLane ?? '',
+      activeLane ?? '',
+      activityTimeZone ?? '',
       stableStringify(queryFilter ?? null),
       composedQuery ? stableStringify(composedQuery) : '',
     ],
     [
-      boardLane,
+      activeLane,
+      activityTimeZone,
       composedQuery,
       delegated,
       layout,
@@ -374,7 +389,8 @@ const MyWorkPage = memo(() => {
           limit: pageLimit,
           mode,
           noProject,
-          subGroupBy: boardLane,
+          subGroupBy: activeLane,
+          timeZone: activityTimeZone,
         }),
   );
   const firstTasks = workQueryResponseTasks<WorkQueryResultTask>(data?.data);
@@ -398,7 +414,8 @@ const MyWorkPage = memo(() => {
     setExtraSubscribed([]);
     resetLoadMoreError();
   }, [
-    boardLane,
+    activeLane,
+    activityTimeZone,
     delegated,
     layout,
     mode,
@@ -447,10 +464,12 @@ const MyWorkPage = memo(() => {
             mode,
             noProject,
             queryHash,
-            subGroupBy: boardLane,
+            subGroupBy: activeLane,
+            timeZone: activityTimeZone,
           }),
     [
-      boardLane,
+      activeLane,
+      activityTimeZone,
       composedQuery,
       delegated,
       layout,
@@ -786,117 +805,52 @@ const MyWorkPage = memo(() => {
     return map;
   }, [members]);
 
-  // One bucketer shared by the primary field groupings and the sub-grouping
-  // menu — the work-query enum covers none of these dimensions, so they all
-  // bucket client-side over the loaded rows with the same labels/icons.
-  const fieldSections = useCallback(
-    (
-      field: 'activityDate' | 'assignee' | 'priority' | 'project' | 'status',
-      rows: WorkQueryResultTask[],
-    ): { icon?: ReactNode; key: string; tasks: WorkQueryResultTask[]; title: string }[] => {
-      if (field === 'activityDate') {
-        const labels = {
-          today: t('time.today'),
-          unknown: t('myWork.unknownDate'),
-          yesterday: t('time.yesterday'),
-        };
-        return workQueryActivitySections(rows).map((section) => ({
-          ...section,
-          title: activityBucketTitle(section.key, { labels, locale: i18n.language }),
-        }));
+  const groupTitle = useCallback(
+    (axis: string, key: string) => {
+      if (axis === 'activityDate') {
+        return activityBucketTitle(key, {
+          labels: {
+            today: t('time.today'),
+            unknown: t('myWork.unknownDate'),
+            yesterday: t('time.yesterday'),
+          },
+          locale: i18n.language,
+        });
       }
-      if (field === 'priority') {
-        return workQueryFieldSections(rows, {
-          // null and 0 are the same "No priority" bucket — matching
-          // `taskImportanceRank`, which ranks them identically.
-          keyOf: (task) => task.priority ?? 0,
-          rankOf: myWorkPriorityGroupRank,
-          titleOf: (key) =>
-            t(
-              `chat:${
-                MY_WORK_PRIORITY_LABEL_KEYS[Number(key ?? 0)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0]
-              }` as never,
-            ),
-        }).map((section) => ({
-          ...section,
-          icon: (
-            <PriorityIcon priority={section.key === 'none' ? 0 : Number(section.key)} size={14} />
-          ),
-        }));
+      if (axis === 'priority') {
+        const label =
+          MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
+        return t(`chat:${label}` as never);
       }
-      if (field === 'project') {
-        return workQueryFieldSections(rows, {
-          keyOf: (task) => task.projectId,
-          // A projectId that resolves to no known name keeps its id as the
-          // honest group label (stale link / unreadable project) instead of
-          // folding into "No project" — the row does carry a project.
-          titleOf: (key) =>
-            key === null ? t('myWork.noProject') : (projectNameById.get(key) ?? key),
-        }).map((section) => ({
-          ...section,
-          icon: createElement(PROJECT_ENTITY_ICON, {
-            className: 'size-4 shrink-0',
-            color: section.key === 'none' ? cssVar.colorTextQuaternary : undefined,
-          }),
-        }));
+      if (axis === 'project') {
+        if (key === 'none') return t('myWork.noProject');
+        return projectNameById.get(key) ?? key;
       }
-      if (field === 'assignee') {
-        return workQueryFieldSections(rows, {
-          keyOf: (task) => task.assigneeUserId,
-          titleOf: (key) =>
-            key === null ? t('chat:taskList.unassigned') : (memberNameById.get(key) ?? key),
-        }).map((section) => ({
-          ...section,
-          icon: (
-            <AssigneeUserAvatar size={18} userId={section.key === 'none' ? null : section.key} />
-          ),
-        }));
+      if (axis === 'assignee') {
+        if (key === 'none') return t('chat:taskList.unassigned');
+        return memberNameById.get(key) ?? key;
       }
-      // `status` — the kanban's `st:` visual family so sub-headers match the
-      // primary status grouping's column marks.
-      return workQueryFieldSections(rows, {
-        keyOf: (task) => task.status,
-        rankOf: myWorkStatusGroupRank,
-        titleOf: (key) => {
-          const i18nKey =
-            key === null ? undefined : (COLUMN_I18N_KEYS[`st:${key}`] ?? COLUMN_I18N_KEYS[key]);
-          return i18nKey ? t(`chat:${i18nKey}` as never) : t('myWork.noStatus');
-        },
-      }).map((section) => ({
-        ...section,
-        icon: (() => {
-          const visual =
-            COLUMN_STATUS_VISUAL[`st:${section.key}`] ?? COLUMN_STATUS_VISUAL[section.key];
-          return visual
-            ? createElement(visual.icon, { className: 'size-4 shrink-0', color: visual.color })
-            : undefined;
-        })(),
-      }));
+      return undefined;
     },
     [i18n.language, memberNameById, projectNameById, t],
   );
-
-  // Client-side list groupings — the work-query enum has no activity-date,
-  // priority, project or assignee dimension, so the page fetches the flat
-  // feed (`myWorkServerGroupBy` → 'none') and buckets the loaded page here.
-  // Arrival order inside a section is the feed's own ordering; Load-more
-  // keeps paging the flat list at the bottom.
-  const flatSections = useMemo(() => {
-    if (layout !== 'list' || !isMyWorkClientGrouping(display.grouping)) return undefined;
-    return fieldSections(display.grouping, displayTasks);
-  }, [display.grouping, displayTasks, fieldSections, layout]);
-
-  // Sub-grouping nests a second level inside each primary section — Linear's
-  // two-level headers. `none`, a board layout, a flat primary grouping, or a
-  // sub-dimension equal to the primary all keep the flat body.
-  const subSectionsFor = useCallback(
-    (sectionTasks: WorkQueryResultTask[]) => {
-      const sub = display.subGrouping;
-      if (layout !== 'list' || sub === 'none' || sub === display.grouping) return undefined;
-      const sections = fieldSections(sub, sectionTasks);
-      return sections.length > 0 ? sections : undefined;
+  const groupIcon = useCallback(
+    (axis: string, key: string) => {
+      if (axis === 'priority') {
+        return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
+      }
+      if (axis === 'project') {
+        return createElement(PROJECT_ENTITY_ICON, {
+          className: 'size-4 shrink-0',
+          color: key === 'none' ? cssVar.colorTextQuaternary : undefined,
+        });
+      }
+      if (axis === 'assignee') {
+        return <AssigneeUserAvatar size={18} userId={key === 'none' ? null : key} />;
+      }
+      return undefined;
     },
-    [display.grouping, display.subGrouping, fieldSections, layout],
+    [],
   );
 
   // Display-property toggles — the set of row chips hidden in place. Project
@@ -966,27 +920,36 @@ const MyWorkPage = memo(() => {
     [joinedTeamOptions, navigate],
   );
 
-  const createInGroup = useCallback(() => openCreateModal(), [openCreateModal]);
-
-  // Of the client-bucketed groupings only Project can preset a create-modal
-  // field — the `+` stays off the day/priority/assignee headers.
-  const createInFlatSection = useCallback(
-    (key: string) => openCreateModal({ projectId: key === 'none' ? undefined : key }),
-    [openCreateModal],
+  const createInGroup = useCallback(
+    (groupKey: string) => {
+      if (display.grouping === 'project') {
+        openCreateModal({ projectId: groupKey === 'none' ? undefined : groupKey });
+        return;
+      }
+      openCreateModal();
+    },
+    [display.grouping, openCreateModal],
   );
+  const listCreateInGroup =
+    display.grouping === 'activityDate' ||
+    display.grouping === 'priority' ||
+    display.grouping === 'assignee'
+      ? undefined
+      : createInGroup;
 
   const saveCopy = useCallback(async () => {
     if (!isMyWorkSaveableMode(mode)) return;
     const query = myWorkComposedQuery({
-      completed: display.completed,
+      completed,
       delegated,
-      filter: builderFilter,
+      filter: mergeWorkQueryFilters(builderFilter, visibilityFilter),
       groupBy: serverGroupBy,
       layout,
       mode,
       noProject,
-      ordering: display.ordering,
-      subGroupBy: boardLane,
+      ordering,
+      subGroupBy: activeLane,
+      timeZone: activityTimeZone,
     });
     if (!query) return;
     try {
@@ -1003,12 +966,14 @@ const MyWorkPage = memo(() => {
       toast.error(t('myWork.saveAsFailed'));
     }
   }, [
-    boardLane,
+    activeLane,
+    activityTimeZone,
     builderFilter,
     canBoard,
     delegated,
-    display.completed,
-    display.ordering,
+    completed,
+    ordering,
+    visibilityFilter,
     layout,
     mode,
     navigate,
@@ -1118,10 +1083,12 @@ const MyWorkPage = memo(() => {
         <WorkQueryResults
           bulkSelectedIds={bulkEnabled ? bulkSelectedIds : undefined}
           collapsedColumns={display.collapsedColumns}
+          collapsedGroups={display.collapsedGroups}
           emptyLabel={t('myWork.empty')}
           flatNested={display.showSubIssues && display.nestedSubIssues}
-          flatSections={flatSections}
           groupBy={data?.data.groupBy}
+          groupIcon={groupIcon}
+          groupTitle={groupTitle}
           groups={displayGroups}
           hiddenRowProperties={hiddenRowProperties}
           isFollowed={(taskId) => isTaskFollowed(taskId, mode, subscribedTaskIds)}
@@ -1135,8 +1102,7 @@ const MyWorkPage = memo(() => {
           peekOnSelect={peekOnSelect}
           rowExtras={rowExtras}
           selectedTaskId={selected?.identifier}
-          subGroupBy={boardLane}
-          subSectionsFor={subSectionsFor}
+          subGroupBy={activeLane}
           tasks={displayTasks}
           total={data?.data.total}
           createContext={
@@ -1146,8 +1112,8 @@ const MyWorkPage = memo(() => {
           }
           onBulkSelectTask={bulkEnabled ? handleBulkSelect : undefined}
           onCollapsedColumnsChange={(keys) => setDisplay({ collapsedColumns: keys })}
-          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
-          onCreateInGroup={createInGroup}
+          onCollapsedGroupsChange={(keys) => setDisplay({ collapsedGroups: keys })}
+          onCreateInGroup={listCreateInGroup}
           onLoadMore={groups.length === 0 ? () => runLoadMore(loadMore) : undefined}
           onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreGroup(key))}
           onMoved={() => void refresh()}

@@ -88,8 +88,10 @@ const TASK_FIELDS = new Set<WorkQueryField>([
   'hasActivity',
   'id',
   'labelId',
+  'parentTaskId',
   'priority',
   'projectId',
+  'projectMilestoneId',
   'reviewerUserId',
   'status',
   'subscribed',
@@ -253,11 +255,17 @@ const taskColumn = (field: WorkQueryField) => {
     case 'id': {
       return tasks.id;
     }
+    case 'parentTaskId': {
+      return tasks.parentTaskId;
+    }
     case 'priority': {
       return tasks.priority;
     }
     case 'projectId': {
       return tasks.projectId;
+    }
+    case 'projectMilestoneId': {
+      return tasks.projectMilestoneId;
     }
     case 'reviewerUserId': {
       return tasks.reviewerUserId;
@@ -670,6 +678,17 @@ const BOARD_GROUP_BY = new Set<WorkQueryGroupBy>([
   'workflowCategory',
 ]);
 
+const LIST_GROUP_BY = new Set<WorkQueryGroupBy>([
+  'activityDate',
+  'assignee',
+  'attention',
+  'cycle',
+  'priority',
+  'project',
+  'status',
+  'workflowCategory',
+]);
+
 export const applyWorkQueryLayout = (
   query: WorkQuery,
   layout?: WorkQueryLayout,
@@ -677,19 +696,13 @@ export const applyWorkQueryLayout = (
 ): WorkQuery => {
   const nextLayout = layout ?? query.layout ?? 'list';
   if (nextLayout !== 'board') {
-    const { subGroupBy: _lane, ...rest } = query;
     const nextGroupBy = groupBy ?? query.groupBy;
     if (nextGroupBy === 'none') {
-      return { ...rest, groupBy: 'none', layout: 'list' };
+      return { ...query, groupBy: 'none', layout: 'list', subGroupBy: undefined };
     }
-    const kept =
-      nextGroupBy === 'workflowCategory' ||
-      nextGroupBy === 'attention' ||
-      nextGroupBy === 'assignee' ||
-      nextGroupBy === 'priority'
-        ? nextGroupBy
-        : 'status';
-    return { ...rest, groupBy: kept, layout: 'list' };
+    const kept = nextGroupBy && LIST_GROUP_BY.has(nextGroupBy) ? nextGroupBy : 'status';
+    const subGroupBy = normalizeWorkQuerySubGroupBy(kept, query.subGroupBy);
+    return { ...query, groupBy: kept, layout: 'list', subGroupBy };
   }
   const nextGroupBy = groupBy ?? query.groupBy ?? 'workflowCategory';
   const boardGroupBy = BOARD_GROUP_BY.has(nextGroupBy) ? nextGroupBy : 'workflowCategory';
@@ -703,7 +716,14 @@ export const applyWorkQueryLayout = (
 };
 
 export type WorkQueryBoardDimension =
-  'assignee' | 'attention' | 'priority' | 'status' | 'workflowCategory';
+  | 'activityDate'
+  | 'assignee'
+  | 'attention'
+  | 'cycle'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 
 export const workQueryBoardGroupBy = (query: WorkQuery): WorkQueryBoardDimension | undefined => {
   if (query.layout === 'board') {
@@ -717,16 +737,22 @@ export const workQueryBoardGroupBy = (query: WorkQuery): WorkQueryBoardDimension
     }
     return 'workflowCategory';
   }
-  if (
-    query.groupBy === 'status' ||
-    query.groupBy === 'workflowCategory' ||
-    query.groupBy === 'attention' ||
-    query.groupBy === 'priority' ||
-    query.groupBy === 'assignee'
-  ) {
+  if (query.groupBy && query.groupBy !== 'none' && LIST_GROUP_BY.has(query.groupBy)) {
     return query.groupBy;
   }
   return undefined;
+};
+
+/** Reject a time zone Postgres would not accept. Missing means UTC. */
+export const assertWorkQueryTimeZone = (timeZone: string | undefined): string => {
+  const zone = timeZone?.trim() || 'UTC';
+  if (zone.length > 100) throw new WorkQueryError('INVALID_QUERY', 'Invalid time zone');
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: zone });
+  } catch {
+    throw new WorkQueryError('INVALID_QUERY', 'Invalid time zone');
+  }
+  return zone;
 };
 
 /** A canceled/completed blocked row no longer needs the blocker. */
@@ -789,10 +815,31 @@ END`;
 
 type BoardLaneAxis = 'assignee' | 'priority' | 'project' | 'status' | 'workflowCategory';
 
-const axisExpr = (axis: WorkQueryBoardDimension | BoardLaneAxis, attentionExpr: SQL): SQL => {
+/**
+ * Local-day recency buckets matching `activityBucketKey`: day:0–6, then
+ * week / month / year. `dayDiff` is the calendar-day distance in `timeZone`.
+ */
+const activityDateExpr = (activity: SQL, timeZone: string): SQL => {
+  const dayDiff = sql`((timezone(${timeZone}, now()))::date - (timezone(${timeZone}, ${activity}))::date)`;
+  return sql`CASE
+    WHEN ${activity} IS NULL THEN 'unknown'
+    WHEN GREATEST(0, ${dayDiff}) < 7 THEN 'day:' || GREATEST(0, ${dayDiff})::text
+    WHEN ${dayDiff} < 30 THEN 'week:' || (${dayDiff} / 7)::text
+    WHEN ${dayDiff} < 365 THEN 'month:' || (${dayDiff} / 30)::text
+    ELSE 'year:' || (${dayDiff} / 365)::text
+  END`;
+};
+
+const axisExpr = (
+  axis: WorkQueryBoardDimension | BoardLaneAxis,
+  ctx: { activity: SQL; attention: SQL; timeZone: string },
+): SQL => {
   switch (axis) {
+    case 'activityDate': {
+      return activityDateExpr(ctx.activity, ctx.timeZone);
+    }
     case 'attention': {
-      return attentionExpr;
+      return ctx.attention;
     }
     case 'status': {
       return sql`${tasks.status}`;
@@ -805,6 +852,9 @@ const axisExpr = (axis: WorkQueryBoardDimension | BoardLaneAxis, attentionExpr: 
     }
     case 'assignee': {
       return sql`coalesce(${tasks.assigneeUserId}, 'none')`;
+    }
+    case 'cycle': {
+      return sql`coalesce(${tasks.cycleRefId}::text, 'none')`;
     }
     case 'project': {
       return sql`coalesce(${tasks.projectId}, 'none')`;
@@ -821,10 +871,7 @@ const finiteBoardKeys = (axis: string): readonly string[] | undefined => {
   return undefined;
 };
 
-const stableBoardKeys = (
-  groupBy: WorkQueryBoardDimension,
-  lane?: BoardLaneAxis,
-): readonly string[] => {
+const stableBoardKeys = (groupBy: string, lane?: string): readonly string[] => {
   const columns = finiteBoardKeys(groupBy);
   if (!lane) return columns ?? [];
   const lanes = finiteBoardKeys(lane);
@@ -832,6 +879,29 @@ const stableBoardKeys = (
   return columns.flatMap((column) =>
     lanes.map((laneKey) => `${column}${WORK_QUERY_BOARD_KEY_SEP}${laneKey}`),
   );
+};
+
+/**
+ * Board swimlanes keep every finite cell, including empties. A list keeps
+ * finite primary columns and, when a lane is set, only the cells that have
+ * rows — plus a bare column key when a finite column has no children.
+ */
+const listGroupKeys = (
+  groupBy: string,
+  lane: string | undefined,
+  countKeys: readonly string[],
+  includeEmptyLanes: boolean,
+): string[] => {
+  if (includeEmptyLanes) return [...stableBoardKeys(groupBy, lane)];
+  if (!lane) return [...(finiteBoardKeys(groupBy) ?? [])];
+  const columns = finiteBoardKeys(groupBy);
+  if (!columns) return [];
+  const bare: string[] = [];
+  for (const column of columns) {
+    const prefix = `${column}${WORK_QUERY_BOARD_KEY_SEP}`;
+    if (!countKeys.some((key) => key.startsWith(prefix))) bare.push(column);
+  }
+  return bare;
 };
 
 /** Keyset for board-ordered groups: position asc, then createdAt/seq desc —
@@ -1179,23 +1249,23 @@ export class WorkQueryModel {
     const groupBy = workQueryBoardGroupBy(query);
 
     if (groupBy) {
-      const lane =
-        query.layout === 'board'
-          ? normalizeWorkQuerySubGroupBy(groupBy, query.subGroupBy)
-          : undefined;
+      const lane = normalizeWorkQuerySubGroupBy(groupBy, query.subGroupBy);
+      const board = query.layout === 'board';
       return this.queryTaskBoard({
         afterId: params.afterId,
         conditions,
         groupBy,
         groupKey: params.groupKey,
+        includeEmptyLanes: board,
         lane,
-        layout: query.layout === 'board' ? 'board' : 'list',
-        // Swimlanes page each cell; a full column page would over-fetch the grid.
-        limit: lane ? Math.min(limit, 10) : limit,
+        layout: board ? 'board' : 'list',
+        // Board swimlanes page 10 cards per cell. List sub-groups page 25.
+        limit: lane ? Math.min(limit, board ? 10 : 25) : limit,
         queryHash,
         requestedHash: params.queryHash,
         sort,
         sortMode: query.sortMode ?? 'manual',
+        timeZone: assertWorkQueryTimeZone(query.timeZone),
       });
     }
 
@@ -1286,6 +1356,7 @@ export class WorkQueryModel {
     conditions: SQL[];
     groupBy: WorkQueryBoardDimension;
     groupKey?: string;
+    includeEmptyLanes: boolean;
     lane?: BoardLaneAxis;
     layout: WorkQueryLayout;
     limit: number;
@@ -1293,6 +1364,7 @@ export class WorkQueryModel {
     requestedHash?: string;
     sort: WorkQuerySort[];
     sortMode: 'field' | 'manual';
+    timeZone: string;
   }) => {
     if (params.afterId && !params.groupKey) {
       throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
@@ -1310,9 +1382,14 @@ export class WorkQueryModel {
       userId: this.userId,
       workspaceId: this.workspaceId,
     });
-    const columnExpr = axisExpr(params.groupBy, attention);
+    const axisCtx = {
+      activity: sql`coalesce(${this.taskActivityAt()}, ${tasks.updatedAt})`,
+      attention,
+      timeZone: params.timeZone,
+    };
+    const columnExpr = axisExpr(params.groupBy, axisCtx);
     const dimension = params.lane
-      ? sql`${columnExpr} || E'\\x1f' || ${axisExpr(params.lane, attention)}`
+      ? sql`${columnExpr} || E'\\x1f' || ${axisExpr(params.lane, axisCtx)}`
       : columnExpr;
     const matchesKey = (key: string): SQL => sql`${dimension} = ${key}`;
     // Group over a derived `key` column: the dimension may carry params
@@ -1336,11 +1413,24 @@ export class WorkQueryModel {
     }
     const total = [...countByKey.values()].reduce((sum, count) => sum + count, 0);
 
-    const stable = stableBoardKeys(params.groupBy, params.lane);
+    const stable = listGroupKeys(
+      params.groupBy,
+      params.lane,
+      [...countByKey.keys()],
+      params.includeEmptyLanes,
+    );
     const extra = [...countByKey.keys()]
       .filter((key) => !(stable as readonly string[]).includes(key))
       .sort();
     const totalsKeys = [...stable, ...extra];
+    // A column page returns only that column. Sibling groups stay on the
+    // client; echoing them with an empty page used to flip their hasMore.
+    const pageKeys = params.groupKey
+      ? totalsKeys.filter((key) => key === params.groupKey)
+      : totalsKeys;
+    if (params.groupKey && pageKeys.length === 0) {
+      throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+    }
 
     // `manual` board ordering keeps position so a same-column drop persists
     // where the user left it; `field` orders each column by the query's own
@@ -1353,11 +1443,8 @@ export class WorkQueryModel {
         );
 
     const groups = await Promise.all(
-      totalsKeys.map(async (key) => {
+      pageKeys.map(async (key) => {
         const groupTotal = countByKey.get(key) ?? 0;
-        if (params.groupKey && key !== params.groupKey) {
-          return { hasMore: groupTotal > 0, key, tasks: [], total: groupTotal };
-        }
 
         const groupConditions: SQL[] = [...params.conditions, matchesKey(key)];
         if (params.afterId) {

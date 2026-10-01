@@ -221,8 +221,10 @@ export type WorkQueryField =
   | 'id'
   | 'labelId'
   | 'ownerUserId'
+  | 'parentTaskId'
   | 'priority'
   | 'projectId'
+  | 'projectMilestoneId'
   | 'reviewerUserId'
   | 'status'
   | 'subscribed'
@@ -268,7 +270,15 @@ export interface WorkQuerySort {
 export type WorkQueryLayout = 'board' | 'list';
 
 export type WorkQueryGroupBy =
-  'assignee' | 'attention' | 'none' | 'priority' | 'status' | 'workflowCategory';
+  | 'activityDate'
+  | 'assignee'
+  | 'attention'
+  | 'cycle'
+  | 'none'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 
 /**
  * Second board axis (swimlane). `project` is lane-only — a project column
@@ -377,8 +387,15 @@ export interface WorkQuery {
   schemaVersion: 1;
   sort?: WorkQuerySort[];
   sortMode?: WorkQuerySortMode;
-  /** Board swimlane. Ignored unless `layout` is `board`. */
+  /**
+   * Board swimlane and list sub-group. Composite keys are the column key,
+   * the unit separator, then the lane key.
+   */
   subGroupBy?: WorkQuerySubGroupBy;
+  /**
+   * IANA time zone for `activityDate` buckets. Omitted queries bucket in UTC.
+   */
+  timeZone?: string;
 }
 
 /**

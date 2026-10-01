@@ -3,8 +3,10 @@ import type {
   WorkQuery,
   WorkQueryField,
   WorkQueryFilter,
+  WorkQueryGroupBy,
   WorkQueryLayout,
   WorkQueryOp,
+  WorkQuerySubGroupBy,
   WorkQueryValue,
 } from '@orvilo/types';
 import {
@@ -76,14 +78,16 @@ export interface MyWorkComposedQueryInput {
   delegated: boolean;
   /** Extra predicates from the visual builder (mode predicate stays implicit). */
   filter?: WorkQueryFilter;
-  /** Resolved list/board grouping — `activityDate` never reaches this layer. */
-  groupBy: 'assignee' | 'attention' | 'none' | 'priority' | 'status' | 'workflowCategory';
+  /** Resolved list/board grouping, including activity date, project and cycle. */
+  groupBy: WorkQueryGroupBy;
   layout: WorkQueryLayout;
   mode: MyWorkMode;
   noProject: boolean;
   ordering: MyWorkOrdering;
-  /** Board swimlane. Applied only when `layout` is `board`. */
-  subGroupBy?: 'assignee' | 'none' | 'priority' | 'project' | 'status' | 'workflowCategory';
+  /** Board swimlane or list sub-group. */
+  subGroupBy?: WorkQuerySubGroupBy;
+  /** IANA zone for activity-date groups. */
+  timeZone?: string;
 }
 
 /**
@@ -102,17 +106,20 @@ export const myWorkComposedQuery = ({
   noProject,
   ordering,
   subGroupBy,
+  timeZone,
 }: MyWorkComposedQueryInput): WorkQuery | null => {
   if (!isMyWorkSaveableMode(mode)) return null;
   const base = myWorkSaveAsQuery(mode, layout);
   const boardGroupBy =
     layout === 'board'
-      ? groupBy === 'status' || groupBy === 'priority' || groupBy === 'assignee'
+      ? groupBy === 'status' ||
+        groupBy === 'priority' ||
+        groupBy === 'assignee' ||
+        groupBy === 'attention'
         ? groupBy
         : 'workflowCategory'
       : groupBy;
-  const lane =
-    layout === 'board' ? normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy) : undefined;
+  const lane = normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy);
   const query: WorkQuery = {
     ...base,
     filter: mergeWorkQueryFilters(
@@ -123,6 +130,7 @@ export const myWorkComposedQuery = ({
     layout,
     ...(lane ? { subGroupBy: lane } : {}),
     ...(ordering === 'default' ? {} : { sort: MY_WORK_ORDERING_SORTS[ordering] }),
+    ...(timeZone ? { timeZone } : {}),
   };
   return applyNoProjectFilter(applyDelegatedFilter(query, delegated), noProject);
 };

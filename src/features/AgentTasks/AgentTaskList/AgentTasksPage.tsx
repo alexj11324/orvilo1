@@ -29,10 +29,7 @@ import {
 import { useScheduledTaskPage } from '@/features/Automations/useScheduledTaskPage';
 import { CollaborationOverlay, CollaborationProvider } from '@/features/Collaboration';
 import { resolveMineCollectionRedirect } from '@/features/MyWork/mineCollectionRedirect';
-import {
-  workQueryResponseTasks,
-  type WorkQueryResultTask,
-} from '@/features/MyWork/workQueryPaging';
+import { workQueryBoardGroups, workQuerySourceKeysForKanbanColumn } from '@/features/MyWork/workQueryBoard';
 import NavHeader from '@/features/NavHeader';
 import IssueDetailPane from '@/features/Projects/Issues/IssueDetailPane';
 import IssueFilterChips from '@/features/Projects/Issues/IssueFilterChips';
@@ -45,6 +42,11 @@ import {
   writeProjectIssueFilters,
 } from '@/features/Projects/Issues/issueFilters';
 import ProjectIssuesControls from '@/features/Projects/Issues/ProjectIssuesControls';
+import {
+  projectIssueBoardGroupBy,
+  projectIssueWorkQuery,
+} from '@/features/Projects/Issues/projectIssueWorkQuery';
+import { useProjectIssuePages } from '@/features/Projects/Issues/useProjectIssuePages';
 import { ProjectToolbarContext } from '@/features/Projects/Layout/ProjectToolbarContext';
 import {
   filterTasksByMilestone,
@@ -54,7 +56,6 @@ import {
 } from '@/features/Projects/milestoneFilter';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
 import NewViewModal from '@/features/SavedViews/NewViewModal';
-import { stableStringify } from '@/features/SavedViews/workQueryBuilder';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -63,7 +64,6 @@ import { usePermission } from '@/hooks/usePermission';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys } from '@/libs/swr/keys';
 import { taskLabelService } from '@/services/taskLabel';
-import { workAttentionService } from '@/services/workAttention';
 import { useGlobalStore } from '@/store/global';
 import type { TaskViewMode } from '@/store/global/initialState';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -71,7 +71,6 @@ import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useTaskStore } from '@/store/task';
 import { taskListSelectors } from '@/store/task/selectors';
-import type { TaskListItem } from '@/store/task/slices/list/initialState';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
@@ -434,63 +433,6 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
     [issueLabelsData],
   );
 
-  // Applied filters run as a work query so they are not capped by the loaded
-  // store page. Milestone stays a client cut — tasks have no milestone field
-  // on the query. With no filter, `items` stays undefined and TaskList reads
-  // the store (its truncation note only makes sense unfiltered).
-  const issueQuery = useMemo(
-    () =>
-      projectId && isOrdinaryCollection && issueFilters.length > 0
-        ? {
-            entityType: 'task' as const,
-            filter: projectIssuesViewFilterSeed(projectId, issueFilters),
-            groupBy: 'none' as const,
-            layout: 'list' as const,
-            schemaVersion: 1 as const,
-          }
-        : null,
-    [isOrdinaryCollection, issueFilters, projectId],
-  );
-  const {
-    data: issueQueryTasks,
-    error: issueQueryError,
-    isLoading: issueQueryLoading,
-  } = useClientDataSWR(
-    issueQuery ? ['project-issue-query', projectId, stableStringify(issueQuery)] : null,
-    async () => {
-      const query = issueQuery!;
-      const first = await workAttentionService.query({ limit: 100, query });
-      const tasks = [...workQueryResponseTasks<WorkQueryResultTask>(first.data)];
-      const total =
-        first.data && 'total' in first.data ? (first.data.total ?? tasks.length) : tasks.length;
-      const queryHash = first.data && 'queryHash' in first.data ? first.data.queryHash : undefined;
-      while (queryHash && tasks.length < total && tasks.length < 1000) {
-        const last = tasks.at(-1);
-        if (!last) break;
-        const next = await workAttentionService.query({
-          afterId: last.id,
-          limit: 100,
-          query,
-          queryHash,
-        });
-        const incoming = workQueryResponseTasks<WorkQueryResultTask>(next.data);
-        if (incoming.length === 0) break;
-        const seen = new Set(tasks.map((task) => task.id));
-        const extra = incoming.filter((task) => !seen.has(task.id));
-        if (extra.length === 0) break;
-        tasks.push(...extra);
-      }
-      return tasks.map(
-        (task) => ({ ...task, participants: task.participants ?? [] }) as TaskListItem,
-      );
-    },
-  );
-  const filteredIssueTasks = useMemo(() => {
-    if (!issueQuery) return milestoneTasks;
-    const page = issueQueryTasks ?? [];
-    return milestoneFilterId ? filterTasksByMilestone(page, milestoneFilterId) : page;
-  }, [issueQuery, issueQueryTasks, milestoneFilterId, milestoneTasks]);
-
   /* --------------------- selection + peek ("Open details") ------------- */
 
   const [detailsOpen, setDetailsOpen] = useState(false);
@@ -529,6 +471,41 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
   });
   const rawViewOptions = useGlobalStore(systemStatusSelectors.taskListViewOptions);
   const viewOptions = useMemo(() => normalizeTaskListViewOptions(rawViewOptions), [rawViewOptions]);
+  // Filters and the milestone param page a work query (50 rows, then load
+  // more). An unfiltered list keeps the store. Milestone has no board axis,
+  // so a milestone-grouped board still uses status columns.
+  const issueQueryActive = Boolean(
+    projectId && isOrdinaryCollection && (issueFilters.length > 0 || milestoneFilterId),
+  );
+  const issueListQuery = useMemo(
+    () =>
+      issueQueryActive && ordinarySurface === 'list' && projectId
+        ? projectIssueWorkQuery({
+            filters: issueFilters,
+            layout: 'list',
+            milestoneId: milestoneFilterId,
+            projectId,
+          })
+        : null,
+    [issueFilters, issueQueryActive, milestoneFilterId, ordinarySurface, projectId],
+  );
+  const issueBoardAxis = projectIssueBoardGroupBy(viewOptions.groupBy);
+  const issueBoardQuery = useMemo(
+    () =>
+      issueQueryActive && ordinarySurface === 'board' && projectId
+        ? projectIssueWorkQuery({
+            filters: issueFilters,
+            groupBy: issueBoardAxis,
+            layout: 'board',
+            milestoneId: milestoneFilterId,
+            projectId,
+          })
+        : null,
+    [issueBoardAxis, issueFilters, issueQueryActive, milestoneFilterId, ordinarySurface, projectId],
+  );
+  const issueListPages = useProjectIssuePages(issueListQuery);
+  const issueBoardPages = useProjectIssuePages(issueBoardQuery);
+  const filteredIssueTasks = issueListQuery ? issueListPages.tasks : milestoneTasks;
   const useFetchMyTaskList = useTaskStore((s) => s.useFetchMyTaskList);
   const mineSWR = useFetchMyTaskList({
     enabled: isMineCollection && !isMineBoard,
@@ -899,6 +876,25 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                 options={viewOptions}
                 projectId={projectId}
                 routeScope={routeScope}
+                external={
+                  issueBoardQuery
+                    ? {
+                        error: issueBoardPages.error,
+                        groups: workQueryBoardGroups(issueBoardPages.groups, issueBoardAxis),
+                        isLoading: issueBoardPages.isLoading,
+                        onLoadMoreGroup: (columnKey) => {
+                          const key = workQuerySourceKeysForKanbanColumn(
+                            issueBoardAxis,
+                            columnKey,
+                          )[0];
+                          if (key) void issueBoardPages.loadMoreGroup(key);
+                        },
+                        onRefresh: () => issueBoardPages.refresh(),
+                        queryGroupBy: issueBoardAxis,
+                        settled: issueBoardPages.settled || Boolean(issueBoardPages.error),
+                      }
+                    : undefined
+                }
                 onViewAll={() =>
                   updateSystemStatus({ taskListViewMode: 'list' }, 'viewAllBoardTasks')
                 }
@@ -928,30 +924,42 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                     />
                   )}
                   <TaskList
-                    data={
-                      issueQuery
-                        ? Boolean(issueQueryTasks) || undefined
-                        : isTaskListInit || undefined
-                    }
-                    error={issueQuery ? issueQueryError : error}
+                    error={issueListQuery ? issueListPages.error : error}
                     items={filteredIssueTasks}
                     milestones={projectId ? projectMilestones : undefined}
                     options={viewOptions}
                     peekOnSelect={peekOnSelect}
                     routeScope={routeScope}
                     selectedIdentifier={selectedIdentifier ?? undefined}
+                    data={
+                      issueListQuery
+                        ? issueListPages.settled || undefined
+                        : isTaskListInit || undefined
+                    }
                     isLoading={
-                      issueQuery
-                        ? issueQueryLoading || (!issueQueryTasks && !issueQueryError)
+                      issueListQuery
+                        ? issueListPages.isLoading ||
+                          (!issueListPages.settled && !issueListPages.error)
                         : isLoading || (!isTaskListInit && !error)
                     }
-                    onRetry={() => mutate()}
+                    onRetry={() => (issueListQuery ? issueListPages.refresh() : mutate())}
                     onSelectTask={(task) => setSelectedIdentifier(task.identifier)}
                     onShowHiddenCompleted={handleShowHiddenCompleted}
                     onOpenTask={(task) =>
                       navigate(taskDetailPath(task.identifier, undefined, task.name))
                     }
                   />
+                  {issueListQuery && issueListPages.hasMore ? (
+                    <div className="flex justify-center py-2">
+                      <Button
+                        disabled={issueListPages.loadingMore}
+                        variant="outline"
+                        onClick={() => void issueListPages.loadMore()}
+                      >
+                        {t('topicComment.loadMore')}
+                      </Button>
+                    </div>
+                  ) : null}
                 </div>
               </WideScreenContainer>
               {peekOnSelect && (

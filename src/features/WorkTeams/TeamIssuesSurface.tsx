@@ -19,8 +19,6 @@ import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
   completedWindowQueryFilter,
   MY_WORK_PRIORITY_LABEL_KEYS,
-  myWorkPriorityGroupRank,
-  workQueryFieldSections,
 } from '@/features/MyWork/myWorkDisplay';
 import {
   EMPTY_FILTER_BUILDER,
@@ -61,7 +59,6 @@ import TeamIssuesControls from './TeamIssuesControls';
 import { nextTeamIssueScopeNavigation } from './teamIssueScopeNavigation';
 import {
   filterTeamIssueRows,
-  isTeamIssuesClientGrouping,
   patchTeamIssuesParams,
   readTeamIssuesUrlState,
   resetTeamIssuesDisplayParams,
@@ -69,6 +66,7 @@ import {
   teamIssuesBoardLane,
   teamIssuesServerGroupBy,
   type TeamIssuesUrlPatch,
+  teamIssuesVisibilityQueryFilter,
 } from './teamIssuesDisplay';
 import { teamSurfaceState } from './teamSurfaceState';
 import { ALL_TEAM_CYCLES, type TeamIssueScope, teamTaskQuery } from './teamWorkQuery';
@@ -235,8 +233,11 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
   // kanban refuses same-column position writes under it.
   const sortMode: WorkQuerySortMode | undefined = sort && boardActive ? 'field' : undefined;
   const queryFilter = mergeWorkQueryFilters(
-    hasCustomFilters ? builderFilter : undefined,
-    completedWindowQueryFilter(display.completed),
+    mergeWorkQueryFilters(
+      hasCustomFilters ? builderFilter : undefined,
+      completedWindowQueryFilter(display.completed),
+    ),
+    teamIssuesVisibilityQueryFilter(display),
   );
   const tasksQuery = useMemo(
     () =>
@@ -431,79 +432,47 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     return map;
   }, [members]);
 
-  // Client-side list groupings — the work-query enum has no priority, project,
-  // assignee or cycle dimension, so the surface fetches the flat feed
-  // (`teamIssuesServerGroupBy` → 'none') and buckets the loaded page here.
-  // Arrival order inside a section is the feed's own ordering; Load-more
-  // keeps paging the flat list at the bottom.
-  const flatSections = useMemo(() => {
-    if (layout !== 'list' || !isTeamIssuesClientGrouping(display.grouping)) return undefined;
-    if (display.grouping === 'priority') {
-      return workQueryFieldSections(displayTasks, {
-        // null and 0 are the same "No priority" bucket.
-        keyOf: (task) => task.priority ?? 0,
-        rankOf: myWorkPriorityGroupRank,
-        titleOf: (key) =>
-          t(
-            `chat:${
-              MY_WORK_PRIORITY_LABEL_KEYS[Number(key ?? 0)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0]
-            }` as never,
-          ),
-      }).map((section) => ({
-        ...section,
-        icon: (
-          <PriorityIcon priority={section.key === 'none' ? 0 : Number(section.key)} size={14} />
-        ),
-      }));
+  const groupTitle = useCallback(
+    (axis: string, key: string) => {
+      if (axis === 'priority') {
+        const label =
+          MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
+        return t(`chat:${label}` as never);
+      }
+      if (axis === 'project') {
+        if (key === 'none') return t('myWork.noProject');
+        return projectNameById.get(key) ?? key;
+      }
+      if (axis === 'assignee') {
+        if (key === 'none') return t('chat:taskList.unassigned');
+        return memberNameById.get(key) ?? key;
+      }
+      if (axis === 'cycle') {
+        if (key === 'none') return t('teams.noCycle');
+        return cycleNameById.get(key) ?? key;
+      }
+      return undefined;
+    },
+    [cycleNameById, memberNameById, projectNameById, t],
+  );
+  const groupIcon = useCallback((axis: string, key: string) => {
+    if (axis === 'priority') {
+      return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
     }
-    if (display.grouping === 'project') {
-      return workQueryFieldSections(displayTasks, {
-        keyOf: (task) => task.projectId,
-        // A projectId that resolves to no known name keeps its id as the
-        // honest group label instead of folding into "No project".
-        titleOf: (key) =>
-          key === null ? t('myWork.noProject') : (projectNameById.get(key) ?? key),
-      }).map((section) => ({
-        ...section,
-        icon: (
-          <PROJECT_ENTITY_ICON
-            aria-hidden
-            className="size-4 shrink-0"
-            color={section.key === 'none' ? cssVar.colorTextQuaternary : undefined}
-          />
-        ),
-      }));
+    if (axis === 'project') {
+      return (
+        <PROJECT_ENTITY_ICON
+          aria-hidden
+          className="size-4 shrink-0"
+          color={key === 'none' ? cssVar.colorTextQuaternary : undefined}
+        />
+      );
     }
-    if (display.grouping === 'assignee') {
-      return workQueryFieldSections(displayTasks, {
-        keyOf: (task) => task.assigneeUserId,
-        titleOf: (key) =>
-          key === null ? t('chat:taskList.unassigned') : (memberNameById.get(key) ?? key),
-      }).map((section) => ({
-        ...section,
-        icon: <AssigneeUserAvatar size={18} userId={section.key === 'none' ? null : section.key} />,
-      }));
+    if (axis === 'assignee') {
+      return <AssigneeUserAvatar size={18} userId={key === 'none' ? null : key} />;
     }
-    // 'cycle' — buckets follow the team's own cycle list order; a cycle the
-    // roster doesn't know and the "No cycle" bucket both trail.
-    return workQueryFieldSections(displayTasks, {
-      keyOf: (task) => task.cycleRefId,
-      rankOf: (key) =>
-        key === null
-          ? Number.MAX_SAFE_INTEGER
-          : (cycleRankById.get(key) ?? Number.MAX_SAFE_INTEGER),
-      titleOf: (key) => (key === null ? t('teams.noCycle') : (cycleNameById.get(key) ?? key)),
-    });
-  }, [
-    cycleNameById,
-    cycleRankById,
-    display.grouping,
-    displayTasks,
-    layout,
-    memberNameById,
-    projectNameById,
-    t,
-  ]);
+    return undefined;
+  }, []);
 
   const rowExtras = useCallback(
     (task: WorkQueryResultTask) => {
@@ -571,16 +540,16 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           ? { status: groupKey as TaskStatus }
           : serverGroupBy === 'workflowCategory'
             ? { workflowCategory: groupKey as TaskWorkflowCategory }
-            : undefined,
+            : serverGroupBy === 'project'
+              ? { projectId: groupKey === 'none' ? undefined : groupKey }
+              : undefined,
       ),
     [openCreateModal, serverGroupBy],
   );
-  // Of the client-bucketed groupings only Project can preset a create-modal
-  // field — the `+` stays off the other client buckets.
-  const createInFlatSection = useCallback(
-    (key: string) => openCreateModal({ projectId: key === 'none' ? undefined : key }),
-    [openCreateModal],
-  );
+  const listCreateInGroup =
+    display.grouping === 'priority' || display.grouping === 'assignee' || display.grouping === 'cycle'
+      ? undefined
+      : createInGroup;
 
   const chipsRow =
     noProject || activeFilterCount > 0 || cycleId !== ALL_TEAM_CYCLES ? (
@@ -639,10 +608,12 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
         ) : null}
         <WorkQueryResults
           collapsedColumns={display.collapsedColumns}
+          collapsedGroups={display.collapsedGroups}
           createContext={{ teamId }}
           emptyLabel={t('teams.workEmpty')}
           flatNested={display.showSubIssues && display.nestedSubIssues}
-          flatSections={flatSections}
+          groupIcon={groupIcon}
+          groupTitle={groupTitle}
           groups={displayGroups}
           hiddenRowProperties={hiddenRowProperties}
           hideEmptyColumns={!display.showEmptyColumns}
@@ -664,14 +635,22 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               ? teamTasksData.data.groupBy
               : undefined
           }
+          groupRank={
+            layout === 'list' && display.grouping === 'cycle'
+              ? (key) =>
+                  key === 'none'
+                    ? Number.MAX_SAFE_INTEGER
+                    : (cycleRankById.get(key) ?? Number.MAX_SAFE_INTEGER - 1)
+              : undefined
+          }
           total={
             teamTasksData?.data && 'total' in teamTasksData.data
               ? teamTasksData.data.total
               : undefined
           }
           onCollapsedColumnsChange={(keys) => updateParams({ collapsedColumns: keys })}
-          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
-          onCreateInGroup={createInGroup}
+          onCollapsedGroupsChange={(keys) => updateParams({ collapsedGroups: keys })}
+          onCreateInGroup={listCreateInGroup}
           onLoadMore={teamGroups.length === 0 ? () => runLoadMore(loadMore) : undefined}
           onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreGroup(key))}
           onMoved={refreshWork}

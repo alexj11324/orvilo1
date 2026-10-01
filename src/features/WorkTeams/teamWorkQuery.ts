@@ -70,7 +70,7 @@ export interface TeamTaskQueryOptions {
   sort?: WorkQuerySort[];
   /** Board ordering semantics when a field sort is applied. */
   sortMode?: WorkQuerySortMode;
-  /** Board swimlane. Ignored on the list layout. */
+  /** Board swimlane. List queries leave this unset — team issues have no list sub-group. */
   subGroupBy?: WorkQuery['subGroupBy'];
 }
 

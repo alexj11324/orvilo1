@@ -85,6 +85,19 @@ describe('myWorkComposedQuery', () => {
       subGroupBy: 'status',
     });
     expect(conflict?.subGroupBy).toBeUndefined();
+    const listed = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'activityDate',
+      layout: 'list',
+      mode: 'activity',
+      noProject: false,
+      ordering: 'default',
+      subGroupBy: 'priority',
+      timeZone: 'UTC',
+    });
+    expect(listed?.groupBy).toBe('activityDate');
+    expect(listed?.subGroupBy).toBe('priority');
+    expect(listed?.timeZone).toBe('UTC');
   });
 
   it('keeps the mode predicate and AND-merges builder predicates', () => {

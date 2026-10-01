@@ -13,11 +13,9 @@ import { TASK_STATUS_VALUES, TASK_TRIAGE_STATUS_VALUES } from '@orvilo/types';
  * repeated `?filter=` params, the same convention the projects list uses
  * (listFilters.ts), so a filtered list is shareable.
  *
- * The list itself is matched client-side over the complete `task.list` fetch —
- * the same reason `filterTasksByMilestone` is exact — so only fields the task
- * row honestly answers are interactive. `task.list` rows carry every field the
- * menu offers (including `labels` — the batched `taskLabel.listForTasks` join
- * on the list route), so no filter needs a second fetch.
+ * Applied filters and the milestone param run as a paged work query. The
+ * unfiltered list still reads the task store. Only fields the task row
+ * honestly answers are interactive.
  *
  * The project's milestones ride the separate `?projectMilestoneId=` param
  * (milestoneFilter.ts) — the menu still lists Milestones so the directory

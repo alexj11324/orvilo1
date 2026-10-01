@@ -41,6 +41,7 @@ import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { issueIdColumnStyle } from '@/features/AgentTasks/shared/issueIdColumn';
+import WorkQueryVirtualList from '@/features/MyWork/WorkQueryVirtualList';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 
 import {
@@ -49,11 +50,14 @@ import {
   type BulkSelectGesture,
 } from './bulkSelection';
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
-import { isInteractiveRowClick, type MyWorkRowProperty } from './myWorkDisplay';
+import {
+  activityBucketRank,
+  isInteractiveRowClick,
+  type MyWorkRowProperty,
+} from './myWorkDisplay';
 import {
   workQueryBoardGroups,
   workQueryListGroupBy,
-  workQueryListSections,
   workQuerySourceKeysForKanbanColumn,
 } from './workQueryBoard';
 import { applyWorkQueryStatusChoice } from './workQueryBoardMove';
@@ -134,6 +138,11 @@ interface WorkQueryResultsProps {
   /** Work-query board columns the user collapsed. Persisted by the caller. */
   collapsedColumns?: readonly string[];
   /**
+   * List groups the user collapsed. When `onCollapsedGroupsChange` is set the
+   * list is controlled; otherwise collapse lasts for the session.
+   */
+  collapsedGroups?: readonly string[];
+  /**
    * Where the board's create entry should file a new card. `teamId` files it
    * directly; `teamOptions` makes the create modal ask the one ambiguous
    * choice (a cross-team view). Neither means create stays hidden.
@@ -154,7 +163,13 @@ interface WorkQueryResultsProps {
    */
   flatSections?: { icon?: ReactNode; key: string; tasks: WorkQueryResultTask[]; title: string }[];
   groupBy?: WorkQueryGroupBy;
+  /** Optional header glyph for a server group (assignee avatar, priority icon). */
+  groupIcon?: (axis: string, key: string) => ReactNode;
+  /** Primary-group order. Activity date uses its own recency rank. */
+  groupRank?: (key: string) => number;
   groups?: WorkQueryGroupPage<WorkQueryResultTask>[];
+  /** Header label for a server group. Status and workflow fall back to their marks. */
+  groupTitle?: (axis: string, key: string) => string | undefined;
   /**
    * Display-property toggles — the set of row chips to hide. Project and
    * milestone chips are caller-supplied (`rowExtras`/`milestoneFor`), so the
@@ -200,6 +215,7 @@ interface WorkQueryResultsProps {
     orderedRowIds: string[],
   ) => void;
   onCollapsedColumnsChange?: (keys: string[]) => void;
+  onCollapsedGroupsChange?: (keys: string[]) => void;
   /**
    * Hover `+` on caller-computed (`flatSections`) headers. Only supplied when
    * the bucket key is a real create preset (e.g. a project id) — day/priority
@@ -243,7 +259,7 @@ interface WorkQueryResultsProps {
   total?: number;
 }
 
-const WorkQueryTaskRow = memo(
+export const WorkQueryTaskRow = memo(
   ({
     followed,
     depth = 0,
@@ -258,6 +274,7 @@ const WorkQueryTaskRow = memo(
     onSelectTask,
     onToggleFollow,
     peekOnSelect,
+    rangeIds,
     rowExtras,
     selected,
     task,
@@ -283,6 +300,8 @@ const WorkQueryTaskRow = memo(
     onSelectTask?: (task: WorkQueryResultTask) => void;
     onToggleFollow?: (taskId: string, followed: boolean) => void;
     peekOnSelect?: boolean;
+    /** In-memory row order for shift-range. Windowed lists pass this because off-screen rows are not in the DOM. */
+    rangeIds?: readonly string[];
     rowExtras?: (task: WorkQueryResultTask) => ReactNode;
     selected?: boolean;
     task: WorkQueryResultTask;
@@ -323,7 +342,9 @@ const WorkQueryTaskRow = memo(
           onBulkSelectTask(
             task,
             gesture,
-            gesture === 'range' && list ? bulkOrderedRowIds(list) : [task.id],
+            gesture === 'range'
+              ? [...(rangeIds ?? (list ? bulkOrderedRowIds(list) : [task.id]))]
+              : [task.id],
           );
           return;
         }
@@ -332,7 +353,7 @@ const WorkQueryTaskRow = memo(
         event.stopPropagation();
         onSelectTask(task);
       },
-      [onBulkSelectTask, onSelectTask, peekOnSelect, task],
+      [onBulkSelectTask, onSelectTask, peekOnSelect, rangeIds, task],
     );
 
     const handleDoubleClick = useCallback(
@@ -735,6 +756,10 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
   ({
     emptyLabel,
     collapsedColumns,
+    collapsedGroups,
+    groupIcon,
+    groupRank,
+    groupTitle,
     externalReviews,
     bulkSelectedIds,
     createContext,
@@ -760,6 +785,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     onLoadMoreGroup,
     onMoved,
     onCollapsedColumnsChange,
+    onCollapsedGroupsChange,
     onRetryLoadMore,
     onRetryLoadMoreGroup,
     onOpenTask,
@@ -782,21 +808,14 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const laneAxis =
       layout === 'board' ? normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy) : undefined;
     const listGroupBy = workQueryListGroupBy(groupBy);
+    const listLane =
+      layout === 'list' ? normalizeWorkQuerySubGroupBy(listGroupBy, subGroupBy) : undefined;
     const headerGroupBy =
       listGroupBy === 'status' || listGroupBy === 'workflowCategory' ? listGroupBy : 'status';
-    const fieldGroupLabel = (key: string) => {
-      if (listGroupBy !== 'priority' && listGroupBy !== 'assignee') return undefined;
-      return t(`savedViews.values.${listGroupBy}.${key}` as never, { defaultValue: key });
-    };
-    const listSections =
-      listGroupBy === 'none' ? [] : workQueryListSections(groups, tasks, listGroupBy);
-    const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup);
+    const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup && listGroupBy !== 'none');
     const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
-    // Flat lists nest children under in-list parents only when the caller opts
-    // in — Linear's "nested sub-issues: Show matching" vs "Hide" per tab.
-    const flatRows = flatNested
-      ? workQueryHierarchyRows(tasks, tasks)
-      : tasks.map((task) => ({ depth: 0, isParentContext: false, task }));
+    const nestRows =
+      Boolean(flatNested) && (listGroupBy === 'none' || listGroupBy === 'attention');
 
     // While any selection exists every row keeps its checkbox revealed —
     // Linear's signal that multi-select is armed.
@@ -901,110 +920,70 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
           style={issueIdColumnStyle(allTasks.map((task) => task.identifier))}
         >
           {reviewBlock}
-          {listGroupBy === 'none' ? (
-            /* `none` grouping stays a flat list in the query's own sort order —
-             no status headers are re-imposed. `flatSections` overlays caller-
-             computed groupings (activity day buckets) without re-bucketing. */
-            tasks.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-muted-foreground">
-                <ListTodoIcon aria-hidden className="size-8" />
-                <p>{emptyLabel}</p>
-              </div>
-            ) : flatSections && flatSections.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {flatSections.map((section) => (
-                  /* Client-bucketed sections borrow the banner header
-                   (`attention`) — the filled status pill would be wrong chrome
-                   for a field label. `+` only appears when the caller's
-                   `onCreateInFlatSection` says the key presets a real field
-                   (a day or a priority rank presets nothing). */
-                  <WorkQueryStatusGroup
-                    attention
-                    allTasks={allTasks}
-                    bulkSelectedIds={bulkSelectedIds}
-                    columnKey={section.key}
-                    groupBy={'status'}
-                    icon={section.icon}
-                    isFollowed={isFollowed}
-                    key={section.key}
-                    label={section.title}
-                    nested={flatNested}
-                    selectedTaskId={selectedTaskId}
-                    subSections={subSectionsFor?.(section.tasks)}
-                    tasks={section.tasks}
-                    total={section.tasks.length}
-                    onCreateInGroup={onCreateInFlatSection}
-                    {...rowProps}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                {flatRows.map((row) => (
-                  <WorkQueryTaskRow
-                    bulkSelected={bulkSelectedIds?.has(row.task.id)}
-                    depth={row.depth}
-                    followed={isFollowed?.(row.task.id)}
-                    groupBy={'status'}
-                    key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
-                    muted={row.isParentContext}
-                    selected={rowSelected(row.task)}
-                    task={row.task}
-                    {...rowProps}
-                  />
-                ))}
-              </div>
-            )
-          ) : listSections.length === 0 ? (
+          {flatSections && flatSections.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {flatSections.map((section) => (
+                <WorkQueryStatusGroup
+                  attention
+                  allTasks={allTasks}
+                  bulkSelectedIds={bulkSelectedIds}
+                  columnKey={section.key}
+                  groupBy={'status'}
+                  icon={section.icon}
+                  isFollowed={isFollowed}
+                  key={section.key}
+                  label={section.title}
+                  nested={flatNested}
+                  selectedTaskId={selectedTaskId}
+                  subSections={subSectionsFor?.(section.tasks)}
+                  tasks={section.tasks}
+                  total={section.tasks.length}
+                  onCreateInGroup={onCreateInFlatSection}
+                  {...rowProps}
+                />
+              ))}
+            </div>
+          ) : tasks.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-muted-foreground">
               <ListTodoIcon aria-hidden className="size-8" />
               <p>{emptyLabel}</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              {listSections.map((group) => (
-                // `nested` honours the caller's sub-issues toggle — `flatNested`
-                // === false disables attention nesting too (Linear's option is
-                // list-wide).
-                <WorkQueryStatusGroup
-                  allTasks={allTasks}
-                  bulkSelectedIds={bulkSelectedIds}
-                  columnKey={group.key}
+            <WorkQueryVirtualList
+              allTasks={allTasks}
+              collapsedGroups={collapsedGroups}
+              createLabel={t('chat:taskList.kanban.addTask')}
+              groupIcon={groupIcon}
+              groupTitle={groupTitle}
+              groups={groups}
+              laneAxis={listLane}
+              listGroupBy={listGroupBy}
+              loadMoreGroupErrors={loadMoreGroupErrors}
+              loadMoreLabel={loadMoreLabel}
+              nestRows={nestRows}
+              primaryAxis={listGroupBy}
+              rankOf={listGroupBy === 'activityDate' ? activityBucketRank : groupRank}
+              tasks={tasks}
+              renderRow={(task, item, orderedIds) => (
+                <WorkQueryTaskRow
+                  bulkSelected={bulkSelectedIds?.has(task.id)}
+                  depth={item.rowDepth}
+                  followed={isFollowed?.(task.id)}
                   groupBy={headerGroupBy}
-                  label={fieldGroupLabel(group.key)}
-                  // Attention buckets aren't a writable status dimension — a
-                  // status change inside them still writes `status` — but the
-                  // tail keys are workflow states and take that axis's marks.
-                  hasMore={pageGroupPaging ? group.hasMore : false}
-                  isFollowed={isFollowed}
-                  key={group.key}
-                  keyAxis={listGroupBy === 'attention' ? 'workflowCategory' : undefined}
-                  loadMoreError={loadMoreGroupErrors?.[group.key]}
-                  loadMoreLabel={loadMoreLabel}
-                  nested={listGroupBy === 'attention' && flatNested !== false}
-                  selectedTaskId={selectedTaskId}
-                  subSections={subSectionsFor?.(group.tasks)}
-                  tasks={group.tasks}
-                  total={group.total}
-                  attention={
-                    listGroupBy === 'priority' ||
-                    listGroupBy === 'assignee' ||
-                    (listGroupBy === 'attention' &&
-                      (group.key === 'urgent' || group.key === 'blocking'))
-                  }
-                  onCreateInGroup={onCreateInGroup}
-                  onLoadMore={
-                    pageGroupPaging && onLoadMoreGroup
-                      ? () => onLoadMoreGroup(group.key)
-                      : undefined
-                  }
-                  onRetryLoadMore={
-                    onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined
-                  }
+                  muted={item.parentContext}
+                  rangeIds={orderedIds}
+                  selected={rowSelected(task)}
+                  task={task}
                   {...rowProps}
                 />
-              ))}
-            </div>
+              )}
+              onCollapsedGroupsChange={onCollapsedGroupsChange}
+              onCreateInGroup={onCreateInGroup}
+              onRetryLoadMoreGroup={onRetryLoadMoreGroup}
+              onLoadMoreGroup={
+                pageGroupPaging && onLoadMoreGroup ? (key) => onLoadMoreGroup(key) : undefined
+              }
+            />
           )}
           {/* A failed tail page keeps the loaded rows — the retry sits under
             the list where the load-more footer lives (flat or grouped). */}

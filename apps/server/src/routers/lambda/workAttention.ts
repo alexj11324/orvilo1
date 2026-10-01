@@ -71,8 +71,10 @@ const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.strictObject({
     'id',
     'labelId',
     'ownerUserId',
+    'parentTaskId',
     'priority',
     'projectId',
+    'projectMilestoneId',
     'reviewerUserId',
     'status',
     'subscribed',
@@ -128,7 +130,17 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
   entityType: z.enum(['project', 'task']),
   filter: workQueryFilterSchema.optional(),
   groupBy: z
-    .enum(['assignee', 'attention', 'none', 'priority', 'status', 'workflowCategory'])
+    .enum([
+      'activityDate',
+      'assignee',
+      'attention',
+      'cycle',
+      'none',
+      'priority',
+      'project',
+      'status',
+      'workflowCategory',
+    ])
     .optional(),
   layout: z.enum(['board', 'list']).optional(),
   schemaVersion: z.literal(1),
@@ -162,6 +174,7 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
   subGroupBy: z
     .enum(['assignee', 'none', 'priority', 'project', 'status', 'workflowCategory'])
     .optional(),
+  timeZone: z.string().min(1).max(100).optional(),
 });
 
 const mapQueryError = (error: unknown): never => {
@@ -343,7 +356,17 @@ export const workAttentionRouter = router({
       z.object({
         afterId: z.string().min(1).optional(),
         groupBy: z
-          .enum(['assignee', 'attention', 'none', 'priority', 'status', 'workflowCategory'])
+          .enum([
+            'activityDate',
+            'assignee',
+            'attention',
+            'cycle',
+            'none',
+            'priority',
+            'project',
+            'status',
+            'workflowCategory',
+          ])
           .optional(),
         groupKey: z.string().min(1).optional(),
         layout: z.enum(['board', 'list']).optional(),
@@ -357,6 +380,7 @@ export const workAttentionRouter = router({
         subGroupBy: z
           .enum(['assignee', 'none', 'priority', 'project', 'status', 'workflowCategory'])
           .optional(),
+        timeZone: z.string().min(1).max(100).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -365,6 +389,7 @@ export const workAttentionRouter = router({
         const scoped: WorkQuery = {
           ...modeQuery,
           ...(input.subGroupBy ? { subGroupBy: input.subGroupBy } : {}),
+          ...(input.timeZone ? { timeZone: input.timeZone } : {}),
           ...(input.filter
             ? {
                 filter: {

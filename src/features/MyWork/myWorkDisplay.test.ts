@@ -2,13 +2,13 @@ import { describe, expect, it } from 'vitest';
 
 import {
   activityBucketKey,
+  activityBucketRank,
   activityBucketTitle,
   compareTasksByImportance,
   defaultMyWorkDisplay,
   filterMyWorkTaskRows,
   isCompletedWindowHidden,
   isInteractiveRowClick,
-  isMyWorkClientGrouping,
   MY_WORK_DEFAULT_ROW_PROPERTIES,
   MY_WORK_PRIORITY_LABEL_KEYS,
   MY_WORK_ROW_PROPERTIES,
@@ -83,27 +83,10 @@ describe('myWorkListGroupingOptions', () => {
   });
 });
 
-describe('isMyWorkClientGrouping', () => {
-  it('marks the client-bucketed groupings', () => {
-    for (const grouping of ['activityDate', 'assignee', 'priority', 'project'] as const) {
-      expect(isMyWorkClientGrouping(grouping)).toBe(true);
-    }
-    for (const grouping of ['attention', 'none', 'status', 'workflowCategory'] as const) {
-      expect(isMyWorkClientGrouping(grouping)).toBe(false);
-    }
-  });
-});
-
 describe('myWorkServerGroupBy', () => {
-  it('fetches a flat list when the display grouping is activityDate', () => {
-    expect(myWorkServerGroupBy({ boardGrouping: 'status', grouping: 'activityDate' }, 'list')).toBe(
-      'none',
-    );
-  });
-
-  it('fetches a flat list for the client-bucketed field groupings', () => {
-    for (const grouping of ['assignee', 'priority', 'project'] as const) {
-      expect(myWorkServerGroupBy({ boardGrouping: 'status', grouping }, 'list')).toBe('none');
+  it('sends activity date and field groupings to the server', () => {
+    for (const grouping of ['activityDate', 'assignee', 'priority', 'project'] as const) {
+      expect(myWorkServerGroupBy({ boardGrouping: 'status', grouping }, 'list')).toBe(grouping);
     }
   });
 
@@ -267,6 +250,9 @@ describe('workQueryActivitySections', () => {
     expect(title(14)).toBe('2 weeks ago');
     // Several days share one week bucket.
     expect(activityBucketKey(ago(15), now)).toBe(activityBucketKey(ago(20), now));
+    expect(activityBucketRank('day:0')).toBeLessThan(activityBucketRank('week:1'));
+    expect(activityBucketRank('week:1')).toBeLessThan(activityBucketRank('month:1'));
+    expect(activityBucketRank('unknown')).toBeGreaterThan(activityBucketRank('year:2'));
     expect(title(62)).toBe('2 months ago');
   });
 });

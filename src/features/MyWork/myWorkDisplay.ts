@@ -3,6 +3,8 @@ import {
   normalizeWorkQuerySubGroupBy,
   WORK_QUERY_STATUS_COLUMNS,
   type WorkQueryFilter,
+  type WorkQueryGroupBy,
+  type WorkQueryPredicate,
   type WorkQuerySort,
 } from '@orvilo/types';
 
@@ -13,12 +15,9 @@ import type { WorkQueryResultTask } from './workQueryPaging';
  * Display-options model for My issues (audit D2/D8–D13). Kept pure so the
  * grouping/ordering/filter decisions are testable without rendering.
  *
- * `activityDate` is a client-side presentation grouping: the work-query API
- * has no activity-date dimension (`groupBy` covers attention/status/
- * workflowCategory/none only), so the page fetches the flat activity-ordered
- * list and buckets rows by their day locally. `priority`/`project`/`assignee`
- * group the same way — real row fields the wire enum cannot express, bucketed
- * over the loaded flat page (`workQueryFieldSections`).
+ * List groupings, including activity date, project, cycle, priority and
+ * assignee, are server dimensions. The page sends them as `groupBy` and
+ * pages each group. Activity buckets use the viewer's IANA time zone.
  */
 
 export type MyWorkListGrouping =
@@ -32,9 +31,8 @@ export type MyWorkListGrouping =
   | 'workflowCategory';
 export type MyWorkBoardGrouping = 'assignee' | 'priority' | 'status' | 'workflowCategory';
 /**
- * Second-level list grouping — the row fields Linear's "Sub-grouping" menu
- * offers on My issues. Always bucketed client-side over the loaded rows, so
- * it composes with any primary grouping (`none` disables it).
+ * Second-level list grouping — Linear's "Sub-grouping". Sent as `subGroupBy`
+ * so each cell pages on the server. `none` disables it.
  */
 export type MyWorkSubGrouping = 'assignee' | 'none' | 'priority' | 'project' | 'status';
 export type MyWorkOrdering =
@@ -82,9 +80,11 @@ export interface MyWorkDisplay {
   boardLane: MyWorkSubGrouping;
   /** Board columns the user collapsed. Empty keeps every column open. */
   collapsedColumns: string[];
+  /** List groups the user collapsed. Empty keeps every group open. */
+  collapsedGroups: string[];
   /** Completed-issues window — compiled into the work query when it hides rows. */
   completed: MyWorkCompletedWindow;
-  /** List grouping; `activityDate` buckets client-side by activity day. */
+  /** List grouping. Every value is a server `groupBy`, including activity date. */
   grouping: MyWorkListGrouping;
   /**
    * Indent children under parents already in the list — Linear's "nested
@@ -118,6 +118,7 @@ export const defaultMyWorkDisplay = (mode: MyWorkMode): MyWorkDisplay => ({
   boardGrouping: 'workflowCategory',
   boardLane: 'none',
   collapsedColumns: [],
+  collapsedGroups: [],
   // Assigned defaults to "Completed issues: Past day"; the other tabs show all.
   completed: mode === 'assigned' ? 'pastDay' : 'all',
   grouping: defaultMyWorkGrouping(mode),
@@ -215,6 +216,9 @@ export const normalizeMyWorkDisplay = (
     collapsedColumns: Array.isArray(source.collapsedColumns)
       ? source.collapsedColumns.filter((key) => typeof key === 'string' && key.length > 0)
       : defaults.collapsedColumns,
+    collapsedGroups: Array.isArray(source.collapsedGroups)
+      ? source.collapsedGroups.filter((key) => typeof key === 'string' && key.length > 0)
+      : defaults.collapsedGroups,
     completed,
     grouping,
     nestedSubIssues:
@@ -293,22 +297,13 @@ export const myWorkOrderingOptions = (mode: MyWorkMode): MyWorkOrdering[] =>
     ? ['default', 'updatedDesc', 'updatedAsc', 'createdDesc', 'createdAsc']
     : ['default'];
 
-/** Groupings bucketed client-side over the flat feed — they never reach the wire. */
-export const isMyWorkClientGrouping = (
-  grouping: MyWorkListGrouping,
-): grouping is 'activityDate' | 'assignee' | 'priority' | 'project' =>
-  grouping === 'activityDate' ||
-  grouping === 'assignee' ||
-  grouping === 'priority' ||
-  grouping === 'project';
-
-/** The `groupBy` actually sent to `myWork` — client-side groupings fetch the flat list. */
+/** The `groupBy` sent on the wire. Board columns stay on `boardGrouping`. */
 export const myWorkServerGroupBy = (
   display: Pick<MyWorkDisplay, 'boardGrouping' | 'grouping'>,
   layout: 'board' | 'list',
-): 'assignee' | 'attention' | 'none' | 'priority' | 'status' | 'workflowCategory' => {
+): WorkQueryGroupBy => {
   if (layout === 'board') return display.boardGrouping;
-  return isMyWorkClientGrouping(display.grouping) ? 'none' : display.grouping;
+  return display.grouping;
 };
 
 export const MY_WORK_ORDERING_SORTS: Record<Exclude<MyWorkOrdering, 'default'>, WorkQuerySort[]> = {
@@ -389,6 +384,24 @@ export const completedWindowQueryFilter = (
 };
 
 /**
+ * Show-sub-issues and show-triage as query predicates, so the server total
+ * matches the rows the list is allowed to draw.
+ */
+export const myWorkVisibilityQueryFilter = (
+  display: Pick<MyWorkDisplay, 'showSubIssues' | 'showTriage'>,
+): WorkQueryFilter | undefined => {
+  const all: WorkQueryPredicate[] = [
+    ...(!display.showSubIssues
+      ? [{ field: 'parentTaskId' as const, op: 'isNull' as const }]
+      : []),
+    ...(!display.showTriage
+      ? [{ field: 'workflowCategory' as const, op: 'neq' as const, value: 'triage' }]
+      : []),
+  ];
+  return all.length > 0 ? { all } : undefined;
+};
+
+/**
  * Completed-issues window: 'all' keeps everything, 'pastDay' keeps the last
  * 24h. "Completed" matches the server's closed set — `completed`/`canceled`
  * statuses both count (Linear's window covers canceled work too).
@@ -449,6 +462,18 @@ type RecencyUnit = 'day' | 'month' | 'week' | 'year';
  * years — so an older feed collapses into a few headers instead of a date
  * per row. `null` input lands in `unknown`.
  */
+/** Sort key for activity headers: today first, unknown last. */
+export const activityBucketRank = (key: string): number => {
+  const [unit, raw] = key.split(':');
+  const count = Number(raw);
+  if (unit === 'unknown' || !Number.isFinite(count)) return Number.MAX_SAFE_INTEGER;
+  if (unit === 'day') return count;
+  if (unit === 'week') return count * 7;
+  if (unit === 'month') return count * 30;
+  if (unit === 'year') return count * 365;
+  return Number.MAX_SAFE_INTEGER;
+};
+
 export const activityBucketKey = (
   value: Date | number | string | null | undefined,
   now: Date = new Date(),

@@ -110,7 +110,15 @@ export const workQueryTaskColumnKey = (
  * dimension for backwards compatibility with pre-groupBy saved views.
  */
 export type WorkQueryListGroupBy =
-  'assignee' | 'attention' | 'none' | 'priority' | 'project' | 'status' | 'workflowCategory';
+  | 'activityDate'
+  | 'assignee'
+  | 'attention'
+  | 'cycle'
+  | 'none'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
 
 export const workQueryListGroupBy = (
   groupBy: WorkQueryGroupBy | undefined,
@@ -121,7 +129,10 @@ export const workQueryListGroupBy = (
     groupBy === 'status' ||
     groupBy === 'workflowCategory' ||
     groupBy === 'priority' ||
-    groupBy === 'assignee'
+    groupBy === 'assignee' ||
+    groupBy === 'project' ||
+    groupBy === 'cycle' ||
+    groupBy === 'activityDate'
   ) {
     return groupBy;
   }
@@ -164,7 +175,7 @@ export const workQueryListGroups = (
 export const workQueryListSections = (
   groups: readonly WorkQueryGroupPage<WorkQueryResultTask>[] | undefined,
   tasks: readonly WorkQueryResultTask[],
-  groupBy: 'attention' | 'assignee' | 'priority' | 'project' | WorkQueryBoardGroupBy,
+  groupBy: WorkQueryListGroupBy,
 ): {
   hasMore?: boolean;
   key: string;
@@ -183,6 +194,10 @@ export const workQueryListSections = (
   }
   // 'attention' can't be derived client-side (it reads the dependency graph),
   // so a groups-less response degrades to its tail axis — workflow state.
+  // Activity, cycle and project have no client bucket.
+  if (groupBy === 'activityDate' || groupBy === 'cycle' || groupBy === 'project' || groupBy === 'none') {
+    return [];
+  }
   return workQueryListGroups(tasks, groupBy === 'attention' ? 'workflowCategory' : groupBy);
 };
 

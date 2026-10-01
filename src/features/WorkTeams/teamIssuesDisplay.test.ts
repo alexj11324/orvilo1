@@ -5,7 +5,6 @@ import type { WorkQueryResultTask } from '@/features/MyWork/workQueryPaging';
 import {
   DEFAULT_TEAM_ISSUES_DISPLAY,
   filterTeamIssueRows,
-  isTeamIssuesClientGrouping,
   patchTeamIssuesParams,
   readTeamIssuesUrlState,
   resetTeamIssuesDisplayParams,
@@ -47,6 +46,7 @@ describe('teamIssuesDisplay URL state', () => {
       boardGrouping: 'priority',
       boardLane: 'none',
       collapsedColumns: [],
+      collapsedGroups: [],
       completed: 'pastDay',
       grouping: 'priority',
       nestedSubIssues: false,
@@ -153,6 +153,7 @@ describe('teamIssuesDisplay URL state', () => {
       'grouping',
       'ordering',
       'completed',
+      'groups',
       'subIssues',
       'nestedSub',
       'emptyColumns',
@@ -164,7 +165,7 @@ describe('teamIssuesDisplay URL state', () => {
 });
 
 describe('teamIssuesServerGroupBy', () => {
-  it('maps board to its column grouping and client list groupings to the flat feed', () => {
+  it('sends list groupings, including priority and cycle, to the server', () => {
     expect(
       teamIssuesServerGroupBy({ boardGrouping: 'status', grouping: 'priority' }, 'board'),
     ).toBe('status');
@@ -172,8 +173,9 @@ describe('teamIssuesServerGroupBy', () => {
       teamIssuesServerGroupBy({ boardGrouping: 'workflowCategory', grouping: 'status' }, 'list'),
     ).toBe('status');
     for (const grouping of ['priority', 'project', 'assignee', 'cycle'] as const) {
-      expect(isTeamIssuesClientGrouping(grouping)).toBe(true);
-      expect(teamIssuesServerGroupBy({ boardGrouping: 'status', grouping }, 'list')).toBe('none');
+      expect(teamIssuesServerGroupBy({ boardGrouping: 'status', grouping }, 'list')).toBe(
+        grouping,
+      );
     }
     expect(teamIssuesServerGroupBy({ boardGrouping: 'status', grouping: 'none' }, 'list')).toBe(
       'none',

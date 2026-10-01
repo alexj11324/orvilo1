@@ -109,7 +109,9 @@ export const spawnRunner = (options: SpawnRunnerOptions = {}): SpawnedRunner => 
   const stderrChunks: Buffer[] = [];
   const child = spawn(process.execPath, [...(options.nodeArgs ?? []), RUNNER_ARTIFACT], {
     cwd: options.cwd,
-    env: options.env ?? {},
+    // Minimal env on purpose (isolation evidence) — same cast the repo's
+    // transport tests use for ProcessEnv's required i18n debug keys.
+    env: (options.env ?? {}) as NodeJS.ProcessEnv,
     stdio: ['pipe', 'pipe', 'pipe'],
   });
   const stdin = tapWritable(child.stdin, (chunk) => {
@@ -208,7 +210,7 @@ export const realProcessSupervisor = (
       state.launches.push(input);
       const child = spawn(input.executable, [...(spec.nodeArgs ?? []), ...input.args], {
         cwd: input.workspace,
-        env: { ...input.environment, ...spec.extraEnv },
+        env: { ...input.environment, ...spec.extraEnv } as NodeJS.ProcessEnv,
         stdio: ['pipe', 'pipe', 'pipe'],
       });
       const transcript = spec.transcript;

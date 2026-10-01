@@ -147,6 +147,8 @@ export default eslint(
     ignores: [
       // dependencies
       'node_modules',
+      // vendored upstream sources — upstream's own style, not this repo's
+      'vendor',
       // ci
       'coverage',
       '.coverage',

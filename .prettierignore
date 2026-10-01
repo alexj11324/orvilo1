@@ -19,6 +19,9 @@ LICENSE
 # dependencies
 node_modules
 
+# vendored upstream sources — keep upstream bytes/formatting
+vendor
+
 # generated files (regenerate with `bun generate:openapi` in packages/openapi)
 packages/openapi/openapi.yml
 *.log

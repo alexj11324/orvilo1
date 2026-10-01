@@ -159,11 +159,11 @@
     ],
     "*.{js,jsx}": [
       "eslint --fix",
-      "stylelint --fix",
+      "stylelint --fix --allow-empty-input",
       "prettier --write"
     ],
     "*.{ts,tsx}": [
-      "stylelint --fix",
+      "stylelint --fix --allow-empty-input",
       "eslint --fix",
       "prettier --parser=typescript --write"
     ],

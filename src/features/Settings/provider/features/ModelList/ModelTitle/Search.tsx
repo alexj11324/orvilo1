@@ -1,6 +1,6 @@
 import { SearchBar } from '@lobehub/ui';
 import { useDebounce } from 'ahooks';
-import { memo, type ComponentProps, useEffect, useRef, useState } from 'react';
+import { type ComponentProps, memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 interface SearchProps {

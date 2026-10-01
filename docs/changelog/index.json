@@ -9,6 +9,11 @@
   ],
   "community": [
     {
+      "id": "2026-10-01-settings-workspace-switcher",
+      "date": "2026-10-01",
+      "versionRange": ["2.5.0"]
+    },
+    {
       "id": "2026-09-29-team-resources-and-favorites-drag",
       "date": "2026-09-29",
       "versionRange": ["2.4.1"]

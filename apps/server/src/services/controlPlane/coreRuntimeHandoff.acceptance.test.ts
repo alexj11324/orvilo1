@@ -24,7 +24,7 @@ it.skipIf(!process.env.CORE_DOCKER_IMAGE || process.env.TEST_SERVER_DB !== '1')(
   'transfers actual stopped Prime ownership once and fences old actions, receipts and stop recovery',
   async () => {
     const imageId = process.env.CORE_DOCKER_IMAGE!;
-    const dockerPath = '/usr/local/bin/docker';
+    const dockerPath = process.env.DOCKER_PATH ?? 'docker';
     const [image] = JSON.parse((await command(dockerPath, ['image', 'inspect', imageId])).stdout);
     expect(image.Id).toBe(imageId);
     expect(image.Config.Labels['orvilo.prime.commit']).toBe(PRIME_RUNTIME_PIN.commit);

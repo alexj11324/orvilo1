@@ -93,29 +93,48 @@ const TaskProperties = memo(() => {
   )?.name;
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
-  const WorkflowGlyph =
-    statusRow.kind === 'workflow' ? WORKFLOW_CATEGORY_VISUALS[statusRow.category].icon : null;
+  const workflowMark =
+    statusRow.kind === 'workflow'
+      ? {
+          category: statusRow.category,
+          color: WORKFLOW_CATEGORY_VISUALS[statusRow.category].color,
+          Icon: WORKFLOW_CATEGORY_VISUALS[statusRow.category].icon,
+        }
+      : null;
+  const WorkflowIcon = workflowMark?.Icon;
 
   const statusChip = (
     <div
       className={`flex cursor-pointer items-center gap-2 ${styles.propertyItem}`}
-      data-task-workflow-state={statusRow.kind === 'workflow' ? statusRow.category : undefined}
+      data-task-workflow-state={workflowMark?.category}
     >
-      {WorkflowGlyph ? (
-        <WorkflowGlyph
-          size={16}
-          color={
-            statusRow.kind === 'workflow'
-              ? WORKFLOW_CATEGORY_VISUALS[statusRow.category].color
-              : undefined
-          }
-        />
+      {WorkflowIcon && workflowMark ? (
+        status ? (
+          // The chip itself is the status menu trigger. Wrapping the whole
+          // chip in a tooltip swallows the trigger props, so the menu never
+          // opens. The execution-status hint stays on the glyph only.
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <span className="inline-flex">
+                  <WorkflowIcon color={workflowMark.color} size={16} />
+                </span>
+              }
+            />
+            <TooltipContent>
+              {`${t('taskDetail.executionStatus')} · ${t(`taskDetail.status.${status}` as never)}`}
+            </TooltipContent>
+          </Tooltip>
+        ) : (
+          <WorkflowIcon color={workflowMark.color} size={16} />
+        )
       ) : (
         <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
       )}
       <div className="font-medium" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
-        {statusRow.kind === 'workflow'
-          ? (workflowStateName ?? t(`taskDetail.workflow.category.${statusRow.category}` as never))
+        {workflowMark
+          ? (workflowStateName ??
+            t(`taskDetail.workflow.category.${workflowMark.category}` as never))
           : t(`taskDetail.${statusMeta.labelKey}` as never)}
       </div>
     </div>
@@ -130,9 +149,8 @@ const TaskProperties = memo(() => {
       <div className={styles.properties}>
         {/* One Status row — the workflow state when the task has one, else
             its execution status — over one picker: the Kanban board's own
-            columns, order and glyphs, triage included. The Tooltip mounts
-            only when it has a title — lobehub returns the bare child when it
-            doesn't, which would swallow the props Menu.Trigger clones on. */}
+            columns, order and glyphs, triage included. The chip stays the
+            menu trigger; the execution-status tooltip sits on the glyph. */}
         <TaskStatusTag
           status={status}
           taskIdentifier={taskId}
@@ -141,16 +159,7 @@ const TaskProperties = memo(() => {
           workflowStateId={workflowStateId}
           workflowStateRefId={workflowStateRefId}
         >
-          {statusRow.kind === 'workflow' && status ? (
-            <Tooltip>
-              <TooltipTrigger render={statusChip} />
-              <TooltipContent>
-                {`${t('taskDetail.executionStatus')} · ${t(`taskDetail.status.${status}` as never)}`}
-              </TooltipContent>
-            </Tooltip>
-          ) : (
-            statusChip
-          )}
+          {statusChip}
         </TaskStatusTag>
 
         <TaskPriorityTag priority={priority} taskIdentifier={taskId}>

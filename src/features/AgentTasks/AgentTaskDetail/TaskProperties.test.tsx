@@ -125,4 +125,23 @@ describe('TaskProperties', () => {
       'taskList.kanban.canceled',
     ]);
   });
+
+  it('opens the status menu from a workflow-linked status chip', async () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.workflowCategory = 'backlog';
+    detail.workflowStateId = 'state-backlog';
+
+    render(<TaskProperties />);
+
+    fireEvent.click(screen.getByText('taskDetail.workflow.category.backlog'));
+
+    await waitFor(() => {
+      expect(screen.getByText('taskList.kanban.running')).toBeTruthy();
+    });
+
+    delete detail.workflowCategory;
+    delete detail.workflowStateId;
+  });
 });

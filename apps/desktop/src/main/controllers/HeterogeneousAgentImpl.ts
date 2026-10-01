@@ -13,6 +13,7 @@ import type {
   HeterogeneousCliAgentType,
 } from '@orvilo/electron-client-ipc';
 import { HeterogeneousAgentSessionErrorCode } from '@orvilo/electron-client-ipc/types/heterogeneous-agent';
+import type { HeterogeneousProviderBindingReference } from '@orvilo/heterogeneous-agents';
 import {
   buildHeterogeneousAgentAuthRequiredError,
   buildHeterogeneousAgentCliNotFoundError,
@@ -211,11 +212,19 @@ interface StartSessionParams {
    * its ACP transport (`claude-agent-acp` / `codex-acp`).
    */
   orviloEngine?: OrviloEngineKind;
+  /**
+   * BYOK provider binding for api-mode heterogeneous runs. The current driver
+   * pipeline does not consume it; it rides along so the renderer can pass the
+   * resolved binding without a second IPC contract.
+   */
+  providerBinding?: HeterogeneousProviderBindingReference;
   /** Session ID to resume (for multi-turn) */
   resumeSessionId?: string;
 }
 
 export interface StartSessionResult {
+  /** Binding key of the provider binding the session started under, if any. */
+  providerBindingKey?: string;
   sessionId: string;
 }
 

@@ -28,6 +28,7 @@ import {
   MY_WORK_BOARD_GROUPING_OPTIONS,
   MY_WORK_ROW_PROPERTIES,
   type MyWorkBoardGrouping,
+  myWorkBoardSubGroupingOptions,
   type MyWorkCompletedWindow,
   type MyWorkDisplay,
   type MyWorkListGrouping,
@@ -244,8 +245,18 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                         value,
                       }))}
                       onValueChange={(next) => {
-                        if (next === 'status' || next === 'workflowCategory') {
-                          onDisplayChange({ boardGrouping: next });
+                        if (
+                          (MY_WORK_BOARD_GROUPING_OPTIONS as readonly string[]).includes(
+                            next as string,
+                          )
+                        ) {
+                          const grouping = next as MyWorkBoardGrouping;
+                          const lane = myWorkBoardSubGroupingOptions(grouping).includes(
+                            display.boardLane,
+                          )
+                            ? display.boardLane
+                            : 'none';
+                          onDisplayChange({ boardGrouping: grouping, boardLane: lane });
                         }
                       }}
                     >
@@ -294,7 +305,42 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                     </Select>
                   )}
                 </OptionRow>
-                {layout === 'list' ? (
+                {layout === 'board' ? (
+                  <OptionRow label={t('myWork.subGrouping')}>
+                    <Select
+                      value={display.boardLane}
+                      items={myWorkBoardSubGroupingOptions(boardGrouping).map((value) => ({
+                        label: groupingLabel(value),
+                        value,
+                      }))}
+                      onValueChange={(next) => {
+                        if (
+                          myWorkBoardSubGroupingOptions(boardGrouping).includes(
+                            next as MyWorkSubGrouping,
+                          )
+                        ) {
+                          onDisplayChange({ boardLane: next as MyWorkSubGrouping });
+                        }
+                      }}
+                    >
+                      <SelectTrigger aria-label={t('myWork.subGrouping')} className="w-full">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {myWorkBoardSubGroupingOptions(boardGrouping)
+                          .map((value) => ({
+                            label: groupingLabel(value),
+                            value,
+                          }))
+                          .map((option) => (
+                            <SelectItem key={option.value} value={option.value}>
+                              {option.label}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                  </OptionRow>
+                ) : (
                   <OptionRow label={t('myWork.subGrouping')}>
                     <Select
                       disabled={display.grouping === 'none'}
@@ -330,7 +376,7 @@ const MyWorkControls = memo<MyWorkControlsProps>(
                       </SelectContent>
                     </Select>
                   </OptionRow>
-                ) : null}
+                )}
                 {orderingOptions.length > 1 ? (
                   <OptionRow label={t('savedViews.ordering')}>
                     <Select

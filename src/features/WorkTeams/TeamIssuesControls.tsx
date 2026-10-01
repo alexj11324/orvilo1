@@ -23,6 +23,7 @@ import WorkQueryFilterBuilder from '@/features/SavedViews/WorkQueryFilterBuilder
 
 import type {
   TeamIssuesBoardGrouping,
+  TeamIssuesBoardLane,
   TeamIssuesCompletedWindow,
   TeamIssuesDisplay,
   TeamIssuesListGrouping,
@@ -30,9 +31,11 @@ import type {
 } from './teamIssuesDisplay';
 import {
   TEAM_ISSUES_BOARD_GROUPINGS,
+  TEAM_ISSUES_BOARD_LANES,
   TEAM_ISSUES_COMPLETED_WINDOWS,
   TEAM_ISSUES_LIST_GROUPINGS,
   TEAM_ISSUES_ORDERINGS,
+  teamIssuesBoardLane,
 } from './teamIssuesDisplay';
 import { ALL_TEAM_CYCLES } from './teamWorkQuery';
 
@@ -148,6 +151,13 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
       { label: t('teams.layoutBoard'), value: 'board' },
     ];
     const groupingItems = groupingOptions.map((value) => ({
+      label: groupingLabel(value),
+      value,
+    }));
+    const laneOptions = TEAM_ISSUES_BOARD_LANES.filter(
+      (lane) => lane === 'none' || teamIssuesBoardLane(display.boardGrouping, lane) === lane,
+    );
+    const laneItems = laneOptions.map((value) => ({
       label: groupingLabel(value),
       value,
     }));
@@ -270,7 +280,11 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                       if (
                         (TEAM_ISSUES_BOARD_GROUPINGS as readonly string[]).includes(next as string)
                       ) {
-                        onDisplayChange({ boardGrouping: next as TeamIssuesBoardGrouping });
+                        const boardGrouping = next as TeamIssuesBoardGrouping;
+                        onDisplayChange({
+                          boardGrouping,
+                          boardLane: teamIssuesBoardLane(boardGrouping, display.boardLane),
+                        });
                       }
                     } else if (
                       (TEAM_ISSUES_LIST_GROUPINGS as readonly string[]).includes(next as string)
@@ -291,6 +305,30 @@ const TeamIssuesControls = memo<TeamIssuesControlsProps>(
                   </SelectContent>
                 </Select>
               </OptionRow>
+              {layout === 'board' ? (
+                <OptionRow label={t('myWork.subGrouping')}>
+                  <Select
+                    items={laneItems}
+                    value={teamIssuesBoardLane(display.boardGrouping, display.boardLane)}
+                    onValueChange={(next) => {
+                      if ((TEAM_ISSUES_BOARD_LANES as readonly string[]).includes(next as string)) {
+                        onDisplayChange({ boardLane: next as TeamIssuesBoardLane });
+                      }
+                    }}
+                  >
+                    <SelectTrigger aria-label={t('myWork.subGrouping')} style={{ minWidth: 150 }}>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {laneItems.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>
+                          {option.label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </OptionRow>
+              ) : null}
               <OptionRow label={t('savedViews.ordering')}>
                 <Select
                   items={orderingItems}

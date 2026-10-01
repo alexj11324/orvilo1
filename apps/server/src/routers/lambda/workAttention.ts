@@ -12,7 +12,11 @@ import {
   WORK_SEARCH_MAX_PER_TYPE,
   WORKFLOW_STATE_REQUIRED,
   type WorkQuery,
+  type WorkQueryEntityType,
+  type WorkQueryField,
+  workQueryFieldSpec,
   type WorkQueryFilter,
+  type WorkQueryOp,
   type WorkQueryPredicate,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -126,6 +130,56 @@ const workQueryNodeSchema: z.ZodType<WorkQueryFilter | WorkQueryPredicate> = z.l
   z.union([workQueryPredicateSchema, workQueryFilterSchema]),
 );
 
+const COLUMN_OPS = ['eq', 'in', 'isNotNull', 'isNull', 'neq', 'notIn'] as const satisfies readonly WorkQueryOp[];
+const DATE_OPS = ['between', 'gte', 'isNotNull', 'isNull', 'lt'] as const satisfies readonly WorkQueryOp[];
+
+/** Fields the compiler accepts that the visual builder does not offer. */
+const COMPILER_FIELD_OPS: Record<
+  WorkQueryEntityType,
+  Partial<Record<WorkQueryField, readonly WorkQueryOp[]>>
+> = {
+  project: { id: COLUMN_OPS },
+  task: {
+    closedAt: DATE_OPS,
+    delegatedByUserId: ['eq'],
+    id: COLUMN_OPS,
+    parentTaskId: COLUMN_OPS,
+    projectMilestoneId: COLUMN_OPS,
+  },
+};
+
+const opsForField = (
+  entityType: WorkQueryEntityType,
+  field: WorkQueryField,
+): readonly WorkQueryOp[] | undefined =>
+  workQueryFieldSpec(entityType, field)?.ops ?? COMPILER_FIELD_OPS[entityType][field];
+
+const rejectIllegalOps = (
+  node: WorkQueryFilter | WorkQueryPredicate | undefined,
+  entityType: WorkQueryEntityType,
+  ctx: z.RefinementCtx,
+  path: Array<number | string>,
+) => {
+  if (!node) return;
+  if ('field' in node) {
+    const ops = opsForField(entityType, node.field);
+    if (ops && !(ops as readonly string[]).includes(node.op)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${node.field} does not support ${node.op}`,
+        path: [...path, 'op'],
+      });
+    }
+    return;
+  }
+  node.all?.forEach((child, index) =>
+    rejectIllegalOps(child, entityType, ctx, [...path, 'all', index]),
+  );
+  node.any?.forEach((child, index) =>
+    rejectIllegalOps(child, entityType, ctx, [...path, 'any', index]),
+  );
+};
+
 export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
   entityType: z.enum(['project', 'task']),
   filter: workQueryFilterSchema.optional(),
@@ -175,6 +229,8 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
     .enum(['assignee', 'none', 'priority', 'project', 'status', 'workflowCategory'])
     .optional(),
   timeZone: z.string().min(1).max(100).optional(),
+}).superRefine((query, ctx) => {
+  rejectIllegalOps(query.filter, query.entityType, ctx, ['filter']);
 });
 
 const mapQueryError = (error: unknown): never => {

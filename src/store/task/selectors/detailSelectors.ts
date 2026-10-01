@@ -140,7 +140,7 @@ const taskTopicCount = (s: TaskStoreState, taskId?: string) =>
 
 const isTaskBlocked = (s: TaskStoreState, taskId?: string): boolean =>
   taskDetail(s, taskId)?.dependencies?.some(
-    (dep) => dep.type === 'blocks' && dep.status !== 'completed',
+    (dep) => dep.type === 'blocks' && dep.direction !== 'blocking' && dep.status !== 'completed',
   ) ?? false;
 
 const canRunTask = (s: TaskStoreState, taskId?: string): boolean => {

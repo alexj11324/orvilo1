@@ -88,8 +88,9 @@ vi.mock('../shared/useUserDisplayMeta', () => ({
   useUserDisplayMeta: () => undefined,
 }));
 
-vi.mock('./TaskAcceptanceStateRow', () => ({
-  default: () => <div>acceptance</div>,
+vi.mock('./TaskPrerequisites', () => ({
+  default: () => <div>relations</div>,
+  TaskBlockedNotice: () => null,
 }));
 
 vi.mock('./TaskScheduleConfig', () => ({
@@ -128,5 +129,41 @@ describe('TaskProperties', () => {
       'taskList.kanban.done',
       'taskList.kanban.canceled',
     ]);
+  });
+
+  it('opens the status menu from a workflow-linked status chip', async () => {
+    const detail = (mocks.taskState.taskDetailMap as Record<string, Record<string, unknown>>)[
+      'T-1'
+    ];
+    detail.workflowCategory = 'backlog';
+    detail.workflowStateId = 'state-backlog';
+
+    render(<TaskProperties />);
+
+    fireEvent.click(screen.getByText('taskDetail.workflow.category.backlog'));
+
+    await waitFor(() => {
+      expect(screen.getByText('taskList.kanban.running')).toBeTruthy();
+    });
+
+    delete detail.workflowCategory;
+    delete detail.workflowStateId;
+  });
+
+  it('renders a Plane label beside each property value', () => {
+    render(<TaskProperties />);
+
+    expect(screen.getByText('taskDetail.property.state')).toBeTruthy();
+    expect(screen.getByText('taskDetail.status.backlog')).toBeTruthy();
+    expect(screen.getByText('taskDetail.assignee')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.addAssignee')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.priority')).toBeTruthy();
+    expect(screen.getByText('priority')).toBeTruthy();
+    expect(screen.getByText('taskDetail.dueDate')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.addDueDate')).toBeTruthy();
+    expect(screen.getByText('taskDetail.labels.title')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.addLabels')).toBeTruthy();
+    expect(screen.getByText('taskDetail.property.schedule')).toBeTruthy();
+    expect(screen.queryByText('taskDetail.property.addReviewer')).toBeNull();
   });
 });

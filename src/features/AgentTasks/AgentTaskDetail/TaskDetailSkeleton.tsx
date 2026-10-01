@@ -37,7 +37,7 @@ const TaskDetailBodySkeleton = () => (
     <div className={layout.header}>
       <div className={`flex flex-col gap-3 ${layout.main}`}>
         <div style={{ paddingBottom: 5, paddingTop: 5 }}>
-          <SkeletonBar height={24} width={'min(520px, 56%)'} />
+          <SkeletonBar height={20} width={'min(520px, 56%)'} />
         </div>
         <div className="flex gap-2 flex-wrap">
           <div className={`flex items-center gap-2 ${styles.control}`} style={{ width: 76 }}>
@@ -57,9 +57,14 @@ const TaskDetailBodySkeleton = () => (
       <div className={layout.side}>
         <div className={layout.properties}>
           {Array.from({ length: 3 }).map((_, index) => (
-            <div className={`flex items-center gap-2 ${layout.propertyItem}`} key={index}>
-              <SkeletonBar height={16} radius={4} width={16} />
-              <SkeletonBar height={14} width={index === 1 ? 80 : 68} />
+            <div className={layout.propertyRow} key={index}>
+              <div className={layout.propertyLabel}>
+                <SkeletonBar height={16} radius={4} width={16} />
+                <SkeletonBar height={10} width={56} />
+              </div>
+              <div className={layout.propertyValue}>
+                <SkeletonBar height={10} width={index === 1 ? 88 : 64} />
+              </div>
             </div>
           ))}
         </div>

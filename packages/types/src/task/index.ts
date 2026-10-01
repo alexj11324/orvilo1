@@ -1246,6 +1246,12 @@ export interface TaskDetailData {
   createdByUserId?: string | null;
   dependencies?: Array<{
     dependsOn: string;
+    /**
+     * Which side of a `blocks` edge this row is. `blocking` means this issue
+     * blocks `dependsOn`; omitted or `blockedBy` means this issue is blocked
+     * by it. `relates` rows leave it unset.
+     */
+    direction?: 'blockedBy' | 'blocking';
     /** Raw target ID is exposed only when the issue is readable. */
     id?: string;
     /** Opaque relation row ID; allows unlinking without exposing an unreadable target ID. */

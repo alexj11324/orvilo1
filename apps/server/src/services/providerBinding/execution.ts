@@ -11,19 +11,33 @@ import type { OrviloDatabase } from '@/database/type';
  * is a read only — it never issues credentials; `issueBindingExecution` is the
  * fence. `list` orders by `updatedAt` descending, so the most recently saved
  * matching binding wins.
+ *
+ * `match` narrows the candidates to the task's requested provider/model — a
+ * run configured for provider X may only resolve binding X; absent fields are
+ * unconstrained. No match means `undefined`, and callers fail loudly rather
+ * than falling back to a different binding or an environment key.
  */
+export interface ProviderBindingMatch {
+  model?: string;
+  provider?: string;
+}
+
 export async function resolveOrviloProviderBinding(
   db: OrviloDatabase,
   userId: string,
   engine: OrviloEngineKind | string | null | undefined,
   target: ProviderBindingConfig['selection']['target'],
+  match?: ProviderBindingMatch,
 ) {
   const wanted = resolveOrviloEngine(engine);
   const rows = await new ProviderBindingModel(db, userId).list();
   return rows.find((row) => {
     const selection = row.config?.selection;
     if (!selection || selection.runtime !== 'orvilo' || selection.target !== target) return false;
-    return resolveOrviloEngine(selection.engine) === wanted;
+    if (resolveOrviloEngine(selection.engine) !== wanted) return false;
+    if (match?.provider && row.config?.provider !== match.provider) return false;
+    if (match?.model && row.config?.model !== match.model) return false;
+    return true;
   });
 }
 

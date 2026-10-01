@@ -193,6 +193,10 @@ vi.mock('../pipeline/heteroDispatch', async (importOriginal) => {
   return { ...actual, dispatchHeteroAgent: mockDispatchHeteroAgent };
 });
 
+vi.mock('@/server/services/providerBinding/execution', () => ({
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue({ status: 'none' }),
+}));
+
 vi.mock('@/server/services/market', () => ({
   MarketService: vi.fn().mockImplementation(function () {
     return {

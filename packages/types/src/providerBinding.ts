@@ -83,7 +83,19 @@ export const providerBindingConfigSchema = z
   );
 
 export type ProviderBindingConfig = z.infer<typeof providerBindingConfigSchema>;
-export interface ProviderBinding extends ProviderBindingConfig {
+
+/**
+ * The shape actually persisted in `provider_bindings.config`. Writes through
+ * {@link providerBindingConfigSchema} always land `enabled: false`; the server
+ * flips `enabled` to true only after `checkConnection` verifies the binding
+ * end-to-end, so stored rows may carry `enabled: true` even though the input
+ * schema cannot express it.
+ */
+export interface StoredProviderBindingConfig extends Omit<ProviderBindingConfig, 'enabled'> {
+  enabled: boolean;
+}
+
+export interface ProviderBinding extends StoredProviderBindingConfig {
   createdAt: Date;
   id: string;
   revision: number;

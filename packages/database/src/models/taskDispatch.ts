@@ -6,7 +6,20 @@ import type {
   TaskItem,
   TaskRunTrigger,
 } from '@orvilo/types';
-import { and, asc, eq, inArray, isNotNull, isNull, like, lt, ne, or, sql } from 'drizzle-orm';
+import {
+  and,
+  asc,
+  eq,
+  inArray,
+  isNotNull,
+  isNull,
+  like,
+  lt,
+  ne,
+  notLike,
+  or,
+  sql,
+} from 'drizzle-orm';
 
 import { goals } from '../schemas/goal';
 import { goalNodes } from '../schemas/goalGraph';
@@ -42,6 +55,29 @@ const PROJECT_CONCURRENCY_PHASES: TaskDispatchPhase[] = [
 ];
 
 const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
+
+/** Column projection shared by the resume-sweep candidate finders. */
+const RESUME_CANDIDATE_COLUMNS = {
+  dispatchId: taskDispatches.id,
+  fence: taskDispatches.fence,
+  generation: taskDispatches.generation,
+  idempotencyKey: taskDispatches.idempotencyKey,
+  phase: taskDispatches.phase,
+  planRevision: taskDispatches.planRevision,
+  recoveryAttempts: taskDispatches.recoveryAttempts,
+  requestedBy: taskDispatches.requestedBy,
+  taskId: taskDispatches.taskId,
+  userId: sql<
+    string | null
+  >`coalesce(${projects.userId}, ${teams.createdByUserId}, ${tasks.createdByUserId}, ${tasks.createdBySubjectId})`,
+  waitingReason: taskDispatches.waitingReason,
+  workspaceId: taskDispatches.workspaceId,
+} as const;
+
+const resumeCandidates = (
+  rows: Array<Omit<TaskDispatchResumeCandidate, 'userId'> & { userId: string | null }>,
+): TaskDispatchResumeCandidate[] =>
+  rows.flatMap((row) => (row.userId === null ? [] : [{ ...row, userId: row.userId }]));
 
 /**
  * Goal statuses that fence automated dispatch for a goal-owned Task. Pausing,
@@ -193,6 +229,39 @@ export interface TaskPlanningDispatchCandidate {
   taskId: string;
   userId: string;
   workspaceId: string | null;
+}
+
+/**
+ * A resumable durable intent discovered by the resume sweep — either a
+ * start that never reached provisioning (`requested`/`claimed`) or a parked
+ * `waiting` row whose recorded reason a re-evaluation can clear. The resume
+ * service re-drives these through the same `request()` path so contract,
+ * policy and goal re-checks decide whether the row resumes or re-parks.
+ */
+export interface TaskDispatchResumeCandidate {
+  dispatchId: string;
+  fence: number;
+  generation: number;
+  idempotencyKey: string;
+  phase: TaskDispatchPhase;
+  planRevision: number | null;
+  recoveryAttempts: number;
+  requestedBy: string;
+  taskId: string;
+  userId: string;
+  waitingReason: string | null;
+  workspaceId: string | null;
+}
+
+/** A `backlog` task eligible for project `autoDispatch` intake. */
+export interface TaskBacklogIntakeCandidate {
+  createdBySubjectId: string | null;
+  createdByUserId: string | null;
+  executionGeneration: number;
+  projectId: string;
+  taskId: string;
+  userId: string | null;
+  workspaceId: string;
 }
 
 /**
@@ -387,6 +456,134 @@ export class TaskDispatchModel {
       .limit(limit);
   }
 
+  /**
+   * Discover durable start intents that never reached provisioning — a
+   * `requested` row no worker ever claimed, or a `claimed` row whose worker
+   * lease lapsed before the environment started. Planner intents are owned
+   * by their dedicated sweep and excluded here. Event intents stay
+   * discoverable so the sweep can retire them: they cannot be re-driven
+   * without the event's admission evidence, so the only convergence is
+   * `requestStop`.
+   */
+  static async findStaleStartCandidates(
+    db: OrviloDatabase,
+    input: { graceMs?: number; limit?: number; now?: Date } = {},
+  ): Promise<TaskDispatchResumeCandidate[]> {
+    const now = input.now ?? new Date();
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
+    const staleBefore = new Date(now.getTime() - (input.graceMs ?? 5 * 60 * 1000));
+    const rows = await db
+      .select(RESUME_CANDIDATE_COLUMNS)
+      .from(taskDispatches)
+      .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
+      .leftJoin(projects, eq(projects.id, tasks.projectId))
+      .leftJoin(teams, eq(teams.id, tasks.teamId))
+      .where(
+        and(
+          inArray(taskDispatches.phase, ['requested', 'claimed']),
+          lt(taskDispatches.updatedAt, staleBefore),
+          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+          notLike(taskDispatches.requestedBy, 'orchestrator:planning:%'),
+        ),
+      )
+      .orderBy(asc(taskDispatches.updatedAt), asc(taskDispatches.id))
+      .limit(limit);
+    return resumeCandidates(rows);
+  }
+
+  /**
+   * Discover parked `waiting` dispatches whose recorded reason a
+   * re-evaluation may clear — capacity/budget ceilings, a newly assigned
+   * agent, a resumed admission flag, a retryable prepare failure. Reasons
+   * owned by another sweep (`goal_*`), evidence-bound intents (`event:*`),
+   * planner intents, and terminal-coded waits are skipped: none of them can
+   * resume from a generic re-drive.
+   */
+  static async findWaitingResumeCandidates(
+    db: OrviloDatabase,
+    input: { graceMs?: number; limit?: number; now?: Date } = {},
+  ): Promise<TaskDispatchResumeCandidate[]> {
+    const now = input.now ?? new Date();
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
+    const staleBefore = new Date(now.getTime() - (input.graceMs ?? 5 * 60 * 1000));
+    const rows = await db
+      .select(RESUME_CANDIDATE_COLUMNS)
+      .from(taskDispatches)
+      .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
+      .leftJoin(projects, eq(projects.id, tasks.projectId))
+      .leftJoin(teams, eq(teams.id, tasks.teamId))
+      .where(
+        and(
+          eq(taskDispatches.phase, 'waiting'),
+          lt(taskDispatches.updatedAt, staleBefore),
+          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+          notLike(taskDispatches.requestedBy, 'event:%'),
+          notLike(taskDispatches.requestedBy, 'orchestrator:planning:%'),
+          or(
+            isNull(taskDispatches.waitingReason),
+            and(
+              notLike(taskDispatches.waitingReason, 'goal_%'),
+              notLike(taskDispatches.waitingReason, 'superseded_%'),
+              notLike(taskDispatches.waitingReason, 'settlement_%'),
+              ne(taskDispatches.waitingReason, 'planning_resume_instruction_missing'),
+            ),
+          ),
+        ),
+      )
+      .orderBy(asc(taskDispatches.updatedAt), asc(taskDispatches.id))
+      .limit(limit);
+    return resumeCandidates(rows);
+  }
+
+  /**
+   * Discover `backlog` tasks a project has opted into autonomous dispatch
+   * for (`orchestrationPolicy.autoDispatch`): assigned, not automation-owned
+   * (heartbeat/schedule tasks mint their own tick intents), not deleted, and
+   * without a live dispatch. Dependency readiness is checked by the service
+   * in the caller's owner scope before each start.
+   */
+  static async findBacklogIntakeCandidates(
+    db: OrviloDatabase,
+    input: { limit?: number } = {},
+  ): Promise<TaskBacklogIntakeCandidate[]> {
+    const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 10)));
+    const rows = await db
+      .select({
+        createdBySubjectId: tasks.createdBySubjectId,
+        createdByUserId: tasks.createdByUserId,
+        executionGeneration: tasks.executionGeneration,
+        // The join keys on the project, so the column is always present here.
+        projectId: sql<string>`${tasks.projectId}`,
+        taskId: tasks.id,
+        userId: sql<string | null>`coalesce(${tasks.createdByUserId}, ${tasks.createdBySubjectId})`,
+        workspaceId: tasks.workspaceId,
+      })
+      .from(tasks)
+      .innerJoin(projects, eq(projects.id, tasks.projectId))
+      .where(
+        and(
+          eq(tasks.status, 'backlog'),
+          isNotNull(tasks.workspaceId),
+          isNotNull(tasks.assigneeAgentId),
+          isNull(tasks.automationMode),
+          sql`${tasks.isDeleted} IS NOT TRUE`,
+          sql`(${projects.orchestrationPolicy} ->> 'autoDispatch')::boolean`,
+          sql`NOT EXISTS (
+            SELECT 1 FROM ${taskDispatches} active
+            WHERE active.task_id = ${tasks.id}
+              AND active.phase IN ('requested', 'claimed', 'provisioning', 'dispatched', 'running', 'waiting', 'cancel_requested', 'outcome_unknown')
+          )`,
+        ),
+      )
+      .orderBy(asc(tasks.createdAt), asc(tasks.id))
+      .limit(limit);
+    return rows.flatMap((row) =>
+      row.userId === null || row.workspaceId === null
+        ? []
+        : [{ ...row, userId: row.userId, workspaceId: row.workspaceId }],
+    );
+  }
+
   /** Discover committed planner dispatch intents whose post-commit wakeup was lost. */
   static async findPlanningStartCandidates(
     db: OrviloDatabase,
@@ -551,6 +748,7 @@ export class TaskDispatchModel {
               phase: 'requested',
               planRevision: input.planRevision,
               policyRevision: task.policyRevision,
+              recoveryAttempts: 0,
               requirementRevision: task.requirementRevision,
               taskRevision: task.domainRevision,
               waitingReason: null,
@@ -601,6 +799,7 @@ export class TaskDispatchModel {
             agentId: task.assigneeAgentId,
             phase: 'requested',
             policyRevision: task.policyRevision,
+            recoveryAttempts: 0,
             requirementRevision: task.requirementRevision,
             taskRevision: task.domainRevision,
             waitingReason: null,
@@ -810,6 +1009,36 @@ export class TaskDispatchModel {
     });
   }
 
+  /**
+   * Mark one sweep-driven resume attempt. This must NOT hold a lease: the
+   * re-drive immediately re-enters `claimForProvisioning`, which rejects a
+   * live lease owned by someone else — a resume lease would make every
+   * re-drive land on `busy` instead of starting. The phase CAS alone is the
+   * fence (a row that moved on fails it), and the downstream request path is
+   * CAS-serialized end to end. The stale lease is cleared so the next owner
+   * cannot be blocked by a dead claimant's window.
+   */
+  async claimForResume(dispatchId: string): Promise<TaskDispatchLease | null> {
+    const now = new Date();
+    const [claimed] = await this.db
+      .update(taskDispatches)
+      .set({
+        leaseExpiresAt: null,
+        leaseOwner: null,
+        recoveryAttempts: sql`${taskDispatches.recoveryAttempts} + 1`,
+      })
+      .where(
+        and(
+          eq(taskDispatches.id, dispatchId),
+          this.scopeCondition(),
+          inArray(taskDispatches.phase, ['requested', 'claimed', 'waiting']),
+          or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
+        ),
+      )
+      .returning();
+    return claimed ? { dispatch: claimed, fence: claimed.fence } : null;
+  }
+
   /** Release a reconciliation lease without changing the execution fence or operation identity. */
   async releaseRecovery(input: {
     dispatchId: string;
@@ -825,6 +1054,10 @@ export class TaskDispatchModel {
         leaseExpiresAt: new Date(Date.now() + Math.max(1, input.retryAfterMs)),
         leaseOwner: null,
         phase: input.phase,
+        // A rescheduled `outcome_unknown` counts toward the reconcile bound;
+        // a stable live identity resets it — the writer is provably alive.
+        recoveryAttempts:
+          input.phase === 'outcome_unknown' ? sql`${taskDispatches.recoveryAttempts} + 1` : 0,
         waitingReason: input.reason,
       })
       .where(
@@ -1650,6 +1883,134 @@ export class TaskDispatchModel {
           and(
             eq(taskDispatches.id, dispatch.id),
             eq(taskDispatches.phase, 'cancel_requested'),
+            eq(taskDispatches.fence, input.fence),
+            eq(taskDispatches.generation, input.generation),
+            eq(taskDispatches.leaseOwner, input.owner),
+          ),
+        )
+        .returning();
+      return abandoned ? { dispatch: abandoned, topicId: topic?.topicId ?? null } : null;
+    });
+  }
+
+  /**
+   * Give up on an `outcome_unknown` dispatch whose reconcile retries hit the
+   * bound — the `abandonCancellation` counterpart for the recovery sweep. No
+   * settlement ever arrived: the row leaves the active-phase set (freeing the
+   * task's single execution slot) with the fence bumped, so a late write from
+   * the unreachable runtime is rejected as stale. The task parks at `paused`
+   * for human attention.
+   */
+  async abandonRecovery(input: {
+    dispatchId: string;
+    fence: number;
+    generation: number;
+    owner: string;
+    reason: string;
+  }): Promise<{ dispatch: TaskDispatchItem; topicId: string | null } | null> {
+    return this.db.transaction(async (tx) => {
+      const runner = tx as OrviloDatabase;
+      const [dispatch] = await runner
+        .select()
+        .from(taskDispatches)
+        .where(and(eq(taskDispatches.id, input.dispatchId), this.scopeCondition()))
+        .limit(1)
+        .for('update');
+      if (
+        !dispatch ||
+        dispatch.phase !== 'outcome_unknown' ||
+        dispatch.fence !== input.fence ||
+        dispatch.generation !== input.generation ||
+        dispatch.leaseOwner !== input.owner
+      ) {
+        return null;
+      }
+
+      const [task] = await runner
+        .select()
+        .from(tasks)
+        .where(eq(tasks.id, dispatch.taskId))
+        .limit(1)
+        .for('update');
+      if (!task || task.workspaceId !== (this.workspaceId ?? null)) return null;
+
+      const [topic] = await runner
+        .select()
+        .from(taskTopics)
+        .where(eq(taskTopics.dispatchId, dispatch.id))
+        .limit(1)
+        .for('update');
+      if (topic) {
+        await runner
+          .update(taskTopics)
+          .set({ runState: 'canceled', status: 'abandoned' })
+          .where(
+            and(
+              eq(taskTopics.id, topic.id),
+              eq(taskTopics.dispatchId, dispatch.id),
+              eq(taskTopics.executionGeneration, dispatch.generation),
+            ),
+          );
+        if (topic.topicId) {
+          await runner
+            .update(topics)
+            .set({ completedAt: new Date() })
+            .where(eq(topics.id, topic.topicId));
+        }
+      }
+
+      if (task.status === 'running' && task.executionGeneration === dispatch.generation) {
+        const [paused] = await runner
+          .update(tasks)
+          .set({
+            domainRevision: sql`${tasks.domainRevision} + 1`,
+            error: input.reason,
+            reviewerUserId: sql<string | null>`coalesce(
+              ${tasks.reviewerUserId},
+              ${tasks.assigneeUserId},
+              ${tasks.createdByUserId}
+            )`,
+            status: 'paused',
+            updatedAt: new Date(),
+          })
+          .where(
+            and(
+              eq(tasks.id, task.id),
+              eq(tasks.executionGeneration, dispatch.generation),
+              eq(tasks.status, 'running'),
+            ),
+          )
+          .returning();
+        if (!paused) return null;
+        if (this.workspaceId) {
+          await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(
+            runner,
+            {
+              changedFields: ['status'],
+              eventType: 'task.status.changed',
+              idempotencyKey: `task:${paused.id}:revision:${paused.domainRevision}:task.status.changed`,
+              source: 'system',
+              suppressLinearOutbox: true,
+              task: paused,
+            },
+          );
+        }
+      }
+
+      const [abandoned] = await runner
+        .update(taskDispatches)
+        .set({
+          fence: sql`${taskDispatches.fence} + 1`,
+          lastCancelError: input.reason,
+          leaseExpiresAt: null,
+          leaseOwner: null,
+          phase: 'abandoned',
+          waitingReason: input.reason,
+        })
+        .where(
+          and(
+            eq(taskDispatches.id, dispatch.id),
+            eq(taskDispatches.phase, 'outcome_unknown'),
             eq(taskDispatches.fence, input.fence),
             eq(taskDispatches.generation, input.generation),
             eq(taskDispatches.leaseOwner, input.owner),

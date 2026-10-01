@@ -4225,6 +4225,7 @@ table task_dispatches {
   cancel_attempts integer [not null, default: 0]
   cancel_requested_at "timestamp with time zone"
   last_cancel_error text
+  recovery_attempts integer [not null, default: 0]
   environment_snapshot jsonb
   accessed_at "timestamp with time zone" [not null, default: `now()`]
   created_at "timestamp with time zone" [not null, default: `now()`]

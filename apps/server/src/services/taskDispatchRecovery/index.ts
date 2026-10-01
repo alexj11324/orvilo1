@@ -10,8 +10,16 @@ import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 
 const DEFAULT_LEASE_MS = 2 * 60 * 1000;
 const DEFAULT_RETRY_MS = 30 * 1000;
+/**
+ * Bound on consecutive unresolved `outcome_unknown` reconciles: each
+ * reschedule bumps `recovery_attempts` (a stable live identity resets it),
+ * so an op that never reaches a persisted terminal state cannot retry
+ * forever while its dispatch pins the task's single execution slot.
+ */
+const MAX_RECOVERY_ATTEMPTS = 60;
 
 export type TaskDispatchRecoveryOutcome =
+  | { dispatchId: string; outcome: 'abandoned' }
   | { dispatchId: string; outcome: 'active'; operationId: string }
   | { dispatchId: string; outcome: 'retry'; reason: string }
   | { dispatchId: string; outcome: 'settled'; operationId: string }
@@ -80,6 +88,20 @@ export const processTaskDispatchRecovery = async (input: {
     input.leaseMs ?? DEFAULT_LEASE_MS,
   );
   if (!claim) return { dispatchId: input.dispatchId, outcome: 'skipped' };
+
+  if (claim.dispatch.recoveryAttempts >= MAX_RECOVERY_ATTEMPTS) {
+    const abandoned = await model.abandonRecovery({
+      dispatchId: claim.dispatch.id,
+      fence: claim.fence,
+      generation: claim.dispatch.generation,
+      owner,
+      reason: `recovery_attempts_exhausted:${claim.dispatch.recoveryAttempts}`,
+    });
+    return {
+      dispatchId: claim.dispatch.id,
+      outcome: abandoned ? 'abandoned' : 'skipped',
+    };
+  }
 
   const retryMs = input.retryMs ?? DEFAULT_RETRY_MS;
   const operationId = claim.dispatch.operationId;

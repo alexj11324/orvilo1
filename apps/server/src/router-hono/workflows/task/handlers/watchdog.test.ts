@@ -21,12 +21,16 @@ const {
   findByTaskId,
   findStuckTasks,
   interruptTask,
+  requestStop,
+  updateContext,
   updateStatus,
   updateStatusIfCurrent,
   updateStatusIfReservation,
+  sweepTaskBacklogIntake,
   sweepTaskCancellations,
   sweepPlanningTaskDispatchStarts,
   sweepTaskDispatchRecovery,
+  sweepTaskDispatchResume,
   sweepTaskOwnershipInvariants,
   sweepMcpEventInbox,
 } = vi.hoisted(() => ({
@@ -41,6 +45,8 @@ const {
         operationId?: string;
       }) => Promise<{ deviceCancellationConfirmed?: boolean; success: boolean }>
     >(),
+  requestStop: vi.fn<(params: unknown) => Promise<unknown>>(),
+  updateContext: vi.fn<(id: string, partial: unknown) => Promise<unknown>>(),
   updateStatus: vi.fn<(id: string, status: string, extra?: unknown) => Promise<unknown>>(),
   updateStatusIfCurrent:
     vi.fn<
@@ -61,9 +67,11 @@ const {
         extra?: unknown,
       ) => Promise<null | WatchdogUpdate>
     >(),
+  sweepTaskBacklogIntake: vi.fn<() => Promise<unknown[]>>(),
   sweepTaskCancellations: vi.fn<() => Promise<unknown[]>>(),
   sweepPlanningTaskDispatchStarts: vi.fn<() => Promise<unknown[]>>(),
   sweepTaskDispatchRecovery: vi.fn<() => Promise<unknown[]>>(),
+  sweepTaskDispatchResume: vi.fn<() => Promise<unknown[]>>(),
   sweepTaskOwnershipInvariants: vi.fn<() => Promise<unknown[]>>(),
   sweepMcpEventInbox: vi.fn<() => Promise<unknown>>(),
 }));
@@ -72,10 +80,20 @@ vi.mock('@/database/server', () => ({ getServerDB: vi.fn().mockResolvedValue({})
 vi.mock('@/database/models/task', () => ({
   TaskModel: Object.assign(
     vi.fn(function () {
-      return { updateStatus, updateStatusIfCurrent, updateStatusIfReservation };
+      return {
+        updateContext,
+        updateStatus,
+        updateStatusIfCurrent,
+        updateStatusIfReservation,
+      };
     }),
     { findStuckTasks },
   ),
+}));
+vi.mock('@/database/models/taskDispatch', () => ({
+  TaskDispatchModel: vi.fn(function () {
+    return { requestStop };
+  }),
 }));
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn(function () {
@@ -92,9 +110,11 @@ vi.mock('@/server/services/taskIntegration', () => ({
     return { cleanupTaskWorktrees };
   }),
 }));
+vi.mock('@/server/services/taskBacklogIntake', () => ({ sweepTaskBacklogIntake }));
 vi.mock('@/server/services/taskCancellation', () => ({ sweepTaskCancellations }));
 vi.mock('@/server/services/taskDispatchStart', () => ({ sweepPlanningTaskDispatchStarts }));
 vi.mock('@/server/services/taskDispatchRecovery', () => ({ sweepTaskDispatchRecovery }));
+vi.mock('@/server/services/taskDispatchResume', () => ({ sweepTaskDispatchResume }));
 vi.mock('@/server/services/taskOwnership', () => ({ sweepTaskOwnershipInvariants }));
 vi.mock('@/server/services/mcpEvents/runtime', () => ({ sweepMcpEventInbox }));
 vi.mock('@/server/services/mcpEvents/maintenance', () => ({
@@ -132,10 +152,14 @@ describe('task watchdog', () => {
     findStuckTasks.mockResolvedValue([stuckTask]);
     findByTaskId.mockResolvedValue([]);
     interruptTask.mockResolvedValue({ success: true });
+    sweepTaskBacklogIntake.mockResolvedValue([]);
     sweepTaskCancellations.mockResolvedValue([]);
     sweepPlanningTaskDispatchStarts.mockResolvedValue([]);
     sweepTaskDispatchRecovery.mockResolvedValue([]);
+    sweepTaskDispatchResume.mockResolvedValue([]);
     sweepTaskOwnershipInvariants.mockResolvedValue([]);
+    requestStop.mockResolvedValue({ id: 'dispatch-1' });
+    updateContext.mockResolvedValue({});
     sweepMcpEventInbox.mockResolvedValue({ processed: 0 });
     updateStatusIfCurrent.mockResolvedValue({ id: 'task-1' });
     updateStatusIfReservation.mockResolvedValue({ id: 'task-1' });

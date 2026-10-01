@@ -2,6 +2,7 @@ import debug from 'debug';
 
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
+import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import type { OrviloDatabase } from '@/database/type';
 import { AiAgentService } from '@/server/services/aiAgent';
@@ -11,6 +12,15 @@ import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { TaskResultCallbackRedisStore } from '@/server/services/taskResultBridge/redisStore';
 
 const log = debug('lobe-server:task-watchdog');
+
+/**
+ * Bound on watchdog passes that fail to confirm cancellation for a task
+ * whose running topics carry no durable dispatch. Dispatched topics hand
+ * the stop to the bounded cancellation sweep via `requestStop`; legacy or
+ * dispatch-less topics have no such path, so the task parks at `paused`
+ * for human attention once the bound is hit instead of looping forever.
+ */
+const MAX_UNCONFIRMED_CANCELS = 3;
 
 export interface TaskWatchdogOptions {
   /** Restrict a manual/API sweep to tasks created by this user. */
@@ -107,6 +117,74 @@ export async function runTaskWatchdog(
         }
       }
       if (!cancellationConfirmed) {
+        const dispatchModel = new TaskDispatchModel(db, wsId);
+        let unfencedTopic = false;
+        for (const topic of runningTopics) {
+          if (
+            !topic.dispatchId ||
+            topic.dispatchFence === null ||
+            topic.dispatchFence === undefined ||
+            topic.executionGeneration === null ||
+            topic.executionGeneration === undefined
+          ) {
+            unfencedTopic = true;
+            continue;
+          }
+          try {
+            const stopped = await dispatchModel.requestStop({
+              dispatchId: topic.dispatchId,
+              fence: topic.dispatchFence,
+              generation: topic.executionGeneration,
+              operationId: topic.operationId ?? undefined,
+              reason: 'watchdog_heartbeat_timeout',
+            });
+            if (!stopped) unfencedTopic = true;
+          } catch (error) {
+            unfencedTopic = true;
+            log(
+              'Watchdog requestStop failed: task=%s dispatch=%s error=%O',
+              task.identifier,
+              topic.dispatchId,
+              error,
+            );
+          }
+        }
+        if (unfencedTopic) {
+          const watchdogCancel = ((task.context as Record<string, unknown> | null)
+            ?.watchdogCancel ?? {}) as { unconfirmedAttempts?: number };
+          const attempts = (watchdogCancel.unconfirmedAttempts ?? 0) + 1;
+          await taskModel.updateContext(task.id, {
+            watchdogCancel: { unconfirmedAttempts: attempts },
+          });
+          if (attempts >= MAX_UNCONFIRMED_CANCELS) {
+            const parkExtra = {
+              error: 'Watchdog cancellation unconfirmed',
+              runReservationExpiresAt: null,
+              runReservationId: null,
+            } as const;
+            const parkedTask = task.runReservationId
+              ? await taskModel.updateStatusIfReservation(
+                  task.id,
+                  task.runReservationId,
+                  'running',
+                  'paused',
+                  parkExtra,
+                )
+              : await taskModel.updateStatusIfCurrent(task.id, 'running', 'paused', parkExtra);
+            if (parkedTask) {
+              await new BriefModel(db, taskOwnerId, wsId).create({
+                agentId: task.assigneeAgentId || undefined,
+                priority: 'urgent',
+                summary: `Task heartbeat timed out and ${attempts} watchdog passes could not confirm its operations canceled. Parked for manual review.`,
+                taskId: task.id,
+                title: `${task.identifier} cancellation unconfirmed`,
+                trigger: 'task',
+                type: 'error',
+              });
+            }
+            continue;
+          }
+        }
         cancellationRequired.push(task.identifier);
         continue;
       }

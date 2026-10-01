@@ -1,7 +1,7 @@
 import type { EnabledAiModel } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AiInfraRepos } from '../index';
+import { AiInfraCatalogRepos } from '../index';
 
 // vitest.config.server.mts runs with isolate:false, so one file's module mock
 // serves every file; delegate through a per-test-installed global instead.
@@ -37,14 +37,14 @@ beforeEach(() => {
     ]);
 });
 
-describe('AiInfraRepos', () => {
+describe('AiInfraCatalogRepos', () => {
   describe('getAiProviderRuntimeState', () => {
     it('returns deployment-owned runtime state', async () => {
       const providerConfigs = {
         anthropic: { enabled: false },
         openai: { apiKey: 'deploy-key', enabled: true },
       };
-      const repo = new AiInfraRepos(providerConfigs as never);
+      const repo = new AiInfraCatalogRepos(providerConfigs as never);
       const state = await repo.getAiProviderRuntimeState();
 
       expect(Object.keys(state.runtimeConfig)).toEqual(['openai']);
@@ -55,7 +55,7 @@ describe('AiInfraRepos', () => {
     });
 
     it('returns an empty state when nothing is deployment-enabled', async () => {
-      const repo = new AiInfraRepos({});
+      const repo = new AiInfraCatalogRepos({});
       const state = await repo.getAiProviderRuntimeState();
 
       expect(state.enabledAiModels).toEqual([]);

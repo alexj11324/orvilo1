@@ -14,6 +14,7 @@ export * from './agentQuota';
 export * from './agentResource';
 export * from './agentShare';
 export * from './agentSkill';
+export * from './aiInfra';
 export * from './apiKey';
 export * from './asyncTask';
 export * from './betterAuth';

@@ -4,7 +4,7 @@ import { pickTrimmedString, toRecord } from '@orvilo/utils/object';
 
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
-import { AiInfraRepos } from '@/database/repositories/aiInfra';
+import { AiInfraCatalogRepos } from '@/database/repositories/aiInfra';
 import type { OrviloDatabase } from '@/database/type';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { resolveGoalModelConfig } from '@/server/services/goal/modelConfig';
@@ -27,7 +27,7 @@ export const resolveGoalReviewModelConfig = async (
       { ...config, enabled: config?.enabled ?? false },
     ]),
   );
-  const infra = new AiInfraRepos(providerConfigs);
+  const infra = new AiInfraCatalogRepos(providerConfigs);
   const tried = new Set<string>();
   const usable = async (candidate?: { model?: string | null; provider?: string | null } | null) => {
     if (

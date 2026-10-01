@@ -229,6 +229,14 @@ export interface AgentRunRequestMessage {
   builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
   /**
+   * Server-minted spawn env (e.g. BYOK provider credentials) merged into the
+   * `lh hetero exec` process environment ahead of the fixed `ORVILO_*` keys.
+   * Values travel verbatim — they are decrypted server-side and the device
+   * stores nothing. Optional for compatibility with older servers; absent
+   * means no extra env.
+   */
+  env?: Record<string, string>;
+  /**
    * Server-side idempotency key for admission. Always equals `operationId`
    * (the device-side task id): a gateway or device retry carrying the same key
    * must not spawn a second execution of the same logical run. Optional for

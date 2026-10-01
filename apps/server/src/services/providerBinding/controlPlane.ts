@@ -38,6 +38,45 @@ const RESERVED_HEADERS = new Set(['content-length', 'host', 'transfer-encoding']
 const CAPABILITY_OUTPUT_FLOOR = 4096;
 
 /**
+ * Decrypt the referenced personal credential and map it onto provider request
+ * headers. `kv-header` secrets forward their stored headers verbatim (minus
+ * reserved hop-by-hop names); `kv-env` secrets fold into the two de-facto auth
+ * headers (`Authorization: Bearer` + `x-api-key`). The mapping stays inside
+ * this trusted boundary — the returned headers are request material, never a
+ * client-facing representation.
+ */
+export const resolveProviderCredentialHeaders = async (
+  db: OrviloDatabase,
+  ownerId: string,
+  secretReference: string,
+): Promise<Record<string, string> | undefined> => {
+  const credentials = new CredentialModel(db, ownerId);
+  const credential = await credentials.findPersonalById(
+    secretReference.slice('credential:'.length),
+  );
+  if (!credential) return undefined;
+  const payload = await credentials.decryptPayload(credential);
+  if (!payload || typeof payload !== 'object' || !('values' in payload)) return undefined;
+  const headers: Record<string, string> = {};
+  const values = (payload as CredentialKVPayload).values ?? {};
+  if (credential.type === 'kv-header') {
+    for (const [name, value] of Object.entries(values)) {
+      if (!RESERVED_HEADERS.has(name.toLowerCase())) headers[name] = value;
+    }
+  } else {
+    // Env-style keys become the two de-facto provider auth headers.
+    const secret =
+      Object.entries(values).find(([key]) => /KEY|TOKEN|SECRET|AUTH/i.test(key))?.[1] ??
+      Object.values(values)[0];
+    if (secret) {
+      headers.Authorization = `Bearer ${secret}`;
+      headers['x-api-key'] = secret;
+    }
+  }
+  return Object.keys(headers).length === 0 ? undefined : headers;
+};
+
+/**
  * Personal-scope convention: a binding is tenant-scoped to its owning user,
  * so tenantId === ownerId === the users row id. The persisted `updatedAt`
  * timestamps the authority snapshot — any account change bumps the revision
@@ -89,30 +128,12 @@ export class SqlTrustedProviderBackend implements TrustedProviderBackend {
     const row = await bindings.find(binding.bindingId);
     const config = row?.config;
     if (!config || row?.revision !== binding.revision) return undefined;
-    const credentials = new CredentialModel(this.db, binding.ownerId);
-    const credential = await credentials.findPersonalById(
-      binding.secretReference.slice('credential:'.length),
+    const headers = await resolveProviderCredentialHeaders(
+      this.db,
+      binding.ownerId,
+      binding.secretReference,
     );
-    if (!credential) return undefined;
-    const payload = await credentials.decryptPayload(credential);
-    if (!payload || typeof payload !== 'object' || !('values' in payload)) return undefined;
-    const headers: Record<string, string> = {};
-    const values = (payload as CredentialKVPayload).values ?? {};
-    if (credential.type === 'kv-header') {
-      for (const [name, value] of Object.entries(values)) {
-        if (!RESERVED_HEADERS.has(name.toLowerCase())) headers[name] = value;
-      }
-    } else {
-      // Env-style keys become the two de-facto provider auth headers.
-      const secret =
-        Object.entries(values).find(([key]) => /KEY|TOKEN|SECRET|AUTH/i.test(key))?.[1] ??
-        Object.values(values)[0];
-      if (secret) {
-        headers.Authorization = `Bearer ${secret}`;
-        headers['x-api-key'] = secret;
-      }
-    }
-    if (Object.keys(headers).length === 0) return undefined;
+    if (!headers) return undefined;
     return { endpoint: config.endpoint.replace(/\/+$/, ''), headers, model: config.model };
   }
 

@@ -937,6 +937,7 @@ function bindGatewayClientHandlers(
           args: request.args,
           builtinTools: request.builtinTools,
           cwd: request.cwd,
+          env: request.env,
           imageList: request.imageList,
           jwt: request.jwt,
           operationId: request.operationId,

@@ -130,6 +130,12 @@ export interface SpawnHeteroAgentRunParams {
   /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
   builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
+  /**
+   * Server-minted spawn env (e.g. BYOK provider credentials) merged into the
+   * child env ahead of the fixed `ORVILO_*` keys. Travels verbatim over the
+   * authenticated dispatch channel; the device stores nothing.
+   */
+  env?: Record<string, string>;
   /** Image attachments (signed URLs) appended as image content blocks. */
   imageList?: HeteroExecImageRef[];
   jwt: string;
@@ -217,6 +223,7 @@ async function admitHeteroAgentRun(
     args: extraArgs,
     builtinTools,
     cwd,
+    env: byokEnv,
     imageList,
     jwt,
     operationId,
@@ -345,6 +352,7 @@ async function admitHeteroAgentRun(
       detached: true,
       env: {
         ...childEnv,
+        ...byokEnv,
         ...(assistantMessageId ? { ORVILO_ASSISTANT_MESSAGE_ID: assistantMessageId } : {}),
         [HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV]: '1',
         ORVILO_JWT: jwt,

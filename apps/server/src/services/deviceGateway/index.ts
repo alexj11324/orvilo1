@@ -1716,6 +1716,8 @@ export class DeviceGateway {
     builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
     deviceId?: string;
+    /** Server-minted spawn env (e.g. BYOK credentials) merged into the run's process env. */
+    env?: Record<string, string>;
     /** Admission idempotency key (always the operationId), relayed to the device. */
     idempotencyKey?: string;
     /** Image attachments forwarded to the device as fetchable (signed) URLs. */

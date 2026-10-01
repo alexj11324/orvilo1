@@ -159,7 +159,9 @@ describe('sidebar toggle ownership', () => {
         <AppSidebar />
       </SidebarProvider>,
     );
-    expect(screen.getAllByRole('button', { name: 'reuiShell9.collapseSidebar' })).toHaveLength(1);
+    expect(
+      screen.getAllByRole('button', { name: 'common:reuiShell9.collapseSidebar' }),
+    ).toHaveLength(1);
   });
   it('keeps one Linux expanded collapse entry in the real shell and page header', () => {
     platform.desktop = true;
@@ -170,7 +172,7 @@ describe('sidebar toggle ownership', () => {
       </SidebarProvider>,
     );
     const entries = [
-      ...screen.queryAllByRole('button', { name: 'reuiShell9.collapseSidebar' }),
+      ...screen.queryAllByRole('button', { name: 'common:reuiShell9.collapseSidebar' }),
       ...screen.queryAllByRole('button', { name: 'toggleLeftPanel.title' }),
     ];
     expect(entries).toHaveLength(1);
@@ -291,7 +293,7 @@ describe('workspace switcher header', () => {
       </SidebarProvider>,
     );
     expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'reuiShell9.collapseSidebar' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:reuiShell9.collapseSidebar' })).toBeTruthy();
     expect(screen.queryByText('Orvilo')).toBeNull();
   });
   it.each(['workspace-settings', 'settings'])(
@@ -315,7 +317,7 @@ describe('workspace switcher header', () => {
       </SidebarProvider>,
     );
     expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
-    expect(screen.queryByRole('button', { name: 'reuiShell9.collapseSidebar' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:reuiShell9.collapseSidebar' })).toBeNull();
   });
   it('hides the shell header inside the settings mobile drawer', () => {
     route.key = 'workspace-settings';

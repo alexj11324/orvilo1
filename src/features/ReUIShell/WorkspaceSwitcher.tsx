@@ -48,7 +48,7 @@ export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
             <DropdownMenuTrigger
               render={
                 <SidebarMenuButton
-                  aria-label={t('reuiShell9.openWorkspaceMenu')}
+                  aria-label={t('common:reuiShell9.openWorkspaceMenu')}
                   className="h-9 px-1.5"
                   size="lg"
                 />
@@ -121,7 +121,7 @@ export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
       </SidebarMenu>
       {children}
       {state === 'expanded' && !(isDesktop && isMacOS()) && (
-        <SidebarTrigger aria-label={t('reuiShell9.collapseSidebar')} />
+        <SidebarTrigger aria-label={t('common:reuiShell9.collapseSidebar')} />
       )}
     </>
   );

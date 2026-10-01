@@ -5,6 +5,7 @@ import { RequestTrigger } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiProviderModel } from '@/database/models/aiProvider';
+import type * as WorkspaceModelModule from '@/database/models/workspace';
 import { AiInfraRepos, ProviderBindingPlane } from '@/database/repositories/aiInfra';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
@@ -24,6 +25,11 @@ vi.mock('@/server/modules/KeyVaultsEncrypt');
 vi.mock('@/database/repositories/aiInfra');
 vi.mock('@/database/models/aiProvider');
 vi.mock('@/database/models/user');
+vi.mock('@/database/models/workspace', async (importOriginal) => ({
+  ...(await importOriginal<typeof WorkspaceModelModule>()),
+  // Workspace callers resolve membership through this seam — stub an owner.
+  getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('owner'),
+}));
 vi.mock('@/server/modules/ModelRuntime', () => ({
   initModelRuntimeFromDB: vi.fn(),
 }));
@@ -111,8 +117,8 @@ describe('aiProviderRouter', () => {
   });
 
   describe('createAiProvider', () => {
-    // Personal scope persists through the provider_bindings plane (Phase 5b);
-    // the legacy aiProviders write runs only in workspace scope.
+    // Provider settings are a personal credential surface: every scope
+    // persists through the provider_bindings plane (Phase 5b).
     it('should create a new AI provider through the binding plane', async () => {
       const mockCreate = vi.fn().mockResolvedValue(mockProviderId);
       vi.mocked(ProviderBindingPlane).prototype.createProvider = mockCreate;
@@ -133,6 +139,34 @@ describe('aiProviderRouter', () => {
         }),
       );
       expect(vi.mocked(AiProviderModel).prototype.create).not.toHaveBeenCalled();
+    });
+
+    // A workspace-context write lands on the binding plane the same way —
+    // the auto-provisioned workspace must not divert writes to the legacy
+    // path. The plane's deps carry the workspaceId for legacy-row scoping.
+    it('should create through the binding plane in workspace scope too', async () => {
+      const mockCreate = vi.fn().mockResolvedValue(mockProviderId);
+      vi.mocked(ProviderBindingPlane).prototype.createProvider = mockCreate;
+      vi.mocked(AiProviderModel).prototype.create = vi.fn();
+
+      const caller = aiProviderRouter.createCaller({
+        ...createMockContext(),
+        workspaceId: 'ws-1',
+      });
+      const result = await caller.createAiProvider({
+        id: mockProviderId,
+        name: 'Test Provider',
+        source: 'custom',
+      });
+
+      expect(result).toBe(mockProviderId);
+      expect(mockCreate).toHaveBeenCalled();
+      expect(vi.mocked(AiProviderModel).prototype.create).not.toHaveBeenCalled();
+      expect(vi.mocked(ProviderBindingPlane).mock.calls).toContainEqual([
+        expect.anything(),
+        mockUserId,
+        expect.objectContaining({ workspaceId: 'ws-1' }),
+      ]);
     });
   });
 

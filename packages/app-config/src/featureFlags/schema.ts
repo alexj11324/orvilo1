@@ -48,16 +48,6 @@ export const FeatureFlagsSchema = z.object({
   caid_dispatch: FeatureFlagValue.optional(),
   caid_dispatch_workspaces: z.array(z.string()).optional(),
 
-  /**
-   * Prime embedded harness dispatch routing (phase 5a): own-agent runs
-   * (`type:'orvilo'`) take the canonical `CanonicalCoreRuntimeHost` + embedded
-   * runtime path instead of the cloud sandbox spawn. Off by default so the
-   * seam can ship dark — an admin enables it per deployment (boolean) or per
-   * user (id list); heterogeneous/ACP agents are never routed by this flag.
-   * Server-side evaluation only (see `featureFlags/primeEmbeddedDispatch`).
-   */
-  prime_embedded_dispatch: FeatureFlagValue.optional(),
-
   // internal flag
   agent_self_iteration: FeatureFlagValue.optional(),
   agent_onboarding: FeatureFlagValue.optional(),
@@ -117,8 +107,6 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   rag_eval: false,
 
   caid_dispatch: false,
-
-  prime_embedded_dispatch: false,
 
   agent_self_iteration: isDev,
   agent_onboarding: isDev,

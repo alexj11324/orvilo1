@@ -6,9 +6,10 @@
  * `resolveExecutionBinding` synthesizes; ACP/hetero kinds never match), (b)
  * carrying canonical task context (a task dispatch id + fence + generation on
  * `appContext`, present only on real task dispatches — chat runs can't), and
- * (c) admitted by the `prime_embedded_dispatch` feature flag, the dispatch
- * composes `CanonicalCoreRuntimeHost` with `embedded` filled and drives the
- * run in-process.
+ * (c) the dispatch composes `CanonicalCoreRuntimeHost` with `embedded`
+ * filled and drives the run in-process. `orvilo` is Orvilo's own engine —
+ * it always runs the embedded Prime harness, like `codex` always runs the
+ * codex CLI; there is no flag gating which engine an own-agent type uses.
  *
  * The host's prompt stream is translated back into the shared
  * `AgentStreamEvent` → `heteroIngest` / `heteroFinish` producer path, so the
@@ -47,7 +48,6 @@ import { and, eq } from 'drizzle-orm';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { tasks, taskTopics } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
-import { isPrimeEmbeddedDispatchEnabled } from '@/server/featureFlags/primeEmbeddedDispatch';
 import { AgentDelegationService } from '@/server/services/agentDelegation/executionGrants';
 import { HeterogeneousAgentService } from '@/server/services/heterogeneousAgent';
 import { SqlTrustedProviderBackend } from '@/server/services/providerBinding/controlPlane';
@@ -109,11 +109,10 @@ export interface EmbeddedDispatchRouteInput {
 }
 
 /**
- * The embedded route admits only own-agent task dispatches on the sandbox
- * plan while `prime_embedded_dispatch` is on, and returns their canonical
- * context fully typed so the seam needs no narrowing. Everything else —
- * ACP/hetero kinds, chat runs, device-planned runs — gets `null` and keeps
- * the existing dispatch path byte-identical.
+ * The embedded route admits every own-agent task dispatch on the sandbox
+ * plan and returns its canonical context fully typed so the seam needs no
+ * narrowing. Everything else — ACP/hetero kinds, chat runs, device-planned
+ * runs — gets `null` and keeps the existing dispatch path byte-identical.
  */
 export const resolveEmbeddedDispatchRoute = async (
   deps: { userId: string },
@@ -127,7 +126,6 @@ export const resolveEmbeddedDispatchRoute = async (
     typeof executionGeneration !== 'number'
   )
     return null;
-  if (!(await isPrimeEmbeddedDispatchEnabled({ userId: deps.userId }))) return null;
   return {
     dispatchFence,
     dispatchId,

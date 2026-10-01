@@ -25,22 +25,20 @@ Inside `dispatchHeteroAgent`'s sandbox-plan `else` branch, **before**
 `supportsCloudHeterogeneousSandbox`, `resolveEmbeddedDispatchRoute` admits a
 run only when all of these hold:
 
-- `heteroType === 'orvilo'` (checked first — hetero kinds short-circuit
-  before the flag lookup),
+- `heteroType === 'orvilo'` (checked first — hetero kinds short-circuit),
 - a canonical task-dispatch context exists (`operationTaskId`, string
   `dispatchId`, numeric `dispatchFence` + `executionGeneration` from the
-  dispatch lease's `appContext`) — chat runs carry none,
-- `prime_embedded_dispatch` evaluates true for the user.
+  dispatch lease's `appContext`) — chat runs carry none.
 
 Anything else falls through to the unchanged sandbox path below the seam.
 
-## 2. Gate
+## 2. No gate
 
-`prime_embedded_dispatch` in `FeatureFlagsSchema`, default **`false`**. The
-flag ships the routing dark and is the kill switch: flip per-user via runtime
-config, no deploy needed. Off → `resolveEmbeddedDispatchRoute` returns `null`
-and the legacy path is bit-identical (the resolver is the only new statement
-executed on that path).
+There is no feature flag. `orvilo` is Orvilo's own engine: a task that
+selects it runs the embedded Prime harness the same way a task that selects
+`codex` runs the codex CLI — per-task choice, not a deployment toggle. (The
+`prime_embedded_dispatch` flag that shipped this seam dark was removed; see
+the acceptance doc's deploy-readiness checklist for rollout prerequisites.)
 
 ## 3. Composition — `openEmbeddedDispatchHost`
 
@@ -104,7 +102,7 @@ turn `error`, and the driver settles through the same `heteroFinish` path.
 - **Phase 5b** (on `feat/restore-provider-p30`, not this branch): repoint
   restored provider-UI writes to `provider_bindings`; retire
   `streamingExecutor` from the cloud path.
-- **Phase 6** (acceptance): flag-on end-to-end in a live env (real Docker
+- **Phase 6** (acceptance): end-to-end in a live env (real Docker
   supervisor + runner image); orvilo **chat** runs deliberately do not route
   here yet — the seam requires the canonical task-dispatch context, so only
   task dispatches admit.

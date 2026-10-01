@@ -1551,10 +1551,10 @@ export const dispatchHeteroAgent = async (
       }
     } else {
       // Prime embedded harness (phase 5a): own-agent task dispatches on the
-      // sandbox plan route to the canonical embedded host when
-      // `prime_embedded_dispatch` admits them. Everything else — ACP/hetero
-      // kinds, chat runs, runs without canonical dispatch context — falls
-      // through to the unchanged sandbox path below.
+      // sandbox plan always route to the canonical embedded host — `orvilo`
+      // is our own engine. Everything else — ACP/hetero kinds, chat runs,
+      // runs without canonical dispatch context — falls through to the
+      // unchanged sandbox path below.
       const embeddedRoute = await resolveEmbeddedDispatchRoute(deps, {
         appContext,
         heteroType,

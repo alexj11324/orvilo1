@@ -27,6 +27,7 @@ import { serverDatabase } from '@/libs/trpc/lambda/middleware';
  */
 export interface WorkspaceMembershipSummary extends WorkspaceItem {
   lockedOut?: boolean;
+  memberCount?: number;
   plan?: string;
   role: string | null;
 }
@@ -161,7 +162,7 @@ export const workspaceRouter = router({
         if (!(await model.findBySlug(slug))) {
           try {
             const created = await model.create({ name, slug });
-            return { ...created, role: 'owner' };
+            return { ...created, memberCount: 1, role: 'owner' };
           } catch (error) {
             if (!isUniqueViolation(error)) {
               console.error('[workspace:ensureDefault]', error);

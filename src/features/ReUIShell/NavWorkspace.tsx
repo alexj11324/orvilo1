@@ -46,6 +46,8 @@ import { useUserAvatar } from '@/hooks/useUserAvatar';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 
+import { isImageAvatar, WorkspaceAvatar, type WorkspaceAvatarOption } from './WorkspaceAvatar';
+
 const THEMES = [
   { icon: SunIcon, labelKey: 'settingCommon.themeMode.light', value: 'light' },
   { icon: MoonIcon, labelKey: 'settingCommon.themeMode.dark', value: 'dark' },
@@ -95,36 +97,6 @@ function ThemeSegmentedToggle() {
   );
 }
 
-interface WorkspaceOption {
-  avatar?: string | null;
-  id: string | null;
-  name: string;
-}
-
-const isImageAvatar = (avatar?: string | null) =>
-  Boolean(avatar && (/^(?:data:|https?:|\/)/.test(avatar) || avatar.startsWith('blob:')));
-
-function WorkspaceAvatar({
-  workspace,
-  className,
-}: {
-  className?: string;
-  workspace: WorkspaceOption;
-}) {
-  return (
-    <Avatar className={cn('shrink-0', className)}>
-      {isImageAvatar(workspace.avatar) && (
-        <AvatarImage alt={workspace.name} src={workspace.avatar ?? undefined} />
-      )}
-      <AvatarFallback className="border border-border bg-background text-sm font-medium text-foreground">
-        {workspace.avatar && !isImageAvatar(workspace.avatar)
-          ? workspace.avatar
-          : workspace.name.charAt(0).toUpperCase()}
-      </AvatarFallback>
-    </Avatar>
-  );
-}
-
 function WorkspaceItem({
   workspace,
   isActive,
@@ -132,7 +104,7 @@ function WorkspaceItem({
 }: {
   isActive: boolean;
   onSelect: (id: string | null) => void;
-  workspace: WorkspaceOption;
+  workspace: WorkspaceAvatarOption;
 }) {
   return (
     <DropdownMenuItem onClick={() => onSelect(workspace.id)}>
@@ -158,13 +130,13 @@ export function NavWorkspace() {
     authSelectors.isLoginWithAuth(state),
     state.openLogin,
   ]);
-  const personalWorkspace: WorkspaceOption = {
+  const personalWorkspace: WorkspaceAvatarOption = {
     avatar: userAvatar,
     id: null,
     name: t('workspaceSwitcher.personal'),
   };
   // Root routes reconcile to a membership; Personal is not a persistent destination.
-  const workspaceOptions: WorkspaceOption[] = workspaces;
+  const workspaceOptions: WorkspaceAvatarOption[] = workspaces;
   const activeWorkspace =
     workspaceOptions.find((workspace) => workspace.id === activeWorkspaceId) ?? personalWorkspace;
   const initials = displayName

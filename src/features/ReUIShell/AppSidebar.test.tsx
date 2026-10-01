@@ -11,6 +11,7 @@ import SearchSection from '@/features/SettingsSearch/SearchSection';
 import { AppSidebar } from './AppSidebar';
 import { NavMain } from './NavMain';
 import { NavWorkspace } from './NavWorkspace';
+import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 
 const platform = vi.hoisted(() => ({ desktop: false }));
 const globalState = vi.hoisted(() => ({
@@ -20,10 +21,12 @@ const globalState = vi.hoisted(() => ({
   toggleLeftPanel: vi.fn(),
 }));
 const viewport = vi.hoisted(() => ({ mobile: false }));
-const workspace = vi.hoisted(() => ({
-  items: [{ id: 'w1', name: 'Team', slug: 'team' }],
-  switchWorkspace: vi.fn(),
-}));
+const workspace = vi.hoisted(() => {
+  const items: Array<{ id: string; memberCount?: number; name: string; slug: string }> = [
+    { id: 'w1', name: 'Team', slug: 'team' },
+  ];
+  return { items, navigate: vi.fn(), switchWorkspace: vi.fn() };
+});
 vi.mock('@/const/version', () => ({
   get isDesktop() {
     return platform.desktop;
@@ -58,6 +61,9 @@ vi.mock('@/features/NavPanel/components/SideBarSkeleton', () => ({
 vi.mock('./NotificationsPopover', () => ({ NotificationsPopover: () => null }));
 vi.mock('./Logo', () => ({ Logo: () => null }));
 vi.mock('@/business/client/hooks/useWorkspaces', () => ({ useWorkspaces: () => workspace.items }));
+vi.mock('@/business/client/hooks/useActiveWorkspace', () => ({
+  useActiveWorkspace: () => workspace.items.find((item) => item.id === 'w1') ?? null,
+}));
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
   useActiveWorkspaceId: () => 'w1',
 }));
@@ -65,7 +71,7 @@ vi.mock('@/business/client/hooks/useSwitchWorkspace', () => ({
   useSwitchWorkspace: () => ({ switchWorkspace: workspace.switchWorkspace }),
 }));
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
-  useWorkspaceAwareNavigate: () => vi.fn(),
+  useWorkspaceAwareNavigate: () => workspace.navigate,
 }));
 vi.mock('@/features/User/UserPanel/useMenu', () => ({ useMenu: () => ({ mainItems: [] }) }));
 vi.mock('@/features/NavPanel/components/SidebarDropdownMenu', () => ({
@@ -273,6 +279,91 @@ describe('workspace destinations', () => {
     );
     expect(screen.queryByRole('menuitem', { name: /workspaceSwitcher.personal/ })).toBeNull();
     expect(screen.queryByText('reuiShell9.organizations')).toBeNull();
+  });
+});
+
+describe('workspace settings switcher', () => {
+  it('replaces the logo header on the expanded settings surface', () => {
+    route.key = 'workspace-settings';
+    render(
+      <SidebarProvider open>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'common:reuiShell9.collapseSidebar' })).toBeTruthy();
+  });
+  it('keeps the global header outside settings and on the collapsed rail', () => {
+    route.key = 'workspace-settings';
+    const { rerender } = render(
+      <SidebarProvider open>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    rerender(
+      <SidebarProvider open={false}>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
+    route.key = 'home';
+    rerender(
+      <SidebarProvider open>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
+  });
+  it('shows the switcher inside the collapsed desktop preference when in the mobile drawer', () => {
+    route.key = 'workspace-settings';
+    viewport.mobile = true;
+    render(
+      <SidebarProvider openMobile open={false}>
+        <AppSidebar />
+      </SidebarProvider>,
+    );
+    expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
+  });
+  it('lists memberships with member counts and marks only the active workspace', () => {
+    workspace.items = [
+      { id: 'w1', memberCount: 8, name: 'Team', slug: 'team' },
+      { id: 'w2', name: 'Solo', slug: 'solo' },
+    ];
+    render(
+      <SidebarProvider>
+        <WorkspaceSwitcher />
+      </SidebarProvider>,
+    );
+    const team = screen.getByRole('menuitem', { name: /Team/ });
+    expect(team.querySelector('svg.lucide-check')).toBeTruthy();
+    expect(screen.getAllByText('workspaceSetting.switcher.memberCount')).toHaveLength(1);
+    const solo = screen.getByRole('menuitem', { name: /Solo/ });
+    expect(solo.querySelector('svg.lucide-check')).toBeNull();
+    expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
+  });
+  it('switches workspace from a membership row', () => {
+    workspace.items = [
+      { id: 'w1', name: 'Team', slug: 'team' },
+      { id: 'w2', name: 'Solo', slug: 'solo' },
+    ];
+    render(
+      <SidebarProvider>
+        <WorkspaceSwitcher />
+      </SidebarProvider>,
+    );
+    fireEvent.click(screen.getByRole('menuitem', { name: /Solo/ }));
+    expect(workspace.switchWorkspace).toHaveBeenCalledWith('w2');
+  });
+  it('routes New Workspace into the existing onboarding flow', () => {
+    render(
+      <SidebarProvider>
+        <WorkspaceSwitcher />
+      </SidebarProvider>,
+    );
+    fireEvent.click(
+      screen.getByRole('menuitem', { name: /workspaceSetting.switcher.newWorkspace/ }),
+    );
+    expect(workspace.navigate).toHaveBeenCalledWith('/onboarding', { escape: true });
   });
 });
 

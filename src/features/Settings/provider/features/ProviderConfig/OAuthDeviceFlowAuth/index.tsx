@@ -38,7 +38,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     padding-inline: 24px;
     border-radius: 12px;
 
-    font-family: monospace;
+    font-family: ${cssVar.fontFamilyCode};
     font-size: 28px;
     font-weight: 600;
     letter-spacing: 6px;

@@ -1,8 +1,8 @@
 // @vitest-environment node
 /**
- * Phase-5a dispatch routing: `resolveEmbeddedDispatchRoute` admits only
- * own-agent (`heteroType === 'orvilo'`) task dispatches while
- * `prime_embedded_dispatch` is on, `openEmbeddedDispatchHost` composes
+ * Phase-5a dispatch routing: `resolveEmbeddedDispatchRoute` admits every
+ * own-agent (`heteroType === 'orvilo'`) task dispatch unconditionally,
+ * `openEmbeddedDispatchHost` composes
  * `CanonicalCoreRuntimeHost` + the embedded bridge against the canonical rows,
  * and `driveEmbeddedCanonicalRun` produces through the shared
  * heteroIngest/heteroFinish surface.
@@ -34,7 +34,7 @@ import { PRIME_EMBEDDED_PIN } from '@orvilo/agent-execution/controlPlane/server'
 import { getTestDB } from '@orvilo/database/test-utils';
 import { isRecord } from '@orvilo/utils/object';
 import { eq, sql } from 'drizzle-orm';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { CredentialModel } from '@/database/models/credential';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
@@ -70,11 +70,6 @@ import {
   openEmbeddedDispatchHost,
   resolveEmbeddedDispatchRoute,
 } from './embeddedDispatch';
-
-const mockIsPrimeEmbeddedDispatchEnabled = vi.hoisted(() => vi.fn());
-vi.mock('@/server/featureFlags/primeEmbeddedDispatch', () => ({
-  isPrimeEmbeddedDispatchEnabled: mockIsPrimeEmbeddedDispatchEnabled,
-}));
 
 const db: OrviloDatabase = await getTestDB();
 
@@ -381,7 +376,6 @@ afterEach(async () => {
     await db.delete(workspaces).where(eq(workspaces.id, row.workspaceId));
     await cleanupTestUser(db, row.userId);
   }
-  mockIsPrimeEmbeddedDispatchEnabled.mockReset();
 });
 
 afterAll(() => {
@@ -610,10 +604,9 @@ const openInput = (
 });
 
 describe('resolveEmbeddedDispatchRoute', () => {
-  it('admits only an own-agent task dispatch while the flag is on', async () => {
+  it('admits every own-agent task dispatch; ACP/hetero kinds never match', async () => {
     const userId = `u_${randomBytes(4).toString('hex')}`;
     const appContext = { dispatchFence: 2, dispatchId: 'd-1', executionGeneration: 1 };
-    mockIsPrimeEmbeddedDispatchEnabled.mockResolvedValue(true);
     expect(
       await resolveEmbeddedDispatchRoute(
         { userId },
@@ -640,14 +633,6 @@ describe('resolveEmbeddedDispatchRoute', () => {
       await resolveEmbeddedDispatchRoute(
         { userId },
         { appContext: { dispatchId: 'd-1' }, heteroType: 'orvilo', operationTaskId: 'task-1' },
-      ),
-    ).toBeNull();
-    // Gate off → the seam never fires and the legacy path stays untouched.
-    mockIsPrimeEmbeddedDispatchEnabled.mockResolvedValue(false);
-    expect(
-      await resolveEmbeddedDispatchRoute(
-        { userId },
-        { appContext, heteroType: 'orvilo', operationTaskId: 'task-1' },
       ),
     ).toBeNull();
   });

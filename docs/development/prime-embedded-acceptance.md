@@ -40,9 +40,8 @@ to also emit `protocol-handshake.jsonl` — the verbatim ndjson transcript of
 | Isolation: runner env carries no endpoint/headers/secrets (`sanitizedRuntimeEnvironment`)           | "launch env"                                                                 | Real `IsolatedLaunch` env captured by supervisor seam; deep-equality + regex over args                                                                                                           | Pass                                    |
 | Isolation: denied network — runner opens no outbound socket except stdio                            | "netguard"                                                                   | Real child under `prime-embedded-netguard.mjs` (patches `net`/`tls`/`dgram`/`fetch` → ENETUNREACH + JSONL audit); real prompt driven through the stub broker — zero `net` entries                | Pass                                    |
 | Isolation: mid-stream `requestStop`/stopped task → `withRun` denial kills stream                    | isolation stop test                                                          | Real fence transition mid-prompt → `revoked`                                                                                                                                                     | Pass                                    |
-| Dispatch: `prime_embedded_dispatch` **on** → `heteroType:'orvilo'` reaches embedded composition     | `embeddedAcceptance.dispatch.test.ts`                                        | Real env flag flip (`FEATURE_FLAGS` + `vi.resetModules` + dynamic import — no `vi.mock`); real DB rows (task fence 2, gen 1); `driveEmbeddedCanonicalRun` → real child via supervisor seam       | Pass                                    |
-| Dispatch: hetero (`claude-code`,`codex`) and ACP dispatches provably do NOT route to embedded       | route matrix in same file                                                    | Real flag flip, real `resolveEmbeddedDispatchRoute` — non-orvilo → `null`                                                                                                                        | Pass                                    |
-| Dispatch: flag **off** → embedded route inert (default-deny)                                        | same matrix                                                                  | Real flag flip                                                                                                                                                                                   | Pass                                    |
+| Dispatch: `heteroType:'orvilo'` task runs route to embedded composition unconditionally             | `embeddedAcceptance.dispatch.test.ts`                                        | Real `resolveEmbeddedDispatchRoute` — no flag gate (`orvilo` is our own engine); real DB rows (task fence 2, gen 1); `driveEmbeddedCanonicalRun` → real child via supervisor seam                | Pass                                    |
+| Dispatch: hetero (`claude-code`,`codex`) and ACP dispatches provably do NOT route to embedded       | route matrix in same file                                                    | Real `resolveEmbeddedDispatchRoute` — non-orvilo → `null`                                                                                                                                        | Pass                                    |
 | Revocation: binding bump mid-compose/mid-stream → `unauthorized` before further inference           | inference bump test (real DB)                                                | Real `provider_bindings.revision` UPDATE; per-event `withRun` recheck                                                                                                                            | Pass                                    |
 | Compaction: vendored `completeSimple` summarization exits via `broker.infer` only                   | `embeddedAcceptance.compaction.test.ts` "an over-window…"                    | Real child; seeded history + reported-usage threshold compaction → `broker.infer` frame whose `messages[0]` is `SUMMARIZATION_SYSTEM_PROMPT` verbatim                                            | Pass                                    |
 | Resume: v1 deferral fail-closed                                                                     | "resume returns unsupported_capability"                                      | Real `PrimeEmbeddedRuntime` — `capabilities().resume === 'none'`                                                                                                                                 | Pass                                    |
@@ -90,14 +89,14 @@ Residual risk is confined to the supervisor boundary — the wire protocol,
 broker auth/fencing, inference path, and artifact verification are all
 exercised end-to-end here.
 
-## Flag-flip checklist — `prime_embedded_dispatch`
+## Deploy readiness checklist — embedded dispatch
 
-Gate: `isPrimeEmbeddedDispatchEnabled` ← `getServerFeatureFlagsFromRuntimeConfig`
-← `parseFeatureFlag(process.env.FEATURE_FLAGS)` (`'+prime_embedded_dispatch'`
-enables, `'-prime_embedded_dispatch'` disables; default off). The flag
-provider caches for 5s — expect one cache TTL of propagation delay.
+`orvilo` task dispatches route to the embedded host unconditionally — `orvilo`
+is Orvilo's own engine, selectable per task like `codex`, not a flag-gated
+seam (the `prime_embedded_dispatch` flag was removed; there is no runtime
+toggle). Rollback is a code revert, not a flag flip.
 
-Before flipping in prod:
+Before first traffic in a deploy:
 
 1. Image: build and pin `prime-harness` image + `runner.manifest.json` in the
    deploy environment (Docker gap items above must hold there).
@@ -107,10 +106,7 @@ Before flipping in prod:
    fails the dispatch pre-launch (`unavailable`), never mid-run.
 4. Smoke: one `heteroType:'orvilo'` dispatch on a staging task; confirm the
    operation reaches `done` and `terminatedTrees` cleaned up.
-5. Rollback is the same flag off — in-flight runs are unaffected (the route
-   is chosen at dispatch-compose time); new dispatches fall back to the
-   previous harness path.
-6. Watch for `stale_fence`/`unauthorized` errors on first traffic — they
+5. Watch for `stale_fence`/`unauthorized` errors on first traffic — they
    indicate fence/binding revision drift, not transient failures.
 
 ## Earlier-phase fixes found by this suite

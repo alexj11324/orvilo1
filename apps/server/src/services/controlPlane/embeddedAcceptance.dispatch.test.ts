@@ -2,12 +2,9 @@
 /**
  * Phase 6 acceptance — dispatch-chain evidence.
  *
- * The flag flip is REAL: `FEATURE_FLAGS='+prime_embedded_dispatch'` in the
- * process environment, re-read through a fresh module registry — the same
- * env-var mechanism production uses (no vi.mock on the flag module).
- *
  * The route seam (`resolveEmbeddedDispatchRoute`) admits heteroType 'orvilo'
- * under the flag and provably denies everything else. The compose seam
+ * unconditionally — `orvilo` is our own engine — and provably denies
+ * everything else. The compose seam
  * (`openEmbeddedDispatchHost` + `driveEmbeddedCanonicalRun`) runs against the
  * REAL canonical rows (task/dispatch/taskTopics/operation/admission), the REAL
  * artifact verifier, a REAL SqlTrustedProviderBackend (real credential
@@ -21,7 +18,7 @@ import { rm } from 'node:fs/promises';
 import { getTestDB } from '@orvilo/database/test-utils';
 import type { ProviderBindingConfig } from '@orvilo/types';
 import { eq, sql } from 'drizzle-orm';
-import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 
 import { CredentialModel } from '@/database/models/credential';
 import {
@@ -60,7 +57,11 @@ import {
   startStubProvider,
   type StubProvider,
 } from './embeddedAcceptance.support';
-import { driveEmbeddedCanonicalRun, openEmbeddedDispatchHost } from './embeddedDispatch';
+import {
+  driveEmbeddedCanonicalRun,
+  openEmbeddedDispatchHost,
+  resolveEmbeddedDispatchRoute,
+} from './embeddedDispatch';
 
 const RUNNER_UP = runnerAvailable();
 const db: OrviloDatabase = await getTestDB();
@@ -71,18 +72,8 @@ const platformDescriptor = Object.getOwnPropertyDescriptor(process, 'platform');
 const directories: string[] = [];
 const seeded: Array<{ userId: string; workspaceId: string }> = [];
 let originalDisableRedis: string | undefined;
-let originalFlags: string | undefined;
 let originalSecret: string | undefined;
 let provider: StubProvider;
-
-/** The flag evaluation path is module-cached for 5s — a real flip needs a
- * fresh module registry reading a changed process env. */
-const routeWithFlag = async (flagValue: string | undefined) => {
-  if (flagValue === undefined) delete process.env.FEATURE_FLAGS;
-  else process.env.FEATURE_FLAGS = flagValue;
-  vi.resetModules();
-  return (await import('./embeddedDispatch')).resolveEmbeddedDispatchRoute;
-};
 
 const appContext = {
   dispatchFence: 2,
@@ -223,7 +214,6 @@ const seedBinding = async (userId: string) => {
 beforeAll(async () => {
   originalSecret = process.env.KEY_VAULTS_SECRET;
   originalDisableRedis = process.env.DISABLE_REDIS;
-  originalFlags = process.env.FEATURE_FLAGS;
   process.env.KEY_VAULTS_SECRET = randomBytes(32).toString('base64');
   // No broker in the test env — pin the in-memory stream manager so ingest's
   // publish path is exercised rather than failing against a dead Redis.
@@ -246,8 +236,6 @@ afterEach(async () => {
     await db.delete(workspaces).where(eq(workspaces.id, row.workspaceId));
     await cleanupTestUser(db, row.userId);
   }
-  if (originalFlags === undefined) delete process.env.FEATURE_FLAGS;
-  else process.env.FEATURE_FLAGS = originalFlags;
 });
 
 afterAll(async () => {
@@ -259,22 +247,9 @@ afterAll(async () => {
   await provider.stop();
 });
 
-describe('embedded acceptance: dispatch flag flip (real env)', () => {
-  it('flag unset → the route denies even an orvilo task dispatch', async () => {
-    const route = await routeWithFlag(undefined);
-    const admitted = await route(
-      { userId: 'user-1' },
-      {
-        appContext,
-        heteroType: 'orvilo',
-        operationTaskId: 'task-1',
-      },
-    );
-    expect(admitted).toBeNull();
-  });
-
-  it("FEATURE_FLAGS='+prime_embedded_dispatch' → orvilo admitted, hetero/ACP denied", async () => {
-    const route = await routeWithFlag('+prime_embedded_dispatch');
+describe('embedded acceptance: dispatch routing (unconditional)', () => {
+  it('orvilo task dispatch admitted, hetero/ACP denied', async () => {
+    const route = resolveEmbeddedDispatchRoute;
     const admitted = await route(
       { userId: 'user-1' },
       {

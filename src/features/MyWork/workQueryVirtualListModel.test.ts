@@ -6,10 +6,9 @@ import {
   flattenWorkQueryVirtualItems,
   nestWorkQueryListGroups,
   stickyVirtualSections,
-} from './workQueryVirtualList';
+} from './workQueryVirtualListModel';
 
-const task = (id: string) =>
-  ({ id, identifier: id, parentTaskId: null }) as never;
+const task = (id: string) => ({ id, identifier: id, parentTaskId: null }) as never;
 
 describe('nestWorkQueryListGroups', () => {
   it('keeps a primary group and drops an empty one', () => {
@@ -79,9 +78,9 @@ describe('flattenWorkQueryVirtualItems', () => {
       primaryAxis: 'activityDate',
       rankOf: (key) => (key === 'day:0' ? 0 : 7),
     });
-    expect(flat.items.filter((item) => item.kind === 'header').map((item) => item.labelKey)).toEqual(
-      ['day:0', 'week:1'],
-    );
+    expect(
+      flat.items.filter((item) => item.kind === 'header').map((item) => item.labelKey),
+    ).toEqual(['day:0', 'week:1']);
   });
 
   it('orders priority headers urgent-first and assignee lanes by name', () => {
@@ -124,9 +123,11 @@ describe('flattenWorkQueryVirtualItems', () => {
       nestRows: false,
       primaryAxis: 'status',
     });
-    expect(
-      laneFlat.items.filter((item) => item.depth === 1).map((item) => item.labelKey),
-    ).toEqual(['a', 'b', 'none']);
+    expect(laneFlat.items.filter((item) => item.depth === 1).map((item) => item.labelKey)).toEqual([
+      'a',
+      'b',
+      'none',
+    ]);
   });
 });
 

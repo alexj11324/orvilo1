@@ -22,7 +22,7 @@ import {
   nestWorkQueryListGroups,
   stickyVirtualSections,
   type WorkQueryVirtualItem,
-} from './workQueryVirtualList';
+} from './workQueryVirtualListModel';
 
 const DEFAULT_ROW_HEIGHT = 44;
 
@@ -235,9 +235,7 @@ const WorkQueryVirtualList = ({
           <AsyncError
             error={error}
             variant={'inline'}
-            onRetry={
-              onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(item.cursorKey) : undefined
-            }
+            onRetry={onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(item.cursorKey) : undefined}
           />
         );
       }

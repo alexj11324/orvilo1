@@ -219,6 +219,10 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
   spawnHeteroSandbox: mockSpawnHeteroSandbox,
 }));
 
+vi.mock('@/server/services/providerBinding/execution', () => ({
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue({ status: 'none' }),
+}));
+
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: {
     dispatchAgentRun: mockDispatchAgentRun,

@@ -341,6 +341,7 @@ export default class GatewayConnectionCtr extends ControllerModule {
         args: request.args,
         builtinTools: request.builtinTools,
         cwd: request.cwd,
+        env: request.env,
         imageList: request.imageList,
         jwt,
         operationId: request.operationId,

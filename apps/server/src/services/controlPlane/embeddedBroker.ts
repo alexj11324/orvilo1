@@ -15,7 +15,11 @@ import type { OrviloEngineKind, ProviderBindingConfig } from '@orvilo/types';
 import type { OrviloDatabase } from '@/database/type';
 
 import { SqlTrustedProviderBackend } from '../providerBinding/controlPlane';
-import type { BindingExecutionClaim } from '../providerBinding/execution';
+import type {
+  BindingExecutionClaim,
+  IssueBindingExecutionForClaim,
+  ResolveOrviloProviderBindingForTarget,
+} from '../providerBinding/execution';
 import { issueBindingExecution, resolveOrviloProviderBinding } from '../providerBinding/execution';
 import type { CanonicalRunBinding } from './canonicalRun';
 import { CanonicalRunAuthority } from './canonicalRun';
@@ -38,10 +42,10 @@ export interface EmbeddedInferenceBridgeDeps {
   binding: CanonicalRunBinding;
   database: OrviloDatabase;
   engine?: OrviloEngineKind | string | null;
-  issueExecution?: typeof issueBindingExecution;
+  issueExecution?: IssueBindingExecutionForClaim;
   now?: () => number;
   /** Test seams — replace binding resolution and issuance. */
-  resolveBinding?: typeof resolveOrviloProviderBinding;
+  resolveBinding?: ResolveOrviloProviderBindingForTarget;
   /** Test seam — replaces canonical admission without a live DB. */
   runAuthority?: Pick<CanonicalRunAuthority, 'withRun'>;
   target?: ProviderBindingConfig['selection']['target'];

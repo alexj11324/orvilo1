@@ -3,7 +3,7 @@ import { randomBytes, randomUUID } from 'node:crypto';
 
 import type { ProviderBindingConfig } from '@orvilo/types';
 import { inArray } from 'drizzle-orm';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { CredentialModel } from '@/database/models/credential';
@@ -13,6 +13,8 @@ import type { OrviloDatabase } from '@/database/type';
 import { issueBindingExecution, resolveOrviloProviderBinding } from './execution';
 
 const db: OrviloDatabase = await getTestDB();
+
+let originalSecret: string | undefined;
 
 const OWNER = 'pb-exec-owner';
 const OUTSIDER = 'pb-exec-outsider';
@@ -56,8 +58,18 @@ const createCredential = (userId: string, values: Record<string, string> = { K: 
     type: 'kv-env',
   });
 
+beforeAll(() => {
+  originalSecret = process.env.KEY_VAULTS_SECRET;
+  process.env.KEY_VAULTS_SECRET = randomBytes(32).toString('base64');
+});
+
 beforeEach(async () => {
   await db.insert(users).values([{ id: OWNER }, { id: OUTSIDER }]);
+});
+
+afterAll(() => {
+  if (originalSecret === undefined) delete process.env.KEY_VAULTS_SECRET;
+  else process.env.KEY_VAULTS_SECRET = originalSecret;
 });
 
 afterEach(async () => {

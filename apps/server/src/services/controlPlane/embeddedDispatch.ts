@@ -23,7 +23,6 @@ import { randomUUID } from 'node:crypto';
 import { mkdir, mkdtemp, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import type {
   ControlError,
@@ -172,10 +171,23 @@ export interface EmbeddedDispatchHost {
   initModelId: string;
 }
 
-/** The built runner bundle, resolved repo-relative from this file. */
-const DEFAULT_RUNNER_ARTIFACT = fileURLToPath(
-  new URL('../../../../../packages/prime-harness/dist/runner.mjs', import.meta.url),
-);
+/** The built runner bundle, resolved lazily and repo-relative from this file.
+ * A plain dirname join, never `new URL(literal, import.meta.url)` — bundlers
+ * trace that form into the module graph and the unbuilt `dist/` breaks the
+ * web-app build; only the flag-on dispatch path ever evaluates this. */
+const defaultRunnerArtifact = () =>
+  path.join(
+    import.meta.dirname,
+    '..',
+    '..',
+    '..',
+    '..',
+    '..',
+    'packages',
+    'prime-harness',
+    'dist',
+    'runner.mjs',
+  );
 
 /**
  * Everything before launch: read the canonical rows the binding pins, mint or
@@ -270,7 +282,7 @@ export const openEmbeddedDispatchHost = async (
   };
 
   const environment = input.environment ?? {};
-  const artifact = environment.artifact ?? DEFAULT_RUNNER_ARTIFACT;
+  const artifact = environment.artifact ?? defaultRunnerArtifact();
   const manifestPath = path.join(path.dirname(artifact), 'runner.manifest.json');
   let manifest: EmbeddedArtifactManifest;
   try {

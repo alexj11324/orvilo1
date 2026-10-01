@@ -1,4 +1,4 @@
-CREATE TABLE "ai_models" (
+CREATE TABLE IF NOT EXISTS "ai_models" (
 	"id" varchar(150) NOT NULL,
 	"_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"display_name" varchar(200),
@@ -23,7 +23,7 @@ CREATE TABLE "ai_models" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "ai_providers" (
+CREATE TABLE IF NOT EXISTS "ai_providers" (
 	"id" varchar(64) NOT NULL,
 	"name" text,
 	"_id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
@@ -44,15 +44,19 @@ CREATE TABLE "ai_providers" (
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
+ALTER TABLE "ai_models" DROP CONSTRAINT IF EXISTS "ai_models_user_id_users_id_fk";--> statement-breakpoint
 ALTER TABLE "ai_models" ADD CONSTRAINT "ai_models_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ai_models" DROP CONSTRAINT IF EXISTS "ai_models_workspace_id_workspaces_id_fk";--> statement-breakpoint
 ALTER TABLE "ai_models" ADD CONSTRAINT "ai_models_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ai_providers" DROP CONSTRAINT IF EXISTS "ai_providers_user_id_users_id_fk";--> statement-breakpoint
 ALTER TABLE "ai_providers" ADD CONSTRAINT "ai_providers_user_id_users_id_fk" FOREIGN KEY ("user_id") REFERENCES "public"."users"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "ai_providers" DROP CONSTRAINT IF EXISTS "ai_providers_workspace_id_workspaces_id_fk";--> statement-breakpoint
 ALTER TABLE "ai_providers" ADD CONSTRAINT "ai_providers_workspace_id_workspaces_id_fk" FOREIGN KEY ("workspace_id") REFERENCES "public"."workspaces"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
-CREATE UNIQUE INDEX "ai_models_id_provider_id_user_id_unique" ON "ai_models" USING btree ("id","provider_id","user_id") WHERE "ai_models"."workspace_id" is null;--> statement-breakpoint
-CREATE UNIQUE INDEX "ai_models_id_provider_id_user_id_workspace_id_unique" ON "ai_models" USING btree ("id","provider_id","user_id","workspace_id") WHERE "ai_models"."workspace_id" is not null;--> statement-breakpoint
-CREATE INDEX "ai_models_user_id_idx" ON "ai_models" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "ai_models_workspace_id_idx" ON "ai_models" USING btree ("workspace_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "ai_providers_id_user_id_unique" ON "ai_providers" USING btree ("id","user_id") WHERE "ai_providers"."workspace_id" is null;--> statement-breakpoint
-CREATE UNIQUE INDEX "ai_providers_id_user_id_workspace_id_unique" ON "ai_providers" USING btree ("id","user_id","workspace_id") WHERE "ai_providers"."workspace_id" is not null;--> statement-breakpoint
-CREATE INDEX "ai_providers_user_id_idx" ON "ai_providers" USING btree ("user_id");--> statement-breakpoint
-CREATE INDEX "ai_providers_workspace_id_idx" ON "ai_providers" USING btree ("workspace_id");
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_models_id_provider_id_user_id_unique" ON "ai_models" USING btree ("id","provider_id","user_id") WHERE "ai_models"."workspace_id" is null;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_models_id_provider_id_user_id_workspace_id_unique" ON "ai_models" USING btree ("id","provider_id","user_id","workspace_id") WHERE "ai_models"."workspace_id" is not null;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_models_user_id_idx" ON "ai_models" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_models_workspace_id_idx" ON "ai_models" USING btree ("workspace_id");--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_providers_id_user_id_unique" ON "ai_providers" USING btree ("id","user_id") WHERE "ai_providers"."workspace_id" is null;--> statement-breakpoint
+CREATE UNIQUE INDEX IF NOT EXISTS "ai_providers_id_user_id_workspace_id_unique" ON "ai_providers" USING btree ("id","user_id","workspace_id") WHERE "ai_providers"."workspace_id" is not null;--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_providers_user_id_idx" ON "ai_providers" USING btree ("user_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "ai_providers_workspace_id_idx" ON "ai_providers" USING btree ("workspace_id");

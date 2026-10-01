@@ -743,7 +743,9 @@ export class TaskDetailSliceActionImpl {
       // 15s below, including a teammate adding the very first prerequisite.
       return (
         hasInFlightActivity(detail) ||
-        detail?.dependencies?.some((dep) => dep.type === 'blocks') === true
+        detail?.dependencies?.some(
+          (dep) => dep.type === 'blocks' && dep.direction !== 'blocking',
+        ) === true
       );
     });
 

@@ -29,12 +29,15 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Notification,
   SettingsTabs.Plans,
   SettingsTabs.Profile,
+  SettingsTabs.Referral,
+  SettingsTabs.ServiceModel,
   SettingsTabs.Stats,
   SettingsTabs.Storage,
 ] as const;
 
 /** Tabs whose pages own their internal layout and must not be wrapped. */
 const FULL_WIDTH_TABS: readonly string[] = [
+  SettingsTabs.Provider,
   SettingsTabs.Connector,
   SettingsTabs.Creds,
   SettingsTabs.Usage,
@@ -66,6 +69,8 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     [SettingsTabs.Notification]: t('setting:tab.notification'),
     [SettingsTabs.Plans]: t('subscription:tab.plans'),
     [SettingsTabs.Profile]: t('auth:profile.title'),
+    [SettingsTabs.Referral]: t('subscription:tab.referral'),
+    [SettingsTabs.ServiceModel]: t('setting:tab.serviceModel'),
     [SettingsTabs.Stats]: t('auth:tab.stats'),
     [SettingsTabs.Storage]: t('setting:tab.storage'),
   };
@@ -99,6 +104,8 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     if (
       [
         SettingsTabs.About,
+        SettingsTabs.ServiceModel,
+        SettingsTabs.Provider,
         SettingsTabs.Profile,
         SettingsTabs.Stats,
         SettingsTabs.Usage,

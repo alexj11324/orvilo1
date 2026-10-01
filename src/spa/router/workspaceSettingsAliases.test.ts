@@ -10,11 +10,15 @@ import { mobileRoutes } from './mobileRouter.config';
 /**
  * Legacy `/:workspaceSlug/settings/<alias>` deep links.
  *
- * Both routers used to spell these out by hand — `provider` and
- * `service-model` in the middle of the tab list, `creds` and `stats` next to
- * the tabs they alias — so the same redirect existed in four places and none of
- * them knew about the others. They are built from `WORKSPACE_SETTINGS_ALIASES`
- * now, and these tests pin that every entry actually reaches a router.
+ * Both routers used to spell these out by hand — `creds` and `stats` next to
+ * the tabs they alias — so the same redirect existed in several places and none
+ * of them knew about the others. They are built from
+ * `WORKSPACE_SETTINGS_ALIASES` now, and these tests pin that every entry
+ * actually reaches a router.
+ *
+ * `provider` and `service-model` are NOT aliases: they are live workspace tabs
+ * again (restored P30 provider surface), so a redirect entry would shadow the
+ * real pages.
  */
 type Routes = Parameters<typeof matchRoutes>[0];
 
@@ -42,10 +46,11 @@ describe('workspace settings legacy aliases', () => {
   it('declares the aliases the routers must keep', () => {
     const aliases = WORKSPACE_SETTINGS_ALIASES.map((entry) => entry.alias);
 
-    expect(aliases).toContain('provider');
-    expect(aliases).toContain('service-model');
     expect(aliases).toContain('creds');
     expect(aliases).toContain('stats');
+    // Live restored tabs must stay alias-free or the redirect would shadow them.
+    expect(aliases).not.toContain('provider');
+    expect(aliases).not.toContain('service-model');
   });
 
   it.each(surfaces)('%s redirects every alias to its live workspace tab', (_, routes) => {

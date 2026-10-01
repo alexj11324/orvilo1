@@ -55,7 +55,28 @@ const isRenderableValue = (spec: WorkQueryFieldSpec, predicate: WorkQueryPredica
   if (isNullary(predicate.op)) return predicate.value === undefined;
   const value = predicate.value;
   if (predicate.op === 'in' || predicate.op === 'notIn') {
-    return Array.isArray(value) && value.every((item) => typeof item === 'string');
+    return (
+      Array.isArray(value) &&
+      value.every(
+        (item) =>
+          typeof item === 'string' ||
+          typeof item === 'number' ||
+          (typeof item === 'object' && item !== null && 'ref' in item),
+      )
+    );
+  }
+  if (predicate.op === 'between') {
+    return (
+      typeof value === 'object' &&
+      value !== null &&
+      'from' in value &&
+      'to' in value &&
+      typeof value.from === 'string' &&
+      typeof value.to === 'string'
+    );
+  }
+  if (predicate.op === 'contains' || predicate.op === 'lt' || predicate.op === 'gte') {
+    return typeof value === 'string' && value.length > 0;
   }
   if (spec.valueKind === 'user') {
     return (
@@ -155,6 +176,16 @@ export const isRowComplete = (row: FilterRow): boolean => {
   if (isNullary(row.op)) return true;
   if (row.op === 'in' || row.op === 'notIn') {
     return Array.isArray(row.value) && row.value.length > 0;
+  }
+  if (row.op === 'between') {
+    return (
+      typeof row.value === 'object' &&
+      row.value !== null &&
+      'from' in row.value &&
+      'to' in row.value &&
+      Boolean(row.value.from) &&
+      Boolean(row.value.to)
+    );
   }
   return row.value !== undefined && row.value !== '';
 };

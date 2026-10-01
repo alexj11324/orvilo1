@@ -32,10 +32,11 @@ const cardStyles = createStaticStyles(({ css }) => ({
 }));
 
 const SortableTaskCard = memo<{
+  hiddenProperties?: ReadonlySet<string>;
   onStatusChange?: (task: TaskListItem, choice: TaskStatusChoice) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
-}>(({ onStatusChange, routeScope, task }) => {
+}>(({ hiddenProperties, onStatusChange, routeScope, task }) => {
   const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
     data: { task },
     id: task.identifier,
@@ -58,6 +59,7 @@ const SortableTaskCard = memo<{
       {...attributes}
     >
       <TaskBoardCard
+        hiddenProperties={hiddenProperties}
         routeScope={routeScope}
         task={task}
         onStatusChange={onStatusChange ? handleStatusChange : undefined}
@@ -299,6 +301,7 @@ interface KanbanColumnProps {
   footer?: ReactNode;
   groupBy: TaskKanbanGroupBy;
   groupMeta?: TaskGroupMeta;
+  hiddenProperties?: ReadonlySet<string>;
   loading?: boolean;
   onCreate?: () => void;
   onHide?: () => void;
@@ -314,6 +317,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
     droppable,
     footer,
     groupBy,
+    hiddenProperties,
     groupMeta,
     loading,
     onCreate,
@@ -407,6 +411,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             >
               {tasks.map((task) => (
                 <SortableTaskCard
+                  hiddenProperties={hiddenProperties}
                   key={task.identifier}
                   routeScope={routeScope}
                   task={task}

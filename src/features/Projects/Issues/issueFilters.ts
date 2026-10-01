@@ -13,11 +13,9 @@ import { TASK_STATUS_VALUES, TASK_TRIAGE_STATUS_VALUES } from '@orvilo/types';
  * repeated `?filter=` params, the same convention the projects list uses
  * (listFilters.ts), so a filtered list is shareable.
  *
- * The list itself is matched client-side over the complete `task.list` fetch —
- * the same reason `filterTasksByMilestone` is exact — so only fields the task
- * row honestly answers are interactive. `task.list` rows carry every field the
- * menu offers (including `labels` — the batched `taskLabel.listForTasks` join
- * on the list route), so no filter needs a second fetch.
+ * Applied filters and the milestone param run as a paged work query. The
+ * unfiltered list still reads the task store. Only fields the task row
+ * honestly answers are interactive.
  *
  * The project's milestones ride the separate `?projectMilestoneId=` param
  * (milestoneFilter.ts) — the menu still lists Milestones so the directory
@@ -387,14 +385,24 @@ export const upsertProjectIssueFilter = (
 // ── WorkQuery bridge (seeds "Save as new view" / Advanced filter, and the
 //    server-side label narrowing) ──
 
-const orNodes = (predicates: WorkQueryPredicate[]): WorkQueryFilter | WorkQueryPredicate =>
-  predicates.length === 1 ? predicates[0] : { any: predicates };
+/** One `in` for ids, `isNull` for the empty choice, or both under `any`. */
+const idListPredicate = (
+  field: WorkQueryPredicate['field'],
+  values: readonly (string | null)[],
+): (WorkQueryFilter | WorkQueryPredicate)[] | undefined => {
+  const ids = values.filter((value): value is string => typeof value === 'string');
+  const includeEmpty = values.includes(null);
+  const nodes: (WorkQueryFilter | WorkQueryPredicate)[] = [];
+  if (ids.length > 0) nodes.push({ field, op: 'in', value: ids });
+  if (includeEmpty) nodes.push({ field, op: 'isNull' });
+  if (nodes.length === 0) return undefined;
+  return nodes.length === 1 ? nodes : [{ any: nodes }];
+};
 
 /**
- * Maps one applied filter to WorkQuery AST nodes. Returns undefined when the
- * field isn't part of the task work-query registry (dates, free text, the
- * agent assignee — `assigneeAgentId` is not a WorkQueryField) — those stay
- * URL-only and never feed a saved view.
+ * Maps one applied filter to WorkQuery AST nodes. Field-internal choices are
+ * one `in` predicate. Dates, text and the agent assignee compile too, so a
+ * saved view keeps what the project issues page was showing.
  */
 const issueFilterToQueryNodes = (
   filter: ProjectIssueFilter,
@@ -406,46 +414,55 @@ const issueFilterToQueryNodes = (
         : undefined;
     }
     case 'priority': {
-      const predicates = filter.values.map((value): WorkQueryPredicate => ({
-        field: 'priority',
-        op: 'eq',
-        value,
-      }));
-      return predicates.length > 0 ? [orNodes(predicates)] : undefined;
+      return filter.values.length > 0
+        ? [{ field: 'priority', op: 'in', value: [...filter.values] }]
+        : undefined;
     }
     case 'assignee':
-    case 'creator': {
-      const field = filter.type === 'assignee' ? 'assigneeUserId' : 'createdByUserId';
-      // `createdByUserId` has no `isNull` op in the task field spec, so the
-      // "no creator" value simply cannot seed a saved view — it's skipped,
-      // not silently compiled to something the backend would reject.
-      const predicates = filter.values.flatMap((value): WorkQueryPredicate[] =>
-        value === null
-          ? filter.type === 'assignee'
-            ? [{ field, op: 'isNull' }]
-            : []
-          : [{ field, op: 'eq', value }],
-      );
-      return predicates.length > 0 ? [orNodes(predicates)] : undefined;
+    case 'creator':
+    case 'agent': {
+      const field =
+        filter.type === 'assignee'
+          ? 'assigneeUserId'
+          : filter.type === 'creator'
+            ? 'createdByUserId'
+            : 'assigneeAgentId';
+      return idListPredicate(field, filter.values);
     }
     case 'labels': {
-      const predicates = filter.values.map((value): WorkQueryPredicate =>
-        value === null ? { field: 'labelId', op: 'isNull' } : { field: 'labelId', op: 'eq', value },
-      );
-      return predicates.length > 0 ? [orNodes(predicates)] : undefined;
+      return idListPredicate('labelId', filter.values);
     }
     case 'triage': {
-      const predicates = filter.values.map((value): WorkQueryPredicate =>
-        value === null
-          ? { field: 'triageStatus', op: 'isNull' }
-          : { field: 'triageStatus', op: 'eq', value },
-      );
-      return predicates.length > 0 ? [orNodes(predicates)] : undefined;
+      return idListPredicate('triageStatus', filter.values);
     }
-    case 'agent':
-    case 'date':
+    case 'date': {
+      const field =
+        filter.field === 'created'
+          ? 'createdAt'
+          : filter.field === 'updated'
+            ? 'updatedAt'
+            : 'completedAt';
+      const now = new Date();
+      if (filter.window === 'set') return [{ field, op: 'isNotNull' }];
+      if (filter.window === 'unset') return [{ field, op: 'isNull' }];
+      if (filter.window === 'past') {
+        const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        return [{ field, op: 'lt', value: start }];
+      }
+      return [
+        {
+          field,
+          op: 'between',
+          value: {
+            from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+            to: now.toISOString(),
+          },
+        },
+      ];
+    }
     case 'text': {
-      return undefined;
+      const query = filter.query.trim();
+      return query ? [{ field: 'text', op: 'contains', value: query }] : undefined;
     }
   }
 };

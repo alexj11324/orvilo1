@@ -1,4 +1,11 @@
-import type { MyWorkMode, VersionedDecision, WorkQuery } from '@orvilo/types';
+import type {
+  MyWorkMode,
+  VersionedDecision,
+  WorkQuery,
+  WorkQueryFilter,
+  WorkQueryGroupBy,
+  WorkQuerySubGroupBy,
+} from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 
@@ -30,13 +37,16 @@ class WorkAttentionService {
   myWork = (input: {
     afterId?: string;
     delegated?: boolean;
-    groupBy?: 'attention' | 'none' | 'status' | 'workflowCategory';
+    filter?: WorkQueryFilter;
+    groupBy?: WorkQueryGroupBy;
     groupKey?: string;
     layout?: 'board' | 'list';
     limit?: number;
     mode: MyWorkMode;
     noProject?: boolean;
     queryHash?: string;
+    subGroupBy?: WorkQuerySubGroupBy;
+    timeZone?: string;
   }) => lambdaClient.workAttention.myWork.query(input);
 
   reviews = (input: {
@@ -59,6 +69,7 @@ class WorkAttentionService {
     afterId?: string;
     groupKey?: string;
     limit?: number;
+    mode?: MyWorkMode;
     query: WorkQuery;
     queryHash?: string;
   }) => lambdaClient.workAttention.query.query(input);

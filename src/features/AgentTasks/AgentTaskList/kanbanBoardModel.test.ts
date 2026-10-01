@@ -719,6 +719,12 @@ describe('kanbanColumnAllowsCreate', () => {
       workflowCategory: 'in_progress',
     });
     expect(kanbanColumnCreatePreset('st:paused')).toEqual({ status: 'paused' });
+    expect(kanbanColumnCreatePreset('pr:2')).toEqual({ priority: 2 });
+    expect(kanbanColumnCreatePreset('as:none')).toEqual({ assigneeUserId: null });
+    expect(kanbanColumnCreatePreset(`wf:todo${'\u001f'}pj:proj_1`)).toEqual({
+      projectId: 'proj_1',
+      workflowCategory: 'todo',
+    });
   });
 
   it('refuses create in my-task scope and on external boards without a team context', () => {

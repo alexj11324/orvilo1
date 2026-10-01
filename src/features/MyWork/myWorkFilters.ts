@@ -3,16 +3,27 @@ import type {
   WorkQuery,
   WorkQueryField,
   WorkQueryFilter,
+  WorkQueryGroupBy,
   WorkQueryLayout,
   WorkQueryOp,
+  WorkQuerySubGroupBy,
   WorkQueryValue,
 } from '@orvilo/types';
-import { applyDelegatedFilter, applyNoProjectFilter } from '@orvilo/types';
+import {
+  applyDelegatedFilter,
+  applyNoProjectFilter,
+  normalizeWorkQuerySubGroupBy,
+} from '@orvilo/types';
 
 import type { BuilderState, FilterRow } from '@/features/SavedViews/workQueryBuilder';
 import { builderToFilter } from '@/features/SavedViews/workQueryBuilder';
 
-import { MY_WORK_ORDERING_SORTS, type MyWorkOrdering } from './myWorkDisplay';
+import {
+  completedWindowQueryFilter,
+  MY_WORK_ORDERING_SORTS,
+  type MyWorkCompletedWindow,
+  type MyWorkOrdering,
+} from './myWorkDisplay';
 import { isMyWorkSaveableMode, myWorkSaveAsQuery } from './myWorkSaveAs';
 
 /** Builder start state — no editable rows, no preserved nodes. */
@@ -20,6 +31,23 @@ export const EMPTY_FILTER_BUILDER: BuilderState = { any: [], rows: [], slots: []
 
 export const workQueryFilterHasPredicates = (filter: WorkQueryFilter | undefined): boolean =>
   Boolean(filter && ((filter.all?.length ?? 0) > 0 || (filter.any?.length ?? 0) > 0));
+
+/** `?filter=` carries the builder AST. Malformed params read as no filter. */
+export const parseWorkQueryFilterParam = (raw: string | null): WorkQueryFilter | undefined => {
+  if (!raw) return undefined;
+  try {
+    const parsed = JSON.parse(raw) as unknown;
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return undefined;
+    const filter = parsed as WorkQueryFilter;
+    return filter.all || filter.any ? filter : undefined;
+  } catch {
+    return undefined;
+  }
+};
+
+export const serializeWorkQueryFilterParam = (
+  filter: WorkQueryFilter | undefined,
+): string | null => (workQueryFilterHasPredicates(filter) ? JSON.stringify(filter) : null);
 
 /**
  * AND-merge two filters, preserving `all`/`any` grouping. The mode predicate
@@ -45,25 +73,31 @@ export const myWorkActiveFilterCount = (builder: BuilderState): number => {
 };
 
 export interface MyWorkComposedQueryInput {
+  /** Completed-issues window, merged into the mode predicate. */
+  completed?: MyWorkCompletedWindow;
   delegated: boolean;
   /** Extra predicates from the visual builder (mode predicate stays implicit). */
   filter?: WorkQueryFilter;
-  /** Resolved list/board grouping — `activityDate` never reaches this layer. */
-  groupBy: 'attention' | 'none' | 'status' | 'workflowCategory';
+  /** Resolved list/board grouping, including activity date, project and cycle. */
+  groupBy: WorkQueryGroupBy;
   layout: WorkQueryLayout;
   mode: MyWorkMode;
   noProject: boolean;
   ordering: MyWorkOrdering;
+  /** Board swimlane or list sub-group. */
+  subGroupBy?: WorkQuerySubGroupBy;
+  /** IANA zone for activity-date groups. */
+  timeZone?: string;
 }
 
 /**
- * Compose the generic work-query endpoint payload for the Filter/Ordering
- * path. Only `assigned`/`created` are expressible: `subscribed` and
- * `activity` scope their rows through mode-injected SQL EXISTS clauses that
- * `workAttentionService.query` does not receive (`mode` is not a parameter),
- * so those tabs return `null` and keep the plain `myWork` call.
+ * Compose the generic work-query endpoint payload for a non-default ordering.
+ * Subscribed and activity carry their EXISTS predicate in the AST. Activity
+ * lists still pass `mode: 'activity'` so the page sorts by notification time.
+ * Delegated and review stay on the `myWork` endpoint.
  */
 export const myWorkComposedQuery = ({
+  completed = 'all',
   delegated,
   filter,
   groupBy,
@@ -71,15 +105,32 @@ export const myWorkComposedQuery = ({
   mode,
   noProject,
   ordering,
+  subGroupBy,
+  timeZone,
 }: MyWorkComposedQueryInput): WorkQuery | null => {
   if (!isMyWorkSaveableMode(mode)) return null;
   const base = myWorkSaveAsQuery(mode, layout);
+  const boardGroupBy =
+    layout === 'board'
+      ? groupBy === 'status' ||
+        groupBy === 'priority' ||
+        groupBy === 'assignee' ||
+        groupBy === 'attention'
+        ? groupBy
+        : 'workflowCategory'
+      : groupBy;
+  const lane = normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy);
   const query: WorkQuery = {
     ...base,
-    filter: mergeWorkQueryFilters(base.filter, filter),
-    groupBy: layout === 'board' ? (groupBy === 'status' ? 'status' : 'workflowCategory') : groupBy,
+    filter: mergeWorkQueryFilters(
+      mergeWorkQueryFilters(base.filter, filter),
+      completedWindowQueryFilter(completed),
+    ),
+    groupBy: boardGroupBy,
     layout,
+    ...(lane ? { subGroupBy: lane } : {}),
     ...(ordering === 'default' ? {} : { sort: MY_WORK_ORDERING_SORTS[ordering] }),
+    ...(timeZone ? { timeZone } : {}),
   };
   return applyNoProjectFilter(applyDelegatedFilter(query, delegated), noProject);
 };
@@ -98,6 +149,7 @@ export const MY_WORK_FILTER_DIRECTORY_FIELDS: readonly WorkQueryField[] = [
   'teamId',
   'status',
   'assigneeUserId',
+  'assigneeAgentId',
   'createdByUserId',
   'priority',
   'labelId',
@@ -106,9 +158,22 @@ export const MY_WORK_FILTER_DIRECTORY_FIELDS: readonly WorkQueryField[] = [
   'triageStatus',
   'reviewerUserId',
   'cycleId',
+  'createdAt',
+  'updatedAt',
+  'completedAt',
+  'text',
 ];
 
-const DIRECTORY_OPS: readonly WorkQueryOp[] = ['eq', 'in', 'isNull', 'isNotNull'];
+const DIRECTORY_OPS: readonly WorkQueryOp[] = [
+  'between',
+  'contains',
+  'eq',
+  'gte',
+  'in',
+  'isNull',
+  'isNotNull',
+  'lt',
+];
 
 /** Rows the directory can author for `field` — flat eq/in/nullary predicates. */
 const isDirectoryRow = (row: FilterRow, field: WorkQueryField): boolean =>
@@ -171,6 +236,45 @@ export const toggleMyWorkDirectoryValue = (
   return { ...builder, rows: [...rows, { field, id: nextDirectoryRowId(), op: 'eq', value }] };
 };
 
+const isDirectoryInMember = (
+  value: WorkQueryValue,
+): value is number | string | { ref: 'currentUser' } =>
+  typeof value === 'number' ||
+  typeof value === 'string' ||
+  (typeof value === 'object' &&
+    value !== null &&
+    !Array.isArray(value) &&
+    'ref' in value &&
+    value.ref === 'currentUser');
+
+const directoryValueKey = (value: WorkQueryValue): string => {
+  if (typeof value === 'object' && value !== null && 'ref' in value) return `ref:${value.ref}`;
+  return `${typeof value}:${String(value)}`;
+};
+
+/**
+ * Multi-select directory toggle. Picks on one field collect in a single `in`
+ * predicate — string enums, numeric priority, people, projects and teams.
+ * Empty removes the row. A `{ref:'currentUser'}` member stays inside the list.
+ */
+export const toggleMyWorkDirectoryMulti = (
+  builder: BuilderState,
+  field: WorkQueryField,
+  value: number | string | { ref: 'currentUser' },
+): BuilderState => {
+  const selected = myWorkDirectorySelectedValues(builder, field).filter(isDirectoryInMember);
+  const key = directoryValueKey(value);
+  const next = selected.some((item) => directoryValueKey(item) === key)
+    ? selected.filter((item) => directoryValueKey(item) !== key)
+    : [...selected, value];
+  const rows = builder.rows.filter((row) => !isDirectoryRow(row, field));
+  if (next.length === 0) return { ...builder, rows };
+  return {
+    ...builder,
+    rows: [...rows, { field, id: nextDirectoryRowId(), op: 'in', value: next }],
+  };
+};
+
 /**
  * Multi-select directory toggle for string enums (status/workflowCategory/
  * triageStatus): picks collect in a single `in` predicate; empty removes it.
@@ -179,19 +283,66 @@ export const toggleMyWorkDirectoryEnum = (
   builder: BuilderState,
   field: WorkQueryField,
   value: string,
+): BuilderState => toggleMyWorkDirectoryMulti(builder, field, value);
+
+export type MyWorkDateWindow = 'past' | 'past30' | 'set' | 'unset';
+
+/** Date directory: set/unset/past/past30 map onto isNotNull/isNull/lt/between. */
+export const setMyWorkDirectoryDateWindow = (
+  builder: BuilderState,
+  field: WorkQueryField,
+  window: MyWorkDateWindow,
+  now: Date = new Date(),
 ): BuilderState => {
-  const selected = new Set(
-    myWorkDirectorySelectedValues(builder, field).filter(
-      (item): item is string => typeof item === 'string',
-    ),
-  );
-  if (selected.has(value)) selected.delete(value);
-  else selected.add(value);
+  const current = myWorkDirectoryRowsFor(builder, field)[0];
+  const same =
+    (window === 'set' && current?.op === 'isNotNull') ||
+    (window === 'unset' && current?.op === 'isNull') ||
+    (window === 'past' && current?.op === 'lt') ||
+    (window === 'past30' && current?.op === 'between');
   const rows = builder.rows.filter((row) => !isDirectoryRow(row, field));
-  if (selected.size === 0) return { ...builder, rows };
+  if (same) return { ...builder, rows };
+  if (window === 'set') {
+    return { ...builder, rows: [...rows, { field, id: nextDirectoryRowId(), op: 'isNotNull' }] };
+  }
+  if (window === 'unset') {
+    return { ...builder, rows: [...rows, { field, id: nextDirectoryRowId(), op: 'isNull' }] };
+  }
+  if (window === 'past') {
+    const start = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+    return {
+      ...builder,
+      rows: [...rows, { field, id: nextDirectoryRowId(), op: 'lt', value: start }],
+    };
+  }
   return {
     ...builder,
-    rows: [...rows, { field, id: nextDirectoryRowId(), op: 'in', value: [...selected] }],
+    rows: [
+      ...rows,
+      {
+        field,
+        id: nextDirectoryRowId(),
+        op: 'between',
+        value: {
+          from: new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000).toISOString(),
+          to: now.toISOString(),
+        },
+      },
+    ],
+  };
+};
+
+export const setMyWorkDirectoryText = (
+  builder: BuilderState,
+  field: WorkQueryField,
+  query: string,
+): BuilderState => {
+  const rows = builder.rows.filter((row) => !isDirectoryRow(row, field));
+  const trimmed = query.trim();
+  if (!trimmed) return { ...builder, rows };
+  return {
+    ...builder,
+    rows: [...rows, { field, id: nextDirectoryRowId(), op: 'contains', value: trimmed }],
   };
 };
 

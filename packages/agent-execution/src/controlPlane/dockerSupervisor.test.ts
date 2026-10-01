@@ -5,16 +5,25 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { promisify } from 'node:util';
 
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 
 import { DockerProcessTreeSupervisor } from './dockerSupervisor';
 
 const execute = promisify(execFile);
 const docker = process.env.DOCKER_PATH ?? 'docker';
-// Explicit immutable fixture image; this does not validate the Prime artifact.
-const imageId = 'sha256:c83674e1999044d33d751661371b873539f47e5b5c5ca3320c7e0377acca6238';
+// Pinned public fixture image; this does not validate the Prime artifact. The
+// daemon resolves its immutable content Id at pull time.
+const imageTag = process.env.CORE_DOCKER_IMAGE ?? 'alpine:3.21';
+let imageId: string;
 
 describe('real Docker isolation and tree cancellation', () => {
+  beforeAll(async () => {
+    await execute(docker, ['pull', imageTag]);
+    const inspected: { Id: string }[] = JSON.parse(
+      (await execute(docker, ['image', 'inspect', imageTag])).stdout,
+    );
+    imageId = inspected[0].Id;
+  });
   let directory: string;
   let supervisor: DockerProcessTreeSupervisor;
   let treeId: string | undefined;

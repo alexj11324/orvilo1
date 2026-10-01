@@ -77,6 +77,7 @@ import { inboxDraftKeyForCard, useInboxDraft } from './inboxDrafts';
 import { inboxFeedScopeKey, mergeInboxFeedPages, useInboxFeedPager } from './inboxFeedPager';
 import { INBOX_FEED_FOCUS_THROTTLE_MS, inboxFeedListMode } from './inboxFeedState';
 import InboxListRow from './InboxListRow';
+import InboxListRowSkeleton from './InboxListRowSkeleton';
 import {
   armInboxReadReceiptSuppression,
   type InboxReadReceiptAttempt,
@@ -1104,17 +1105,7 @@ const WorkInboxPage = memo(() => {
         </div>
       ) : null}
       {listMode === 'loading' ? (
-        <div aria-busy className="flex flex-col gap-2 p-3" role="status">
-          {Array.from({ length: 8 }, (_, index) => (
-            <div className="flex items-start gap-3 px-2 py-2" key={index}>
-              <Skeleton className="size-10 shrink-0 rounded-full" />
-              <div className="flex flex-1 flex-col gap-1.5 py-0.5">
-                <Skeleton className="h-3.5 w-3/4" />
-                <Skeleton className="h-3 w-1/2" />
-              </div>
-            </div>
-          ))}
-        </div>
+        <InboxListRowSkeleton />
       ) : error && cards.length === 0 ? (
         <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
           <AsyncError error={error} variant={'block'} onRetry={() => void refresh()} />

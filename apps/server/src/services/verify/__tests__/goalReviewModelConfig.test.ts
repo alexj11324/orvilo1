@@ -23,7 +23,7 @@ vi.mock('@/database/models/task', () => ({
   }),
 }));
 vi.mock('@/database/repositories/aiInfra', () => ({
-  AiInfraRepos: vi.fn(function () {
+  AiInfraCatalogRepos: vi.fn(function () {
     return { getAiProviderModelList: mocks.models };
   }),
 }));

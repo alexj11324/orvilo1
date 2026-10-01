@@ -11,6 +11,17 @@ export {
   PiAdapter,
   QoderAdapter,
 } from './adapters';
+export {
+  buildClaudeCodeDirectEnv,
+  type BuildClaudeCodeDirectEnvInput,
+  type BuildClaudeCodeDirectEnvResult,
+  CLAUDE_CODE_API_LOCAL_ONLY_ERROR,
+  HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
+  HETEROGENEOUS_PROVIDER_BINDING_PERSONAL_ONLY_ERROR,
+  normalizeAnthropicSdkBaseURL,
+  sanitizeClaudeCodeDirectArgs,
+  sanitizeClaudeCodeDirectEnv,
+} from './claudeCodeDirectEnv';
 export type {
   BuiltinHeterogeneousAgentDescriptor,
   BuiltinHeterogeneousAgentType,
@@ -96,6 +107,37 @@ export type {
   SetErrorIntent,
 } from './mainAgentCoordinator';
 export { createMainAgentRunState, reduceMainAgent } from './mainAgentCoordinator';
+export type {
+  EnabledProviderBindingModelRef,
+  HeterogeneousProviderBindingCapability,
+  HeterogeneousProviderBindingError,
+  HeterogeneousProviderBindingProtocol,
+  HeterogeneousProviderBindingReference,
+  HeterogeneousProviderBindingResolution,
+  HeterogeneousProviderBindingRuntime,
+  ResolveHeterogeneousProviderBindingInput,
+  ResolveHeterogeneousProviderBindingResult,
+  ServerDefaultHeterogeneousAgentType,
+  ServerDefaultHeterogeneousCompatibilityProfile,
+  ServerDefaultHeterogeneousIngress,
+  ServerDefaultHeterogeneousModelPolicy,
+  ServerDefaultHeterogeneousTokenHeader,
+} from './providerBinding';
+export {
+  formatHeterogeneousProviderBindingError,
+  getHeterogeneousProviderBindingCapability,
+  getProviderInferenceProtocols,
+  getServerDefaultHeterogeneousAgentConfig,
+  HETEROGENEOUS_PROVIDER_BINDING_AGENT_TYPES,
+  isHeterogeneousProviderBindingSupported,
+  isServerDefaultHeterogeneousAgentType,
+  isServerDefaultHeterogeneousProfileModel,
+  resolveHeterogeneousProviderBinding,
+  resolveProviderBindingProtocol,
+  SERVER_DEFAULT_HETEROGENEOUS_AGENT_CONFIG,
+  SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
+  SERVER_DEFAULT_HETEROGENEOUS_PROFILE_DEFAULT_MODELS,
+} from './providerBinding';
 export {
   createLiveAdapter,
   createTraceDecoder,

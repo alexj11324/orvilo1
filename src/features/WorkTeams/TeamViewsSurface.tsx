@@ -4,7 +4,7 @@ import type { WorkQueryEntityType } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { FilterIcon, Layers2Icon, LoaderCircleIcon, PlusIcon, Settings2Icon } from 'lucide-react';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -23,15 +23,34 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
+import { useWorkQueryGroupTitle } from '@/features/MyWork/useWorkQueryGroupTitle';
+import {
+  mergeWorkQueryGroups,
+  mergeWorkQueryPage,
+  type WorkQueryGroupPage,
+  workQueryHasMore,
+  workQueryResponseGroups,
+  workQueryResponseTasks,
+  type WorkQueryResultTask,
+} from '@/features/MyWork/workQueryPaging';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import { filterSavedViewsByEntity } from '@/features/SavedViews/savedViewDirectory';
-import { SavedViewProjectRow } from '@/features/SavedViews/SavedViewPage';
+import {
+  savedViewProjectsPageByGroup,
+  workQueryWithViewerTimeZone,
+} from '@/features/SavedViews/savedViewDisplay';
+import {
+  SavedViewProjectBoard,
+  SavedViewProjectGroupList,
+  SavedViewProjectRow,
+} from '@/features/SavedViews/SavedViewPage';
 import { savedViewVisibilityKey } from '@/features/SavedViews/savedViewVisibility';
 import ViewDefinitionEditor from '@/features/SavedViews/ViewDefinitionEditor';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 import { WorkSurface, WorkSurfaceCollection, WorkSurfaceToolbar } from '@/features/WorkSurface';
+import { usePagedLoadMore } from '@/hooks/usePagedLoadMore';
 import { useSearchParams } from '@/libs/router/navigation';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
@@ -104,6 +123,27 @@ interface TeamViewsSurfaceProps {
   views: SavedViewItem[];
 }
 
+type PreviewProject = {
+  id: string;
+  identifier?: string | null;
+  name: string;
+  slug?: string | null;
+  status?: string | null;
+  updatedAt?: Date | string | null;
+};
+
+const previewProjectGroups = (
+  data: { projectGroups?: { hasMore: boolean; key: string; projects: PreviewProject[]; total: number }[] } | undefined,
+): WorkQueryGroupPage<PreviewProject>[] => {
+  if (!data?.projectGroups) return [];
+  return data.projectGroups.map((group) => ({
+    hasMore: group.hasMore,
+    key: group.key,
+    tasks: group.projects,
+    total: group.total,
+  }));
+};
+
 /** Team-scoped directory and a routed draft, using the same saved-view query model as workspace Views. */
 const TeamViewsSurface = ({
   error,
@@ -141,7 +181,8 @@ const TeamViewsSurface = ({
               ...current,
               builder: { any: [], rows: [], slots: [] },
               entityType,
-              groupBy: entityType === 'task' ? 'status' : 'none',
+              groupBy:
+                entityType === 'task' || current.layout === 'board' ? 'status' : 'none',
             },
       );
     }
@@ -149,19 +190,134 @@ const TeamViewsSurface = ({
   }, [creating, entityType, teamId]);
 
   const query = useMemo(() => teamViewDraftQuery(draft, teamId), [draft, teamId]);
+  const viewerTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+    [],
+  );
+  const previewQuery = useMemo(
+    () => workQueryWithViewerTimeZone(query, viewerTimeZone),
+    [query, viewerTimeZone],
+  );
+  const groupTitle = useWorkQueryGroupTitle({
+    cycleTeamIds: query.groupBy === 'cycle' ? [teamId] : [],
+    needsAssignee: query.groupBy === 'assignee' || query.subGroupBy === 'assignee',
+    needsProject: query.groupBy === 'project' || query.subGroupBy === 'project',
+  });
   const {
     data: preview,
     error: previewError,
     isLoading: previewLoading,
     mutate: retryPreview,
   } = useClientDataSWR(
-    creating && workspaceId ? ['team-view-preview', workspaceId, query] : null,
-    () => workAttentionService.query({ query }),
+    creating && workspaceId ? ['team-view-preview', workspaceId, previewQuery] : null,
+    () => workAttentionService.query({ query: previewQuery }),
   );
   const result = preview?.data;
-  const tasks = result && 'tasks' in result ? (result.tasks ?? []) : [];
-  const groups = result && 'groups' in result ? (result.groups ?? []) : [];
-  const projects = result && 'projects' in result ? (result.projects ?? []) : [];
+  const queryHash = result && 'queryHash' in result ? result.queryHash : undefined;
+  const firstTasks = workQueryResponseTasks<WorkQueryResultTask>(result);
+  const firstGroups = workQueryResponseGroups<WorkQueryResultTask>(result);
+  const firstProjectGroups = previewProjectGroups(
+    result && 'projectGroups' in result ? result : undefined,
+  );
+  const firstProjects: PreviewProject[] =
+    result && 'projects' in result ? (result.projects ?? []) : [];
+  const previewKey = `${workspaceId ?? ''}\u001F${JSON.stringify(previewQuery)}`;
+  const pageTokenRef = useRef(previewKey);
+  pageTokenRef.current = previewKey;
+  const [taskTail, setTaskTail] = useState<WorkQueryResultTask[]>([]);
+  const [groupTail, setGroupTail] = useState<WorkQueryGroupPage<WorkQueryResultTask>[]>([]);
+  const [projectTail, setProjectTail] = useState<PreviewProject[]>([]);
+  const [projectGroupTail, setProjectGroupTail] = useState<WorkQueryGroupPage<PreviewProject>[]>([]);
+  const {
+    loadMoreError,
+    loadMoreGroupErrors,
+    resetLoadMoreError,
+    retryLoadMore,
+    retryLoadMoreGroup,
+    runLoadMore,
+    runLoadMoreGroup,
+  } = usePagedLoadMore();
+  useEffect(() => {
+    setTaskTail([]);
+    setGroupTail([]);
+    setProjectTail([]);
+    setProjectGroupTail([]);
+    resetLoadMoreError();
+  }, [previewKey, resetLoadMoreError]);
+  const tasks = mergeWorkQueryPage(firstTasks, taskTail);
+  const groups = mergeWorkQueryGroups(firstGroups, groupTail);
+  const projectRows = mergeWorkQueryPage(firstProjects, projectTail);
+  const projectGroups = mergeWorkQueryGroups(firstProjectGroups, projectGroupTail);
+  const projectGrouped = savedViewProjectsPageByGroup(draft.layout, previewQuery.groupBy);
+  const loadMoreTasks = useCallback(async () => {
+    const last = tasks.at(-1);
+    const started = pageTokenRef.current;
+    if (!last || !queryHash) return;
+    const next = await workAttentionService.query({
+      afterId: last.id,
+      query: previewQuery,
+      queryHash,
+    });
+    if (pageTokenRef.current !== started) return;
+    setTaskTail((current) =>
+      mergeWorkQueryPage(current, workQueryResponseTasks<WorkQueryResultTask>(next.data)),
+    );
+  }, [previewQuery, queryHash, tasks]);
+  const loadMoreTaskGroup = useCallback(
+    async (groupKey: string) => {
+      const column = groups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
+      if (!last || !queryHash) return;
+      const next = await workAttentionService.query({
+        afterId: last.id,
+        groupKey,
+        query: previewQuery,
+        queryHash,
+      });
+      if (pageTokenRef.current !== started) return;
+      setGroupTail((current) =>
+        mergeWorkQueryGroups(current, workQueryResponseGroups<WorkQueryResultTask>(next.data)),
+      );
+    },
+    [groups, previewQuery, queryHash],
+  );
+  const loadMoreProjects = useCallback(async () => {
+    const last = projectRows.at(-1);
+    const started = pageTokenRef.current;
+    if (!last || !queryHash) return;
+    const next = await workAttentionService.query({
+      afterId: last.id,
+      query: previewQuery,
+      queryHash,
+    });
+    if (pageTokenRef.current !== started) return;
+    const incoming: PreviewProject[] =
+      next.data && 'projects' in next.data ? (next.data.projects ?? []) : [];
+    setProjectTail((current) => mergeWorkQueryPage(current, incoming));
+  }, [previewQuery, projectRows, queryHash]);
+  const loadMoreProjectGroup = useCallback(
+    async (groupKey: string) => {
+      const column = projectGroups.find((group) => group.key === groupKey);
+      const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
+      if (!last || !queryHash) return;
+      const next = await workAttentionService.query({
+        afterId: last.id,
+        groupKey,
+        query: previewQuery,
+        queryHash,
+      });
+      if (pageTokenRef.current !== started) return;
+      setProjectGroupTail((current) =>
+        mergeWorkQueryGroups(
+          current,
+          previewProjectGroups(next.data && 'projectGroups' in next.data ? next.data : undefined),
+        ),
+      );
+    },
+    [previewQuery, projectGroups, queryHash],
+  );
   const filteredViews = filterSavedViewsByEntity(views, entityType, '', (view) => view.name);
   const sortedViews = [...filteredViews].sort((a, b) => {
     const direction = sort.endsWith('Desc') ? -1 : 1;
@@ -182,7 +338,7 @@ const TeamViewsSurface = ({
         ...current,
         builder: { any: [], rows: [], slots: [] },
         entityType: next,
-        groupBy: next === 'task' ? 'status' : 'none',
+        groupBy: next === 'task' || current.layout === 'board' ? 'status' : 'none',
       }));
     changeLocation({ entityType: next });
   };
@@ -364,8 +520,53 @@ const TeamViewsSurface = ({
           ) : draft.entityType === 'project' ? (
             previewLoading ? (
               <span className="text-sm">{t('savedViews.loading')}</span>
-            ) : projects.length ? (
-              projects.map((project) => <SavedViewProjectRow key={project.id} project={project} />)
+            ) : projectGrouped && draft.layout === 'board' ? (
+              <SavedViewProjectBoard
+                groups={projectGroups}
+                loadMoreGroupErrors={loadMoreGroupErrors}
+                loadMoreLabel={t('savedViews.loadMore')}
+                onRetryLoadMoreGroup={retryLoadMoreGroup}
+                onLoadMoreGroup={(key) =>
+                  runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
+                }
+              />
+            ) : projectGrouped ? (
+              projectGroups.some((group) => group.total > 0 || group.tasks.length > 0) ? (
+                <SavedViewProjectGroupList
+                  groups={projectGroups}
+                  loadMoreGroupErrors={loadMoreGroupErrors}
+                  loadMoreLabel={t('savedViews.loadMore')}
+                  onRetryLoadMoreGroup={retryLoadMoreGroup}
+                  onLoadMoreGroup={(key) =>
+                    runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
+                  }
+                />
+              ) : (
+                <div className="flex flex-col items-center justify-center p-12">
+                  <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+                    <p>{t('savedViews.emptyResults')}</p>
+                  </div>
+                </div>
+              )
+            ) : projectRows.length ? (
+              <>
+                {projectRows.map((project) => (
+                  <SavedViewProjectRow key={project.id} project={project} />
+                ))}
+                {loadMoreError ? (
+                  <AsyncError
+                    error={loadMoreError}
+                    variant={'inline'}
+                    onRetry={retryLoadMore}
+                  />
+                ) : workQueryHasMore(projectRows.length, result?.total) ? (
+                  <div className="flex flex-row justify-center">
+                    <Button size="sm" onClick={() => runLoadMore(loadMoreProjects)}>
+                      {t('savedViews.loadMore')}
+                    </Button>
+                  </div>
+                ) : null}
+              </>
             ) : (
               <div className="flex flex-col items-center justify-center p-12">
                 <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
@@ -377,13 +578,25 @@ const TeamViewsSurface = ({
             <WorkQueryResults
               emptyLabel={t('savedViews.emptyResults')}
               groupBy={result && 'groupBy' in result ? result.groupBy : undefined}
+              groupTitle={groupTitle}
               groups={groups}
               layout={draft.layout}
+              loadMoreError={loadMoreError}
+              loadMoreGroupErrors={loadMoreGroupErrors}
               loadMoreLabel={t('savedViews.loadMore')}
               loading={previewLoading}
               loadingLabel={t('savedViews.loading')}
+              subGroupBy={query.subGroupBy}
               tasks={tasks}
               total={result?.total}
+              onRetryLoadMore={retryLoadMore}
+              onRetryLoadMoreGroup={retryLoadMoreGroup}
+              onLoadMore={
+                draft.layout === 'list' ? () => runLoadMore(loadMoreTasks) : undefined
+              }
+              onLoadMoreGroup={(key) =>
+                runLoadMoreGroup(key, () => loadMoreTaskGroup(key))
+              }
             />
           )}
         </div>

@@ -70,7 +70,7 @@ import {
   UserMemoryModel,
 } from '@/database/models/userMemory';
 import { UserMemorySourceBenchmarkLoCoMoModel } from '@/database/models/userMemory/sources/benchmarkLoCoMo';
-import { AiInfraRepos } from '@/database/repositories/aiInfra';
+import { AiInfraCatalogRepos } from '@/database/repositories/aiInfra';
 import { asyncTasks } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { buildWorkspaceWhere } from '@/database/utils/workspace';
@@ -2384,14 +2384,14 @@ export class MemoryExtractionExecutor {
   private async getAiProviderRuntimeState(): Promise<AiProviderRuntimeState> {
     // Provider matching only needs the deployment catalog (enabled providers/models); it must
     // not decrypt user key vaults — credentials are deployment-managed since BYOK retirement.
-    return new AiInfraRepos(this.aiProviderConfig).getAiProviderRuntimeState();
+    return new AiInfraCatalogRepos(this.aiProviderConfig).getAiProviderRuntimeState();
   }
 
   private async resolveRuntimeProviders(
     runtimeState: AiProviderRuntimeState,
     memoryServiceConfig: ResolvedMemoryServiceConfig,
   ): Promise<RuntimeProviderIds> {
-    const gatekeeperProvider = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
+    const gatekeeperProvider = await AiInfraCatalogRepos.tryMatchingProviderFrom(runtimeState, {
       fallbackProvider: memoryServiceConfig.agents.gatekeeper.provider,
       label: 'gatekeeper',
       modelId: memoryServiceConfig.modelConfig.gateModel,
@@ -2403,7 +2403,7 @@ export class MemoryExtractionExecutor {
         : this.gatekeeperPreferredProviders,
     });
 
-    const embeddingProvider = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
+    const embeddingProvider = await AiInfraCatalogRepos.tryMatchingProviderFrom(runtimeState, {
       fallbackProvider: memoryServiceConfig.agents.embedding.provider,
       label: 'embedding',
       modelId: memoryServiceConfig.modelConfig.embeddingsModel,
@@ -2418,7 +2418,7 @@ export class MemoryExtractionExecutor {
     const layerExtractorProviders: string[] = [];
     for (const model of Object.values(memoryServiceConfig.modelConfig.layerModels)) {
       if (!model) continue;
-      const providerId = await AiInfraRepos.tryMatchingProviderFrom(runtimeState, {
+      const providerId = await AiInfraCatalogRepos.tryMatchingProviderFrom(runtimeState, {
         fallbackProvider: memoryServiceConfig.agents.layerExtractor.provider,
         label: 'layer extractor',
         modelId: model,

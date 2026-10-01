@@ -49,7 +49,10 @@ const mobileLeaf = (leaf: SharedRouteLeaf) =>
   leafElement(leaf, `Mobile > ${leaf.name}`, mobileLeafPreloadId(leaf));
 
 const mobileWorkspaceSettingsLeaf = (leaf: SharedWorkspaceSettingsLeaf): RouteObject => ({
-  element: leafElement(leaf, `Mobile > Workspace > Settings > ${leaf.name}`),
+  element: leafElement(
+    { ...leaf, load: leaf.loadMobile ?? leaf.load },
+    `Mobile > Workspace > Settings > ${leaf.name}`,
+  ),
   path: leaf.path,
 });
 
@@ -183,14 +186,27 @@ export const mobileRoutes: RouteObject[] = [
             ),
             index: true,
           },
-          // Retired LLM Provider surface — legacy deep-links land on the settings root.
+          // Provider routes with nested structure
           {
-            element: redirectElement('/settings'),
+            children: [
+              {
+                element: redirectElement('/settings/provider/all'),
+                index: true,
+              },
+              {
+                element: dynamicElement(
+                  () =>
+                    import('@/routes/(main)/settings/provider').then((m) => m.ProviderDetailPage),
+                  'Mobile > Settings > Provider > Detail',
+                ),
+                path: ':providerId',
+              },
+            ],
+            element: dynamicLayout(
+              () => import('@/routes/(mobile)/settings/provider/_layout'),
+              'Mobile > Settings > Provider > Layout',
+            ),
             path: 'provider',
-          },
-          {
-            element: redirectElement('/settings'),
-            path: 'provider/:providerId',
           },
           {
             element: redirectElement('/settings/credential'),

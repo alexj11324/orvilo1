@@ -122,6 +122,11 @@ const toTaskStatus = (status: string): TaskStatus =>
 
 interface TaskBoardCardProps {
   /**
+   * Display properties the list and the board share. A key in the set hides
+   * that chip; omitted means every chip stays visible.
+   */
+  hiddenProperties?: ReadonlySet<string>;
+  /**
    * Board-card glyph/context-menu status. Receives the picked board column —
    * Linear-linked cards go through `moveBoard`; omit to keep the store write.
    */
@@ -142,7 +147,7 @@ interface TaskBoardCardProps {
  * (reviewer while paused) plus live-run and subtask affordances.
  */
 const TaskBoardCard = memo<TaskBoardCardProps>(
-  ({ onStatusChange, overlay, routeScope = 'agent', task }) => {
+  ({ hiddenProperties, onStatusChange, overlay, routeScope = 'agent', task }) => {
     const { t, i18n } = useTranslation('common');
     const { t: tChat } = useTranslation('chat');
     const fetchTaskDetail = useTaskStore((s) => s.fetchTaskDetail);
@@ -350,6 +355,8 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
         </TooltipProvider>
       ) : null;
 
+    const shows = (property: string) => !hiddenProperties?.has(property);
+
     const card = (
       <div
         data-task-board-card
@@ -374,31 +381,33 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
 
         {/* Row 2 — status glyph + title, two lines max. */}
         <div className="flex items-start gap-1.5" style={{ marginTop: 4, minWidth: 0 }}>
-          <span
-            data-collab-id={`task:${task.id}:status`}
-            data-collab-id-alt={`task:${task.identifier}:status`}
-            style={{ flex: 'none', marginTop: 2 }}
-          >
-            {workflowGlyph ? (
-              <TooltipProvider>
-                <Tooltip>
-                  <TooltipTrigger
-                    render={
-                      <span className="inline-flex">
-                        {createElement(workflowGlyph.icon, {
-                          color: workflowGlyph.color,
-                          size: 14,
-                        })}
-                      </span>
-                    }
-                  />
-                  <TooltipContent>{workflowGlyph.label}</TooltipContent>
-                </Tooltip>
-              </TooltipProvider>
-            ) : (
-              <TaskStatusIcon size={14} status={status} />
-            )}
-          </span>
+          {shows('status') ? (
+            <span
+              data-collab-id={`task:${task.id}:status`}
+              data-collab-id-alt={`task:${task.identifier}:status`}
+              style={{ flex: 'none', marginTop: 2 }}
+            >
+              {workflowGlyph ? (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger
+                      render={
+                        <span className="inline-flex">
+                          {createElement(workflowGlyph.icon, {
+                            color: workflowGlyph.color,
+                            size: 14,
+                          })}
+                        </span>
+                      }
+                    />
+                    <TooltipContent>{workflowGlyph.label}</TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              ) : (
+                <TaskStatusIcon size={14} status={status} />
+              )}
+            </span>
+          ) : null}
           <span className={styles.title}>{hasName ? task.name : task.identifier}</span>
         </div>
 
@@ -414,9 +423,11 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           className="flex flex-wrap items-center gap-1.5"
           style={{ marginTop: 6, minHeight: 20, minWidth: 0 }}
         >
-          <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+          {shows('priority') ? (
+            <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
+          ) : null}
           <LinearTaskSyncStatus taskId={task.id} />
-          {projectName ? (
+          {shows('project') && projectName ? (
             <Tag size="sm" variant="primary-outline">
               {<PROJECT_ENTITY_ICON size={12} />}
               {projectName}
@@ -448,9 +459,9 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             data-collab-id={`task:${task.id}:assignee`}
             data-collab-id-alt={`task:${task.identifier}:assignee`}
           >
-            {ownerNode}
+            {shows('assignee') ? ownerNode : null}
           </div>
-          {time ? (
+          {shows('updated') && time ? (
             <div
               className="truncate block text-[12px] text-muted-foreground"
               style={{ minWidth: 0 }}

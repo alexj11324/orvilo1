@@ -8,6 +8,9 @@ import { SettingsTabs } from '@/store/global/initialState';
 const loading = (_debugId: string) => () => createElement(SettingsSectionSkeleton);
 
 export const componentMap = {
+  [SettingsTabs.Provider]: dynamic(() => import('../ProviderBindings'), {
+    loading: loading('Settings > Provider'),
+  }),
   [SettingsTabs.Advanced]: dynamic(() => import('../advanced'), {
     loading: loading('Settings > Advanced'),
   }),

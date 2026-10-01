@@ -9,6 +9,7 @@ import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/
 import { type Transport } from '@modelcontextprotocol/sdk/shared/transport.js';
 import { type Progress } from '@modelcontextprotocol/sdk/types.js';
 import debug from 'debug';
+import { z } from 'zod';
 
 import {
   type MCPClientParams,
@@ -340,6 +341,23 @@ export class MCPClient {
         log('Transport closed.');
       }
     }
+  }
+
+  /** Optional Events extension; never exposes an arbitrary JSON-RPC proxy. */
+  async requestEventProtocol(
+    method: 'server/discover' | 'events/list' | 'events/subscribe' | 'events/unsubscribe',
+    params?: Record<string, unknown>,
+    options?: { signal: AbortSignal },
+  ): Promise<unknown> {
+    if (
+      !['server/discover', 'events/list', 'events/subscribe', 'events/unsubscribe'].includes(method)
+    ) {
+      throw new Error('Unsupported event protocol method');
+    }
+    return this.mcp.request({ method, params }, z.object({}).passthrough(), {
+      signal: options?.signal,
+      timeout: 30_000,
+    });
   }
 
   async listTools() {

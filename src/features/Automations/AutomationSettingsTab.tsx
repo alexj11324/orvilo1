@@ -10,6 +10,7 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 import { useTaskDetailSelector } from '../AgentTasks/AgentTaskDetail/TaskDetailScope';
 import TaskInstruction from '../AgentTasks/AgentTaskDetail/TaskInstruction';
 import TaskScheduleConfig from '../AgentTasks/AgentTaskDetail/TaskScheduleConfig';
+import McpEventTriggerSettings from './McpEventTriggerSettings';
 import { automationDetailNextRun, automationDetailTriggerSummary } from './shared';
 
 dayjs.extend(relativeTime);
@@ -75,6 +76,7 @@ const AutomationSettingsTab = memo(() => {
       <Section title={t('trigger.section')}>
         <TriggerCard />
       </Section>
+      <McpEventTriggerSettings />
       <Section title={t('instructions.section')}>
         <TaskInstruction />
       </Section>

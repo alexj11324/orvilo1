@@ -10,6 +10,9 @@ import type {
 } from '@orvilo/types';
 
 import {
+  type EventDispatchEvidence,
+  type EventDispatchEvidenceCode,
+  TaskDispatchEventEvidenceError,
   TaskDispatchIdempotencyConflictError,
   TaskDispatchModel,
   TaskDispatchSettlementGrantError,
@@ -47,6 +50,7 @@ export class TaskDispatchWaitingError extends Error {
  * persisted column; re-exported here for the service's existing consumers.
  */
 export type { TaskDispatchOrigin, TaskDispatchSettlementGrant } from '@orvilo/types';
+export type { EventDispatchEvidence, EventDispatchEvidenceCode };
 
 export interface PreparedTaskDispatch {
   dispatch: TaskDispatchItem;
@@ -86,6 +90,8 @@ export class TaskDispatchService {
   }
 
   async prepare(input: {
+    /** Server-verified admission evidence when `trigger === 'event'`. */
+    eventEvidence?: EventDispatchEvidence;
     idempotencyKey: string;
     /** Raw actor identity persisted separately from `requestedBy`. */
     initiator?: string;
@@ -101,6 +107,7 @@ export class TaskDispatchService {
     let requested;
     try {
       requested = await this.model.request({
+        eventEvidence: input.eventEvidence,
         idempotencyKey: input.idempotencyKey,
         initiator: input.initiator,
         origin: input.origin,
@@ -114,6 +121,13 @@ export class TaskDispatchService {
     } catch (error) {
       if (error instanceof TaskDispatchIdempotencyConflictError) {
         throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
+      }
+      if (error instanceof TaskDispatchEventEvidenceError) {
+        // Stale event admission evidence is a hard rejection — the caller
+        // must re-enter through durable event admission rather than inherit
+        // an event claim it can no longer prove. Keep the typed error so the
+        // denial code survives to the admission boundary.
+        throw error;
       }
       if (error instanceof TaskDispatchSettlementGrantError) {
         // A stale settlement grant is a hard rejection — the run must

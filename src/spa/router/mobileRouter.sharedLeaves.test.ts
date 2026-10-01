@@ -40,9 +40,16 @@ const MOBILE_UNSUPPORTED_SHARED_PATHS = [
   'group/:gid/:topicId',
   'group/:gid/permission',
   'group/:gid/profile',
-  // Mobile `/memory` only carries the retired-root guard, not the preferences
-  // page the desktop mounts underneath it.
+  // Mobile `/memory` only carries the retired-root guard, not the memory
+  // pages the desktop mounts underneath it.
+  'memory/activities',
+  'memory/contexts',
+  'memory/experiences',
+  'memory/home',
+  'memory/identities',
   'memory/preferences',
+  'memory/prime',
+  'memory/search',
   // The project workspace is desktop-only.
   'project/:projectId',
   'project/:projectId/activity',

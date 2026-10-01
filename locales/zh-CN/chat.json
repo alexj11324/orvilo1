@@ -1791,6 +1791,7 @@
   "taskDetail.runFollowUpPlaceholder": "对这次运行追问...",
   "taskDetail.runNow": "立即运行",
   "taskDetail.runTask": "运行",
+  "taskDetail.runTrigger.event": "事件触发",
   "taskDetail.runTrigger.goal": "目标驱动",
   "taskDetail.runTrigger.heartbeat": "心跳触发",
   "taskDetail.runTrigger.orchestrator": "编排器触发",

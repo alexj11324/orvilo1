@@ -61,7 +61,7 @@ PR285 新增 migration0195，并改动 Favorites 拖拽、TeamHome resources、P
 
 - `AgentTaskItem.tsx` 包 Lobe Block，未确认相同丢事件问题。
 - `TaskSubtasks.tsx` 使用 imperative `showContextMenu(buildItems(...))`，目前只在 canEdit 时开放且不含完整 assignee。
-- `useTaskItemContextMenu.tsx` 已有 status /priority/assignee /copy ID+URL /delete/conditional run；native interceptor 不是本次 board 根因，因为 status/priority extra 导致 web fallback。
+- `useTaskItemContextMenu.tsx` 已有 status /priority/assignee/copy ID+URL /delete/conditional run；native interceptor 不是本次 board 根因，因为 status/priority extra 导致 web fallback。
 - `closeContextMenu()` 仍只关闭旧宿主；迁移新的受控 ReUI menu 后，数字快捷键必须关闭新 root 并清理 listeners。
 
 规格：[`../research/reui/issue-context-menu/SPEC.md`](../research/reui/issue-context-menu/SPEC.md)。现有 Labels、Project、milestone、rename、favorite、subscribe、dependency/parent、copy 定义等 API 可复用；`useTaskTransferMenuItem` 是返回 null 的 stub。Due date/reminder 新增已批准；其他未建立的 conversion/team-reassign/IDE 功能不应制造假菜单。

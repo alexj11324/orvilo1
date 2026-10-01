@@ -39,6 +39,7 @@ import type {
   UserMemoryPreference,
 } from '../../schemas';
 import {
+  experienceMemories,
   userMemories,
   userMemoriesActivities,
   userMemoriesContexts,
@@ -2561,7 +2562,18 @@ export class UserMemoryModel {
   };
 
   deleteAll = async (): Promise<void> => {
-    await this.db.delete(userMemories).where(this.memoryWhere(userMemories));
+    await this.db.transaction(async (tx) => {
+      await tx
+        .update(experienceMemories)
+        .set({
+          content: '',
+          lifecycle: 'deleted',
+          revision: sql`${experienceMemories.revision}+1`,
+          updatedAt: new Date(),
+        })
+        .where(eq(experienceMemories.userId, this.userId));
+      await tx.delete(userMemories).where(this.memoryWhere(userMemories));
+    });
   };
 
   searchActivities = async (params: {

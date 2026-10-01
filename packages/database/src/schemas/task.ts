@@ -15,6 +15,7 @@ import type {
   TaskLockField,
   TaskOrchestrationOwner,
   TaskRunState,
+  TaskRunTrigger,
   TaskTopicIntegration,
   TaskTriageStatus,
   TaskWorkflowCategory,
@@ -41,6 +42,7 @@ import { agents } from './agent';
 import { agentCronJobs } from './agentCronJob';
 import { documents } from './file';
 import { projectMilestones, projects } from './project';
+import type { TaskExecutionControl } from './taskExecutionControl';
 import { teamCycles, teams, teamWorkflowStates } from './team';
 import { topics } from './topic';
 import { users } from './user';
@@ -474,6 +476,9 @@ export const taskTopics = pgTable(
     // runner asserts it via `assertMayCommit` before the registration
     // commits, so a superseded delegation cannot land its dispatch.
     executionEpoch: integer('execution_epoch').notNull().default(0),
+    /** Core process registration; absent on legacy runtimes. */
+    executionControl: jsonb('execution_control').$type<TaskExecutionControl>(),
+    executionControlRevision: integer('execution_control_revision').notNull().default(0),
     // Soft reference to `execution_grants.id` (the grant table points back at
     // this run — a direct FK would make the two schemas mutually recursive).
     executionGrantId: text('execution_grant_id'),
@@ -490,7 +495,7 @@ export const taskTopics = pgTable(
     // 'schedule' (cron tick) or 'heartbeat' (interval tick). Null for legacy
     // rows created before this column existed. Used so the maxExecutions quota
     // counts only automation ticks, not manual runs.
-    trigger: text('trigger').$type<'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator'>(),
+    trigger: text('trigger').$type<TaskRunTrigger>(),
 
     // Handoff (populated after topic completes via LLM summarization)
     // { title, summary, keyFindings: string[], nextAction }

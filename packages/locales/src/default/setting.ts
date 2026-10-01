@@ -1,4 +1,39 @@
 export default {
+  'providerBindings.runtime': 'Runtime',
+  'providerBindings.engine': 'Engine',
+  'providerBindings.effort': 'Reasoning effort',
+  'providerBindings.mode': 'Mode',
+  'providerBindings.speed': 'Speed',
+  'providerBindings.target': 'Execution target',
+  'providerBindings.deviceId': 'Device ID',
+
+  'providerBindings.title': 'Provider and custom models',
+  'providerBindings.description': 'These bindings belong to your personal account.',
+  'providerBindings.empty': 'No saved bindings.',
+  'providerBindings.edit': 'Edit',
+  'providerBindings.delete': 'Delete',
+  'providerBindings.cancel': 'Cancel',
+  'providerBindings.deleteTitle': 'Delete binding?',
+  'providerBindings.deleteContent': 'Delete {{name}}? The stored credential will be kept.',
+  'providerBindings.deleted': 'Binding deleted.',
+  'providerBindings.check': 'Check connection',
+  'providerBindings.verified': 'Connection verified. Configuration remains disabled for execution.',
+  'providerBindings.failed':
+    'Request failed or connection checking is unavailable. Reload and try again.',
+  'providerBindings.invalid':
+    'Check the fields: use an HTTPS endpoint and a personal credential reference.',
+  'providerBindings.saved': 'Configuration saved.',
+  'providerBindings.save': 'Save configuration',
+  'providerBindings.name': 'Name',
+  'providerBindings.provider': 'Provider ID',
+  'providerBindings.model': 'Model ID',
+  'providerBindings.endpoint': 'HTTPS endpoint',
+  'providerBindings.secretReference': 'Credential reference',
+  'providerBindings.referenceHint':
+    'Use credential:cred_\u2026 from your personal credentials. Do not enter an API key here.',
+  'providerBindings.configurationOnly':
+    'Saving a configuration does not enable execution. Connection checks require the configured provider broker.',
+
   'completionSound.title': 'In-app completion sound',
   'completionSound.enabled': 'Play completion sound',
   'completionSound.desc':

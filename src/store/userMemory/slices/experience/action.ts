@@ -11,6 +11,8 @@ import { type StoreSetter } from '@/store/types';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type UserMemoryStore } from '../../store';
+import { invalidateMemoryCaches } from '../../utils/invalidate';
+import { getMemorySession, memorySessionKey, useMemorySession } from '../../utils/session';
 import { isMemoryListRequestCurrent } from '../utils/isMemoryListRequestCurrent';
 import { shouldSurfaceMemoryListError } from '../utils/shouldSurfaceMemoryListError';
 
@@ -23,7 +25,7 @@ export interface ExperienceQueryParams {
   sort?: 'capturedAt' | 'scoreConfidence';
 }
 
-type ExperienceListRequest = ExperienceQueryParams & { page: number };
+type ExperienceListRequest = ExperienceQueryParams & { page: number; session?: number };
 
 type Setter = StoreSetter<UserMemoryStore>;
 export const createExperienceSlice = (set: Setter, get: () => UserMemoryStore, _api?: unknown) =>
@@ -40,12 +42,15 @@ export class ExperienceActionImpl {
   }
 
   deleteExperience = async (id: string): Promise<void> => {
+    const session = getMemorySession();
     await memoryCRUDService.deleteExperience(id);
+    if (session !== getMemorySession()) return;
     // Reset list to refresh
     this.#get().resetExperiencesList({
       q: this.#get().experiencesQuery,
       sort: this.#get().experiencesSort,
     });
+    await invalidateMemoryCaches(session);
   };
 
   loadMoreExperiences = (): void => {
@@ -65,6 +70,7 @@ export class ExperienceActionImpl {
     data: ExperienceListResult,
     request: ExperienceListRequest,
   ): void => {
+    if (request.session !== undefined && request.session !== getMemorySession()) return;
     const state = this.#get();
     if (
       !isMemoryListRequestCurrent(
@@ -102,6 +108,7 @@ export class ExperienceActionImpl {
   };
 
   internal_failExperiencesList = (error: unknown, request: ExperienceListRequest): void => {
+    if (request.session !== undefined && request.session !== getMemorySession()) return;
     const state = this.#get();
     if (
       !isMemoryListRequestCurrent(
@@ -152,8 +159,9 @@ export class ExperienceActionImpl {
    */
   useFetchExperiences = (params: ExperienceQueryParams): SWRResponse<ExperienceListResult> => {
     const page = params.page ?? 1;
+    const session = useMemorySession();
     const response = useSWR(
-      userMemoryKeys.experiences(params),
+      memorySessionKey(userMemoryKeys.experiences(params), session),
       async () => {
         // Use the new dedicated queryExperiences API
         return userMemoryService.queryExperiences({
@@ -164,19 +172,20 @@ export class ExperienceActionImpl {
         });
       },
       {
+        keepPreviousData: false,
         revalidateOnFocus: false,
       },
     );
 
     useEffect(() => {
       if (response.data !== undefined)
-        this.internal_acceptExperiencesList(response.data, { ...params, page });
-    }, [page, params.pageSize, params.q, params.sort, response.data]);
+        this.internal_acceptExperiencesList(response.data, { ...params, page, session });
+    }, [session, page, params.pageSize, params.q, params.sort, response.data]);
 
     useEffect(() => {
       if (response.error !== undefined)
-        this.internal_failExperiencesList(response.error, { ...params, page });
-    }, [page, params.pageSize, params.q, params.sort, response.error]);
+        this.internal_failExperiencesList(response.error, { ...params, page, session });
+    }, [session, page, params.pageSize, params.q, params.sort, response.error]);
 
     return response;
   };

@@ -5,7 +5,7 @@ import { RequestTrigger } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AiProviderModel } from '@/database/models/aiProvider';
-import { AiInfraRepos } from '@/database/repositories/aiInfra';
+import { AiInfraRepos, ProviderBindingPlane } from '@/database/repositories/aiInfra';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { initModelRuntimeFromDB } from '@/server/modules/ModelRuntime';
@@ -111,9 +111,12 @@ describe('aiProviderRouter', () => {
   });
 
   describe('createAiProvider', () => {
-    it('should create a new AI provider', async () => {
-      const mockCreate = vi.fn().mockResolvedValue({ id: mockProviderId });
-      vi.mocked(AiProviderModel).prototype.create = mockCreate;
+    // Personal scope persists through the provider_bindings plane (Phase 5b);
+    // the legacy aiProviders write runs only in workspace scope.
+    it('should create a new AI provider through the binding plane', async () => {
+      const mockCreate = vi.fn().mockResolvedValue(mockProviderId);
+      vi.mocked(ProviderBindingPlane).prototype.createProvider = mockCreate;
+      vi.mocked(AiProviderModel).prototype.create = vi.fn();
 
       const caller = aiProviderRouter.createCaller(createMockContext());
       const result = await caller.createAiProvider({
@@ -128,8 +131,8 @@ describe('aiProviderRouter', () => {
           id: mockProviderId,
           name: 'Test Provider',
         }),
-        mockGateKeeper.encrypt,
       );
+      expect(vi.mocked(AiProviderModel).prototype.create).not.toHaveBeenCalled();
     });
   });
 
@@ -362,21 +365,24 @@ describe('aiProviderRouter', () => {
   });
 
   describe('removeAiProvider', () => {
-    it('should remove AI provider', async () => {
+    it('should remove AI provider through the binding plane (both planes)', async () => {
       const mockDelete = vi.fn();
-      vi.mocked(AiProviderModel).prototype.delete = mockDelete;
+      vi.mocked(ProviderBindingPlane).prototype.deleteProvider = mockDelete;
+      vi.mocked(AiProviderModel).prototype.delete = vi.fn();
 
       const caller = aiProviderRouter.createCaller(createMockContext());
       await caller.removeAiProvider({ id: mockProviderId });
 
       expect(mockDelete).toHaveBeenCalledWith(mockProviderId);
+      expect(vi.mocked(AiProviderModel).prototype.delete).not.toHaveBeenCalled();
     });
   });
 
   describe('toggleProviderEnabled', () => {
-    it('should toggle provider enabled state', async () => {
+    it('should toggle provider enabled state through the binding plane', async () => {
       const mockToggle = vi.fn();
-      vi.mocked(AiProviderModel).prototype.toggleProviderEnabled = mockToggle;
+      vi.mocked(ProviderBindingPlane).prototype.setProviderEnabled = mockToggle;
+      vi.mocked(AiProviderModel).prototype.toggleProviderEnabled = vi.fn();
 
       const caller = aiProviderRouter.createCaller(createMockContext());
       await caller.toggleProviderEnabled({
@@ -385,6 +391,7 @@ describe('aiProviderRouter', () => {
       });
 
       expect(mockToggle).toHaveBeenCalledWith(mockProviderId, true);
+      expect(vi.mocked(AiProviderModel).prototype.toggleProviderEnabled).not.toHaveBeenCalled();
     });
 
     it('should reject disabling the official provider', async () => {
@@ -408,9 +415,10 @@ describe('aiProviderRouter', () => {
   });
 
   describe('updateAiProvider', () => {
-    it('should update AI provider', async () => {
+    it('should update AI provider through the binding plane', async () => {
       const mockUpdate = vi.fn();
-      vi.mocked(AiProviderModel).prototype.update = mockUpdate;
+      vi.mocked(ProviderBindingPlane).prototype.updateProvider = mockUpdate;
+      vi.mocked(AiProviderModel).prototype.update = vi.fn();
 
       const caller = aiProviderRouter.createCaller(createMockContext());
       await caller.updateAiProvider({
@@ -421,13 +429,15 @@ describe('aiProviderRouter', () => {
       expect(mockUpdate).toHaveBeenCalledWith(mockProviderId, {
         name: 'Updated Provider',
       });
+      expect(vi.mocked(AiProviderModel).prototype.update).not.toHaveBeenCalled();
     });
   });
 
   describe('updateAiProviderConfig', () => {
-    it('should update AI provider config', async () => {
+    it('should update AI provider config through the binding plane', async () => {
       const mockUpdateConfig = vi.fn();
-      vi.mocked(AiProviderModel).prototype.updateConfig = mockUpdateConfig;
+      vi.mocked(ProviderBindingPlane).prototype.updateProviderConfig = mockUpdateConfig;
+      vi.mocked(AiProviderModel).prototype.updateConfig = vi.fn();
 
       const caller = aiProviderRouter.createCaller(createMockContext());
       await caller.updateAiProviderConfig({
@@ -435,25 +445,25 @@ describe('aiProviderRouter', () => {
         value: { checkModel: 'gpt-4' },
       });
 
-      expect(mockUpdateConfig).toHaveBeenCalledWith(
-        mockProviderId,
-        { checkModel: 'gpt-4' },
-        mockGateKeeper.encrypt,
-        KeyVaultsGateKeeper.getUserKeyVaults,
-      );
+      expect(mockUpdateConfig).toHaveBeenCalledWith(mockProviderId, {
+        checkModel: 'gpt-4',
+      });
+      expect(vi.mocked(AiProviderModel).prototype.updateConfig).not.toHaveBeenCalled();
     });
   });
 
   describe('updateAiProviderOrder', () => {
-    it('should update AI provider order', async () => {
+    it('should update AI provider order through the binding plane', async () => {
       const mockUpdateOrder = vi.fn();
-      vi.mocked(AiProviderModel).prototype.updateOrder = mockUpdateOrder;
+      vi.mocked(ProviderBindingPlane).prototype.setProviderOrder = mockUpdateOrder;
+      vi.mocked(AiProviderModel).prototype.updateOrder = vi.fn();
 
       const sortMap = [{ id: mockProviderId, sort: 1 }];
       const caller = aiProviderRouter.createCaller(createMockContext());
       await caller.updateAiProviderOrder({ sortMap });
 
       expect(mockUpdateOrder).toHaveBeenCalledWith(sortMap);
+      expect(vi.mocked(AiProviderModel).prototype.updateOrder).not.toHaveBeenCalled();
     });
   });
 });

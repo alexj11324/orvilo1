@@ -16,7 +16,11 @@ import {
 } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AiProviderModel } from '@/database/models/aiProvider';
 import { UserModel } from '@/database/models/user';
-import { AiInfraRepos } from '@/database/repositories/aiInfra';
+import {
+  AiInfraRepos,
+  ProviderBindingConflictError,
+  ProviderBindingPlane,
+} from '@/database/repositories/aiInfra';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { getServerGlobalConfig } from '@/server/globalConfig';
@@ -37,16 +41,34 @@ const aiProviderProcedure = wsCompatProcedure.use(serverDatabase).use(async (opt
   const { aiProvider } = await getServerGlobalConfig();
 
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+  const aiInfraRepos = new AiInfraRepos(
+    ctx.serverDB,
+    ctx.userId,
+    aiProvider as Record<string, ProviderConfig>,
+    ctx.workspaceId ?? undefined,
+  );
+
+  // Provider settings writes repoint onto the provider_bindings plane in
+  // personal scope. Workspace scope keeps the legacy ai_providers path —
+  // the binding plane is personal-agent/local-execution only and has no
+  // workspace ownership (its credentials are personal, and its tenant is
+  // stamped at issuance).
+  const providerBindings = ctx.workspaceId
+    ? undefined
+    : new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
+        decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
+        resolveEnabledModelIds: async (providerId) =>
+          (await aiInfraRepos.getEnabledModels(false))
+            .filter((model) => model.providerId === providerId && model.enabled === true)
+            .map((model) => model.id),
+      });
+
   return opts.next({
     ctx: {
-      aiInfraRepos: new AiInfraRepos(
-        ctx.serverDB,
-        ctx.userId,
-        aiProvider as Record<string, ProviderConfig>,
-        ctx.workspaceId ?? undefined,
-      ),
+      aiInfraRepos,
       aiProviderModel: new AiProviderModel(ctx.serverDB, ctx.userId, ctx.workspaceId ?? undefined),
       gateKeeper,
+      providerBindings,
       userModel: new UserModel(ctx.serverDB, ctx.userId),
     },
   });
@@ -133,6 +155,20 @@ export const aiProviderRouter = router({
     .use(withScopedPermission('ai_provider:create'))
     .input(CreateAiProviderSchema)
     .mutation(async ({ input, ctx }) => {
+      if (ctx.providerBindings) {
+        try {
+          return await ctx.providerBindings.createProvider(input);
+        } catch (error) {
+          if (error instanceof ProviderBindingConflictError) {
+            throw new TRPCError({
+              code: 'CONFLICT',
+              message: `Provider "${input.id}" already exists`,
+            });
+          }
+          throw error;
+        }
+      }
+
       try {
         const data = await ctx.aiProviderModel.create(input, ctx.gateKeeper.encrypt);
         return data?.id;
@@ -248,6 +284,9 @@ export const aiProviderRouter = router({
     .use(requireWorkspaceRoleWhenScoped('admin'))
     .input(z.object({ id: z.string() }))
     .mutation(async ({ input, ctx }) => {
+      if (ctx.providerBindings) {
+        return ctx.providerBindings.deleteProvider(input.id);
+      }
       return ctx.aiProviderModel.delete(input.id);
     }),
 
@@ -267,6 +306,9 @@ export const aiProviderRouter = router({
         });
       }
 
+      if (ctx.providerBindings) {
+        return ctx.providerBindings.setProviderEnabled(input.id, input.enabled);
+      }
       return ctx.aiProviderModel.toggleProviderEnabled(input.id, input.enabled);
     }),
 
@@ -280,6 +322,9 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.providerBindings) {
+        return ctx.providerBindings.updateProvider(input.id, input.value);
+      }
       return ctx.aiProviderModel.update(input.id, input.value);
     }),
 
@@ -293,6 +338,9 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.providerBindings) {
+        return ctx.providerBindings.updateProviderConfig(input.id, input.value);
+      }
       return ctx.aiProviderModel.updateConfig(
         input.id,
         input.value,
@@ -314,6 +362,9 @@ export const aiProviderRouter = router({
       }),
     )
     .mutation(async ({ input, ctx }) => {
+      if (ctx.providerBindings) {
+        return ctx.providerBindings.setProviderOrder(input.sortMap);
+      }
       return ctx.aiProviderModel.updateOrder(input.sortMap);
     }),
 });

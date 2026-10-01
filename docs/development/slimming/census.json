@@ -1,6 +1,6 @@
 {
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "9e9ab6320cb24f39042121d4165e90e1c7f4401c",
+  "baseSha": "011c3cae526892620a55ccbdede2906eaa5283b0",
   "capabilities": [
     {
       "id": "workspace",
@@ -11716,7 +11716,7 @@
         "apps/server/src/services/{file*,storage*,s3*,upload*}/**",
         "apps/server/src/routers/lambda/{file,chunk,document,documentComment,documentLike,notification,pushToken,recent,metric}.ts"
       ],
-      "fileCount": 1341,
+      "fileCount": 1343,
       "files": [
         "apps/server/src/routers/lambda/chunk.ts",
         "apps/server/src/routers/lambda/document.ts",
@@ -12198,9 +12198,11 @@
         "packages/database/src/repositories/aiInfra/__tests__/getAiProviderRuntimeState.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/getEnabledModels.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/getUserEnabledProviderList.test.ts",
+        "packages/database/src/repositories/aiInfra/__tests__/providerBindings.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
         "packages/database/src/repositories/aiInfra/catalog.ts",
         "packages/database/src/repositories/aiInfra/index.ts",
+        "packages/database/src/repositories/aiInfra/providerBindings.ts",
         "packages/database/src/repositories/compression/index.test.ts",
         "packages/database/src/repositories/compression/index.ts",
         "packages/database/src/repositories/dataExporter/index.test.ts",
@@ -13061,8 +13063,8 @@
         "packages/utils/vitest.config.mts"
       ],
       "inbound": {
-        "total": 3916,
-        "explained": 751,
+        "total": 3922,
+        "explained": 753,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -19745,6 +19747,7 @@
             "disposition": "KEEP",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/database/src/type.ts",
               "packages/types/src/index.ts",
               "packages/utils/src/index.ts"
@@ -19755,6 +19758,7 @@
             "disposition": "UNCOVERED",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/trpc/src/lambda/index.ts",
               "packages/trpc/src/lambda/middleware/index.ts"
             ]
@@ -19764,6 +19768,7 @@
             "disposition": "UNCOVERED",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/database/src/type.ts",
               "packages/types/src/aiProvider.ts",
               "packages/types/src/index.ts"
@@ -22618,6 +22623,11 @@
             "importer": "src/styles/loading.ts",
             "disposition": "UNCOVERED",
             "targets": ["packages/shared-tool-ui/src/styles.ts"]
+          },
+          {
+            "importer": "packages/model-runtime/src/providers/replicate/index.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/ssrf-safe-fetch/index.ts"]
           },
           {
             "importer": "packages/model-runtime/src/utils/uriParser.ts",
@@ -27195,6 +27205,11 @@
             "targets": ["packages/types/src/index.ts"]
           },
           {
+            "importer": "packages/model-runtime/src/providers/comfyui/index.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/types/src/index.ts", "packages/utils/src/index.ts"]
+          },
+          {
             "importer": "packages/model-runtime/src/providers/deepseek/modelFetch.ts",
             "disposition": "KEEP",
             "targets": ["packages/types/src/index.ts"]
@@ -27301,6 +27316,11 @@
           },
           {
             "importer": "packages/model-runtime/src/types/error.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/types/src/index.ts"]
+          },
+          {
+            "importer": "packages/model-runtime/src/types/image.ts",
             "disposition": "KEEP",
             "targets": ["packages/types/src/index.ts"]
           },
@@ -31572,6 +31592,11 @@
           },
           {
             "importer": "packages/model-runtime/src/core/openaiCompatibleFactory/client.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/utils/src/index.ts"]
+          },
+          {
+            "importer": "packages/model-runtime/src/providers/bfl/createImage.ts",
             "disposition": "KEEP",
             "targets": ["packages/utils/src/index.ts"]
           },
@@ -37136,7 +37161,7 @@
         "packages/business-server/src/model-runtime*",
         "packages/business-server/src/{getProviderContentPolicyErrorMessage,recordModelCompletionFailure,trackProviderContentPolicyViolation}.ts"
       ],
-      "fileCount": 477,
+      "fileCount": 491,
       "files": [
         "apps/server/src/modules/ModelRuntime/apiKeyManager.test.ts",
         "apps/server/src/modules/ModelRuntime/apiKeyManager.ts",
@@ -37377,6 +37402,11 @@
         "packages/model-runtime/src/providers/bailianCodingPlan/index.ts",
         "packages/model-runtime/src/providers/bedrock/index.test.ts",
         "packages/model-runtime/src/providers/bedrock/index.ts",
+        "packages/model-runtime/src/providers/bfl/createImage.test.ts",
+        "packages/model-runtime/src/providers/bfl/createImage.ts",
+        "packages/model-runtime/src/providers/bfl/index.test.ts",
+        "packages/model-runtime/src/providers/bfl/index.ts",
+        "packages/model-runtime/src/providers/bfl/types.ts",
         "packages/model-runtime/src/providers/cerebras/index.test.ts",
         "packages/model-runtime/src/providers/cerebras/index.ts",
         "packages/model-runtime/src/providers/chatGPT/index.test.ts",
@@ -37387,6 +37417,8 @@
         "packages/model-runtime/src/providers/cohere/index.ts",
         "packages/model-runtime/src/providers/cometapi/index.test.ts",
         "packages/model-runtime/src/providers/cometapi/index.ts",
+        "packages/model-runtime/src/providers/comfyui/__tests__/index.test.ts",
+        "packages/model-runtime/src/providers/comfyui/index.ts",
         "packages/model-runtime/src/providers/deepseek/__tests__/anthropic.test.ts",
         "packages/model-runtime/src/providers/deepseek/__tests__/generateObject.test.ts",
         "packages/model-runtime/src/providers/deepseek/__tests__/index.test.ts",
@@ -37401,6 +37433,8 @@
         "packages/model-runtime/src/providers/deepseek/modelFetch.ts",
         "packages/model-runtime/src/providers/deepseek/runtimeModels.ts",
         "packages/model-runtime/src/providers/deepseek/sanitizePayload.ts",
+        "packages/model-runtime/src/providers/fal/index.test.ts",
+        "packages/model-runtime/src/providers/fal/index.ts",
         "packages/model-runtime/src/providers/fireworksai/index.test.ts",
         "packages/model-runtime/src/providers/fireworksai/index.ts",
         "packages/model-runtime/src/providers/giteeai/index.test.ts",
@@ -37494,6 +37528,7 @@
         "packages/model-runtime/src/providers/qwen/index.ts",
         "packages/model-runtime/src/providers/qwen/modelId.test.ts",
         "packages/model-runtime/src/providers/qwen/modelId.ts",
+        "packages/model-runtime/src/providers/replicate/index.ts",
         "packages/model-runtime/src/providers/sambanova/index.test.ts",
         "packages/model-runtime/src/providers/sambanova/index.ts",
         "packages/model-runtime/src/providers/search1api/index.test.ts",
@@ -37555,6 +37590,7 @@
         "packages/model-runtime/src/types/chat.ts",
         "packages/model-runtime/src/types/embeddings.ts",
         "packages/model-runtime/src/types/error.ts",
+        "packages/model-runtime/src/types/image.ts",
         "packages/model-runtime/src/types/index.ts",
         "packages/model-runtime/src/types/model.ts",
         "packages/model-runtime/src/types/pricing.ts",
@@ -37563,8 +37599,11 @@
         "packages/model-runtime/src/types/toolsCalling.ts",
         "packages/model-runtime/src/types/tts.ts",
         "packages/model-runtime/src/types/type.ts",
+        "packages/model-runtime/src/types/video.ts",
         "packages/model-runtime/src/utils/asyncifyPolling.test.ts",
         "packages/model-runtime/src/utils/asyncifyPolling.ts",
+        "packages/model-runtime/src/utils/comfyuiErrorParser.test.ts",
+        "packages/model-runtime/src/utils/comfyuiErrorParser.ts",
         "packages/model-runtime/src/utils/consumeStream.test.ts",
         "packages/model-runtime/src/utils/consumeStream.ts",
         "packages/model-runtime/src/utils/createError.test.ts",
@@ -38879,7 +38918,7 @@
         "packages/prompts/vitest.config.mts"
       ],
       "inbound": {
-        "total": 458,
+        "total": 463,
         "explained": 154,
         "unexplained": [
           {
@@ -39226,6 +39265,11 @@
             ]
           },
           {
+            "importer": "packages/database/src/repositories/aiInfra/providerBindings.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/model-bank/src/index.ts"]
+          },
+          {
             "importer": "packages/database/src/schemas/aiInfra.ts",
             "disposition": "KEEP",
             "targets": ["packages/model-bank/src/index.ts"]
@@ -39366,6 +39410,11 @@
             "targets": ["packages/model-bank/src/index.ts"]
           },
           {
+            "importer": "packages/model-runtime/src/providers/bfl/createImage.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/model-bank/src/index.ts"]
+          },
+          {
             "importer": "packages/model-runtime/src/providers/cerebras/index.ts",
             "disposition": "KEEP",
             "targets": ["packages/model-bank/src/index.ts"]
@@ -39412,6 +39461,11 @@
           },
           {
             "importer": "packages/model-runtime/src/providers/deepseek/runtimeModels.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/model-bank/src/index.ts"]
+          },
+          {
+            "importer": "packages/model-runtime/src/providers/fal/index.ts",
             "disposition": "KEEP",
             "targets": ["packages/model-bank/src/index.ts"]
           },
@@ -39726,7 +39780,17 @@
             "targets": ["packages/model-bank/src/index.ts"]
           },
           {
+            "importer": "packages/model-runtime/src/types/image.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/model-bank/src/index.ts"]
+          },
+          {
             "importer": "packages/model-runtime/src/types/type.ts",
+            "disposition": "KEEP",
+            "targets": ["packages/model-bank/src/index.ts"]
+          },
+          {
+            "importer": "packages/model-runtime/src/types/video.ts",
             "disposition": "KEEP",
             "targets": ["packages/model-bank/src/index.ts"]
           },
@@ -40645,7 +40709,7 @@
     }
   ],
   "counts": {
-    "sourceFiles": 13141,
+    "sourceFiles": 13157,
     "workspacePackages": 110,
     "nextRoutes": 43,
     "spaRouteEntries": 132,
@@ -40656,7 +40720,7 @@
     "localeFiles": 886,
     "defaultNamespaceFiles": 53,
     "docFiles": 656,
-    "testFiles": 3513,
+    "testFiles": 3519,
     "storeFiles": 895,
     "unresolvedImports": 402
   },
@@ -43031,7 +43095,7 @@
       "docs/wiki/HOME.zh-CN.md"
     ]
   },
-  "generatedAt": "2026-10-01T04:08:42.465Z",
+  "generatedAt": "2026-10-01T11:09:14.637Z",
   "packageConsumers": {
     "@orvilo/web-crawler": [
       "apps/server/src/services/search/index.test.ts",
@@ -43171,6 +43235,7 @@
       "packages/database/src/models/work/toolResultParsing.ts",
       "packages/database/src/models/workspaceUserSettings.ts",
       "packages/database/src/repositories/agentGroup/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/repositories/home/index.ts",
       "packages/database/src/repositories/onboardingUnderstanding/repository.ts",
       "packages/database/src/server/models/__tests__/adapter.test.ts",
@@ -43202,6 +43267,10 @@
       "packages/model-runtime/src/core/contextBuilders/openai.ts",
       "packages/model-runtime/src/core/openaiCompatibleFactory/client.ts",
       "packages/model-runtime/src/core/usageConverters/utils/estimateChatCost.ts",
+      "packages/model-runtime/src/providers/bfl/createImage.test.ts",
+      "packages/model-runtime/src/providers/bfl/createImage.ts",
+      "packages/model-runtime/src/providers/comfyui/__tests__/index.test.ts",
+      "packages/model-runtime/src/providers/comfyui/index.ts",
       "packages/model-runtime/src/providers/deepseek/sanitizePayload.ts",
       "packages/model-runtime/src/providers/ollama/index.test.ts",
       "packages/model-runtime/src/providers/ollama/index.ts",
@@ -44395,9 +44464,11 @@
       "packages/database/src/models/workspaceUserSettings.ts",
       "packages/database/src/repositories/agentGroup/index.ts",
       "packages/database/src/repositories/aiInfra/__tests__/getAiProviderDetail.test.ts",
+      "packages/database/src/repositories/aiInfra/__tests__/providerBindings.test.ts",
       "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
       "packages/database/src/repositories/aiInfra/catalog.ts",
       "packages/database/src/repositories/aiInfra/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/repositories/compression/index.test.ts",
       "packages/database/src/repositories/compression/index.ts",
       "packages/database/src/repositories/dataImporter/__tests__/index.test.ts",
@@ -44558,6 +44629,8 @@
       "packages/model-runtime/src/providers/baichuan/index.ts",
       "packages/model-runtime/src/providers/cloudflare/index.ts",
       "packages/model-runtime/src/providers/cohere/index.ts",
+      "packages/model-runtime/src/providers/comfyui/__tests__/index.test.ts",
+      "packages/model-runtime/src/providers/comfyui/index.ts",
       "packages/model-runtime/src/providers/deepseek/__tests__/modelFetch.test.ts",
       "packages/model-runtime/src/providers/deepseek/modelFetch.ts",
       "packages/model-runtime/src/providers/fireworksai/index.ts",
@@ -44581,6 +44654,7 @@
       "packages/model-runtime/src/types/chat.ts",
       "packages/model-runtime/src/types/embeddings.ts",
       "packages/model-runtime/src/types/error.ts",
+      "packages/model-runtime/src/types/image.ts",
       "packages/model-runtime/src/types/pricing.ts",
       "packages/model-runtime/src/types/structureOutput.ts",
       "packages/model-runtime/src/types/type.ts",
@@ -45732,6 +45806,7 @@
     "@orvilo/ssrf-safe-fetch": [
       "apps/server/src/services/file/downloadRemoteImage.test.ts",
       "apps/server/src/services/file/downloadRemoteImage.ts",
+      "packages/model-runtime/src/providers/replicate/index.ts",
       "packages/model-runtime/src/utils/uriParser.test.ts",
       "packages/model-runtime/src/utils/uriParser.ts",
       "packages/utils/src/imageToBase64.ts",
@@ -46121,6 +46196,7 @@
       "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
       "packages/database/src/repositories/aiInfra/catalog.ts",
       "packages/database/src/repositories/aiInfra/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/schemas/aiInfra.ts",
       "packages/fetch-sse/src/parseError.ts",
       "packages/locales/src/default/models.ts",
@@ -46171,6 +46247,7 @@
       "packages/model-runtime/src/providers/bailianCodingPlan/index.ts",
       "packages/model-runtime/src/providers/bedrock/index.test.ts",
       "packages/model-runtime/src/providers/bedrock/index.ts",
+      "packages/model-runtime/src/providers/bfl/createImage.ts",
       "packages/model-runtime/src/providers/cerebras/index.test.ts",
       "packages/model-runtime/src/providers/cerebras/index.ts",
       "packages/model-runtime/src/providers/chatGPT/index.ts",
@@ -46185,6 +46262,7 @@
       "packages/model-runtime/src/providers/deepseek/index.ts",
       "packages/model-runtime/src/providers/deepseek/modelFetch.ts",
       "packages/model-runtime/src/providers/deepseek/runtimeModels.ts",
+      "packages/model-runtime/src/providers/fal/index.ts",
       "packages/model-runtime/src/providers/fireworksai/index.test.ts",
       "packages/model-runtime/src/providers/fireworksai/index.ts",
       "packages/model-runtime/src/providers/giteeai/index.test.ts",
@@ -46295,7 +46373,9 @@
       "packages/model-runtime/src/providers/zeroone/index.test.ts",
       "packages/model-runtime/src/providers/zeroone/index.ts",
       "packages/model-runtime/src/providers/zhipu/index.ts",
+      "packages/model-runtime/src/types/image.ts",
       "packages/model-runtime/src/types/type.ts",
+      "packages/model-runtime/src/types/video.ts",
       "packages/model-runtime/src/utils/getFallbackModelProperty.ts",
       "packages/model-runtime/src/utils/getModelMaxOutputs.test.ts",
       "packages/model-runtime/src/utils/getModelMaxOutputs.ts",

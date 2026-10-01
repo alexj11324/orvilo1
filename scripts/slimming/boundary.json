@@ -169,11 +169,11 @@
     {
       "id": "provider-byok",
       "disposition": "DELETE",
-      "reason": "User-managed LLM provider/BYOK/baseURL/model-selection product surface was retired in P05/P06; residual route/store/API/service/locale/docs are swept per ORV-101. Generic credential infra for connectors stays.",
+      "reason": "User-managed LLM provider/BYOK/baseURL/model-selection product surface was retired in P05/P06; residual route/store/API/service/locale/docs are swept per ORV-101. Generic credential infra for connectors stays. The control-plane providerBinding service is a living replacement and stays outside this capability.",
       "globs": [
         "apps/server/src/routers/lambda/{aiProvider,aiModel}.ts",
         "apps/server/src/routers/lambda/__tests__/{aiProvider,aiModel}.test.ts",
-        "apps/server/src/services/{aiProvider,aiModel,modelProvider*,provider*}/**",
+        "apps/server/src/services/{aiProvider,aiModel,modelProvider*}/**",
         "src/services/{aiModel,aiProvider}/**",
         "src/utils/aiProvider*",
         "src/types/aiProvider*",

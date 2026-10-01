@@ -1049,7 +1049,7 @@ const WorkInboxPage = memo(() => {
               <span className="flex h-full items-center justify-center gap-1">
                 {t(`inbox.tab.${which}`)}
                 {count > 0 ? (
-                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-[10px] leading-none text-muted-foreground">
+                  <span className="rounded-full bg-muted px-1.5 py-0.5 text-xs leading-none text-muted-foreground">
                     {count}
                   </span>
                 ) : null}
@@ -1106,7 +1106,13 @@ const WorkInboxPage = memo(() => {
       {listMode === 'loading' ? (
         <div aria-busy className="flex flex-col gap-2 p-3" role="status">
           {Array.from({ length: 8 }, (_, index) => (
-            <Skeleton className="h-10 w-full" key={index} />
+            <div className="flex items-start gap-3 px-2 py-2" key={index}>
+              <Skeleton className="size-10 shrink-0 rounded-full" />
+              <div className="flex flex-1 flex-col gap-1.5 py-0.5">
+                <Skeleton className="h-3.5 w-3/4" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </div>
           ))}
         </div>
       ) : error && cards.length === 0 ? (

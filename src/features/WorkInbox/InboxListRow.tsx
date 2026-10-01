@@ -172,6 +172,9 @@ const InboxListRow = memo((props: InboxListRowProps) => {
       tabIndex={0}
       onClick={() => onSelect(card.notificationId, true)}
       onKeyDown={(event) => {
+        // Portaled menus stay React descendants of this row — let their
+        // items keep Enter/Space instead of re-selecting the card.
+        if ((event.target as HTMLElement).closest('[role="menu"]')) return;
         if (event.key === 'Enter' || event.key === ' ') {
           event.preventDefault();
           onSelect(card.notificationId, true);
@@ -185,7 +188,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
             avatar={card.actor?.avatar ?? card.agent?.avatar}
             background={card.agent?.backgroundColor}
             name={card.actor?.name ?? card.agent?.name}
-            size={40}
+            size={40} // linear-token-override: Plane notification rows use a 40px avatar disc
           />
         ) : (
           createElement(inboxCardIcon(card), {

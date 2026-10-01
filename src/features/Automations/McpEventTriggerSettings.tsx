@@ -1,5 +1,5 @@
-import { Flexbox, TextArea } from '@lobehub/ui';
-import { Button, Select, Text } from '@lobehub/ui/base-ui';
+import { Flexbox } from '@lobehub/ui';
+import { Button, Select, Text, TextArea } from '@lobehub/ui/base-ui';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 

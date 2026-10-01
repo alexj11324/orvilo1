@@ -1,5 +1,5 @@
-import { Flexbox, Input } from '@lobehub/ui';
-import { Button, confirmModal, Select, Text } from '@lobehub/ui/base-ui';
+import { Flexbox } from '@lobehub/ui';
+import { Button, confirmModal, Input, Select, Text } from '@lobehub/ui/base-ui';
 import {
   type ProviderBinding,
   type ProviderBindingConfig,

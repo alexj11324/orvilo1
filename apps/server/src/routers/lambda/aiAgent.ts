@@ -65,6 +65,10 @@ import {
 } from '@/libs/trpc/utils/internalJwt';
 import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
+import {
+  getServerDefaultHeterogeneousModels,
+  SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
+} from '@/server/modules/ModelRuntime';
 import { mapAgentInterventionTRPCError } from '@/server/routers/lambda/_helpers/agentInterventionError';
 import { mapAgentStartTRPCError } from '@/server/routers/lambda/_helpers/agentStartError';
 import {
@@ -1787,7 +1791,45 @@ const authorizeOperationCallback = async (
   }
 };
 
+export const resolveServerDefaultHeterogeneousCapability = async () => {
+  const base = {
+    model: 'orvilo-default' as const,
+  };
+  if (process.env.ENABLE_SERVER_DEFAULT_HETEROGENEOUS_AGENT === '0') {
+    return { ...base, agents: [], enabled: false as const, reason: 'disabled' as const };
+  }
+
+  try {
+    const models = await getServerDefaultHeterogeneousModels();
+    const agents = SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES.filter(
+      (agentType) => models[agentType].length > 0,
+    );
+    if (agents.length === 0) {
+      return {
+        ...base,
+        agents,
+        enabled: false as const,
+        models,
+        reason: 'invalidConfiguration' as const,
+      };
+    }
+    return { ...base, agents, enabled: true as const, models };
+  } catch (error) {
+    log('Server-default heterogeneous capability is unavailable: %O', error);
+    return {
+      ...base,
+      agents: [],
+      enabled: false as const,
+      reason: 'invalidConfiguration' as const,
+    };
+  }
+};
+
 export const aiAgentRouter = router({
+  getServerDefaultHeterogeneousCapability: aiAgentBaseProcedure.query(() =>
+    resolveServerDefaultHeterogeneousCapability(),
+  ),
+
   /**
    * Create Thread for client-side task execution in Group mode
    *

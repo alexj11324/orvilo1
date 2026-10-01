@@ -1,6 +1,6 @@
 import type { ProviderConfig } from '@orvilo/types';
 
-import { AiInfraRepos } from '@/database/repositories/aiInfra';
+import { AiInfraCatalogRepos } from '@/database/repositories/aiInfra';
 import { getServerGlobalConfig } from '@/server/globalConfig';
 
 import { BaseService } from '../common/base.service';
@@ -35,7 +35,7 @@ export class ModelService extends BaseService {
         { ...config, enabled: config?.enabled ?? false },
       ]),
     );
-    return new AiInfraRepos(providerConfigs);
+    return new AiInfraCatalogRepos(providerConfigs);
   };
 
   /**

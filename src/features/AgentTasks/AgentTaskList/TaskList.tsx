@@ -291,7 +291,7 @@ const TaskList = memo<TaskListProps>((props) => {
   // The page scrolls in an ancestor (`WideScreenContainer`'s wrapper), with the
   // inline composer above this list. Windowing against that ancestor keeps the
   // page layout intact instead of nesting a second scroller.
-  const { ref: anchorRef, scrollParent } = useClosestScrollParent();
+  const { ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
 
   const peekArmed = Boolean(peekOnSelect && onSelectTask);
 
@@ -427,7 +427,7 @@ const TaskList = memo<TaskListProps>((props) => {
         ref={anchorRef}
         style={{ width: '100%', ...issueIdColumnStyle(tasks.map((task) => task.identifier)) }}
       >
-        {scrollParent && (
+        {scrollParent ? (
           <Virtuoso
             // Footer belongs to the window so it follows the last rendered row
             // rather than sitting under an unrendered tail.
@@ -447,6 +447,14 @@ const TaskList = memo<TaskListProps>((props) => {
               ),
             }}
           />
+        ) : unresolved ? null : (
+          <div className="flex flex-col">
+            {virtualItems.map((item, index) => (
+              <div key={item.key}>{renderItem(index, item)}</div>
+            ))}
+            {hiddenFooter}
+            {truncatedFooter}
+          </div>
         )}
       </div>
     </AsyncBoundary>

@@ -14,12 +14,14 @@ import { type ActionKeys } from '@/features/ChatInput';
 import HeteroControlBar from '@/features/ChatInput/ControlBar/HeteroControlBar';
 import { ChatInput } from '@/features/Conversation';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
+import { useProviderBindingValidation } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import {
   isHeterogeneousSandboxExecutionAvailable,
   resolveExecutionTarget,
 } from '@/helpers/executionTarget';
+import { resolveProviderBindingGuard } from '@/helpers/providerBinding';
 import { useRemoteAgentDeviceGuard } from '@/hooks/useRemoteAgentDeviceGuard';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { useChatStore } from '@/store/chat';
@@ -96,16 +98,35 @@ const HeterogeneousChatInput = memo(() => {
   const { agencyConfig, isPreferenceLoading, workspaceScoped } = useTopicAgencyConfig(agentId);
   const heterogeneousProvider = agencyConfig?.heterogeneousProvider;
   const providerType = heterogeneousProvider?.type;
+  const isApiAuth = heterogeneousProvider?.authMode === 'api';
+  const providerApiConfig =
+    isApiAuth &&
+    heterogeneousProvider.apiConfig &&
+    heterogeneousProvider.apiConfig.source !== 'server-default'
+      ? heterogeneousProvider.apiConfig
+      : undefined;
+  const apiConfigMissing = isApiAuth && !heterogeneousProvider.apiConfig;
   const executionTarget = resolveExecutionTarget(agencyConfig, {
     isHetero: !!providerType,
     clientExecutionAvailable: isDesktop,
     workspaceScoped,
   });
+  const { error: apiBindingValidationError, isReady: isApiBindingStateReady } =
+    useProviderBindingValidation(providerType, providerApiConfig);
   const deviceSelectionRequired =
     !!providerType &&
     !isHeterogeneousSandboxExecutionAvailable(providerType) &&
     executionTarget === 'none';
 
+  const apiModeTargetUnsupported = isApiAuth && executionTarget !== 'local';
+  const validateProviderBinding =
+    (apiConfigMissing || !!providerApiConfig) && executionTarget === 'local';
+  const { blocked: apiModeBindingBlocked, error: apiModeBindingError } =
+    resolveProviderBindingGuard({
+      active: validateProviderBinding,
+      error: apiBindingValidationError,
+      isReady: isApiBindingStateReady,
+    });
   // The armed-schedule chip sits immediately after the `+` that armed it, so the
   // state and the control that produced it read as one unit.
   const extraActionItems = useMemo<ChatInputActionsProps['items']>(
@@ -190,6 +211,44 @@ const HeterogeneousChatInput = memo(() => {
     );
   };
 
+  const renderApiModeTargetGuard = () => {
+    if (!apiModeTargetUnsupported) return null;
+
+    return (
+      <GuardBanner
+        hint={t('heteroAgent.apiMode.localOnly.desc')}
+        title={t('heteroAgent.apiMode.localOnly.title')}
+        action={
+          <Button size="sm" onClick={goToAgentProfile}>
+            {t('platformAgent.deviceGuard.configure')}
+          </Button>
+        }
+      />
+    );
+  };
+
+  const renderApiModeBindingGuard = () => {
+    if (!apiModeBindingError) return null;
+
+    const title =
+      apiModeBindingError.code === 'configMissing'
+        ? t('heteroAgent.apiMode.configMissing')
+        : apiModeBindingError.code === 'agentUnsupported'
+          ? t('heteroAgent.apiMode.agentUnsupported', { name: providerType })
+          : t(`heteroAgent.apiMode.${apiModeBindingError.code}`, apiModeBindingError);
+
+    return (
+      <GuardBanner
+        title={title}
+        action={
+          <Button size="sm" onClick={goToAgentProfile}>
+            {t('platformAgent.deviceGuard.configure')}
+          </Button>
+        }
+      />
+    );
+  };
+
   const renderDeviceSelectionGuard = () => {
     if (!deviceSelectionRequired) return null;
 
@@ -213,10 +272,17 @@ const HeterogeneousChatInput = memo(() => {
     (!isConfigured && !isDeviceExecution) ||
     deviceBlocked;
   const hasGuard =
-    deviceSelectionRequired || deviceBlocked || (!isConfigured && !isDeviceExecution);
+    apiModeTargetUnsupported ||
+    !!apiModeBindingError ||
+    apiModeBindingBlocked ||
+    deviceSelectionRequired ||
+    deviceBlocked ||
+    (!isConfigured && !isDeviceExecution);
 
   return (
     <div className="flex flex-col">
+      {renderApiModeTargetGuard()}
+      {renderApiModeBindingGuard()}
       {renderDeviceSelectionGuard()}
       {renderCloudConfigGuard()}
       {renderDeviceGuard()}

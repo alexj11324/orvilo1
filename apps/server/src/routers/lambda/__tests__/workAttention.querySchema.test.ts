@@ -28,6 +28,30 @@ describe('workQuerySchema', () => {
     expect(parsed.filter).toEqual(filter);
   });
 
+  it('accepts a numeric in, a date range and a board lane', () => {
+    const filter = {
+      all: [
+        { field: 'priority', op: 'in', value: [1, 2] },
+        {
+          field: 'createdAt',
+          op: 'between',
+          value: { from: '2026-01-01T00:00:00.000Z', to: '2026-02-01T00:00:00.000Z' },
+        },
+      ],
+    } as const;
+    const parsed = workQuerySchema.parse({
+      entityType: 'task',
+      filter,
+      groupBy: 'priority',
+      layout: 'board',
+      schemaVersion: 1,
+      subGroupBy: 'assignee',
+    });
+    expect(parsed.groupBy).toBe('priority');
+    expect(parsed.subGroupBy).toBe('assignee');
+    expect(parsed.filter).toEqual(filter);
+  });
+
   it('still accepts pure filter nodes and rejects unknown predicates', () => {
     expect(
       workQuerySchema.safeParse({

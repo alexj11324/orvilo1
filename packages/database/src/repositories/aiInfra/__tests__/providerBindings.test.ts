@@ -15,6 +15,17 @@ import type { OrviloDatabase } from '../../../type';
 import { AiInfraRepos } from '../index';
 import { ProviderBindingPlane } from '../providerBindings';
 
+// vitest.config.server.mts runs with isolate:false, so one file's module mock
+// serves every file; delegate through a per-test-installed global instead.
+type GlobalWithMock = typeof globalThis & {
+  __orviloTestLoadModels?: () => Promise<unknown[]>;
+};
+
+vi.mock('@orvilo/business-model-bank/model-config', () => ({
+  loadModels: () =>
+    (globalThis as GlobalWithMock).__orviloTestLoadModels?.() ?? Promise.resolve([]),
+}));
+
 const owner = 'binding-plane-owner';
 const foreign = 'binding-plane-foreign';
 const providerId = 'fixture-provider';

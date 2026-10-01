@@ -24,7 +24,9 @@ export async function createCanonicalRunFixture(
   db: OrviloDatabase,
   state: 'registering' | 'running' = 'running',
 ): Promise<CanonicalRunBinding> {
-  await db.execute(sql.raw(TASK_EXECUTION_CONTROL_CANDIDATE_SQL));
+  for (const statement of TASK_EXECUTION_CONTROL_CANDIDATE_SQL) {
+    await db.execute(sql.raw(statement));
+  }
   const userId = await createTestUser(db);
   const [workspace] = await db
     .insert(workspaces)

@@ -269,6 +269,8 @@ describe('workQueryListGroups', () => {
     expect(workQueryListGroupBy(undefined)).toBe('status');
     expect(workQueryListGroupBy('none')).toBe('none');
     expect(workQueryListGroupBy('workflowCategory')).toBe('workflowCategory');
+    expect(workQueryListGroupBy('milestone')).toBe('milestone');
+    expect(workQueryListGroupBy('agent')).toBe('agent');
   });
 
   it('keeps business categories and run states apart in grouped lists', () => {

@@ -1,7 +1,11 @@
 'use client';
 
 import type { SavedViewItem } from '@orvilo/database/schemas';
-import type { SavedViewVisibility, WorkQuery } from '@orvilo/types';
+import {
+  normalizeWorkQuerySubGroupBy,
+  type SavedViewVisibility,
+  type WorkQuery,
+} from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { cn } from 'cn';
 import dayjs from 'dayjs';
@@ -12,7 +16,7 @@ import {
   Settings2Icon,
   TriangleAlert,
 } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import useSWR from 'swr';
@@ -271,6 +275,7 @@ const viewToEditorState = (view: SavedViewItem): ViewEditorState => ({
   name: view.name,
   sort: view.queryAst.sort,
   sortMode: view.queryAst.sortMode,
+  subGroupBy: view.queryAst.subGroupBy,
   teamId: view.teamId ?? null,
   visibility: view.visibility ?? 'private',
 });
@@ -283,6 +288,10 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   sort: state.sort,
   // Board ordering is explicit — the field is meaningless off-board.
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
+  subGroupBy:
+    state.layout === 'board'
+      ? normalizeWorkQuerySubGroupBy(state.groupBy, state.subGroupBy)
+      : undefined,
 });
 
 const SavedViewPage = memo(() => {
@@ -328,6 +337,9 @@ const SavedViewPage = memo(() => {
     [evaluation?.projectGroups],
   );
   const queryHash = evaluation?.queryHash;
+  const pageToken = `${workspaceId ?? ''}\u001F${viewId ?? ''}\u001F${queryHash ?? ''}`;
+  const pageTokenRef = useRef(pageToken);
+  pageTokenRef.current = pageToken;
   const [tail, setTail] = useState<typeof firstTasks>([]);
   const [projectTail, setProjectTail] = useState<typeof firstProjects>([]);
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
@@ -399,6 +411,7 @@ const SavedViewPage = memo(() => {
 
   const loadMore = useCallback(async () => {
     if (!queryHash || !viewId) return;
+    const started = pageTokenRef.current;
     if (view?.entityType === 'project') {
       const last = projectRows.at(-1);
       if (!last) return;
@@ -407,6 +420,7 @@ const SavedViewPage = memo(() => {
         id: viewId,
         queryHash,
       });
+      if (pageTokenRef.current !== started) return;
       setProjectTail((current) => mergeWorkQueryPage(current, next.data.evaluation.projects ?? []));
       return;
     }
@@ -417,6 +431,7 @@ const SavedViewPage = memo(() => {
       id: viewId,
       queryHash,
     });
+    if (pageTokenRef.current !== started) return;
     setTail((current) => mergeWorkQueryPage(current, next.data.evaluation.tasks ?? []));
   }, [projectRows, queryHash, tasks, view?.entityType, viewId]);
 
@@ -424,6 +439,7 @@ const SavedViewPage = memo(() => {
     async (groupKey: string) => {
       const column = groups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
       if (!last || !queryHash || !viewId) return;
       const next = await workAttentionService.savedViewEvaluate({
         afterId: last.id,
@@ -431,6 +447,7 @@ const SavedViewPage = memo(() => {
         id: viewId,
         queryHash,
       });
+      if (pageTokenRef.current !== started) return;
       setGroupTail((current) => mergeWorkQueryGroups(current, next.data.evaluation.groups ?? []));
     },
     [groups, queryHash, viewId],
@@ -440,6 +457,7 @@ const SavedViewPage = memo(() => {
     async (groupKey: string) => {
       const column = projectGroups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
       if (!last || !queryHash || !viewId) return;
       const next = await workAttentionService.savedViewEvaluate({
         afterId: last.id,
@@ -447,6 +465,7 @@ const SavedViewPage = memo(() => {
         id: viewId,
         queryHash,
       });
+      if (pageTokenRef.current !== started) return;
       setProjectGroupTail((current) =>
         mergeWorkQueryGroups(
           current,
@@ -887,6 +906,7 @@ const SavedViewPage = memo(() => {
                   loadingLabel={t('savedViews.loading')}
                   movable={resolvedLayout === 'board'}
                   sortMode={view?.queryAst.sortMode}
+                  subGroupBy={view?.queryAst.subGroupBy}
                   tasks={tasks}
                   total={evaluation?.total}
                   createContext={

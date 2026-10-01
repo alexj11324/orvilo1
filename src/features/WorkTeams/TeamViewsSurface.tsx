@@ -23,6 +23,7 @@ import {
 import { Skeleton } from '@/components/ui/skeleton';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
+import { useWorkQueryGroupTitle } from '@/features/MyWork/useWorkQueryGroupTitle';
 import WorkQueryResults from '@/features/MyWork/WorkQueryResults';
 import NavHeader from '@/features/NavHeader';
 import { filterSavedViewsByEntity } from '@/features/SavedViews/savedViewDirectory';
@@ -149,6 +150,11 @@ const TeamViewsSurface = ({
   }, [creating, entityType, teamId]);
 
   const query = useMemo(() => teamViewDraftQuery(draft, teamId), [draft, teamId]);
+  const groupTitle = useWorkQueryGroupTitle({
+    cycleTeamIds: query.groupBy === 'cycle' ? [teamId] : [],
+    needsAssignee: query.groupBy === 'assignee' || query.subGroupBy === 'assignee',
+    needsProject: query.groupBy === 'project' || query.subGroupBy === 'project',
+  });
   const {
     data: preview,
     error: previewError,
@@ -377,11 +383,13 @@ const TeamViewsSurface = ({
             <WorkQueryResults
               emptyLabel={t('savedViews.emptyResults')}
               groupBy={result && 'groupBy' in result ? result.groupBy : undefined}
+              groupTitle={groupTitle}
               groups={groups}
               layout={draft.layout}
               loadMoreLabel={t('savedViews.loadMore')}
               loading={previewLoading}
               loadingLabel={t('savedViews.loading')}
+              subGroupBy={query.subGroupBy}
               tasks={tasks}
               total={result?.total}
             />

@@ -32,7 +32,11 @@ collapsed groups with the display options. Team issues store them in the
 
 A saved task list can group by activity date, project, or cycle, and can set
 a second axis. A board stays on status, workflow, priority, or assignee.
-Activity-date buckets for a saved view use the viewer's time zone.
+Activity-date buckets for a saved view use the viewer's time zone. Those
+headers use the viewer's calendar labels, the cached project list, the
+workspace roster, and the cycles of the view's team (or each joined team when
+the view is not on one team). A team view draft keeps that second axis on a
+list as well as on a board.
 
 A group page asks for one extra row. That row is not shown. `hasMore` stays
 on only while the loaded rows are still short of the group total and the
@@ -51,6 +55,11 @@ group total matches the rows the list is allowed to draw. A client pass still
 drops a stale row on an already loaded page and does not rewrite the total.
 
 A project issue list with filters, or with a milestone selected, loads pages
-of 50 through the work query. The milestone is `projectMilestoneId eq`. The
-same query feeds the project board. An unfiltered project list and board still
-read the local task store.
+of 50 through the work query. The milestone is `projectMilestoneId eq`. When
+the display grouping is status, priority, or member, that list groups on the
+server: each group keeps its total and loads its own next page. Hiding
+completed issues adds `status notIn completed, canceled`, so the total matches
+the rows on screen. Milestone grouping and the agent assignee still arrange
+only the loaded page — the work query has no axis for them. The same query
+feeds the project board. An unfiltered project list and board still read the
+local task store.

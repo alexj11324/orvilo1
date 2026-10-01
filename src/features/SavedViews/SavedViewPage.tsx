@@ -35,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
+import { useWorkQueryGroupTitle } from '@/features/MyWork/useWorkQueryGroupTitle';
 import {
   mergeWorkQueryGroups,
   mergeWorkQueryPage,
@@ -332,6 +333,17 @@ const SavedViewPage = memo(() => {
         .map((team) => ({ id: team.id, name: team.name })),
     [teamsData],
   );
+  const groupTitle = useWorkQueryGroupTitle({
+    cycleTeamIds:
+      evaluation?.groupBy === 'cycle'
+        ? view?.teamId
+          ? [view.teamId]
+          : joinedTeamOptions.map((team) => team.id)
+        : [],
+    needsAssignee:
+      evaluation?.groupBy === 'assignee' || view?.queryAst.subGroupBy === 'assignee',
+    needsProject: evaluation?.groupBy === 'project' || view?.queryAst.subGroupBy === 'project',
+  });
   const firstTasks = evaluation?.tasks ?? [];
   const firstProjects = evaluation?.projects ?? [];
   const firstGroups = evaluation?.groups ?? [];
@@ -910,6 +922,7 @@ const SavedViewPage = memo(() => {
                 <WorkQueryResults
                   emptyLabel={t('savedViews.emptyResults')}
                   groupBy={evaluation?.groupBy}
+                  groupTitle={groupTitle}
                   groups={groups}
                   layout={resolvedLayout}
                   loadMoreError={pagedMore.loadMoreError}

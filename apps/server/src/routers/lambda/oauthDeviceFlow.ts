@@ -5,6 +5,10 @@ import { z } from 'zod';
 import { withScopedPermission } from '@/business/server/trpc-middlewares/rbacPermission';
 import { wsCompatProcedure } from '@/business/server/trpc-middlewares/workspaceAuth';
 import { AiProviderModel } from '@/database/models/aiProvider';
+import {
+  ProviderBindingPlane,
+  resolveBindingManagedProviderDetail,
+} from '@/database/repositories/aiInfra/providerBindings';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
@@ -18,10 +22,16 @@ const oauthProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) =>
   const { ctx } = opts;
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
 
+  // OAuth device-flow writes are personal-only (the model above has no
+  // workspace scope) — they persist through the binding plane when the
+  // provider is binding-managed.
+  const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId);
+
   return opts.next({
     ctx: {
       aiProviderModel: new AiProviderModel(ctx.serverDB, ctx.userId),
       gateKeeper,
+      providerBindings,
     },
   });
 });
@@ -47,10 +57,14 @@ export const oauthDeviceFlowRouter = router({
   getAuthStatus: oauthProcedure
     .input(z.object({ providerId: z.string() }))
     .query(async ({ input, ctx }) => {
-      const providerDetail = await ctx.aiProviderModel.getAiProviderById(
-        input.providerId,
-        KeyVaultsGateKeeper.getUserKeyVaults,
-      );
+      // Personal scope prefers provider_bindings (migrated providers have no
+      // ai_providers row); this router is personal-only (no workspace scope).
+      const providerDetail =
+        (await resolveBindingManagedProviderDetail(ctx.providerBindings, input.providerId)) ??
+        (await ctx.aiProviderModel.getAiProviderById(
+          input.providerId,
+          KeyVaultsGateKeeper.getUserKeyVaults,
+        ));
 
       if (!providerDetail?.keyVaults) {
         return { status: 'PENDING' };
@@ -133,20 +147,25 @@ export const oauthDeviceFlowRouter = router({
           }
 
           // Save tokens and user info to keyVaults
-          await ctx.aiProviderModel.updateConfig(
+          const tokenPatch = {
+            bearerToken: tokens.bearerToken,
+            bearerTokenExpiresAt: String(tokens.bearerTokenExpiresAt),
+            githubAvatarUrl: tokens.userInfo.avatarUrl,
+            githubUsername: tokens.userInfo.username,
+            oauthAccessToken: tokens.oauthAccessToken,
+          };
+          const written = await ctx.providerBindings.updateProviderKeyVaults(
             input.providerId,
-            {
-              keyVaults: {
-                bearerToken: tokens.bearerToken,
-                bearerTokenExpiresAt: String(tokens.bearerTokenExpiresAt),
-                githubAvatarUrl: tokens.userInfo.avatarUrl,
-                githubUsername: tokens.userInfo.username,
-                oauthAccessToken: tokens.oauthAccessToken,
-              },
-            },
-            ctx.gateKeeper.encrypt,
-            KeyVaultsGateKeeper.getUserKeyVaults,
+            tokenPatch,
           );
+          if (!written) {
+            await ctx.aiProviderModel.updateConfig(
+              input.providerId,
+              { keyVaults: tokenPatch },
+              ctx.gateKeeper.encrypt,
+              KeyVaultsGateKeeper.getUserKeyVaults,
+            );
+          }
 
           return { status: 'success' as const };
         } catch {
@@ -167,19 +186,24 @@ export const oauthDeviceFlowRouter = router({
           : parseJwtExpiry(pollResult.tokens.accessToken);
 
         // Save tokens to keyVaults
-        await ctx.aiProviderModel.updateConfig(
+        const tokenPatch = {
+          oauthAccountId: pollResult.tokens.accountId,
+          oauthAccessToken: pollResult.tokens.accessToken,
+          oauthRefreshToken: pollResult.tokens.refreshToken,
+          oauthTokenExpiresAt: expiresAt ? String(expiresAt) : undefined,
+        };
+        const written = await ctx.providerBindings.updateProviderKeyVaults(
           input.providerId,
-          {
-            keyVaults: {
-              oauthAccountId: pollResult.tokens.accountId,
-              oauthAccessToken: pollResult.tokens.accessToken,
-              oauthRefreshToken: pollResult.tokens.refreshToken,
-              oauthTokenExpiresAt: expiresAt ? String(expiresAt) : undefined,
-            },
-          },
-          ctx.gateKeeper.encrypt,
-          KeyVaultsGateKeeper.getUserKeyVaults,
+          tokenPatch,
         );
+        if (!written) {
+          await ctx.aiProviderModel.updateConfig(
+            input.providerId,
+            { keyVaults: tokenPatch },
+            ctx.gateKeeper.encrypt,
+            KeyVaultsGateKeeper.getUserKeyVaults,
+          );
+        }
       }
 
       return { status: pollResult.status };
@@ -192,23 +216,28 @@ export const oauthDeviceFlowRouter = router({
     .input(z.object({ providerId: z.string() }))
     .mutation(async ({ input, ctx }) => {
       // Clear OAuth tokens and user info from keyVaults
-      await ctx.aiProviderModel.updateConfig(
+      const clearPatch = {
+        bearerToken: undefined,
+        bearerTokenExpiresAt: undefined,
+        githubAvatarUrl: undefined,
+        githubUsername: undefined,
+        oauthAccountId: undefined,
+        oauthAccessToken: undefined,
+        oauthRefreshToken: undefined,
+        oauthTokenExpiresAt: undefined,
+      };
+      const written = await ctx.providerBindings.updateProviderKeyVaults(
         input.providerId,
-        {
-          keyVaults: {
-            bearerToken: undefined,
-            bearerTokenExpiresAt: undefined,
-            githubAvatarUrl: undefined,
-            githubUsername: undefined,
-            oauthAccountId: undefined,
-            oauthAccessToken: undefined,
-            oauthRefreshToken: undefined,
-            oauthTokenExpiresAt: undefined,
-          },
-        },
-        ctx.gateKeeper.encrypt,
-        KeyVaultsGateKeeper.getUserKeyVaults,
+        clearPatch,
       );
+      if (!written) {
+        await ctx.aiProviderModel.updateConfig(
+          input.providerId,
+          { keyVaults: clearPatch },
+          ctx.gateKeeper.encrypt,
+          KeyVaultsGateKeeper.getUserKeyVaults,
+        );
+      }
 
       return { success: true };
     }),

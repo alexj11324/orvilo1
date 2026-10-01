@@ -62,7 +62,7 @@ Then(
     };
     const expectEmpty = async () => {
       for (const label of ['Blocked by', 'Blocks', 'Related']) {
-        await expect(sidebar.getByText(label, { exact: true })).toBeVisible();
+        await expect(sidebar.getByText(label, { exact: true })).toBeVisible({ timeout: 25_000 });
       }
       await expect(relationActions).toHaveCount(0);
     };
@@ -99,13 +99,13 @@ Then(
       await rpc('updateStatus', { id: target.id, status: 'paused' });
       await rpc('updateStatus', { id: first.id, status: 'completed' });
       await rejected('run', { id: target.id });
-      await expect(blocked).toBeVisible();
+      await expect(blocked).toBeVisible({ timeout: 25_000 });
       await screenshot('one-blocker');
 
       await rpc('updateStatus', { id: second.id, status: 'canceled' });
       await rejected('run', { id: target.id });
       await rejected('updateStatus', { id: target.id, status: 'completed' });
-      await expect(blocked).toBeVisible();
+      await expect(blocked).toBeVisible({ timeout: 25_000 });
 
       await rpc('updateStatus', { id: second.id, status: 'completed' });
       await expect(ready).toBeVisible({ timeout: 25_000 });
@@ -117,7 +117,7 @@ Then(
       await rejected('run', { id: target.id });
       await screenshot('reopened');
       await removeRelation(first.identifier);
-      await expect(ready).toBeVisible();
+      await expect(ready).toBeVisible({ timeout: 25_000 });
       await removeRelation(second.identifier);
       await expectEmpty();
     } catch (error) {

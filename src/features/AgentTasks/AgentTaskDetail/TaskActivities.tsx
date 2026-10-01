@@ -534,7 +534,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         {(['all', 'comments', 'updates'] as const).map((filter) => (
           <button
             aria-pressed={feedFilter === filter}
-            className="text-[12px]"
+            className="text-xs"
             key={filter}
             type="button"
             style={{

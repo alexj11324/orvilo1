@@ -103,7 +103,7 @@ export const TaskBlockedNotice = () => {
   return (
     <div
       role="status"
-      className={`rounded-md px-3 py-1.5 text-[12px] ${
+      className={`rounded-md px-3 py-1.5 text-xs ${
         statusKey === 'blocked'
           ? 'bg-destructive/10 text-destructive'
           : 'bg-muted text-muted-foreground'
@@ -283,12 +283,12 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
                   />
                 </div>
                 {searching && (
-                  <div className="px-2 py-2 text-[12px] text-muted-foreground">
+                  <div className="px-2 py-2 text-xs text-muted-foreground">
                     {t('taskDetail.relations.searching')}
                   </div>
                 )}
                 {!searching && query.trim() && hits.length === 0 && (
-                  <div className="px-2 py-2 text-[12px] text-muted-foreground">
+                  <div className="px-2 py-2 text-xs text-muted-foreground">
                     {t('taskDetail.relations.noMatches')}
                   </div>
                 )}
@@ -301,7 +301,7 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
                     onClick={() => addRelation(hit)}
                   >
                     <span
-                      className="text-muted-foreground"
+                      className="font-mono text-muted-foreground"
                       style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
                     >
                       {hit.identifier}
@@ -412,12 +412,12 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
         );
       })}
       {!allowed && reason && (
-        <div className="text-[12px] text-muted-foreground" style={{ paddingInline: 8 }}>
+        <div className="text-xs text-muted-foreground" style={{ paddingInline: 8 }}>
           {reason}
         </div>
       )}
       {error && (
-        <div className="text-[12px] text-destructive" role="alert" style={{ paddingInline: 8 }}>
+        <div className="text-xs text-destructive" role="alert" style={{ paddingInline: 8 }}>
           {error}
         </div>
       )}

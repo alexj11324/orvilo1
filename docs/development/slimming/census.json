@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-01T16:54:34.131Z",
+  "generatedAt": "2026-10-01T17:34:45.991Z",
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "ae1a30a8831d161c761ee15f8e734b92e73e8fb1",
+  "baseSha": "49d2153fb9438153d39812843b5a70c15cfc4805",
   "counts": {
-    "sourceFiles": 13193,
+    "sourceFiles": 13195,
     "workspacePackages": 111,
     "nextRoutes": 43,
     "spaRouteEntries": 132,
@@ -14,7 +14,7 @@
     "localeFiles": 886,
     "defaultNamespaceFiles": 53,
     "docFiles": 660,
-    "testFiles": 3531,
+    "testFiles": 3532,
     "storeFiles": 895,
     "unresolvedImports": 402
   },
@@ -2539,6 +2539,7 @@
       "packages/database/src/models/work/toolResultParsing.ts",
       "packages/database/src/models/workspaceUserSettings.ts",
       "packages/database/src/repositories/agentGroup/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/repositories/home/index.ts",
       "packages/database/src/repositories/onboardingUnderstanding/repository.ts",
       "packages/database/src/server/models/__tests__/adapter.test.ts",
@@ -3774,9 +3775,11 @@
       "packages/database/src/models/workspaceUserSettings.ts",
       "packages/database/src/repositories/agentGroup/index.ts",
       "packages/database/src/repositories/aiInfra/__tests__/getAiProviderDetail.test.ts",
+      "packages/database/src/repositories/aiInfra/__tests__/providerBindings.test.ts",
       "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
       "packages/database/src/repositories/aiInfra/catalog.ts",
       "packages/database/src/repositories/aiInfra/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/repositories/compression/index.test.ts",
       "packages/database/src/repositories/compression/index.ts",
       "packages/database/src/repositories/dataImporter/__tests__/index.test.ts",
@@ -5515,6 +5518,7 @@
       "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
       "packages/database/src/repositories/aiInfra/catalog.ts",
       "packages/database/src/repositories/aiInfra/index.ts",
+      "packages/database/src/repositories/aiInfra/providerBindings.ts",
       "packages/database/src/schemas/aiInfra.ts",
       "packages/fetch-sse/src/parseError.ts",
       "packages/locales/src/default/models.ts",
@@ -22573,7 +22577,7 @@
         "apps/server/src/services/{file*,storage*,s3*,upload*}/**",
         "apps/server/src/routers/lambda/{file,chunk,document,documentComment,documentLike,notification,pushToken,recent,metric}.ts"
       ],
-      "fileCount": 1341,
+      "fileCount": 1343,
       "files": [
         "apps/server/src/routers/lambda/chunk.ts",
         "apps/server/src/routers/lambda/document.ts",
@@ -23055,9 +23059,11 @@
         "packages/database/src/repositories/aiInfra/__tests__/getAiProviderRuntimeState.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/getEnabledModels.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/getUserEnabledProviderList.test.ts",
+        "packages/database/src/repositories/aiInfra/__tests__/providerBindings.test.ts",
         "packages/database/src/repositories/aiInfra/__tests__/tryMatchingProviderFrom.test.ts",
         "packages/database/src/repositories/aiInfra/catalog.ts",
         "packages/database/src/repositories/aiInfra/index.ts",
+        "packages/database/src/repositories/aiInfra/providerBindings.ts",
         "packages/database/src/repositories/compression/index.test.ts",
         "packages/database/src/repositories/compression/index.ts",
         "packages/database/src/repositories/dataExporter/index.test.ts",
@@ -32009,6 +32015,7 @@
             "disposition": "KEEP",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/database/src/type.ts",
               "packages/types/src/index.ts",
               "packages/utils/src/index.ts"
@@ -32019,6 +32026,7 @@
             "disposition": "UNCOVERED",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/trpc/src/lambda/index.ts",
               "packages/trpc/src/lambda/middleware/index.ts"
             ]
@@ -32028,6 +32036,7 @@
             "disposition": "UNCOVERED",
             "targets": [
               "packages/database/src/models/aiProvider.ts",
+              "packages/database/src/repositories/aiInfra/providerBindings.ts",
               "packages/database/src/type.ts",
               "packages/types/src/aiProvider.ts",
               "packages/types/src/index.ts"
@@ -56461,7 +56470,7 @@
         "packages/prompts/vitest.config.mts"
       ],
       "inbound": {
-        "total": 462,
+        "total": 463,
         "explained": 154,
         "unexplained": [
           {
@@ -56932,6 +56941,13 @@
             "targets": [
               "packages/model-bank/src/index.ts",
               "packages/model-bank/src/modelProviders/index.ts"
+            ]
+          },
+          {
+            "importer": "packages/database/src/repositories/aiInfra/providerBindings.ts",
+            "disposition": "KEEP",
+            "targets": [
+              "packages/model-bank/src/index.ts"
             ]
           },
           {

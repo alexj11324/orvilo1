@@ -45,10 +45,19 @@ const collectViolations = (rules: Rule[], scanTargets = serverSources): string[]
 
 // P05's provider-runtime/server-default-relay surfaces are restored (P30
 // resurrection), so only the P06 quota-routing retirement still applies here.
+// Phase 5b adds one new rule: `streamingExecutor` is the client-side
+// (device/local) run loop — cloud dispatch routes `type:'orvilo'` runs to the
+// embedded harness, and nothing server-side may import the client loop.
 const RETIRED_SERVER_RULES: Rule[] = [
   {
     pattern: /\bresolveQuotaAccountEnv\b|\bselectAccountForAgent\b|\bresolveAccountLoads\b/,
     reason: 'P06 retired quota-driven account routing and env injection',
+  },
+  {
+    // Quoted-path import/reference; prose mentions in comments stay legal.
+    pattern: /['"`](?:[^'"`]*\/)?streamingExecutor['"`]/,
+    reason:
+      "streamingExecutor is the client-side (device/local) run loop — cloud dispatch routes type:'orvilo' runs to the embedded harness; nothing server-side may reach the client loop",
   },
 ];
 

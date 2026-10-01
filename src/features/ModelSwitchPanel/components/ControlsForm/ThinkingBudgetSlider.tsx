@@ -1,5 +1,6 @@
-import { Flexbox, InputNumber } from '@lobehub/ui';
-import { memo, useMemo } from 'react';
+import { Flexbox } from '@lobehub/ui';
+import { Input } from '@lobehub/ui/base-ui';
+import { memo, useMemo, useState } from 'react';
 import useMergeState from 'use-merge-value';
 
 import DiscreteSlider from '@/components/DiscreteSlider';
@@ -53,13 +54,6 @@ const getValueFromPosition = (position: number): number => {
   return v === undefined ? SPECIAL_VALUES.AUTO : v;
 };
 
-const getStepForValue = (value: number): number => {
-  if (value < 0) return 1;
-  if (value <= 1024) return 128;
-  if (value < 8192) return 1024;
-  return 2048;
-};
-
 interface ThinkingBudgetSliderProps {
   defaultValue?: number;
   onChange?: (value: number) => void;
@@ -84,11 +78,27 @@ const ThinkingBudgetSlider = memo<ThinkingBudgetSliderProps>(
       setBudget(newValue);
     };
 
-    const updateWithRealValue = (value: number) => {
-      setBudget(value);
+    const [draft, setDraft] = useState<string | null>(null);
+
+    const formatBudget = (v: number) => {
+      if (v === SPECIAL_VALUES.AUTO) return 'Auto';
+      if (v === SPECIAL_VALUES.OFF) return 'OFF';
+      return `${v}`;
     };
 
-    const inputStep = useMemo(() => getStepForValue(budget), [budget]);
+    const commitDraft = (raw: string) => {
+      const text = raw.trim().toLowerCase();
+      if (text === 'auto') {
+        setBudget(SPECIAL_VALUES.AUTO);
+        return;
+      }
+      if (text === 'off') {
+        setBudget(SPECIAL_VALUES.OFF);
+        return;
+      }
+      const parsed = Number.parseInt(text.replaceAll(/[^\d-]/g, ''), 10);
+      if (!Number.isNaN(parsed)) setBudget(Math.min(32_768, Math.max(-1, parsed)));
+    };
 
     const options = useMemo(
       () =>
@@ -108,33 +118,18 @@ const ThinkingBudgetSlider = memo<ThinkingBudgetSliderProps>(
           />
         </Flexbox>
         <div>
-          <InputNumber
-            changeOnWheel
-            max={32_768}
-            min={-1}
-            step={inputStep}
+          <Input
+            onBlur={(e) => {
+              commitDraft(e.target.value);
+              setDraft(null);
+            }}
+            onChange={(e) => setDraft(e.target.value)}
+            onPressEnter={(e) => {
+              commitDraft((e.target as HTMLInputElement).value);
+              setDraft(null);
+            }}
             style={{ width: 80 }}
-            value={budget}
-            formatter={(value, _info) => {
-              if (value === SPECIAL_VALUES.AUTO) return 'Auto';
-              if (value === SPECIAL_VALUES.OFF) return 'OFF';
-              return `${value}`;
-            }}
-            parser={(value) => {
-              if (typeof value === 'string') {
-                if (value.toLowerCase() === 'auto') return SPECIAL_VALUES.AUTO;
-                if (value.toLowerCase() === 'off') return SPECIAL_VALUES.OFF;
-                return parseInt(value.replaceAll(/[^\d-]/g, ''), 10) || 0;
-              }
-              if (typeof value === 'number') {
-                return value;
-              }
-              return SPECIAL_VALUES.AUTO;
-            }}
-            onChange={(e) => {
-              if (e === null || e === undefined) return;
-              updateWithRealValue(e as number);
-            }}
+            value={draft ?? formatBudget(budget)}
           />
         </div>
       </Flexbox>

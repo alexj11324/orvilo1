@@ -2,9 +2,8 @@
 
 import { CheckCircleFilled } from '@ant-design/icons';
 import { CopyButton, Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Button, confirmModal, Modal } from '@lobehub/ui/base-ui';
+import { Avatar, Button, confirmModal, Modal, Text } from '@lobehub/ui/base-ui';
 import { MAX_WIDTH } from '@orvilo/const';
-import { Typography } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Loader2Icon, LogOutIcon, UnplugIcon } from 'lucide-react';
 import { type ReactNode } from 'react';
@@ -16,7 +15,6 @@ import { lambdaQuery } from '@/libs/trpc/client';
 
 import { useOAuthDeviceFlow } from './useOAuthDeviceFlow';
 
-const { Text, Link } = Typography;
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   card: css`
@@ -267,9 +265,9 @@ const OAuthDeviceFlowAuth = memo<OAuthDeviceFlowAuthProps>(
         <div className={styles.content}>
           <div className={styles.hint}>
             {t('providerModels.config.oauth.enterCode')}{' '}
-            <Link href={deviceCodeInfo.verificationUri} target="_blank">
+            <a href={deviceCodeInfo.verificationUri} rel="noreferrer" target="_blank">
               {deviceCodeInfo.verificationUri}
-            </Link>
+            </a>
           </div>
 
           <Flexbox horizontal align="center" gap={12} style={{ width: '100%' }}>

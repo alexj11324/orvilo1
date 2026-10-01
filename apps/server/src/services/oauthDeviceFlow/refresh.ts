@@ -3,6 +3,10 @@ import { AgentRuntimeErrorType } from '@orvilo/types';
 import debug from 'debug';
 
 import { AiProviderModel } from '@/database/models/aiProvider';
+import {
+  type ProviderBindingPlane,
+  resolveBindingManagedProviderDetail,
+} from '@/database/repositories/aiInfra/providerBindings';
 import { type OrviloDatabase } from '@/database/type';
 import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { type OAuthDeviceFlowConfig } from '@/types/aiProvider';
@@ -34,6 +38,12 @@ interface EnsureFreshOAuthTokenParams {
   config: OAuthDeviceFlowConfig;
   db: OrviloDatabase;
   keyVaults: OAuthTokenKeyVaults;
+  /**
+   * Personal-scope binding plane — when present, migrated providers' OAuth
+   * keyVaults read/write through it instead of `ai_providers`. Omit for
+   * workspace scope (bindings are personal-only).
+   */
+  providerBindings?: ProviderBindingPlane;
   providerId: string;
   userId: string;
   workspaceId?: string;
@@ -70,12 +80,18 @@ const readStoredKeyVaults = async (
   userId: string,
   providerId: string,
   workspaceId?: string,
+  providerBindings?: ProviderBindingPlane,
 ): Promise<OAuthTokenKeyVaults> => {
-  const aiProviderModel = new AiProviderModel(db, userId, workspaceId);
-  const providerConfig = await aiProviderModel.getAiProviderById(
-    providerId,
-    KeyVaultsGateKeeper.getUserKeyVaults,
-  );
+  // Personal scope prefers provider_bindings (providers migrated there no
+  // longer have an ai_providers row); workspace scope stays legacy.
+  const providerConfig =
+    (providerBindings
+      ? await resolveBindingManagedProviderDetail(providerBindings, providerId)
+      : undefined) ??
+    (await new AiProviderModel(db, userId, workspaceId).getAiProviderById(
+      providerId,
+      KeyVaultsGateKeeper.getUserKeyVaults,
+    ));
 
   return (providerConfig?.keyVaults || {}) as OAuthTokenKeyVaults;
 };
@@ -86,23 +102,30 @@ const persistKeyVaults = async (
   providerId: string,
   keyVaults: OAuthTokenKeyVaults,
   workspaceId?: string,
+  providerBindings?: ProviderBindingPlane,
 ) => {
+  const patch = {
+    oauthAccountId: keyVaults.oauthAccountId,
+    oauthAccessToken: keyVaults.oauthAccessToken,
+    oauthRefreshToken: keyVaults.oauthRefreshToken,
+    oauthTokenExpiresAt:
+      keyVaults.oauthTokenExpiresAt === undefined
+        ? undefined
+        : String(keyVaults.oauthTokenExpiresAt),
+  };
+
+  // Binding-managed providers persist into their credential row.
+  if (providerBindings) {
+    const written = await providerBindings.updateProviderKeyVaults(providerId, patch);
+    if (written) return;
+  }
+
   const aiProviderModel = new AiProviderModel(db, userId, workspaceId);
   const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
 
   await aiProviderModel.updateConfig(
     providerId,
-    {
-      keyVaults: {
-        oauthAccountId: keyVaults.oauthAccountId,
-        oauthAccessToken: keyVaults.oauthAccessToken,
-        oauthRefreshToken: keyVaults.oauthRefreshToken,
-        oauthTokenExpiresAt:
-          keyVaults.oauthTokenExpiresAt === undefined
-            ? undefined
-            : String(keyVaults.oauthTokenExpiresAt),
-      },
-    },
+    { keyVaults: patch },
     gateKeeper.encrypt,
     KeyVaultsGateKeeper.getUserKeyVaults,
   );
@@ -120,7 +143,7 @@ const throwInvalidGrant = (providerId: string): never => {
 const refreshAndPersist = async (
   params: EnsureFreshOAuthTokenParams,
 ): Promise<OAuthTokenKeyVaults> => {
-  const { config, db, keyVaults, providerId, userId, workspaceId } = params;
+  const { config, db, keyVaults, providerId, userId, workspaceId, providerBindings } = params;
   const service = new OAuthDeviceFlowService();
   const usedRefreshToken = keyVaults.oauthRefreshToken!;
 
@@ -134,7 +157,7 @@ const refreshAndPersist = async (
     // rejected usually means another server instance already consumed it and
     // persisted a newer pair. Re-read the DB before declaring the grant dead.
     log('invalid_grant for %s:%s, re-reading stored credentials', userId, providerId);
-    const stored = await readStoredKeyVaults(db, userId, providerId, workspaceId);
+    const stored = await readStoredKeyVaults(db, userId, providerId, workspaceId, providerBindings);
 
     // Same token in the DB as the one that was just rejected → truly dead.
     if (!stored.oauthRefreshToken || stored.oauthRefreshToken === usedRefreshToken) {
@@ -169,7 +192,7 @@ const refreshAndPersist = async (
   // token pair without writing it back would strand every other instance
   // (and the next request on this one) with a consumed refresh token.
   try {
-    await persistKeyVaults(db, userId, providerId, nextKeyVaults, workspaceId);
+    await persistKeyVaults(db, userId, providerId, nextKeyVaults, workspaceId, providerBindings);
   } catch (error) {
     // The rotated pair only exists in memory now. Still serve this request —
     // the next one will go through the invalid_grant self-heal path.

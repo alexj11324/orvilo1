@@ -8,7 +8,7 @@ import type { OrviloDatabase } from '@/database/type';
 
 import { resolveProviderCredentialHeaders } from './controlPlane';
 
-type ProviderBindingRow = NonNullable<Awaited<ReturnType<ProviderBindingModel['find']>>>;
+export type ProviderBindingRow = NonNullable<Awaited<ReturnType<ProviderBindingModel['find']>>>;
 
 /**
  * Binding rows whose selection admits a run on the Orvilo runtime. Resolution
@@ -80,9 +80,7 @@ export type OrviloBindingResolution =
 
 // The compat overload sits above the canonical signature: `target` as an
 // `OrviloBindingTarget` object selects the spawn-material resolution while a
-// `selection.target` string keeps the canonical row lookup. Overload order
-// decides `typeof` — the canonical signature stays last so the
-// `EmbeddedInferenceBridgeDeps` seams keep the broker-model type.
+// `selection.target` string keeps the canonical row lookup.
 export function resolveOrviloProviderBinding(
   db: OrviloDatabase,
   userId: string,
@@ -129,6 +127,20 @@ export async function resolveOrviloProviderBinding(
 }
 
 /**
+ * The canonical row-resolution call shape — what broker seams such as
+ * `EmbeddedInferenceBridgeDeps.resolveBinding` substitute. `typeof`
+ * `resolveOrviloProviderBinding` now covers the whole overload set, so seams
+ * name this alias to keep the canonical contract.
+ */
+export type ResolveOrviloProviderBindingForTarget = (
+  db: OrviloDatabase,
+  userId: string,
+  engine: OrviloEngineKind | string | null | undefined,
+  target: ProviderBindingConfig['selection']['target'],
+  match?: ProviderBindingMatch,
+) => Promise<ProviderBindingRow | undefined>;
+
+/**
  * The run-grant scope a binding may be issued in. `ownerId` is the
  * server-derived delegation subject (never agent payload); `tenantId` is the
  * canonical run tenant (workspace id) stamped onto the contract binding.
@@ -144,8 +156,8 @@ export interface IssuedByokExecution {
   binding: ProviderBinding;
 }
 
-// Same overload layout as the resolver: the claim form (canonical) stays the
-// last signature so `typeof issueBindingExecution` keeps the broker type.
+// The claim form (canonical) stays the last signature; seams that substitute
+// the broker path name `IssueBindingExecutionForClaim` instead of `typeof`.
 export function issueBindingExecution(
   db: OrviloDatabase,
   userId: string,
@@ -196,6 +208,12 @@ export async function issueBindingExecution(
     },
   };
 }
+
+/** The canonical claim-fence call shape — see `ResolveOrviloProviderBindingForTarget`. */
+export type IssueBindingExecutionForClaim = (
+  db: OrviloDatabase,
+  claim: BindingExecutionClaim,
+) => Promise<IssuedByokExecution | undefined>;
 
 /** Codex provider id minted for the binding; config travels via `-c` args. */
 const CODEX_BYOK_PROVIDER_ID = 'orvilo_byok';

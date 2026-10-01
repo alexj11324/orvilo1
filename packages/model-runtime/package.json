@@ -14,6 +14,8 @@
     "./utils/createError": "./src/utils/createError.ts",
     "./utils/modelExtendParams": "./src/utils/modelExtendParams.ts",
     "./utils/uriParser": "./src/utils/uriParser.ts",
+    "./resolveImageSinglePrice": "./src/core/usageConverters/utils/resolveImageSinglePrice.ts",
+    "./resolveVideoSinglePrice": "./src/core/usageConverters/utils/resolveVideoSinglePrice.ts",
     "./vertexai": "./src/providers/vertexai/index.ts"
   },
   "scripts": {

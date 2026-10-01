@@ -35,6 +35,15 @@ export interface CloudflareKeyVault {
   baseURLOrAccountID?: string;
 }
 
+export interface ComfyUIKeyVault {
+  apiKey?: string;
+  authType?: 'none' | 'basic' | 'bearer' | 'custom';
+  baseURL?: string;
+  customHeaders?: Record<string, string>;
+  password?: string;
+  username?: string;
+}
+
 export interface GithubCopilotKeyVault {
   /**
    * Traditional PAT (Personal Access Token)

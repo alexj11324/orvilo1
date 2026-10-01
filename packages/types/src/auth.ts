@@ -3,12 +3,18 @@ export interface ClientSecretPayload {
    * Represents the user's API key
    */
   apiKey?: string;
+  /**
+   * ComfyUI specific authentication fields
+   */
+  authType?: string;
+
   awsAccessKeyId?: string;
 
   awsRegion?: string;
-
   awsSecretAccessKey?: string;
+
   awsSessionToken?: string;
+
   azureApiVersion?: string;
   /**
    * Represents the endpoint of provider

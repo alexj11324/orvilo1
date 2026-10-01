@@ -27,6 +27,8 @@ const createRuntimeState = (models: EnabledAiModel[]) =>
     enabledAiModels: models,
     enabledAiProviders: [],
     enabledChatAiProviders: [],
+    enabledImageAiProviders: [],
+    enabledVideoAiProviders: [],
     runtimeConfig: {},
   }) as AiProviderRuntimeState;
 

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { AiInfraRepos } from '../index';
+import { AiInfraCatalogRepos } from '../index';
 
 // vitest.config.server.mts runs with isolate:false, so one file's module mock
 // serves every file; delegate through a per-test-installed global instead.
@@ -13,10 +13,10 @@ vi.mock('@orvilo/business-model-bank/model-config', () => ({
     ).__orviloTestLoadModels?.() ?? Promise.resolve([]),
 }));
 
-describe('AiInfraRepos', () => {
+describe('AiInfraCatalogRepos', () => {
   describe('getAiProviderList', () => {
     it('returns the builtin catalog in catalog order', async () => {
-      const repo = new AiInfraRepos({});
+      const repo = new AiInfraCatalogRepos({});
       const list = await repo.getAiProviderList();
 
       const { DEFAULT_MODEL_PROVIDER_LIST } = await import('model-bank/modelProviders');
@@ -25,7 +25,7 @@ describe('AiInfraRepos', () => {
     });
 
     it('marks providers enabled only via deployment config', async () => {
-      const repo = new AiInfraRepos({
+      const repo = new AiInfraCatalogRepos({
         openai: { enabled: true },
       });
       const list = await repo.getAiProviderList();

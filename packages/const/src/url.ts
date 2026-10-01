@@ -57,6 +57,8 @@ export const PLUGINS_INDEX_URL = 'https://chat-plugins.aspectlylabs.com';
 
 export const OPS_ASSETS_BASE_URL = 'https://chat-cloud.objects.aspectlylabs.com/dc/ops-assets';
 
+export const BASE_PROVIDER_DOC_URL = urlJoin(DOCUMENTS, 'usage/providers');
+
 export const MORE_MODEL_PROVIDER_REQUEST_URL = urlJoin(GITHUB, 'discussions');
 
 export const MORE_FILE_PREVIEW_REQUEST_URL = urlJoin(GITHUB, 'discussions');

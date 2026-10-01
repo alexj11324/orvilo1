@@ -11,7 +11,7 @@ import { useTaskDetailSelector } from './TaskDetailScope';
 import TaskDetailTitleInput from './TaskDetailTitleInput';
 import TaskInstruction from './TaskInstruction';
 import TaskParentBar from './TaskParentBar';
-import TaskPrerequisites from './TaskPrerequisites';
+import { TaskBlockedNotice } from './TaskPrerequisites';
 import TaskProjectSection from './TaskProjectSection';
 import TaskProperties from './TaskProperties';
 import TaskRailActions from './TaskRailActions';
@@ -48,7 +48,7 @@ const TaskDetailSections = memo(() => {
             <TaskProjectSection />
           </div>
           <div className={`flex flex-col gap-6 ${styles.body}`}>
-            <TaskPrerequisites />
+            <TaskBlockedNotice />
             <TaskSubtasks />
             <TaskArtifacts />
             <TaskActivities />

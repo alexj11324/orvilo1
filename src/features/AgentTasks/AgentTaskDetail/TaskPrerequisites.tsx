@@ -1,6 +1,5 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
-import { cssVar } from 'antd-style';
-import { Ban, Link2, LinkIcon, MoreHorizontal, Plus, Search, XCircle } from 'lucide-react';
+import { Flag, Link2, LinkIcon, MoreHorizontal, Plus, Search } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -25,7 +24,6 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 import { copyToClipboard } from '@/utils/clipboard';
 
 import TaskStatusIcon from '../features/TaskStatusIcon';
-import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import { RAIL_VALUE_FONT_SIZE } from './railText';
 import {
@@ -34,6 +32,7 @@ import {
   type IssueRelationKind,
   relationKindOf,
 } from './relationGroups';
+import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 
 const TASK_STATUS_SET = new Set([
@@ -51,20 +50,11 @@ type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | '
 const toTaskStatus = (status?: string | null): TaskStatus =>
   status && TASK_STATUS_SET.has(status) ? (status as TaskStatus) : 'backlog';
 
-/** Plane's relation groups: a tinted bar per type, then the linked issues. */
-const RELATION_PRESENTATION = {
-  blockedBy: {
-    className: 'bg-destructive/10 text-destructive',
-    icon: Ban,
-  },
-  blocking: {
-    className: 'bg-amber-500/20 text-amber-700 dark:text-amber-200',
-    icon: XCircle,
-  },
-  relates: {
-    className: 'bg-muted text-muted-foreground',
-    icon: Link2,
-  },
+/** Linear's field marks: an orange flag for "Blocked by", a red one for "Blocks". */
+const RELATION_MARKS = {
+  blockedBy: { Icon: Flag, className: 'text-amber-500' },
+  blocking: { Icon: Flag, className: 'text-destructive' },
+  relates: { Icon: Link2, className: 'text-muted-foreground' },
 } as const;
 
 interface RelationEdge {
@@ -85,46 +75,63 @@ interface SearchHit {
   title: string;
 }
 
-const TaskRelationEditor = ({ taskId }: { taskId: string }) => {
-  const { t } = useTranslation('chat');
-  const navigate = useWorkspaceAwareNavigate();
-  const appOrigin = useAppOrigin();
-  const workspaceSlug = useActiveWorkspaceSlug();
-  const { allowed, reason } = usePermission('create_content');
+const useRelationEdges = () => {
   const detail = useTaskDetailSelector(taskDetailSelectors.taskDetail);
-  const removeDependency = useTaskStore((s) => s.removeDependency);
-  const removeIssueRelation = useTaskStore((s) => s.removeIssueRelation);
-  const addDependency = useTaskStore((s) => s.addDependency);
-  const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
-  const [pending, setPending] = useState(false);
-  const [error, setError] = useState<string>();
-  const [sectionOpen, setSectionOpen] = useState(true);
-  const [collapsedGroups, setCollapsedGroups] = useState<
-    Partial<Record<IssueRelationKind, boolean>>
-  >({});
-  const [picker, setPicker] = useState<IssueRelationKind | null>(null);
-  const [query, setQuery] = useState('');
-  const [hits, setHits] = useState<SearchHit[]>([]);
-  const [searching, setSearching] = useState(false);
-  const edges = useMemo(
-    () => (detail?.dependencies ?? []) as RelationEdge[],
-    [detail?.dependencies],
-  );
-  const grouped = useMemo(() => {
-    const buckets: Record<IssueRelationKind, RelationEdge[]> = {
+  return useMemo(() => {
+    const edges = (detail?.dependencies ?? []) as RelationEdge[];
+    const grouped: Record<IssueRelationKind, RelationEdge[]> = {
       blockedBy: [],
       blocking: [],
       relates: [],
     };
     for (const edge of edges) {
       const kind = relationKindOf(edge);
-      if (kind) buckets[kind].push(edge);
+      if (kind) grouped[kind].push(edge);
     }
-    return buckets;
-  }, [edges]);
-  const linkedKey = edges.map((edge) => edge.dependsOn).join('\n');
+    return { edges, grouped };
+  }, [detail?.dependencies]);
+};
+
+/** The run-gating line Linear keeps as a banner on the issue body. */
+export const TaskBlockedNotice = () => {
+  const { t } = useTranslation('chat');
+  const { edges, grouped } = useRelationEdges();
   const openBlockers = edges.filter((edge) => isOpenBlocker(edge));
-  const blockerCount = grouped.blockedBy.length;
+  const statusKey =
+    openBlockers.length > 0 ? 'blocked' : grouped.blockedBy.length > 0 ? 'ready' : null;
+  if (!statusKey) return null;
+  return (
+    <div
+      role="status"
+      className={`rounded-md px-3 py-1.5 text-[12px] ${
+        statusKey === 'blocked'
+          ? 'bg-destructive/10 text-destructive'
+          : 'bg-muted text-muted-foreground'
+      }`}
+    >
+      {t(`taskDetail.prerequisites.${statusKey}`)}
+    </div>
+  );
+};
+
+const TaskRelationFields = ({ taskId }: { taskId: string }) => {
+  const { t } = useTranslation('chat');
+  const navigate = useWorkspaceAwareNavigate();
+  const appOrigin = useAppOrigin();
+  const workspaceSlug = useActiveWorkspaceSlug();
+  const { allowed, reason } = usePermission('create_content');
+  const removeDependency = useTaskStore((s) => s.removeDependency);
+  const removeIssueRelation = useTaskStore((s) => s.removeIssueRelation);
+  const addDependency = useTaskStore((s) => s.addDependency);
+  const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState<string>();
+  const [picker, setPicker] = useState<IssueRelationKind | null>(null);
+  const [query, setQuery] = useState('');
+  const [hits, setHits] = useState<SearchHit[]>([]);
+  const [searching, setSearching] = useState(false);
+  const { edges, grouped } = useRelationEdges();
+  const linkedKey = edges.map((edge) => edge.dependsOn).join('\n');
 
   const removalTotals = new Map<string, number>();
   for (const edge of edges) {
@@ -235,216 +242,175 @@ const TaskRelationEditor = ({ taskId }: { taskId: string }) => {
     );
   };
 
-  const statusKey = openBlockers.length > 0 ? 'blocked' : blockerCount > 0 ? 'ready' : null;
-
   return (
-    <div className="flex flex-col gap-2">
-      <div className="flex items-center justify-between gap-2">
-        <button
-          className="flex items-center gap-2 px-2 py-1"
-          type="button"
-          onClick={() => setSectionOpen((open) => !open)}
-        >
-          <Link2 color={cssVar.colorTextDescription} size={16} />
-          <span
-            className="font-medium"
-            style={{ color: cssVar.colorTextSecondary, fontSize: RAIL_VALUE_FONT_SIZE }}
-          >
-            {t('taskDetail.relations.title')}
-          </span>
-          {edges.length > 0 && (
-            <span className="text-muted-foreground" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
-              {edges.length}
-            </span>
-          )}
-          <AccordionArrowIcon isOpen={sectionOpen} style={{ color: cssVar.colorTextDescription }} />
-        </button>
-        {allowed && (
-          <DropdownMenu>
-            <DropdownMenuTrigger
-              render={
-                <Button aria-label={t('taskDetail.relations.add')} size="icon-sm" variant="ghost">
+    <>
+      {ISSUE_RELATION_KINDS.map((kind) => {
+        const rows = grouped[kind];
+        const { Icon, className: markClass } = RELATION_MARKS[kind];
+        return (
+          <div className="flex flex-col gap-0.5" data-relation-kind={kind} key={kind}>
+            <div className={styles.propertyLabel} style={{ width: 'auto' }}>
+              <span className={styles.propertyMark}>
+                <Icon className={markClass} size={16} />
+              </span>
+              <span className="truncate">{t(`taskDetail.relations.${kind}`)}</span>
+              <span className="flex-1" />
+              {allowed && (
+                <Button
+                  aria-label={t('taskDetail.relations.add')}
+                  size="icon-sm"
+                  variant="ghost"
+                  onClick={() => {
+                    setPicker(picker === kind ? null : kind);
+                    setQuery('');
+                    setHits([]);
+                  }}
+                >
                   <Plus />
                 </Button>
-              }
-            />
-            <DropdownMenuContent align="end">
-              {ISSUE_RELATION_KINDS.map((kind) => {
-                const Icon = RELATION_PRESENTATION[kind].icon;
-                return (
-                  <DropdownMenuItem key={kind} onClick={() => setPicker(kind)}>
-                    <Icon />
-                    {t(`taskDetail.relations.${kind}`)}
-                  </DropdownMenuItem>
-                );
-              })}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-      {sectionOpen && statusKey && (
-        <div className="px-2 text-[12px] text-muted-foreground" role="status">
-          {t(`taskDetail.prerequisites.${statusKey}`)}
-        </div>
-      )}
-      {sectionOpen && picker && allowed && (
-        <div className="overflow-hidden rounded-md border">
-          <div className="flex items-center gap-2 border-b px-2">
-            <Search className="text-muted-foreground" size={14} />
-            <Input
-              aria-label={t('taskDetail.relations.search')}
-              className="border-0 shadow-none focus-visible:ring-0"
-              placeholder={t(`taskDetail.relations.${picker}`)}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
-          {searching && (
-            <div className="px-2 py-2 text-[12px] text-muted-foreground">
-              {t('taskDetail.relations.searching')}
-            </div>
-          )}
-          {!searching && query.trim() && hits.length === 0 && (
-            <div className="px-2 py-2 text-[12px] text-muted-foreground">
-              {t('taskDetail.relations.noMatches')}
-            </div>
-          )}
-          {hits.map((hit) => (
-            <button
-              className="flex h-9 w-full items-center gap-3 px-2 text-left hover:bg-muted"
-              disabled={pending}
-              key={hit.id}
-              type="button"
-              onClick={() => addRelation(hit)}
-            >
-              <span className="text-muted-foreground" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
-                {hit.identifier}
-              </span>
-              {hit.title !== hit.identifier && (
-                <span className="truncate" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
-                  {hit.title}
-                </span>
               )}
-            </button>
-          ))}
-        </div>
-      )}
-      {sectionOpen &&
-        ISSUE_RELATION_KINDS.map((kind) => {
-          const rows = grouped[kind];
-          if (rows.length === 0) return null;
-          const presentation = RELATION_PRESENTATION[kind];
-          const Icon = presentation.icon;
-          const collapsed = collapsedGroups[kind] === true;
-          return (
-            <div className="flex flex-col" key={kind}>
-              <button
-                className={`flex h-9 w-full items-center gap-1 rounded-md px-2.5 ${presentation.className}`}
-                type="button"
-                onClick={() =>
-                  setCollapsedGroups((current) => ({ ...current, [kind]: !current[kind] }))
-                }
-              >
-                <Icon size={14} />
-                <span className="font-medium leading-5" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
-                  {t(`taskDetail.relations.${kind}`)}
-                </span>
-                <span className="flex-1" />
-                <AccordionArrowIcon isOpen={!collapsed} size={14} />
-              </button>
-              {!collapsed &&
-                rows.map((edge) => {
-                  const index = edges.indexOf(edge);
-                  const unavailable = !edge.status;
-                  const workflowVisual =
-                    edge.workflowStateId && edge.workflowCategory
-                      ? WORKFLOW_CATEGORY_VISUALS[edge.workflowCategory]
-                      : undefined;
-                  const canUnlink = Boolean(edge.relationId || edge.id);
-                  return (
-                    <div
-                      className="group flex min-h-11 items-center gap-1 px-1.5 hover:bg-muted/70"
-                      key={edge.relationId ?? `${kind}:${edge.dependsOn}:${index}`}
+            </div>
+            {picker === kind && allowed && (
+              <div className="overflow-hidden rounded-md border">
+                <div className="flex items-center gap-2 border-b px-2">
+                  <Search className="text-muted-foreground" size={14} />
+                  <Input
+                    aria-label={t('taskDetail.relations.search')}
+                    className="border-0 shadow-none focus-visible:ring-0"
+                    placeholder={t('taskDetail.relations.search')}
+                    value={query}
+                    onChange={(event) => setQuery(event.target.value)}
+                  />
+                </div>
+                {searching && (
+                  <div className="px-2 py-2 text-[12px] text-muted-foreground">
+                    {t('taskDetail.relations.searching')}
+                  </div>
+                )}
+                {!searching && query.trim() && hits.length === 0 && (
+                  <div className="px-2 py-2 text-[12px] text-muted-foreground">
+                    {t('taskDetail.relations.noMatches')}
+                  </div>
+                )}
+                {hits.map((hit) => (
+                  <button
+                    className="flex h-9 w-full items-center gap-3 px-2 text-left hover:bg-muted"
+                    disabled={pending}
+                    key={hit.id}
+                    type="button"
+                    onClick={() => addRelation(hit)}
+                  >
+                    <span
+                      className="text-muted-foreground"
+                      style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
                     >
-                      <button
-                        className="flex min-w-0 flex-1 items-center gap-3 px-1 text-left disabled:cursor-default"
-                        disabled={unavailable}
-                        title={edge.name ?? edge.dependsOn}
-                        type="button"
-                        onClick={() =>
-                          navigate(taskDetailPath(edge.dependsOn, undefined, edge.name))
-                        }
+                      {hit.identifier}
+                    </span>
+                    {hit.title !== hit.identifier && (
+                      <span className="truncate" style={{ fontSize: RAIL_VALUE_FONT_SIZE }}>
+                        {hit.title}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+            {rows.length === 0 ? (
+              <div className={`px-1 ${styles.propertyPlaceholder}`} style={{ fontSize: 13 }}>
+                {t('taskDetail.relations.none')}
+              </div>
+            ) : (
+              rows.map((edge) => {
+                const index = edges.indexOf(edge);
+                const unavailable = !edge.status;
+                const workflowVisual =
+                  edge.workflowStateId && edge.workflowCategory
+                    ? WORKFLOW_CATEGORY_VISUALS[edge.workflowCategory]
+                    : undefined;
+                const canUnlink = Boolean(edge.relationId || edge.id);
+                return (
+                  <div
+                    className="group flex min-h-8 items-center gap-1 hover:bg-muted/70"
+                    key={edge.relationId ?? `${kind}:${edge.dependsOn}:${index}`}
+                  >
+                    <button
+                      className="flex min-w-0 flex-1 items-center gap-2 px-1 text-left disabled:cursor-default"
+                      disabled={unavailable}
+                      title={edge.name ?? edge.dependsOn}
+                      type="button"
+                      onClick={() => navigate(taskDetailPath(edge.dependsOn, undefined, edge.name))}
+                    >
+                      {workflowVisual ? (
+                        <workflowVisual.icon color={workflowVisual.color} size={16} />
+                      ) : (
+                        <TaskStatusIcon size={16} status={toTaskStatus(edge.status)} />
+                      )}
+                      <span
+                        className="shrink-0 font-medium text-muted-foreground"
+                        style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
                       >
+                        {edge.dependsOn}
+                      </span>
+                      {edge.name ? (
                         <span
-                          className="shrink-0 font-medium text-muted-foreground"
+                          className="min-w-0 flex-1 truncate"
                           style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
                         >
-                          {edge.dependsOn}
+                          {edge.name}
                         </span>
-                        {edge.name ? (
-                          <span
-                            className="min-w-0 flex-1 truncate"
-                            style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
-                          >
-                            {edge.name}
-                          </span>
-                        ) : (
-                          <span className="flex-1" />
-                        )}
-                        {unavailable ? (
-                          <span
-                            className="truncate text-muted-foreground"
-                            style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
-                          >
-                            {t('taskDetail.prerequisites.unavailable')}
-                          </span>
-                        ) : null}
-                        {workflowVisual ? (
-                          <workflowVisual.icon color={workflowVisual.color} size={16} />
-                        ) : (
-                          <TaskStatusIcon size={16} status={toTaskStatus(edge.status)} />
-                        )}
-                      </button>
-                      {allowed && (canUnlink || !unavailable) && (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger
-                            render={
-                              <Button
-                                aria-label={t('taskDetail.relations.actions')}
-                                size="icon-sm"
-                                variant="ghost"
-                              >
-                                <MoreHorizontal />
-                              </Button>
-                            }
-                          />
-                          <DropdownMenuContent align="end">
-                            {!unavailable && (
-                              <DropdownMenuItem onClick={() => copyLink(edge)}>
-                                <LinkIcon />
-                                {t('taskList.contextMenu.copyLink')}
-                              </DropdownMenuItem>
-                            )}
-                            {canUnlink && (
-                              <DropdownMenuItem
-                                variant="destructive"
-                                aria-label={t('taskDetail.prerequisites.removeBlocker', {
-                                  identifier: removalLabels[index],
-                                })}
-                                onClick={() => unlink(edge)}
-                              >
-                                {t('taskDetail.relations.remove')}
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                      ) : (
+                        <span className="flex-1" />
                       )}
-                    </div>
-                  );
-                })}
-            </div>
-          );
-        })}
+                      {unavailable ? (
+                        <span
+                          className="truncate text-muted-foreground"
+                          style={{ fontSize: RAIL_VALUE_FONT_SIZE }}
+                        >
+                          {t('taskDetail.prerequisites.unavailable')}
+                        </span>
+                      ) : null}
+                    </button>
+                    {allowed && (canUnlink || !unavailable) && (
+                      <DropdownMenu>
+                        <DropdownMenuTrigger
+                          render={
+                            <Button
+                              aria-label={t('taskDetail.relations.actions')}
+                              size="icon-sm"
+                              variant="ghost"
+                            >
+                              <MoreHorizontal />
+                            </Button>
+                          }
+                        />
+                        <DropdownMenuContent align="end">
+                          {!unavailable && (
+                            <DropdownMenuItem onClick={() => copyLink(edge)}>
+                              <LinkIcon />
+                              {t('taskList.contextMenu.copyLink')}
+                            </DropdownMenuItem>
+                          )}
+                          {canUnlink && (
+                            <DropdownMenuItem
+                              variant="destructive"
+                              aria-label={t('taskDetail.prerequisites.removeBlocker', {
+                                identifier: removalLabels[index],
+                              })}
+                              onClick={() => unlink(edge)}
+                            >
+                              {t('taskDetail.relations.remove')}
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        );
+      })}
       {!allowed && reason && (
         <div className="text-[12px] text-muted-foreground" style={{ paddingInline: 8 }}>
           {reason}
@@ -455,13 +421,13 @@ const TaskRelationEditor = ({ taskId }: { taskId: string }) => {
           {error}
         </div>
       )}
-    </div>
+    </>
   );
 };
 
 const TaskPrerequisites = () => {
   const taskId = useTaskDetailTaskId();
-  return taskId ? <TaskRelationEditor key={taskId} taskId={taskId} /> : null;
+  return taskId ? <TaskRelationFields key={taskId} taskId={taskId} /> : null;
 };
 
 export default TaskPrerequisites;

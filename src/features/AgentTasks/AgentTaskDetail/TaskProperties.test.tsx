@@ -88,6 +88,11 @@ vi.mock('../shared/useUserDisplayMeta', () => ({
   useUserDisplayMeta: () => undefined,
 }));
 
+vi.mock('./TaskPrerequisites', () => ({
+  default: () => <div>relations</div>,
+  TaskBlockedNotice: () => null,
+}));
+
 vi.mock('./TaskScheduleConfig', () => ({
   default: () => <div>schedule</div>,
 }));

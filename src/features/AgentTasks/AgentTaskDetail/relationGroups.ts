@@ -1,7 +1,7 @@
 export type IssueRelationKind = 'blockedBy' | 'blocking' | 'relates';
 
-/** Plane's relation order: what this issue blocks, what blocks it, then ordinary links. */
-export const ISSUE_RELATION_KINDS: IssueRelationKind[] = ['blocking', 'blockedBy', 'relates'];
+/** Linear's sidebar order: what blocks this issue, what it blocks, then ordinary links. */
+export const ISSUE_RELATION_KINDS: IssueRelationKind[] = ['blockedBy', 'blocking', 'relates'];
 
 export const relationKindOf = (dep: {
   direction?: 'blockedBy' | 'blocking';

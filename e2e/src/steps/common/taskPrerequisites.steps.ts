@@ -51,9 +51,9 @@ Then(
       exact: true,
     });
     const ready = this.page.getByText('All prerequisites completed.', { exact: true });
-    const relationsHeader = this.page.getByRole('button', { exact: true, name: 'Relations' });
-    const relationActions = this.page.getByRole('button', { name: 'Relation actions' });
-    const rowFor = (identifier: string) => this.page.locator('div.group', { hasText: identifier });
+    const sidebar = this.page.locator('[data-task-detail-side]');
+    const relationActions = sidebar.getByRole('button', { name: 'Relation actions' });
+    const rowFor = (identifier: string) => sidebar.locator('div.group', { hasText: identifier });
     const removeRelation = async (identifier: string) => {
       await rowFor(identifier).getByRole('button', { name: 'Relation actions' }).click();
       await this.page
@@ -61,7 +61,9 @@ Then(
         .click();
     };
     const expectEmpty = async () => {
-      await expect(relationsHeader).toBeVisible();
+      for (const label of ['Blocked by', 'Blocks', 'Related']) {
+        await expect(sidebar.getByText(label, { exact: true })).toBeVisible();
+      }
       await expect(relationActions).toHaveCount(0);
     };
 

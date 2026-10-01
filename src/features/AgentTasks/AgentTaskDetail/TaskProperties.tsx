@@ -32,6 +32,7 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 import { isDueDateOverdue } from './isDueDateOverdue';
 import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
+import TaskPrerequisites from './TaskPrerequisites';
 import TaskScheduleConfig from './TaskScheduleConfig';
 import { resolveTaskStatusRow } from './taskStatusRow';
 
@@ -335,6 +336,10 @@ const TaskProperties = memo(() => {
             </div>
           </TaskScheduleConfig>
         </PropertyRow>
+
+        {/* Linear parks relations in the properties sidebar: Blocked by, Blocks,
+            Related — one flag-marked field per kind. */}
+        <TaskPrerequisites />
       </div>
     </div>
   );

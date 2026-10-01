@@ -6,7 +6,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import type { TaskStore } from '@/store/task';
 
-import TaskPrerequisites from './TaskPrerequisites';
+import TaskPrerequisites, { TaskBlockedNotice } from './TaskPrerequisites';
 
 const mocks = vi.hoisted(() => ({
   addDependency: vi.fn(),
@@ -69,6 +69,11 @@ const setTask = (dependencies: TaskDetailData['dependencies'] = [], id = 'T-4') 
 };
 const key = (suffix: string) => `taskDetail.prerequisites.${suffix}`;
 const relation = (suffix: string) => `taskDetail.relations.${suffix}`;
+const fieldFor = (kind: string) => {
+  const field = document.querySelector(`[data-relation-kind="${kind}"]`);
+  if (!field) throw new Error(`Expected relation field ${kind}`);
+  return within(field as HTMLElement);
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -83,12 +88,15 @@ beforeEach(() => {
 afterEach(cleanup);
 
 describe('TaskPrerequisites', () => {
-  it('renders a relations section with an add menu and no search until a type is chosen', () => {
+  it('renders the three sidebar fields with an add button each and no search until one is chosen', () => {
     render(<TaskPrerequisites />);
-    expect(screen.getByText(relation('title'))).toBeTruthy();
+    expect(screen.getByText(relation('blockedBy'))).toBeTruthy();
+    expect(screen.getByText(relation('blocking'))).toBeTruthy();
+    expect(screen.getByText(relation('relates'))).toBeTruthy();
+    expect(screen.getAllByText(relation('none'))).toHaveLength(3);
     expect(screen.queryByRole('status')).toBeNull();
     expect(screen.queryByRole('textbox')).toBeNull();
-    expect(screen.getByRole('button', { name: relation('add') })).toBeTruthy();
+    expect(screen.getAllByRole('button', { name: relation('add') })).toHaveLength(3);
   });
 
   it('shows blocking state until every prerequisite completes', () => {
@@ -96,28 +104,37 @@ describe('TaskPrerequisites', () => {
       { dependsOn: 'T-1', status: 'completed', type: 'blocks' },
       { dependsOn: 'T-2', status: 'backlog', type: 'blocks' },
     ]);
-    const view = render(<TaskPrerequisites />);
+    const view = render(
+      <>
+        <TaskPrerequisites />
+        <TaskBlockedNotice />
+      </>,
+    );
     expect(screen.getByRole('status').textContent).toBe(key('blocked'));
     expect(screen.getByText('T-1')).toBeTruthy();
     expect(screen.getByText('T-2')).toBeTruthy();
-    expect(screen.getAllByText(relation('blockedBy')).length).toBeGreaterThan(0);
     setTask([
       { dependsOn: 'T-1', status: 'completed', type: 'blocks' },
       { dependsOn: 'T-2', status: 'completed', type: 'blocks' },
     ]);
-    view.rerender(<TaskPrerequisites />);
+    view.rerender(
+      <>
+        <TaskPrerequisites />
+        <TaskBlockedNotice />
+      </>,
+    );
     expect(screen.getByRole('status').textContent).toBe(key('ready'));
   });
 
-  it('lists relates edges in their own group', () => {
+  it('lists relates edges in their own field', () => {
     setTask([
       { dependsOn: 'T-1', status: 'backlog', type: 'blocks' },
       { dependsOn: 'T-3', status: 'backlog', type: 'relates' },
     ]);
     render(<TaskPrerequisites />);
-    expect(screen.getByText('T-1')).toBeTruthy();
-    expect(screen.getByText('T-3')).toBeTruthy();
-    expect(screen.getAllByText(relation('relates')).length).toBeGreaterThan(0);
+    expect(fieldFor('blockedBy').getByText('T-1')).toBeTruthy();
+    expect(fieldFor('relates').getByText('T-3')).toBeTruthy();
+    expect(fieldFor('blocking').getByText(relation('none'))).toBeTruthy();
   });
 
   it('adds a relates edge from search and a blocking edge from the other side', async () => {
@@ -125,15 +142,13 @@ describe('TaskPrerequisites', () => {
       data: [{ description: 'T-9', id: 'tsk_9', title: 'Ship it', type: 'task' }],
     });
     render(<TaskPrerequisites />);
-    const addMenu = screen.getByRole('button', { name: relation('add') }).parentElement;
-    if (!addMenu) throw new Error('Expected the add menu');
-    fireEvent.click(within(addMenu).getByRole('button', { name: relation('relates') }));
+    fireEvent.click(fieldFor('relates').getByRole('button', { name: relation('add') }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ship' } });
     await waitFor(() => expect(screen.getByText('Ship it')).toBeTruthy());
     fireEvent.click(screen.getByText('Ship it'));
     await waitFor(() => expect(mocks.addDependency).toHaveBeenCalledWith('T-4', 'T-9', 'relates'));
 
-    fireEvent.click(within(addMenu).getByRole('button', { name: relation('blocking') }));
+    fireEvent.click(fieldFor('blocking').getByRole('button', { name: relation('add') }));
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'ship' } });
     await waitFor(() => expect(screen.getByText('Ship it')).toBeTruthy());
     fireEvent.click(screen.getByText('Ship it'));
@@ -161,7 +176,12 @@ describe('TaskPrerequisites', () => {
 
   it('keeps unavailable prerequisites blocking but removable by their raw id', async () => {
     setTask([{ dependsOn: 'task_hidden', id: 'task_hidden', status: null, type: 'blocks' }]);
-    render(<TaskPrerequisites />);
+    render(
+      <>
+        <TaskPrerequisites />
+        <TaskBlockedNotice />
+      </>,
+    );
     expect(screen.getByRole('status').textContent).toBe(key('blocked'));
     // The row composes `identifier · unavailable` — match the composed text,
     // then walk up to the (disabled) navigation button.
@@ -227,6 +247,7 @@ describe('TaskPrerequisites', () => {
     setTask([{ dependsOn: 'T-1', status: 'backlog', type: 'blocks' }]);
     render(<TaskPrerequisites />);
     expect(screen.queryByRole('button', { name: `${key('removeBlocker')}:T-1` })).toBeNull();
+    expect(screen.queryByRole('button', { name: relation('add') })).toBeNull();
     expect(screen.getByText('Read only')).toBeTruthy();
   });
 });

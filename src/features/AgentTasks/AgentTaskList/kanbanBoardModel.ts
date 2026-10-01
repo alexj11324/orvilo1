@@ -349,6 +349,10 @@ export const columnDefForBoardKey = (key: string): KanbanColumnDefinition => {
     const meta = getTaskMemberGroupMeta(raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw);
     return { droppable: true, groupMeta: { ...meta, key }, key, targetStatus: null };
   }
+  if (axis === 'agent') {
+    const meta = getTaskAssigneeGroupMeta(raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw);
+    return { droppable: true, groupMeta: { ...meta, key }, key, targetStatus: null };
+  }
   return {
     droppable: true,
     groupMeta: {
@@ -520,7 +524,12 @@ export const workQueryKeyForKanbanColumn = (columnKey: string): string =>
 export const externalTaskColumnKey = (
   task: Pick<
     TaskListItem,
-    'assigneeUserId' | 'priority' | 'projectId' | 'status' | 'workflowCategory'
+    | 'assigneeAgentId'
+    | 'assigneeUserId'
+    | 'priority'
+    | 'projectId'
+    | 'status'
+    | 'workflowCategory'
   >,
   groupBy: WorkQueryBoardGroupBy,
 ): string => {
@@ -536,6 +545,9 @@ export const externalTaskColumnKey = (
     }
     case 'assignee': {
       return prefixWorkQueryBoardKey('assignee', task.assigneeUserId ?? WORK_QUERY_BOARD_NONE_KEY);
+    }
+    case 'agent': {
+      return prefixWorkQueryBoardKey('agent', task.assigneeAgentId ?? WORK_QUERY_BOARD_NONE_KEY);
     }
     case 'project': {
       return prefixWorkQueryBoardKey('project', task.projectId ?? WORK_QUERY_BOARD_NONE_KEY);
@@ -568,6 +580,7 @@ export const canDropTaskIntoExternalColumn = (
 /** Fields a work-query drop may write. Kept narrower than `TaskListItem` so it
  * spreads into `taskService.update` without dragging unrelated card fields. */
 export interface ExternalKanbanFieldPatch {
+  assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
   priority?: number;
   projectId?: string | null;
@@ -599,6 +612,9 @@ export const externalKanbanTaskPatch = (
     case 'assignee': {
       return { assigneeUserId: raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw };
     }
+    case 'agent': {
+      return { assigneeAgentId: raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw };
+    }
     case 'project': {
       return { projectId: raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw };
     }
@@ -628,6 +644,9 @@ const moveScopeForBoardKey = (key: string): TaskMoveScope => {
   if (axis === 'assignee') {
     return { assigneeUserId: raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw };
   }
+  if (axis === 'agent') {
+    return { assigneeAgentId: raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw };
+  }
   return {};
 };
 
@@ -644,7 +663,8 @@ export const externalKanbanColumnMoveScope = (
     !scope.workflowCategories?.length &&
     !scope.statuses?.length &&
     scope.priority === undefined &&
-    !('assigneeUserId' in scope)
+    !('assigneeUserId' in scope) &&
+    !('assigneeAgentId' in scope)
   ) {
     return undefined;
   }
@@ -682,6 +702,7 @@ export const kanbanColumnAllowsCreate = (input: {
 export const kanbanColumnCreatePreset = (
   columnKey: string,
 ): {
+  assigneeAgentId?: string | null;
   assigneeUserId?: string | null;
   priority?: number;
   projectId?: string | null;
@@ -698,6 +719,8 @@ export const kanbanColumnCreatePreset = (
     else if (axis === 'priority') preset.priority = Number(raw);
     else if (axis === 'assignee') {
       preset.assigneeUserId = raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw;
+    } else if (axis === 'agent') {
+      preset.assigneeAgentId = raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw;
     } else if (axis === 'project') {
       preset.projectId = raw === WORK_QUERY_BOARD_NONE_KEY ? null : raw;
     }

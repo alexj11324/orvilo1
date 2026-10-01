@@ -407,9 +407,19 @@ export class SavedViewModel {
 
   evaluate = async (
     view: SavedViewItem,
-    params: { afterId?: string; groupKey?: string; limit?: number; queryHash?: string } = {},
+    params: {
+      afterId?: string;
+      groupKey?: string;
+      limit?: number;
+      queryHash?: string;
+      timeZone?: string;
+    } = {},
   ): Promise<SavedViewEvaluation> => {
-    const query = applyWorkQueryLayout(view.queryAst, view.layout, view.queryAst.groupBy);
+    const laidOut = applyWorkQueryLayout(view.queryAst, view.layout, view.queryAst.groupBy);
+    const query =
+      laidOut.groupBy === 'activityDate' && params.timeZone
+        ? { ...laidOut, timeZone: params.timeZone }
+        : laidOut;
     const kernel = new WorkQueryModel(this.db, this.userId, this.workspaceId);
     try {
       validateWorkQuery(query);

@@ -243,6 +243,61 @@ export const flattenWorkQueryVirtualItems = (input: {
   return { items, orderedIds };
 };
 
+export interface WorkQueryStickySections {
+  groupCounts: number[];
+  /** Header stack for each sticky group. A lane includes its parent header. */
+  headers: WorkQueryVirtualItem[][];
+  items: WorkQueryVirtualItem[];
+}
+
+/**
+ * Split a flat window into virtuoso groups so each header sticks. A primary
+ * header that is immediately followed by lane headers is not its own group —
+ * it stays in the lane's sticky stack.
+ */
+export const stickyVirtualSections = (
+  items: readonly WorkQueryVirtualItem[],
+): WorkQueryStickySections | undefined => {
+  if (!items.some((item) => item.kind === 'header')) return undefined;
+  const groupCounts: number[] = [];
+  const headers: WorkQueryVirtualItem[][] = [];
+  const body: WorkQueryVirtualItem[] = [];
+  let parent: WorkQueryVirtualItem | undefined;
+  let open = false;
+  let count = 0;
+
+  const close = () => {
+    if (!open) return;
+    groupCounts.push(count);
+    open = false;
+    count = 0;
+  };
+  const openGroup = (stack: WorkQueryVirtualItem[]) => {
+    close();
+    headers.push(stack);
+    open = true;
+  };
+
+  for (let index = 0; index < items.length; index += 1) {
+    const item = items[index]!;
+    if (item.kind === 'header' && item.depth === 0) {
+      parent = item;
+      const next = items[index + 1];
+      if (!(next?.kind === 'header' && next.depth === 1)) openGroup([item]);
+      continue;
+    }
+    if (item.kind === 'header' && item.depth === 1) {
+      openGroup(parent ? [parent, item] : [item]);
+      continue;
+    }
+    if (!open) openGroup(parent ? [parent] : []);
+    body.push(item);
+    count += 1;
+  }
+  close();
+  return { groupCounts, headers, items: body };
+};
+
 /** Flat `none` lists: rows only, no group headers. */
 export const flattenWorkQueryFlatItems = (
   tasks: readonly WorkQueryResultTask[],

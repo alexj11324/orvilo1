@@ -35,6 +35,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { SimpleTooltip } from '@/components/ui/tooltip';
 import { COLUMN_I18N_KEYS } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
+import { useWorkQueryGroupTitle } from '@/features/MyWork/useWorkQueryGroupTitle';
 import {
   mergeWorkQueryGroups,
   mergeWorkQueryPage,
@@ -64,6 +65,7 @@ import SavedViewActionsMenu from './SavedViewActionsMenu';
 import { type SavedViewControl, transitionSavedViewControl } from './savedViewControlState';
 import { buildSavedViewCsv, fetchAllSavedViewRows, SAVED_VIEW_CSV_MAX_ROWS } from './savedViewCsv';
 import SavedViewDetailsPanel from './SavedViewDetailsPanel';
+import { savedViewGroupByForLayout, savedViewProjectsPageByGroup } from './savedViewDisplay';
 import { savedViewProjectPath } from './savedViewProjectPath';
 import { isSavedViewShareReady, savedViewCopyName, savedViewSharePatch } from './savedViewShare';
 import { savedViewTitle } from './savedViewTitle';
@@ -221,7 +223,7 @@ SavedViewProjectRow.displayName = 'SavedViewProjectRow';
 /** Read-only status board for project views — the kanban columns Linear
  *  renders for project status. Project cards are not draggable here:
  *  status changes flow through the project surface. */
-const SavedViewProjectBoard = memo<{
+export const SavedViewProjectBoard = memo<{
   groups: WorkQueryGroupPage<SavedViewProjectRowData>[];
   /** Per-column tail-page failures keyed by group key — swaps that column's
    *  load-more button for an inline retry scoped to the failed page. */
@@ -267,10 +269,62 @@ const SavedViewProjectBoard = memo<{
 
 SavedViewProjectBoard.displayName = 'SavedViewProjectBoard';
 
+/** Status groups for a project list. Empty statuses stay off the list. */
+export const SavedViewProjectGroupList = memo<{
+  groups: WorkQueryGroupPage<SavedViewProjectRowData>[];
+  loadMoreGroupErrors?: Record<string, unknown>;
+  loadMoreLabel: string;
+  onLoadMoreGroup?: (key: string) => void;
+  onRetryLoadMoreGroup?: (key: string) => void;
+}>(({ groups, loadMoreGroupErrors, loadMoreLabel, onLoadMoreGroup, onRetryLoadMoreGroup }) => {
+  const { t } = useTranslation('project');
+  const visible = groups.filter((group) => group.total > 0 || group.tasks.length > 0);
+  return (
+    <div className="flex flex-col gap-4">
+      {visible.map((group) => {
+        const status = resolveProjectStatus(group.key);
+        return (
+          <div className="flex flex-col gap-0.5" key={group.key}>
+            <div className="flex flex-row items-center gap-2 px-2">
+              <ProjectStatusIcon size={14} status={status} />
+              <div className="text-[13px] font-medium">{t(`status.${status}`)}</div>
+              <div className="text-[12px] text-muted-foreground">{group.total}</div>
+            </div>
+            {group.tasks.map((project) => (
+              <SavedViewProjectRow key={project.id} project={project} />
+            ))}
+            {loadMoreGroupErrors?.[group.key] ? (
+              <AsyncError
+                error={loadMoreGroupErrors[group.key]}
+                variant={'inline'}
+                onRetry={
+                  onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined
+                }
+              />
+            ) : group.hasMore && onLoadMoreGroup ? (
+              <div className="flex flex-row justify-center">
+                <Button size="sm" onClick={() => onLoadMoreGroup(group.key)}>
+                  {loadMoreLabel}
+                </Button>
+              </div>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+});
+
+SavedViewProjectGroupList.displayName = 'SavedViewProjectGroupList';
+
 const viewToEditorState = (view: SavedViewItem): ViewEditorState => ({
   builder: filterToBuilder(view.entityType, view.queryAst.filter),
   entityType: view.entityType,
-  groupBy: view.queryAst.groupBy ?? 'none',
+  groupBy: savedViewGroupByForLayout(
+    view.entityType,
+    view.layout ?? 'list',
+    view.queryAst.groupBy ?? 'none',
+  ),
   layout: view.layout ?? 'list',
   name: view.name,
   sort: view.queryAst.sort,
@@ -289,7 +343,7 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   // Board ordering is explicit — the field is meaningless off-board.
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
   subGroupBy:
-    state.layout === 'board'
+    state.entityType === 'task' && state.groupBy !== 'none'
       ? normalizeWorkQuerySubGroupBy(state.groupBy, state.subGroupBy)
       : undefined,
 });
@@ -302,9 +356,13 @@ const SavedViewPage = memo(() => {
   const origin = useAppOrigin();
   const navigate = useWorkspaceAwareNavigate();
   const currentUserId = useUserStore(userProfileSelectors.userId);
+  const viewerTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+    [],
+  );
   const { data, error, isLoading } = useClientDataSWR(
     viewId ? workAttentionKeys.savedView(workspaceId, viewId) : null,
-    () => workAttentionService.savedViewEvaluate({ id: viewId! }),
+    () => workAttentionService.savedViewEvaluate({ id: viewId!, timeZone: viewerTimeZone }),
   );
   const view = data?.data.view;
   const evaluation = data?.data.evaluation;
@@ -323,6 +381,17 @@ const SavedViewPage = memo(() => {
         .map((team) => ({ id: team.id, name: team.name })),
     [teamsData],
   );
+  const groupTitle = useWorkQueryGroupTitle({
+    cycleTeamIds:
+      evaluation?.groupBy === 'cycle'
+        ? view?.teamId
+          ? [view.teamId]
+          : joinedTeamOptions.map((team) => team.id)
+        : [],
+    needsAssignee:
+      evaluation?.groupBy === 'assignee' || view?.queryAst.subGroupBy === 'assignee',
+    needsProject: evaluation?.groupBy === 'project' || view?.queryAst.subGroupBy === 'project',
+  });
   const firstTasks = evaluation?.tasks ?? [];
   const firstProjects = evaluation?.projects ?? [];
   const firstGroups = evaluation?.groups ?? [];
@@ -419,6 +488,7 @@ const SavedViewPage = memo(() => {
         afterId: last.id,
         id: viewId,
         queryHash,
+        timeZone: viewerTimeZone,
       });
       if (pageTokenRef.current !== started) return;
       setProjectTail((current) => mergeWorkQueryPage(current, next.data.evaluation.projects ?? []));
@@ -430,10 +500,11 @@ const SavedViewPage = memo(() => {
       afterId: last.id,
       id: viewId,
       queryHash,
+      timeZone: viewerTimeZone,
     });
     if (pageTokenRef.current !== started) return;
     setTail((current) => mergeWorkQueryPage(current, next.data.evaluation.tasks ?? []));
-  }, [projectRows, queryHash, tasks, view?.entityType, viewId]);
+  }, [projectRows, queryHash, tasks, view?.entityType, viewId, viewerTimeZone]);
 
   const loadMoreGroup = useCallback(
     async (groupKey: string) => {
@@ -446,11 +517,12 @@ const SavedViewPage = memo(() => {
         groupKey,
         id: viewId,
         queryHash,
+        timeZone: viewerTimeZone,
       });
       if (pageTokenRef.current !== started) return;
       setGroupTail((current) => mergeWorkQueryGroups(current, next.data.evaluation.groups ?? []));
     },
-    [groups, queryHash, viewId],
+    [groups, queryHash, viewId, viewerTimeZone],
   );
 
   const loadMoreProjectGroup = useCallback(
@@ -464,6 +536,7 @@ const SavedViewPage = memo(() => {
         groupKey,
         id: viewId,
         queryHash,
+        timeZone: viewerTimeZone,
       });
       if (pageTokenRef.current !== started) return;
       setProjectGroupTail((current) =>
@@ -478,7 +551,7 @@ const SavedViewPage = memo(() => {
         ),
       );
     },
-    [projectGroups, queryHash, viewId],
+    [projectGroups, queryHash, viewId, viewerTimeZone],
   );
 
   const saveView = useCallback(async (): Promise<boolean> => {
@@ -644,9 +717,11 @@ const SavedViewPage = memo(() => {
     }
   }, [exporting, t, view, viewId]);
 
-  const projectBoard =
-    view?.entityType === 'project' && (evaluation?.layout ?? view?.layout) === 'board';
   const resolvedLayout = evaluation?.layout ?? view?.layout ?? 'list';
+  const projectBoard = view?.entityType === 'project' && resolvedLayout === 'board';
+  const projectGrouped =
+    view?.entityType === 'project' &&
+    savedViewProjectsPageByGroup(resolvedLayout, evaluation?.groupBy);
   const boardActive = resolvedLayout === 'board';
   const viewTitle = view ? savedViewTitle(view.id, view.name, t) : t('tab.views');
   const detailGroups = view?.entityType === 'project' ? projectGroups : groups;
@@ -864,6 +939,25 @@ const SavedViewPage = memo(() => {
                         pagedMore.runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
                       }
                     />
+                  ) : projectGrouped ? (
+                    projectGroups.some((group) => group.total > 0 || group.tasks.length > 0) ? (
+                      <SavedViewProjectGroupList
+                        groups={projectGroups}
+                        loadMoreGroupErrors={pagedMore.loadMoreGroupErrors}
+                        loadMoreLabel={t('savedViews.loadMore')}
+                        onRetryLoadMoreGroup={pagedMore.retryLoadMoreGroup}
+                        onLoadMoreGroup={(key) =>
+                          pagedMore.runLoadMoreGroup(key, () => loadMoreProjectGroup(key))
+                        }
+                      />
+                    ) : (
+                      <div className="flex flex-col items-center justify-center flex-1 p-12">
+                        <SimpleEmpty
+                          description={t('savedViews.emptyResults')}
+                          icon={PROJECT_ENTITY_ICON}
+                        />
+                      </div>
+                    )
                   ) : projectRows.length === 0 ? (
                     <div className="flex flex-col items-center justify-center flex-1 p-12">
                       <SimpleEmpty
@@ -885,7 +979,7 @@ const SavedViewPage = memo(() => {
                       onRetry={pagedMore.retryLoadMore}
                     />
                   ) : null}
-                  {!projectBoard && workQueryHasMore(projectRows.length, evaluation?.total) ? (
+                  {!projectGrouped && workQueryHasMore(projectRows.length, evaluation?.total) ? (
                     <div className="flex flex-row justify-center">
                       <Button size="sm" onClick={() => pagedMore.runLoadMore(loadMore)}>
                         {t('savedViews.loadMore')}
@@ -897,6 +991,7 @@ const SavedViewPage = memo(() => {
                 <WorkQueryResults
                   emptyLabel={t('savedViews.emptyResults')}
                   groupBy={evaluation?.groupBy}
+                  groupTitle={groupTitle}
                   groups={groups}
                   layout={resolvedLayout}
                   loadMoreError={pagedMore.loadMoreError}

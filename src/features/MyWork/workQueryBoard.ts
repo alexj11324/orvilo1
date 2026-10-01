@@ -111,9 +111,11 @@ export const workQueryTaskColumnKey = (
  */
 export type WorkQueryListGroupBy =
   | 'activityDate'
+  | 'agent'
   | 'assignee'
   | 'attention'
   | 'cycle'
+  | 'milestone'
   | 'none'
   | 'priority'
   | 'project'
@@ -130,6 +132,8 @@ export const workQueryListGroupBy = (
     groupBy === 'workflowCategory' ||
     groupBy === 'priority' ||
     groupBy === 'assignee' ||
+    groupBy === 'agent' ||
+    groupBy === 'milestone' ||
     groupBy === 'project' ||
     groupBy === 'cycle' ||
     groupBy === 'activityDate'
@@ -195,7 +199,14 @@ export const workQueryListSections = (
   // 'attention' can't be derived client-side (it reads the dependency graph),
   // so a groups-less response degrades to its tail axis — workflow state.
   // Activity, cycle and project have no client bucket.
-  if (groupBy === 'activityDate' || groupBy === 'cycle' || groupBy === 'project' || groupBy === 'none') {
+  if (
+    groupBy === 'activityDate' ||
+    groupBy === 'agent' ||
+    groupBy === 'cycle' ||
+    groupBy === 'milestone' ||
+    groupBy === 'project' ||
+    groupBy === 'none'
+  ) {
     return [];
   }
   return workQueryListGroups(tasks, groupBy === 'attention' ? 'workflowCategory' : groupBy);

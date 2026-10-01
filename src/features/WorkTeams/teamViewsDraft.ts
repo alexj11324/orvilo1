@@ -33,7 +33,7 @@ export const teamViewDraftQuery = (draft: ViewEditorState, teamId: string): Work
     sort: draft.sort,
     sortMode: draft.layout === 'board' ? draft.sortMode : undefined,
     subGroupBy:
-      draft.layout === 'board'
+      draft.entityType === 'task' && draft.groupBy !== 'none'
         ? normalizeWorkQuerySubGroupBy(draft.groupBy, draft.subGroupBy)
         : undefined,
   };

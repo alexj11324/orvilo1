@@ -1,4 +1,4 @@
-import { McpIcon, SkillsIcon } from '@lobehub/ui/icons';
+import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
@@ -210,11 +210,6 @@ export const useWorkspaceSettingCategory = (): WorkspaceSettingCategoryGroup[] =
             // The workspace skill settings page was retired with the platform's
             // skill marketplace; the route survives only as a redirect to this
             // settings root (see `WORKSPACE_SETTINGS_ALIASES`).
-            {
-              icon: SkillsIcon,
-              key: WorkspaceSettingsTabs.Skill,
-              label: t('workspaceSetting.tab.skill'),
-            },
             // Label registry is readable by everyone; the page itself keeps
             // management actions behind the admin gate (disabled, not hidden).
             {

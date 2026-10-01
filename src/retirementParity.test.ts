@@ -36,24 +36,14 @@ const clientSources = collectSources(SRC).map((filePath) => ({
 }));
 
 describe('retired client control surfaces stay gone', () => {
+  // P05's BYOK picker, auth-mode keys and client runtime surfaces are restored
+  // (P30 resurrection), so only the P06 quota-routing retirements still apply.
   const RETIRED_CLIENT_RULES = [
     { pattern: /\bQuotaAccountManagerModal\b/, reason: 'P06 retired the managed-account modal' },
-    {
-      pattern: /\bmodelPicker\b|HeterogeneousAgent\/modelPicker/,
-      reason: 'P05 retired the hetero model/auth picker',
-    },
     { pattern: /claudeQuota\.manage\./, reason: 'P06 deleted the manage-account locale keys' },
-    {
-      pattern: /heteroAgent\.apiMode\.|heterogeneousStatus\.apiMode\.|heterogeneousStatus\.auth\./,
-      reason: 'P05 deleted the BYOK auth-mode locale keys',
-    },
     {
       pattern: /\bresolveQuotaAccountEnv\b|\bquotaAccountPlan\b/,
       reason: 'P06 retired quota→env injection into execution',
-    },
-    {
-      pattern: /from ['"]@orvilo\/agent-runtime['"]|require\(['"]@orvilo\/agent-runtime['"]/,
-      reason: 'the retired in-process engine package has no executable consumers',
     },
   ];
 

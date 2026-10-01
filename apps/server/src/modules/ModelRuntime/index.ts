@@ -487,14 +487,12 @@ export const initModelRuntimeFromDB = async (
   // 1. Get user's provider configuration from database
   const aiProviderModel = new AiProviderModel(db, userId, workspaceId);
 
-  // Personal scope prefers the provider_bindings plane: providers that
-  // migrated there no longer have an ai_providers row. Workspace scope stays
-  // on the legacy model (bindings are personal-only).
-  const providerBindings = workspaceId ? undefined : new ProviderBindingPlane(db, userId);
+  // Every scope prefers the provider_bindings plane: providers that migrated
+  // there no longer need an ai_providers row. Bindings are a personal
+  // credential surface, so `workspaceId` only scopes the legacy fallback read.
+  const providerBindings = new ProviderBindingPlane(db, userId, { workspaceId });
   const providerConfig =
-    (providerBindings
-      ? await resolveBindingManagedProviderDetail(providerBindings, provider)
-      : undefined) ??
+    (await resolveBindingManagedProviderDetail(providerBindings, provider)) ??
     (await aiProviderModel.getAiProviderById(provider, KeyVaultsGateKeeper.getUserKeyVaults));
 
   // 2. Resolve the runtime provider for custom providers

@@ -62,17 +62,16 @@ const aiModelProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) 
   );
 
   // Model-enable mirrors keep the provider_bindings route rows in sync for
-  // binding-managed providers (personal scope only — see the aiProvider
-  // router for why workspace scope stays on the legacy plane).
-  const providerBindings = wsId
-    ? undefined
-    : new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
-        decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
-        resolveEnabledModelIds: async (providerId) =>
-          (await aiInfraRepos.getEnabledModels(false))
-            .filter((model) => model.providerId === providerId && model.enabled === true)
-            .map((model) => model.id),
-      });
+  // binding-managed providers (every scope — see the aiProvider router for
+  // why provider settings are a personal credential surface).
+  const providerBindings = new ProviderBindingPlane(ctx.serverDB, ctx.userId, {
+    decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
+    resolveEnabledModelIds: async (providerId) =>
+      (await aiInfraRepos.getEnabledModels(false))
+        .filter((model) => model.providerId === providerId && model.enabled === true)
+        .map((model) => model.id),
+    workspaceId: wsId,
+  });
 
   return opts.next({
     ctx: {

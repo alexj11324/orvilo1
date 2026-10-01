@@ -12,7 +12,7 @@ import type {
 } from '@orvilo/types';
 import { PROVIDER_CONFIG_ANCHOR_MODEL } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
-import { and, eq, isNull } from 'drizzle-orm';
+import { and, eq, isNull, or } from 'drizzle-orm';
 import { ModelProvider } from 'model-bank';
 
 import { CredentialModel } from '../../models/credential';
@@ -52,6 +52,15 @@ export interface ProviderBindingPlaneDeps {
    * binding plane so its existing enabled models become resolvable rows.
    */
   resolveEnabledModelIds?: (providerId: string) => Promise<string[]>;
+  /**
+   * The caller's workspace scope. Bindings and credentials themselves are
+   * always personal — this only selects which legacy `ai_providers`/`ai_models`
+   * rows the plane's migrate-on-write, conflict check, and erasure see:
+   * workspace scope reads the workspace's shared rows plus the caller's own
+   * unfiled rows (mirroring `buildWorkspaceWhere`), personal scope reads only
+   * own unfiled rows.
+   */
+  workspaceId?: string;
 }
 
 /** Thrown when a write targets a provider id that already exists. */
@@ -143,10 +152,11 @@ const secretReferenceOf = (credentialId: string) => `credential:${credentialId}`
 /**
  * The provider-configuration plane on top of `provider_bindings` +
  * `credentials` — the storage target the restored provider settings surface
- * reconciles onto (Phase 5b). Personal scope only: the binding plane has no
- * workspace ownership concept (credentials are personal, `tenantId` is stamped
- * at issuance), so workspace-scoped provider settings keep the legacy
- * `ai_providers` write path.
+ * reconciles onto (Phase 5b). Provider settings are a personal credential
+ * surface by design — every write lands here regardless of the caller's
+ * workspace context (credentials are personal, `tenantId` is stamped at
+ * issuance). `deps.workspaceId` only scopes which legacy `ai_providers`/
+ * `ai_models` rows migrate-on-write, conflict checks, and erasure see.
  *
  * Storage mapping (restored surface → binding rows):
  * - provider entity + enable switch + sort + custom metadata → anchor row
@@ -354,11 +364,23 @@ export class ProviderBindingPlane {
   }
 
   /**
+   * Legacy rows this caller's scope renders, on either provider table —
+   * mirrors `buildWorkspaceWhere` (no visibility column): workspace scope is
+   * the workspace's shared rows OR the caller's own unfiled rows; personal
+   * scope is own unfiled rows only.
+   */
+  private legacyScope(table: typeof aiProviders | typeof aiModels) {
+    const own = and(eq(table.userId, this.userId), isNull(table.workspaceId));
+    return this.deps.workspaceId ? or(eq(table.workspaceId, this.deps.workspaceId), own) : own;
+  }
+
+  /**
    * Migrate-on-write: a provider's first binding write adopts the legacy
-   * `ai_providers` row — keyVaults into the credential, provider fields into
-   * `providerSettings` — then deletes the legacy row so `provider_bindings`
-   * is the only storage plane for it. Route rows materialize for the
-   * provider's current enabled-model set.
+   * `ai_providers` row the caller can see — keyVaults into the credential,
+   * provider fields into `providerSettings`. The caller's own unfiled row is
+   * adopted and deleted (it is solely theirs); a shared workspace row only
+   * seeds the binding — it stays so other members keep their provider.
+   * Route rows materialize for the provider's current enabled-model set.
    */
   private async ensureAnchor(
     providerId: string,
@@ -369,13 +391,23 @@ export class ProviderBindingPlane {
 
     const decrypt: DecryptUserKeyVaults =
       this.deps.decryptLegacyKeyVaults ?? (async (s) => JSON.parse(s ?? '{}'));
-    const legacy = await this.db.query.aiProviders.findFirst({
+    const ownLegacy = await this.db.query.aiProviders.findFirst({
       where: and(
         eq(aiProviders.id, providerId),
         eq(aiProviders.userId, this.userId),
         isNull(aiProviders.workspaceId),
       ),
     });
+    const legacy =
+      ownLegacy ??
+      (this.deps.workspaceId
+        ? await this.db.query.aiProviders.findFirst({
+            where: and(
+              eq(aiProviders.id, providerId),
+              eq(aiProviders.workspaceId, this.deps.workspaceId),
+            ),
+          })
+        : undefined);
 
     let legacyKeyVaults: Record<string, unknown> = {};
     if (legacy?.keyVaults) {
@@ -437,8 +469,10 @@ export class ProviderBindingPlane {
       });
     }
 
-    // The legacy provider row is now fully expressed on the binding plane.
-    if (legacy) {
+    // Only the caller's own unfiled row is removed once its content is
+    // fully expressed on the binding plane — a shared workspace row stays
+    // for other members (this caller's binding simply wins in dual-read).
+    if (ownLegacy) {
       await this.db
         .delete(aiProviders)
         .where(
@@ -457,11 +491,7 @@ export class ProviderBindingPlane {
     const [managed, legacy] = await Promise.all([
       this.getManaged(input.id),
       this.db.query.aiProviders.findFirst({
-        where: and(
-          eq(aiProviders.id, input.id),
-          eq(aiProviders.userId, this.userId),
-          isNull(aiProviders.workspaceId),
-        ),
+        where: and(eq(aiProviders.id, input.id), this.legacyScope(aiProviders)),
       }),
     ]);
     if (managed || legacy) throw new ProviderBindingConflictError(input.id);
@@ -599,27 +629,16 @@ export class ProviderBindingPlane {
       }
     }
 
-    // Erasure = both planes: drop the legacy provider row (and its model rows,
-    // matching AiProviderModel.delete semantics) in the same sweep.
+    // Erasure = both planes: drop every legacy provider row this scope
+    // renders (shared workspace row + own unfiled rows, matching
+    // AiProviderModel.delete semantics) in the same sweep.
     await this.db.transaction(async (trx) => {
       await trx
         .delete(aiModels)
-        .where(
-          and(
-            eq(aiModels.providerId, id),
-            eq(aiModels.userId, this.userId),
-            isNull(aiModels.workspaceId),
-          ),
-        );
+        .where(and(eq(aiModels.providerId, id), this.legacyScope(aiModels)));
       await trx
         .delete(aiProviders)
-        .where(
-          and(
-            eq(aiProviders.id, id),
-            eq(aiProviders.userId, this.userId),
-            isNull(aiProviders.workspaceId),
-          ),
-        );
+        .where(and(eq(aiProviders.id, id), this.legacyScope(aiProviders)));
     });
   }
 

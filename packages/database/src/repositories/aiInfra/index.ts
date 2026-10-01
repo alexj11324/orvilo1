@@ -92,9 +92,10 @@ export class AiInfraRepos {
   aiModelModel: AiModelModel;
   private modelBankModelsPromise?: ReturnType<typeof loadModels>;
   /**
-   * Dual-read overlay for the provider_bindings plane — personal scope only
-   * (bindings have no workspace ownership, so workspace-scoped reads stay on
-   * the legacy plane entirely).
+   * Dual-read overlay for the provider_bindings plane. Bindings are a
+   * personal credential surface (no workspace ownership — `tenantId` is
+   * stamped at issuance), so the overlay applies in every scope;
+   * `workspaceId` only scopes the plane's legacy-row handling.
    */
   private readonly bindingPlane?: ProviderBindingPlane;
 
@@ -109,7 +110,7 @@ export class AiInfraRepos {
     this.aiProviderModel = new AiProviderModel(db, userId, workspaceId);
     this.aiModelModel = new AiModelModel(db, userId, workspaceId);
     this.providerConfigs = providerConfigs;
-    this.bindingPlane = workspaceId ? undefined : new ProviderBindingPlane(db, userId);
+    this.bindingPlane = new ProviderBindingPlane(db, userId, { workspaceId });
   }
 
   /**

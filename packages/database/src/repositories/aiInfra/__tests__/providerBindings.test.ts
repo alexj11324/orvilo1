@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { randomBytes } from 'node:crypto';
 
-import { PROVIDER_CONFIG_ANCHOR_MODEL } from '@orvilo/types';
+import { PROVIDER_CONFIG_ANCHOR_MODEL, resolveOrviloEngine } from '@orvilo/types';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -10,10 +10,10 @@ import { KeyVaultsGateKeeper } from '@/server/modules/KeyVaultsEncrypt';
 import { getTestDB } from '../../../core/getTestDB';
 import { CredentialModel } from '../../../models/credential';
 import { ProviderBindingModel } from '../../../models/providerBinding';
-import { aiModels, aiProviders, users } from '../../../schemas';
+import { aiModels, aiProviders, users, workspaces } from '../../../schemas';
 import type { OrviloDatabase } from '../../../type';
 import { AiInfraRepos } from '../index';
-import { ProviderBindingPlane } from '../providerBindings';
+import { ProviderBindingConflictError, ProviderBindingPlane } from '../providerBindings';
 
 // vitest.config.server.mts runs with isolate:false, so one file's module mock
 // serves every file; delegate through a per-test-installed global instead.
@@ -284,6 +284,233 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
     expect(await otherPlane.getManaged(providerId)).toBeUndefined();
     expect(await otherPlane.listManagedProviders()).toEqual(new Map());
     expect(await new ProviderBindingModel(db, foreign).list()).toEqual([]);
+  });
+});
+
+/**
+ * Replicates the canonical `resolveOrviloProviderBinding` predicate from
+ * `apps/server/src/services/providerBinding/execution.ts` (the #373 stack —
+ * not on this branch): `selection.runtime === 'orvilo'`, target equality,
+ * `resolveOrviloEngine(selection.engine)` match, optional provider/model
+ * match; `enabled` is ignored.
+ */
+const resolveLike = async (
+  target: 'local' | 'device' | 'sandbox',
+  match?: { model?: string; provider?: string },
+) => {
+  const rows = await new ProviderBindingModel(db, owner).list();
+  const wanted = resolveOrviloEngine(undefined);
+  return rows.find((row) => {
+    const selection = row.config?.selection;
+    if (!selection || selection.runtime !== 'orvilo' || selection.target !== target) return false;
+    if (resolveOrviloEngine(selection.engine) !== wanted) return false;
+    if (match?.provider && row.config?.provider !== match.provider) return false;
+    if (match?.model && row.config?.model !== match.model) return false;
+    return true;
+  });
+};
+
+describe('ProviderBindingPlane workspace scope', () => {
+  const workspaceId = 'ws-1';
+
+  beforeEach(async () => {
+    await db
+      .insert(workspaces)
+      .values({ id: workspaceId, name: 'WS 1', primaryOwnerId: owner, slug: workspaceId });
+  });
+
+  it('lands a workspace-context write on the binding plane and resolves via resolver semantics', async () => {
+    const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+    // A shared workspace row written by another member — visible in the
+    // caller's scope like `buildWorkspaceWhere` renders it.
+    await db.insert(aiProviders).values({
+      checkModel: 'ws-check',
+      enabled: false,
+      id: providerId,
+      keyVaults: await gateKeeper.encrypt(
+        JSON.stringify({ apiKey: 'sk-shared', baseURL: 'https://shared.example/v1' }),
+      ),
+      name: 'Shared Fixture',
+      source: 'custom',
+      userId: foreign,
+      workspaceId,
+    });
+    await db.insert(aiModels).values({
+      enabled: true,
+      id: 'm-ws',
+      providerId,
+      source: 'builtin',
+      type: 'chat',
+      userId: owner,
+      workspaceId,
+    });
+
+    const wsPlane = new ProviderBindingPlane(db, owner, {
+      decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
+      resolveEnabledModelIds: async (id) =>
+        (
+          await db.query.aiModels.findMany({
+            where: and(eq(aiModels.providerId, id), eq(aiModels.workspaceId, workspaceId)),
+          })
+        )
+          .filter((row) => row.enabled === true)
+          .map((row) => row.id),
+      workspaceId,
+    });
+
+    await wsPlane.setProviderEnabled(providerId, true);
+
+    // The write landed as personal bindings seeded from the shared row.
+    const anchor = await anchorOf();
+    expect(anchor).toBeDefined();
+    expect(anchor?.config.providerSettings).toMatchObject({
+      checkModel: 'ws-check',
+      enabled: true,
+      name: 'Shared Fixture',
+      source: 'custom',
+    });
+    expect(anchor?.config.endpoint).toBe('https://shared.example/v1');
+
+    // The shared workspace row survives for other members — only the
+    // caller's own unfiled row is ever deleted by migrate-on-write.
+    expect(
+      await db.query.aiProviders.findFirst({
+        where: and(eq(aiProviders.id, providerId), eq(aiProviders.workspaceId, workspaceId)),
+      }),
+    ).toBeDefined();
+    expect(
+      await db.query.aiProviders.findFirst({ where: legacyProviderWhere(providerId) }),
+    ).toBeUndefined();
+
+    // The enabled model materialized a route row the canonical resolver
+    // predicate matches: runtime 'orvilo' + https → 'sandbox' target.
+    const resolved = await resolveLike('sandbox', { model: 'm-ws', provider: providerId });
+    expect(resolved).toBeDefined();
+    expect(resolved?.config).toMatchObject({
+      enabled: true,
+      endpoint: 'https://shared.example/v1',
+      model: 'm-ws',
+      provider: providerId,
+    });
+    expect(resolved?.config.secretReference).toMatch(/^credential:/);
+    // Unconstrained resolution also lands on this provider's rows.
+    expect(await resolveLike('sandbox')).toBeDefined();
+
+    // keyVaults hydrated from the personal credential copy.
+    const detail = await wsPlane.materializeDetail(providerId, anchor!);
+    expect(detail.keyVaults).toMatchObject({ apiKey: 'sk-shared' });
+  });
+
+  it('adopts and deletes only the caller-owned unfiled row under workspace scope', async () => {
+    const gateKeeper = await KeyVaultsGateKeeper.initWithEnvKey();
+    await db.insert(aiProviders).values([
+      {
+        enabled: true,
+        id: providerId,
+        keyVaults: await gateKeeper.encrypt(JSON.stringify({ apiKey: 'sk-own' })),
+        name: 'Own Fixture',
+        source: 'custom',
+        userId: owner,
+      },
+      {
+        enabled: false,
+        id: providerId,
+        name: 'Shared Fixture',
+        source: 'custom',
+        userId: foreign,
+        workspaceId,
+      },
+    ]);
+
+    const wsPlane = new ProviderBindingPlane(db, owner, {
+      decryptLegacyKeyVaults: KeyVaultsGateKeeper.getUserKeyVaults,
+      workspaceId,
+    });
+    await wsPlane.setProviderEnabled(providerId, true);
+
+    const anchor = await anchorOf();
+    expect(anchor?.config.providerSettings).toMatchObject({
+      enabled: true,
+      name: 'Own Fixture',
+    });
+
+    // Own unfiled row deleted; shared workspace row preserved.
+    expect(
+      await db.query.aiProviders.findFirst({ where: legacyProviderWhere(providerId) }),
+    ).toBeUndefined();
+    expect(
+      await db.query.aiProviders.findFirst({
+        where: and(eq(aiProviders.id, providerId), eq(aiProviders.workspaceId, workspaceId)),
+      }),
+    ).toBeDefined();
+  });
+
+  it('conflicts on a shared workspace row only within workspace scope', async () => {
+    await db.insert(aiProviders).values({
+      enabled: true,
+      id: providerId,
+      name: 'Shared Fixture',
+      source: 'custom',
+      userId: foreign,
+      workspaceId,
+    });
+
+    const wsPlane = new ProviderBindingPlane(db, owner, { workspaceId });
+    await expect(
+      wsPlane.createProvider({ id: providerId, name: 'Dup', source: 'custom' }),
+    ).rejects.toThrow(ProviderBindingConflictError);
+
+    // Personal scope does not see the workspace row — no conflict.
+    await expect(
+      plane().createProvider({ id: providerId, name: 'Personal', source: 'custom' }),
+    ).resolves.toBe(providerId);
+  });
+
+  it('erases shared + own legacy rows and bindings under workspace scope', async () => {
+    const wsPlane = new ProviderBindingPlane(db, owner, { workspaceId });
+    await wsPlane.createProvider({ id: providerId, name: 'Fixture', source: 'custom' });
+    await db.insert(aiProviders).values([
+      {
+        enabled: true,
+        id: providerId,
+        name: 'Shared',
+        source: 'custom',
+        userId: foreign,
+        workspaceId,
+      },
+      { enabled: true, id: providerId, name: 'Own', source: 'custom', userId: owner },
+      { enabled: true, id: providerId, name: 'Foreign', source: 'custom', userId: foreign },
+    ]);
+    await db.insert(aiModels).values([
+      {
+        enabled: true,
+        id: 'm-ws',
+        providerId,
+        source: 'custom',
+        type: 'chat',
+        userId: foreign,
+        workspaceId,
+      },
+      { enabled: true, id: 'm-own', providerId, source: 'custom', type: 'chat', userId: owner },
+      {
+        enabled: true,
+        id: 'm-foreign',
+        providerId,
+        source: 'custom',
+        type: 'chat',
+        userId: foreign,
+      },
+    ]);
+
+    await wsPlane.deleteProvider(providerId);
+
+    expect(await bindings().list()).toEqual([]);
+    expect(await db.query.aiProviders.findMany()).toEqual([
+      expect.objectContaining({ name: 'Foreign', userId: foreign }),
+    ]);
+    expect(await db.query.aiModels.findMany()).toEqual([
+      expect.objectContaining({ id: 'm-foreign', userId: foreign }),
+    ]);
   });
 });
 

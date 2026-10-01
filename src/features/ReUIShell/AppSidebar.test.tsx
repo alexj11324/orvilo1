@@ -282,39 +282,42 @@ describe('workspace destinations', () => {
   });
 });
 
-describe('workspace settings switcher', () => {
-  it('replaces the logo header on the expanded settings surface', () => {
-    route.key = 'workspace-settings';
+describe('workspace switcher header', () => {
+  it('shows the workspace switcher on the expanded home surface instead of the logo row', () => {
+    route.key = 'home';
     render(
       <SidebarProvider open>
         <AppSidebar />
       </SidebarProvider>,
     );
     expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
-    expect(screen.getByRole('button', { name: 'common:reuiShell9.collapseSidebar' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'reuiShell9.collapseSidebar' })).toBeTruthy();
+    expect(screen.queryByText('Orvilo')).toBeNull();
   });
-  it('keeps the global header outside settings and on the collapsed rail', () => {
+  it.each(['workspace-settings', 'settings'])(
+    'renders no shell header on the expanded %s surface',
+    (navKey) => {
+      route.key = navKey;
+      render(
+        <SidebarProvider open>
+          <AppSidebar />
+        </SidebarProvider>,
+      );
+      expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
+      expect(screen.queryByText('Orvilo')).toBeNull();
+    },
+  );
+  it('keeps the switcher on the collapsed rail for every surface', () => {
     route.key = 'workspace-settings';
-    const { rerender } = render(
-      <SidebarProvider open>
-        <AppSidebar />
-      </SidebarProvider>,
-    );
-    rerender(
+    render(
       <SidebarProvider open={false}>
         <AppSidebar />
       </SidebarProvider>,
     );
-    expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
-    route.key = 'home';
-    rerender(
-      <SidebarProvider open>
-        <AppSidebar />
-      </SidebarProvider>,
-    );
-    expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
+    expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'reuiShell9.collapseSidebar' })).toBeNull();
   });
-  it('shows the switcher inside the collapsed desktop preference when in the mobile drawer', () => {
+  it('hides the shell header inside the settings mobile drawer', () => {
     route.key = 'workspace-settings';
     viewport.mobile = true;
     render(
@@ -322,7 +325,7 @@ describe('workspace settings switcher', () => {
         <AppSidebar />
       </SidebarProvider>,
     );
-    expect(screen.getByText('common:workspaceSwitcher.label')).toBeTruthy();
+    expect(screen.queryByText('common:workspaceSwitcher.label')).toBeNull();
   });
   it('lists memberships with member counts and marks only the active workspace', () => {
     workspace.items = [

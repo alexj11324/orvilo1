@@ -1,6 +1,7 @@
 'use client';
 
 import { CheckIcon, ChevronsUpDownIcon, PlusIcon } from 'lucide-react';
+import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspace } from '@/business/client/hooks/useActiveWorkspace';
@@ -21,6 +22,7 @@ import {
   SidebarMenuButton,
   SidebarMenuItem,
   SidebarTrigger,
+  useSidebar,
 } from '@/components/ui/sidebar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { isDesktop } from '@/const/version';
@@ -29,8 +31,9 @@ import { isMacOS } from '@/utils/platform';
 
 import { WorkspaceAvatar } from './WorkspaceAvatar';
 
-export function WorkspaceSwitcher() {
+export function WorkspaceSwitcher({ children }: { children?: ReactNode }) {
   const { t } = useTranslation(['setting', 'common']);
+  const { state } = useSidebar();
   const navigate = useWorkspaceAwareNavigate();
   const workspaces = useWorkspaces();
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -45,7 +48,7 @@ export function WorkspaceSwitcher() {
             <DropdownMenuTrigger
               render={
                 <SidebarMenuButton
-                  aria-label={t('common:reuiShell9.openWorkspaceMenu')}
+                  aria-label={t('reuiShell9.openWorkspaceMenu')}
                   className="h-9 px-1.5"
                   size="lg"
                 />
@@ -54,17 +57,20 @@ export function WorkspaceSwitcher() {
               {activeWorkspace ? (
                 <>
                   <WorkspaceAvatar className="size-6 rounded-md" workspace={activeWorkspace} />
-                  <span className="flex-1 truncate text-sm font-medium text-sidebar-foreground">
+                  <span className="flex-1 truncate text-sm font-medium text-sidebar-foreground group-data-[collapsible=icon]:hidden">
                     {activeWorkspace.name}
                   </span>
                 </>
               ) : (
                 <>
                   <Skeleton className="size-6 shrink-0 rounded-md" />
-                  <Skeleton className="h-4 min-w-0 flex-1" />
+                  <Skeleton className="h-4 min-w-0 flex-1 group-data-[collapsible=icon]:hidden" />
                 </>
               )}
-              <ChevronsUpDownIcon aria-hidden className="ml-auto size-4 shrink-0 opacity-50" />
+              <ChevronsUpDownIcon
+                aria-hidden
+                className="ml-auto size-4 shrink-0 opacity-50 group-data-[collapsible=icon]:hidden"
+              />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start" className="min-w-56" side="bottom" sideOffset={4}>
               <DropdownMenuGroup>
@@ -113,8 +119,9 @@ export function WorkspaceSwitcher() {
           </DropdownMenu>
         </SidebarMenuItem>
       </SidebarMenu>
-      {!(isDesktop && isMacOS()) && (
-        <SidebarTrigger aria-label={t('common:reuiShell9.collapseSidebar')} />
+      {children}
+      {state === 'expanded' && !(isDesktop && isMacOS()) && (
+        <SidebarTrigger aria-label={t('reuiShell9.collapseSidebar')} />
       )}
     </>
   );

@@ -16,6 +16,7 @@ import path from 'node:path';
 import { PassThrough } from 'node:stream';
 
 import type {
+  InferenceEvent,
   ProviderModelCapability,
   TrustedProviderBackend,
 } from '@orvilo/agent-execution/controlPlane';
@@ -208,8 +209,8 @@ const fakeBackend: TrustedProviderBackend = {
   capabilities: async () => [capability],
   check: async () => true,
   infer: () => {
-    async function* stream() {
-      yield { type: 'end' as const };
+    async function* stream(): AsyncGenerator<InferenceEvent> {
+      yield { inputTokens: 1, outputTokens: 1, type: 'usage' as const };
     }
     return stream();
   },
@@ -289,7 +290,7 @@ const seedBinding = async (run: CanonicalRunBinding) => {
     .insert(providerBindings)
     .values({
       config: {
-        enabled: true,
+        enabled: false,
         endpoint: 'https://provider.example.test/',
         model: MODEL_ID,
         name: 'Embedded host fixture',

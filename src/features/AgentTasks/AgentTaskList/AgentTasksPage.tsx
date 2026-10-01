@@ -1075,7 +1075,7 @@ const AgentTasksPage = memo<AgentTasksPageProps>(({ agentId, projectId, projectM
                         peekOnSelect={peekOnSelect}
                         selectedTaskId={selectedIdentifier ?? undefined}
                         subGroupBy={issueListQuery?.subGroupBy}
-                        tasks={filteredIssueTasks}
+                        tasks={issueListPages.tasks}
                         total={issueListPages.total}
                         loading={
                           issueListPages.isLoading ||

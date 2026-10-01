@@ -814,8 +814,10 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       groupBy === 'status' || groupBy === 'priority' || groupBy === 'assignee'
         ? groupBy
         : 'workflowCategory';
-    const laneAxis =
+    const requestedLane =
       layout === 'board' ? normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy) : undefined;
+    // Milestone groups a list. A board lane has no milestone columns.
+    const laneAxis = requestedLane === 'milestone' ? undefined : requestedLane;
     const listGroupBy = workQueryListGroupBy(groupBy);
     const listLane =
       layout === 'list' ? normalizeWorkQuerySubGroupBy(listGroupBy, subGroupBy) : undefined;

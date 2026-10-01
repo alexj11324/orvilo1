@@ -51,4 +51,5 @@ export const savedViewProjectsPageByGroup = (
 export const workQueryWithViewerTimeZone = <T extends Pick<WorkQuery, 'groupBy' | 'timeZone'>>(
   query: T,
   timeZone: string | undefined,
-): T => (query.groupBy === 'activityDate' && timeZone ? { ...query, timeZone } : query);
+): T & { timeZone?: string } =>
+  query.groupBy === 'activityDate' && timeZone ? { ...query, timeZone } : query;

@@ -10,7 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { DockerProcessTreeSupervisor } from './dockerSupervisor';
 
 const execute = promisify(execFile);
-const docker = '/usr/local/bin/docker';
+const docker = process.env.DOCKER_PATH ?? 'docker';
 // Explicit immutable fixture image; this does not validate the Prime artifact.
 const imageId = 'sha256:c83674e1999044d33d751661371b873539f47e5b5c5ca3320c7e0377acca6238';
 

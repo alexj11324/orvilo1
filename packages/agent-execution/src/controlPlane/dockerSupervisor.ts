@@ -10,7 +10,11 @@ const execute = promisify(execFile);
 // The application's ProcessEnv augmentation describes its ambient process, not
 // a child allowlist. Do not inherit ambient credentials to satisfy that type.
 const dockerClientEnvironment = () =>
-  ({ PATH: '/usr/bin:/bin', HOME: '/nonexistent' }) as unknown as NodeJS.ProcessEnv;
+  ({
+    PATH: '/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/local/sbin',
+    HOME: '/nonexistent',
+  }) as unknown as NodeJS.ProcessEnv;
+const dockerBinary = (explicit?: string) => explicit ?? 'docker';
 const fail = (message: string): ControlResult<never> => ({
   ok: false,
   error: { code: 'isolation_unavailable', message, retryable: false },
@@ -46,7 +50,7 @@ export class DockerProcessTreeSupervisor implements ProcessTreeSupervisor {
 
   private async command(args: string[]) {
     return (
-      await execute(this.options.dockerPath ?? '/usr/local/bin/docker', args, {
+      await execute(dockerBinary(this.options.dockerPath), args, {
         timeout: 30_000,
         maxBuffer: 1024 * 1024,
         env: dockerClientEnvironment(),
@@ -159,7 +163,7 @@ export class DockerProcessTreeSupervisor implements ProcessTreeSupervisor {
       ]);
       await this.inspect(treeId);
       const client = spawn(
-        this.options.dockerPath ?? '/usr/local/bin/docker',
+        dockerBinary(this.options.dockerPath),
         ['start', '--attach', '--interactive', treeId],
         {
           stdio: 'pipe',

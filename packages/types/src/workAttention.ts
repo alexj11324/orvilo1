@@ -111,6 +111,16 @@ export interface ActionRef {
 
 export type DecisionVerb = 'approve' | 'cancel' | 'decline' | 'reject' | 'submit_input';
 
+/**
+ * Plane-style inbox type filters ("Assigned to me" / "Created by me" /
+ * "Subscribed by me"). Each narrows the feed to task-resource rows matching
+ * that relationship; multiple values are OR'd. `subscribed` additionally
+ * excludes rows matching the other two relationships.
+ */
+export const NOTIFICATION_FEED_TYPE_FILTERS = ['assigned', 'created', 'subscribed'] as const;
+
+export type NotificationFeedTypeFilter = (typeof NOTIFICATION_FEED_TYPE_FILTERS)[number];
+
 export interface VersionedDecision {
   actionRef: ActionRef;
   decision: DecisionVerb;
@@ -168,6 +178,9 @@ export interface NotificationFeedCard {
   read: boolean;
   readVersion: number;
   resourceId?: string | null;
+  /** Display identifier of the task resource (e.g. `T-501`), resolved live
+   *  for the second row line. Absent for non-task resources and unresolved ids. */
+  resourceIdentifier?: string | null;
   resourceType?: string | null;
   safeNavigation?: TypedNavigationTarget | null;
   snoozedUntil?: string | null;
@@ -180,7 +193,7 @@ export interface NotificationFeedSummary {
   snoozedPendingCount: number;
   /** Unique active, unsnoozed, currently-readable cards — not a sum of the others. */
   unreadBadgeCount: number;
-  /** Unread mentions (category=mention) — badge part of the Priority tab. */
+  /** Unread mention rows — powers the Mentions tab count chip. */
   unreadMentionCount: number;
   /** Unread rows in the Other tab: updates plus decided actions — everything
    *  badge-worthy that Priority does not already claim. */
@@ -302,12 +315,7 @@ export type WorkQuerySubGroupBy =
 export const WORK_QUERY_BOARD_KEY_SEP = '\u001F';
 
 export type WorkQueryBoardAxis =
-  | 'agent'
-  | 'assignee'
-  | 'priority'
-  | 'project'
-  | 'status'
-  | 'workflowCategory';
+  'agent' | 'assignee' | 'priority' | 'project' | 'status' | 'workflowCategory';
 
 export const WORK_QUERY_BOARD_AXIS_PREFIX: Record<WorkQueryBoardAxis, string> = {
   agent: 'ag',

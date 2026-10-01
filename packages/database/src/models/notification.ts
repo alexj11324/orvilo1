@@ -2,6 +2,7 @@ import type {
   ActionSourceKind,
   NotificationBulkAction,
   NotificationFeedBucket,
+  NotificationFeedTypeFilter,
   NotificationPresentationFilter,
 } from '@orvilo/types';
 import {
@@ -31,7 +32,11 @@ import type { NewNotification, NewNotificationDelivery } from '../schemas/notifi
 import { notificationDeliveries, notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
 import { tasks } from '../schemas/task';
-import { notificationBulkSnapshots, notificationEventReceipts } from '../schemas/workAttention';
+import {
+  notificationBulkSnapshots,
+  notificationEventReceipts,
+  taskSubscriptions,
+} from '../schemas/workAttention';
 import type { OrviloDatabase, Transaction } from '../type';
 import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
@@ -112,17 +117,26 @@ export class NotificationModel {
     )!;
   };
 
+  /**
+   * A row is a mention when either its semantic type or its sidebar bucket
+   * says so: live projections stamp `type='mention'` under
+   * `category='workspace'`, while older rows and fixtures use
+   * `category='mention'`. Both count.
+   */
+  private isMentionRow = (): SQL =>
+    or(eq(notifications.category, 'mention'), eq(notifications.type, 'mention'))!;
+
+  private unreadClause = (): SQL =>
+    or(
+      eq(notifications.isRead, false),
+      and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
+    )!;
+
   private presentationWhere = (filter?: NotificationPresentationFilter): SQL[] => {
     const now = new Date();
     switch (filter) {
       case 'unread': {
-        return [
-          eq(notifications.isArchived, false),
-          or(
-            eq(notifications.isRead, false),
-            and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
-          )!,
-        ];
+        return [eq(notifications.isArchived, false), this.unreadClause()];
       }
       case 'archived': {
         return [eq(notifications.isArchived, true)];
@@ -136,7 +150,7 @@ export class NotificationModel {
         ];
       }
       case 'mentions': {
-        return [eq(notifications.isArchived, false), eq(notifications.category, 'mention')];
+        return [eq(notifications.isArchived, false), this.isMentionRow()];
       }
       default: {
         return [eq(notifications.isArchived, false)];
@@ -163,6 +177,9 @@ export class NotificationModel {
     filter?: Exclude<NotificationPresentationFilter, 'all'>;
     includeSnoozed?: boolean;
     kind?: NotificationFeedBucket;
+    mentioned?: boolean;
+    types?: NotificationFeedTypeFilter[];
+    unreadOnly?: boolean;
   }): SQL[] => {
     const conditions: SQL[] = [...this.scope(), this.resourceReadable()];
     if (!opts.includeSnoozed && opts.filter !== 'snoozed' && opts.filter !== 'archived') {
@@ -171,7 +188,7 @@ export class NotificationModel {
     if (opts.kind === 'priority' || opts.kind === 'other') {
       const priorityClause = or(
         and(eq(notifications.kind, 'action'), isNull(notifications.resolvedAt)),
-        and(eq(notifications.category, 'mention'), eq(notifications.isRead, false)),
+        and(this.isMentionRow(), eq(notifications.isRead, false)),
       )!;
       conditions.push(eq(notifications.isArchived, false));
       conditions.push(opts.kind === 'priority' ? priorityClause : not(priorityClause));
@@ -187,7 +204,36 @@ export class NotificationModel {
       conditions.push(...this.presentationWhere(opts.filter));
       if (opts.kind) conditions.push(eq(notifications.kind, opts.kind));
     }
+    // Plane-style view params (docs/research/plane/inbox/BEHAVIORS.md):
+    // `mentioned` is the tab — `false` keeps mentions out of the All view.
+    if (opts.mentioned === true) conditions.push(this.isMentionRow());
+    else if (opts.mentioned === false) conditions.push(not(this.isMentionRow()));
+    // `unreadOnly` layers on top of an archived/snoozed base, matching
+    // Plane's `read=false` + `archived`/`snoozed` combination.
+    if (opts.unreadOnly) conditions.push(this.unreadClause());
+    if (opts.types?.length) conditions.push(this.typeFilterWhere(opts.types));
     return conditions;
+  };
+
+  /**
+   * Plane funnel semantics: task-resource rows matching the chosen
+   * relationship, OR'd across checked values. `subscribed` means
+   * "subscriber minus direct stake" — rows the user also created or is
+   * assigned to stay out (Plane applies the exclusion unconditionally,
+   * not only when those filters are checked).
+   */
+  private typeFilterWhere = (types: NotificationFeedTypeFilter[]): SQL => {
+    const assignedClause = sql`(${notifications.resourceType} = 'task' and exists (select 1 from ${tasks} where ${tasks.id} = ${notifications.resourceId} and ${tasks.assigneeUserId} = ${this.userId}))`;
+    const createdClause = sql`(${notifications.resourceType} = 'task' and exists (select 1 from ${tasks} where ${tasks.id} = ${notifications.resourceId} and ${tasks.createdByUserId} = ${this.userId}))`;
+    const clauses = types.map((type): SQL => {
+      if (type === 'assigned') return assignedClause;
+      if (type === 'created') return createdClause;
+      return and(
+        sql`(${notifications.resourceType} = 'task' and exists (select 1 from ${taskSubscriptions} where ${taskSubscriptions.taskId} = ${notifications.resourceId} and ${taskSubscriptions.userId} = ${this.userId} and ${taskSubscriptions.unsubscribedAt} is null))`,
+        not(or(assignedClause, createdClause)!),
+      )!;
+    });
+    return or(...clauses)!;
   };
 
   async list(
@@ -344,10 +390,10 @@ export class NotificationModel {
           sql`case when ${notifications.isArchived} = false and (${notifications.isRead} = false or (${notifications.kind} = 'action' and ${notifications.resolvedAt} is null)) and (${notifications.snoozedUntil} is null or ${notifications.snoozedUntil} <= ${now}) then 1 end`,
         ),
         unreadMentionCount: count(
-          sql`case when ${notifications.category} = 'mention' and ${notifications.isRead} = false and ${notifications.isArchived} = false then 1 end`,
+          sql`case when (${notifications.category} = 'mention' or ${notifications.type} = 'mention') and ${notifications.isRead} = false and ${notifications.isArchived} = false and (${notifications.snoozedUntil} is null or ${notifications.snoozedUntil} <= ${now}) then 1 end`,
         ),
         unreadOtherCount: count(
-          sql`case when ${notifications.isRead} = false and ${notifications.isArchived} = false and not (${notifications.kind} = 'action' and ${notifications.resolvedAt} is null) and not (${notifications.category} = 'mention' and ${notifications.isRead} = false) then 1 end`,
+          sql`case when ${notifications.isRead} = false and ${notifications.isArchived} = false and not (${notifications.kind} = 'action' and ${notifications.resolvedAt} is null) and not ((${notifications.category} = 'mention' or ${notifications.type} = 'mention') and ${notifications.isRead} = false) then 1 end`,
         ),
         unreadUpdateCount: count(
           sql`case when ${notifications.kind} = 'update' and ${notifications.isRead} = false and ${notifications.isArchived} = false then 1 end`,
@@ -374,6 +420,9 @@ export class NotificationModel {
       kind?: NotificationFeedBucket;
       limit?: number;
       lookahead?: boolean;
+      mentioned?: boolean;
+      types?: NotificationFeedTypeFilter[];
+      unreadOnly?: boolean;
     } = {},
   ) {
     const limit = Math.min(Math.max(opts.limit ?? 20, 1), 50);
@@ -382,6 +431,9 @@ export class NotificationModel {
         filter: opts.filter === 'all' ? undefined : opts.filter,
         includeSnoozed: opts.includeSnoozed,
         kind: opts.kind,
+        mentioned: opts.mentioned,
+        types: opts.types,
+        unreadOnly: opts.unreadOnly,
       }),
     ];
 
@@ -467,6 +519,23 @@ export class NotificationModel {
     return this.db
       .update(notifications)
       .set({ archivedAt: new Date(), isArchived: true, updatedAt: new Date() })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.id, id),
+          eq(notifications.activityVersion, expectedVersion),
+        ),
+      );
+  }
+
+  /**
+   * Inverse of `archiveObserved` — Plane's unarchive toggle, same
+   * version guard so a newer event is never silently reverted.
+   */
+  async unarchiveObserved(id: string, expectedVersion: number) {
+    return this.db
+      .update(notifications)
+      .set({ archivedAt: null, isArchived: false, updatedAt: new Date() })
       .where(
         and(
           ...this.scope(),
@@ -656,6 +725,23 @@ export class NotificationModel {
     return this.db
       .update(notifications)
       .set({ snoozedUntil: until, updatedAt: new Date() })
+      .where(
+        and(
+          ...this.scope(),
+          eq(notifications.id, id),
+          eq(notifications.activityVersion, expectedVersion),
+        ),
+      );
+  }
+
+  /**
+   * Plane's un-snooze: the card rejoins the visible feed immediately.
+   * Same version guard as `snooze`.
+   */
+  async unsnoozeObserved(id: string, expectedVersion: number) {
+    return this.db
+      .update(notifications)
+      .set({ snoozedUntil: null, updatedAt: new Date() })
       .where(
         and(
           ...this.scope(),

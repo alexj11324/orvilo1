@@ -1,80 +1,64 @@
 import {
   classifyWorkAttentionActionUrl,
-  notificationBulkFingerprint,
-  type NotificationFeedBucket,
   type NotificationFeedCard,
-  type NotificationPresentationFilter,
+  type NotificationFeedTypeFilter,
 } from '@orvilo/types';
 
-export const INBOX_FILTER_CHIPS = ['all', 'unread', 'mentions', 'snoozed', 'archived'] as const;
+/**
+ * Plane's inbox tabs: `all` is every non-mention row (the server excludes
+ * mentions from it), `mentions` is mention rows only — the tab is a request
+ * parameter (`mentioned`), not a presentation filter.
+ */
+export const INBOX_TABS = ['all', 'mentions'] as const;
 
-export type InboxFilterChip = (typeof INBOX_FILTER_CHIPS)[number];
+export type InboxTab = (typeof INBOX_TABS)[number];
 
-export const feedFilterForChip = (
-  chip: InboxFilterChip,
-): NotificationPresentationFilter | undefined => (chip === 'all' ? undefined : chip);
-
-/** URL params write free-form strings — only known chips survive. */
-export const resolveInboxFilterChip = (value: string | null): InboxFilterChip =>
-  (INBOX_FILTER_CHIPS as readonly string[]).includes(value ?? '')
-    ? (value as InboxFilterChip)
-    : 'all';
+export const resolveInboxTab = (value: string | null): InboxTab =>
+  value === 'mentions' ? 'mentions' : 'all';
 
 /**
- * Linear-style tabs: Priority is anything still needing you (undecided action
- * or unread mention), Other is the rest. The stored row kind stays
- * `action`/`update` — the tab is a priority classification, not a kind alias.
+ * Plane's ⋮ display options. One base view at a time — `archived` and
+ * `snoozed` share the `filter` param so checking one unchecks the other;
+ * `unread` can additionally stack on top of either via the `unread` flag.
  */
-export type InboxTab = 'other' | 'priority';
+export const INBOX_DISPLAY_OPTIONS = ['unread', 'archived', 'snoozed'] as const;
 
-export const resolveInboxTab = (value: string | null): InboxTab => {
-  // Legacy URLs used `action`/`activity`; they map onto the same buckets.
-  if (value === 'other' || value === 'activity' || value === 'update') return 'other';
-  return 'priority';
-};
+export type InboxDisplayOption = (typeof INBOX_DISPLAY_OPTIONS)[number];
 
-export const SNOOZE_HOURS = 4;
+export const resolveInboxDisplayOption = (value: string | null): InboxDisplayOption | undefined =>
+  (INBOX_DISPLAY_OPTIONS as readonly string[]).includes(value ?? '')
+    ? (value as InboxDisplayOption)
+    : undefined;
 
-export const snoozeUntilIso = (now = new Date(), hours = SNOOZE_HOURS): string =>
-  new Date(now.getTime() + hours * 60 * 60 * 1000).toISOString();
+/**
+ * Plane's funnel filters — OR'd task-resource relationships on the server.
+ */
+export const INBOX_TYPE_FILTERS = ['assigned', 'created', 'subscribed'] as const;
 
-/** Linear-style snooze presets — each resolves to an absolute local time so
- *  the choice is unambiguous about the user's own timezone. */
-export type InboxSnoozePreset = 'hour' | 'laterToday' | 'tomorrow' | 'nextWeek';
+export type InboxTypeFilter = NotificationFeedTypeFilter;
 
-export const INBOX_SNOOZE_PRESETS: InboxSnoozePreset[] = [
-  'hour',
-  'laterToday',
-  'tomorrow',
-  'nextWeek',
-];
+/** URL params write free-form strings — only known filters survive. */
+export const resolveInboxTypeFilters = (value: string | null): InboxTypeFilter[] =>
+  (value ?? '')
+    .split(',')
+    .filter((item): item is InboxTypeFilter =>
+      (INBOX_TYPE_FILTERS as readonly string[]).includes(item),
+    );
 
-export const snoozeUntilForPreset = (preset: InboxSnoozePreset, now = new Date()): string => {
-  const target = new Date(now);
-  if (preset === 'hour') return snoozeUntilIso(now, 1);
-  if (preset === 'laterToday') {
-    // Evening of the same day (18:00 local); if that already passed, next 18:00.
-    target.setHours(18, 0, 0, 0);
-    if (target.getTime() <= now.getTime()) target.setDate(target.getDate() + 1);
-    return target.toISOString();
-  }
-  if (preset === 'tomorrow') {
-    target.setDate(target.getDate() + 1);
-    target.setHours(9, 0, 0, 0);
-    return target.toISOString();
-  }
-  // Next Monday 09:00 local.
-  const daysUntilMonday = (8 - target.getDay()) % 7 || 7;
-  target.setDate(target.getDate() + daysUntilMonday);
-  target.setHours(9, 0, 0, 0);
-  return target.toISOString();
-};
+export const serializeInboxTypeFilters = (filters: readonly InboxTypeFilter[]): string =>
+  INBOX_TYPE_FILTERS.filter((filter) => filters.includes(filter)).join(',');
 
-export const inboxBulkFingerprint = (
-  action: 'archive' | 'mark_read',
-  chip: InboxFilterChip,
-  bucket?: NotificationFeedBucket,
-): string => notificationBulkFingerprint(action, chip, bucket);
+/**
+ * Plane's snooze presets — a fixed number of days, plus a Custom date+time
+ * picked through the modal. Each resolves to an absolute moment against the
+ * user's local time.
+ */
+export const INBOX_SNOOZE_DAYS = [1, 3, 5, 7, 14] as const;
+
+export type InboxSnoozeDays = (typeof INBOX_SNOOZE_DAYS)[number];
+
+export const snoozeUntilForDays = (days: InboxSnoozeDays, now = new Date()): string =>
+  new Date(now.getTime() + days * 86_400_000).toISOString();
 
 /** Same-app relative paths navigate in-app; allowlisted https opens a new tab. */
 export const inboxUrlOpenMode = (url: string): 'external' | 'internal' | 'reject' =>

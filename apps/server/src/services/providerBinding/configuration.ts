@@ -68,5 +68,12 @@ export async function checkProviderBinding(
   if (result.value.bindingId !== row.id || result.value.bindingRevision !== row.revision) {
     throw new TRPCError({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
   }
+  // A verified binding is enabled for runtime execution; a check that the
+  // provider rejected (`unavailable`) must not arm it. Enabling is not a
+  // config edit — `revision` stays put, and the next save lands
+  // `enabled: false` again until re-verified.
+  if (result.value.status === 'ready' && !(await model.setEnabled(row.id, true))) {
+    throw new TRPCError({ code: 'CONFLICT', message: 'BINDING_UNAVAILABLE_OR_CHANGED' });
+  }
   return result.value;
 }

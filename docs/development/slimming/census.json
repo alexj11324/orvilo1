@@ -1,9 +1,9 @@
 {
-  "generatedAt": "2026-10-01T20:11:11.266Z",
+  "generatedAt": "2026-10-01T20:30:26.804Z",
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "2b01fca4c92730f45b29108c0667de403d536ca8",
+  "baseSha": "7c730ecdfcb670325b51cd7304262eed7e493fe9",
   "counts": {
-    "sourceFiles": 13216,
+    "sourceFiles": 13217,
     "workspacePackages": 111,
     "nextRoutes": 43,
     "spaRouteEntries": 132,
@@ -14,7 +14,7 @@
     "localeFiles": 886,
     "defaultNamespaceFiles": 53,
     "docFiles": 665,
-    "testFiles": 3543,
+    "testFiles": 3544,
     "storeFiles": 895,
     "unresolvedImports": 402
   },
@@ -2978,6 +2978,7 @@
       "apps/server/src/services/onboardingProgress/index.ts",
       "apps/server/src/services/providerBinding/controlPlane.acceptance.test.ts",
       "apps/server/src/services/providerBinding/controlPlane.ts",
+      "apps/server/src/services/providerBinding/execution.acceptance.test.ts",
       "apps/server/src/services/providerBinding/execution.compat.test.ts",
       "apps/server/src/services/providerBinding/execution.test.ts",
       "apps/server/src/services/providerBinding/execution.ts",
@@ -23999,8 +24000,8 @@
         "packages/utils/vitest.config.mts"
       ],
       "inbound": {
-        "total": 3951,
-        "explained": 763,
+        "total": 3952,
+        "explained": 764,
         "unexplained": [
           {
             "importer": "apps/server/src/routers/lambda/index.ts",
@@ -58995,9 +58996,9 @@
       }
     }
   ],
-  "uncoveredFiles": 5109,
+  "uncoveredFiles": 5110,
   "uncoveredByArea": {
-    "apps/server/src": 890,
+    "apps/server/src": 891,
     "src/routes/(main)": 294,
     "src/features/Settings": 269,
     "apps/cli/src": 190,

@@ -194,6 +194,31 @@ describe('checkConnection real provider round-trip', () => {
     expect(modelsReq?.headers['host']).toBe(`127.0.0.1:${port}`);
   });
 
+  it('a ready check enables the binding for execution without bumping revision', async () => {
+    const cred = await createCredential(OWNER, 'kv-env', { PROVIDER_KEY: 'env-secret-7' });
+    const row = await insertBinding(OWNER, bindConfig(endpoint(), `credential:${cred.id}`));
+    requiredHeaders = { authorization: 'Bearer env-secret-7' };
+
+    const result = await caller(OWNER).checkConnection({ id: row.id, revision: row.revision });
+    expect(result.status).toBe('ready');
+
+    const stored = await new ProviderBindingModel(db, OWNER).find(row.id);
+    expect(stored?.config.enabled).toBe(true);
+    expect(stored?.revision).toBe(row.revision);
+  });
+
+  it('an unavailable check leaves the binding disabled', async () => {
+    const cred = await createCredential(OWNER, 'kv-env', { PROVIDER_KEY: 'env-secret-7' });
+    const row = await insertBinding(OWNER, bindConfig(endpoint(), `credential:${cred.id}`));
+    requiredHeaders = { authorization: 'Bearer other-key' };
+
+    const result = await caller(OWNER).checkConnection({ id: row.id, revision: row.revision });
+    expect(result.status).toBe('unavailable');
+
+    const stored = await new ProviderBindingModel(db, OWNER).find(row.id);
+    expect(stored?.config.enabled).toBe(false);
+  });
+
   it('kv-env credential maps the secret to Authorization Bearer + x-api-key', async () => {
     const cred = await createCredential(OWNER, 'kv-env', {
       OPENAI_API_KEY: 'env-secret-7',

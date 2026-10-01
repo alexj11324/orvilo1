@@ -135,7 +135,6 @@ export interface InboxListRowProps {
 
 const stopRowClick = (event: MouseEvent) => {
   event.stopPropagation();
-  event.preventDefault();
 };
 
 const SNOOZE_LABEL: Record<InboxSnoozeDays, string> = {

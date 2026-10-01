@@ -670,6 +670,12 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
 
 export const hashQuery = (query: WorkQuery) => JSON.stringify(query);
 
+/** One extra row tells a full page from the last page. The extra row is not returned. */
+const limitPage = <T>(rows: T[], limit: number): { hasMore: boolean; rows: T[] } => {
+  if (rows.length <= limit) return { hasMore: false, rows };
+  return { hasMore: true, rows: rows.slice(0, limit) };
+};
+
 const BOARD_GROUP_BY = new Set<WorkQueryGroupBy>([
   'assignee',
   'attention',
@@ -1488,7 +1494,7 @@ export class WorkQueryModel {
           }
         }
 
-        const rows = activityOrdered
+        const fetched = activityOrdered
           ? await this.db
               .select({
                 ...getTableColumns(tasks),
@@ -1497,18 +1503,19 @@ export class WorkQueryModel {
               .from(tasks)
               .where(and(...groupConditions))
               .orderBy(...orderBy)
-              .limit(params.limit)
+              .limit(params.limit + 1)
           : await this.db
               .select()
               .from(tasks)
               .where(and(...groupConditions))
               .orderBy(...orderBy)
-              .limit(params.limit);
+              .limit(params.limit + 1);
+        const page = limitPage(fetched, params.limit);
 
         return {
-          hasMore: params.afterId ? rows.length === params.limit : rows.length < groupTotal,
+          hasMore: page.hasMore,
           key,
-          tasks: rows,
+          tasks: page.rows,
           total: groupTotal,
         };
       }),
@@ -1658,16 +1665,17 @@ export class WorkQueryModel {
             }
             groupConditions.push(keysetAfter(sort, projectSortColumn, projectValueOf(cursor)));
           }
-          const rows = await this.db
+          const fetched = await this.db
             .select()
             .from(projects)
             .where(and(...groupConditions))
             .orderBy(...orderBy)
-            .limit(limit);
+            .limit(limit + 1);
+          const page = limitPage(fetched, limit);
           return {
-            hasMore: params.afterId ? rows.length === limit : rows.length < groupTotal,
+            hasMore: page.hasMore,
             key,
-            projects: rows,
+            projects: page.rows,
             total: groupTotal,
           };
         }),

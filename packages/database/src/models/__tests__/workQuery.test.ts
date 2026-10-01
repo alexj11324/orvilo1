@@ -637,6 +637,34 @@ describe('WorkQueryModel', () => {
     expect(second.groups?.map((group) => group.key)).toEqual(['todo']);
   });
 
+  it('does not offer another page when the last group page is full', async () => {
+    await createTask(userId, { name: 'Todo A', workflowCategory: 'todo' });
+    await createTask(userId, { name: 'Todo B', workflowCategory: 'todo' });
+    const query = {
+      entityType: 'task' as const,
+      groupBy: 'workflowCategory' as const,
+      layout: 'list' as const,
+      schemaVersion: 1 as const,
+    };
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const first = await model.queryTasks({ limit: 1, query });
+    const column = first.groups?.find((group) => group.key === 'todo');
+    expect(column?.total).toBe(2);
+    expect(column?.tasks).toHaveLength(1);
+    expect(column?.hasMore).toBe(true);
+
+    const second = await model.queryTasks({
+      afterId: column!.tasks[0]!.id,
+      groupKey: 'todo',
+      limit: 1,
+      query,
+      queryHash: first.queryHash,
+    });
+    const page = second.groups?.find((group) => group.key === 'todo');
+    expect(page?.tasks).toHaveLength(1);
+    expect(page?.hasMore).toBe(false);
+  });
+
   it('keeps empty priority columns and pages assignee swimlanes as cells', async () => {
     const mine = await createTask(userId, {
       assigneeUserId: userId,

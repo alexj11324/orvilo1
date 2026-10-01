@@ -1,6 +1,6 @@
 {
   "baseBranch": "release/caid-remediation-integration",
-  "baseSha": "ac52bbbf8c594371aa7db7f083e04bf04e1a3e20",
+  "baseSha": "9e9ab6320cb24f39042121d4165e90e1c7f4401c",
   "capabilities": [
     {
       "id": "workspace",
@@ -38286,7 +38286,7 @@
       "reason": "context-engine / prompts / model-bank are live shared primitives (model catalog, prompt registry, context assembly) consumed by ACP/task/collaboration — resolved by ORV-110 census.",
       "issue": "ORV-102",
       "globs": ["packages/{context-engine,prompts,model-bank}/**"],
-      "fileCount": 582,
+      "fileCount": 589,
       "files": [
         "packages/context-engine/src/__tests__/metadata.types.test.ts",
         "packages/context-engine/src/__tests__/pipeline.test.ts",
@@ -38482,12 +38482,15 @@
         "packages/model-bank/src/aiModels/baichuan.ts",
         "packages/model-bank/src/aiModels/bailianCodingPlan.ts",
         "packages/model-bank/src/aiModels/bedrock.ts",
+        "packages/model-bank/src/aiModels/bfl.ts",
         "packages/model-bank/src/aiModels/cerebras.ts",
         "packages/model-bank/src/aiModels/chatGPT.ts",
         "packages/model-bank/src/aiModels/cloudflare.ts",
         "packages/model-bank/src/aiModels/cohere.ts",
         "packages/model-bank/src/aiModels/cometapi.ts",
+        "packages/model-bank/src/aiModels/comfyui.ts",
         "packages/model-bank/src/aiModels/deepseek.ts",
+        "packages/model-bank/src/aiModels/fal.ts",
         "packages/model-bank/src/aiModels/fireworksai.ts",
         "packages/model-bank/src/aiModels/giteeai.ts",
         "packages/model-bank/src/aiModels/github.ts",
@@ -38525,6 +38528,7 @@
         "packages/model-bank/src/aiModels/ppio.ts",
         "packages/model-bank/src/aiModels/qiniu.ts",
         "packages/model-bank/src/aiModels/qwen.ts",
+        "packages/model-bank/src/aiModels/replicate.ts",
         "packages/model-bank/src/aiModels/sambanova.ts",
         "packages/model-bank/src/aiModels/search1api.ts",
         "packages/model-bank/src/aiModels/sensenova.ts",
@@ -38570,6 +38574,7 @@
         "packages/model-bank/src/modelProviders/baichuan.ts",
         "packages/model-bank/src/modelProviders/bailianCodingPlan.ts",
         "packages/model-bank/src/modelProviders/bedrock.ts",
+        "packages/model-bank/src/modelProviders/bfl.ts",
         "packages/model-bank/src/modelProviders/cerebras.ts",
         "packages/model-bank/src/modelProviders/chatGPT.ts",
         "packages/model-bank/src/modelProviders/cloudflare.ts",
@@ -38577,6 +38582,7 @@
         "packages/model-bank/src/modelProviders/cometapi.ts",
         "packages/model-bank/src/modelProviders/comfyui.ts",
         "packages/model-bank/src/modelProviders/deepseek.ts",
+        "packages/model-bank/src/modelProviders/fal.ts",
         "packages/model-bank/src/modelProviders/fireworksai.ts",
         "packages/model-bank/src/modelProviders/giteeai.ts",
         "packages/model-bank/src/modelProviders/github.ts",
@@ -38616,6 +38622,7 @@
         "packages/model-bank/src/modelProviders/ppio.ts",
         "packages/model-bank/src/modelProviders/qiniu.ts",
         "packages/model-bank/src/modelProviders/qwen.ts",
+        "packages/model-bank/src/modelProviders/replicate.ts",
         "packages/model-bank/src/modelProviders/sambanova.ts",
         "packages/model-bank/src/modelProviders/search1api.ts",
         "packages/model-bank/src/modelProviders/sensenova.ts",
@@ -40638,7 +40645,7 @@
     }
   ],
   "counts": {
-    "sourceFiles": 13134,
+    "sourceFiles": 13141,
     "workspacePackages": 110,
     "nextRoutes": 43,
     "spaRouteEntries": 132,
@@ -43024,7 +43031,7 @@
       "docs/wiki/HOME.zh-CN.md"
     ]
   },
-  "generatedAt": "2026-10-01T03:20:45.415Z",
+  "generatedAt": "2026-10-01T04:08:42.465Z",
   "packageConsumers": {
     "@orvilo/web-crawler": [
       "apps/server/src/services/search/index.test.ts",

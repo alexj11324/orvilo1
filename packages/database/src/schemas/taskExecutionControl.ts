@@ -70,12 +70,15 @@ export const taskExecutionHandoffs = pgTable(
   ],
 );
 
-/** Isolated acceptance DDL, not an installed production migration. */
-export const TASK_EXECUTION_CONTROL_CANDIDATE_SQL = `
-ALTER TABLE task_topics ADD COLUMN IF NOT EXISTS execution_control jsonb;
-ALTER TABLE task_topics ADD COLUMN IF NOT EXISTS execution_control_revision integer NOT NULL DEFAULT 0;
-CREATE TABLE IF NOT EXISTS task_execution_handoffs (
+/** Isolated acceptance DDL, not an installed production migration. PGlite's
+ * extended protocol rejects multi-statement queries, so each statement ships
+ * separately. */
+export const TASK_EXECUTION_CONTROL_CANDIDATE_SQL: readonly string[] = [
+  `ALTER TABLE task_topics ADD COLUMN IF NOT EXISTS execution_control jsonb`,
+  `ALTER TABLE task_topics ADD COLUMN IF NOT EXISTS execution_control_revision integer NOT NULL DEFAULT 0`,
+  `CREATE TABLE IF NOT EXISTS task_execution_handoffs (
  id text PRIMARY KEY, task_id text NOT NULL REFERENCES tasks(id) ON DELETE CASCADE, task_topic_id uuid NOT NULL REFERENCES task_topics(id) ON DELETE CASCADE, workspace_id text NOT NULL,
  user_id text NOT NULL, phase text NOT NULL CHECK(phase IN ('prepared','quiescing','quiescent','transferred','resumed')), revision integer NOT NULL DEFAULT 0, record jsonb NOT NULL
-);
-CREATE UNIQUE INDEX IF NOT EXISTS task_execution_handoffs_active ON task_execution_handoffs(task_id) WHERE phase <> 'resumed';`;
+)`,
+  `CREATE UNIQUE INDEX IF NOT EXISTS task_execution_handoffs_active ON task_execution_handoffs(task_id) WHERE phase <> 'resumed'`,
+];

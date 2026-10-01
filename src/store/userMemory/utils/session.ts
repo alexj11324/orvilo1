@@ -5,15 +5,26 @@ import { useUserStore } from '@/store/user';
 let session = 0;
 const listeners = new Set<() => void>();
 
-// A generation also fences Alice → Bob → Alice without reusing Alice's old cache.
-useUserStore.subscribe((state, previous) => {
-  if (state.user?.id === previous.user?.id) return;
-  session += 1;
-  listeners.forEach((listener) => listener());
-});
+let subscribed = false;
+const ensureSubscribed = () => {
+  // Deferred: tests mock `useUserStore` with a bare function whose `.subscribe`
+  // is absent, so touching it at module scope would crash the import chain.
+  if (subscribed || typeof useUserStore.subscribe !== 'function') return;
+  subscribed = true;
+  // A generation also fences Alice → Bob → Alice without reusing Alice's old cache.
+  useUserStore.subscribe((state, previous) => {
+    if (state.user?.id === previous.user?.id) return;
+    session += 1;
+    listeners.forEach((listener) => listener());
+  });
+};
 
-export const getMemorySession = () => session;
+export const getMemorySession = () => {
+  ensureSubscribed();
+  return session;
+};
 const subscribe = (listener: () => void) => {
+  ensureSubscribed();
   listeners.add(listener);
   return () => {
     listeners.delete(listener);

@@ -3,7 +3,22 @@ import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
-import { agents, goalNodes, goals, taskDispatches, tasks, users, workspaces } from '../../schemas';
+import {
+  agents,
+  goalNodes,
+  goals,
+  mcpEventBindings,
+  mcpEventInbox,
+  mcpEventTriggerRuns,
+  mcpEventTriggers,
+  projects,
+  taskDispatches,
+  tasks,
+  userConnectors,
+  users,
+  workspaceMembers,
+  workspaces,
+} from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import {
   TaskDispatchIdempotencyConflictError,
@@ -18,6 +33,12 @@ const otherUserId = 'task-dispatch-other-user';
 const otherWorkspaceId = 'task-dispatch-other-workspace';
 
 const cleanup = async () => {
+  await db.delete(mcpEventTriggerRuns);
+  await db.delete(mcpEventTriggers);
+  await db.delete(mcpEventInbox);
+  await db.delete(mcpEventBindings);
+  await db.delete(userConnectors).where(eq(userConnectors.workspaceId, workspaceId));
+  await db.delete(workspaceMembers).where(eq(workspaceMembers.workspaceId, workspaceId));
   await db.delete(goalNodes);
   await db.delete(goals).where(eq(goals.workspaceId, workspaceId));
   await db.delete(goals).where(eq(goals.workspaceId, otherWorkspaceId));
@@ -28,6 +49,7 @@ const cleanup = async () => {
   await db.delete(tasks).where(eq(tasks.createdByUserId, otherUserId));
   await db.delete(agents).where(eq(agents.userId, userId));
   await db.delete(agents).where(eq(agents.userId, otherUserId));
+  await db.delete(projects).where(eq(projects.workspaceId, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, otherWorkspaceId));
   await db.delete(users).where(eq(users.id, userId));
@@ -104,7 +126,147 @@ const attachTaskToGoal = async (taskId: string, status: 'paused' | 'running', se
   return goal;
 };
 
+/** Seed the durable chain `verifyEventEvidence` re-checks at claim time. */
+const seedEventEvidence = async (taskId: string) => {
+  const tenantId = workspaceId;
+  const connectorId = '00000000-0000-4000-8000-000000000101';
+  const subscriptionId = 'event-sub-1';
+  const triggerId = 'event-trigger-1';
+  const inboxId = 'event-inbox-1';
+  const runId = 'event-run-1';
+  const eventId = 'occurrence-a';
+  const idempotencyKey = `event:${triggerId}:${eventId}`;
+  const revision = 3;
+
+  await db.insert(userConnectors).values({
+    id: connectorId,
+    identifier: 'mcp-source',
+    name: 'Event source',
+    sourceType: 'custom',
+    status: 'connected',
+    userId,
+    workspaceId,
+  });
+  await db.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
+  await db.insert(mcpEventBindings).values({
+    binding: {
+      callbackToken: 'event-callback',
+      callbackUrl: 'https://receiver.example/callback',
+      connectorId,
+      cursor: null,
+      eventArguments: {},
+      eventName: 'message',
+      expiresAt: null,
+      id: subscriptionId,
+      payloadSchema: {},
+      remoteSubscriptionId: null,
+      revision: 0,
+      schemaId: 'schema-1',
+      signingKeys: [],
+      state: 'active',
+      tenantId,
+      truncated: false,
+    },
+    callbackToken: 'event-callback',
+    connectorId,
+    id: subscriptionId,
+    state: 'active',
+    tenantId,
+  });
+  await db.insert(mcpEventInbox).values({
+    availableAt: Date.now(),
+    connectorId,
+    delivery: {
+      bindingRevision: 0,
+      connectorId,
+      event: { data: {}, eventId, name: 'message', timestamp: '2026-09-30T00:00:00Z' },
+      payloadHash: 'payload-hash',
+      rawBodyBase64: '',
+      receivedAt: Date.now(),
+      schemaId: 'schema-1',
+      subscriptionId,
+      tenantId,
+    },
+    eventId,
+    id: inboxId,
+    leaseToken: 'lease-1',
+    leaseUntil: Date.now() + 60_000,
+    payloadHash: 'payload-hash',
+    receivedAt: Date.now(),
+    schemaId: 'schema-1',
+    status: 'processing',
+    subscriptionId,
+    tenantId,
+  });
+  await db.insert(mcpEventTriggers).values({
+    enabled: true,
+    filters: [],
+    id: triggerId,
+    revision,
+    sourceId: connectorId,
+    subscriptionId,
+    taskId,
+    tenantId,
+    userId,
+    workspaceId,
+  });
+  await db.insert(mcpEventTriggerRuns).values({
+    id: runId,
+    idempotencyKey,
+    inboxId,
+    status: 'pending',
+    tenantId,
+    triggerId,
+    triggerRevision: revision,
+  });
+
+  return {
+    eventId,
+    idempotencyKey,
+    inboxRef: inboxId,
+    sourceId: connectorId,
+    subscriptionId,
+    tenantId,
+    triggerId,
+    triggerRevision: revision,
+    triggerRunId: runId,
+    userId,
+    workspaceId,
+  };
+};
+
 describe('TaskDispatchModel', () => {
+  it('persists event identity and applies project admission on duplicate delivery', async () => {
+    const task = await createTask('EVT-1', 101);
+    const [project] = await db
+      .insert(projects)
+      .values({
+        identifier: 'EVT',
+        name: 'Event project',
+        userId,
+        workspaceId,
+      })
+      .returning();
+    await db.update(tasks).set({ projectId: project.id }).where(eq(tasks.id, task.id));
+    const eventEvidence = await seedEventEvidence(task.id);
+    const model = new TaskDispatchModel(db, workspaceId);
+    const input = {
+      eventEvidence,
+      idempotencyKey: eventEvidence.idempotencyKey,
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'event' as const,
+    };
+    const first = await model.request(input);
+    const replay = await model.request(input);
+    if (first.state === 'busy' || replay.state === 'busy') throw new Error('unexpected busy');
+    expect(first.dispatch.requestedBy).toBe(`event:${userId}`);
+    expect(first.dispatch.phase).toBe('waiting');
+    expect(first.dispatch.waitingReason).toBe('project_auto_dispatch_disabled');
+    expect(replay.dispatch.id).toBe(first.dispatch.id);
+    expect(replay.dispatch.waitingReason).toBe('project_auto_dispatch_disabled');
+  });
+
   it('allows only one active dispatch claim for a task', async () => {
     const task = await createTask('RUN-1', 1);
     const base = {

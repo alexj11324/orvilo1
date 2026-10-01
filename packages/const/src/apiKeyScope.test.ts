@@ -185,6 +185,28 @@ describe('requiredApiKeyScopeForTrpc', () => {
     });
   });
 
+  it('scopes the memory and provider namespaces with the user-memory domain', () => {
+    expect(requiredApiKeyScopeForTrpc('experienceMemory.list', 'query')).toEqual({
+      scopes: ['user:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('experienceMemory.search', 'query')).toEqual({
+      scopes: ['user:read'],
+    });
+    expect(requiredApiKeyScopeForTrpc('experienceMemory.create', 'mutation')).toEqual({
+      scopes: ['user:write'],
+    });
+    expect(requiredApiKeyScopeForTrpc('experienceMemory.delete', 'mutation')).toEqual({
+      scopes: ['user:write'],
+    });
+    // Bindings carry credential references and trigger outbound provider calls.
+    expect(requiredApiKeyScopeForTrpc('providerBinding.list', 'query')).toEqual({
+      blocked: true,
+    });
+    expect(requiredApiKeyScopeForTrpc('providerBinding.checkConnection', 'mutation')).toEqual({
+      blocked: true,
+    });
+  });
+
   it('categorizes workAttention as personal attention with agent extras', () => {
     expect(requiredApiKeyScopeForTrpc('workAttention.feed', 'query')).toEqual({
       scopes: ['user:read'],

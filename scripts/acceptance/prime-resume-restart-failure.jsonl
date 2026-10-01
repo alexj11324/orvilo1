@@ -1,0 +1,5 @@
+{"imageId":"sha256:d2c7e387be5c372b52c675327d33ca351065e5b9a8fd5f76109da700c69f9c36","launch":{"ok":true,"value":{"supervisorId":"prime-resume-probe","treeId":"e2e48c7bdc9d291e5ff435bc3fa78088037a34061dc864967e1c995aea957823","enforced":true,"filesystem":true,"network":true,"processes":true,"sanitizedEnvironment":true,"credentialsExcluded":true}}}
+{"phase":"saved","sessionId":"01a0f340-4045-75eb-b07b-0af2c4d212ba","sessionFile":"/tmp/.prime/agent/sessions/01a0f340-4045-75eb-b07b-0af2c4d212ba.jsonl","bytes":671,"messageCount":0}
+{"phase":"rpc-switch","restored":true,"sessionId":"01a0f340-4045-75eb-b07b-0af2c4d212ba"}
+{"failed":"RPC exited: Error: Lock file is already being held\n"}
+{"quiescence":{"ok":true,"value":{"supervisorId":"prime-resume-probe","treeId":"e2e48c7bdc9d291e5ff435bc3fa78088037a34061dc864967e1c995aea957823","observedAt":1790787471786,"remainingProcesses":0,"pendingActions":0}}}

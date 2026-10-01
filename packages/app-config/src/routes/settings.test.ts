@@ -100,7 +100,7 @@ describe('SETTINGS_CAPABILITIES', () => {
 
 describe('resolveSettingsCapability', () => {
   it('redirects a withdrawn tab that has a live equivalent', () => {
-    expect(resolveSettingsCapability('provider', BASE_CONTEXT)).toEqual({
+    expect(resolveSettingsCapability('service-model', BASE_CONTEXT)).toEqual({
       redirectTo: 'profile',
       status: 'retired',
     });
@@ -153,10 +153,7 @@ describe('resolveSettingsCapability', () => {
     const openDeployment = context();
 
     expect(resolveSettingsCapability('appearance', openDeployment)).toEqual({ status: 'enabled' });
-    expect(resolveSettingsCapability('provider', openDeployment)).toEqual({
-      redirectTo: 'profile',
-      status: 'retired',
-    });
+    expect(resolveSettingsCapability('provider', openDeployment)).toEqual({ status: 'enabled' });
     expect(resolveSettingsCapability('llm', openDeployment)).toEqual({ status: 'retired' });
     expect(resolveSettingsCapability('plans', context({ enableBusinessFeatures: false }))).toEqual({
       status: 'unavailable',
@@ -171,7 +168,7 @@ describe('resolveSettingsCapability', () => {
     // `isSettingsTabAvailable` is the predicate the renderer calls before
     // mounting anything, so "false" has to mean "do not run this page".
     expect(isSettingsTabAvailable('appearance', openDeployment)).toBe(true);
-    expect(isSettingsTabAvailable('provider', openDeployment)).toBe(false);
+    expect(isSettingsTabAvailable('provider', openDeployment)).toBe(true);
     expect(isSettingsTabAvailable('llm', openDeployment)).toBe(false);
     expect(isSettingsTabAvailable('plans', closedDeployment)).toBe(false);
     expect(isSettingsTabAvailable('nonsense', openDeployment)).toBe(false);

@@ -349,8 +349,11 @@ export type TaskAutomationMode = 'heartbeat' | 'schedule';
  *                 Like `manual`, it never counts against automation quotas.
  * - `orchestrator` — the dependency/project planner started this run. Project
  *                    dispatch policy and execution budgets apply.
+ * - `event` — a persisted external occurrence matched a scoped trigger; requires
+ *             authoritative event admission before the existing runner may start.
  */
-export type TaskRunTrigger = 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
+export type TaskRunTrigger =
+  'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator' | 'event';
 
 /**
  * A clarifying question the intent reader wants answered before an agent

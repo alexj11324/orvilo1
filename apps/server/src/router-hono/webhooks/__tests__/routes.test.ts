@@ -34,6 +34,7 @@ describe('webhooks hono routes', () => {
       '/api/webhooks/casdoor',
       '/api/webhooks/linear/:workspaceId',
       '/api/webhooks/logto',
+      '/api/webhooks/mcp-events/:callbackToken',
       '/api/webhooks/memory-extraction',
       '/api/webhooks/memory-extraction/benchmark-locomo',
       '/api/webhooks/memory-user-memory/persona/update-writing',

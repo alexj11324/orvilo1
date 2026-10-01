@@ -28,6 +28,7 @@ const {
   sweepPlanningTaskDispatchStarts,
   sweepTaskDispatchRecovery,
   sweepTaskOwnershipInvariants,
+  sweepMcpEventInbox,
 } = vi.hoisted(() => ({
   briefCreate: vi.fn<(input: unknown) => Promise<unknown>>(),
   cancelIfRunning: vi.fn<(taskId: string, topicId: string) => Promise<boolean>>(),
@@ -64,6 +65,7 @@ const {
   sweepPlanningTaskDispatchStarts: vi.fn<() => Promise<unknown[]>>(),
   sweepTaskDispatchRecovery: vi.fn<() => Promise<unknown[]>>(),
   sweepTaskOwnershipInvariants: vi.fn<() => Promise<unknown[]>>(),
+  sweepMcpEventInbox: vi.fn<() => Promise<unknown>>(),
 }));
 
 vi.mock('@/database/server', () => ({ getServerDB: vi.fn().mockResolvedValue({}) }));
@@ -94,6 +96,10 @@ vi.mock('@/server/services/taskCancellation', () => ({ sweepTaskCancellations })
 vi.mock('@/server/services/taskDispatchStart', () => ({ sweepPlanningTaskDispatchStarts }));
 vi.mock('@/server/services/taskDispatchRecovery', () => ({ sweepTaskDispatchRecovery }));
 vi.mock('@/server/services/taskOwnership', () => ({ sweepTaskOwnershipInvariants }));
+vi.mock('@/server/services/mcpEvents/runtime', () => ({ sweepMcpEventInbox }));
+vi.mock('@/server/services/mcpEvents/maintenance', () => ({
+  sweepMcpEventSubscriptions: vi.fn().mockResolvedValue([]),
+}));
 vi.mock('@/database/models/brief', () => ({
   BriefModel: vi.fn(function () {
     return { create: briefCreate };
@@ -130,8 +136,25 @@ describe('task watchdog', () => {
     sweepPlanningTaskDispatchStarts.mockResolvedValue([]);
     sweepTaskDispatchRecovery.mockResolvedValue([]);
     sweepTaskOwnershipInvariants.mockResolvedValue([]);
+    sweepMcpEventInbox.mockResolvedValue({ processed: 0 });
     updateStatusIfCurrent.mockResolvedValue({ id: 'task-1' });
     updateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
+  });
+
+  it('retains ordinary watchdog recovery when event maintenance is unavailable', async () => {
+    sweepMcpEventInbox.mockRejectedValueOnce(new Error('migration unavailable'));
+    const log = vi.spyOn(console, 'error').mockImplementation(() => {});
+    try {
+      const response = await watchdog(context());
+      expect(response.body).toMatchObject({
+        eventInbox: { status: 'unavailable' },
+        success: true,
+      });
+      expect(sweepTaskCancellations).toHaveBeenCalledOnce();
+      expect(sweepMcpEventInbox).toHaveBeenCalledOnce();
+    } finally {
+      log.mockRestore();
+    }
   });
 
   it('does not declare failure while the timed-out generation still owns a running topic', async () => {

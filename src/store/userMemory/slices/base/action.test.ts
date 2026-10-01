@@ -8,6 +8,7 @@ import { userMemoryKeys } from '@/libs/swr/keys';
 import { memoryCRUDService } from '@/services/userMemory';
 import { useUserMemoryStore } from '@/store/userMemory';
 import { initialState } from '@/store/userMemory/initialState';
+import { memorySessionKey } from '@/store/userMemory/utils/session';
 import { LayersEnum } from '@/types/userMemory';
 
 vi.mock('@/libs/swr', async (importOriginal) => {
@@ -86,7 +87,7 @@ describe('userMemory base actions', () => {
       });
       expect(mutate).toHaveBeenCalledWith(expect.any(Function));
       expect(mutate).toHaveBeenCalledWith(
-        userMemoryKeys.memoryDetail(LayersEnum.Preference, 'preference-1'),
+        memorySessionKey(userMemoryKeys.memoryDetail(LayersEnum.Preference, 'preference-1')),
       );
     });
   });

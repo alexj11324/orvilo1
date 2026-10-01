@@ -53,6 +53,7 @@ import { deviceRouter } from './device';
 import { documentRouter } from './document';
 import { documentCommentRouter } from './documentComment';
 import { documentLikeRouter } from './documentLike';
+import { experienceMemoryRouter } from './experienceMemory';
 import { expertiseRouter } from './expertise';
 import { exporterRouter } from './exporter';
 import { fileRouter } from './file';
@@ -67,12 +68,14 @@ import { linearImportRouter } from './linearImport';
 import { linearSyncRouter } from './linearSync';
 import { llmGenerationTracingRouter } from './llmGenerationTracing';
 import { marketRouter } from './market';
+import { mcpEventsRouter } from './mcpEvents';
 import { messageRouter } from './message';
 import { metricRouter } from './metric';
 import { notebookRouter } from './notebook';
 import { notificationRouter } from './notification';
 import { pluginRouter } from './plugin';
 import { projectRouter } from './project';
+import { providerBindingRouter } from './providerBinding';
 import { pullRequestRouter } from './pullRequest';
 import { pushTokenRouter } from './pushToken';
 import { ragEvalRouter } from './ragEval';
@@ -105,6 +108,7 @@ import { workAttentionRouter } from './workAttention';
 import { workspaceUserSettingsRouter } from './workspaceUserSettings';
 
 export const lambdaRouter = router({
+  providerBinding: providerBindingRouter,
   acceptance: acceptanceRouter,
   acceptanceComment: acceptanceCommentRouter,
   agent: agentRouter,
@@ -129,6 +133,7 @@ export const lambdaRouter = router({
   collaboration: collaborationRouter,
   config: configRouter,
   connector: connectorRouter,
+  mcpEvents: mcpEventsRouter,
   creds: credsRouter,
   device: deviceRouter,
   document: documentRouter,
@@ -183,6 +188,7 @@ export const lambdaRouter = router({
   usage: usageRouter,
   user: userRouter,
   userMemories: userMemoriesRouter,
+  experienceMemory: experienceMemoryRouter,
   userMemory: userMemoryRouter,
   verify: verifyRouter,
   webBrowsing: webBrowsingRouter,

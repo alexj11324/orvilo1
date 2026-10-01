@@ -12,6 +12,8 @@ import { LayersEnum } from '@/types/userMemory';
 import { setNamespace } from '@/utils/storeDebug';
 
 import { type UserMemoryStore } from '../../store';
+import { invalidateMemoryCaches } from '../../utils/invalidate';
+import { getMemorySession, memorySessionKey, useMemorySession } from '../../utils/session';
 import { isMemoryListRequestCurrent } from '../utils/isMemoryListRequestCurrent';
 import { shouldSurfaceMemoryListError } from '../utils/shouldSurfaceMemoryListError';
 
@@ -24,7 +26,7 @@ export interface PreferenceQueryParams {
   sort?: 'capturedAt' | 'scorePriority';
 }
 
-type PreferenceListRequest = PreferenceQueryParams & { page: number };
+type PreferenceListRequest = PreferenceQueryParams & { page: number; session?: number };
 
 type Setter = StoreSetter<UserMemoryStore>;
 export const createPreferenceSlice = (set: Setter, get: () => UserMemoryStore, _api?: unknown) =>
@@ -41,12 +43,15 @@ export class PreferenceActionImpl {
   }
 
   deletePreference = async (id: string): Promise<void> => {
+    const session = getMemorySession();
     await memoryCRUDService.deletePreference(id);
+    if (session !== getMemorySession()) return;
     // Reset list to refresh
     this.#get().resetPreferencesList({
       q: this.#get().preferencesQuery,
       sort: this.#get().preferencesSort,
     });
+    await invalidateMemoryCaches(session);
   };
 
   loadMorePreferences = (): void => {
@@ -63,6 +68,7 @@ export class PreferenceActionImpl {
   };
 
   internal_acceptPreferencesList = (data: any, request: PreferenceListRequest): void => {
+    if (request.session !== undefined && request.session !== getMemorySession()) return;
     const state = this.#get();
     if (
       !isMemoryListRequestCurrent(
@@ -105,6 +111,7 @@ export class PreferenceActionImpl {
   };
 
   internal_failPreferencesList = (error: unknown, request: PreferenceListRequest): void => {
+    if (request.session !== undefined && request.session !== getMemorySession()) return;
     const state = this.#get();
     if (
       !isMemoryListRequestCurrent(
@@ -155,8 +162,9 @@ export class PreferenceActionImpl {
    */
   useFetchPreferences = (params: PreferenceQueryParams): SWRResponse<any> => {
     const page = params.page ?? 1;
+    const session = useMemorySession();
     const response = useSWR(
-      userMemoryKeys.preferences(params),
+      memorySessionKey(userMemoryKeys.preferences(params), session),
       async () => {
         const result = await userMemoryService.queryMemories({
           layer: LayersEnum.Preference,
@@ -169,19 +177,20 @@ export class PreferenceActionImpl {
         return result;
       },
       {
+        keepPreviousData: false,
         revalidateOnFocus: false,
       },
     );
 
     useEffect(() => {
       if (response.data !== undefined)
-        this.internal_acceptPreferencesList(response.data, { ...params, page });
-    }, [page, params.pageSize, params.q, params.sort, response.data]);
+        this.internal_acceptPreferencesList(response.data, { ...params, page, session });
+    }, [session, page, params.pageSize, params.q, params.sort, response.data]);
 
     useEffect(() => {
       if (response.error !== undefined)
-        this.internal_failPreferencesList(response.error, { ...params, page });
-    }, [page, params.pageSize, params.q, params.sort, response.error]);
+        this.internal_failPreferencesList(response.error, { ...params, page, session });
+    }, [session, page, params.pageSize, params.q, params.sort, response.error]);
 
     return response;
   };

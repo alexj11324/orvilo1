@@ -181,6 +181,18 @@ const runParams = {
 };
 
 describe('TaskRunnerService run intent (SA05-A)', () => {
+  it('blocks unadmitted events before task lookup, dispatch or runtime effects', async () => {
+    const { execAgent, prepare } = setupHappyPath(baseTask(), []);
+    const resolve = vi.mocked(TaskModel.prototype.resolve);
+    await expect(newRunner().runTask({ ...runParams, trigger: 'event' })).rejects.toMatchObject({
+      code: 'PRECONDITION_FAILED',
+      message: 'Event dispatch admission evidence is required',
+    });
+    expect(resolve).not.toHaveBeenCalled();
+    expect(prepare).not.toHaveBeenCalled();
+    expect(execAgent).not.toHaveBeenCalled();
+  });
+
   it('repair re-executes the frozen source contract, not the live-edited task', async () => {
     const task = baseTask();
     setupHappyPath(task, [priorTopic()]);

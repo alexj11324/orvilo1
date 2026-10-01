@@ -105,11 +105,11 @@ describe('useSettingsCapabilityContext', () => {
     const { result } = renderContext();
 
     // Retired, with a live equivalent: the renderer redirects instead.
-    expect(resolveSettingsCapability(SettingsTabs.Provider, result.current)).toMatchObject({
+    expect(resolveSettingsCapability(SettingsTabs.ServiceModel, result.current)).toMatchObject({
       redirectTo: SettingsTabs.Profile,
       status: 'retired',
     });
-    expect(isSettingsTabAvailable(SettingsTabs.Provider, result.current)).toBe(false);
+    expect(isSettingsTabAvailable(SettingsTabs.ServiceModel, result.current)).toBe(false);
 
     // Live, but the deployment has no business pages: not-found, not a blank
     // page and not somebody else's tab.

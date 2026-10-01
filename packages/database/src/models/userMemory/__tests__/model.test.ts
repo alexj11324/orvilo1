@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '../../../core/getTestDB';
 import {
+  experienceMemories,
   userMemories,
   userMemoriesActivities,
   userMemoriesContexts,
@@ -1993,6 +1994,28 @@ describe('UserMemoryModel', () => {
 
       expect(currentUserMemories).toHaveLength(0);
       expect(otherUserMemories).toHaveLength(1);
+    });
+
+    it('should tombstone the caller prime experiences during a full purge', async () => {
+      await serverDB.insert(experienceMemories).values([
+        { content: 'mine', userId },
+        { content: 'foreign', userId: otherUserId },
+      ]);
+
+      await memoryModel.deleteAll();
+
+      const primeRows = await serverDB.query.experienceMemories.findMany({
+        where: eq(experienceMemories.userId, userId),
+      });
+      const foreignRows = await serverDB.query.experienceMemories.findMany({
+        where: eq(experienceMemories.userId, otherUserId),
+      });
+
+      // The purge erases content through tombstones — it never resurrects or
+      // hard-deletes the audit row, and never touches another owner's rows.
+      expect(primeRows).toHaveLength(1);
+      expect(primeRows[0]).toMatchObject({ content: '', lifecycle: 'deleted', revision: 2 });
+      expect(foreignRows).toMatchObject([{ content: 'foreign', lifecycle: 'active' }]);
     });
   });
 

@@ -138,6 +138,11 @@ export const useCategory = () => {
             key: SettingsTabs.Memory,
             label: t('tab.memory'),
           },
+          offered(SettingsTabs.Provider) && {
+            icon: KeyRound,
+            key: SettingsTabs.Provider,
+            label: t('tab.provider'),
+          },
           offered(SettingsTabs.Proxy) && {
             icon: EthernetPort,
             key: SettingsTabs.Proxy,

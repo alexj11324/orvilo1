@@ -3,6 +3,7 @@ import { Hono } from 'hono';
 import { casdoorWebhook } from './handlers/casdoor';
 import { linearWebhook } from './handlers/linear';
 import { logtoWebhook } from './handlers/logto';
+import { mcpEventsWebhook } from './handlers/mcpEvents';
 import { memoryExtractionWebhook } from './handlers/memoryExtraction';
 import { memoryExtractionBenchmarkLocomo } from './handlers/memoryExtractionBenchmarkLocomo';
 import { memoryUserMemoryChatTopicCancel } from './handlers/memoryUserMemoryChatTopicCancel';
@@ -15,6 +16,7 @@ const app = new Hono().basePath('/api/webhooks');
 app.post('/casdoor', casdoorWebhook);
 app.post('/logto', logtoWebhook);
 app.post('/linear/:workspaceId', linearWebhook);
+app.post('/mcp-events/:callbackToken', mcpEventsWebhook);
 
 // Memory pipeline webhooks — share the configured static-header guard.
 app.post('/memory-extraction', memoryWebhookAuth(), memoryExtractionWebhook);

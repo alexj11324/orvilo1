@@ -93,6 +93,7 @@ export const driveTaskFromVerify = async (
   userId: string,
   operationId: string,
   workspaceId?: string,
+  options?: { beforeCompletion?: (tx: OrviloDatabase) => Promise<boolean> },
 ): Promise<void> => {
   let leaseTimer: ReturnType<typeof setInterval> | undefined;
   let renewal = Promise.resolve();
@@ -396,13 +397,18 @@ export const driveTaskFromVerify = async (
           if (!(await renewTaskDrive())) return;
           const completion = completionReservationId
             ? await new TaskService(db, userId, workspaceId).updateStatus(
-                { id: taskOperation.taskId, status: 'completed' },
+                {
+                  ...(options?.beforeCompletion && { expectedContract }),
+                  id: taskOperation.taskId,
+                  status: 'completed',
+                },
                 undefined,
                 {
                   currentStatus: currentTask.status as TaskStatus,
                   reservationId: completionReservationId,
                 },
                 {
+                  ...(options?.beforeCompletion && { beforeMutation: options.beforeCompletion }),
                   onStatusCommitted: () => {
                     completionReservationActive = false;
                     completionLeaseFailure = undefined;
@@ -437,13 +443,18 @@ export const driveTaskFromVerify = async (
                 reservationId: completionReservationId,
               },
               {
+                ...(options?.beforeCompletion && { beforeMutation: options.beforeCompletion }),
                 onStatusCommitted: () => {
                   completionReservationActive = false;
                   completionLeaseFailure = undefined;
                 },
               },
             )
-          : await taskService.updateStatus(completionInput);
+          : options?.beforeCompletion
+            ? await taskService.updateStatus(completionInput, undefined, undefined, {
+                beforeMutation: options.beforeCompletion,
+              })
+            : await taskService.updateStatus(completionInput);
         if (!completion) {
           await retireSupersededDrive();
           return;

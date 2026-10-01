@@ -15,9 +15,9 @@ const swrState = vi.hoisted(() => ({
   mutate: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/toast', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  ...(await import('~base-ui-stubs')).baseUiStubs,
+  toast: { error: vi.fn() },
 }));
 
 vi.mock('@/services/resourcePermission', () => ({
@@ -104,7 +104,7 @@ describe('useResourceCollaborators', () => {
   });
 
   it('rolls a failed removal back and surfaces it as a toast instead of throwing', async () => {
-    const { toast } = await import('@lobehub/ui/base-ui');
+    const { toast } = await import('@/components/toast');
     swrState.data = [{ userId: 'member-1' }];
     serviceMocks.removeCollaborator.mockRejectedValue(new Error('FORBIDDEN'));
     const { result } = renderHook(() => useResourceCollaborators('knowledgeBase', 'kb-1'));

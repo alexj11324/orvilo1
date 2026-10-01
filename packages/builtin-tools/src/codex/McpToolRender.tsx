@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { LINEAR_TOOL_NAMES } from '@orvilo/shared-tool-ui/inspectors';
 import { GitHubRender, LinearRender } from '@orvilo/shared-tool-ui/renders';
 import type { BuiltinRenderProps } from '@orvilo/types';
@@ -9,6 +7,8 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import type { ComponentType } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/ui/code-block';
 
 import type { CodexMcpToolArgs, CodexMcpToolState } from './mcpToolUtils';
 import {
@@ -94,56 +94,50 @@ const McpToolRender = memo<BuiltinRenderProps<CodexMcpToolArgs, CodexMcpToolStat
     if (!input && !output && !error) return null;
 
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         {input && (
           <div>
-            <Text className={styles.sectionLabel}>
+            <div className={styles.sectionLabel}>
               {t('builtins.codex.mcpTool.input', { defaultValue: 'Input' })}
-            </Text>
-            <Highlighter
+            </div>
+            <CodeBlock
               wrap
+              code={input.text}
               language={input.language}
-              showLanguage={input.language !== 'text'}
               style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
-              variant={'outlined'}
-            >
-              {input.text}
-            </Highlighter>
+              variant="ghost"
+            />
           </div>
         )}
         {output && (
           <div>
-            <Text className={styles.sectionLabel}>
+            <div className={styles.sectionLabel}>
               {t('builtins.codex.mcpTool.result', { defaultValue: 'Result' })}
-            </Text>
-            <Highlighter
+            </div>
+            <CodeBlock
               wrap
+              code={output.text}
               language={output.language}
-              showLanguage={output.language !== 'text'}
               style={{ maxHeight: 360, overflow: 'auto', paddingInline: 8 }}
-              variant={'filled'}
-            >
-              {output.text}
-            </Highlighter>
+              variant="ghost"
+            />
           </div>
         )}
         {error && (
           <div>
-            <Text className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
+            <div className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
               {t('builtins.codex.mcpTool.error', { defaultValue: 'Error' })}
-            </Text>
-            <Highlighter
+            </div>
+            <CodeBlock
               wrap
+              code={error}
               language={'text'}
-              showLanguage={false}
               style={{ maxHeight: 220, overflow: 'auto', paddingInline: 8 }}
-              variant={'filled'}
-            >
-              {error}
-            </Highlighter>
+              variant="ghost"
+            />
           </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

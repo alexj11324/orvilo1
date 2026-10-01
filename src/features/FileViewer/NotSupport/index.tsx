@@ -1,10 +1,9 @@
-import { Center, Flexbox, FluentEmoji } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { type ComponentType, type CSSProperties } from 'react';
 import { useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { MORE_FILE_PREVIEW_REQUEST_URL } from '@/const/url';
 import { downloadFile } from '@/utils/client/downloadFile';
 
@@ -31,11 +30,11 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
   const [loading, setLoading] = useState(false);
 
   return (
-    <Flexbox className={styles.page} id="not-support-renderer" style={style}>
-      <Center height={'100%'}>
-        <Flexbox align={'center'} gap={12}>
-          <FluentEmoji emoji={'👀'} size={64} />
-          <Flexbox style={{ textAlign: 'center' }}>
+    <div className={cx('flex flex-col', styles.page)} id="not-support-renderer" style={style}>
+      <div className="flex flex-col items-center justify-center h-[100%]">
+        <div className="flex flex-col items-center gap-3">
+          <span style={{ fontSize: 64, lineHeight: 1 }}>{'👀'}</span>
+          <div className="flex flex-col" style={{ textAlign: 'center' }}>
             <Trans
               i18nKey="preview.unsupportedFileAndContact"
               ns={'file'}
@@ -50,7 +49,7 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
                 />,
               ]}
             />
-          </Flexbox>
+          </div>
           {url && (
             <Button
               loading={loading}
@@ -63,9 +62,9 @@ const NotSupport: ComponentType<NotSupportProps> = ({ fileName, url, style }) =>
               {t('preview.downloadFile')}
             </Button>
           )}
-        </Flexbox>
-      </Center>
-    </Flexbox>
+        </div>
+      </div>
+    </div>
   );
 };
 

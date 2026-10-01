@@ -4,7 +4,8 @@ import { produce } from 'immer';
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { INBOX_SESSION_ID } from '@/const/session';
 import type { GlobalStore } from '@/store/global';
-import type { WorkingSidebarTab } from '@/store/global/initialState';
+import type { ModelDetailPanelExpandedKey, WorkingSidebarTab } from '@/store/global/initialState';
+import { MODEL_DETAIL_PANEL_EXPANDABLE_KEYS } from '@/store/global/initialState';
 import { readOverridableField } from '@/store/global/selectors/systemStatus';
 import type { StoreSetter } from '@/store/types';
 import { getStableNavigate } from '@/utils/stableNavigate';
@@ -18,10 +19,11 @@ export const globalWorkspaceSlice = (set: Setter, get: () => GlobalStore, _api?:
 
 export class GlobalWorkspacePaneActionImpl {
   readonly #get: () => GlobalStore;
+  readonly #set: Setter;
 
   constructor(set: Setter, get: () => GlobalStore, _api?: unknown) {
     void _api;
-    void set;
+    this.#set = set;
     this.#get = get;
   }
 
@@ -81,10 +83,22 @@ export class GlobalWorkspacePaneActionImpl {
     this.#get().updateSystemStatus({ expandSessionGroupKeys: nextExpandSessionGroup });
   };
 
+  setLeftPanelDrawerMode = (enabled: boolean): void => {
+    if (this.#get().leftPanelDrawerMode === enabled) return;
+    this.#set({ leftPanelDrawerMode: enabled, leftPanelDrawerOpen: false });
+  };
+
   toggleLeftPanel = (newValue?: boolean): void => {
-    if (!this.#get().status.showLeftPanel) {
-      this.#get().updateSystemStatus({ showLeftPanel: true }, n('toggleLeftPanel', newValue));
+    if (this.#get().leftPanelDrawerMode) {
+      this.#set({
+        leftPanelDrawerOpen:
+          typeof newValue === 'boolean' ? newValue : !this.#get().leftPanelDrawerOpen,
+      });
+      return;
     }
+    const showLeftPanel =
+      typeof newValue === 'boolean' ? newValue : !this.#get().status.showLeftPanel;
+    this.#get().updateSystemStatus({ showLeftPanel }, n('toggleLeftPanel', newValue));
   };
 
   toggleAgentBuilderPanel = (newValue?: boolean): void => {
@@ -224,6 +238,17 @@ export class GlobalWorkspacePaneActionImpl {
       typeof newValue === 'boolean' ? !newValue : !this.#get().status.noWideScreen;
 
     this.#get().updateSystemStatus({ noWideScreen }, n('toggleWideScreen', newValue));
+  };
+
+  updateModelDetailPanelExpandedKeys = (keys: ModelDetailPanelExpandedKey[]): void => {
+    // persisted as the complement (collapsed keys) so newly shipped sections
+    // default to expanded — see MODEL_DETAIL_PANEL_EXPANDABLE_KEYS
+    const collapsedKeys = MODEL_DETAIL_PANEL_EXPANDABLE_KEYS.filter((key) => !keys.includes(key));
+
+    this.#get().updateSystemStatus(
+      { modelDetailPanelCollapsedKeys: collapsedKeys },
+      n('updateModelDetailPanelExpandedKeys', keys),
+    );
   };
 }
 

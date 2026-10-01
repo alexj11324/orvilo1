@@ -1,5 +1,3 @@
-import { Flexbox, stopPropagation, Tooltip } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { CUSTOM_FOLDER_FILE_TYPE } from '@orvilo/const';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
@@ -8,6 +6,8 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import FileIcon from '@/components/FileIcon';
+import { Button } from '@/components/ui/button';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
 import { formatSize } from '@/utils/format';
@@ -81,12 +81,8 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
 
     return (
       <>
-        <Flexbox
-          align={'center'}
-          gap={12}
-          justify={'center'}
-          paddingBlock={24}
-          paddingInline={12}
+        <div
+          className="flex flex-col items-center gap-3 justify-center py-6 px-3"
           style={{ minHeight: 180 }}
         >
           {isFolder ? (
@@ -108,13 +104,13 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
               {formatSize(size)}
             </div>
           )}
-        </Flexbox>
+        </div>
         {/* Floating chunk badge or action button - only for files, not folders */}
         {!isFolder &&
           (!isNull(chunkingStatus) && chunkingStatus ? (
             <div
               className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
-              onClick={stopPropagation}
+              onClick={(event) => event.stopPropagation()}
             >
               <ChunksBadge
                 chunkCount={chunkCount}
@@ -128,7 +124,7 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
             </div>
           ) : (
             isSupportedForChunking && (
-              <Tooltip title={t('FileManager.actions.chunkingTooltip')}>
+              <SimpleTooltip title={t('FileManager.actions.chunkingTooltip')}>
                 <div
                   className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
                   style={{ cursor: 'pointer' }}
@@ -139,14 +135,11 @@ const DefaultFileItem = memo<DefaultFileItemProps>(
                     }
                   }}
                 >
-                  <Button
-                    icon={FileBoxIcon}
-                    loading={isCreatingFileParseTask}
-                    size={'small'}
-                    type={'text'}
-                  />
+                  <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                    <FileBoxIcon data-icon="inline-start" />
+                  </Button>
                 </div>
-              </Tooltip>
+              </SimpleTooltip>
             )
           ))}
       </>

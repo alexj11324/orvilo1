@@ -1,13 +1,13 @@
 'use client';
 
-import { Block, Icon } from '@lobehub/ui';
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { TodoPanelHeader } from '@orvilo/shared-tool-ui/components';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { CircleArrowRight } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Checkbox } from '@/components/ui/checkbox';
 
 import type { TodoItem, TodoList as TodoListType, TodoStatus } from '../../../types';
 import {
@@ -65,7 +65,7 @@ const ReadOnlyTodoItem = memo<ReadOnlyTodoItemProps>(({ text, status }) => {
   if (isProcessing) {
     return (
       <div className={cx(styles.itemRow, styles.processingRow)}>
-        <Icon icon={CircleArrowRight} size={17} style={{ color: cssVar.colorInfo }} />
+        <CircleArrowRight size={17} style={{ color: cssVar.colorInfo }} />
         <span className={styles.textProcessing}>{text}</span>
       </div>
     );
@@ -73,21 +73,19 @@ const ReadOnlyTodoItem = memo<ReadOnlyTodoItemProps>(({ text, status }) => {
 
   // Todo and completed states use Checkbox
   return (
-    <Checkbox
-      backgroundColor={cssVar.colorSuccess}
-      checked={isCompleted}
-      shape={'circle'}
-      style={{ borderWidth: 1.5, cursor: 'default' }}
-      classNames={{
-        text: cx(styles.textTodo, isCompleted && styles.textCompleted),
-        wrapper: styles.itemRow,
-      }}
-      textProps={{
-        type: isCompleted ? 'secondary' : undefined,
-      }}
-    >
-      {text}
-    </Checkbox>
+    <label className={cx('flex flex-row items-center gap-2', styles.itemRow)}>
+      <Checkbox
+        checked={isCompleted}
+        className="rounded-full"
+        style={{ borderWidth: 1.5, cursor: 'default', borderColor: cssVar.colorSuccess }}
+      />
+      <span
+        className={cx(styles.textTodo, isCompleted && styles.textCompleted)}
+        style={{ color: isCompleted ? 'var(--muted-foreground)' : undefined }}
+      >
+        {text}
+      </span>
+    </label>
   );
 });
 
@@ -111,12 +109,19 @@ const TodoListUI = memo<TodoListUIProps>(({ items }) => {
 
   return (
     // Outer container with background - matches AddTodoIntervention
-    <Block variant={'outlined'} width="100%">
+    <div
+      style={{
+        background: cssVar.colorBgContainer,
+        border: `1px solid ${cssVar.colorBorderSecondary}`,
+        borderRadius: cssVar.borderRadius,
+        width: '100%',
+      }}
+    >
       <TodoPanelHeader label={t(TODO_SUMMARY_LABEL_KEYS[summary.state])} summary={summary} />
       {items.map((item, index) => (
         <ReadOnlyTodoItem key={index} status={item.status} text={item.text} />
       ))}
-    </Block>
+    </div>
   );
 });
 

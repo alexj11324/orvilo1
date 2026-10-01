@@ -1,18 +1,24 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Accordion, Text } from '@lobehub/ui/base-ui';
+import { ChevronDown } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { Link } from 'react-router';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
-import NavItem from '@/features/NavPanel/components/NavItem';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import {
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarMenu,
+} from '@/components/ui/sidebar';
+import NavItem from '@/features/NavPanel/components/SidebarNavItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { DEFAULT_WORKSPACE_SETTINGS_TAB, WorkspaceSettingsTabs } from '@/types/workspaceSettings';
 import { isModifierClick } from '@/utils/navigation';
 
-import { useWorkspaceSettingCategory, WorkspaceSettingsGroupKey } from '../hooks/useCategory';
+import { useWorkspaceSettingCategory } from '../hooks/useCategory';
 
 const Body = memo(() => {
   const navigate = useWorkspaceAwareNavigate();
@@ -32,50 +38,41 @@ const Body = memo(() => {
   if (!slug) return null;
 
   return (
-    <Flexbox paddingInline={4}>
-      <Accordion
-        gap={8}
-        indicatorPlacement="inline"
-        styles={{ trigger: { paddingBlock: 4, paddingInline: '8px 4px' } }}
-        defaultValue={[
-          WorkspaceSettingsGroupKey.Account,
-          WorkspaceSettingsGroupKey.General,
-          WorkspaceSettingsGroupKey.Subscription,
-          WorkspaceSettingsGroupKey.Agent,
-          WorkspaceSettingsGroupKey.Admin,
-          WorkspaceSettingsGroupKey.System,
-          WorkspaceSettingsGroupKey.Developer,
-        ]}
-        items={groups.map((group) => ({
-          key: group.key,
-          title: (
-            <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
+    <>
+      {groups.map((group) => (
+        <Collapsible defaultOpen className="group/collapsible" key={group.key}>
+          <SidebarGroup>
+            <SidebarGroupLabel render={<CollapsibleTrigger />}>
               {group.title}
-            </Text>
-          ),
-          children: (
-            <Flexbox gap={1} paddingBlock={1}>
-              {group.items.map((item) => {
-                const url = `/${slug}/settings/${item.key}`;
-                return (
-                  <Link
-                    key={item.key}
-                    to={url}
-                    onClick={(e) => {
-                      if (isModifierClick(e)) return;
-                      e.preventDefault();
-                      navigate(url);
-                    }}
-                  >
-                    <NavItem active={activeTab === item.key} icon={item.icon} title={item.label} />
-                  </Link>
-                );
-              })}
-            </Flexbox>
-          ),
-        }))}
-      />
-    </Flexbox>
+              <ChevronDown className="ml-auto transition-transform group-data-[closed]/collapsible:-rotate-90" />
+            </SidebarGroupLabel>
+            <CollapsibleContent>
+              <SidebarGroupContent>
+                <SidebarMenu className="gap-0.25">
+                  {group.items.map((item) => {
+                    const url = `/${slug}/settings/${item.key}`;
+                    return (
+                      <NavItem
+                        active={activeTab === item.key}
+                        href={url}
+                        icon={item.icon}
+                        key={item.key}
+                        render={<Link to={url} />}
+                        title={item.label}
+                        onClick={(e) => {
+                          if (isModifierClick(e)) return;
+                          navigate(url);
+                        }}
+                      />
+                    );
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </CollapsibleContent>
+          </SidebarGroup>
+        </Collapsible>
+      ))}
+    </>
   );
 });
 

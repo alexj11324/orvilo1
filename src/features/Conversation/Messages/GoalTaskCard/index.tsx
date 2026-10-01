@@ -1,8 +1,7 @@
 'use client';
 
-import { Center, Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRightIcon, TargetIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -67,11 +66,8 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
   };
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.card}
-      gap={10}
+    <div
+      className={cn('flex items-center gap-2.5', styles.card)}
       role={'button'}
       tabIndex={0}
       onClick={openGoal}
@@ -81,7 +77,7 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
         openGoal();
       }}
     >
-      <Center className={styles.icon}>
+      <div className={cn('flex flex-col items-center justify-center', styles.icon)}>
         {isActive ? (
           <RingLoadingIcon
             ringColor={cssVar.colorBorder}
@@ -89,18 +85,16 @@ const GoalCard = memo<{ goal: OperationGoal }>(({ goal }) => {
             style={{ color: cssVar.colorWarning }}
           />
         ) : (
-          <Icon icon={TargetIcon} size={20} />
+          <TargetIcon size={20} />
         )}
-      </Center>
-      <Flexbox flex={1} gap={2} style={{ minWidth: 0 }}>
-        <Text ellipsis className={styles.title}>
-          {title ?? goal.name}
-        </Text>
+      </div>
+      <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0 }}>
+        <div className={cn('truncate', styles.title)}>{title ?? goal.name}</div>
         <GoalStatusLine {...progress} />
-      </Flexbox>
+      </div>
       {isActive && <GoalElapsedTime startedAt={startedAt} />}
       <ChevronRightIcon className={styles.chevron} size={16} />
-    </Flexbox>
+    </div>
   );
 });
 
@@ -110,11 +104,11 @@ const GoalTaskCard = memo<{ goals: OperationGoal[] }>(({ goals }) => {
   if (goals.length === 0) return null;
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {goals.map((goal) => (
         <GoalCard goal={goal} key={goal.goalId} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

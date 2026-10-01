@@ -1,5 +1,4 @@
 import { SiReact } from '@icons-pack/react-simple-icons';
-import { Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { CodeXml, GlobeIcon, ImageIcon, Loader2, OrigamiIcon } from 'lucide-react';
 import { memo } from 'react';
@@ -11,11 +10,13 @@ interface ArtifactProps {
 const SIZE = 28;
 const ArtifactIcon = memo<ArtifactProps>(({ type }) => {
   if (!type)
-    return <Icon spin icon={Loader2} size={SIZE} style={{ color: cssVar.colorTextSecondary }} />;
+    return (
+      <Loader2 className="animate-spin" size={SIZE} style={{ color: cssVar.colorTextSecondary }} />
+    );
 
   switch (type) {
     case 'application/orvilo.artifacts.code': {
-      return <Icon icon={CodeXml} size={SIZE} style={{ color: cssVar.colorTextSecondary }} />;
+      return <CodeXml size={SIZE} style={{ color: cssVar.colorTextSecondary }} />;
     }
 
     case 'application/orvilo.artifacts.react': {
@@ -23,15 +24,13 @@ const ArtifactIcon = memo<ArtifactProps>(({ type }) => {
     }
 
     case 'image/svg+xml': {
-      return <Icon icon={ImageIcon} size={SIZE} style={{ color: cssVar.colorTextSecondary }} />;
+      return <ImageIcon size={SIZE} style={{ color: cssVar.colorTextSecondary }} />;
     }
     case 'text/html': {
-      return <Icon icon={GlobeIcon} size={SIZE} style={{ color: cssVar.colorTextSecondary }} />;
+      return <GlobeIcon size={SIZE} style={{ color: cssVar.colorTextSecondary }} />;
     }
     default: {
-      return (
-        <Icon color={cssVar.purple} icon={OrigamiIcon} size={{ size: SIZE, strokeWidth: 1.2 }} />
-      );
+      return <OrigamiIcon color={cssVar.purple} size={SIZE} strokeWidth={1.2} />;
     }
   }
 });

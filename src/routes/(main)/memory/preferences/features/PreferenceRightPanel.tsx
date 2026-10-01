@@ -1,8 +1,7 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { BotIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -49,41 +48,33 @@ const PreferenceRightPanel = memo(() => {
   const content = preference && (
     <>
       <CateTag cate={preference.type} />
-      <Text
-        as={'h1'}
-        fontSize={20}
-        weight={'bold'}
-        style={{
-          lineHeight: 1.4,
-          marginBottom: 0,
-        }}
-      >
+      <h1 className="text-[20px] font-bold" style={{ lineHeight: 1.4, marginBottom: 0 }}>
         {preference.title || preference.type || t('preference.defaultType')}
-      </Text>
-      <Flexbox horizontal align="center" gap={16} justify="space-between">
+      </h1>
+      <div className="flex items-center gap-4 justify-between">
         <ProgressIcon
           showInfo
           format={(percent) => `${t('filter.sort.scorePriority')}: ${percent}%`}
           percent={(preference.scorePriority ?? 0) * 100}
         />
-      </Flexbox>
-      <Flexbox horizontal align="center" gap={16} justify="space-between">
+      </div>
+      <div className="flex items-center gap-4 justify-between">
         <SourceLink source={preference.source} />
         <Time capturedAt={preference.capturedAt || preference.updatedAt || preference.createdAt} />
-      </Flexbox>
+      </div>
 
       {preference.conclusionDirectives && (
         <HighlightedContent>{preference.conclusionDirectives}</HighlightedContent>
       )}
 
       {preference.suggestions && (
-        <Block gap={8} padding={16} variant={'filled'}>
-          <Flexbox horizontal align={'center'} className={styles.suggestionsTitle} gap={6}>
-            <Icon icon={BotIcon} size={16} />
+        <div className="flex flex-col gap-2 p-4" style={{ background: cssVar.colorFillSecondary }}>
+          <div className={cn('flex items-center gap-1.5', styles.suggestionsTitle)}>
+            <BotIcon size={16} />
             <span>{t('preference.suggestions')}</span>
-          </Flexbox>
+          </div>
           <HighlightedContent>{preference.suggestions}</HighlightedContent>
-        </Block>
+        </div>
       )}
 
       <HashTags hashTags={preference.tags} />

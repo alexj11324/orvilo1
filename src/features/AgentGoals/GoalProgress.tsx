@@ -1,6 +1,5 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -77,34 +76,46 @@ export const GoalProgress = memo<GoalProgressProps>(
     return (
       <div className={styles.metrics}>
         {taskTotal > 0 ? (
-          <Flexbox horizontal align={'center'} className={styles.acceptance} gap={6}>
+          <div className={`flex items-center gap-1.5 ${styles.acceptance}`}>
             <div aria-hidden className={styles.progress}>
               <div className={styles.progressValue} style={{ width: `${progress}%` }} />
             </div>
-            <Text ellipsis color={cssVar.colorTextTertiary} fontSize={12}>
+            <div
+              className="truncate min-w-0 text-[12px]"
+              style={{ color: cssVar.colorTextTertiary }}
+            >
               {t('goalList.taskProgress', { done: taskDone, total: taskTotal })}
-            </Text>
-          </Flexbox>
+            </div>
+          </div>
         ) : (
-          <Text ellipsis color={cssVar.colorTextTertiary} fontSize={12}>
+          <div className="truncate min-w-0 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
             {t('goalList.noTasks')}
-          </Text>
+          </div>
         )}
         {pendingDecisions > 0 ? (
-          <Text className={styles.needsYou} fontSize={12}>
+          <div className={cn('text-[12px]', styles.needsYou)}>
             {t('goalList.needsYou', { count: pendingDecisions })}
-          </Text>
+          </div>
         ) : (
-          <Text className={styles.metric} color={cssVar.colorTextTertiary} fontSize={12}>
+          <div
+            className={cn('text-[12px]', styles.metric)}
+            style={{ color: cssVar.colorTextTertiary }}
+          >
             {t('goalList.findings', { count: findingCount })}
-          </Text>
+          </div>
         )}
-        <Text className={styles.metric} color={cssVar.colorTextTertiary} fontSize={12}>
+        <div
+          className={cn('text-[12px]', styles.metric)}
+          style={{ color: cssVar.colorTextTertiary }}
+        >
           {formatGoalDuration(totalRunDuration)}
-        </Text>
-        <Text className={styles.metric} color={cssVar.colorTextTertiary} fontSize={12}>
+        </div>
+        <div
+          className={cn('text-[12px]', styles.metric)}
+          style={{ color: cssVar.colorTextTertiary }}
+        >
           {formatGoalCost(totalRunCost)}
-        </Text>
+        </div>
       </div>
     );
   },

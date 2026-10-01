@@ -1,6 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
+import { cx } from 'antd-style';
 import { memo, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -39,7 +39,7 @@ const RecentlyViewed = memo<RecentlyViewedProps>(({ onClose }) => {
   }
 
   return (
-    <Flexbox className={styles.container}>
+    <div className={cx(styles.container, 'flex flex-col')}>
       <Section isPinned items={pinnedPages} title={t('navigation.pinned')} onClose={onClose} />
       {pinnedPages.length > 0 && recentPages.length > 0 && <div className={styles.divider} />}
       <Section
@@ -48,7 +48,7 @@ const RecentlyViewed = memo<RecentlyViewedProps>(({ onClose }) => {
         title={t('navigation.recentView')}
         onClose={onClose}
       />
-    </Flexbox>
+    </div>
   );
 });
 

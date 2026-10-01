@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface ListSkeletonProps {
   /**
@@ -19,23 +19,21 @@ interface ListSkeletonProps {
  * the caller, so the list keeps its shape while the fetch is in flight.
  */
 const ListSkeleton = memo<ListSkeletonProps>(({ paddingInline = 12, rows = 4 }) => (
-  <Flexbox gap={2} width={'100%'}>
+  <div className={'flex flex-col'} style={{ gap: 2, width: '100%' }}>
     {Array.from({ length: rows }, (_, index) => (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={16}
+      <div
+        className={'flex gap-4 items-center'}
         key={index}
         style={{ paddingBlock: 12, paddingInline }}
       >
-        <Skeleton.Avatar shape={'square'} size={48} />
-        <Flexbox flex={1} gap={8}>
-          <Skeleton height={14} width={140} />
-          <Skeleton height={12} width={200} />
-        </Flexbox>
-      </Flexbox>
+        <Skeleton className={'size-12 rounded-md'} />
+        <div className={'flex flex-col gap-2 flex-1'}>
+          <Skeleton style={{ height: 14, width: 140 }} />
+          <Skeleton style={{ height: 12, width: 200 }} />
+        </div>
+      </div>
     ))}
-  </Flexbox>
+  </div>
 ));
 
 ListSkeleton.displayName = 'ListSkeleton';

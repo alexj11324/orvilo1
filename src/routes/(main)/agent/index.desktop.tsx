@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { useParams } from 'react-router';
 
@@ -28,14 +27,12 @@ const ChatPage = memo(() => {
       <TopicInPopupGuard popup={popup} />
     ) : (
       <>
-        <Flexbox
-          horizontal
-          height={'100%'}
-          style={{ overflow: 'hidden', position: 'relative' }}
-          width={'100%'}
+        <div
+          className="flex"
+          style={{ height: '100%', width: '100%', overflow: 'hidden', position: 'relative' }}
         >
           <Conversation />
-        </Flexbox>
+        </div>
         <TelemetryNotification mobile={false} />
       </>
     );

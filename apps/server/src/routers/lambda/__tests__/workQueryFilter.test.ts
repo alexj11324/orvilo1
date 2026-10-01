@@ -118,5 +118,19 @@ describe('workAttention.count — query filter schema', () => {
         query: baseQuery({ all: [{ field: 'status', op: 'contains', value: 'x' }] }),
       }),
     ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(mockCountTasks).not.toHaveBeenCalled();
+  });
+
+  it('accepts contains on text and isNull on parentTaskId', async () => {
+    const filter = {
+      all: [
+        { field: 'text', op: 'contains', value: 'login' },
+        { field: 'parentTaskId', op: 'isNull' },
+      ],
+    };
+    await createCaller().count({ query: baseQuery(filter) });
+    expect(mockCountTasks).toHaveBeenCalledWith({
+      query: expect.objectContaining({ filter }),
+    });
   });
 });

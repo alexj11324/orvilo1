@@ -17,7 +17,7 @@ vi.mock('@orvilo/const', async (importOriginal) => ({
   isDesktop: false,
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
+vi.mock('@/components/toast', () => ({
   toast: { error: mocks.toastError, info: mocks.toastInfo, warning: mocks.toastWarning },
 }));
 

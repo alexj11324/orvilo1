@@ -1,5 +1,4 @@
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AddResourceContent } from './AddResourceModal';
@@ -10,34 +9,17 @@ const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui', () => ({
-  Center: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Empty: ({ description }: { description?: ReactNode }) => <div>{description}</div>,
-  Flexbox: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
-  Icon: () => null,
+vi.mock('@/components/Modal', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  createModal: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
-  Button: ({
-    children,
-    disabled,
-    loading,
-    onClick,
-  }: {
-    children?: ReactNode;
-    disabled?: boolean;
-    loading?: boolean;
-    onClick?: () => void;
-  }) => (
-    <button disabled={disabled || loading} onClick={onClick}>
-      {children}
-    </button>
-  ),
-  Skeleton: { Text: () => <div data-testid="picker-skeleton" /> },
-  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  createModal: vi.fn(),
+vi.mock('@/components/toast', () => ({
   toast: { error: mocks.toastError },
+}));
+
+vi.mock('@/components/ui/skeleton', () => ({
+  Skeleton: () => <div data-testid="picker-skeleton" />,
 }));
 
 vi.mock('@/services/project', () => ({
@@ -75,7 +57,7 @@ describe('add project resource picker', () => {
 
     renderPicker();
 
-    expect(screen.getByTestId('picker-skeleton')).toBeInTheDocument();
+    expect(screen.getByRole('status')).toHaveAttribute('aria-busy', 'true');
     expect(screen.queryByText('resources.addModal.empty')).not.toBeInTheDocument();
   });
 

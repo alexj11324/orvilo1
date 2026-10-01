@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 
 import { LinearTaskSyncProvider } from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
@@ -33,16 +32,16 @@ const TaskDetailSections = memo(() => {
     <LinearTaskSyncProvider taskIds={taskId ? [taskId] : []}>
       <div className={styles.root}>
         <div data-task-detail-header className={styles.header}>
-          <Flexbox className={styles.main} gap={12}>
+          <div className={`flex flex-col gap-3 ${styles.main}`}>
             {/* Reference order: the title owns the top line, then the
                 "Sub-issue of" parent bar, then the run/assignee controls. */}
             <TaskDetailTitleInput />
             <TaskParentBar />
-            <Flexbox horizontal align={'center'} gap={8} style={{ maxWidth: '100%' }} wrap={'wrap'}>
+            <div className="flex items-center gap-2 flex-wrap" style={{ maxWidth: '100%' }}>
               <TaskDetailRunPauseAction />
               <TaskDetailAssignee />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
           <div data-task-detail-side className={styles.side}>
             {/* Rail, top to bottom, matching the reference: round quick
                 actions, then the labeled Properties / Project / Related
@@ -56,13 +55,13 @@ const TaskDetailSections = memo(() => {
               the wide layout bounds it to the left track beside the rail —
               matching the reference, where body text never runs under the
               properties column. */}
-          <Flexbox className={styles.body} gap={24}>
+          <div className={`flex flex-col gap-6 ${styles.body}`}>
             <TaskInstruction />
             <TaskAcceptance />
             <TaskSubtasks />
             <TaskArtifacts />
             <TaskActivities />
-          </Flexbox>
+          </div>
         </div>
       </div>
     </LinearTaskSyncProvider>

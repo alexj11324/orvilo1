@@ -1,5 +1,4 @@
 import { type MenuRenderProps } from '@lobehub/editor';
-import { Flexbox } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { type ReactNode } from 'react';
 import { memo, useEffect, useLayoutEffect, useRef, useState } from 'react';
@@ -49,7 +48,8 @@ const MentionDropdown = memo<MenuRenderProps>(
     if (!open || !options.length || !position) return null;
 
     return (
-      <Flexbox
+      <div
+        className="flex flex-col"
         style={{
           background: cssVar.colorBgElevated,
           border: `1px solid ${cssVar.colorBorderSecondary}`,
@@ -79,13 +79,9 @@ const MentionDropdown = memo<MenuRenderProps>(
           const isActive = activeKey === item.key;
 
           return (
-            <Flexbox
-              align="center"
-              direction="horizontal"
-              gap={8}
+            <div
+              className="flex items-center gap-2 py-2 px-3"
               key={String(item.key)}
-              paddingBlock={8}
-              paddingInline={12}
               ref={isActive ? activeItemRef : null}
               style={{
                 background: isActive ? cssVar.colorFillSecondary : undefined,
@@ -97,7 +93,11 @@ const MentionDropdown = memo<MenuRenderProps>(
                 onSelect?.(item);
               }}
             >
-              {item.icon && <Flexbox style={{ flex: 'none' }}>{item?.icon as ReactNode}</Flexbox>}
+              {item.icon && (
+                <div className="flex flex-col" style={{ flex: 'none' }}>
+                  {item?.icon as ReactNode}
+                </div>
+              )}
               <div
                 style={{
                   color: cssVar.colorText,
@@ -109,10 +109,10 @@ const MentionDropdown = memo<MenuRenderProps>(
               >
                 {item.label}
               </div>
-            </Flexbox>
+            </div>
           );
         })}
-      </Flexbox>
+      </div>
     );
   },
 );

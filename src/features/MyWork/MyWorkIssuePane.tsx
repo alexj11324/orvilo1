@@ -1,13 +1,11 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ArrowUpRightIcon, XIcon } from 'lucide-react';
-import { lazy, memo, Suspense } from 'react';
+import { createElement, lazy, memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const LazyIssueContent = lazy(() =>
   import('@/features/AgentTasks').then((module) => ({ default: module.IssueContent })),
@@ -54,25 +52,37 @@ const MyWorkIssuePane = memo<MyWorkIssuePaneProps>(({ identifier, onClose, onOpe
   return (
     <>
       <div className={styles.paneHeader}>
-        <Text fontSize={13} weight={500}>
-          {identifier}
-        </Text>
-        <Flexbox horizontal flex={1} gap={4} justify="flex-end">
-          <ActionIcon
-            icon={ArrowUpRightIcon}
-            size={'small'}
+        <span className="text-sm font-medium">{identifier}</span>
+        <div className="flex flex-row" style={{ justifyContent: 'flex-end', gap: 4, flex: 1 }}>
+          <Button
+            aria-label={t('myWork.openFullPage')}
+            size="icon"
             title={t('myWork.openFullPage')}
+            variant="ghost"
             onClick={onOpen}
-          />
-          <ActionIcon
-            icon={XIcon}
-            size={'small'}
+          >
+            {createElement(ArrowUpRightIcon, { className: 'size-4 shrink-0' })}
+          </Button>
+          <Button
+            aria-label={t('myWork.closeDetails')}
+            size="icon"
             title={t('myWork.closeDetails')}
+            variant="ghost"
             onClick={onClose}
-          />
-        </Flexbox>
+          >
+            {createElement(XIcon, { className: 'size-4 shrink-0' })}
+          </Button>
+        </div>
       </div>
-      <Suspense fallback={<SkeletonList padding={8} rows={4} />}>
+      <Suspense
+        fallback={
+          <div aria-busy className="flex flex-col gap-2 p-3" role="status">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton className="h-10 w-full" key={index} />
+            ))}
+          </div>
+        }
+      >
         <LazyIssueContent taskId={identifier} />
       </Suspense>
     </>

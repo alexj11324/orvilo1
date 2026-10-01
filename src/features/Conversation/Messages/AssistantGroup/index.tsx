@@ -1,13 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Tag } from '@lobehub/ui/base-ui';
 import type { AssistantContentBlock, EmojiReaction, UISignalCallbacksBlock } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import type { MouseEventHandler, ReactNode } from 'react';
 import { memo, Suspense, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { MESSAGE_ACTION_BAR_PORTAL_ATTRIBUTES } from '@/const/messageActionPortal';
 import AgentGroupAvatar from '@/features/AgentGroupAvatar';
 import { ChatItem } from '@/features/Conversation/ChatItem';
@@ -289,7 +288,7 @@ const GroupMessage = memo<GroupMessageProps>(
         id={id}
         placement={'left'}
         time={createdAt}
-        titleAddon={isSupervisor ? <Tag>{t('supervisor.label')}</Tag> : undefined}
+        titleAddon={isSupervisor ? <Badge>{t('supervisor.label')}</Badge> : undefined}
         actionAddon={
           reactions.length > 0 || (commentCount > 0 && commentTopicId) ? (
             <>
@@ -323,9 +322,9 @@ const GroupMessage = memo<GroupMessageProps>(
             {/* Model + token usage rides the action row instead of claiming a
                 band of its own between the answer and the round's artifacts. */}
             {isDevMode && model && (
-              <Flexbox horizontal align={'center'} paddingInline={8}>
+              <div className="flex items-center px-2">
                 <Usage model={model} performance={performance} provider={provider!} usage={usage} />
-              </Flexbox>
+              </div>
             )}
           </>
         }
@@ -337,11 +336,11 @@ const GroupMessage = memo<GroupMessageProps>(
           // mount the wrapper when one exists: a work anchor can be present
           // while `MessageWorks` itself resolves to null.
           editedFiles.length > 0 || operationGoals.length > 0 ? (
-            <Flexbox gap={8}>
+            <div className="flex flex-col gap-2">
               {editedFiles.length > 0 && <EditedFilesCard entries={editedFiles} />}
               {operationGoals.length > 0 && <GoalTaskCard goals={operationGoals} />}
               {workRootOperationId && <MessageWorks rootOperationId={workRootOperationId} />}
-            </Flexbox>
+            </div>
           ) : workRootOperationId ? (
             <MessageWorks rootOperationId={workRootOperationId} />
           ) : undefined
@@ -368,7 +367,7 @@ const GroupMessage = memo<GroupMessageProps>(
           reply → callbacks → summary — reads as three disconnected
           sections ().
         */}
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           {children && children.length > 0 && (
             <Group
               enableProcessFold
@@ -398,7 +397,7 @@ const GroupMessage = memo<GroupMessageProps>(
               messageIndex={index}
             />
           )}
-        </Flexbox>
+        </div>
 
         {aggregatedFileList.length > 0 && (
           <div style={{ marginTop: 8 }}>

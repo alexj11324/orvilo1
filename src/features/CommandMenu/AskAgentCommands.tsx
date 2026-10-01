@@ -1,4 +1,3 @@
-import { preventDefault } from '@lobehub/ui';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
@@ -65,7 +64,7 @@ const AskAgentCommands = memo(() => {
       {showOrviloAI && (
         <Command.Item
           value="@orvilo-ai"
-          onMouseDown={preventDefault}
+          onMouseDown={(e) => e.preventDefault()}
           onSelect={() => handleAgentSelect(inboxAgentId, 'Orvilo AI', DEFAULT_INBOX_AVATAR)}
         >
           <Avatar emojiScaleWithBackground avatar={DEFAULT_INBOX_AVATAR} shape="square" size={18} />
@@ -80,7 +79,7 @@ const AskAgentCommands = memo(() => {
         <Command.Item
           key={agent.id}
           value={`@${agentDisplayName(agent, 'agent')}-${agent.id}`}
-          onMouseDown={preventDefault}
+          onMouseDown={(e) => e.preventDefault()}
           onSelect={() =>
             handleAgentSelect(
               agent.id,

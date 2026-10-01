@@ -1,14 +1,18 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
-import { Button, confirmModal, type ModalInstance, Text, toast } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { ArrowLeftIcon, Clock3Icon } from 'lucide-react';
 import { memo, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { confirmModal } from '@/components/Modal';
 import SurfaceSkeleton from '@/components/Skeleton/Surface';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { DOCUMENT_HISTORY_QUERY_LIST_LIMIT } from '@/const/documentHistory';
 import NavHeader from '@/features/NavHeader';
 import ToggleRightPanelButton from '@/features/RightPanel/ToggleRightPanelButton';
@@ -215,27 +219,26 @@ const HistoryPanel = memo(() => {
   if (!documentId) return null;
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <NavHeader
         showTogglePanelButton={false}
         left={
-          <Text
-            ellipsis={{ tooltipWhenOverflow: true }}
+          <div
+            className="truncate min-w-0 text-muted-foreground"
             style={{ fontSize: 13, fontWeight: 500, marginLeft: 8 }}
-            type={'secondary'}
           >
             {t('pageEditor.history.title', { ns: 'file' })}
-          </Text>
+          </div>
         }
         right={
           <>
             <Button
-              className={styles.headerButton}
-              icon={ArrowLeftIcon}
-              size={'small'}
-              type={'text'}
+              className={cn(styles.headerButton)}
+              size="sm"
+              variant="ghost"
               onClick={() => setRightPanelMode('copilot')}
             >
+              <ArrowLeftIcon data-icon="inline-start" />
               {t('pageEditor.history.backToCopilot', { ns: 'file' })}
             </Button>
             <ToggleRightPanelButton
@@ -248,18 +251,25 @@ const HistoryPanel = memo(() => {
       />
 
       {isLoading && !data ? (
-        <Flexbox align={'center'} className={styles.empty} justify={'center'}>
+        <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
           <SurfaceSkeleton header={false} variant={'list'} />
-        </Flexbox>
+        </div>
       ) : items.length === 0 ? (
-        <Flexbox align={'center'} className={styles.empty} justify={'center'}>
-          <Empty description={t('pageEditor.history.empty', { ns: 'file' })} icon={Clock3Icon} />
-        </Flexbox>
+        <div className={cn('flex flex-col items-center justify-center', styles.empty)}>
+          <Empty>
+            <EmptyHeader>
+              <EmptyMedia variant="icon">
+                <Clock3Icon />
+              </EmptyMedia>
+              <EmptyDescription>{t('pageEditor.history.empty', { ns: 'file' })}</EmptyDescription>
+            </EmptyHeader>
+          </Empty>
+        </div>
       ) : (
         <HistoryItemsProvider items={items} restoringHistoryId={restoringHistoryId}>
-          <Flexbox className={styles.list} gap={0}>
+          <div className={cn('flex flex-col gap-0', styles.list)}>
             {groups.map((group) => (
-              <Flexbox gap={0} key={group.key}>
+              <div className="flex flex-col gap-0" key={group.key}>
                 <div className={styles.groupHeader}>
                   <span className={styles.groupTitle}>{group.label}</span>
                   <span className={styles.groupCount}>
@@ -278,12 +288,12 @@ const HistoryPanel = memo(() => {
                     onRestore={handleRestore}
                   />
                 ))}
-              </Flexbox>
+              </div>
             ))}
-          </Flexbox>
+          </div>
         </HistoryItemsProvider>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

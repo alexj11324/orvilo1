@@ -1,13 +1,14 @@
-import { Flexbox, Icon, Markdown, PatchDiff } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
 
 import { InlineHtmlPreview, isHtmlFile } from '@/components/HtmlPreview';
+import { CodeBlock } from '@/components/ui/code-block';
+import { Skeleton } from '@/components/ui/skeleton';
 import { LocalFile, LocalFolder } from '@/features/LocalFile';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -21,25 +22,21 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-const buildNewFilePatch = (filePath: string, content: string) => {
-  const hasTrailingNewline = content.endsWith('\n');
-  const lines = content.split('\n');
-  const bodyLines = hasTrailingNewline ? lines.slice(0, -1) : lines;
-  const lineCount = bodyLines.length;
-  const header = `--- /dev/null\n+++ b/${filePath}\n@@ -0,0 +1,${lineCount} @@\n`;
-  const body = bodyLines.map((line) => `+${line}`).join('\n');
-  return hasTrailingNewline
-    ? `${header}${body}\n`
-    : `${header}${body}\n\\ No newline at end of file\n`;
-};
-
 type WriteFileArgs = WriteLocalFileParams & {
   file_path?: string;
   filePath?: string;
 };
 
 const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
-  if (!args) return <Skeleton.Text rows={4} />;
+  if (!args)
+    return (
+      <div className="flex flex-col gap-2">
+        <Skeleton />
+        <Skeleton />
+        <Skeleton />
+        <Skeleton style={{ width: '60%' }} />
+      </div>
+    );
 
   const filePath = args.path || args.filePath || args.file_path || '';
   const { base, dir } = path.parse(filePath);
@@ -47,32 +44,37 @@ const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
   const isHtml = isHtmlFile({ path: filePath });
   const isMarkdown = ext === 'md' || ext === 'mdx';
 
-  // Code-type files render as a "new file" unified diff so the visual is
-  // consistent with EditLocalFile's PatchDiff. Markdown keeps its rendered
+  // Code-type files render as a "new file" diff so the visual is
+  // consistent with EditLocalFile. Markdown keeps its rendered
   // preview because a rendered doc reads better than an all-green diff.
   if (!isMarkdown && !isHtml && args.content) {
+    const code = args.content.replace(/\n$/, '');
     return (
-      <PatchDiff
-        fileName={base}
+      <CodeBlock
+        showLineNumbers
+        code={code}
+        diff={{ added: `1-${code.split('\n').length}` }}
         language={ext || undefined}
-        patch={buildNewFilePatch(filePath, args.content)}
-        showHeader={false}
-        variant={'borderless'}
-        viewMode={'unified'}
+        variant="ghost"
       />
     );
   }
 
   return (
-    <Flexbox className={styles.container} gap={12}>
-      <Flexbox horizontal align={'center'}>
+    <div className={cx('flex flex-col gap-3', styles.container)}>
+      <div className="flex flex-row items-center">
         <LocalFolder path={dir} />
-        <Icon icon={ChevronRight} />
+        <span className="anticon" role="img">
+          <ChevronRight fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+        </span>
         <LocalFile name={base} path={filePath} />
-      </Flexbox>
+      </div>
 
       {args.content && (
-        <Flexbox className={styles.previewBox} style={{ height: isHtml ? 260 : undefined }}>
+        <div
+          className={cx('flex flex-col', styles.previewBox)}
+          style={{ height: isHtml ? 260 : undefined }}
+        >
           {isHtml ? (
             <InlineHtmlPreview content={args.content} />
           ) : (
@@ -83,9 +85,9 @@ const WriteFile = memo<BuiltinRenderProps<WriteFileArgs>>(({ args }) => {
               {args.content}
             </Markdown>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

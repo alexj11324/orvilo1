@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { useLocation, useSearchParams } from 'react-router';
 
 import SkeletonBar from '@/components/Skeleton/Bar';
@@ -21,28 +20,25 @@ const ResourceCategorySkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => {
   if (view === 'works') return <WorkGallerySkeleton />;
 
   return (
-    <Flexbox aria-busy flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+    <div
+      aria-busy
+      className="flex flex-col flex-1 h-[100%]"
+      style={{ minHeight: 0, overflow: 'hidden' }}
+    >
       {chrome !== 'body' && (
-        <Flexbox
-          horizontal
-          align={'center'}
-          flex={'none'}
-          height={44}
-          justify={'space-between'}
-          paddingInline={16}
-        >
+        <div className="flex flex-row items-center flex-none h-[44px] justify-between px-4">
           <SkeletonBar height={20} width={144} />
           <SkeletonBar height={28} width={72} />
-        </Flexbox>
+        </div>
       )}
-      <Flexbox flex={1} style={{ minHeight: 0, overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1" style={{ minHeight: 0, overflow: 'hidden' }}>
         {view === 'masonry' ? (
           <MasonryViewSkeleton columnCount={columnCount} />
         ) : (
           <ListViewSkeleton showUploader={!pathname.startsWith('/resource')} />
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

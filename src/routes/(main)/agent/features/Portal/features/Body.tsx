@@ -1,7 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { css, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type PropsWithChildren } from 'react';
 
 const body = css`
@@ -13,14 +13,12 @@ const body = css`
 
 const Body = ({ children }: PropsWithChildren) => {
   return (
-    <Flexbox
-      className={cx(body, 'portal-body')}
-      height={'100%'}
-      style={{ flex: 1, height: 0, position: 'relative' }}
-      width={'100%'}
+    <div
+      className={cn('flex flex-col', cx(body, 'portal-body'))}
+      style={{ flex: 1, height: 0, position: 'relative', width: '100%' }}
     >
       {children}
-    </Flexbox>
+    </div>
   );
 };
 

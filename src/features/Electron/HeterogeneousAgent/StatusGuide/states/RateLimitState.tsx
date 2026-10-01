@@ -1,8 +1,8 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
 import { CalendarClock, Play, RotateCcw } from 'lucide-react';
 import { useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -102,35 +102,31 @@ const RateLimitState = ({
 
     if (schedule.isScheduled) {
       return (
-        <Flexbox horizontal gap={8} justify="flex-end" style={{ flexWrap: 'wrap' }}>
-          <Button size="small" onClick={schedule.onCancel}>
+        <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
+          <Button size="sm" onClick={schedule.onCancel}>
             {t('cliRateLimitGuide.schedule.cancel')}
           </Button>
-          <Button icon={<Play size={14} />} size="small" type="primary" onClick={schedule.onRunNow}>
-            {t('cliRateLimitGuide.schedule.runNow')}
+          <Button size="sm" variant="default" onClick={schedule.onRunNow}>
+            <Play size={14} /> {t('cliRateLimitGuide.schedule.runNow')}
           </Button>
-        </Flexbox>
+        </div>
       );
     }
 
     return (
-      <Flexbox horizontal gap={8} justify="flex-end" style={{ flexWrap: 'wrap' }}>
+      <div className="flex gap-2 justify-end" style={{ flexWrap: 'wrap' }}>
         {onRetry && (
-          <Button icon={<RotateCcw size={14} />} size="small" onClick={onRetry}>
-            {t('cliRateLimitGuide.schedule.retryNow')}
+          <Button size="sm" onClick={onRetry}>
+            <RotateCcw size={14} /> {t('cliRateLimitGuide.schedule.retryNow')}
           </Button>
         )}
-        <Button
-          icon={<CalendarClock size={14} />}
-          size="small"
-          type="primary"
-          onClick={schedule.onSchedule}
-        >
+        <Button size="sm" variant="default" onClick={schedule.onSchedule}>
+          <CalendarClock size={14} />{' '}
           {relativeDuration
             ? t('cliRateLimitGuide.schedule.continueAfter', { duration: relativeDuration })
             : t('cliRateLimitGuide.schedule.continueAfterReset')}
         </Button>
-      </Flexbox>
+      </div>
     );
   }, [onRetry, relativeDuration, schedule, t]);
 
@@ -163,7 +159,7 @@ const RateLimitState = ({
       }
       headerDescription={
         !isScheduled && (
-          <Text type="secondary">
+          <div className="text-muted-foreground">
             {t(
               rateLimitTypeLabel
                 ? 'cliRateLimitGuide.afterResetWithLimitType'
@@ -175,41 +171,43 @@ const RateLimitState = ({
                   : t('cliRateLimitGuide.resetUnknown'),
               },
             )}
-          </Text>
+          </div>
         )
       }
       onDismiss={onDismiss}
     >
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {formattedResetAt && (
-          <Flexbox horizontal gap={8} style={{ alignItems: 'baseline' }}>
-            <Text strong style={{ fontSize: 12 }}>
+          <div className="flex gap-2" style={{ alignItems: 'baseline' }}>
+            <div className="font-semibold" style={{ fontSize: 12 }}>
               {t('cliRateLimitGuide.resetAt')}
-            </Text>
-            <Flexbox
-              horizontal
-              gap={8}
+            </div>
+            <div
+              className="flex gap-2"
               style={{ alignItems: 'baseline', flexWrap: 'nowrap', whiteSpace: 'nowrap' }}
             >
-              <Text>{`${formattedResetAt}${timezoneLabel ? ` (${timezoneLabel})` : ''}`}</Text>
+              <div>{`${formattedResetAt}${timezoneLabel ? ` (${timezoneLabel})` : ''}`}</div>
               {relativeResetText && (
-                <Text style={{ fontSize: 12, whiteSpace: 'nowrap' }} type="secondary">
+                <div
+                  className="text-muted-foreground"
+                  style={{ fontSize: 12, whiteSpace: 'nowrap' }}
+                >
                   {relativeResetText}
-                </Text>
+                </div>
               )}
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
 
         {rateLimitTypeLabel && (
-          <Flexbox horizontal align="center" gap={8}>
-            <Text strong style={{ fontSize: 12 }}>
+          <div className="flex items-center gap-2">
+            <div className="font-semibold" style={{ fontSize: 12 }}>
               {t('cliRateLimitGuide.limitType')}
-            </Text>
-            <Text>{rateLimitTypeLabel}</Text>
-          </Flexbox>
+            </div>
+            <div>{rateLimitTypeLabel}</div>
+          </div>
         )}
-      </Flexbox>
+      </div>
     </GuideShell>
   );
 };

@@ -1,11 +1,11 @@
 import { type ImageProps } from '@lobehub/ui';
 import { Image } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Trash } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { usePlatform } from '@/hooks/usePlatform';
 
 import { MIN_IMAGE_SIZE } from './style';
@@ -81,7 +81,6 @@ const ImageItem = memo<ImageItemProps>(
         actions={
           editable && (
             <ActionIcon
-              glass
               className={styles.deleteButton}
               icon={Trash}
               size={'small'}

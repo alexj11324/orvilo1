@@ -1,10 +1,9 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ExternalLink, FileDown, FileText, Link2 } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { isSafeExternalUrl } from '@/features/Work/descriptors';
@@ -103,38 +102,35 @@ const DeliverableRow = memo<{
     artifact.type === 'document' ? FileText : artifact.type === 'file' ? FileDown : ExternalLink;
 
   const openable = !!openTargetOf(artifact);
+  // A real button carries focus, Enter/Space and the right semantics for
+  // free; a row with nowhere to go stays inert rather than faking an
+  // affordance it cannot honour.
+  const RowTag = openable ? 'button' : 'div';
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      as={openable ? 'button' : 'div'}
+    <RowTag
       className={cx(styles.row, openable && styles.rowOpenable)}
-      gap={8}
-      // A real button carries focus, Enter/Space and the right semantics for
-      // free; a row with nowhere to go stays inert rather than faking an
-      // affordance it cannot honour.
       {...(openable ? { onClick: () => onOpen(artifact), type: 'button' as const } : {})}
     >
-      <Icon color={cssVar.colorTextQuaternary} icon={icon} size={14} />
+      {createElement(icon, { color: cssVar.colorTextQuaternary, size: 14 })}
       {/* The title takes the slack so the attribution and the timestamp form
           right-aligned columns; letting the title size itself left every row's
           attribution starting at a different x. */}
-      <Text ellipsis style={{ flex: 1, minWidth: 0 }} weight={500}>
+      <div className="truncate min-w-0 font-medium" style={{ flex: 1, minWidth: 0 }}>
         {artifact.title || artifact.identifier || t('goalProcess.deliverables.untitled')}
-      </Text>
+      </div>
       {!!producerTitle && (
-        <Flexbox horizontal align={'center'} className={styles.producer} gap={6}>
+        <div className={`flex items-center gap-1.5 ${styles.producer}`}>
           <KindDot kind={'task'} />
-          <Text ellipsis fontSize={12} type={'secondary'}>
+          <div className="truncate min-w-0 text-[12px] text-muted-foreground">
             {t('goalProcess.deliverables.from', { title: producerTitle })}
-          </Text>
-        </Flexbox>
+          </div>
+        </div>
       )}
-      <Text className={styles.time} fontSize={12} title={title} type={'secondary'}>
+      <div className={cn('text-[12px] text-muted-foreground', styles.time)} title={title}>
         {text}
-      </Text>
-    </Flexbox>
+      </div>
+    </RowTag>
   );
 });
 
@@ -161,16 +157,16 @@ const Deliverables = memo<{ graph: GoalGraphView }>(({ graph }) => {
 
   if (graph.artifacts.length === 0)
     return (
-      <Flexbox horizontal align={'center'} gap={6}>
-        <Icon color={cssVar.colorTextQuaternary} icon={Link2} size={14} />
-        <Text fontSize={13} type={'secondary'}>
+      <div className="flex items-center gap-1.5">
+        <Link2 color={cssVar.colorTextQuaternary} size={14} />
+        <div className="text-[13px] text-muted-foreground">
           {t('goalProcess.deliverables.empty')}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
     );
 
   return (
-    <Flexbox gap={0}>
+    <div className="flex flex-col gap-0">
       {graph.artifacts.map((artifact) => (
         <DeliverableRow
           artifact={artifact}
@@ -179,7 +175,7 @@ const Deliverables = memo<{ graph: GoalGraphView }>(({ graph }) => {
           onOpen={open}
         />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

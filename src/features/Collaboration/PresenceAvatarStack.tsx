@@ -1,13 +1,12 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Bot } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import {
   type ActorPresenceSummary,
   type CollaborationRoom,
@@ -90,48 +89,56 @@ export const PresenceAvatarStack = memo<{ room: CollaborationRoom | null }>(({ r
   const overflow = summaries.length - visible.length;
 
   return (
-    <Flexbox align="center" className={styles.stack} gap={0}>
+    <div className={cx(styles.stack, 'flex flex-col items-center gap-[0px]')}>
       {visible.map((summary) => {
         const isAgent = summary.actor.kind === 'agent';
         return (
-          <Tooltip
-            key={summary.connectionId}
-            title={t('teammates.presence.actorTooltip', {
-              count: summary.connectionCount,
-              name: actorLabel(summary),
-            })}
-          >
-            <span className={styles.avatarCell}>
-              {isAgent ? (
-                <Avatar
-                  avatar={summary.actor.avatar}
-                  name={actorLabel(summary)}
-                  size={22}
-                  title={actorLabel(summary)}
-                />
-              ) : (
-                <Avatar
-                  avatar={summary.actor.avatar}
-                  name={actorLabel(summary)}
-                  size={22}
-                  title={actorLabel(summary)}
-                />
-              )}
-              {isAgent && (
-                <span className={styles.agentBadge}>
-                  <Icon icon={Bot} size={8} />
-                </span>
-              )}
-            </span>
-          </Tooltip>
+          <TooltipProvider key={summary.actor.id}>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span className="inline-flex">
+                    <span className={styles.avatarCell}>
+                      {isAgent ? (
+                        <Avatar
+                          avatar={summary.actor.avatar}
+                          name={actorLabel(summary)}
+                          size={22}
+                          title={actorLabel(summary)}
+                        />
+                      ) : (
+                        <Avatar
+                          avatar={summary.actor.avatar}
+                          name={actorLabel(summary)}
+                          size={22}
+                          title={actorLabel(summary)}
+                        />
+                      )}
+                      {isAgent && (
+                        <span className={styles.agentBadge}>
+                          <Bot size={8} />
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                }
+              />
+              <TooltipContent>
+                {t('teammates.presence.actorTooltip', {
+                  count: summary.connectionCount,
+                  name: actorLabel(summary),
+                })}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         );
       })}
       {overflow > 0 && (
         <span className={styles.countChip}>
-          <Text as="span">+{overflow}</Text>
+          <span>+{overflow}</span>
         </span>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

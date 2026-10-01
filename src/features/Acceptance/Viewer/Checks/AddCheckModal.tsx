@@ -1,20 +1,24 @@
 'use client';
 
-import { Flexbox, Icon, Input, TextArea } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Select,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import type { AcceptanceChecklistItem } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { Check, CircleDashed, Plus } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Textarea } from '@/components/ui/textarea';
 
 import { useRubricCriteria, useRubrics } from '../../hooks';
 
@@ -65,65 +69,74 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
     mode === 'manual' ? Boolean(name.trim()) : Boolean(rubricId && selectedIds.size > 0);
 
   return (
-    <Flexbox gap={16}>
+    <div className="flex flex-col gap-4">
       {mode === 'manual' ? (
         <>
-          <Flexbox gap={6}>
-            <Text fontSize={12} type={'secondary'}>
+          <div className="flex flex-col gap-1.5">
+            <div className="text-[12px] text-muted-foreground">
               {tv('acceptance.tray.editModal.nameLabel')}
-            </Text>
+            </div>
             <Input
               placeholder={tv('acceptance.tray.editModal.namePlaceholder')}
               value={name}
               onChange={(event) => setName(event.target.value)}
             />
-          </Flexbox>
-          <Flexbox gap={6}>
-            <Text fontSize={12} type={'secondary'}>
+          </div>
+          <div className="flex flex-col gap-1.5">
+            <div className="text-[12px] text-muted-foreground">
               {tv('acceptance.tray.editModal.methodLabel')}
-            </Text>
-            <TextArea
-              autoSize={{ maxRows: 4, minRows: 2 }}
+            </div>
+            <Textarea
               placeholder={tv('acceptance.tray.editModal.methodPlaceholder')}
+              rows={2}
+              style={{ maxHeight: '4lh' }}
               value={method}
               onChange={(event) => setMethod(event.target.value)}
             />
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={2}>
-            <Text fontSize={12} type={'secondary'}>
-              {tv('or', { ns: 'common' })}
-            </Text>
-            <Button size={'small'} type={'text'} onClick={() => setMode('rubric')}>
+          </div>
+          <div className="flex items-center gap-0.5">
+            <div className="text-[12px] text-muted-foreground">{tv('or', { ns: 'common' })}</div>
+            <Button size="sm" variant="ghost" onClick={() => setMode('rubric')}>
               {tv('acceptance.checkCreate.rubric')}
             </Button>
-          </Flexbox>
+          </div>
         </>
       ) : (
-        <Flexbox gap={12}>
+        <div className="flex flex-col gap-3">
           <Button
-            size={'small'}
+            size="sm"
             style={{ alignSelf: 'flex-start' }}
-            type={'text'}
+            variant="ghost"
             onClick={() => setMode('manual')}
           >
             {tv('acceptance.checkCreate.manual')}
           </Button>
           <Select
-            loading={rubricsLoading}
-            options={(rubrics ?? []).map((rubric) => ({ label: rubric.title, value: rubric.id }))}
-            placeholder={tv('acceptance.checkCreate.selectRubric')}
+            disabled={rubricsLoading}
+            items={(rubrics ?? []).map((rubric) => ({ label: rubric.title, value: rubric.id }))}
             value={rubricId}
-            onChange={(value) => {
-              setRubricId(value);
+            onValueChange={(value) => {
+              setRubricId(value ?? undefined);
               setSelectedIds(new Set());
             }}
-          />
+          >
+            <SelectTrigger>
+              <SelectValue placeholder={tv('acceptance.checkCreate.selectRubric')} />
+            </SelectTrigger>
+            <SelectContent>
+              {(rubrics ?? []).map((rubric) => (
+                <SelectItem key={rubric.id} value={rubric.id}>
+                  {rubric.title}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
           {rubricId && (
-            <Flexbox gap={4}>
+            <div className="flex flex-col gap-1">
               {criteriaLoading ? (
-                <Text type={'secondary'}>{tv('acceptance.checkCreate.loading')}</Text>
+                <div className="text-muted-foreground">{tv('acceptance.checkCreate.loading')}</div>
               ) : availableCriteria.length === 0 ? (
-                <Text type={'secondary'}>{tv('acceptance.checkCreate.empty')}</Text>
+                <div className="text-muted-foreground">{tv('acceptance.checkCreate.empty')}</div>
               ) : (
                 availableCriteria.map((criterion) => {
                   const selected = selectedIds.has(criterion.id);
@@ -131,7 +144,7 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
                     <Button
                       key={criterion.id}
                       style={{ height: 'auto', justifyContent: 'flex-start', padding: 10 }}
-                      type={selected ? 'primary' : 'default'}
+                      variant={selected ? 'default' : 'outline'}
                       onClick={() =>
                         setSelectedIds((previous) => {
                           const next = new Set(previous);
@@ -141,68 +154,66 @@ const AddCheckContent = memo<AddCheckContentProps>(({ existingIds, onSubmit }) =
                         })
                       }
                     >
-                      <Flexbox horizontal align={'flex-start'} gap={8}>
-                        <Icon icon={selected ? Check : Plus} size={14} />
-                        <Flexbox align={'flex-start'} gap={2}>
-                          <Text>{criterion.title}</Text>
+                      <div className="flex items-start gap-2">
+                        {selected ? <Check size={14} /> : <Plus size={14} />}
+                        <div className="flex flex-col items-start gap-0.5">
+                          <div>{criterion.title}</div>
                           {criterion.description && (
-                            <Text fontSize={12} type={'secondary'}>
+                            <div className="text-[12px] text-muted-foreground">
                               {criterion.description}
-                            </Text>
+                            </div>
                           )}
-                        </Flexbox>
-                      </Flexbox>
+                        </div>
+                      </div>
                     </Button>
                   );
                 })
               )}
-            </Flexbox>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
-      <Flexbox
-        gap={6}
-        padding={12}
+      <div
+        className="flex flex-col gap-1.5"
         style={{
+          padding: 12,
           background: cssVar.colorFillQuaternary,
           border: `1px solid ${cssVar.colorBorderSecondary}`,
           borderRadius: 8,
         }}
       >
-        <Flexbox horizontal align={'center'} gap={6}>
-          <Icon icon={CircleDashed} size={14} />
-          <Text fontSize={12} type={'secondary'}>
+        <div className="flex items-center gap-1.5">
+          <CircleDashed size={14} />
+          <div className="text-[12px] text-muted-foreground">
             {tv('acceptance.checkCreate.previewState')}
-          </Text>
-        </Flexbox>
-        <Text strong>
+          </div>
+        </div>
+        <div className="font-semibold">
           {mode === 'manual'
             ? name.trim() || tv('acceptance.checkCreate.previewTitle')
             : tv('acceptance.checkCreate.selectedCount', { count: selectedIds.size })}
-        </Text>
+        </div>
         {mode === 'manual' && method.trim() && (
-          <Text fontSize={12} type={'secondary'}>
-            {method.trim()}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{method.trim()}</div>
         )}
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {tv('acceptance.checkCreate.previewHint')}
-        </Text>
-      </Flexbox>
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+        </div>
+      </div>
+      <div className="flex gap-2 justify-end">
         <Button disabled={saving} onClick={close}>
           {tv('acceptance.actions.cancel')}
         </Button>
         <Button
           disabled={!canSave || saving}
           loading={saving}
-          type={'primary'}
+          variant="outline"
           onClick={handleSave}
         >
           {tv('acceptance.checkCreate.addToScope')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

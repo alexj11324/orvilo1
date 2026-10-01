@@ -1,5 +1,4 @@
-import { textStyles } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles, cx, keyframes } from 'antd-style';
 
 const localTextGroupStyles = createStaticStyles(({ css }) => ({
   shinyGroup: css`
@@ -76,8 +75,84 @@ const shinyToneStyles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
+const shine = keyframes`
+  0% {
+    background-position: 100%;
+  }
+
+  100% {
+    background-position: -100%;
+  }
+`;
+const sweep = keyframes`
+  0% {
+    translate: -100% 0;
+  }
+
+  100% {
+    translate: 100% 0;
+  }
+`;
+
+const localShinyText = createStaticStyles(({ css, cssVar }) => ({
+  shiny: css`
+    --shiny-duration: 1.5s;
+    --shiny-color: ${cssVar.colorText};
+
+    user-select: none;
+
+    color: color-mix(in srgb, var(--shiny-color) 28%, transparent);
+
+    background: linear-gradient(120deg, transparent 25%, var(--shiny-color) 50%, transparent 75%);
+    background-clip: text;
+    background-size: 200% 100%;
+
+    animation: ${shine} var(--shiny-duration) linear infinite;
+
+    @supports (-webkit-mask-clip: text) {
+      &:not(:has(*)) {
+        position: var(--shiny-origin, relative);
+
+        background: none;
+
+        animation: none;
+
+        /* stylelint-disable-next-line declaration-property-value-no-unknown */
+        mask-clip: text;
+        mask-image: linear-gradient(#fff, #fff);
+
+        &::after {
+          pointer-events: none;
+          will-change: transform;
+          content: '';
+
+          position: absolute;
+          inset: 0;
+
+          background: linear-gradient(
+            90deg,
+            transparent 25%,
+            var(--shiny-color) 50%,
+            transparent 75%
+          );
+
+          animation: ${sweep} var(--shiny-duration) linear infinite;
+        }
+      }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      animation: none;
+
+      &::after {
+        display: none;
+      }
+    }
+  `,
+}));
+
 export const shinyTextStyles = {
-  shinyText: cx(textStyles.shiny, shinyToneStyles.secondary),
+  shinyText: cx(localShinyText.shiny, shinyToneStyles.secondary),
 };
 
 export const shinyGroupStyles = {

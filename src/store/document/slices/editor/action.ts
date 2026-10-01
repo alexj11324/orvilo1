@@ -2,10 +2,10 @@
 
 import type { IEditor } from '@lobehub/editor';
 import type { EditorState as OrviloEditorState } from '@lobehub/editor/react';
-import { toast } from '@lobehub/ui/base-ui';
 import isEqual from 'fast-deep-equal';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { EMPTY_EDITOR_STATE } from '@/libs/editor/constants';
 import { isValidEditorData } from '@/libs/editor/isValidEditorData';
 import { documentService } from '@/services/document';

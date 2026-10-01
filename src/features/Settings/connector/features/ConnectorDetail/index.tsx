@@ -1,6 +1,5 @@
 'use client';
 
-import { Button, confirmModal, Skeleton } from '@lobehub/ui/base-ui';
 import { getOrviloSkillProviderById } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
@@ -9,6 +8,10 @@ import { SquareArrowOutUpRight, Unplug, Wrench } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { ConnectorDetail, CustomConnectorModal } from '@/features/Connectors';
 import { useSkillConnect } from '@/features/Connectors/useSkillConnect';
 import { usePermission } from '@/hooks/usePermission';
@@ -95,13 +98,14 @@ const OrviloConnectorAction = memo<OrviloConnectorActionProps>(
     if (isConnected) {
       return (
         <Button
-          danger
-          disabled={!canEdit}
-          icon={<Unplug size={14} />}
-          loading={isConnecting}
-          size="small"
+          aria-busy={isConnecting}
+          disabled={!canEdit || isConnecting}
+          size="sm"
+          variant="destructive"
           onClick={handleConfirmDisconnect}
         >
+          {isConnecting && <Spinner />}
+          <Unplug size={14} />
           {t('tools.orviloSkill.disconnect')}
         </Button>
       );
@@ -109,15 +113,17 @@ const OrviloConnectorAction = memo<OrviloConnectorActionProps>(
 
     return (
       <Button
-        disabled={!canCreate || !canEdit}
-        icon={<SquareArrowOutUpRight size={14} />}
-        loading={isConnecting}
-        size="small"
+        aria-busy={isConnecting}
+        disabled={!canCreate || !canEdit || isConnecting}
+        size="sm"
+        variant="outline"
         onClick={() => {
           if (!canCreate || !canEdit) return;
           handleConnect();
         }}
       >
+        {isConnecting && <Spinner />}
+        <SquareArrowOutUpRight size={14} />
         {t('tools.orviloSkill.connect')}
       </Button>
     );
@@ -274,7 +280,11 @@ const ConnectorDetailPanel = memo<ConnectorDetailProps>(({ identifier, type, onD
   if (syncing) {
     return (
       <div style={{ padding: 24 }}>
-        <Skeleton.Text rows={6} />
+        <div aria-busy="true" className="flex flex-col gap-3">
+          {Array.from({ length: 6 }, (_, index) => (
+            <Skeleton className="h-4 w-full" key={index} />
+          ))}
+        </div>
       </div>
     );
   }
@@ -289,14 +299,14 @@ const ConnectorDetailPanel = memo<ConnectorDetailProps>(({ identifier, type, onD
           {canMigrateLegacy ? (
             <Button
               disabled={!canCreate || !canEdit}
-              icon={<Wrench size={14} />}
-              size="small"
-              type="primary"
+              size="sm"
+              variant="default"
               onClick={() => {
                 if (!canCreate || !canEdit) return;
                 setMigrateOpen(true);
               }}
             >
+              <Wrench size={14} />
               {ts('tools.legacyConnector.configure')}
             </Button>
           ) : (

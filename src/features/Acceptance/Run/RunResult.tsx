@@ -1,4 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Info, Shield, ShieldAlert, ShieldCheck, ShieldX } from 'lucide-react';
 import { memo } from 'react';
@@ -146,22 +145,21 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
   // separate control and left the title looking neutral on a failed round.
   const header = (
     <div className={styles.head}>
-      <Flexbox>
-        <Flexbox horizontal align="center" gap={7}>
-          <Icon
+      <div className="flex flex-col">
+        <div className="flex items-center gap-[7px]">
+          <meta.badge.icon
             color={meta.badge.color === 'default' ? undefined : badgeColorMap[meta.badge.color]}
-            icon={meta.badge.icon}
             size={16}
           />
           <span className={styles.title}>{t('result.title', { round })}</span>
           <span className={styles.status} style={{ color: badgeTextMap[meta.badge.color] }}>
             {t(`badge.${meta.badge.key}` as any)}
           </span>
-        </Flexbox>
+        </div>
         <div className={styles.sub}>
           {t(meta.subKey as any, { passed: counts.passed, total: counts.total } as any)}
         </div>
-      </Flexbox>
+      </div>
     </div>
   );
 
@@ -172,11 +170,11 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
     <div className={cx(styles.card, phase === 'failed' && styles.cardFailed)}>
       {header}
       <div className={styles.body}>
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           {(state.verifyPlan ?? []).map((item) => {
             const result = (results ?? []).find((r) => r.checkItemId === item.id);
             return (
-              <Flexbox horizontal align="center" gap={8} key={item.id}>
+              <div className="flex items-center gap-2" key={item.id}>
                 <span>{item.title}</span>
                 {result?.verdict && (
                   <span
@@ -187,13 +185,13 @@ const RunResult = memo<RunResultProps>(({ operationId, round = 1, embedded }) =>
                     · {result.verdict}
                   </span>
                 )}
-              </Flexbox>
+              </div>
             );
           })}
-        </Flexbox>
+        </div>
       </div>
       <div className={styles.foot}>
-        <Icon icon={Info} size={14} />
+        <Info size={14} />
         <span>{t('result.foot')}</span>
       </div>
     </div>

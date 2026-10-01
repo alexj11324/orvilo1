@@ -1,5 +1,4 @@
-import { Skeleton } from '@lobehub/ui/base-ui';
-
+import { Skeleton } from '@/components/ui/skeleton';
 import { useChatStore } from '@/store/chat';
 
 import ActiveThread from './Active';
@@ -10,7 +9,7 @@ const Header = () => {
 
   const isInit = useChatStore((s) => s.threadsInit);
 
-  if (!isInit) return <Skeleton height={22} width={200} />;
+  if (!isInit) return <Skeleton style={{ height: 22, width: 200 }} />;
 
   return isInNew ? <NewThread /> : <ActiveThread />;
 };

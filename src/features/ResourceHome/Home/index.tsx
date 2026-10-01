@@ -1,7 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -35,20 +34,24 @@ const ResourceHomeDashboard = memo(() => {
   const { t } = useTranslation('file');
 
   return (
-    <Flexbox height={'100%'}>
+    <div className="flex flex-col h-[100%]">
       <NavHeader
-        left={<Flexbox style={{ marginLeft: 8 }}>{t('resource')}</Flexbox>}
         right={<AddButton />}
         style={{ borderBottom: `1px solid ${cssVar.colorBorderSecondary}` }}
+        left={
+          <div className="flex flex-col" style={{ marginLeft: 8 }}>
+            {t('resource')}
+          </div>
+        }
       />
       <div className={styles.scroll}>
-        <Flexbox className={styles.content} gap={40}>
+        <div className={cx('flex flex-col gap-10', styles.content)}>
           <Libraries />
           <RecentWorks />
           <RecentFiles />
-        </Flexbox>
+        </div>
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

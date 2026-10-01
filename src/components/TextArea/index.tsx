@@ -1,22 +1,21 @@
-import { type TextAreaProps as Props } from '@lobehub/ui';
-import { TextArea as OrviloTextArea } from '@lobehub/ui';
-import { type TextAreaRef } from 'antd/es/input/TextArea';
+import { type TextareaHTMLAttributes } from 'react';
 import { memo, useRef, useState } from 'react';
 
+import { Textarea } from '@/components/ui/textarea';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 
-interface TextAreaProps extends Omit<Props, 'onChange'> {
+interface TextAreaProps extends Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'onChange'> {
   onChange?: (value: string) => void;
 }
 
 const TextArea = memo<TextAreaProps>(({ onChange, value: defaultValue, ...props }) => {
-  const ref = useRef<TextAreaRef>(null);
+  const ref = useRef<HTMLTextAreaElement>(null);
   const { compositionProps, isComposingRef } = useIMECompositionEvent();
 
   const [value, setValue] = useState(defaultValue as string);
 
   return (
-    <OrviloTextArea
+    <Textarea
       ref={ref}
       onBlur={() => {
         onChange?.(value);
@@ -25,9 +24,8 @@ const TextArea = memo<TextAreaProps>(({ onChange, value: defaultValue, ...props 
         setValue(e.target.value);
       }}
       {...compositionProps}
-      onPressEnter={() => {
-        if (isComposingRef.current) return;
-        onChange?.(value);
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !isComposingRef.current) onChange?.(value);
       }}
       {...props}
       value={value}

@@ -1,23 +1,23 @@
 'use client';
 
-import { Flexbox, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
-import { Carousel as AntCarousel } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
+import Autoplay from 'embla-carousel-autoplay';
 import { X } from 'lucide-react';
 import * as m from 'motion/react-m';
-import {
-  type ComponentRef,
-  memo,
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-  useState,
-} from 'react';
+import { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
+import {
+  Carousel,
+  type CarouselApi,
+  CarouselContent,
+  CarouselItem,
+} from '@/components/ui/carousel';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import { useSingleton } from '@/hooks/useSingleton';
 import { useAnalytics } from '@/libs/analytics/client';
 import type { GlobalBillboard, GlobalBillboardItem } from '@/types/serverConfig';
 
@@ -204,26 +204,40 @@ const ItemContent = memo<{
   );
 
   return (
-    <Flexbox gap={0}>
+    <div className="flex flex-col gap-0">
       {item.cover && <img alt="" className={styles.image} src={item.cover} />}
-      <Flexbox className={styles.itemBody} gap={4}>
+      <div className={cn('flex flex-col gap-1', styles.itemBody)}>
         {titleOverflow ? (
-          <Tooltip placement="top" title={resolved.title}>
-            {titleNode}
-          </Tooltip>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger
+                render={<span style={{ display: 'inline-flex' }}>{titleNode}</span>}
+              />
+              <TooltipContent>{resolved.title}</TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         ) : (
           titleNode
         )}
         {descNode &&
           (descOverflow ? (
-            <Tooltip placement="top" title={resolved.description}>
-              {descNode}
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={<span style={{ display: 'inline-flex' }}>{descNode}</span>}
+                />
+                <TooltipContent>{resolved.description}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           ) : (
             descNode
           ))}
         {action ? (
-          <Button block className={styles.action} type="primary" onClick={handleActionClick}>
+          <Button
+            className={cn('w-full', styles.action)}
+            variant="default"
+            onClick={handleActionClick}
+          >
             {resolved.linkLabel ?? t('billboard.learnMore')}
           </Button>
         ) : (
@@ -235,14 +249,14 @@ const ItemContent = memo<{
               target="_blank"
               onClick={handleLinkClick}
             >
-              <Button block type="primary">
+              <Button className="w-full" variant="default">
                 {resolved.linkLabel ?? t('billboard.learnMore')}
               </Button>
             </a>
           )
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -254,7 +268,11 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
   ({ set, onClose, closing, exitTarget, onAnimationFinish, cardAttr }) => {
     const [paused, setPaused] = useState(false);
     const [current, setCurrent] = useState(0);
-    const carouselRef = useRef<ComponentRef<typeof AntCarousel>>(null);
+    const [carouselApi, setCarouselApi] = useState<CarouselApi>();
+    const autoplay = useSingleton(() =>
+      Autoplay({ delay: 6000, stopOnFocusIn: false, stopOnInteraction: false }),
+    );
+    const [slideHeight, setSlideHeight] = useState<number>();
     const { analytics } = useAnalytics();
 
     useEffect(() => {
@@ -275,6 +293,42 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
         },
       });
     }, [analytics, set.slug, set.items.length]);
+
+    useEffect(() => {
+      if (!carouselApi) return;
+      let observed: Element | null = null;
+      const resizeObserver = new ResizeObserver(() => {
+        const slide = carouselApi.slideNodes()[carouselApi.selectedScrollSnap()];
+        if (slide) setSlideHeight(slide.offsetHeight);
+      });
+      const sync = () => {
+        const idx = carouselApi.selectedScrollSnap();
+        setCurrent(idx);
+        const slide = carouselApi.slideNodes()[idx];
+        if (slide !== observed) {
+          if (observed) resizeObserver.unobserve(observed);
+          if (slide) resizeObserver.observe(slide);
+          observed = slide;
+        }
+        if (slide) setSlideHeight(slide.offsetHeight);
+      };
+      sync();
+      carouselApi.on('select', sync);
+      carouselApi.on('reInit', sync);
+      return () => {
+        resizeObserver.disconnect();
+        carouselApi.off('select', sync);
+        carouselApi.off('reInit', sync);
+      };
+    }, [carouselApi]);
+
+    useEffect(() => {
+      if (paused) {
+        autoplay.stop();
+      } else {
+        autoplay.play();
+      }
+    }, [autoplay, paused]);
 
     if (set.items.length === 0) return null;
 
@@ -309,34 +363,39 @@ const BillboardCarousel = memo<BillboardCarouselProps>(
           />
         ) : (
           <>
-            <AntCarousel
-              adaptiveHeight
-              autoplay={!paused}
-              autoplaySpeed={6000}
-              beforeChange={(_: number, next: number) => setCurrent(next)}
-              dots={false}
-              ref={carouselRef}
+            <Carousel
+              opts={{ align: 'start', loop: true }}
+              plugins={[autoplay]}
+              setApi={setCarouselApi}
             >
-              {set.items.map((item, idx) => (
-                <div key={item.id}>
-                  <ItemContent
-                    billboardSlug={set.slug}
-                    item={item}
-                    position={idx}
-                    onClose={onClose}
-                  />
-                </div>
-              ))}
-            </AntCarousel>
-            <Flexbox horizontal className={styles.dots} gap={6} justify="center">
+              <CarouselContent
+                className="items-start"
+                viewportStyle={{
+                  height: slideHeight,
+                  transition: 'height 0.3s ease',
+                }}
+              >
+                {set.items.map((item, idx) => (
+                  <CarouselItem key={item.id}>
+                    <ItemContent
+                      billboardSlug={set.slug}
+                      item={item}
+                      position={idx}
+                      onClose={onClose}
+                    />
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+            </Carousel>
+            <div className={cn('flex gap-1.5 justify-center', styles.dots)}>
               {set.items.map((item, idx) => (
                 <div
                   className={`${styles.dot} ${current === idx ? styles.dotActive : ''}`}
                   key={item.id}
-                  onClick={() => carouselRef.current?.goTo(idx)}
+                  onClick={() => carouselApi?.scrollTo(idx)}
                 />
               ))}
-            </Flexbox>
+            </div>
           </>
         )}
       </m.div>

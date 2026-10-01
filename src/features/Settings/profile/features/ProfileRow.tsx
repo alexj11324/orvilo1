@@ -1,7 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
 import { type ReactNode } from 'react';
 
 import { SETTINGS_ANCHOR_ROW_ATTR, SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
@@ -16,45 +14,6 @@ interface ProfileRowProps {
   labelSlot?: ReactNode;
 }
 
-const styles = createStaticStyles(({ css, responsive }) => ({
-  action: css`
-    flex-shrink: 0;
-
-    /* Keep action trailing even for action-only rows (AvatarRow / PasswordRow) where body has no children and space-between degenerates to flex-start. */
-    margin-inline-start: auto;
-  `,
-  body: css`
-    display: flex;
-    flex: 0 1 auto;
-    gap: 12px;
-    align-items: center;
-    justify-content: space-between;
-
-    min-width: 0;
-  `,
-  label: css`
-    flex: 1;
-
-    ${responsive.md} {
-      flex: 0 0 auto;
-    }
-  `,
-  row: css`
-    display: flex;
-    gap: 24px;
-    align-items: center;
-
-    min-height: 64px;
-    padding-block: 16px;
-
-    ${responsive.md} {
-      flex-direction: column;
-      gap: 12px;
-      align-items: stretch;
-    }
-  `,
-}));
-
 const ProfileRow = ({
   anchor,
   description,
@@ -63,23 +22,26 @@ const ProfileRow = ({
   children,
   action,
 }: ProfileRowProps) => {
-  const labelNode = labelSlot ?? (label && <Text fontSize={14}>{label}</Text>);
+  const labelNode = labelSlot ?? (label && <span className="text-sm">{label}</span>);
 
   return (
-    <div className={styles.row} {...(anchor ? { [SETTINGS_ANCHOR_ROW_ATTR]: '' } : undefined)}>
-      <div className={styles.label}>
+    <div
+      className={
+        'flex min-h-16 items-center gap-6 py-4 max-md:flex-col max-md:items-stretch max-md:gap-3'
+      }
+      {...(anchor ? { [SETTINGS_ANCHOR_ROW_ATTR]: '' } : undefined)}
+    >
+      <div className="flex-1 max-md:flex-none">
         {anchor ? <SettingsSearchAnchor id={anchor}>{labelNode}</SettingsSearchAnchor> : labelNode}
         {description && (
           <div>
-            <Text fontSize={13} type={'secondary'}>
-              {description}
-            </Text>
+            <span className="text-[13px] text-muted-foreground">{description}</span>
           </div>
         )}
       </div>
-      <div className={styles.body}>
+      <div className="flex min-w-0 flex-[0_1_auto] items-center justify-between gap-3">
         {children}
-        {action && <div className={styles.action}>{action}</div>}
+        {action && <div className="ms-auto shrink-0">{action}</div>}
       </div>
     </div>
   );

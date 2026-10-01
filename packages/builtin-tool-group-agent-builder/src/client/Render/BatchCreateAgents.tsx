@@ -1,13 +1,13 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Users } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import ToolTag from '@/features/ToolTag';
 
 import type { BatchCreateAgentsParams, BatchCreateAgentsState } from '../../types';
@@ -71,25 +71,25 @@ const AgentItem = memo<AgentItemProps>(({ agent, definition }) => {
   const tools = definition?.tools;
 
   return (
-    <Flexbox horizontal align="flex-start" className={styles.item} gap={12}>
+    <div className={cn('flex', 'items-start', 'gap-3', styles.item)}>
       <Avatar
         avatar={avatar}
         size={24}
         style={{ flexShrink: 0, marginTop: 4 }}
         title={agent.title}
       />
-      <Flexbox flex={1} gap={4} style={{ minWidth: 0, overflow: 'hidden' }}>
+      <div className="flex flex-col flex-1 gap-1" style={{ minWidth: 0, overflow: 'hidden' }}>
         <span className={styles.title}>{agent.title}</span>
         {description && <span className={styles.description}>{description}</span>}
         {tools && tools.length > 0 && (
-          <Flexbox horizontal gap={4} style={{ marginTop: 8 }} wrap={'wrap'}>
+          <div className="flex gap-1 flex-wrap" style={{ marginTop: 8 }}>
             {tools.map((tool) => (
               <ToolTag identifier={tool} key={tool} variant={'compact'} />
             ))}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -102,19 +102,19 @@ const BatchCreateAgentsRender = memo<
 
   if (!resultAgents || resultAgents.length === 0) {
     return (
-      <Flexbox align="center" className={styles.empty} gap={8}>
+      <div className={cn('flex', 'flex-col', 'items-center', 'gap-2', styles.empty)}>
         <Users size={24} />
         <span>{t('builtins.orvilo-group-agent-builder.inspector.noResults')}</span>
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox className={styles.container}>
+    <div className={cn('flex', 'flex-col', styles.container)}>
       {resultAgents.map((agent, index) => (
         <AgentItem agent={agent} definition={definitions[index]} key={agent.agentId || index} />
       ))}
-    </Flexbox>
+    </div>
   );
 });
 

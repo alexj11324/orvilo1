@@ -1,5 +1,4 @@
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Button as BaseButton, createModal, toast, useModalContext } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { UpdateInfo } from '@orvilo/electron-client-ipc';
 import { useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -8,6 +7,9 @@ import { X } from 'lucide-react';
 import React, { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button as BaseButton } from '@/components/ui/button';
 import { autoUpdateService } from '@/services/electron/autoUpdate';
 import { rendererOtaService } from '@/services/electron/rendererOta';
 import { useUserStore } from '@/store/user';
@@ -86,7 +88,7 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
   const [isInstalling, setIsInstalling] = useState(false);
 
   return (
-    <Flexbox gap={12} style={{ maxWidth: 480 }}>
+    <div className="flex flex-col gap-3" style={{ maxWidth: 480 }}>
       <div style={{ color: cssVar.colorTextSecondary, fontSize: 12 }}>{updateInfo.version}</div>
       {updateInfo.releaseNotes &&
         (typeof updateInfo.releaseNotes === 'string' ? (
@@ -100,7 +102,7 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
             ))}
           </div>
         ))}
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+      <div className="flex gap-2 justify-end">
         <BaseButton
           onClick={() => {
             autoUpdateService.installLater();
@@ -111,7 +113,7 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
         </BaseButton>
         <BaseButton
           loading={isInstalling}
-          type={'primary'}
+          variant={'default'}
           onClick={() => {
             setIsInstalling(true);
             autoUpdateService.installNow();
@@ -119,8 +121,8 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
         >
           {tElectron('updater.restartAndInstall')}
         </BaseButton>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
@@ -159,13 +161,13 @@ export const UpdateNotification: React.FC = () => {
     return (
       <div className={styles.installLaterToast}>
         <span>{tElectron('updater.rendererReady', { version: updateInfo.version })}</span>
-        <BaseButton size={'small'} type={'text'} onClick={() => setUpdateInfo(null)}>
+        <BaseButton size={'sm'} variant={'ghost'} onClick={() => setUpdateInfo(null)}>
           {tElectron('updater.ignore')}
         </BaseButton>
         <BaseButton
           loading={isInstalling}
-          size={'small'}
-          type={'primary'}
+          size={'sm'}
+          variant={'default'}
           onClick={async () => {
             setIsInstalling(true);
             try {
@@ -198,7 +200,7 @@ export const UpdateNotification: React.FC = () => {
           type="button"
           onClick={() => setInstallConfirmMode(null)}
         >
-          <Icon icon={X} style={{ fontSize: 14 }} />
+          <X style={{ fontSize: 14 }} />
         </button>
       </div>
     );
@@ -217,8 +219,8 @@ export const UpdateNotification: React.FC = () => {
           {isDevMode && updateInfo?.version ? ` · ${updateInfo.version}` : ''}
         </span>
         <BaseButton
-          size={'small'}
-          type={'text'}
+          size={'sm'}
+          variant={'ghost'}
           onClick={() => {
             autoUpdateService.installLater();
           }}
@@ -227,8 +229,8 @@ export const UpdateNotification: React.FC = () => {
         </BaseButton>
         <BaseButton
           loading={isInstalling}
-          size={'small'}
-          type={'primary'}
+          size={'sm'}
+          variant={'default'}
           onClick={() => {
             setIsInstalling(true);
             autoUpdateService.installNow();

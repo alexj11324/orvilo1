@@ -1,7 +1,7 @@
-import { Flexbox, Highlighter, Snippet } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 import GuideActions from '../GuideActions';
 import GuideShell from '../GuideShell';
@@ -36,41 +36,36 @@ const AuthRequiredState = ({
         />
       }
       headerDescription={
-        <Text type="secondary">{t('cliAuthGuide.desc', { name: config.title })}</Text>
+        <div className="text-muted-foreground">
+          {t('cliAuthGuide.desc', { name: config.title })}
+        </div>
       }
     >
       {isDesktop && (
-        <Flexbox gap={6}>
-          <Text strong style={{ fontSize: 12 }}>
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {t('cliAuthGuide.runCommand')}
-          </Text>
-          <Snippet language={'bash'}>{config.signInCommand}</Snippet>
-        </Flexbox>
+          </div>
+          <CodeBlock wrap code={config.signInCommand} language="bash" variant="ghost" />
+        </div>
       )}
 
-      <Text style={{ fontSize: 12 }} type="secondary">
+      <div className="text-muted-foreground" style={{ fontSize: 12 }}>
         {t(isDesktop ? 'cliAuthGuide.afterLogin' : 'cliAuthGuide.cloudAfterUpdate')}
-      </Text>
+      </div>
 
       {rawErrorDetails && (
-        <Flexbox gap={6}>
-          <Text strong style={{ fontSize: 12 }}>
+        <div className="flex flex-col gap-1.5">
+          <div className="font-semibold" style={{ fontSize: 12 }}>
             {t('cliAuthGuide.errorDetails')}
-          </Text>
-          <Highlighter
+          </div>
+          <CodeBlock
             wrap
-            actionIconSize={'small'}
-            language={'log'}
-            padding={12}
-            variant={'outlined'}
-            style={{
-              maxHeight: 200,
-              overflow: 'auto',
-            }}
-          >
-            {rawErrorDetails}
-          </Highlighter>
-        </Flexbox>
+            code={rawErrorDetails}
+            language="log"
+            style={{ maxHeight: 200, overflow: 'auto' }}
+          />
+        </div>
       )}
     </GuideShell>
   );

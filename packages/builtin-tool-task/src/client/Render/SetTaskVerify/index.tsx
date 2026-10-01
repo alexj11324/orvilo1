@@ -1,10 +1,10 @@
 'use client';
 
-import { Icon, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { Check, ShieldCheck, X } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import type { SetTaskVerifyParams, SetTaskVerifyState } from '../../../types';
@@ -58,7 +58,7 @@ export const SetTaskVerifyRender = memo<
   // requirement rendered as markdown.
   const statusBadge = showStatus ? (
     <span className={enabled ? styles.onBadge : styles.offBadge}>
-      <Icon icon={enabled ? Check : X} size={13} />
+      {createElement(enabled ? Check : X, { size: 13 })}
       {t(enabled ? 'builtins.orvilo-task.verify.on' : 'builtins.orvilo-task.verify.off')}
     </span>
   ) : undefined;

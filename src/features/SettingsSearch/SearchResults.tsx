@@ -1,13 +1,12 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import { Loader2Icon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import NavItem from '@/features/NavPanel/components/NavItem';
+import { SidebarMenu } from '@/components/ui/sidebar';
+import NavItem from '@/features/NavPanel/components/SidebarNavItem';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { isModifierClick } from '@/utils/navigation';
 
@@ -16,7 +15,7 @@ import type { SettingsSearchResult } from './useSettingsSearch';
 
 const styles = createStaticStyles(({ css }) => ({
   match: css`
-    color: ${cssVar.colorPrimary};
+    color: var(--sidebar-primary);
   `,
 }));
 
@@ -54,21 +53,21 @@ const SearchResults = memo<SearchResultsProps>(({ isIndexing, query, results }) 
 
   if (results.length === 0)
     return (
-      <Flexbox align={'center'} paddingBlock={24} paddingInline={8}>
+      <div className="flex flex-col items-center" style={{ paddingBlock: 24, paddingInline: 8 }}>
         {isIndexing ? (
           // A zero-result answer is not authoritative while the pinyin dict is
           // still loading — show a spinner instead of a false empty state.
-          <Icon spin color={cssVar.colorTextSecondary} icon={Loader2Icon} />
+          <Loader2Icon className="animate-spin" color="var(--sidebar-muted)" />
         ) : (
-          <Text fontSize={12} type={'secondary'}>
+          <span className="text-xs text-[var(--sidebar-muted)]">
             {t('settingsSearch.empty', { keyword })}
-          </Text>
+          </span>
         )}
-      </Flexbox>
+      </div>
     );
 
   return (
-    <Flexbox gap={1} paddingBlock={4}>
+    <SidebarMenu className="gap-0.25 py-1">
       {results.map((result, index) => (
         <NavItem
           href={result.url}
@@ -76,20 +75,20 @@ const SearchResults = memo<SearchResultsProps>(({ isIndexing, query, results }) 
           key={result.key}
           title={<HighlightMatch query={keyword} text={result.label} />}
           description={
-            <Text ellipsis fontSize={12} type={'secondary'}>
+            <span className="truncate text-xs text-[var(--sidebar-muted)]">
               {result.breadcrumb}
-            </Text>
+            </span>
           }
           onClick={(e) => {
             trackResultClick(result, index + 1);
             // Modifier clicks (cmd/ctrl) open a new tab via the href; don't also
             // navigate the current tab.
             if (isModifierClick(e)) return;
-            navigate(result.url);
+            navigate(result.url, { escape: true });
           }}
         />
       ))}
-    </Flexbox>
+    </SidebarMenu>
   );
 });
 

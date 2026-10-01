@@ -1,12 +1,17 @@
-import { EditableText, SortableList } from '@lobehub/ui';
-import { ActionIcon, confirmModal, toast } from '@lobehub/ui/base-ui';
+import type { DraggableSyntheticListeners } from '@dnd-kit/core';
 import { createStaticStyles } from 'antd-style';
-import { PencilLine, Trash } from 'lucide-react';
-import { memo, useState } from 'react';
+import { GripVertical, PencilLine, Trash } from 'lucide-react';
+import { createContext, memo, use, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Input } from '@/components/ui/input';
 import { useSessionStore } from '@/store/session';
 import { type SessionGroupItem } from '@/types/session';
+
+export const GroupItemDragContext = createContext<DraggableSyntheticListeners>(undefined);
 
 const styles = createStaticStyles(({ css }) => ({
   content: css`
@@ -35,9 +40,20 @@ const GroupItem = memo<GroupItemProps>(({ id, name, disabled = false }) => {
     s.removeSessionGroup,
   ]);
 
+  const dragListeners = use(GroupItemDragContext);
+
   return (
     <>
-      {!disabled && <SortableList.DragHandle />}
+      {!disabled && (
+        <button
+          aria-label={t('sessionGroup.drag', 'Drag')}
+          className="cursor-grab text-muted-foreground"
+          type="button"
+          {...dragListeners}
+        >
+          <GripVertical size={14} />
+        </button>
+      )}
       {!editing ? (
         <>
           <span className={styles.title}>{name}</span>
@@ -72,23 +88,25 @@ const GroupItem = memo<GroupItemProps>(({ id, name, disabled = false }) => {
           />
         </>
       ) : (
-        <EditableText
-          editing={editing}
-          showEditIcon={false}
-          style={{ height: 28 }}
-          value={name}
-          onEditingChange={(e) => setEditing(e)}
-          onChangeEnd={async (input) => {
+        <Input
+          autoFocus
+          className="h-7 flex-1"
+          defaultValue={name}
+          onBlur={async (e) => {
+            const input = e.target.value;
+            setEditing(false);
             if (disabled) return;
             if (name !== input) {
-              if (!input) return;
-              if (input.length === 0 || input.length > 20 || input.trim() === '')
+              if (!input || input.length > 20 || input.trim() === '')
                 return toast.warning(t('sessionGroup.tooLong'));
 
               await updateSessionGroupName(id, input);
               toast.success(t('sessionGroup.renameSuccess'));
             }
-            setEditing(false);
+          }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') e.currentTarget.blur();
+            if (e.key === 'Escape') setEditing(false);
           }}
         />
       )}

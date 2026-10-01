@@ -1,10 +1,17 @@
 'use client';
 
-import { FluentEmoji } from '@lobehub/ui';
-import { Result, Text } from '@lobehub/ui/base-ui';
+import { CircleCheckIcon } from 'lucide-react';
 import React, { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useSearchParams } from 'react-router';
+
+import {
+  Empty,
+  EmptyDescription,
+  EmptyHeader,
+  EmptyMedia,
+  EmptyTitle,
+} from '@/components/ui/empty';
 
 const SuccessPage = memo(() => {
   const { t } = useTranslation('oauth');
@@ -46,25 +53,24 @@ const SuccessPage = memo(() => {
   const provider = searchParams.get('provider');
 
   return (
-    <Result
-      icon={<FluentEmoji emoji={'✅'} size={96} type={'anim'} />}
-      status="success"
-      subTitle={
-        <Text fontSize={16} type="secondary">
-          {provider
-            ? t('success.subTitleWithCountdown', {
-                countdown,
-                defaultValue: `You may close this page. Auto-closing in ${countdown}s...`,
-              })
-            : t('success.subTitle')}
-        </Text>
-      }
-      title={
-        <Text fontSize={32} weight={'bold'}>
-          {t('success.title')}
-        </Text>
-      }
-    />
+    <Empty>
+      <EmptyHeader>
+        <EmptyMedia variant="default">{<CircleCheckIcon size={96} />}</EmptyMedia>
+        <EmptyTitle>{<div className="text-[32px] font-bold">{t('success.title')}</div>}</EmptyTitle>
+        <EmptyDescription>
+          {
+            <div className="text-[16px] text-muted-foreground">
+              {provider
+                ? t('success.subTitleWithCountdown', {
+                    countdown,
+                    defaultValue: `You may close this page. Auto-closing in ${countdown}s...`,
+                  })
+                : t('success.subTitle')}
+            </div>
+          }
+        </EmptyDescription>
+      </EmptyHeader>
+    </Empty>
   );
 });
 

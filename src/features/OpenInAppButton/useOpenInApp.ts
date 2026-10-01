@@ -1,10 +1,10 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import type { DetectedApp, OpenInAppId } from '@orvilo/electron-client-ipc';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import { toast } from '@/components/toast';
 import { openInAppKeys } from '@/libs/swr/keys';
 import { electronOpenInAppService } from '@/services/electron/openInApp';
 import { useUserStore } from '@/store/user';

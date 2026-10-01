@@ -1,5 +1,4 @@
 'use client';
-
 import {
   ReactCodeblockPlugin,
   ReactCodePlugin,
@@ -9,15 +8,17 @@ import {
   ReactTablePlugin,
 } from '@lobehub/editor';
 import { Editor, useEditor } from '@lobehub/editor/react';
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { InputNumber } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight, Pencil, Plus, Trash2 } from 'lucide-react';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import InputNumber from '@/components/InputNumber';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import {
   CriterionList,
   CriterionRequiredChip,
@@ -117,25 +118,24 @@ interface SectionProps {
  * fold away, instead of three flat blocks bleeding into each other.
  */
 const Section = memo<SectionProps>(({ children, extra, label, onToggle, open }) => (
-  <Flexbox className={styles.section} gap={7}>
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.sectionHeader}
-      gap={6}
+  <div className={cn('flex', 'flex-col', 'gap-[7px]', styles.section)}>
+    <div
+      className={cn('flex', 'items-center', 'gap-[6px]', styles.sectionHeader)}
       onClick={onToggle}
     >
-      <Icon
-        color={cssVar.colorTextQuaternary}
-        icon={ChevronRight}
+      <ChevronRight
         size={13}
-        style={{ transform: open ? 'rotate(90deg)' : 'none', transition: 'transform 0.2s' }}
+        style={{
+          color: cssVar.colorTextQuaternary,
+          transform: open ? 'rotate(90deg)' : 'none',
+          transition: 'transform 0.2s',
+        }}
       />
-      <Text className={styles.sectionLabel}>{label}</Text>
+      <div className={styles.sectionLabel}>{label}</div>
       {extra}
-    </Flexbox>
+    </div>
     {open && children}
-  </Flexbox>
+  </div>
 ));
 
 Section.displayName = 'CreateGoalSection';
@@ -192,22 +192,21 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
     );
 
     return (
-      <Flexbox className={styles.root}>
-        <Flexbox className={styles.header}>
+      <div className={cn('flex', 'flex-col', styles.root)}>
+        <div className={cn('flex', 'flex-col', styles.header)}>
           <Input
             className={styles.titleInput}
             value={args.name}
-            variant={'borderless'}
             onChange={(event) => patch({ name: event.target.value })}
           />
-        </Flexbox>
+        </div>
 
         <Section
           label={t('builtins.orvilo-task.goal.sectionInstruction')}
           open={openSections.instruction}
           onToggle={() => toggleSection('instruction')}
         >
-          <Flexbox className={styles.instructionEditor}>
+          <div className={cn('flex', 'flex-col', styles.instructionEditor)}>
             <Editor
               content={initialInstruction}
               editor={editor}
@@ -222,20 +221,16 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
               ]}
               onTextChange={handleInstructionChange}
             />
-          </Flexbox>
+          </div>
         </Section>
 
         <Section
+          extra={<span className={styles.seq}>{args.criteria.length}</span>}
           label={t('builtins.orvilo-task.goal.criteria')}
           open={openSections.criteria}
-          extra={
-            <Text as={'span'} className={styles.seq}>
-              {args.criteria.length}
-            </Text>
-          }
           onToggle={() => toggleSection('criteria')}
         >
-          <Flexbox gap={7}>
+          <div className="flex flex-col gap-[7px]">
             <CriterionList className={styles.list}>
               {/* Rows are read-only on purpose. A focusable input sitting in a
                 dense list is one stray click away from silently rewriting a
@@ -280,11 +275,10 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
                 </CriterionRow>
               ))}
             </CriterionList>
-            <Flexbox horizontal>
+            <div className="flex">
               <Button
-                icon={<Icon icon={Plus} />}
-                size={'small'}
-                type={'text'}
+                size="sm"
+                variant="ghost"
                 onClick={() =>
                   openCriterionEditModal({
                     criterion: {
@@ -298,10 +292,10 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
                   })
                 }
               >
-                {t('builtins.orvilo-task.goal.addCriterion')}
+                <Plus /> {t('builtins.orvilo-task.goal.addCriterion')}
               </Button>
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </Section>
 
         <Section
@@ -309,48 +303,46 @@ const CreateGoalIntervention = memo<BuiltinInterventionProps<CreateGoalParams>>(
           open={openSections.budget}
           onToggle={() => toggleSection('budget')}
         >
-          <Flexbox horizontal gap={24}>
-            <Flexbox gap={4}>
-              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</Text>
-              <InputNumber
-                min={2}
-                size={'small'}
-                style={{ width: 120 }}
-                suffix={t('builtins.orvilo-task.goal.roundsUnit')}
-                value={args.maxIterations ?? undefined}
-                variant={'filled'}
-                onChange={(value) => patch({ maxIterations: value })}
-              />
-            </Flexbox>
-            <Flexbox gap={4}>
-              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</Text>
+          <div className="flex gap-6">
+            <div className="flex flex-col gap-1">
+              <div className={styles.seq}>{t('builtins.orvilo-task.goal.roundBudget')}</div>
+              <div className="flex items-center gap-2">
+                <InputNumber
+                  min={2}
+                  style={{ width: 120 }}
+                  value={args.maxIterations ?? undefined}
+                  onChange={(value) => patch({ maxIterations: value })}
+                />
+                <span className="text-[12px] text-muted-foreground whitespace-nowrap">
+                  {t('builtins.orvilo-task.goal.roundsUnit')}
+                </span>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className={styles.seq}>{t('builtins.orvilo-task.goal.costBudget')}</div>
               <InputNumber
                 min={0}
                 placeholder={t('builtins.orvilo-task.goal.uncapped')}
                 prefix={'$'}
-                size={'small'}
                 style={{ width: 120 }}
                 value={args.maxTotalCost ?? undefined}
-                variant={'filled'}
                 onChange={(value) => patch({ maxTotalCost: value })}
               />
-            </Flexbox>
-            <Flexbox gap={4}>
-              <Text className={styles.seq}>{t('builtins.orvilo-task.goal.parallelism')}</Text>
+            </div>
+            <div className="flex flex-col gap-1">
+              <div className={styles.seq}>{t('builtins.orvilo-task.goal.parallelism')}</div>
               <InputNumber
                 max={10}
                 min={1}
                 placeholder={t('builtins.orvilo-task.goal.parallelismAuto')}
-                size={'small'}
                 style={{ width: 120 }}
                 value={args.maxConcurrentTasks ?? undefined}
-                variant={'filled'}
                 onChange={(value) => patch({ maxConcurrentTasks: value })}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         </Section>
-      </Flexbox>
+      </div>
     );
   },
 );

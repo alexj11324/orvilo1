@@ -1,12 +1,14 @@
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import { type BriefAction, DEFAULT_BRIEF_ACTIONS, type TaskStatus } from '@orvilo/types';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Check, SquarePen, Workflow } from 'lucide-react';
 import { lazy, memo, Suspense, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useBriefStore } from '@/store/brief';
 import { useTaskStore } from '@/store/task';
 
@@ -43,10 +45,10 @@ export interface BriefCardActionsProps {
 type CommentMode = { type: 'feedback' } | { key: string; type: 'comment' };
 
 const SuccessTag = memo<{ label: string }>(({ label }) => (
-  <Flexbox horizontal align={'center'} gap={4}>
-    <Icon color={cssVar.colorTextQuaternary} icon={Check} size={14} />
-    <Text className={styles.resolvedTag}>{label}</Text>
-  </Flexbox>
+  <div className="flex items-center gap-1">
+    <Check color={cssVar.colorTextQuaternary} size={14} />
+    <div className={cn(styles.resolvedTag)}>{label}</div>
+  </div>
 ));
 
 const BriefCardActions = memo<BriefCardActionsProps>(
@@ -92,13 +94,13 @@ const BriefCardActions = memo<BriefCardActionsProps>(
     }, [agentId, openTopicDrawer, setActiveTaskId, taskId, topicId, topicTitle]);
     const viewRunButton = showViewRun ? (
       <Button
-        className={'brief-view-run-btn'}
-        icon={Workflow}
-        size={'small'}
+        className={cn('brief-view-run-btn')}
+        size="sm"
         style={{ color: cssVar.colorTextSecondary }}
-        type={'text'}
+        variant="ghost"
         onClick={handleViewRun}
       >
+        <Workflow data-icon="inline-start" />
         {t('brief.viewRun')}
       </Button>
     ) : null;
@@ -235,10 +237,10 @@ const BriefCardActions = memo<BriefCardActionsProps>(
     if (resolvedAction) {
       if (!showViewRun) return <SuccessTag label={t('brief.resolved')} />;
       return (
-        <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+        <div className="flex items-center gap-2 justify-between">
           {viewRunButton}
           <SuccessTag label={t('brief.resolved')} />
-        </Flexbox>
+        </div>
       );
     }
     if (commentMode) {
@@ -263,21 +265,30 @@ const BriefCardActions = memo<BriefCardActionsProps>(
         : t('brief.addFeedback');
 
     return (
-      <Flexbox horizontal align={'center'} gap={8} justify={'space-between'} wrap={'wrap'}>
+      <div className="flex items-center gap-2 justify-between" style={{ flexWrap: 'wrap' }}>
         {viewRunButton ?? <span />}
-        <Flexbox horizontal align={'center'} gap={8}>
+        <div className="flex items-center gap-2">
           {showEditButton && (
-            <Tooltip title={editTooltip}>
-              <Button
-                className={'brief-comment-btn'}
-                icon={SquarePen}
-                shape={'round'}
-                style={{
-                  color: cssVar.colorTextSecondary,
-                }}
-                onClick={() => setCommentMode({ type: 'feedback' })}
-              />
-            </Tooltip>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span className="inline-flex">
+                      <Button
+                        className={cn('rounded-full', 'brief-comment-btn')}
+                        style={{
+                          color: cssVar.colorTextSecondary,
+                        }}
+                        onClick={() => setCommentMode({ type: 'feedback' })}
+                      >
+                        <SquarePen data-icon="inline-start" />
+                      </Button>
+                    </span>
+                  }
+                />
+                <TooltipContent>{editTooltip}</TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
           )}
           {otherActions.map((action) => {
             if (action.type === 'link') {
@@ -296,10 +307,9 @@ const BriefCardActions = memo<BriefCardActionsProps>(
 
             return (
               <Button
-                className={styles.actionBtn}
+                className={cn('rounded-full', styles.actionBtn)}
                 disabled={loadingKey === action.key}
                 key={action.key}
-                shape={'round'}
                 onClick={() => handleResolve(action.key)}
               >
                 {getActionLabel(action)}
@@ -308,9 +318,8 @@ const BriefCardActions = memo<BriefCardActionsProps>(
           })}
           {briefType === 'error' && (
             <Button
-              className={styles.actionBtn}
+              className={cn('rounded-full', styles.actionBtn)}
               disabled={loadingKey === 'ignore'}
-              shape={'round'}
               onClick={() => handleResolve('ignore')}
             >
               {t('brief.action.ignore')}
@@ -332,16 +341,15 @@ const BriefCardActions = memo<BriefCardActionsProps>(
               </BriefActionLink>
             ) : (
               <Button
-                className={styles.actionBtnPrimary}
+                className={cn('rounded-full', styles.actionBtnPrimary)}
                 disabled={loadingKey === primaryActions.key}
-                shape={'round'}
                 onClick={() => handleResolve(primaryActions.key)}
               >
                 {getActionLabel(primaryActions)}
               </Button>
             ))}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

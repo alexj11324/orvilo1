@@ -1,11 +1,11 @@
 'use client';
 
-import { copyToClipboard, Flexbox } from '@lobehub/ui';
-import { Button, Text, toast } from '@lobehub/ui/base-ui';
 import dayjs from 'dayjs';
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 import { verifyService } from '@/services/verify';
 
@@ -41,12 +41,12 @@ const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
 
   if (turn !== null && turn !== data.rounds.at(-1)?.run.roundIndex)
     return (
-      <Flexbox gap={8}>
-        <Text type={'secondary'}>{t('acceptance.review.historicalReadOnly')}</Text>
+      <div className="flex flex-col gap-2">
+        <div className="text-muted-foreground">{t('acceptance.review.historicalReadOnly')}</div>
         <Button style={{ minHeight: 44 }} onClick={() => setTurn(null)}>
           {t('acceptance.filter.roundAll')}
         </Button>
-      </Flexbox>
+      </div>
     );
   const { acceptance, checks, rounds } = data;
   const currentRound = rounds.at(-1);
@@ -219,7 +219,7 @@ const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
           })
         }
         onCopyReview={async () => {
-          await copyToClipboard(repairPrompt);
+          await navigator.clipboard.writeText(repairPrompt);
           toast.success({
             placement: 'top',
             title: t('acceptance.bar.copied'),
@@ -244,7 +244,7 @@ const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
                 title: t('acceptance.bar.rerunDrafted'),
               });
             } else {
-              await copyToClipboard(repairPrompt);
+              await navigator.clipboard.writeText(repairPrompt);
               toast.success({
                 placement: 'top',
                 title: t('acceptance.bar.copied'),
@@ -254,7 +254,7 @@ const AcceptanceDecision = ({ onDraftToComposer }: AcceptanceDecisionProps) => {
           }
         }}
       />
-      <Flexbox style={{ height: 8 }} />
+      <div className="flex flex-col" style={{ height: 8 }} />
       <FeedbackDrawer
         entries={feedbackEntries}
         open={feedbackOpen}

@@ -1,14 +1,13 @@
 import { type IconAvatarProps } from '@lobehub/icons';
 import { LobeHub as Orvilo } from '@lobehub/icons';
-import { type FlexboxProps } from '@lobehub/ui';
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
 import { type ChatModelCard } from '@orvilo/types';
 import { createStaticStyles, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import {
   AudioLines,
   Infinity as InfinityIcon,
   LucideEye,
+  type LucideIcon,
   LucideImage,
   LucidePaperclip,
   Video,
@@ -16,11 +15,14 @@ import {
 } from 'lucide-react';
 import { type ModelAbilities } from 'model-bank';
 import numeral from 'numeral';
-import { type CSSProperties, type FC } from 'react';
+import { createElement, type CSSProperties, type FC, type HTMLAttributes } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
+import { Badge, type BadgeProps } from '@/components/reui/badge';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { type AiProviderSourceType } from '@/types/aiProvider';
 import { formatTokenNumber } from '@/utils/format';
 
@@ -75,29 +77,37 @@ interface FeatureTagsProps extends Pick<
 
 interface FeatureTagItemProps {
   className: string;
-  color: Parameters<typeof Tag>[0]['color'];
+  color: 'success' | 'magenta' | 'gold' | 'info';
   disableTooltip?: boolean;
   enabled: boolean | undefined;
-  icon: Parameters<typeof Icon>[0]['icon'];
+  icon: LucideIcon;
   placement: 'top' | 'right';
   title: string;
 }
+
+const featureTagVariants: Record<FeatureTagItemProps['color'], BadgeProps['variant']> = {
+  gold: 'warning',
+  info: 'info',
+  magenta: 'focus',
+  success: 'success',
+};
 
 const FeatureTagItem = memo<FeatureTagItemProps>(
   ({ className, color, disableTooltip, enabled, icon, placement, title }) => {
     if (!enabled) return null;
 
     const tag = (
-      <Tag className={className} color={color} size={'small'}>
-        <Icon icon={icon} />
-      </Tag>
+      <Badge className={className} size="sm" variant={featureTagVariants[color]}>
+        {createElement(icon, { size: 16 })}
+      </Badge>
     );
 
     if (disableTooltip) return tag;
 
     return (
-      <Tooltip placement={placement} title={title}>
-        {tag}
+      <Tooltip>
+        <TooltipTrigger render={<span />}>{tag}</TooltipTrigger>
+        <TooltipContent side={placement}>{title}</TooltipContent>
       </Tooltip>
     );
   },
@@ -194,21 +204,21 @@ const Context = memo(
     const tokensText = contextWindowTokens === 0 ? '∞' : formatTokenNumber(contextWindowTokens);
 
     const tag = (
-      <Tag className={styles.token} size={'small'}>
+      <Badge className={styles.token} size="sm" variant="secondary">
         {contextWindowTokens === 0 ? <InfinityIcon size={17} strokeWidth={1.6} /> : tokensText}
-      </Tag>
+      </Badge>
     );
 
     if (disableTooltip) return tag;
 
     return (
-      <Tooltip
-        placement={placement}
-        title={t('ModelSelect.featureTag.tokens', {
-          tokens: contextWindowTokens === 0 ? '∞' : numeral(contextWindowTokens).format('0,0'),
-        })}
-      >
-        {tag}
+      <Tooltip>
+        <TooltipTrigger render={<span />}>{tag}</TooltipTrigger>
+        <TooltipContent side={placement}>
+          {t('ModelSelect.featureTag.tokens', {
+            tokens: contextWindowTokens === 0 ? '∞' : numeral(contextWindowTokens).format('0,0'),
+          })}
+        </TooltipContent>
       </Tooltip>
     );
   },
@@ -217,12 +227,15 @@ const Context = memo(
 export const ModelInfoTags = memo<ModelInfoTagsProps>(
   ({ directionReverse, disableTooltip, placement = 'top', style, ...model }) => {
     return (
-      <Flexbox
-        className={TAG_CLASSNAME}
-        direction={directionReverse ? 'horizontal-reverse' : 'horizontal'}
-        gap={2}
-        style={{ marginLeft: 'auto', ...style }}
-        width={'fit-content'}
+      <div
+        className={cn('flex', TAG_CLASSNAME)}
+        style={{
+          gap: 2,
+          marginLeft: 'auto',
+          ...style,
+          flexDirection: directionReverse ? 'row-reverse' : 'row',
+          width: 'fit-content',
+        }}
       >
         <FeatureTags
           audio={model.audio}
@@ -243,12 +256,12 @@ export const ModelInfoTags = memo<ModelInfoTagsProps>(
             styles={styles}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
 
-interface ModelItemRenderProps extends ChatModelCard, Pick<FlexboxProps, 'className' | 'style'> {
+interface ModelItemRenderProps extends ChatModelCard, Omit<HTMLAttributes<HTMLDivElement>, 'id'> {
   abilities?: ModelAbilities;
   audio?: boolean;
   newBadgeLabel?: string;
@@ -279,46 +292,39 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
     const displayNameOrId = displayName || id;
 
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={className}
-        gap={32}
-        justify={'space-between'}
-        style={{
-          overflow: 'hidden',
-          position: 'relative',
-          width: '100%',
-          ...style,
-        }}
+      <div
+        className={cn('flex gap-8 items-center justify-between', className)}
+        style={{ overflow: 'hidden', position: 'relative', width: '100%', ...style }}
       >
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
+        <div
+          className={'flex gap-2 items-center'}
           style={{ flexShrink: 1, minWidth: 0, overflow: 'hidden' }}
         >
           <ModelIcon model={id} size={20} />
-          <Text
-            style={mobile ? { maxWidth: '60vw' } : { minWidth: 0, overflow: 'hidden' }}
-            ellipsis={{
-              tooltip: displayNameOrId,
-              tooltipWhenOverflow: true,
-            }}
-          >
-            {displayNameOrId}
-          </Text>
+          <Tooltip>
+            <TooltipTrigger
+              render={
+                <div
+                  className="truncate min-w-0"
+                  style={mobile ? { maxWidth: '60vw' } : { minWidth: 0, overflow: 'hidden' }}
+                >
+                  {displayNameOrId}
+                </div>
+              }
+            />
+            <TooltipContent>{displayNameOrId}</TooltipContent>
+          </Tooltip>
           {newBadgeLabel ? (
             <NewModelBadgeCore label={newBadgeLabel} releasedAt={releasedAt} />
           ) : (
             <NewModelBadgeI18n releasedAt={releasedAt} />
           )}
           {proBadgeLabel && (
-            <Tag color="gold" size="small">
+            <Badge size="sm" variant="warning">
               {proBadgeLabel}
-            </Tag>
+            </Badge>
           )}
-        </Flexbox>
+        </div>
         {showInfoTag && (
           <ModelInfoTags
             audio={audio ?? abilities?.audio}
@@ -331,7 +337,7 @@ export const ModelItemRender = memo<ModelItemRenderProps>(
             vision={vision ?? abilities?.vision}
           />
         )}
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -349,15 +355,7 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
   ({ provider, name, source, logo, type = 'mono', size = 16 }) => {
     const isMono = type === 'mono';
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={6}
-        width={'100%'}
-        style={{
-          overflow: 'hidden',
-        }}
-      >
+      <div className={'flex items-center'} style={{ gap: 6, overflow: 'hidden' }}>
         {source === 'custom' && !!logo ? (
           <Avatar
             avatar={logo}
@@ -371,10 +369,10 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
         ) : (
           <ProviderIcon provider={provider} size={size} type={type} />
         )}
-        <Text ellipsis color={'inherit'}>
+        <div className="truncate min-w-0" style={{ color: 'inherit' }}>
           {name}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -385,8 +383,8 @@ interface LabelRendererProps {
 }
 
 export const LabelRenderer = memo<LabelRendererProps>(({ Icon, label }) => (
-  <Flexbox horizontal align={'center'} gap={8}>
-    <Icon size={20} />
+  <div className={'flex gap-2 items-center'}>
+    {createElement(Icon, { size: 20 })}
     <span>{label}</span>
-  </Flexbox>
+  </div>
 ));

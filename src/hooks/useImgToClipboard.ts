@@ -1,6 +1,7 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { useState } from 'react';
+
+import { toast } from '@/components/toast';
 
 import { getImageUrl, ImageType } from './useScreenshot';
 

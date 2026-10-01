@@ -1,8 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
-import { render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
 import TaskListVisibilityFilter from './TaskListVisibilityFilter';
@@ -10,27 +9,6 @@ import TaskListVisibilityFilter from './TaskListVisibilityFilter';
 const taskStoreMock = vi.hoisted(() => ({
   setListVisibility: vi.fn(),
   visibility: 'workspace',
-}));
-
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  DropdownMenu: ({
-    children,
-    items,
-  }: {
-    children: ReactNode;
-    items: Array<{ extra?: ReactNode; key: string }>;
-  }) => (
-    <>
-      {children}
-      {items.map((item) => (
-        <div data-testid={`extra-${item.key}`} key={item.key}>
-          {item.extra}
-        </div>
-      ))}
-    </>
-  ),
-  Icon: () => <span data-testid="menu-extra-icon" />,
 }));
 
 vi.mock('@/business/client/hooks/useActiveWorkspaceId', () => ({
@@ -45,14 +23,24 @@ vi.mock('@/store/task', () => ({
     }),
 }));
 
-describe('TaskListVisibilityFilter', () => {
-  it('shows a trailing checkmark only for the active visibility option', () => {
-    render(<TaskListVisibilityFilter />);
+const itemsByText = async () => {
+  const items = await screen.findAllByRole('menuitem');
+  const byText = (needle: string) => items.find((item) => item.textContent?.includes(needle));
+  return {
+    all: byText('taskList.visibility.all'),
+    private: byText('createTask.visibility.private'),
+    workspace: byText('createTask.visibility.workspace'),
+  };
+};
 
-    expect(screen.getByTestId('extra-workspace')).toContainElement(
-      screen.getByTestId('menu-extra-icon'),
-    );
-    expect(screen.getByTestId('extra-private')).toBeEmptyDOMElement();
-    expect(screen.getByTestId('extra-all')).toBeEmptyDOMElement();
+describe('TaskListVisibilityFilter', () => {
+  it('shows a trailing checkmark only for the active visibility option', async () => {
+    render(<TaskListVisibilityFilter />);
+    fireEvent.click(screen.getByRole('button'));
+
+    const { all, private: privateItem, workspace } = await itemsByText();
+    expect(workspace?.querySelector('svg.lucide-check')).not.toBeNull();
+    expect(privateItem?.querySelector('svg.lucide-check')).toBeNull();
+    expect(all?.querySelector('svg.lucide-check')).toBeNull();
   });
 });

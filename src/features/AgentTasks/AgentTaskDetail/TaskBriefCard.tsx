@@ -1,10 +1,12 @@
-import { Block, type DropdownItem, DropdownMenu, Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, confirmModal, Text, toast } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { Check, ChevronDownIcon, ChevronUpIcon, MoreHorizontal, Trash } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import BriefCardActions from '@/features/DailyBrief/BriefCardActions';
 import BriefCardArtifacts from '@/features/DailyBrief/BriefCardArtifacts';
 import BriefCardSummary from '@/features/DailyBrief/BriefCardSummary';
@@ -12,6 +14,7 @@ import BriefIcon from '@/features/DailyBrief/BriefIcon';
 import { styles as briefStyles } from '@/features/DailyBrief/style';
 import type { BriefItem } from '@/features/DailyBrief/types';
 import Time from '@/features/Home/components/Time';
+import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useBriefStore } from '@/store/brief';
 
 interface TaskBriefCardProps {
@@ -57,11 +60,11 @@ const TaskBriefCard = memo<TaskBriefCardProps>(
       });
     }, [brief.id, deleteBrief, onAfterDelete, t]);
 
-    const menuItems = useMemo<DropdownItem[]>(
+    const menuItems = useMemo(
       () => [
         {
           danger: true,
-          icon: <Icon icon={Trash} />,
+          icon: <Trash />,
           key: 'delete',
           label: t('brief.delete'),
           onClick: handleDelete,
@@ -71,24 +74,23 @@ const TaskBriefCard = memo<TaskBriefCardProps>(
     );
 
     return (
-      <Block
-        className={briefStyles.card}
-        gap={12}
-        paddingBlock={12}
-        paddingInline={8}
-        style={{ borderRadius: cssVar.borderRadiusLG }}
-        variant={'outlined'}
+      <div
+        className={`flex flex-col gap-3 px-2 py-3 ${briefStyles.card}`}
+        style={{
+          border: `1px solid ${cssVar.colorBorder}`,
+          borderRadius: cssVar.borderRadiusLG,
+        }}
       >
-        <Flexbox horizontal align={'center'} gap={8} style={{ overflow: 'hidden' }}>
+        <div className="flex items-center gap-2" style={{ overflow: 'hidden' }}>
           <BriefIcon muted={isResolved} size={24} type={brief.type} />
-          <Text ellipsis style={{ flex: 1 }} weight={500}>
+          <div className="truncate block font-medium" style={{ flex: 1 }}>
             {brief.title}
-          </Text>
+          </div>
           {isResolved && !expanded && (
-            <Flexbox horizontal align={'center'} gap={4}>
-              <Icon color={cssVar.colorTextQuaternary} icon={Check} size={14} />
-              <Text className={briefStyles.resolvedTag}>{t('brief.resolved')}</Text>
-            </Flexbox>
+            <div className="flex items-center gap-1">
+              <Check color={cssVar.colorTextQuaternary} size={14} />
+              <div className={cn(briefStyles.resolvedTag)}>{t('brief.resolved')}</div>
+            </div>
           )}
           <Time date={brief.createdAt} />
           {isResolved && (
@@ -99,10 +101,10 @@ const TaskBriefCard = memo<TaskBriefCardProps>(
               onClick={() => setExpanded((v) => !v)}
             />
           )}
-          <DropdownMenu items={menuItems}>
+          <SidebarDropdownMenu items={menuItems}>
             <ActionIcon icon={MoreHorizontal} size={'small'} />
-          </DropdownMenu>
-        </Flexbox>
+          </SidebarDropdownMenu>
+        </div>
         {showFull && (
           <>
             <BriefCardSummary summary={brief.summary} />
@@ -121,7 +123,7 @@ const TaskBriefCard = memo<TaskBriefCardProps>(
             />
           </>
         )}
-      </Block>
+      </div>
     );
   },
 );

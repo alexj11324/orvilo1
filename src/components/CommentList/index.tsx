@@ -1,12 +1,12 @@
 'use client';
 
-import { Empty, Flexbox } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { MessageSquare } from 'lucide-react';
 import { memo, useCallback, useState, useTransition } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ArticleSkeleton } from '@/components/Skeleton';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { type SkillCommentItem, type SkillCommentListResponse } from '@/types/discover';
 
 import CommentItem from './CommentItem';
@@ -51,23 +51,32 @@ const CommentList = memo<CommentListProps>(({ initialData, fetchMore }) => {
 
   let content;
   if (totalCount === 0 && !isPending) {
-    content = <Empty description={t('skills.details.comments.noComments')} icon={MessageSquare} />;
+    content = (
+      <Empty>
+        <EmptyHeader>
+          <EmptyMedia variant={'icon'}>
+            <MessageSquare />
+          </EmptyMedia>
+          <EmptyDescription>{t('skills.details.comments.noComments')}</EmptyDescription>
+        </EmptyHeader>
+      </Empty>
+    );
   } else {
     content = (
       <>
-        <Flexbox gap={24}>
+        <div className={'flex flex-col gap-6'}>
           {isPending && items.length === 0 ? (
-            <Flexbox gap={24}>
+            <div className={'flex flex-col gap-6'}>
               {Array.from({ length: 3 }).map((_, i) => (
                 <ArticleSkeleton key={i} rows={2} title={120} />
               ))}
-            </Flexbox>
+            </div>
           ) : (
             items.map((item) => <CommentItem item={item} key={item.id} />)
           )}
-        </Flexbox>
+        </div>
         {currentPage < totalPages && (
-          <Button block loading={isPending} onClick={handleLoadMore}>
+          <Button className="w-full" loading={isPending} onClick={handleLoadMore}>
             {loadMoreFailed ? tc('retry') : t('skills.details.comments.loadMore')}
           </Button>
         )}
@@ -75,7 +84,7 @@ const CommentList = memo<CommentListProps>(({ initialData, fetchMore }) => {
     );
   }
 
-  return <Flexbox gap={24}>{content}</Flexbox>;
+  return <div className={'flex flex-col gap-6'}>{content}</div>;
 });
 
 export default CommentList;

@@ -1,10 +1,13 @@
 'use client';
 
-import { DropdownMenu, type DropdownMenuProps, Icon } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { Monitor, Moon, Sun } from 'lucide-react';
 import { useTheme as useNextThemesTheme } from 'next-themes';
-import { memo, useMemo } from 'react';
+import { createElement, memo, useMemo } from 'react';
+
+import ActionIcon from '@/components/ActionIcon';
+import SidebarDropdownMenu, {
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 const themeIcons = {
   dark: Moon,
@@ -15,22 +18,22 @@ const themeIcons = {
 const AuthThemeButton = memo<{ size?: number }>((props) => {
   const { setTheme, theme } = useNextThemesTheme();
 
-  const items = useMemo<DropdownMenuProps['items']>(
+  const items = useMemo<SidebarDropdownMenuProps['items']>(
     () => [
       {
-        icon: <Icon icon={themeIcons.system} />,
+        icon: createElement(themeIcons.system, { size: 14 }),
         key: 'system',
         label: 'Auto',
         onClick: () => setTheme('system'),
       },
       {
-        icon: <Icon icon={themeIcons.light} />,
+        icon: createElement(themeIcons.light, { size: 14 }),
         key: 'light',
         label: 'Light',
         onClick: () => setTheme('light'),
       },
       {
-        icon: <Icon icon={themeIcons.dark} />,
+        icon: createElement(themeIcons.dark, { size: 14 }),
         key: 'dark',
         label: 'Dark',
         onClick: () => setTheme('dark'),
@@ -40,12 +43,12 @@ const AuthThemeButton = memo<{ size?: number }>((props) => {
   );
 
   return (
-    <DropdownMenu items={items}>
+    <SidebarDropdownMenu items={items}>
       <ActionIcon
         icon={themeIcons[(theme as 'dark' | 'light' | 'system') || 'system']}
         size={props.size || { blockSize: 32, size: 16 }}
       />
-    </DropdownMenu>
+    </SidebarDropdownMenu>
   );
 });
 

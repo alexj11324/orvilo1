@@ -1,4 +1,3 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
 import { type MouseEventHandler } from 'react';
@@ -6,6 +5,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Badge } from '@/components/reui/badge';
 import { ChatItem } from '@/features/Conversation/ChatItem';
 import { useMessageCommentCount } from '@/features/TopicComment/hooks';
 import MessageCommentBadge from '@/features/TopicComment/MessageCommentBadge';
@@ -79,7 +79,7 @@ const UserMessage = memo<UserMessageProps>(({ id, disableEditing, index }) => {
             targetId,
           );
 
-    return <Tag>{t('dm.visibleTo', { target: targetName })}</Tag>;
+    return <Badge>{t('dm.visibleTo', { target: targetName })}</Badge>;
   }, [targetId, userName, agents, t]);
 
   const onDoubleClick = useDoubleClickEdit({ disableEditing, error, id, role });
@@ -108,7 +108,7 @@ const UserMessage = memo<UserMessageProps>(({ id, disableEditing, index }) => {
       avatar={{ avatar, title }}
       belowMessage={<ScheduledRunFooter id={id} />}
       editing={editing}
-      headerAddon={metadata?.steer ? <Tag>{t('steer.tag')}</Tag> : undefined}
+      headerAddon={metadata?.steer ? <Badge>{t('steer.tag')}</Badge> : undefined}
       id={id}
       message={content}
       messageExtra={<UserMessageExtra content={content} extra={extra} id={id} />}

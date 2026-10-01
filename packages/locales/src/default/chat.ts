@@ -406,6 +406,32 @@ export default {
   'heteroAgent.fullAccess.label': 'Full access',
   'heteroAgent.fullAccess.tooltip':
     'The local coding agent runs with full read/write access to the working directory. Switching permission modes is not available yet.',
+  'heteroAgent.apiMode.agentUnsupported': '{{name}} does not support Orvilo Provider binding.',
+  'heteroAgent.apiMode.configMissing':
+    'Provider binding requires a provider and model. Open the agent profile to configure it.',
+  'heteroAgent.apiMode.defaultProviderConfigMissing':
+    'Orvilo requires a compatible model. Open the agent profile to select one.',
+  'heteroAgent.apiMode.credentialUnsupported':
+    'The provider "{{providerId}}" uses an authentication method this agent does not support.',
+  'heteroAgent.apiMode.credentialsMissing':
+    'The provider "{{providerId}}" has no API key configured.',
+  'heteroAgent.apiMode.endpointMissing':
+    'The provider "{{providerId}}" requires a base URL for this agent.',
+  'heteroAgent.apiMode.endpointUnsupported':
+    'The provider "{{providerId}}" has an unsupported base URL.',
+  'heteroAgent.apiMode.labDisabled.action': 'Enable in Labs',
+  'heteroAgent.apiMode.labDisabled.desc':
+    'Turn it on in Settings → Labs, or switch this agent to Subscription authentication.',
+  'heteroAgent.apiMode.labDisabled.title': 'Provider binding is a Labs experiment',
+  'heteroAgent.apiMode.localOnly.desc':
+    'Switch the execution environment to Local device, or use Subscription authentication.',
+  'heteroAgent.apiMode.localOnly.title': 'API mode requires Desktop local execution',
+  'heteroAgent.apiMode.modelUnavailable':
+    'The model "{{providerId}}/{{model}}" is disabled or no longer available.',
+  'heteroAgent.apiMode.protocolMismatch':
+    'The provider "{{providerId}}" does not expose a protocol supported by {{agentType}}.',
+  'heteroAgent.apiMode.providerUnavailable':
+    'The provider "{{providerId}}" is disabled or no longer available.',
   'heteroAgent.claudeQuota.accounts': 'Accounts',
   'heteroAgent.claudeQuota.calendar.burnout.exhausted': 'Exhausted — resets {{time}}',
   'heteroAgent.claudeQuota.calendar.burnout.safe':
@@ -1652,6 +1678,7 @@ export default {
   'taskDetail.priority.normal': 'Medium',
   'taskDetail.priority.urgent': 'Urgent',
   'taskDetail.properties': 'Properties',
+  'taskDetail.dueDate': 'Due date',
   'taskDetail.executionStatus': 'Execution',
   'taskDetail.project': 'Project',
   'taskDetail.noProject': 'No project',
@@ -2242,6 +2269,20 @@ export default {
   'taskList.mine.emptyCreated': "You haven't created any tasks yet",
   'taskList.mine.title': 'My tasks',
   'taskList.noMilestone': 'No milestone',
+  'taskList.schedule.inOneWeek': 'In one week',
+  'taskList.schedule.loadFailed': 'Could not load the reminder. Try again.',
+  'taskList.schedule.nextMonth': 'Next month',
+  'taskList.schedule.previousMonth': 'Previous month',
+  'taskList.schedule.remindInHour': 'In 1 hour',
+  'taskList.schedule.remindInThreeHours': 'In 3 hours',
+  'taskList.schedule.remindInWeek': 'In one week',
+  'taskList.schedule.remindMe': 'Remind me',
+  'taskList.schedule.remindTomorrow': 'Tomorrow morning',
+  'taskList.schedule.removeDueDate': 'Remove due date',
+  'taskList.schedule.removeReminder': 'Remove reminder',
+  'taskList.schedule.saveFailed': 'Could not update the schedule. Try again.',
+  'taskList.schedule.today': 'Today',
+  'taskList.schedule.tomorrow': 'Tomorrow',
   'taskList.scheduled.empty': 'No automations yet',
   // The collection keeps the `scheduled` identifier — it names a query and a
   // route, and renaming it would break stored deep links. The product calls the
@@ -2321,13 +2362,25 @@ export default {
   'taskList.contextMenu.copyFailed': 'Failed to copy task',
   'taskList.contextMenu.copyId': 'Copy ID',
   'taskList.contextMenu.copyIdSuccess': 'ID copied',
+  'taskList.contextMenu.copyIssueTitle': 'Copy title',
   'taskList.contextMenu.copyLink': 'Copy Link',
   'taskList.contextMenu.copyLinkSuccess': 'Link copied',
+  'taskList.contextMenu.copyMarkdown': 'Copy as Markdown',
+  'taskList.contextMenu.copyMarkdownSuccess': 'Markdown copied',
   'taskList.contextMenu.copySuccess': 'Task copied',
   'taskList.contextMenu.copyTitle': 'Copy task',
+  'taskList.contextMenu.copyTitleAsLink': 'Copy title as link',
+  'taskList.contextMenu.copyTitleSuccess': 'Title copied',
   'taskList.contextMenu.copyTo': 'Copy to…',
+  'taskList.contextMenu.dueDate': 'Due date…',
+  'taskList.contextMenu.favorite': 'Favorite',
+  'taskList.contextMenu.labels': 'Labels',
+  'taskList.contextMenu.labelsEmpty': 'No labels',
+  'taskList.contextMenu.noProject': 'No project',
   'taskList.contextMenu.openRun': 'Open run',
   'taskList.contextMenu.priority': 'Priority',
+  'taskList.contextMenu.project': 'Project',
+  'taskList.contextMenu.remindMe': 'Remind me…',
   'taskList.contextMenu.runNow': 'Run now',
   'taskList.contextMenu.status': 'Status',
   'taskList.contextMenu.transferConfirm': 'Move',
@@ -2339,6 +2392,7 @@ export default {
   'taskList.contextMenu.transferTo': 'Move to…',
   'taskList.contextMenu.transferWarning':
     'Cross-workspace references like assigned agent and active topic will be cleared.',
+  'taskList.contextMenu.unfavorite': 'Unfavorite',
   'taskList.kanban.addTask': 'Create task',
   'taskList.attention.blocking': 'Blocking issues',
   'taskList.attention.urgent': 'Urgent issues',

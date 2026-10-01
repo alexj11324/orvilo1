@@ -26,8 +26,8 @@ describe('FloatingChatPanel ChatBody', () => {
     const body = screen.getByTestId('floating-chat-panel-body');
     const list = screen.getByTestId('floating-chat-list');
 
-    expect(body.style.getPropertyValue('--lobe-flex')).toBe('1');
-    expect(body.style.getPropertyValue('--lobe-flex-height')).toBe('100%');
+    expect(body.className).toContain('flex-1');
+    expect(body.className).toContain('h-full');
     expect(body).toContainElement(list);
     expect(list).toContainElement(screen.getByTestId('agent-welcome'));
     expect(body).toHaveStyle({ overflow: 'hidden' });

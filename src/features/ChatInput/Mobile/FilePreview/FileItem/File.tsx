@@ -1,10 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { RotateCw, Trash } from 'lucide-react';
 import { memo } from 'react';
 
 import { FileUploadErrorActions } from '@/business/client/features/FileUploadErrorActions';
+import ActionIcon from '@/components/ActionIcon';
 import FileIcon from '@/components/FileIcon';
 import UploadDetail from '@/features/ChatInput/components/UploadDetail';
 import { type UploadFileItem } from '@/types/files';
@@ -49,10 +48,10 @@ interface FileItemProps extends UploadFileItem {
 const FileItem = memo<FileItemProps>(
   ({ error, errorCode, id, onRemove, onRetry, file, status, uploadState, tasks }) => {
     return (
-      <Flexbox horizontal align={'center'} className={styles.container} gap={12} key={id}>
+      <div className={cx('flex flex-row items-center gap-3', styles.container)} key={id}>
         <FileIcon fileName={file.name} fileType={file.type} />
-        <Flexbox style={{ overflow: 'hidden' }}>
-          <Text ellipsis>{file.name}</Text>
+        <div className="flex flex-col" style={{ overflow: 'hidden' }}>
+          <div className="truncate">{file.name}</div>
           <UploadDetail
             error={error}
             size={file.size}
@@ -60,13 +59,12 @@ const FileItem = memo<FileItemProps>(
             tasks={tasks}
             uploadState={uploadState}
           />
-        </Flexbox>
-        <Flexbox horizontal className={styles.actions}>
+        </div>
+        <div className={cx('flex flex-row', styles.actions)}>
           {status === 'error' && errorCode ? (
             <FileUploadErrorActions compact code={errorCode} />
           ) : status === 'error' ? (
             <ActionIcon
-              glass
               className={styles.deleteButton}
               icon={RotateCw}
               size={'small'}
@@ -77,7 +75,6 @@ const FileItem = memo<FileItemProps>(
             />
           ) : null}
           <ActionIcon
-            glass
             className={styles.deleteButton}
             icon={Trash}
             size={'small'}
@@ -86,8 +83,8 @@ const FileItem = memo<FileItemProps>(
               onRemove?.();
             }}
           />
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

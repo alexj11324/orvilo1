@@ -18,7 +18,7 @@ it('replays the shipped migration and commits receipts using its real unique ind
       CREATE TABLE task_topics (id uuid PRIMARY KEY);
     `);
     const migration = await readFile(
-      path.resolve('packages/database/migrations/0196_cloud_control_plane.sql'),
+      path.resolve('packages/database/migrations/0197_cloud_control_plane.sql'),
       'utf8',
     );
     const sql = migration.replaceAll('--> statement-breakpoint', ';');

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { memo } from 'react';
 
@@ -35,9 +34,9 @@ const CopilotModelSelect = memo(() => {
   const displayName = enabledModel?.displayName || model;
 
   return (
-    <Flexbox horizontal align={'center'}>
+    <div className="flex items-center">
       <span className={styles.name}>{displayName}</span>
-    </Flexbox>
+    </div>
   );
 });
 

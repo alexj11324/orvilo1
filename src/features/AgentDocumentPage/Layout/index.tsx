@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { Outlet } from 'react-router';
 
 import { NavPanelPortal } from '@/features/NavPanel/NavPanelPortal';
@@ -12,17 +11,14 @@ const AgentDocumentLayout = () => (
     <NavPanelPortal navKey="agent-docs">
       <AgentDocumentSidebarContent />
     </NavPanelPortal>
-    <Flexbox
-      horizontal
-      flex={1}
-      height={'100%'}
+    <div
+      className="flex flex-1 h-full w-full"
       style={{ minHeight: 0, overflow: 'hidden', position: 'relative' }}
-      width={'100%'}
     >
-      <Flexbox flex={1} style={{ minHeight: 0, minWidth: 0 }}>
+      <div className="flex flex-col flex-1" style={{ minHeight: 0, minWidth: 0 }}>
         <Outlet />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   </>
 );
 

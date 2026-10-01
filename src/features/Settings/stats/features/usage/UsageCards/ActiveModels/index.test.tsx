@@ -15,18 +15,13 @@ vi.mock('@/components/OrviloIcons', () => ({
   ProviderIcon: ({ provider }: { provider: string }) => <span>{provider}</span>,
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => {
-  const actual = (await importOriginal()) as Record<string, unknown>;
-
-  return {
-    ...actual,
-    Avatar: ({ avatar, title }: { avatar?: string | null; title?: string }) => (
-      <span aria-label={title} data-testid="active-user-avatar">
-        {avatar}
-      </span>
-    ),
-  };
-});
+vi.mock('@/components/Avatar', () => ({
+  default: ({ avatar, name, title }: { avatar?: string | null; name?: string; title?: string }) => (
+    <span aria-label={title} data-testid="active-user-avatar">
+      {avatar ?? name}
+    </span>
+  ),
+}));
 
 vi.mock('@/components/StatisticCard', () => ({
   default: ({ statistic }: { statistic: { description?: ReactNode; value?: ReactNode } }) => (

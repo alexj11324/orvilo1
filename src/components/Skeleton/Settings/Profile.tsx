@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox, FormGroup } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { type ReactNode } from 'react';
 
+import { FormGroup } from '@/components/GroupForm';
 import { useUserStore } from '@/store/user';
 import { authSelectors, userProfileSelectors } from '@/store/user/selectors';
 
@@ -86,11 +86,11 @@ const INTEREST_WIDTHS = [
 ];
 
 const InterestsSkeleton = () => (
-  <Flexbox horizontal gap={8} style={{ width: '100%' }} wrap={'wrap'}>
+  <div className="flex flex-wrap gap-2" style={{ width: '100%' }}>
     {INTEREST_WIDTHS.map((width, index) => (
       <SkeletonBar height={34} key={index} radius={cssVar.borderRadius} width={width} />
     ))}
-  </Flexbox>
+  </div>
 );
 
 const SettingsProfileSkeleton = () => {
@@ -106,7 +106,7 @@ const SettingsProfileSkeleton = () => {
       title={<SkeletonBar height={18} width={80} />}
       variant={'filled'}
     >
-      <Flexbox>
+      <div className="flex flex-col">
         <SettingsProfileRowSkeleton
           actionNode={<SkeletonBar height={46} radius={cssVar.borderRadius} width={46} />}
           body={null}
@@ -129,7 +129,7 @@ const SettingsProfileSkeleton = () => {
             <SettingsProfileRowSkeleton bodyWidth={184} height={54} labelWidth={96} />
           </>
         )}
-      </Flexbox>
+      </div>
     </FormGroup>
   );
 };

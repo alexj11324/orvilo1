@@ -1,7 +1,7 @@
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import type { TaskStatus } from '@orvilo/types';
 import { memo } from 'react';
 
+import ActionIcon from '@/components/ActionIcon';
 import { TASK_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import { taskListSelectors } from '@/store/task/selectors';
 

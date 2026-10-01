@@ -28,7 +28,7 @@ not an enabled event automation feature. Do not resume implementation in the ori
 6. Event source discriminant and existing TaskDispatch policy/idempotency handling.
    TaskRunner rejects bare event requests before effects pending authoritative Core wiring.
 7. Targeted tests and a registered consolidated migration
-   `packages/database/migrations/0196_cloud_control_plane.sql` (the earlier
+   `packages/database/migrations/0197_cloud_control_plane.sql` (the earlier
    candidate file in `docs/development/` was removed once the journal entry landed).
 
 ## Validation evidence and limits

@@ -1,6 +1,5 @@
 'use client';
 
-import type { MenuProps } from '@lobehub/ui';
 import { listBuiltinInspectorEntries } from '@orvilo/builtin-tools/inspectors';
 import { listBuiltinInterventionEntries } from '@orvilo/builtin-tools/interventions';
 import { listBuiltinPlaceholderEntries } from '@orvilo/builtin-tools/placeholders';
@@ -14,6 +13,8 @@ import type {
   BuiltinStreaming,
 } from '@orvilo/types';
 import { useMemo } from 'react';
+
+import type { DevMenuItem } from '@/features/DevPanel/RenderGallery/Sidebar';
 
 import { getToolRenderFixture, getToolRenderMeta, type ToolRenderFixture } from './fixtures';
 
@@ -38,7 +39,7 @@ export interface ToolsetEntry {
 
 export interface DevtoolsEntries {
   defaultToolset?: ToolsetEntry;
-  menuItems: MenuProps['items'];
+  menuItems: DevMenuItem[];
   toolsetMap: Map<string, ToolsetEntry>;
 }
 
@@ -155,7 +156,7 @@ export const useDevtoolsEntries = (): DevtoolsEntries =>
       left.toolsetName.localeCompare(right.toolsetName),
     );
 
-    const menuItems: MenuProps['items'] = toolsets.map((toolset) => ({
+    const menuItems: DevMenuItem[] = toolsets.map((toolset) => ({
       key: toolset.identifier,
       label: toolset.toolsetName,
     }));

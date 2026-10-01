@@ -2,14 +2,14 @@
 
 import { type ChatInputProps } from '@lobehub/editor/react';
 import { ChatInput, ChatInputActionBar } from '@lobehub/editor/react';
-import { Center, Flexbox } from '@lobehub/ui';
-import { Skeleton, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { type ReactNode, use } from 'react';
 import { memo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import ChatInputNotice from '@/features/ChatInput/ChatInputNotice';
 import ComposerExpandButton from '@/features/ChatInput/components/ComposerExpandButton';
 import { useChatInputStore } from '@/features/ChatInput/store';
@@ -205,13 +205,13 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     const contextContainerNode = shouldShowContextContainer && <ContextContainer />;
 
     const loadingLeftSlot = isConfigLoading ? (
-      <Flexbox horizontal align="center" gap={6} paddingInline={4}>
-        <Skeleton height={28} radius={'50%'} width={28} />
-        <Skeleton height={28} radius={'50%'} width={28} />
-      </Flexbox>
+      <div className="flex flex-row items-center gap-1.5 px-1">
+        <Skeleton style={{ height: 28, borderRadius: '50%', width: 28 }} />
+        <Skeleton style={{ height: 28, borderRadius: '50%', width: 28 }} />
+      </div>
     ) : null;
     const loadingRightSlot = isConfigLoading ? (
-      <Skeleton radius={999} style={{ height: 32, minWidth: 64, width: 64 }} />
+      <Skeleton style={{ height: 32, minWidth: 64, width: 64, borderRadius: 999 }} />
     ) : null;
     const noticeNode = !isConfigLoading && <ChatInputNotice />;
     // The action bar is `width: 100%`, so a sibling placed *inside* its
@@ -219,8 +219,8 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     // one-slot hole between the last action and the expand toggle. Keep the
     // toggle in a row outside that box.
     const leftSlotContent = (
-      <Flexbox horizontal align={'center'} flex={'none'} gap={2}>
-        <Flexbox horizontal align={'center'} className={styles.leftActions}>
+      <div className="flex flex-row items-center flex-none gap-0.5">
+        <div className={cx('flex flex-row items-center', styles.leftActions)}>
           {leftContent ?? (
             <ActionBar
               disableCollapse
@@ -229,15 +229,15 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
               extraActionItems={extraActionItems}
             />
           )}
-        </Flexbox>
+        </div>
         <ComposerExpandButton />
-      </Flexbox>
+      </div>
     );
     const leftSlot = noticeNode ? (
-      <Flexbox horizontal align={'center'} className={styles.leftSlot} gap={4}>
+      <div className={cx('flex flex-row items-center gap-1', styles.leftSlot)}>
         {leftSlotContent}
         {noticeNode}
-      </Flexbox>
+      </div>
     ) : (
       leftSlotContent
     );
@@ -249,11 +249,12 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
     const controlBarInsideCard = controlBarInCard && !compact;
 
     const content = (
-      <Flexbox
-        className={cx(styles.container, expand && styles.fullscreen)}
-        gap={8}
-        paddingBlock={expand ? 0 : showFootnote ? '0 12px' : '0 8px'}
-        style={{ display: hidden ? 'none' : undefined }}
+      <div
+        className={cx('flex flex-col gap-2', cx(styles.container, expand && styles.fullscreen))}
+        style={{
+          display: hidden ? 'none' : undefined,
+          paddingBlock: expand ? 0 : showFootnote ? '0 12px' : '0 8px',
+        }}
         onDragOver={handleDragOver}
         onDrop={handleDrop}
       >
@@ -275,10 +276,10 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
                     loadingRightSlot ??
                     rightContent ??
                     (sendAreaPrefix ? (
-                      <Flexbox horizontal align={'center'} gap={6}>
+                      <div className="flex flex-row items-center gap-1.5">
                         {sendAreaPrefix}
                         <SendArea hideContextWindow={hasControlBar} />
-                      </Flexbox>
+                      </div>
                     ) : (
                       <SendArea hideContextWindow={hasControlBar} />
                     ))
@@ -291,11 +292,11 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
             )
           }
           header={
-            <Flexbox gap={0}>
+            <div className="flex flex-col gap-0">
               {extentHeaderContent}
               {showTypoBar && <TypoBar />}
               {contextContainerNode}
-            </Flexbox>
+            </div>
           }
           onSizeChange={(height) => {
             updateSystemStatus({ chatInputHeight: height });
@@ -312,13 +313,16 @@ const DesktopChatInput = memo<DesktopChatInputProps>(
         </ChatInput>
         {controlBarInsideCard ? null : controlBarNode}
         {showFootnote && !expand && (
-          <Center style={{ pointerEvents: 'none', zIndex: 100 }}>
-            <Text className={styles.footnote} type={'secondary'}>
+          <div
+            className="flex flex-col items-center justify-center"
+            style={{ pointerEvents: 'none', zIndex: 100 }}
+          >
+            <div className={cn('text-muted-foreground', styles.footnote)}>
               {t('input.disclaimer')}
-            </Text>
-          </Center>
+            </div>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
 
     if (expand && layoutContainerRef.current)

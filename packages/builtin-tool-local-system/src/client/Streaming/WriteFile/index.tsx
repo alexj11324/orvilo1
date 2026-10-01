@@ -1,10 +1,12 @@
 'use client';
 
-import { Highlighter, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import type { WriteLocalFileParams } from '@orvilo/electron-client-ipc';
 import type { BuiltinStreamingProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
 
 type WriteFileArgs = WriteLocalFileParams & {
   file_path?: string;
@@ -33,16 +35,14 @@ export const WriteFileStreaming = memo<BuiltinStreamingProps<WriteFileArgs>>(({ 
   }
 
   return (
-    <Highlighter
-      animated
+    <CodeBlock
+      streaming
       wrap
+      code={content}
       language={ext || 'text'}
-      showLanguage={false}
       style={{ padding: '4px 8px' }}
-      variant={'outlined'}
-    >
-      {content}
-    </Highlighter>
+      variant={'default'}
+    />
   );
 });
 

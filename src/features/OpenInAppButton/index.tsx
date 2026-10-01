@@ -1,10 +1,14 @@
-import { DropdownMenu, type DropdownMenuProps, Icon, Tooltip } from '@lobehub/ui';
 import { isDesktop } from '@orvilo/const';
 import type { OpenInAppId } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDownIcon } from 'lucide-react';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
+import SidebarDropdownMenu, {
+  type SidebarDropdownMenuProps,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 
 import { APP_ICONS } from './apps';
 import { useOpenInApp } from './useOpenInApp';
@@ -28,7 +32,7 @@ const AppIcon = ({ id, icon, size = 16 }: AppIconProps) => {
     );
   }
   const Fallback = APP_ICONS[id];
-  return <Icon icon={Fallback} size={size} />;
+  return <Fallback size={size} />;
 };
 
 const styles = createStaticStyles(({ css }) => ({
@@ -102,7 +106,7 @@ const OpenInAppButton = memo<OpenInAppButtonProps>(({ workingDirectory, classNam
   const defaultDisplayName = defaultAppEntry?.displayName ?? defaultApp;
   const defaultIconSrc = defaultAppEntry?.icon;
 
-  const dropdownItems = useMemo<DropdownMenuProps['items']>(
+  const dropdownItems = useMemo<SidebarDropdownMenuProps['items']>(
     () =>
       installedApps.map((app) => ({
         icon: <AppIcon icon={app.icon} id={app.id} size={14} />,
@@ -122,23 +126,32 @@ const OpenInAppButton = memo<OpenInAppButtonProps>(({ workingDirectory, classNam
 
   return (
     <div className={wrapperClassName}>
-      <Tooltip title={t('tooltip', { appName: defaultDisplayName })}>
-        <div
-          aria-label={t('tooltip', { appName: defaultDisplayName })}
-          className={styles.leftButton}
-          role="button"
-          onClick={() => {
-            void launch(defaultApp);
-          }}
-        >
-          <AppIcon icon={defaultIconSrc} id={defaultApp} size={14} />
-        </div>
-      </Tooltip>
-      <DropdownMenu items={dropdownItems} trigger={['click']}>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span className="inline-flex">
+                <div
+                  aria-label={t('tooltip', { appName: defaultDisplayName })}
+                  className={styles.leftButton}
+                  role="button"
+                  onClick={() => {
+                    void launch(defaultApp);
+                  }}
+                >
+                  <AppIcon icon={defaultIconSrc} id={defaultApp} size={14} />
+                </div>
+              </span>
+            }
+          />
+          <TooltipContent>{t('tooltip', { appName: defaultDisplayName })}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
+      <SidebarDropdownMenu items={dropdownItems}>
         <div aria-label={t('dropdownLabel')} className={styles.rightButton} role="button">
-          <Icon icon={ChevronDownIcon} size={12} />
+          <ChevronDownIcon size={12} />
         </div>
-      </DropdownMenu>
+      </SidebarDropdownMenu>
     </div>
   );
 });

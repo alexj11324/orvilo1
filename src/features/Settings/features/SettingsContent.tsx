@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { Fragment, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -30,12 +29,15 @@ const COMPACT_HEADER_TABS = [
   SettingsTabs.Notification,
   SettingsTabs.Plans,
   SettingsTabs.Profile,
+  SettingsTabs.Referral,
+  SettingsTabs.ServiceModel,
   SettingsTabs.Stats,
   SettingsTabs.Storage,
 ] as const;
 
 /** Tabs whose pages own their internal layout and must not be wrapped. */
 const FULL_WIDTH_TABS: readonly string[] = [
+  SettingsTabs.Provider,
   SettingsTabs.Connector,
   SettingsTabs.Creds,
   SettingsTabs.Usage,
@@ -67,6 +69,8 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     [SettingsTabs.Notification]: t('setting:tab.notification'),
     [SettingsTabs.Plans]: t('subscription:tab.plans'),
     [SettingsTabs.Profile]: t('auth:profile.title'),
+    [SettingsTabs.Referral]: t('subscription:tab.referral'),
+    [SettingsTabs.ServiceModel]: t('setting:tab.serviceModel'),
     [SettingsTabs.Stats]: t('auth:tab.stats'),
     [SettingsTabs.Storage]: t('setting:tab.storage'),
   };
@@ -100,6 +104,8 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
     if (
       [
         SettingsTabs.About,
+        SettingsTabs.ServiceModel,
+        SettingsTabs.Provider,
         SettingsTabs.Profile,
         SettingsTabs.Stats,
         SettingsTabs.Usage,
@@ -144,7 +150,7 @@ const SettingsContent = ({ mobile, activeTab }: SettingsContentProps) => {
         right={compactHeaderExtra}
         styles={compactHeaderTitle ? { center: { alignItems: 'center' } } : undefined}
       >
-        {compactHeaderTitle && <Text weight={500}>{compactHeaderTitle}</Text>}
+        {compactHeaderTitle && <span style={{ fontWeight: 500 }}>{compactHeaderTitle}</span>}
       </NavHeader>
       <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
         {content}

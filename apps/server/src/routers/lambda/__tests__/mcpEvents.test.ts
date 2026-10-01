@@ -17,7 +17,7 @@ const mocks = vi.hoisted(() => ({
 }));
 vi.mock('@/database/models/task', () => ({
   TaskModel: class {
-    findById = mocks.task;
+    resolve = mocks.task;
   },
 }));
 vi.mock('@/database/models/connector', () => ({
@@ -91,6 +91,14 @@ beforeEach(() => {
 });
 
 describe('MCP Events router authorization decisions (auth transport mocked)', () => {
+  it('resolves route identifiers (T-N) to the canonical task id for trigger lookups', async () => {
+    mocks.task.mockResolvedValue({ id: 'task_canonical', createdByUserId: 'user' });
+    mocks.list.mockResolvedValue([]);
+    const result = await caller().list({ taskId: 'T-1' });
+    expect(mocks.task).toHaveBeenCalledWith('T-1');
+    expect(mocks.list).toHaveBeenCalledWith(expect.anything(), 'task_canonical');
+    expect(result.success).toBe(true);
+  });
   it('rejects missing task before remote discovery', async () => {
     mocks.task.mockResolvedValue(null);
     await expect(caller().discover(input)).rejects.toMatchObject({ code: 'NOT_FOUND' });

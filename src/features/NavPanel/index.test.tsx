@@ -2,6 +2,9 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { SidebarProvider } from '@/components/ui/sidebar';
+import { NavMain } from '@/features/ReUIShell/NavMain';
+
 import NavPanel from './index';
 import { NavPanelPortal } from './NavPanelPortal';
 import {
@@ -58,6 +61,76 @@ vi.mock('./components/NavPanelDraggable', () => ({
 vi.mock('@/features/HomeSidebar/Content', () => ({
   default: () => <div>Home sidebar</div>,
 }));
+
+vi.mock('@/features/HomeSidebar/Body', () => ({
+  default: () => <div>Global workspace navigation</div>,
+}));
+
+describe('ReUI sidebar panel selection', () => {
+  beforeEach(() => clearNavPanelRegistry());
+
+  it.each([
+    ['/settings/profile', 'settings'],
+    ['/orvilo-team/settings/general', 'workspace-settings'],
+  ])('renders the registered Settings navigation for %s', (route, key) => {
+    pathname = route;
+    render(
+      <SidebarProvider>
+        <NavPanelPortal navKey={key}>
+          <div>Settings category navigation</div>
+        </NavPanelPortal>
+        <NavMain />
+      </SidebarProvider>,
+    );
+    expect(screen.getByText('Settings category navigation')).toBeInTheDocument();
+    expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
+  });
+
+  it.each([
+    ['/orvilo-team/agent/assistant', 'agent'],
+    ['/orvilo-team/agent/assistant/docs', 'agent-docs'],
+    ['/orvilo-team/memory', 'memory'],
+  ])('swaps the registered %s panel into the column on %s', (route, key) => {
+    pathname = route;
+    registerNavPanelContent(key, Symbol(key), <div>Route panel</div>);
+    render(
+      <SidebarProvider>
+        <NavMain />
+      </SidebarProvider>,
+    );
+    expect(screen.getByText('Route panel')).toBeInTheDocument();
+    expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
+  });
+
+  it.each(['/orvilo-team/tasks', '/'])(
+    'preserves global navigation on %s when no panel is registered',
+    (route) => {
+      pathname = route;
+      registerNavPanelContent('agent', Symbol('agent'), <div>Agent navigation</div>);
+      render(
+        <SidebarProvider>
+          <NavMain />
+        </SidebarProvider>,
+      );
+      expect(screen.getByText('Global workspace navigation')).toBeInTheDocument();
+      expect(screen.queryByText('Agent navigation')).not.toBeInTheDocument();
+    },
+  );
+
+  it.each(['/orvilo-team/agent/assistant', '/orvilo-team/memory', '/orvilo-team/settings/general'])(
+    'shows the loading skeleton on %s while its panel has not registered yet',
+    (route) => {
+      pathname = route;
+      render(
+        <SidebarProvider>
+          <NavMain />
+        </SidebarProvider>,
+      );
+      expect(screen.queryByText('Global workspace navigation')).not.toBeInTheDocument();
+      expect(screen.getByTestId('nav-sidebar-skeleton')).toBeInTheDocument();
+    },
+  );
+});
 
 describe('NavPanel', () => {
   beforeEach(() => {

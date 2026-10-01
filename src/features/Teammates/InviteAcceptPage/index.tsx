@@ -1,34 +1,38 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Alert, Button, SkeletonText, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
-import { Users } from 'lucide-react';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { CircleCheck, TriangleAlert, Users } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams } from 'react-router';
 import useSWR from 'swr';
 
 import Avatar from '@/components/Avatar';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { teammatesClient } from '../api/client';
 import type { WorkspaceRole } from '../api/contract';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
+    width: 100%;
+    max-width: 480px;
+    margin-block: 48px;
+    margin-inline: auto;
     padding: 32px;
-    margin: 48px auto;
     border: 1px solid ${cssVar.colorBorderSecondary};
     border-radius: ${cssVar.borderRadiusLG};
-    max-width: 480px;
-    width: 100%;
   `,
   projectRow: css`
     padding-block: 4px;
     padding-inline: 12px;
     border-radius: ${cssVar.borderRadius};
-    background: ${cssVar.colorFillTertiary};
+
     font-size: 13px;
+
+    background: ${cssVar.colorFillTertiary};
   `,
 }));
 
@@ -46,9 +50,12 @@ const InviteAcceptPage = memo(() => {
   const navigate = useNavigate();
   const token = useParams<{ token: string }>().token ?? '';
 
-  const { data: preview, error, isLoading } = useSWR(
-    token ? invitePreviewKey(token) : null,
-    () => teammatesClient.invitation.preview.query({ token }),
+  const {
+    data: preview,
+    error,
+    isLoading,
+  } = useSWR(token ? invitePreviewKey(token) : null, () =>
+    teammatesClient.invitation.preview.query({ token }),
   );
 
   const [accepting, setAccepting] = useState(false);
@@ -90,92 +97,92 @@ const InviteAcceptPage = memo(() => {
 
   if (!token) {
     return (
-      <Flexbox className={styles.card} gap={16}>
-        <Alert title={t('workspaceSetting.invite.invalidLink')} type="error" />
-      </Flexbox>
+      <div className={cx(styles.card, 'flex flex-col gap-4')}>
+        <Alert variant="destructive">
+          <AlertTitle>{t('workspaceSetting.invite.invalidLink')}</AlertTitle>
+        </Alert>
+      </div>
     );
   }
 
   if (isLoading) {
     return (
-      <Flexbox className={styles.card} gap={16}>
-        <SkeletonText style={{ width: 200 }} />
-        <SkeletonText style={{ width: 320 }} />
-        <SkeletonText style={{ width: 120 }} />
-      </Flexbox>
+      <div className={cx(styles.card, 'flex flex-col gap-4')}>
+        <Skeleton className="h-3" style={{ width: 200 }} />
+        <Skeleton className="h-3" style={{ width: 320 }} />
+        <Skeleton className="h-3" style={{ width: 120 }} />
+      </div>
     );
   }
 
   if (error || !preview) {
     return (
-      <Flexbox className={styles.card} gap={16}>
-        <Alert title={t('workspaceSetting.invite.loadFailed')} type="error" />
+      <div className={cx(styles.card, 'flex flex-col gap-4')}>
+        <Alert variant="destructive">
+          <AlertTitle>{t('workspaceSetting.invite.loadFailed')}</AlertTitle>
+        </Alert>
         <Button onClick={() => navigate('/', { replace: true })}>
           {t('workspaceSetting.invite.backHome')}
         </Button>
-      </Flexbox>
+      </div>
     );
   }
 
   const terminal = preview.status !== 'pending';
 
   return (
-    <Flexbox className={styles.card} gap={20}>
-      <Flexbox horizontal align="center" gap={12}>
+    <div className={cx(styles.card, 'flex flex-col gap-5')}>
+      <div className="flex items-center gap-3">
         <Avatar avatar={preview.workspace.avatar} name={preview.workspace.name} size={48} />
-        <Flexbox gap={2}>
-          <Text fontSize={18} weight={600}>
-            {preview.workspace.name}
-          </Text>
-          <Text fontSize={13} type="secondary">
+        <div className="flex flex-col gap-0.5">
+          <div className="text-[18px] font-semibold">{preview.workspace.name}</div>
+          <div className="text-[13px] text-muted-foreground">
             {t('workspaceSetting.invite.invitedBy', {
               name: preview.inviter.name ?? t('workspaceSetting.invite.unknownInviter'),
             })}
-          </Text>
-        </Flexbox>
-      </Flexbox>
+          </div>
+        </div>
+      </div>
 
-      <Flexbox gap={8}>
-        <Text fontSize={13}>
+      <div className="flex flex-col gap-2">
+        <div className="text-[13px]">
           {t('workspaceSetting.invite.roleLine', { role: roleLabel })}
           {preview.emailHint ? ` · ${preview.emailHint}` : ''}
-        </Text>
+        </div>
         {preview.projects.length > 0 && (
-          <Flexbox gap={6}>
-            <Text fontSize={12} type="secondary">
+          <div className="flex flex-col gap-1.5">
+            <div className="text-[12px] text-muted-foreground">
               {t('workspaceSetting.invite.projectAccess')}
-            </Text>
+            </div>
             {preview.projects.map((project) => (
               <div className={styles.projectRow} key={project.id}>
                 {project.name} · {project.role}
               </div>
             ))}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
 
       {terminal ? (
-        <Alert
-          showIcon
-          title={
-            preview.acceptedByCurrentUser
+        <Alert variant={preview.acceptedByCurrentUser ? 'success' : 'warning'}>
+          {preview.acceptedByCurrentUser ? <CircleCheck /> : <TriangleAlert />}
+          <AlertTitle>
+            {preview.acceptedByCurrentUser
               ? t('workspaceSetting.invite.alreadyJoined')
               : t(`workspaceSetting.invite.status.${preview.status}`, {
                   defaultValue: preview.status,
-                })
-          }
-          type={preview.acceptedByCurrentUser ? 'success' : 'warning'}
-        />
+                })}
+          </AlertTitle>
+        </Alert>
       ) : (
         <>
-          {acceptError && <Alert title={acceptError} type="error" />}
-          <Button
-            disabled={accepting}
-            icon={<Icon icon={Users} size={16} />}
-            loading={accepting}
-            type="primary"
-            onClick={handleAccept}
-          >
+          {acceptError && (
+            <Alert variant="destructive">
+              <AlertTitle>{acceptError}</AlertTitle>
+            </Alert>
+          )}
+          <Button disabled={accepting} loading={accepting} variant="default" onClick={handleAccept}>
+            {<Users size={16} />}
             {t('workspaceSetting.invite.acceptAction')}
           </Button>
         </>
@@ -186,7 +193,7 @@ const InviteAcceptPage = memo(() => {
           {t('workspaceSetting.invite.goToWorkspace')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

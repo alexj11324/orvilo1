@@ -1,35 +1,47 @@
-import { Flexbox, PatchDiff } from '@lobehub/ui';
-import { Alert, Skeleton } from '@lobehub/ui/base-ui';
 import type { EditLocalFileState } from '@orvilo/builtin-tool-local-system';
 import type { BuiltinRenderProps } from '@orvilo/types';
-import React, { memo } from 'react';
+import { CircleAlert } from 'lucide-react';
+import { memo, useMemo } from 'react';
+
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { CodeBlock, parseUnifiedDiff } from '@/components/ui/code-block';
+import { Skeleton } from '@/components/ui/skeleton';
 
 const EditLocalFile = memo<BuiltinRenderProps<any, EditLocalFileState>>(
   ({ args, pluginState, pluginError }) => {
-    if (!args) return <Skeleton.Text rows={4} />;
+    const diffFiles = useMemo(
+      () => parseUnifiedDiff(pluginState?.diffText ?? ''),
+      [pluginState?.diffText],
+    );
 
-    // Support both IPC format (file_path) and ComputerRuntime format (path)
-    const filePath = args.file_path || args.path || '';
+    if (!args)
+      return (
+        <div className="flex flex-col gap-2">
+          <Skeleton />
+          <Skeleton />
+          <Skeleton />
+          <Skeleton style={{ width: '60%' }} />
+        </div>
+      );
 
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         {pluginError ? (
-          <Alert
-            showIcon
-            description={pluginError.message || 'Unknown error occurred'}
-            title="Edit Failed"
-            type="error"
-          />
+          <Alert variant="destructive">
+            <CircleAlert />
+            <AlertTitle>Edit Failed</AlertTitle>
+            <AlertDescription>{pluginError.message || 'Unknown error occurred'}</AlertDescription>
+          </Alert>
         ) : pluginState?.diffText ? (
-          <PatchDiff
-            fileName={filePath}
-            patch={pluginState.diffText}
-            showHeader={false}
-            variant="borderless"
-            viewMode="unified"
-          />
+          diffFiles.length > 0 ? (
+            diffFiles.map((file) => (
+              <CodeBlock showLineNumbers key={file.file} lines={file.lines} variant="ghost" />
+            ))
+          ) : (
+            <CodeBlock code={pluginState.diffText} language="diff" variant="ghost" />
+          )
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

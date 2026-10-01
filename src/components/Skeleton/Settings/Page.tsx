@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { useLocation } from 'react-router';
 
 import NavHeader from '@/features/NavHeader';
@@ -17,16 +16,20 @@ const SettingsPageSkeleton = ({ chrome = 'page' }: RouteSkeletonProps) => {
   const profile = tab === 'profile';
 
   return (
-    <Flexbox aria-busy flex={1} height={'100%'} style={{ minHeight: 0, overflow: 'hidden' }}>
+    <div
+      aria-busy
+      className="flex flex-col flex-1 h-full"
+      style={{ minHeight: 0, overflow: 'hidden' }}
+    >
       {chrome !== 'body' && (
         <NavHeader styles={{ center: { alignItems: 'center' } }}>
           <SkeletonBar height={16} width={profile ? 52 : 88} />
         </NavHeader>
       )}
-      <SettingContainer maxWidth={1024} paddingBlock={'24px 128px'} paddingInline={24}>
+      <SettingContainer maxWidth={1024} style={{ paddingBlock: '24px 128px', paddingInline: 24 }}>
         {profile ? <SettingsProfileSkeleton /> : <SettingsSectionSkeleton />}
       </SettingContainer>
-    </Flexbox>
+    </div>
   );
 };
 

@@ -1,7 +1,7 @@
-import { Button, Center, Flexbox } from '@lobehub/ui';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 
 import SearchXNGIcon from './SearchXNGIcon';
@@ -28,18 +28,17 @@ const ConfigAlert = memo<ConfigAlertProps>(({ provider, id }) => {
   }, [provider]);
 
   return (
-    <Center gap={16} style={{ width: 400 }}>
+    <div className="flex flex-col items-center justify-center gap-4" style={{ width: 400 }}>
       <FormAction
         avatar={avatar}
         description={t('search.searchxng.unconfiguredDesc')}
         title={t('search.searchxng.unconfiguredTitle')}
       >
-        <Flexbox gap={12} width={'100%'}>
+        <div className="flex flex-col gap-3 w-[100%]">
           <Button
-            block
+            className="w-full"
             disabled={loading}
             style={{ marginTop: 8 }}
-            type={'primary'}
             onClick={async () => {
               setLoading(true);
               resend(id).then(() => {
@@ -51,15 +50,16 @@ const ConfigAlert = memo<ConfigAlertProps>(({ provider, id }) => {
             {t('search.config.confirm')}
           </Button>
           <Button
+            variant={'secondary'}
             onClick={() => {
               deleteMessage(id);
             }}
           >
             {t('search.config.close')}
           </Button>
-        </Flexbox>
+        </div>
       </FormAction>
-    </Center>
+    </div>
   );
 });
 

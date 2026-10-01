@@ -1,8 +1,8 @@
-import { AccordionRoot } from '@lobehub/ui/base-ui';
 import { type SidebarGroup } from '@orvilo/types';
 import React, { memo } from 'react';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import { Accordion } from '@/components/ui/accordion';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
@@ -20,15 +20,15 @@ const Group = memo<GroupProps>(({ dataSource }) => {
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
 
   return (
-    <AccordionRoot
-      indicatorPlacement="inline"
+    <Accordion
+      multiple
       value={sessionGroupKeys}
-      onValueChange={(keys) => updateSystemStatus({ expandSessionGroupKeys: keys as any })}
+      onValueChange={(keys) => updateSystemStatus({ expandSessionGroupKeys: keys.map(String) })}
     >
       {dataSource.map((item) => (
         <Item {...item} key={item.id} />
       ))}
-    </AccordionRoot>
+    </Accordion>
   );
 });
 

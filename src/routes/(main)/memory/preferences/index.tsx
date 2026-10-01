@@ -1,10 +1,10 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Button, Tag } from '@lobehub/ui/base-ui';
+import { Button } from '@lobehub/ui/base-ui';
 import { BrainCircuitIcon } from 'lucide-react';
 import { type FC } from 'react';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { MemoryListBoundary, useResetMemoryList } from '@/features/Memory';
 import { useScopedMemoryEditor } from '@/features/Memory/useScopedMemoryEditor';
 import NavHeader from '@/features/NavHeader';
@@ -84,11 +84,14 @@ const PreferencesArea = memo(() => {
   );
 
   return (
-    <Flexbox flex={1} height={'100%'}>
+    <div className="flex flex-col flex-1" style={{ height: '100%' }}>
       <NavHeader
         left={
           Boolean(preferencesTotal) && (
-            <Tag icon={<Icon icon={BrainCircuitIcon} />}>{preferencesTotal}</Tag>
+            <Badge variant="primary-light">
+              <BrainCircuitIcon />
+              {preferencesTotal}
+            </Badge>
           )
         }
         right={
@@ -109,13 +112,12 @@ const PreferencesArea = memo(() => {
           </ActionBar>
         }
       />
-      <Flexbox
-        height={'100%'}
+      <div
+        className="flex flex-col"
         id={SCROLL_PARENT_ID}
-        style={{ overflowY: 'auto', paddingBottom: '16vh' }}
-        width={'100%'}
+        style={{ height: '100%', width: '100%', overflowY: 'auto', paddingBottom: '16vh' }}
       >
-        <WideScreenContainer gap={32} paddingBlock={48}>
+        <WideScreenContainer wrapperStyle={{ gap: 32, paddingBlock: 48 }}>
           <FilterBar
             searchValue={searchValue}
             sortOptions={viewMode === 'grid' ? sortOptions : undefined}
@@ -135,18 +137,18 @@ const PreferencesArea = memo(() => {
             <List isLoading={isLoading} searchValue={searchValue} viewMode={viewMode} />
           </MemoryListBoundary>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
 const Preferences: FC = () => {
   return (
     <>
-      <Flexbox horizontal height={'100%'} width={'100%'}>
+      <div className="flex" style={{ height: '100%', width: '100%' }}>
         <PreferencesArea />
         <PreferenceRightPanel />
-      </Flexbox>
+      </div>
       <EditableModal />
     </>
   );

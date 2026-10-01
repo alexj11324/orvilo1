@@ -1,9 +1,9 @@
-import { Input, MotionProvider } from '@lobehub/ui';
-import { ModalHost } from '@lobehub/ui/base-ui';
 import { act, render, screen } from '@testing-library/react';
-import { motion } from 'motion/react';
 import { useState } from 'react';
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+
+import { ModalHost } from '@/components/Modal';
+import { Input } from '@/components/ui/input';
 
 import ImperativeModal from '.';
 
@@ -27,7 +27,7 @@ afterAll(() => {
 const Harness = ({ open = true }: { open?: boolean }) => {
   const [value, setValue] = useState('');
   return (
-    <MotionProvider motion={motion}>
+    <>
       <ImperativeModal open={open} title={'title'}>
         <Input
           autoFocus
@@ -37,7 +37,7 @@ const Harness = ({ open = true }: { open?: boolean }) => {
         />
       </ImperativeModal>
       <ModalHost />
-    </MotionProvider>
+    </>
   );
 };
 

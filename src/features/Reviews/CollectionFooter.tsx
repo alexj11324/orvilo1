@@ -1,10 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { Button } from '@/components/ui/button';
 
 const styles = createStaticStyles(({ css }) => ({
   footer: css`
@@ -39,24 +38,24 @@ const CollectionFooter = memo<{
   const { t } = useTranslation('common');
   if (!error && !hasMore && !stale && (total === null || loaded === total)) return null;
   return (
-    <Flexbox className={styles.footer}>
+    <div className={cx('flex flex-col', styles.footer)}>
       {error ? (
         <AsyncError error={error} variant={'inline'} onRetry={onRetry} />
       ) : (
         <>
-          <Text fontSize={12} type={'secondary'}>
+          <div className="text-[12px] text-muted-foreground">
             {stale
               ? t('reviews.staleBanner')
               : t('reviews.loadedCount', { loaded, total: total ?? '…' })}
-          </Text>
+          </div>
           {hasMore && !stale ? (
-            <Button loading={loading} size={'small'} type={'text'} onClick={onLoadMore}>
+            <Button loading={loading} size="sm" variant="ghost" onClick={onLoadMore}>
               {t('myWork.loadMore')}
             </Button>
           ) : null}
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

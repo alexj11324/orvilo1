@@ -1,6 +1,3 @@
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { cssVar, cx } from 'antd-style';
 import { WrapText } from 'lucide-react';
 import { parse } from 'partial-json';
@@ -8,8 +5,11 @@ import type { ReactNode } from 'react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import type { DescriptionItem } from '@/components/Descriptions';
 import Descriptions from '@/components/Descriptions';
+import { CodeBlock } from '@/components/ui/code-block';
+import { Separator } from '@/components/ui/separator';
 import { useYamlArguments } from '@/hooks/useYamlArguments';
 import { shinyTextStyles } from '@/styles';
 
@@ -51,11 +51,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
   let contentNode;
 
   if (typeof displayArgs === 'string') {
-    contentNode = !!yaml && (
-      <Highlighter language={'yaml'} showLanguage={false} wrap={wrap}>
-        {yaml}
-      </Highlighter>
-    );
+    contentNode = !!yaml && <CodeBlock code={yaml} language="yaml" wrap={wrap} />;
   } else if (Object.keys(displayArgs).length === 0) {
     contentNode = null;
   } else {
@@ -67,7 +63,7 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
     }));
 
     contentNode = (
-      <Flexbox paddingBlock={4} paddingInline={16}>
+      <div className="flex flex-col py-1 px-4">
         <Descriptions
           bordered={false}
           items={items}
@@ -83,22 +79,15 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
               : {},
           }}
         />
-      </Flexbox>
+      </div>
     );
   }
 
   return (
     <>
-      <Flexbox
-        horizontal
-        align={'center'}
-        gap={4}
-        justify={'space-between'}
-        paddingBlock={8}
-        paddingInline={16}
-      >
-        <Text>{t('arguments.title')}</Text>
-        <Flexbox horizontal gap={4}>
+      <div className="flex items-center gap-1 justify-between py-2 px-4">
+        <div>{t('arguments.title')}</div>
+        <div className="flex gap-1">
           <ActionIcon
             active={wrap}
             icon={WrapText}
@@ -110,9 +99,9 @@ const Arguments = memo<ArgumentsProps>(({ arguments: args = '', loading, actions
             onClick={() => setWrap((value) => !value)}
           />
           {actions}
-        </Flexbox>
-      </Flexbox>
-      <Divider style={{ marginBlock: 0 }} />
+        </div>
+      </div>
+      <Separator style={{ marginBlock: 0 }} />
       {contentNode}
     </>
   );

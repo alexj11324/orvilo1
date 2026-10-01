@@ -1,8 +1,8 @@
-import { Tooltip } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { BanIcon, CheckIcon, HandIcon } from 'lucide-react';
 import { memo } from 'react';
 
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { ConnectorToolPermission } from '@/database/schemas';
 import type { ConnectorTool } from '@/store/tool/slices/connector';
 
@@ -101,9 +101,9 @@ const ToolPermissionRow = memo<ToolPermissionRowProps>(({ disabled, tool, onPerm
       <div className={styles.nameCell}>
         <div className={styles.toolName}>{tool.toolName}</div>
         {tool.description && (
-          <Tooltip mouseEnterDelay={0.5} title={tool.description}>
+          <SimpleTooltip title={tool.description}>
             <div className={styles.description}>{tool.description}</div>
-          </Tooltip>
+          </SimpleTooltip>
         )}
       </div>
       <div

@@ -1,12 +1,13 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { RENDERER_HANDLED_LINK_ATTR } from '@orvilo/desktop-bridge';
+import { cn } from 'cn';
 import type { MouseEvent, ReactNode } from 'react';
 import { memo, useCallback } from 'react';
 
 import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
+import { Button } from '@/components/ui/button';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import { parseInternalLink } from '@/features/Conversation/Markdown/plugins/Link/internalLink';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -100,10 +101,10 @@ export const BriefActionLink = memo<BriefActionLinkProps>(
     return (
       <Button
         {...(isRendererHandled ? { [RENDERER_HANDLED_LINK_ATTR]: 'true' } : {})}
-        className={className}
-        href={url}
-        shape={'round'}
-        type={primary ? 'primary' : 'default'}
+        className={cn('rounded-full', className)}
+        nativeButton={false}
+        render={<a href={url} />}
+        variant={primary ? 'default' : 'outline'}
         onClick={handleClick}
       >
         {children}

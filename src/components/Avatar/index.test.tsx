@@ -46,12 +46,12 @@ describe('Avatar', () => {
   });
 
   it('renders an emoji avatar instead of initials for emoji identities', () => {
-    const { container } = render(<Avatar avatar="🎨" name="palette" size={28} />);
+    render(<Avatar avatar="🎨" name="palette" size={28} />);
 
-    // The emoji draws through FluentEmoji's image, never the initials tile.
-    const emoji = container.querySelector('img');
-    expect(emoji).not.toBeNull();
-    expect(emoji).toHaveAttribute('alt', '🎨');
+    // The emoji renders as an accessible image, never the initials tile.
+    const emoji = screen.getByRole('img');
+    expect(emoji).toHaveAttribute('aria-label', '🎨');
+    expect(emoji).toHaveTextContent('🎨');
     expect(screen.queryByText('PA')).toBeNull();
   });
 });

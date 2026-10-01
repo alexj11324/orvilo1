@@ -1,8 +1,8 @@
-import { Block, Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge as Tag } from '@/components/reui/badge';
 
 interface SubtaskGraphPlan {
   alreadyDone: string[];
@@ -22,79 +22,80 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox gap={12} style={{ paddingBlock: 8 }}>
-      <Text fontSize={13} style={{ color: cssVar.colorTextSecondary }}>
+    <div className="flex flex-col gap-3" style={{ paddingBlock: 8 }}>
+      <div className="text-[13px]" style={{ color: cssVar.colorTextSecondary }}>
         {t('taskDetail.runAll.description')}
-      </Text>
+      </div>
 
-      <Flexbox gap={8}>
+      <div className="flex flex-col gap-2">
         {plan.layers.map((layer, index) => {
           const hint =
             index === 0
               ? t('taskDetail.runAll.layerHint.first')
               : t('taskDetail.runAll.layerHint.next', { prev: index });
           return (
-            <Block
-              gap={6}
+            <div
+              className="flex flex-col gap-1.5 rounded-md border border-border"
               key={`layer-${index}`}
-              paddingBlock={8}
-              paddingInline={12}
-              variant={'outlined'}
+              style={{ paddingBlock: 8, paddingInline: 12 }}
             >
-              <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
-                <Text fontSize={13} weight={600}>
+              <div className="flex items-center justify-between gap-2">
+                <div className="text-[13px] font-semibold">
                   {t('taskDetail.runAll.layer', { index: index + 1 })}
-                </Text>
-                <Text fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+                </div>
+                <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
                   {hint}
-                </Text>
-              </Flexbox>
-              <Flexbox horizontal flex={'wrap'} gap={4}>
+                </div>
+              </div>
+              <div className="flex flex-wrap gap-1">
                 {layer.map((id) => (
                   <Tag key={id} style={{ marginInlineEnd: 0 }}>
                     {id}
                   </Tag>
                 ))}
-              </Flexbox>
-            </Block>
+              </div>
+            </div>
           );
         })}
-      </Flexbox>
+      </div>
 
       {(plan.alreadyDone.length > 0 ||
         plan.ineligible.length > 0 ||
         plan.blockedExternally.length > 0) && (
-        <Flexbox gap={4}>
+        <div className="flex flex-col gap-1">
           {plan.alreadyDone.length > 0 && (
-            <Text fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.alreadyDone', { count: plan.alreadyDone.length })}
-            </Text>
+            </div>
           )}
           {plan.ineligible.length > 0 && (
-            <Text fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.ineligible', { count: plan.ineligible.length })}
-            </Text>
+            </div>
           )}
           {plan.blockedExternally.length > 0 && (
-            <Text fontSize={12} style={{ color: cssVar.colorTextDescription }}>
+            <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
               {t('taskDetail.runAll.skipped.blockedExternally', {
                 count: plan.blockedExternally.length,
               })}
-            </Text>
+            </div>
           )}
-        </Flexbox>
+        </div>
       )}
 
       {plan.cycles.length > 0 && (
-        <Block paddingBlock={8} paddingInline={12} variant={'outlined'}>
-          <Text fontSize={12} style={{ color: cssVar.colorWarning }}>
+        <div
+          className="rounded-md border border-border"
+          style={{ paddingBlock: 8, paddingInline: 12 }}
+        >
+          <div className="text-[12px]" style={{ color: cssVar.colorWarning }}>
             {t('taskDetail.runAll.cycleWarning', {
               members: [...plan.cycles, ...plan.blockedByCycle].join(', '),
             })}
-          </Text>
-        </Block>
+          </div>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

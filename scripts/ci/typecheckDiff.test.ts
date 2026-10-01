@@ -251,9 +251,8 @@ describe('validateHeadLog', () => {
     });
 
     it('rejects a tree-sha that is not the claimed commit’s tree', () => {
-      const wrongTree = execSync('git rev-parse HEAD^{tree}', { encoding: 'utf8' })
-        .trim()
-        .replace(/^../, '00');
+      const actualTree = execSync('git rev-parse HEAD^{tree}', { encoding: 'utf8' }).trim();
+      const wrongTree = `${actualTree.startsWith('00') ? 'ff' : '00'}${actualTree.slice(2)}`;
       expect(() =>
         validateHeadLog(
           envelope({ 'tc-head-sha': headSha, 'tc-tree-sha': wrongTree }, good),

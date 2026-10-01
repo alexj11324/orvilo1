@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import { Select, Text } from '@lobehub/ui/base-ui';
 import type {
   SavedViewVisibility,
   WorkQueryEntityType,
@@ -9,15 +7,20 @@ import type {
   WorkQueryLayout,
   WorkQuerySort,
   WorkQuerySortMode,
+  WorkQuerySubGroupBy,
 } from '@orvilo/types';
+import { normalizeWorkQuerySubGroupBy } from '@orvilo/types';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Select from '@/components/Select';
+import { Input } from '@/components/ui/input';
 import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { lambdaClient } from '@/libs/trpc/client';
 
+import { savedViewGroupByForLayout, savedViewGroupByOptions } from './savedViewDisplay';
 import type { BuilderState } from './workQueryBuilder';
 import WorkQueryFilterBuilder from './WorkQueryFilterBuilder';
 
@@ -35,6 +38,8 @@ export interface ViewEditorState {
   sort?: WorkQuerySort[];
   /** Board ordering: `manual` = drag position, `field` = `sort`. Board-only. */
   sortMode?: WorkQuerySortMode;
+  /** Board swimlane. Absent means a single row of columns. */
+  subGroupBy?: WorkQuerySubGroupBy;
   teamId: string | null;
   visibility: SavedViewVisibility;
 }
@@ -54,15 +59,7 @@ const sortKey = (sort: WorkQuerySort[] | undefined): string => {
   return `${first.field === 'updatedAt' ? 'updated' : first.field === 'createdAt' ? 'created' : first.field}${first.direction === 'desc' ? 'Desc' : 'Asc'}`;
 };
 
-// 'attention' is the My-issues default grouping, not a view-editor choice —
-// keep it out of the option union so the savedViews.groupBy.* key set stays
-// exactly the three translated groups.
-type EditableGroupBy = Exclude<WorkQueryGroupBy, 'attention'>;
-
-const GROUP_BY_OPTIONS: Record<WorkQueryEntityType, EditableGroupBy[]> = {
-  project: ['none', 'status'],
-  task: ['none', 'status', 'workflowCategory'],
-};
+const TASK_LANES: WorkQuerySubGroupBy[] = ['none', 'status', 'priority', 'assignee', 'project'];
 
 interface ViewDefinitionEditorProps {
   onChange: (next: ViewEditorState) => void;
@@ -100,12 +97,12 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
     const set = (patch: Partial<ViewEditorState>) => onChange({ ...value, ...patch });
 
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         {showEntityPicker ? (
-          <Flexbox horizontal align="center" gap={8}>
-            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+          <div className="flex items-center gap-2">
+            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.entityType')}
-            </Text>
+            </div>
             <Select
               size="small"
               style={{ minWidth: 160 }}
@@ -119,45 +116,49 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 set({
                   builder: { any: [], rows: [], slots: [] },
                   entityType: next,
-                  groupBy: 'none',
+                  groupBy: next === 'project' && value.layout === 'board' ? 'status' : 'none',
+                  subGroupBy: undefined,
                 });
               }}
             />
-          </Flexbox>
+          </div>
         ) : null}
         {showName ? (
-          <Flexbox horizontal align="center" gap={8}>
-            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+          <div className="flex items-center gap-2">
+            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.name')}
-            </Text>
+            </div>
             <Input
+              className="h-7 text-[13px]"
               placeholder={t('savedViews.name')}
-              size="small"
               style={{ flex: 1 }}
               value={value.name}
               onChange={(event) => set({ name: event.target.value })}
             />
-          </Flexbox>
+          </div>
         ) : null}
         {showFilters ? (
-          <Flexbox horizontal align="flex-start" gap={8}>
-            <Text fontSize={13} style={{ paddingBlock: 4, width: 72 }} type="secondary">
+          <div className="flex items-start gap-2">
+            <div
+              className="text-[13px] text-muted-foreground"
+              style={{ paddingBlock: 4, width: 72 }}
+            >
               {t('savedViews.filters.label')}
-            </Text>
-            <Flexbox flex={1}>
+            </div>
+            <div className="flex flex-1 flex-col">
               <WorkQueryFilterBuilder
                 entityType={value.entityType}
                 value={value.builder}
                 onChange={(builder) => set({ builder })}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         ) : null}
         {showDisplay ? (
-          <Flexbox horizontal align="center" gap={8} wrap="wrap">
-            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.display')}
-            </Text>
+            </div>
             <Select
               size="small"
               style={{ minWidth: 140 }}
@@ -167,29 +168,62 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 { label: t('savedViews.layoutBoard'), value: 'board' },
               ]}
               onChange={(next) => {
-                if (next === 'board' || next === 'list') {
-                  set({
-                    groupBy:
-                      next === 'board' && value.groupBy === 'none' ? 'status' : value.groupBy,
-                    layout: next,
-                  });
-                }
+                if (next !== 'board' && next !== 'list') return;
+                const groupBy =
+                  next === 'board' && value.groupBy === 'none'
+                    ? 'status'
+                    : savedViewGroupByForLayout(value.entityType, next, value.groupBy);
+                set({
+                  groupBy,
+                  layout: next,
+                  subGroupBy: normalizeWorkQuerySubGroupBy(groupBy, value.subGroupBy),
+                });
               }}
             />
             <Select
               size="small"
               style={{ minWidth: 150 }}
               value={value.groupBy}
-              options={GROUP_BY_OPTIONS[value.entityType].map((groupBy) => ({
+              options={savedViewGroupByOptions(value.entityType, value.layout).map((groupBy) => ({
                 label: t(`savedViews.groupBy.${groupBy}`),
                 value: groupBy,
               }))}
               onChange={(next) => {
-                if (next === 'none' || next === 'status' || next === 'workflowCategory') {
-                  set({ groupBy: next });
+                const options = savedViewGroupByOptions(value.entityType, value.layout);
+                if ((options as readonly string[]).includes(next as string)) {
+                  const groupBy = next as (typeof options)[number];
+                  set({
+                    groupBy,
+                    subGroupBy: normalizeWorkQuerySubGroupBy(groupBy, value.subGroupBy),
+                  });
                 }
               }}
             />
+            {value.entityType === 'task' && value.groupBy !== 'none' ? (
+              <Select
+                size="small"
+                style={{ minWidth: 150 }}
+                value={value.subGroupBy ?? 'none'}
+                options={TASK_LANES.filter(
+                  (lane) => lane === 'none' || normalizeWorkQuerySubGroupBy(value.groupBy, lane),
+                ).map((lane) => ({
+                  label:
+                    lane === 'none'
+                      ? t('savedViews.groupBy.none')
+                      : t(`savedViews.groupBy.${lane}` as never, {
+                          defaultValue: t(`myWork.grouping.${lane}` as never),
+                        }),
+                  value: lane,
+                }))}
+                onChange={(next) => {
+                  if ((TASK_LANES as readonly string[]).includes(next as string)) {
+                    set({
+                      subGroupBy: next === 'none' ? undefined : (next as WorkQuerySubGroupBy),
+                    });
+                  }
+                }}
+              />
+            ) : null}
             <Select
               size="small"
               style={{ minWidth: 170 }}
@@ -220,13 +254,13 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 set({ sort: undefined, sortMode: undefined });
               }}
             />
-          </Flexbox>
+          </div>
         ) : null}
         {showShare ? (
-          <Flexbox horizontal align="center" gap={8} wrap="wrap">
-            <Text fontSize={13} style={{ width: 72 }} type="secondary">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.share')}
-            </Text>
+            </div>
             <Select
               size="small"
               style={{ minWidth: 150 }}
@@ -258,9 +292,9 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
                 }}
               />
             ) : null}
-          </Flexbox>
+          </div>
         ) : null}
-      </Flexbox>
+      </div>
     );
   },
 );

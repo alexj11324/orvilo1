@@ -184,16 +184,24 @@ vi.mock('react-i18next', () => ({
   }),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/ActionIcon', async (importOriginal) => ({
   ...((await importOriginal()) as Record<string, unknown>),
-  ActionIcon: ({ onClick, title }: { onClick?: () => void; title?: string }) => (
+  default: ({ onClick, title }: { onClick?: () => void; title?: string }) => (
     <button title={title} type={'button'} onClick={onClick} />
   ),
+}));
+
+vi.mock('@/components/ui/button', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
   Button: ({ children, title }: { children?: ReactNodeType; title?: string }) => (
     <button title={title} type={'button'}>
       {children}
     </button>
   ),
+}));
+
+vi.mock('@/components/ItemsMenu', async (importOriginal) => ({
+  ...((await importOriginal()) as Record<string, unknown>),
   DropdownMenu: ({
     children,
     items,
@@ -224,13 +232,15 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
   ),
 }));
 
-vi.mock('@lobehub/ui', () => ({
-  Center: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
+vi.mock('@/utils/clipboard', () => ({
   copyToClipboard: vi.fn(),
-  Empty: ({ description }: { description?: ReactNodeType }) => <div>{description}</div>,
-  Flexbox: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
-  Icon: () => <span />,
-  stopPropagation: vi.fn(),
+}));
+
+vi.mock('@/components/ui/empty', () => ({
+  Empty: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
+  EmptyDescription: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
+  EmptyHeader: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
+  EmptyMedia: ({ children }: { children?: ReactNodeType }) => <div>{children}</div>,
 }));
 
 vi.mock('antd-style', async (importOriginal) => {

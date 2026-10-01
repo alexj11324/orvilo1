@@ -1,11 +1,11 @@
-import { stopPropagation, Tooltip } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { isNull } from 'es-toolkit/compat';
 import { FileBoxIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { fileManagerSelectors, useFileStore } from '@/store/file';
 import { type AsyncTaskStatus, type IAsyncTaskError } from '@/types/asyncTask';
 import { isChunkingUnsupported } from '@/utils/isChunkingUnsupported';
@@ -134,7 +134,7 @@ const NoteFileItem = memo<NoteFileItemProps>(
         {!isNull(chunkingStatus) && chunkingStatus ? (
           <div
             className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
-            onClick={stopPropagation}
+            onClick={(event) => event.stopPropagation()}
           >
             <ChunksBadge
               chunkCount={chunkCount}
@@ -148,7 +148,7 @@ const NoteFileItem = memo<NoteFileItemProps>(
           </div>
         ) : (
           isSupportedForChunking && (
-            <Tooltip title={t('components:FileManager.actions.chunkingTooltip')}>
+            <SimpleTooltip title={t('components:FileManager.actions.chunkingTooltip')}>
               <div
                 className={cx('floatingChunkBadge', styles.floatingChunkBadge)}
                 style={{ cursor: 'pointer' }}
@@ -159,14 +159,11 @@ const NoteFileItem = memo<NoteFileItemProps>(
                   }
                 }}
               >
-                <Button
-                  icon={FileBoxIcon}
-                  loading={isCreatingFileParseTask}
-                  size={'small'}
-                  type={'text'}
-                />
+                <Button loading={isCreatingFileParseTask} size="sm" variant="ghost">
+                  <FileBoxIcon data-icon="inline-start" />
+                </Button>
               </div>
-            </Tooltip>
+            </SimpleTooltip>
           )
         )}
       </>

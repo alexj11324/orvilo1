@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
@@ -51,9 +50,9 @@ export const PeriodHeader = memo<PeriodHeaderProps>(({ periodKey, groupBy = 'day
       : dayjs(periodKey).format('MMMM D, YYYY');
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.periodHeader} gap={12} paddingBlock={8}>
-      <Text weight={500}>{periodName}</Text>
-    </Flexbox>
+    <div className={cn('flex items-center gap-3 py-2', styles.periodHeader)}>
+      <div className="font-medium">{periodName}</div>
+    </div>
   );
 });
 

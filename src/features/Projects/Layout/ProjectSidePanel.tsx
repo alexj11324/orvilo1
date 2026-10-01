@@ -1,8 +1,6 @@
 'use client';
-
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo, type ReactNode, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -161,8 +159,8 @@ export function ProjectPanelSection({
   const [expanded, setExpanded] = useState(true);
   const contentId = useId();
   return (
-    <Flexbox className={styles.railCard} gap={expanded ? 8 : 0}>
-      <Flexbox horizontal align="center" gap={8}>
+    <div className={cn('flex flex-col', styles.railCard)} style={{ gap: expanded ? 8 : 0 }}>
+      <div className="flex flex-row" style={{ alignItems: 'center', gap: 8 }}>
         <button
           aria-controls={contentId}
           aria-expanded={expanded}
@@ -173,15 +171,26 @@ export function ProjectPanelSection({
           })}
           onClick={() => setExpanded((value) => !value)}
         >
-          <Text {...SECTION_LABEL_PROPS}>{title}</Text>
+          <span
+            className="text-sm"
+            style={{
+              color: SECTION_LABEL_PROPS.color,
+              fontSize: SECTION_LABEL_PROPS.fontSize,
+              fontWeight: SECTION_LABEL_PROPS.weight,
+            }}
+          >
+            {title}
+          </span>
           <AccordionArrowIcon isOpen={expanded} size={16} />
         </button>
         {action}
-      </Flexbox>
-      <div hidden={!expanded} id={contentId}>
-        <Flexbox gap={8}>{children}</Flexbox>
       </div>
-    </Flexbox>
+      <div hidden={!expanded} id={contentId}>
+        <div className="flex flex-col" style={{ gap: 8 }}>
+          {children}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -201,17 +210,17 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
     const projectRef = detail.project.slug || databaseId;
 
     return (
-      <Flexbox className={styles.panel} gap={12}>
+      <div className={cn('flex flex-col', styles.panel)} style={{ gap: 12 }}>
         <ProjectPanelSection title={t('overview.propertiesLabel')}>
           <ProjectPropertiesCard detail={detail} projectId={databaseId} />
         </ProjectPanelSection>
         <ProjectPanelSection title={t('overview.milestones', { defaultValue: 'Milestones' })}>
           {milestones.length === 0 ? (
-            <Text fontSize={12} type={'secondary'}>
+            <span className="text-sm text-muted-foreground" style={{ fontSize: 12 }}>
               {t('overview.milestonesEmpty')}
-            </Text>
+            </span>
           ) : (
-            <Flexbox gap={1}>
+            <div className="flex flex-col" style={{ gap: 1 }}>
               {milestones.map((milestone) => (
                 // The row itself is not a navigation target. This used to be a
                 // whole-row `role=button` that opened the project's issues —
@@ -228,23 +237,32 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                 // card's always-visible progress link.
                 <div className={styles.milestoneRow} key={milestone.id}>
                   <MilestoneIcon />
-                  <Text ellipsis fontSize={12} style={{ flex: 1, minWidth: 0 }} weight={450}>
+                  <span
+                    className="text-sm truncate"
+                    style={{ fontSize: 12, fontWeight: 450, flex: 1, minWidth: 0 }}
+                  >
                     {milestone.name}
-                  </Text>
+                  </span>
                   {milestone.date && (
-                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+                    <span
+                      className="text-sm text-muted-foreground"
+                      style={{ fontSize: 12, flex: 'none' }}
+                    >
                       {formatProjectDate(milestone.date)}
-                    </Text>
+                    </span>
                   )}
                   {/* A `null` readout could not be computed honestly — omit it
                       rather than render it as 0%. */}
                   {milestone.progress && (
-                    <Text fontSize={12} style={{ flex: 'none' }} type={'secondary'}>
+                    <span
+                      className="text-sm text-muted-foreground"
+                      style={{ fontSize: 12, flex: 'none' }}
+                    >
                       {t('overview.milestoneProgressOf', {
                         count: milestone.progress.issues,
                         percent: milestone.progress.percent,
                       })}
-                    </Text>
+                    </span>
                   )}
                   <WorkspaceLink
                     className={styles.seeIssues}
@@ -255,7 +273,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
                   </WorkspaceLink>
                 </div>
               ))}
-            </Flexbox>
+            </div>
           )}
         </ProjectPanelSection>
         <ProjectPanelSection title={t('overview.progressLabel', { defaultValue: 'Progress' })}>
@@ -276,7 +294,7 @@ const ProjectSidePanel = memo<{ projectId: string; showActivity?: boolean }>(
             <ProjectCreationActivity project={detail.project} />
           </ProjectPanelSection>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

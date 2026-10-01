@@ -1,10 +1,10 @@
 'use client';
 
-import { Flexbox, Highlighter } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { memo, useMemo } from 'react';
+
+import { CodeBlock } from '@/components/ui/code-block';
 
 import {
   getGithubOutput,
@@ -55,10 +55,10 @@ const GithubRunCommandRender = memo<
   if (!normalized && !output && !stderr) return null;
 
   return (
-    <Flexbox gap={12}>
+    <div className="flex flex-col gap-3">
       {normalized && (
         <div>
-          <Text className={styles.sectionLabel}>
+          <div className={styles.sectionLabel}>
             Command
             {success !== undefined && (
               <span
@@ -69,49 +69,43 @@ const GithubRunCommandRender = memo<
                 exit {exitCode ?? (success ? 0 : 1)}
               </span>
             )}
-          </Text>
-          <Highlighter
+          </div>
+          <CodeBlock
             wrap
+            code={`gh ${normalized}`}
             language={'sh'}
-            showLanguage={false}
             style={{ maxHeight: 160, overflow: 'auto', paddingInline: 8 }}
-            variant={'outlined'}
-          >
-            {`gh ${normalized}`}
-          </Highlighter>
+            variant="ghost"
+          />
         </div>
       )}
       {outputBody && (
         <div>
-          <Text className={styles.sectionLabel}>Output</Text>
-          <Highlighter
+          <div className={styles.sectionLabel}>Output</div>
+          <CodeBlock
             wrap
+            code={outputBody}
             language={outputLanguage}
-            showLanguage={outputLanguage === 'json'}
             style={{ maxHeight: 360, overflow: 'auto', paddingInline: 8 }}
-            variant={'filled'}
-          >
-            {outputBody}
-          </Highlighter>
+            variant="ghost"
+          />
         </div>
       )}
       {stderr && (
         <div>
-          <Text className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
+          <div className={styles.sectionLabel} style={{ color: cssVar.colorError }}>
             Stderr
-          </Text>
-          <Highlighter
+          </div>
+          <CodeBlock
             wrap
+            code={stderr}
             language={'text'}
-            showLanguage={false}
             style={{ maxHeight: 200, overflow: 'auto', paddingInline: 8 }}
-            variant={'filled'}
-          >
-            {stderr}
-          </Highlighter>
+            variant="ghost"
+          />
         </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

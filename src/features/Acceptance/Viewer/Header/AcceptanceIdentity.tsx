@@ -1,11 +1,11 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { GitPullRequest } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import Avatar from '@/components/Avatar';
 
 import { useAcceptanceScope } from '../AcceptanceScope';
 import { acceptanceCodingScope } from '../History/codingScope';
@@ -69,30 +69,30 @@ const AcceptanceIdentity = ({ statusSlot, topicSlot }: AcceptanceIdentityProps) 
   const agentName = originAgent?.title ?? t('acceptance.origin.agentFallback');
 
   return (
-    <Flexbox gap={10}>
+    <div className="flex flex-col gap-2.5">
       {/* No subject-type tag beside the name. Which KIND of thing was
           delivered is a fact about the plumbing, not about the delivery a
           reader came to judge — and it sat where the title's own meaning
           should carry. */}
-      <Flexbox horizontal align={'center'} className={styles.titleRow} gap={10} wrap={'wrap'}>
-        <Text ellipsis as={'h1'} style={{ fontSize: 18, margin: 0, minWidth: 0 }}>
+      <div className={`flex items-center gap-2.5 flex-wrap ${styles.titleRow}`}>
+        <h1 className="truncate min-w-0" style={{ fontSize: 18, margin: 0, minWidth: 0 }}>
           {subject.title ?? subject.id}
-        </Text>
-      </Flexbox>
+        </h1>
+      </div>
 
-      <Flexbox horizontal align={'center'} className={styles.metaRow} gap={12} wrap={'wrap'}>
+      <div className={`flex items-center gap-3 flex-wrap ${styles.metaRow}`}>
         {statusSlot ?? <AcceptanceStatusPill status={acceptance.status} />}
         {/* Who delivered this, right after its state — the same place a pull
             request names its author. A shared record with no name on it reads
             as nobody's, and the status alone never says whose work it is. */}
         {authorName && (
-          <Flexbox horizontal align={'center'} gap={6}>
+          <div className="flex items-center gap-1.5">
             <Avatar avatar={author?.avatar || authorName.slice(0, 1)} size={18} />
-            <Text style={{ color: cssVar.colorText, fontSize: 'inherit' }}>{authorName}</Text>
-          </Flexbox>
+            <div style={{ color: cssVar.colorText, fontSize: 'inherit' }}>{authorName}</div>
+          </div>
         )}
         {originAgent && (
-          <Flexbox horizontal align={'center'} gap={6} style={{ cursor: 'default' }}>
+          <div className="flex items-center gap-1.5" style={{ cursor: 'default' }}>
             {/* Beside the author's face, an agent with no picture used to draw
                 the library's "UN" placeholder — two avatars in one bar, one of
                 them claiming a name nobody has. Fall back to its own initial,
@@ -103,7 +103,7 @@ const AcceptanceIdentity = ({ statusSlot, topicSlot }: AcceptanceIdentityProps) 
               size={18}
             />
             {agentName}
-          </Flexbox>
+          </div>
         )}
         {topicSlot}
         {pullRequest?.number ? (
@@ -115,18 +115,18 @@ const AcceptanceIdentity = ({ statusSlot, topicSlot }: AcceptanceIdentityProps) 
               target={'_blank'}
               title={pullRequest.title ?? pullRequest.url}
             >
-              <Flexbox horizontal align={'center'} gap={4}>
-                <Icon icon={GitPullRequest} size={13} /> #{pullRequest.number}
-              </Flexbox>
+              <div className="flex items-center gap-1">
+                <GitPullRequest size={13} /> #{pullRequest.number}
+              </div>
             </a>
           ) : (
-            <Flexbox horizontal align={'center'} gap={4}>
-              <Icon icon={GitPullRequest} size={13} /> #{pullRequest.number}
-            </Flexbox>
+            <div className="flex items-center gap-1">
+              <GitPullRequest size={13} /> #{pullRequest.number}
+            </div>
           )
         ) : null}
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 };
 

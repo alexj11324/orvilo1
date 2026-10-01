@@ -1,7 +1,7 @@
-import { toast } from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { type StateCreator } from 'zustand';
 
+import { toast } from '@/components/toast';
 import { aiAgentService } from '@/services/aiAgent';
 import { useChatStore } from '@/store/chat';
 

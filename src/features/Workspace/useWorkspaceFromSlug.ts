@@ -2,8 +2,7 @@
 
 import { useParams } from 'react-router';
 
-import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
-import { useWorkspaces } from '@/business/client/hooks/useWorkspaces';
+import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
 
 export type WorkspaceSlugStatus =
   | { status: 'no-slug' }
@@ -18,16 +17,21 @@ export type WorkspaceSlugStatus =
  * Store synchronisation (URL → activeWorkspaceId) lives in
  * `useWorkspaceUrlSync`, which is mounted globally — this hook is purely
  * read-side.
+ *
+ * `data === undefined` — including a failed first fetch — keeps the slug
+ * unresolved: a cold failure must not render as "resolved empty" (404) while
+ * SWR retries. `not-found` is only honest once a real list response exists.
  */
 export const useWorkspaceFromSlug = (): WorkspaceSlugStatus => {
   const { workspaceSlug } = useParams<{ workspaceSlug: string }>();
-  const workspaces = useWorkspaces();
-  const isLoading = useIsWorkspaceLoading();
+  const { data, isLoading } = useFetchWorkspaces();
 
-  const matched = workspaceSlug ? (workspaces.find((w) => w.slug === workspaceSlug) ?? null) : null;
+  const matched = workspaceSlug
+    ? ((data ?? []).find((w) => w.slug === workspaceSlug) ?? null)
+    : null;
 
   if (!workspaceSlug) return { status: 'no-slug' };
   if (matched) return { status: 'ok', workspaceId: matched.id, slug: workspaceSlug };
-  if (isLoading) return { status: 'loading', slug: workspaceSlug };
+  if (isLoading || data === undefined) return { status: 'loading', slug: workspaceSlug };
   return { status: 'not-found', slug: workspaceSlug };
 };

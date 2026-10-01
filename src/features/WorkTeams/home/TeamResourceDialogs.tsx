@@ -1,12 +1,13 @@
 'use client';
 
-import { Button, createModal, useModalContext } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { t as translate } from 'i18next';
 import { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { createModal, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
 import { lambdaClient } from '@/libs/trpc/client';
 
 import { isPublicDocument } from './teamResourcePicker';
@@ -156,7 +157,7 @@ function LinkForm({
         <Button disabled={pending} onClick={close}>
           {t('cancel')}
         </Button>
-        <Button disabled={pending} htmlType="submit" loading={pending} type="primary">
+        <Button disabled={pending} loading={pending} type="submit">
           {t('save')}
         </Button>
       </div>
@@ -218,7 +219,7 @@ function SectionForm({
         <Button disabled={pending} onClick={close}>
           {t('cancel')}
         </Button>
-        <Button disabled={pending} htmlType="submit" loading={pending} type="primary">
+        <Button disabled={pending} loading={pending} type="submit">
           {t('save')}
         </Button>
       </div>

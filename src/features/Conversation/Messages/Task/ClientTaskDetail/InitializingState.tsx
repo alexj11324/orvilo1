@@ -1,13 +1,11 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, keyframes } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
-import { shinyTextStyles } from '@/styles';
 
 const shimmer = keyframes`
   0% {
@@ -55,14 +53,12 @@ const InitializingState = memo(() => {
   const { t } = useTranslation('chat');
 
   return (
-    <Flexbox className={styles.container} gap={12}>
-      <Flexbox horizontal align="center" gap={8}>
+    <div className={cn('flex flex-col gap-3', styles.container)}>
+      <div className="flex items-center gap-2">
         <NeuralNetworkLoading size={14} />
-        <Text className={shinyTextStyles.shinyText} weight={500}>
-          {t('task.status.initializing')}
-        </Text>
-      </Flexbox>
-    </Flexbox>
+        <div className="font-medium shinyTextStyles.shinyText">{t('task.status.initializing')}</div>
+      </div>
+    </div>
   );
 });
 

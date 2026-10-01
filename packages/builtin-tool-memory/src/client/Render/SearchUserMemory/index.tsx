@@ -1,11 +1,18 @@
 'use client';
 
-import { Accordion, AccordionItem, Flexbox } from '@lobehub/ui';
-import { Tag, Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 
 import type { SearchMemoryParams, SearchUserMemoryState } from '../../../types';
 
@@ -63,24 +70,27 @@ const MemoryItem = memo<MemoryItemProps>(({ title, content, subContent, tags }) 
   // Guard against non-array `tags` (dirty data) so a bad row can't crash the list.
   const safeTags = Array.isArray(tags) ? tags : [];
   return (
-    <Flexbox className={styles.item} gap={4}>
+    <div className={cn('flex', 'flex-col', 'gap-1', styles.item)}>
       {title && <div className={styles.itemTitle}>{title}</div>}
       {content && <div className={styles.itemContent}>{content}</div>}
       {subContent && (
-        <Text className={styles.itemContent} style={{ fontStyle: 'italic' }} type={'secondary'}>
+        <div
+          className={`text-muted-foreground ${styles.itemContent}`}
+          style={{ fontStyle: 'italic' }}
+        >
           {subContent}
-        </Text>
+        </div>
       )}
       {safeTags.length > 0 && (
-        <Flexbox horizontal className={styles.tags} gap={4} wrap={'wrap'}>
+        <div className={cn('flex', 'gap-1', 'flex-wrap', styles.tags)}>
           {safeTags.map((tag, index) => (
-            <Tag key={index} size={'small'}>
+            <Badge key={index} size="sm">
               {tag}
-            </Tag>
+            </Badge>
           ))}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -120,156 +130,131 @@ const SearchUserMemoryRender = memo<BuiltinRenderProps<SearchMemoryParams, Searc
     ];
 
     return (
-      <Flexbox className={styles.container}>
-        <Accordion defaultExpandedKeys={defaultActiveKeys} gap={0}>
+      <div className={cn('flex', 'flex-col', styles.container)}>
+        <Accordion defaultValue={defaultActiveKeys}>
           {activities.length > 0 && (
-            <AccordionItem
-              itemKey="activities"
-              paddingBlock={8}
-              paddingInline={12}
-              title={
-                <Text className={styles.sectionHeader}>
+            <AccordionItem value="activities">
+              <AccordionTrigger>
+                <div className={styles.sectionHeader}>
                   <span>Activities</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({activities.length})
-                  </Text>
-                </Text>
-              }
-            >
-              <Flexbox>
-                {activities.map((item) => (
-                  <MemoryItem
-                    content={item.narrative}
-                    key={item.id}
-                    subContent={item.feedback}
-                    tags={item.tags}
-                    title={item.notes || item.type}
-                  />
-                ))}
-              </Flexbox>
+                  <span className="text-muted-foreground"> ({activities.length})</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-col">
+                  {activities.map((item) => (
+                    <MemoryItem
+                      content={item.narrative}
+                      key={item.id}
+                      subContent={item.feedback}
+                      tags={item.tags}
+                      title={item.notes || item.type}
+                    />
+                  ))}
+                </div>
+              </AccordionContent>
             </AccordionItem>
           )}
 
           {/* Contexts */}
           {contexts.length > 0 && (
-            <AccordionItem
-              itemKey="contexts"
-              paddingBlock={8}
-              paddingInline={12}
-              title={
-                <Text className={styles.sectionHeader}>
+            <AccordionItem value="contexts">
+              <AccordionTrigger>
+                <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.contexts')}</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({contexts.length})
-                  </Text>
-                </Text>
-              }
-            >
-              <Flexbox>
-                {contexts.map((item) => (
-                  <MemoryItem
-                    content={item.description}
-                    key={item.id}
-                    subContent={item.currentStatus}
-                    tags={item.tags}
-                    title={item.title}
-                  />
-                ))}
-              </Flexbox>
+                  <span className="text-muted-foreground"> ({contexts.length})</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-col">
+                  {contexts.map((item) => (
+                    <MemoryItem
+                      content={item.description}
+                      key={item.id}
+                      subContent={item.currentStatus}
+                      tags={item.tags}
+                      title={item.title}
+                    />
+                  ))}
+                </div>
+              </AccordionContent>
             </AccordionItem>
           )}
 
           {/* Experiences */}
           {experiences.length > 0 && (
-            <AccordionItem
-              itemKey="experiences"
-              paddingBlock={8}
-              paddingInline={12}
-              title={
-                <Text className={styles.sectionHeader}>
+            <AccordionItem value="experiences">
+              <AccordionTrigger>
+                <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.experiences')}</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({experiences.length})
-                  </Text>
-                </Text>
-              }
-            >
-              <Flexbox>
-                {experiences.map((item) => (
-                  <MemoryItem
-                    content={item.situation}
-                    key={item.id}
-                    subContent={item.keyLearning}
-                    tags={item.tags}
-                    title={item.action}
-                  />
-                ))}
-              </Flexbox>
+                  <span className="text-muted-foreground"> ({experiences.length})</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-col">
+                  {experiences.map((item) => (
+                    <MemoryItem
+                      content={item.situation}
+                      key={item.id}
+                      subContent={item.keyLearning}
+                      tags={item.tags}
+                      title={item.action}
+                    />
+                  ))}
+                </div>
+              </AccordionContent>
             </AccordionItem>
           )}
 
           {/* Preferences */}
           {identities.length > 0 && (
-            <AccordionItem
-              itemKey="identities"
-              paddingBlock={8}
-              paddingInline={12}
-              title={
-                <Text className={styles.sectionHeader}>
+            <AccordionItem value="identities">
+              <AccordionTrigger>
+                <div className={styles.sectionHeader}>
                   <span>Identities</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({identities.length})
-                  </Text>
-                </Text>
-              }
-            >
-              <Flexbox>
-                {identities.map((item) => (
-                  <MemoryItem
-                    content={item.description}
-                    key={item.id}
-                    subContent={item.role}
-                    tags={item.tags}
-                    title={item.relationship || item.type}
-                  />
-                ))}
-              </Flexbox>
+                  <span className="text-muted-foreground"> ({identities.length})</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-col">
+                  {identities.map((item) => (
+                    <MemoryItem
+                      content={item.description}
+                      key={item.id}
+                      subContent={item.role}
+                      tags={item.tags}
+                      title={item.relationship || item.type}
+                    />
+                  ))}
+                </div>
+              </AccordionContent>
             </AccordionItem>
           )}
 
           {preferences.length > 0 && (
-            <AccordionItem
-              itemKey="preferences"
-              paddingBlock={8}
-              paddingInline={12}
-              title={
-                <Text className={styles.sectionHeader}>
+            <AccordionItem value="preferences">
+              <AccordionTrigger>
+                <div className={styles.sectionHeader}>
                   <span>{t('builtins.orvilo-user-memory.render.preferences')}</span>
-                  <Text as={'span'} type={'secondary'}>
-                    {' '}
-                    ({preferences.length})
-                  </Text>
-                </Text>
-              }
-            >
-              <Flexbox>
-                {preferences.map((item) => (
-                  <MemoryItem
-                    content={item.conclusionDirectives}
-                    key={item.id}
-                    subContent={item.suggestions}
-                    tags={item.tags}
-                  />
-                ))}
-              </Flexbox>
+                  <span className="text-muted-foreground"> ({preferences.length})</span>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent>
+                <div className="flex flex-col">
+                  {preferences.map((item) => (
+                    <MemoryItem
+                      content={item.conclusionDirectives}
+                      key={item.id}
+                      subContent={item.suggestions}
+                      tags={item.tags}
+                    />
+                  ))}
+                </div>
+              </AccordionContent>
             </AccordionItem>
           )}
         </Accordion>
-      </Flexbox>
+      </div>
     );
   },
 );

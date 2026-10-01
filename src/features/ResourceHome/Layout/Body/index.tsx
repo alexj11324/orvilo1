@@ -1,18 +1,11 @@
-import { Tooltip } from '@lobehub/ui';
-import {
-  AccordionHeader,
-  AccordionItem,
-  AccordionPanel,
-  accordionStyles,
-  AccordionTrigger,
-  ActionIcon,
-  Text,
-} from '@lobehub/ui/base-ui';
 import { cx } from 'antd-style';
 import { PlusIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -47,25 +40,23 @@ const SidebarBody = memo<{ itemKey: string }>(({ itemKey }) => {
 
   return (
     <AccordionItem value={itemKey}>
-      <AccordionHeader>
+      <div className="group flex items-center">
         <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
-          <Text ellipsis fontSize={12} type={'secondary'} weight={500}>
+          <div className="truncate min-w-0 text-[12px] text-muted-foreground font-medium">
             {t('library.title')}
-          </Text>
+          </div>
         </AccordionTrigger>
         <div
           className={cx(
-            'accordion-action',
-            accordionStyles.action,
-            accordionStyles.actionBorderless,
+            'accordion-action flex shrink-0 items-center gap-1 pe-2 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100',
           )}
         >
-          {canCreate ? createButton : <Tooltip title={reason}>{createButton}</Tooltip>}
+          {canCreate ? createButton : <SimpleTooltip title={reason}>{createButton}</SimpleTooltip>}
         </div>
-      </AccordionHeader>
-      <AccordionPanel>
+      </div>
+      <AccordionContent>
         <LibraryList />
-      </AccordionPanel>
+      </AccordionContent>
     </AccordionItem>
   );
 });

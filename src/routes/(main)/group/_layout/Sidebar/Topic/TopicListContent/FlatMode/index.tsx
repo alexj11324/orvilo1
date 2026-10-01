@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal } from 'lucide-react';
 import React, { memo } from 'react';
@@ -38,7 +37,7 @@ const FlatMode = memo(() => {
   );
 
   return (
-    <Flexbox gap={1}>
+    <div className="flex flex-col" style={{ gap: 1 }}>
       {activeTopicList?.map((topic) => (
         <TopicItem
           active={activeTopicId === topic.id}
@@ -55,7 +54,7 @@ const FlatMode = memo(() => {
       {hasMore && !isExpandingPageSize && (
         <NavItem icon={MoreHorizontal} title={t('loadMore')} onClick={openAllTopicsDrawer} />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

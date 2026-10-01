@@ -18,16 +18,23 @@ import {
   SiRust,
   SiYarn,
 } from '@icons-pack/react-simple-icons';
-import { Icon, Tooltip } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
-import { memo } from 'react';
+import { type ComponentType, createElement, type CSSProperties, memo } from 'react';
+
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 
 import Java from './Java';
 import PowerShell from './PowerShell';
 import Terminal from './Terminal';
 import UV from './UV';
 
-const icons: any = {
+type DependencyIcon = ComponentType<{
+  fill?: string;
+  size?: number | string;
+  style?: CSSProperties;
+}>;
+
+const icons: Record<string, DependencyIcon> = {
   blender: SiBlender,
   bun: SiBun,
   bunx: SiBun,
@@ -60,10 +67,17 @@ const icons: any = {
 
 const InstallationIcon = memo<{ size?: number; type: string }>(({ type, size = 20 }) => {
   const iconType = type.split(' ')[0];
-  if (iconType === 'none') return;
+  if (iconType === 'none') return null;
   return (
-    <Tooltip title={iconType}>
-      <Icon fill={cssVar.colorTextDescription} icon={icons?.[iconType] || Terminal} size={size} />
+    <Tooltip>
+      <TooltipTrigger render={<span />}>
+        {createElement(icons[iconType] || Terminal, {
+          size,
+          style: { color: cssVar.colorTextDescription },
+          fill: cssVar.colorTextDescription,
+        })}
+      </TooltipTrigger>
+      <TooltipContent>{iconType}</TooltipContent>
     </Tooltip>
   );
 });

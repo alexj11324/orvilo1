@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Input, Popover, Tooltip } from '@lobehub/ui';
-import { ActionIcon, toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import type { WorkingDirEntry } from '@orvilo/types';
 import { getWorkingDirSourcePath } from '@orvilo/types';
@@ -19,6 +17,10 @@ import {
 import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { toast } from '@/components/toast';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useConversationStore } from '@/features/Conversation/store';
 import { openAddWorkingDirModal } from '@/features/WorkingDirectory';
 import {
@@ -40,6 +42,7 @@ import { useElectronStore } from '@/store/electron';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
+import { SimpleTooltip } from '../SimpleTooltip';
 import DirIcon from './DirIcon';
 import { useCommitWorkingDirectory } from './useCommitWorkingDirectory';
 import { useMigrateDeviceRecents } from './useMigrateDeviceRecents';
@@ -210,16 +213,15 @@ const ChooseLocalFolderRow = memo<{ defaultPath?: string; onPick: (entry: Folder
       if (result) onPick({ path: result.path, repoType: result.repoType });
     };
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={styles.chooseFolderItem}
-        gap={8}
+      <div
+        className={cx('flex flex-row items-center gap-2', styles.chooseFolderItem)}
         onClick={handleClick}
       >
-        <Icon icon={FolderOpenIcon} size={14} />
+        <span className="anticon" role="img">
+          <FolderOpenIcon fill={'transparent'} height={14} size={14} width={14} />
+        </span>
         <span>{t('workingDirectory.chooseDifferentFolder')}</span>
-      </Flexbox>
+      </div>
     );
   },
 );
@@ -257,16 +259,15 @@ const AddRemoteFolderRow = memo<{
     });
   };
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.chooseFolderItem}
-      gap={8}
+    <div
+      className={cx('flex flex-row items-center gap-2', styles.chooseFolderItem)}
       onClick={handleClick}
     >
-      <Icon icon={FolderPlusIcon} size={14} />
+      <span className="anticon" role="img">
+        <FolderPlusIcon fill={'transparent'} height={14} size={14} width={14} />
+      </span>
       <span>{t('workingDirectory.addFolder')}</span>
-    </Flexbox>
+    </div>
   );
 });
 AddRemoteFolderRow.displayName = 'AddRemoteFolderRow';
@@ -440,28 +441,28 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
       isDefault ? 'workingDirectory.clearDefault' : 'workingDirectory.setDefault',
     );
     return (
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={cx(styles.dirItem, isActive && styles.dirItemActive)}
-        gap={8}
+      <div
         key={entry.path}
         ref={isActive ? activeRowRef : undefined}
+        className={cx(
+          'flex flex-row items-center gap-2',
+          cx(styles.dirItem, isActive && styles.dirItemActive),
+        )}
         onClick={() => void pick(entry)}
       >
         <DirIcon repoType={entry.repoType} />
-        <Flexbox flex={1} style={{ minWidth: 0 }}>
-          <Flexbox horizontal align={'center'} gap={6}>
+        <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
+          <div className="flex flex-row items-center gap-1.5">
             <div className={styles.dirName}>
               {getWorkingDirectoryName(entry.path) ?? entry.path}
             </div>
             {isDefault && (
               <span className={styles.badge}>{t('workingDirectory.defaultBadge')}</span>
             )}
-          </Flexbox>
+          </div>
           <div className={styles.dirPath}>{entry.path}</div>
-        </Flexbox>
-        <Flexbox horizontal align={'center'} gap={2} style={{ flex: 'none' }}>
+        </div>
+        <div className="flex flex-row items-center gap-0.5" style={{ flex: 'none' }}>
           {/* The same Star toggles the device default in both directions. Remove
               (X) is hidden on the active row: you can't remove the selection out
               from under yourself. */}
@@ -486,45 +487,57 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
             )}
           </div>
           {isActive && (
-            <Icon icon={CheckIcon} size={16} style={{ color: cssVar.colorSuccess, flex: 'none' }} />
+            <span
+              className="anticon"
+              role="img"
+              style={{ color: cssVar.colorSuccess, flex: 'none' }}
+            >
+              <CheckIcon fill={'transparent'} height={16} size={16} width={16} />
+            </span>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   };
 
   const content = (
-    <Flexbox gap={4} style={{ maxWidth: 'calc(100vw - 48px)', width: 320 }}>
+    <div className="flex flex-col gap-1" style={{ maxWidth: 'calc(100vw - 48px)', width: 320 }}>
       {showSearch && (
         <div className={styles.searchBar}>
-          <Input
-            autoFocus
-            placeholder={t('workingDirectory.searchPlaceholder')}
-            prefix={<Icon icon={SearchIcon} size={14} />}
-            size="small"
-            value={search}
-            variant="borderless"
-            onChange={(e) => setSearch(e.target.value)}
-          />
+          <div className="flex flex-row items-center gap-1.5 px-1.5">
+            <span className="flex items-center">
+              <span className="anticon" role="img">
+                <SearchIcon fill={'transparent'} height={14} size={14} width={14} />
+              </span>
+            </span>
+            <Input
+              autoFocus
+              placeholder={t('workingDirectory.searchPlaceholder')}
+              value={search}
+              className={
+                'h-7 border-0 px-0 shadow-none focus-visible:border-transparent focus-visible:ring-0'
+              }
+              onChange={(e) => setSearch(e.target.value)}
+            />
+          </div>
         </div>
       )}
-      <Flexbox horizontal align={'center'} distribution={'space-between'}>
+      <div className="flex flex-row items-center justify-between">
         <div className={styles.sectionTitle}>{t('workingDirectory.recent')}</div>
         {hasClearableSelection && (
           <div className={styles.clearText} onClick={() => void clear().then(() => setOpen(false))}>
             {t('workingDirectory.clear')}
           </div>
         )}
-      </Flexbox>
+      </div>
       <div className={styles.scrollContainer}>
         {filtered.length === 0 ? (
-          <Flexbox
-            align={'center'}
-            justify={'center'}
+          <div
+            className="flex flex-col items-center justify-center"
             style={{ color: cssVar.colorTextQuaternary, fontSize: 12, padding: '12px 8px' }}
           >
             {search.trim() ? t('workingDirectory.noMatch') : t('workingDirectory.noRecent')}
-          </Flexbox>
+          </div>
         ) : (
           filtered.map(renderRow)
         )}
@@ -540,7 +553,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
           onPick={pick}
         />
       )}
-    </Flexbox>
+    </div>
   );
 
   const displayName = selectedDir
@@ -552,29 +565,35 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
       {selectedDir ? (
         <DirIcon repoType={recents.find((r) => r.path === selectedDir)?.repoType} />
       ) : (
-        <Icon icon={FolderIcon} size={14} />
+        <span className="anticon" role="img">
+          <FolderIcon fill={'transparent'} height={14} size={14} width={14} />
+        </span>
       )}
       <span className={styles.buttonLabel}>{displayName}</span>
-      <Icon icon={ChevronDownIcon} size={12} />
+      <span className="anticon" role="img">
+        <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+      </span>
     </div>
   );
 
   return (
-    <Popover
-      content={content}
-      open={open}
-      placement="bottomLeft"
-      styles={{ content: { padding: 4 } }}
-      trigger="click"
-      onOpenChange={setOpen}
-    >
-      <div>
-        {open ? (
-          trigger
-        ) : (
-          <Tooltip title={selectedDir || t('workingDirectory.title')}>{trigger}</Tooltip>
-        )}
-      </div>
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger
+        render={
+          <div>
+            {open ? (
+              trigger
+            ) : (
+              <SimpleTooltip title={selectedDir || t('workingDirectory.title')}>
+                {trigger}
+              </SimpleTooltip>
+            )}
+          </div>
+        }
+      />
+      <PopoverContent align={'start'} className={'w-auto'} side={'bottom'} style={{ padding: 4 }}>
+        {content}
+      </PopoverContent>
     </Popover>
   );
 });

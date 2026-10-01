@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -21,22 +20,16 @@ const Title = memo<TitleProps>(({ showTitle, time, avatar, titleAddon }) => {
 
   return (
     <>
-      {showTitle && (
-        <Text fontSize={14} weight={500}>
-          {title}
-        </Text>
-      )}
+      {showTitle && <div className="text-[14px] font-medium">{title}</div>}
       {showTitle ? titleAddon : undefined}
       {!timeText ? null : (
-        <Text
+        <time
           aria-label="published-date"
-          as={'time'}
-          fontSize={12}
+          className="text-[12px] text-muted-foreground"
           title={timeTitle}
-          type={'secondary'}
         >
           {timeText}
-        </Text>
+        </time>
       )}
     </>
   );

@@ -1,10 +1,8 @@
 'use client';
-
-import { Flexbox, Icon, Input } from '@lobehub/ui';
-import { ActionIcon, Button, Checkbox, Popover, Text } from '@lobehub/ui/base-ui';
 import type { WorkQueryField } from '@orvilo/types';
 import { workQueryFieldSpec } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import type { ParseKeys } from 'i18next';
 import {
   CheckIcon,
@@ -23,7 +21,7 @@ import {
   WorkflowIcon,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useEffect, useMemo, useState } from 'react';
+import { createElement, memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -34,14 +32,22 @@ import {
   WORKFLOW_CATEGORY_VISUALS,
 } from '@/components/ExecutionStatus';
 import { PriorityIcon } from '@/components/PriorityIcon';
+import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Input } from '@/components/ui/input';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { resolveLabelColor } from '@/features/Labels/labelColor';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import type { BuilderState } from '@/features/SavedViews/workQueryBuilder';
-import WorkQueryFilterBuilder from '@/features/SavedViews/WorkQueryFilterBuilder';
+import WorkQueryFilterBuilder, {
+  useCycleOptions,
+} from '@/features/SavedViews/WorkQueryFilterBuilder';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys } from '@/libs/swr/keys';
 import { taskLabelService } from '@/services/taskLabel';
+import { useHomeStore } from '@/store/home';
+import { homeAgentListSelectors } from '@/store/home/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/slices/auth/selectors';
 
@@ -50,8 +56,12 @@ import {
   MY_WORK_FILTER_DIRECTORY_FIELDS,
   myWorkDirectoryFieldActive,
   myWorkDirectoryNullaryActive,
+  myWorkDirectoryRowsFor,
   myWorkDirectorySelectedValues,
+  setMyWorkDirectoryDateWindow,
+  setMyWorkDirectoryText,
   toggleMyWorkDirectoryEnum,
+  toggleMyWorkDirectoryMulti,
   toggleMyWorkDirectoryNullary,
   toggleMyWorkDirectoryValue,
 } from './myWorkFilters';
@@ -178,19 +188,22 @@ MenuRow.displayName = 'MenuRow';
 const PaneHeader = memo<{ onBack: () => void; title: string }>(({ onBack, title }) => {
   const { t } = useTranslation('common');
   return (
-    <Flexbox horizontal align="center" className={styles.paneHeader} gap={8}>
-      <ActionIcon
+    <div
+      className={cn('flex flex-row', styles.paneHeader)}
+      style={{ alignItems: 'center', gap: 8 }}
+    >
+      <Button
         aria-label={t('back')}
         className={styles.backButton}
-        icon={ChevronLeftIcon}
-        size="small"
+        size="icon"
         title={t('back')}
+        variant="ghost"
         onClick={onBack}
-      />
-      <Text ellipsis fontSize={13} weight={500}>
-        {title}
-      </Text>
-    </Flexbox>
+      >
+        {createElement(ChevronLeftIcon, { className: 'size-4 shrink-0' })}
+      </Button>
+      <span className="text-sm font-medium truncate">{title}</span>
+    </div>
   );
 });
 
@@ -225,6 +238,16 @@ const DirectoryFieldPane = memo<{
   // Label picker — same registry fetch the filter builder uses (workspace-scoped).
   const workspaceId = useActiveWorkspaceId();
   const isLogin = useUserStore(authSelectors.isLogin);
+  const cycleTeamId = builder.rows.find(
+    (row) => row.field === 'teamId' && row.op === 'eq' && typeof row.value === 'string',
+  )?.value as string | undefined;
+  const workspaceIdForCycles = useActiveWorkspaceId();
+  const cycleOptions = useCycleOptions(
+    cycleTeamId,
+    spec?.valueKind === 'cycle',
+    workspaceIdForCycles,
+  );
+  const agents = useHomeStore(homeAgentListSelectors.allAgents);
   const { data: labelsData } = useClientDataSWR(
     spec?.valueKind === 'label' && isLogin ? taskLabelKeys.list(isLogin, workspaceId) : null,
     () => taskLabelService.getLabels(),
@@ -239,20 +262,26 @@ const DirectoryFieldPane = memo<{
   if (spec) {
     switch (spec.valueKind) {
       case 'enum': {
-        const multi =
-          spec.ops.includes('in') &&
-          (spec.enumValues ?? []).every((value) => typeof value === 'string');
+        const multi = spec.ops.includes('in');
         for (const value of spec.enumValues ?? []) {
           let icon: ReactNode;
           if (field === 'priority') {
             icon = <PriorityIcon priority={Number(value)} size={14} />;
           } else if (field === 'status') {
             const visual = TASK_STATUS_VISUALS[value as keyof typeof TASK_STATUS_VISUALS];
-            if (visual) icon = <Icon color={visual.color} icon={visual.icon} size={14} />;
+            if (visual)
+              icon = createElement(visual.icon, {
+                className: 'size-4 shrink-0',
+                color: visual.color,
+              });
           } else if (field === 'workflowCategory') {
             const visual =
               WORKFLOW_CATEGORY_VISUALS[value as keyof typeof WORKFLOW_CATEGORY_VISUALS];
-            if (visual) icon = <Icon color={visual.color} icon={visual.icon} size={14} />;
+            if (visual)
+              icon = createElement(visual.icon, {
+                className: 'size-4 shrink-0',
+                color: visual.color,
+              });
           }
           valueRows.push({
             checked: isSelected(value),
@@ -264,7 +293,11 @@ const DirectoryFieldPane = memo<{
             onClick: () =>
               onBuilderChange(
                 multi
-                  ? toggleMyWorkDirectoryEnum(builder, field, String(value))
+                  ? toggleMyWorkDirectoryMulti(
+                      builder,
+                      field,
+                      typeof value === 'number' ? value : String(value),
+                    )
                   : toggleMyWorkDirectoryValue(builder, field, value),
               ),
           });
@@ -294,7 +327,11 @@ const DirectoryFieldPane = memo<{
             key: typeof option.value === 'string' ? option.value : 'me',
             label: option.label,
             onClick: () =>
-              onBuilderChange(toggleMyWorkDirectoryValue(builder, field, option.value)),
+              onBuilderChange(
+                spec.ops.includes('in')
+                  ? toggleMyWorkDirectoryMulti(builder, field, option.value)
+                  : toggleMyWorkDirectoryValue(builder, field, option.value),
+              ),
           });
         }
         break;
@@ -303,10 +340,15 @@ const DirectoryFieldPane = memo<{
         for (const project of projects) {
           valueRows.push({
             checked: isSelected(project.id),
-            icon: <Icon icon={PROJECT_ENTITY_ICON} size={14} />,
+            icon: createElement(PROJECT_ENTITY_ICON, { className: 'size-4 shrink-0' }),
             key: project.id,
             label: project.name || project.id,
-            onClick: () => onBuilderChange(toggleMyWorkDirectoryValue(builder, field, project.id)),
+            onClick: () =>
+              onBuilderChange(
+                spec.ops.includes('in')
+                  ? toggleMyWorkDirectoryMulti(builder, field, project.id)
+                  : toggleMyWorkDirectoryValue(builder, field, project.id),
+              ),
           });
         }
         break;
@@ -317,9 +359,56 @@ const DirectoryFieldPane = memo<{
             checked: isSelected(team.id),
             key: team.id,
             label: team.name || team.id,
-            onClick: () => onBuilderChange(toggleMyWorkDirectoryValue(builder, field, team.id)),
+            onClick: () =>
+              onBuilderChange(
+                spec.ops.includes('in')
+                  ? toggleMyWorkDirectoryMulti(builder, field, team.id)
+                  : toggleMyWorkDirectoryValue(builder, field, team.id),
+              ),
           });
         }
+        break;
+      }
+      case 'cycle': {
+        for (const cycle of cycleOptions) {
+          valueRows.push({
+            checked: isSelected(cycle.value),
+            key: cycle.value,
+            label: cycle.label,
+            onClick: () => onBuilderChange(toggleMyWorkDirectoryMulti(builder, field, cycle.value)),
+          });
+        }
+        break;
+      }
+      case 'agent': {
+        for (const agent of agents) {
+          valueRows.push({
+            checked: isSelected(agent.id),
+            key: agent.id,
+            label: agent.title || agent.id,
+            onClick: () => onBuilderChange(toggleMyWorkDirectoryMulti(builder, field, agent.id)),
+          });
+        }
+        break;
+      }
+      case 'date': {
+        const current = myWorkDirectoryRowsFor(builder, field)[0];
+        for (const window of ['set', 'unset', 'past', 'past30'] as const) {
+          const active =
+            (window === 'set' && current?.op === 'isNotNull') ||
+            (window === 'unset' && current?.op === 'isNull') ||
+            (window === 'past' && current?.op === 'lt') ||
+            (window === 'past30' && current?.op === 'between');
+          valueRows.push({
+            checked: active,
+            key: window,
+            label: t(`myWork.dateWindow.${window}` as never, { defaultValue: window }),
+            onClick: () => onBuilderChange(setMyWorkDirectoryDateWindow(builder, field, window)),
+          });
+        }
+        break;
+      }
+      case 'text': {
         break;
       }
       case 'label': {
@@ -368,8 +457,22 @@ const DirectoryFieldPane = memo<{
 
   if (!spec) return null;
 
+  const textValue = myWorkDirectoryRowsFor(builder, field)[0]?.value;
   return (
-    <Flexbox>
+    <div className="flex flex-col">
+      {spec.valueKind === 'text' ? (
+        <input
+          className="mx-2 my-1 rounded border border-border bg-transparent px-2 py-1 text-sm"
+          defaultValue={typeof textValue === 'string' ? textValue : ''}
+          placeholder={t('savedViews.filters.textPlaceholder')}
+          onBlur={(event) =>
+            onBuilderChange(setMyWorkDirectoryText(builder, field, event.target.value))
+          }
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur();
+          }}
+        />
+      ) : null}
       {valueRows.map((row) => (
         <MenuRow
           checked={row.checked}
@@ -396,7 +499,7 @@ const DirectoryFieldPane = memo<{
           />
         </>
       ) : null}
-    </Flexbox>
+    </div>
   );
 });
 
@@ -466,12 +569,12 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
 
     const content =
       pane.kind === 'builder' ? (
-        <Flexbox className={styles.builderPane} gap={8}>
+        <div className={cn('flex flex-col', styles.builderPane)} style={{ gap: 8 }}>
           <PaneHeader title={t('myWork.filterAdvanced')} onBack={() => setPane({ kind: 'menu' })} />
           <WorkQueryFilterBuilder entityType={'task'} value={builder} onChange={onBuilderChange} />
-        </Flexbox>
+        </div>
       ) : pane.kind === 'field' ? (
-        <Flexbox className={styles.directoryPane} gap={2}>
+        <div className={cn('flex flex-col', styles.directoryPane)} style={{ gap: 2 }}>
           <PaneHeader
             title={t(`savedViews.fields.${pane.field}` as never, { defaultValue: pane.field })}
             onBack={() => setPane({ kind: 'menu' })}
@@ -483,21 +586,20 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
             teamOptions={teamOptions}
             onBuilderChange={onBuilderChange}
           />
-        </Flexbox>
+        </div>
       ) : (
-        <Flexbox className={styles.directoryPane} gap={2}>
+        <div className={cn('flex flex-col', styles.directoryPane)} style={{ gap: 2 }}>
           {filterSupported ? (
             <>
               <Input
                 autoFocus
                 className={styles.searchInput}
                 placeholder={t('myWork.filterSearchPlaceholder')}
-                size="small"
                 value={keyword}
                 onChange={(event) => setKeyword(event.target.value)}
               />
               <MenuRow
-                icon={<Icon icon={SlidersHorizontalIcon} size={14} />}
+                icon={createElement(SlidersHorizontalIcon, { className: 'size-4 shrink-0' })}
                 label={t('myWork.filterAdvanced')}
                 trailing={<ChevronRightIcon className={styles.menuRowIcon} size={14} />}
                 onClick={() => setPane({ kind: 'builder' })}
@@ -505,56 +607,66 @@ const MyWorkFilterMenu = memo<MyWorkFilterMenuProps>(
               {directoryFields.map((entry) => (
                 <MenuRow
                   checked={entry.active}
-                  icon={entry.icon ? <Icon icon={entry.icon} size={14} /> : undefined}
                   key={entry.field}
                   label={entry.label}
                   trailing={<ChevronRightIcon className={styles.menuRowIcon} size={14} />}
+                  icon={
+                    entry.icon
+                      ? createElement(entry.icon, { className: 'size-4 shrink-0' })
+                      : undefined
+                  }
                   onClick={() => setPane({ field: entry.field, kind: 'field' })}
                 />
               ))}
               <div className={styles.sectionDivider} />
             </>
           ) : (
-            <Text fontSize={12} type="secondary">
-              {t('myWork.filterUnsupported')}
-            </Text>
+            <span className="text-sm text-muted-foreground">{t('myWork.filterUnsupported')}</span>
           )}
-          <Flexbox gap={2} style={{ paddingInline: 8 }}>
-            <Checkbox checked={noProject} onChange={onNoProjectChange}>
-              {t('myWork.noProject')}
-            </Checkbox>
-            <Checkbox checked={delegated} onChange={onDelegatedChange}>
-              {t('myWork.delegated')}
-            </Checkbox>
-          </Flexbox>
+          <div className="flex flex-col" style={{ gap: 2, paddingInline: 8 }}>
+            <label className="flex items-center gap-3 px-3 py-2 text-sm">
+              <Checkbox checked={noProject} onCheckedChange={onNoProjectChange} />
+              <span>{t('myWork.noProject')}</span>
+            </label>
+            <label className="flex items-center gap-3 px-3 py-2 text-sm">
+              <Checkbox checked={delegated} onCheckedChange={onDelegatedChange} />
+              <span>{t('myWork.delegated')}</span>
+            </label>
+          </div>
           {activeFilterCount > 0 ? (
             <>
               <div className={styles.sectionDivider} />
-              <Flexbox horizontal justify="flex-end" style={{ paddingInlineEnd: 4 }}>
-                <Button size="small" type="text" onClick={onResetFilters}>
+              <div
+                className="flex flex-row"
+                style={{ justifyContent: 'flex-end', paddingInlineEnd: 4 }}
+              >
+                <Button variant="ghost" onClick={onResetFilters}>
                   {t('myWork.filtersReset')}
                 </Button>
-              </Flexbox>
+              </div>
             </>
           ) : null}
-        </Flexbox>
+        </div>
       );
 
     return (
-      <Popover
-        content={content}
-        open={open}
-        placement="bottomRight"
-        trigger="click"
-        onOpenChange={setOpen}
-      >
-        <ActionIcon
-          active={activeFilterCount > 0 || noProject || delegated}
-          aria-label={t('myWork.addFilter')}
-          icon={FilterIcon}
-          size="small"
-          title={t('myWork.addFilter')}
+      <Popover open={open} onOpenChange={setOpen}>
+        <PopoverTrigger
+          render={
+            <Button
+              aria-label={t('myWork.addFilter')}
+              aria-pressed={activeFilterCount > 0 || noProject || delegated}
+              size="icon"
+              title={t('myWork.addFilter')}
+              variant="ghost"
+            >
+              {createElement(FilterIcon, { className: 'size-4 shrink-0' })}
+            </Button>
+          }
         />
+        <PopoverContent align="end" className="w-auto max-w-[calc(100vw-2rem)]">
+          {content}
+        </PopoverContent>
       </Popover>
     );
   },

@@ -47,6 +47,8 @@ const taskWorkflowStateRefId = (s: TaskStoreState, taskId?: string) =>
 
 const taskTeamId = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.teamId;
 
+const taskDueDate = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.dueDate;
+
 const taskPriority = (s: TaskStoreState, taskId?: string) => taskDetail(s, taskId)?.priority ?? 0;
 
 const taskVisibility = (s: TaskStoreState, taskId?: string): 'private' | 'public' =>
@@ -188,6 +190,7 @@ export const taskDetailSelectors = {
   activeTaskDependencies: (s: TaskStoreState) => taskDependencies(s, s.activeTaskId),
   activeTaskDescription: (s: TaskStoreState) => taskDescription(s, s.activeTaskId),
   activeTaskDetail,
+  activeTaskDueDate: (s: TaskStoreState) => taskDueDate(s, s.activeTaskId),
   activeTaskEditorData: (s: TaskStoreState) => taskEditorData(s, s.activeTaskId),
   activeTaskError: (s: TaskStoreState) => taskError(s, s.activeTaskId),
   activeTaskFiles: (s: TaskStoreState) => taskFiles(s, s.activeTaskId),
@@ -238,6 +241,7 @@ export const taskDetailSelectors = {
   taskDescription,
   taskDetail,
   taskDetailById,
+  taskDueDate,
   taskEditorData,
   taskError,
   taskFiles,

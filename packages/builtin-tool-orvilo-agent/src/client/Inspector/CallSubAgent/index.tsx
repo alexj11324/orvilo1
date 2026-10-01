@@ -1,5 +1,4 @@
 'use client';
-
 import { GroupBotIcon } from '@lobehub/ui/icons';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';

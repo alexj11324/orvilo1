@@ -1,11 +1,13 @@
 'use client';
-
-import { Flexbox, Hotkey, Icon, KeyMapEnum, TextArea } from '@lobehub/ui';
-import { Button, Tabs, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
 import { Check, PenLine, Replace, Send, X } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
+
+import { Button } from '@/components/ui/button';
+import { Kbd } from '@/components/ui/kbd';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Textarea } from '@/components/ui/textarea';
 
 import { registerPendingHotkeyCard } from '../pendingHotkeys';
 import { formatRemaining, isQuestionAnswered } from './draft';
@@ -273,83 +275,40 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
   );
 
   const footer = (
-    <Flexbox
-      horizontal
-      align="center"
-      gap={8}
-      justify={showCountdown ? 'space-between' : 'flex-end'}
-      width={'100%'}
+    <div
+      className="flex items-center gap-2"
+      style={{ justifyContent: showCountdown ? 'space-between' : 'flex-end', width: '100%' }}
     >
       {showCountdown && (
-        <Text fontSize={12} type="secondary">
+        <div className="text-[12px] text-muted-foreground">
           {expired ? labels.timeExpired : labels.timeRemaining(formatRemaining(remainingMs))}
-        </Text>
+        </div>
       )}
-      <Flexbox horizontal gap={8}>
-        <Button disabled={submitting} icon={<Icon icon={X} />} onClick={handleSkip}>
-          {labels.skip}
-          <Hotkey compact keys={KeyMapEnum.Esc} variant="borderless" />
+      <div className="flex gap-2">
+        <Button disabled={submitting} onClick={handleSkip}>
+          <X /> {labels.skip}
+          <Kbd>Esc</Kbd>
         </Button>
         <Button
           disabled={isSubmitDisabled}
-          icon={<Icon icon={Send} />}
           loading={submitting}
-          type="primary"
+          variant="default"
           onClick={handleSubmit}
         >
-          {labels.submit}
-          <Hotkey compact inverseTheme keys={KeyMapEnum.Enter} variant="borderless" />
+          <Send /> {labels.submit}
+          <Kbd className="bg-background/20 text-primary-foreground">Enter</Kbd>
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 
   return (
-    <Flexbox gap={12} ref={rootRef}>
+    <div className="flex flex-col gap-3" ref={rootRef}>
       {questions.length > 0 && (
         <Tabs
-          activeKey={escapeActive ? 'escape' : supplementActive ? 'supplement' : activeTab}
           className={styles.tabs}
-          variant="square"
-          items={[
-            ...questions.map((q, idx) => {
-              const done = isQuestionAnswered(q, picks, custom);
-              return {
-                key: String(idx),
-                label: (
-                  <Flexbox horizontal align="center" gap={6}>
-                    <Text>Q{idx + 1}</Text>
-                    {done && <Icon icon={Check} size={12} />}
-                  </Flexbox>
-                ),
-              };
-            }),
-            {
-              key: 'supplement',
-              label: (
-                <Flexbox horizontal align="center" gap={6}>
-                  <Icon icon={PenLine} size={12} />
-                  <Text>{labels.supplementEnter}</Text>
-                </Flexbox>
-              ),
-            },
-            ...(isMulti
-              ? [
-                  // Replace-all stays at the far right because it discards the
-                  // structured selections, unlike additional notes.
-                  {
-                    key: 'escape',
-                    label: (
-                      <Flexbox data-replace-all horizontal align="center" gap={6}>
-                        <Icon icon={Replace} size={12} />
-                        <Text>{labels.escapeEnter}</Text>
-                      </Flexbox>
-                    ),
-                  },
-                ]
-              : []),
-          ]}
-          onChange={(key: string) => {
+          value={escapeActive ? 'escape' : supplementActive ? 'supplement' : activeTab}
+          onValueChange={(key) => {
             if (key === 'escape') {
               setEscapeMode(true);
             } else if (key === 'supplement') {
@@ -358,16 +317,44 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
               setQuestionMode(key);
             }
           }}
-        />
+        >
+          <TabsList variant="line">
+            {questions.map((q, idx) => {
+              const done = isQuestionAnswered(q, picks, custom);
+              return (
+                <TabsTrigger key={String(idx)} value={String(idx)}>
+                  <div className="flex items-center gap-[6px]">
+                    <div>Q{idx + 1}</div>
+                    {done && <Check size={12} />}
+                  </div>
+                </TabsTrigger>
+              );
+            })}
+            <TabsTrigger value="supplement">
+              <div className="flex items-center gap-[6px]">
+                <PenLine size={12} />
+                <div>{labels.supplementEnter}</div>
+              </div>
+            </TabsTrigger>
+            {isMulti && (
+              // Replace-all stays at the far right because it discards the
+              // structured selections, unlike additional notes.
+              <TabsTrigger value="escape">
+                <div data-replace-all className="flex items-center gap-[6px]">
+                  <Replace size={12} />
+                  <div>{labels.escapeEnter}</div>
+                </div>
+              </TabsTrigger>
+            )}
+          </TabsList>
+        </Tabs>
       )}
 
       {escapeActive || supplementActive ? (
-        <TextArea
-          autoSize={{ maxRows: 8, minRows: 3 }}
+        <Textarea
           disabled={expired || submitting}
           placeholder={supplementActive ? labels.supplementPlaceholder : labels.escapePlaceholder}
           value={supplementActive ? supplementText : escapeText}
-          variant="filled"
           onChange={(e) =>
             supplementActive
               ? handleSupplementTextChange(e.target.value)
@@ -409,7 +396,7 @@ export const AskUserQuestionView = memo<AskUserQuestionViewProps>((props) => {
       )}
 
       {actionsPortalTarget ? createPortal(footer, actionsPortalTarget) : footer}
-    </Flexbox>
+    </div>
   );
 });
 

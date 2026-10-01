@@ -1,7 +1,6 @@
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { Globe } from 'lucide-react';
 import { memo } from 'react';
 
@@ -24,17 +23,13 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 const PageAction = memo<BuiltinRenderProps<unknown, BrowserPageState, string>>(
   ({ content, pluginState }) => {
     return (
-      <Flexbox className={styles.container} gap={2}>
-        <Flexbox horizontal align={'center'} gap={6}>
+      <div className={cn('flex', 'flex-col', 'gap-[2px]', styles.container)}>
+        <div className="flex items-center gap-[6px]">
           <Globe size={14} />
-          <Text ellipsis>{content || pluginState?.title || 'Browser action'}</Text>
-        </Flexbox>
-        {pluginState?.url && (
-          <Text ellipsis className={styles.url}>
-            {pluginState.url}
-          </Text>
-        )}
-      </Flexbox>
+          <div className="truncate">{content || pluginState?.title || 'Browser action'}</div>
+        </div>
+        {pluginState?.url && <div className={`truncate ${styles.url}`}>{pluginState.url}</div>}
+      </div>
     );
   },
 );

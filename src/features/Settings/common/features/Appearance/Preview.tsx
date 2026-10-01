@@ -1,4 +1,3 @@
-import { Block, Flexbox } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { memo } from 'react';
 
@@ -60,233 +59,310 @@ const AgentItem = memo<{
   color?: string;
 }>(({ active, color }) => {
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.agent, active && styles.agentActive)}
-      gap={4}
-      width={'100%'}
+    <div
+      style={{ flexDirection: 'row', alignItems: 'center', gap: 4, width: '100%' }}
+      className={['flex min-w-0', cx(styles.agent, active && styles.agentActive)]
+        .filter(Boolean)
+        .join(' ')}
     >
-      <Flexbox
-        className={styles.icon}
-        height={12}
-        style={{ background: color, borderRadius: '50%' }}
-        width={12}
+      <div
+        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+        style={{
+          flexDirection: 'column',
+          width: 12,
+          height: 12,
+          background: color,
+          borderRadius: '50%',
+        }}
       />
-      <Flexbox flex={1} gap={4}>
-        <Flexbox
-          className={styles.icon}
-          height={2}
-          width={'66%'}
+      <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 4, flex: 1 }}>
+        <div
+          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
           style={{
+            flexDirection: 'column',
+            width: '66%',
+            height: 2,
             background: cssVar.colorTextTertiary,
           }}
         />
-        <Flexbox
-          className={styles.icon}
-          height={2}
-          width={'100%'}
+        <div
+          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
           style={{
+            flexDirection: 'column',
+            width: '100%',
+            height: 2,
             background: cssVar.colorTextQuaternary,
           }}
         />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 
 const Preview = memo(() => {
   const nav = (
-    <Flexbox align={'center'} className={styles.nav} gap={8} width={24}>
-      <Flexbox
-        className={styles.icon}
-        height={14}
-        style={{ border: `2px solid ${cssVar.colorPrimary}`, borderRadius: '50%' }}
-        width={14}
+    <div
+      className={['flex min-w-0', styles.nav].filter(Boolean).join(' ')}
+      style={{ flexDirection: 'column', alignItems: 'center', gap: 8, width: 24 }}
+    >
+      <div
+        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+        style={{
+          flexDirection: 'column',
+          width: 14,
+          height: 14,
+          border: `2px solid ${cssVar.colorPrimary}`,
+          borderRadius: '50%',
+        }}
       />
-      <Flexbox className={styles.icon} height={12} width={12} />
-      <Flexbox className={styles.icon} height={12} width={12} />
-      <Flexbox className={styles.icon} height={12} width={12} />
-    </Flexbox>
+      <div
+        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+        style={{ flexDirection: 'column', width: 12, height: 12 }}
+      />
+      <div
+        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+        style={{ flexDirection: 'column', width: 12, height: 12 }}
+      />
+      <div
+        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+        style={{ flexDirection: 'column', width: 12, height: 12 }}
+      />
+    </div>
   );
 
   const sidebar = (
-    <Flexbox className={styles.sidebar} gap={4} width={72}>
-      <Flexbox
-        gap={4}
-        paddingInline={2}
-        style={{
-          paddingTop: 4,
-        }}
+    <div
+      className={['flex min-w-0', styles.sidebar].filter(Boolean).join(' ')}
+      style={{ flexDirection: 'column', gap: 4, width: 72 }}
+    >
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'column', gap: 4, paddingInline: 2, paddingTop: 4 }}
       >
-        <Flexbox className={styles.icon} height={8} width={'50%'} />
-        <Flexbox
-          className={styles.icon}
-          height={8}
-          width={'100%'}
+        <div
+          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+          style={{ flexDirection: 'column', width: '50%', height: 8 }}
+        />
+        <div
+          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
           style={{
+            flexDirection: 'column',
+            width: '100%',
+            height: 8,
             background: cssVar.colorFillTertiary,
           }}
         />
-      </Flexbox>
+      </div>
       <AgentItem />
       <AgentItem active />
       <AgentItem />
       <AgentItem />
-    </Flexbox>
+    </div>
   );
 
   const header = (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={styles.header}
-      justify={'space-between'}
-      padding={4}
+    <div
+      className={['flex min-w-0', styles.header].filter(Boolean).join(' ')}
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        padding: 4,
+      }}
     >
-      <Flexbox horizontal align={'center'} gap={4}>
-        <Flexbox className={styles.icon} height={12} style={{ borderRadius: '50%' }} width={12} />
-        <Flexbox className={styles.icon} height={8} width={32} />
-      </Flexbox>
-      <Flexbox horizontal gap={2}>
-        <Flexbox className={styles.icon} height={10} width={10} />
-        <Flexbox className={styles.icon} height={10} width={10} />
-      </Flexbox>
-    </Flexbox>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}
+      >
+        <div
+          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+          style={{ flexDirection: 'column', width: 12, height: 12, borderRadius: '50%' }}
+        />
+        <div
+          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+          style={{ flexDirection: 'column', width: 32, height: 8 }}
+        />
+      </div>
+      <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 2 }}>
+        <div
+          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+          style={{ flexDirection: 'column', width: 10, height: 10 }}
+        />
+        <div
+          className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+          style={{ flexDirection: 'column', width: 10, height: 10 }}
+        />
+      </div>
+    </div>
   );
 
   const input = (
-    <Flexbox
-      align={'flex-end'}
-      className={styles.input}
-      height={48}
-      justify={'flex-end'}
-      padding={8}
+    <div
+      className={['flex min-w-0', styles.input].filter(Boolean).join(' ')}
+      style={{
+        flexDirection: 'column',
+        alignItems: 'flex-end',
+        justifyContent: 'flex-end',
+        height: 48,
+        padding: 8,
+      }}
     >
-      <Flexbox
-        className={styles.icon}
-        height={12}
-        width={32}
-        style={{
-          background: cssVar.colorPrimary,
-        }}
+      <div
+        className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+        style={{ flexDirection: 'column', width: 32, height: 12, background: cssVar.colorPrimary }}
       />
-    </Flexbox>
+    </div>
   );
 
   return (
-    <Block horizontal shadow className={styles.container} variant={'outlined'}>
+    <div className={`flex rounded-md border border-border ${styles.container}`}>
       {nav}
       {sidebar}
-      <Flexbox className={styles.conversation} flex={1}>
+      <div
+        className={['flex min-w-0', styles.conversation].filter(Boolean).join(' ')}
+        style={{ flexDirection: 'column', flex: 1 }}
+      >
         {header}
-        <Flexbox align={'flex-start'} flex={1} gap={8} padding={6}>
-          <Flexbox horizontal align={'center'} gap={4} justify={'flex-end'} width={'100%'}>
-            <Flexbox className={styles.bubble} gap={4} width={64}>
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'100%'}
+        <div
+          className={'flex min-w-0'}
+          style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 8, flex: 1, padding: 6 }}
+        >
+          <div
+            className={'flex min-w-0'}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: 4,
+              width: '100%',
+            }}
+          >
+            <div
+              className={['flex min-w-0', styles.bubble].filter(Boolean).join(' ')}
+              style={{ flexDirection: 'column', gap: 4, width: 64 }}
+            >
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'66%'}
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '66%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-            </Flexbox>
-            <Flexbox
-              className={styles.icon}
-              height={14}
-              style={{ borderRadius: '50%' }}
-              width={14}
+            </div>
+            <div
+              className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+              style={{ flexDirection: 'column', width: 14, height: 14, borderRadius: '50%' }}
             />
-          </Flexbox>
-          <Flexbox horizontal gap={4}>
-            <Flexbox
-              className={styles.icon}
-              height={14}
-              style={{ borderRadius: '50%' }}
-              width={14}
+          </div>
+          <div className={'flex min-w-0'} style={{ flexDirection: 'row', gap: 4 }}>
+            <div
+              className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+              style={{ flexDirection: 'column', width: 14, height: 14, borderRadius: '50%' }}
             />
-            <Flexbox className={styles.bubble} gap={4} width={160}>
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'100%'}
+            <div
+              className={['flex min-w-0', styles.bubble].filter(Boolean).join(' ')}
+              style={{ flexDirection: 'column', gap: 4, width: 160 }}
+            >
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'66%'}
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '66%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'100%'}
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'100%'}
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'33%'}
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '33%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-            </Flexbox>
-          </Flexbox>
-          <Flexbox horizontal align={'center'} gap={4} justify={'flex-end'} width={'100%'}>
-            <Flexbox className={styles.bubble} gap={4} width={100}>
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'100%'}
+            </div>
+          </div>
+          <div
+            className={'flex min-w-0'}
+            style={{
+              flexDirection: 'row',
+              alignItems: 'center',
+              justifyContent: 'flex-end',
+              gap: 4,
+              width: '100%',
+            }}
+          >
+            <div
+              className={['flex min-w-0', styles.bubble].filter(Boolean).join(' ')}
+              style={{ flexDirection: 'column', gap: 4, width: 100 }}
+            >
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '100%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-              <Flexbox
-                className={styles.icon}
-                height={2}
-                width={'66%'}
+              <div
+                className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
                 style={{
+                  flexDirection: 'column',
+                  width: '66%',
+                  height: 2,
                   background: cssVar.colorTextQuaternary,
                 }}
               />
-            </Flexbox>
-            <Flexbox
-              className={styles.icon}
-              height={14}
-              style={{ borderRadius: '50%' }}
-              width={14}
+            </div>
+            <div
+              className={['flex min-w-0', styles.icon].filter(Boolean).join(' ')}
+              style={{ flexDirection: 'column', width: 14, height: 14, borderRadius: '50%' }}
             />
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
         {input}
-      </Flexbox>
-    </Block>
+      </div>
+    </div>
   );
 });
 

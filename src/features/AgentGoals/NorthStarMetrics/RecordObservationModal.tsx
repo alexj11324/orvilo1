@@ -1,18 +1,14 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { useGoalStore } from '@/store/goal';
 
 /**
@@ -47,30 +43,32 @@ const RecordObservationContent = memo<{ goalId: string; metricKey: string; metri
     };
 
     return (
-      <Flexbox gap={16} paddingBlock={'4px 8px'}>
-        <Flexbox gap={6}>
-          <Text fontSize={13} weight={500}>
+      <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
+        <div className="flex flex-col gap-1.5">
+          <div className="text-[13px] font-medium">
             {t('goalProcess.northStar.record.valueLabel', { key: metricKey })}
-          </Text>
+          </div>
           <Input
             autoFocus
             placeholder={'42180'}
             value={value}
             onChange={(e) => setValue(e.target.value)}
-            onPressEnter={() => void submit()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') void submit();
+            }}
           />
-        </Flexbox>
-        <Flexbox horizontal justify={'flex-end'}>
+        </div>
+        <div className="flex justify-end">
           <Button
             disabled={!Number.isFinite(Number(value)) || value.trim() === ''}
             loading={busy}
-            type={'primary'}
+            variant="outline"
             onClick={() => void submit()}
           >
             {t('goalProcess.northStar.record.submit')}
           </Button>
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );

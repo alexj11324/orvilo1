@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { memo, useMemo, useState, useSyncExternalStore } from 'react';
@@ -139,27 +138,27 @@ export const ActivityDock = memo(() => {
             <span className={styles.itemText}>
               {t('teammates.activity.bubble', { action: event.action, name })}
             </span>
-            <Icon className={styles.phaseIcon} icon={PhaseIcon} size={12} />
+            <PhaseIcon className={styles.phaseIcon} size={12} />
           </div>
         );
       })}
-      <Flexbox horizontal justify="flex-end">
+      <div className="flex justify-end">
         <button className={styles.toggle} type="button" onClick={() => setExpanded((v) => !v)}>
           {expanded ? (
             <>
-              <Icon icon={ChevronUp} size={12} />
+              <ChevronUp size={12} />
               {t('teammates.activity.collapse')}
             </>
           ) : (
             <>
-              <Icon icon={ChevronDown} size={12} />
+              <ChevronDown size={12} />
               {moreCount > 0
                 ? t('teammates.activity.more', { count: moreCount })
                 : t('teammates.activity.expand')}
             </>
           )}
         </button>
-      </Flexbox>
+      </div>
     </div>
   );
 });

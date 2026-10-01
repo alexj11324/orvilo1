@@ -1,7 +1,5 @@
 'use client';
 
-import { Empty, Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Button, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceGroupFeedback } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import dayjs from 'dayjs';
@@ -17,6 +15,9 @@ import {
 import { Fragment, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader, EmptyMedia } from '@/components/ui/empty';
 import { useIsHydrated } from '@/hooks/useIsHydrated';
 
 import { AttachmentThumbs } from '../Evidence/attachments';
@@ -118,41 +119,42 @@ const CheckList = memo<CheckListProps>(
     if (visibleRows.length === 0) {
       const allAccepted = filter === 'pending' && isGroupFullyAccepted(checks);
       return (
-        <Flexbox align={'center'} className={styles.emptyCard} gap={12} justify={'center'}>
+        <div className={`flex flex-col items-center gap-3 justify-center ${styles.emptyCard}`}>
           {allAccepted ? (
             <>
-              <Icon
-                className={styles.celebrateIcon}
-                color={cssVar.colorSuccess}
-                icon={PartyPopper}
-                size={40}
-              />
-              <Flexbox align={'center'} gap={4}>
-                <Text strong style={{ color: cssVar.colorSuccess, fontSize: 15 }}>
+              <PartyPopper className={styles.celebrateIcon} color={cssVar.colorSuccess} size={40} />
+              <div className="flex flex-col items-center gap-1">
+                <div className="font-semibold" style={{ color: cssVar.colorSuccess, fontSize: 15 }}>
                   {t('acceptance.checks.allAccepted.title')}
-                </Text>
-                <Text fontSize={13} type={'secondary'}>
+                </div>
+                <div className="text-[13px] text-muted-foreground">
                   {t('acceptance.checks.allAccepted.desc')}
-                </Text>
-              </Flexbox>
+                </div>
+              </div>
             </>
           ) : (
-            <Empty
-              icon={CircleDashed}
-              description={t(
-                filter === 'all'
-                  ? 'acceptance.checks.empty'
-                  : `acceptance.checks.emptyFilter.${filter}`,
-              )}
-            />
+            <Empty>
+              <EmptyHeader>
+                <EmptyMedia variant={'icon'}>
+                  <CircleDashed />
+                </EmptyMedia>
+                <EmptyDescription>
+                  {t(
+                    filter === 'all'
+                      ? 'acceptance.checks.empty'
+                      : `acceptance.checks.emptyFilter.${filter}`,
+                  )}
+                </EmptyDescription>
+              </EmptyHeader>
+            </Empty>
           )}
-        </Flexbox>
+        </div>
       );
     }
 
     if (!shouldGroupChecks(checks.length)) {
       return (
-        <Flexbox className={styles.groupCard}>
+        <div className={`flex flex-col ${styles.groupCard}`}>
           {visibleRows.map((check) => (
             <AcceptanceCheckRow
               canReview={canReview}
@@ -167,12 +169,12 @@ const CheckList = memo<CheckListProps>(
               onToggle={() => onToggleItem(check.id)}
             />
           ))}
-        </Flexbox>
+        </div>
       );
     }
 
     return (
-      <Flexbox className={styles.groupCard}>
+      <div className={`flex flex-col ${styles.groupCard}`}>
         {groups.map(({ checks: groupChecks_, key, label, rows }, groupIndex) => {
           const passed = groupChecks_.filter((check) => check.state === 'passed').length;
           const collapsed = collapsedGroups.has(key);
@@ -204,54 +206,49 @@ const CheckList = memo<CheckListProps>(
 
           return (
             <Fragment key={key}>
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={styles.groupHeader}
-                gap={8}
+              <div
+                className={`flex items-center gap-2 ${styles.groupHeader}`}
                 style={{
                   borderBlockStart:
                     groupIndex > 0 ? `1px solid ${cssVar.colorBorderSecondary}` : 'none',
                 }}
                 onClick={() => onToggleGroup(key)}
               >
-                <Text strong style={{ fontSize: 13 }}>
+                <div className="font-semibold" style={{ fontSize: 13 }}>
                   {label}
-                </Text>
+                </div>
                 {allVerified ? (
-                  <Flexbox
-                    horizontal
-                    align={'center'}
-                    gap={4}
+                  <div
+                    className="flex items-center gap-1"
                     style={{ color: cssVar.colorSuccess, fontSize: 12 }}
                   >
-                    <Icon icon={BadgeCheck} size={13} />
+                    <BadgeCheck size={13} />
                     {t('acceptance.group.allVerified', { passed, total: groupChecks_.length })}
-                  </Flexbox>
+                  </div>
                 ) : (
-                  <Flexbox horizontal align={'center'} gap={8}>
-                    <Text fontSize={12} type={'secondary'}>
+                  <div className="flex items-center gap-2">
+                    <div className="text-[12px] text-muted-foreground">
                       {t('acceptance.group.acceptedRatio', {
                         accepted: acceptedCount,
                         total: groupChecks_.length,
                       })}
-                    </Text>
+                    </div>
                     {exceptionCount > 0 && (
-                      <Text style={{ color: cssVar.colorError, fontSize: 12 }}>
+                      <div style={{ color: cssVar.colorError, fontSize: 12 }}>
                         {t('acceptance.group.failedCount', { count: exceptionCount })}
-                      </Text>
+                      </div>
                     )}
                     {rejectedCount > 0 && (
-                      <Text style={{ color: cssVar.colorError, fontSize: 12 }}>
+                      <div style={{ color: cssVar.colorError, fontSize: 12 }}>
                         {t('acceptance.group.rejectedCount', { count: rejectedCount })}
-                      </Text>
+                      </div>
                     )}
                     {ignoredCount > 0 && (
-                      <Text fontSize={12} type={'secondary'}>
+                      <div className="text-[12px] text-muted-foreground">
                         {t('acceptance.group.ignoredCount', { count: ignoredCount })}
-                      </Text>
+                      </div>
                     )}
-                  </Flexbox>
+                  </div>
                 )}
                 {/* Bulk accept sits by the ratio it settles, hover-revealed —
                     a full-width column of always-on buttons begs misclicks. */}
@@ -261,12 +258,11 @@ const CheckList = memo<CheckListProps>(
                     <Button
                       className={'acceptance-group-actions'}
                       disabled={reviewPending && acceptingGroup !== key}
-                      icon={<Icon icon={BadgeCheck} />}
                       loading={acceptingGroup === key}
-                      size={'small'}
+                      size="sm"
                       // The spinner must stay visible after the pointer leaves.
                       style={acceptingGroup === key ? { opacity: 1 } : undefined}
-                      type={'text'}
+                      variant="ghost"
                       onClick={async (event) => {
                         event.stopPropagation();
                         setAcceptingGroup(key);
@@ -279,22 +275,21 @@ const CheckList = memo<CheckListProps>(
                         if (ok && !collapsed) onToggleGroup(key);
                       }}
                     >
+                      <BadgeCheck data-icon="inline-start" />
                       {t('acceptance.review.acceptAll')}
                     </Button>
                   ) : allVerified || ignoredCount > 0 ? null : (
                     // Fully signed off but not all green — the mixed-verdict
                     // receipt that can't fold into the ratio text.
-                    <Flexbox
-                      horizontal
-                      align={'center'}
-                      gap={4}
+                    <div
+                      className="flex items-center gap-1"
                       style={{ color: cssVar.colorSuccess, fontSize: 12 }}
                     >
-                      <Icon icon={BadgeCheck} size={13} />
+                      <BadgeCheck size={13} />
                       {t('acceptance.review.acceptAllDone')}
-                    </Flexbox>
+                    </div>
                   ))}
-                <Flexbox flex={1} />
+                <div className="flex flex-col flex-1" />
                 {/* Group-scoped feedback — the channel for concerns that
                     belong to no single check yet must reach the next round.
                     Lives with the other group-level controls by the chevron. */}
@@ -346,52 +341,53 @@ const CheckList = memo<CheckListProps>(
                     }}
                   />
                 )}
-                <Icon
+                <ChevronRight
                   color={cssVar.colorTextQuaternary}
-                  icon={ChevronRight}
                   size={14}
                   style={{
                     transform: collapsed ? 'none' : 'rotate(90deg)',
                     transition: 'transform 0.2s',
                   }}
                 />
-              </Flexbox>
+              </div>
               {/* Group feedback trail — newest first; entries consumed by a
                   later round stay readable but visually recede. */}
               {!collapsed && feedbackEntries.length > 0 && (
-                <Flexbox gap={10} paddingBlock={10} paddingInline={16}>
+                <div
+                  className="flex flex-col gap-2.5"
+                  style={{ paddingBlock: 10, paddingInline: 16 }}
+                >
                   {[...feedbackEntries].reverse().map((entry) => {
                     const stale = entry.roundIndex < currentRound;
                     return (
-                      <Flexbox
-                        gap={4}
+                      <div
+                        className="flex flex-col gap-1"
                         key={`${entry.createdAt}-${entry.roundIndex}`}
-                        style={stale ? { opacity: 0.55 } : undefined}
+                        style={{ ...(stale ? { opacity: 0.55 } : undefined) }}
                       >
-                        <Flexbox horizontal align={'center'} gap={6}>
-                          <Icon
+                        <div className="flex items-center gap-1.5">
+                          <MessageSquareText
                             color={stale ? cssVar.colorTextQuaternary : cssVar.colorError}
-                            icon={MessageSquareText}
                             size={13}
                           />
-                          <Text
+                          <div
                             style={{
                               color: stale ? cssVar.colorTextTertiary : cssVar.colorError,
                               fontSize: 12,
                             }}
                           >
                             {t('acceptance.group.feedbackLabel')}
-                          </Text>
-                          <Text fontSize={12} type={'secondary'}>
+                          </div>
+                          <div className="text-[12px] text-muted-foreground">
                             {hydrated ? dayjs(entry.createdAt).format('MM-DD HH:mm') : null}
-                          </Text>
-                        </Flexbox>
-                        <Text style={{ fontSize: 12 }}>{entry.comment}</Text>
+                          </div>
+                        </div>
+                        <div style={{ fontSize: 12 }}>{entry.comment}</div>
                         <AttachmentThumbs attachments={entry.attachments} />
-                      </Flexbox>
+                      </div>
                     );
                   })}
-                </Flexbox>
+                </div>
               )}
               {!collapsed &&
                 rows.map((check) => (
@@ -411,7 +407,7 @@ const CheckList = memo<CheckListProps>(
             </Fragment>
           );
         })}
-      </Flexbox>
+      </div>
     );
   },
 );

@@ -1,10 +1,7 @@
 'use client';
 
-import { Accordion, AccordionItem, Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import { DEFAULT_AVATAR } from '@orvilo/const';
 import type { BuiltinInterventionProps } from '@orvilo/types';
-import { Input, InputNumber } from 'antd';
 import { createStaticStyles, useTheme } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { Clock, Trash2 } from 'lucide-react';
@@ -12,6 +9,17 @@ import type { ChangeEvent } from 'react';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
+import InputNumber from '@/components/InputNumber';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -107,13 +115,9 @@ const TaskEditor = memo<TaskEditorProps>(({ task, index, onChange, onDelete }) =
   }, [index, onDelete]);
 
   return (
-    <AccordionItem
-      defaultExpand
-      itemKey={String(index)}
-      paddingBlock={4}
-      paddingInline={2}
-      title={
-        <Flexbox horizontal align={'center'} gap={8}>
+    <AccordionItem value={String(index)}>
+      <AccordionTrigger>
+        <div className="flex items-center gap-2">
           <div className={styles.assignee}>
             <Avatar
               avatar={agent?.avatar || DEFAULT_AVATAR}
@@ -123,48 +127,49 @@ const TaskEditor = memo<TaskEditorProps>(({ task, index, onChange, onDelete }) =
             />
             <span>{agent?.title}</span>
           </div>
-        </Flexbox>
-      }
-    >
-      <Flexbox gap={12} style={{ marginTop: 8 }}>
-        <Flexbox horizontal gap={12}>
-          <Input
-            placeholder={t('agentGroupManagement.executeTasks.intervention.titlePlaceholder')}
-            size={'small'}
-            value={task.title}
-            variant={'filled'}
-            onChange={handleTitleChange}
+        </div>
+      </AccordionTrigger>
+      <AccordionContent>
+        <div className="flex flex-col gap-3" style={{ marginTop: 8 }}>
+          <div className="flex gap-3">
+            <Input
+              placeholder={t('agentGroupManagement.executeTasks.intervention.titlePlaceholder')}
+              value={task.title}
+              onChange={handleTitleChange}
+            />
+            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+              <Tooltip>
+                <TooltipTrigger
+                  render={
+                    <span>
+                      <Clock size={14} />
+                    </span>
+                  }
+                />
+                <TooltipContent>
+                  {t('agentGroupManagement.executeTask.intervention.timeout')}
+                </TooltipContent>
+              </Tooltip>
+              <InputNumber
+                className={styles.timeoutInput}
+                max={120}
+                min={1}
+                value={Math.round((task.timeout || DEFAULT_TIMEOUT) / 60_000)}
+                onChange={handleTimeoutChange}
+              />
+              <span className="text-muted-foreground">
+                {t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
+              </span>
+              <Trash2 className={styles.deleteButton} size={16} onClick={handleDelete} />
+            </div>
+          </div>
+          <Textarea
+            placeholder={t('agentGroupManagement.executeTasks.intervention.instructionPlaceholder')}
+            value={task.instruction}
+            onChange={handleInstructionChange}
           />
-          <Flexbox horizontal align={'center'} gap={8} onClick={stopPropagation}>
-            <Tooltip title={t('agentGroupManagement.executeTask.intervention.timeout')}>
-              <Clock size={14} />
-            </Tooltip>
-            <InputNumber
-              className={styles.timeoutInput}
-              max={120}
-              min={1}
-              size={'small'}
-              suffix={t('agentGroupManagement.executeTask.intervention.timeoutUnit')}
-              value={Math.round((task.timeout || DEFAULT_TIMEOUT) / 60_000)}
-              variant={'filled'}
-              onChange={handleTimeoutChange}
-            />
-            <Icon
-              className={styles.deleteButton}
-              icon={Trash2}
-              size={{ size: 16 }}
-              onClick={handleDelete}
-            />
-          </Flexbox>
-        </Flexbox>
-        <Input.TextArea
-          autoSize={{ maxRows: 20, minRows: 8 }}
-          placeholder={t('agentGroupManagement.executeTasks.intervention.instructionPlaceholder')}
-          value={task.instruction}
-          variant={'filled'}
-          onChange={handleInstructionChange}
-        />
-      </Flexbox>
+        </div>
+      </AccordionContent>
     </AccordionItem>
   );
 });
@@ -217,7 +222,7 @@ const ExecuteTasksIntervention = memo<BuiltinInterventionProps<ExecuteTasksParam
     }, [registerBeforeApprove, hasChanges, tasks, args, onArgsChange]);
 
     return (
-      <Accordion className={styles.container} gap={0} variant={'borderless'}>
+      <Accordion className={styles.container} defaultValue={tasks.map((_, i) => String(i))}>
         {tasks.map((task, index) => (
           <TaskEditor
             index={index}

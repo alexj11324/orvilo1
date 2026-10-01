@@ -1,6 +1,7 @@
-import { Center, Flexbox } from '@lobehub/ui';
-import { Checkbox, Skeleton } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
+
+import { Checkbox } from '@/components/ui/checkbox';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import { FILE_DATE_WIDTH, FILE_SIZE_WIDTH, getListViewMinWidth } from './ListItem/constants';
 
@@ -24,14 +25,11 @@ const ListViewSkeleton = ({
   const getOpacity = (index: number) => 1 - (index / (count - 1)) * 0.8;
 
   return (
-    <Flexbox>
+    <div className="flex flex-col">
       {Array.from({ length: count }).map((_, index) => (
-        <Flexbox
-          horizontal
-          align={'center'}
-          height={48}
+        <div
+          className="flex flex-row items-center h-[48px] px-2"
           key={index}
-          paddingInline={8}
           style={{
             background: index % 2 === 0 ? cssVar.colorFillQuaternary : 'transparent',
             borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
@@ -39,12 +37,14 @@ const ListViewSkeleton = ({
             opacity: getOpacity(index),
           }}
         >
-          <Center height={40} style={{ paddingInline: 4 }}>
+          <div
+            className="flex flex-col items-center justify-center h-[40px]"
+            style={{ paddingInline: 4 }}
+          >
             <Checkbox disabled />
-          </Center>
-          <Flexbox
-            horizontal
-            align={'center'}
+          </div>
+          <div
+            className="flex flex-row items-center"
             style={{
               flexShrink: 0,
               maxWidth: columnWidths.name,
@@ -53,30 +53,33 @@ const ListViewSkeleton = ({
               width: columnWidths.name,
             }}
           >
-            <Skeleton.Avatar shape={'square'} size={24} style={{ marginInline: 8 }} />
-            <Skeleton height={16} width={'60%'} />
-          </Flexbox>
-          <Flexbox style={{ flexShrink: 0, paddingInline: '0 24px' }} width={columnWidths.date}>
-            <Skeleton height={16} width={'80%'} />
-          </Flexbox>
+            <Skeleton className="size-6 rounded-full" style={{ marginInline: 8 }} />
+            <Skeleton style={{ height: 16, width: '60%' }} />
+          </div>
+          <div
+            className="flex flex-col"
+            style={{ flexShrink: 0, paddingInline: '0 24px', width: columnWidths.date }}
+          >
+            <Skeleton style={{ height: 16, width: '80%' }} />
+          </div>
           {showUploader && (
-            <Flexbox
-              horizontal
-              align={'center'}
-              gap={8}
-              style={{ flexShrink: 0, paddingInline: '0 24px' }}
-              width={columnWidths.uploader}
+            <div
+              className="flex flex-row items-center gap-2"
+              style={{ flexShrink: 0, paddingInline: '0 24px', width: columnWidths.uploader }}
             >
-              <Skeleton.Avatar size={20} />
-              <Skeleton height={16} width={'70%'} />
-            </Flexbox>
+              <Skeleton className="size-5 rounded-full" />
+              <Skeleton style={{ height: 16, width: '70%' }} />
+            </div>
           )}
-          <Flexbox style={{ flexShrink: 0, paddingInline: '0 24px' }} width={columnWidths.size}>
-            <Skeleton height={16} width={'60%'} />
-          </Flexbox>
-        </Flexbox>
+          <div
+            className="flex flex-col"
+            style={{ flexShrink: 0, paddingInline: '0 24px', width: columnWidths.size }}
+          >
+            <Skeleton style={{ height: 16, width: '60%' }} />
+          </div>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 };
 

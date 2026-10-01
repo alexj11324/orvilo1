@@ -1,9 +1,8 @@
 'use client';
 
-import { copyToClipboard, Flexbox, Icon, TextArea, Tooltip } from '@lobehub/ui';
-import { ActionIcon, Button, Tag, Text } from '@lobehub/ui/base-ui';
 import type { AcceptanceCommentThread } from '@orvilo/types';
 import { cssVar, cx, useResponsive } from 'antd-style';
+import { cn } from 'cn';
 import dayjs from 'dayjs';
 import {
   AudioLines,
@@ -21,9 +20,14 @@ import {
   Repeat,
   Route,
 } from 'lucide-react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
+import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
 
@@ -363,25 +367,22 @@ export const AcceptanceCheckRow = memo<{
           ? cssVar.colorTextQuaternary
           : meta.color;
 
-    const headIconNode = (
-      <Icon
-        color={headColor}
-        icon={headIcon}
-        size={16}
-        style={{ alignSelf: 'flex-start', flex: 'none', marginBlockStart: 3 }}
-      />
-    );
+    const headIconNode = createElement(headIcon, {
+      color: headColor,
+      size: 16,
+      style: { alignSelf: 'flex-start', flex: 'none', marginBlockStart: 3 },
+    });
 
     return (
-      <Flexbox className={detailMode ? undefined : styles.row} data-check-row={check.id}>
+      <div
+        className={`flex flex-col ${detailMode ? undefined : styles.row}`}
+        data-check-row={check.id}
+      >
         {!detailMode && (
-          <Flexbox
-            horizontal
-            align={'flex-start'}
+          <div
             aria-expanded={ariaExpanded}
-            className={styles.rowHeader}
+            className={`flex items-start gap-2.5 ${styles.rowHeader}`}
             data-expanded={open ? '' : undefined}
-            gap={10}
             role={'button'}
             tabIndex={0}
             onClick={activate}
@@ -396,43 +397,57 @@ export const AcceptanceCheckRow = memo<{
             }}
           >
             {reviewState === 'rejected' ? (
-              <Tooltip title={t('acceptance.review.rejectedHint')}>{headIconNode}</Tooltip>
+              <Tooltip>
+                <TooltipTrigger render={<span>{headIconNode}</span>} />
+                <TooltipContent>{t('acceptance.review.rejectedHint')}</TooltipContent>
+              </Tooltip>
             ) : (
               headIconNode
             )}
-            <Tooltip
-              title={seqCopied ? t('acceptance.checks.copied') : t('acceptance.checks.copySeq')}
-            >
-              <span
-                className={cx(styles.seqChip, styles.seqChipClickable)}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  void copyToClipboard(`C${check.seq}`);
-                  setSeqCopied(true);
-                  setTimeout(() => setSeqCopied(false), 1500);
-                }}
-              >
-                C{check.seq}
-              </span>
+            <Tooltip>
+              <TooltipTrigger
+                render={
+                  <span>
+                    <span
+                      className={cx(styles.seqChip, styles.seqChipClickable)}
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        void navigator.clipboard.writeText(`C${check.seq}`);
+                        setSeqCopied(true);
+                        setTimeout(() => setSeqCopied(false), 1500);
+                      }}
+                    >
+                      C{check.seq}
+                    </span>
+                  </span>
+                }
+              />
+              <TooltipContent>
+                {seqCopied ? t('acceptance.checks.copied') : t('acceptance.checks.copySeq')}
+              </TooltipContent>
             </Tooltip>
-            <Flexbox
-              horizontal
-              align={'center'}
-              className={styles.rowTitle}
-              flex={1}
-              gap={8}
-              style={{ minWidth: 0 }}
-              wrap={open ? 'wrap' : 'nowrap'}
+            <div
+              className={`flex items-center flex-1 gap-2 ${styles.rowTitle}`}
+              style={{ flexWrap: open ? 'wrap' : 'nowrap', minWidth: 0 }}
             >
-              <Text
-                className={open || !desktop ? undefined : styles.titleEllipsis}
+              <div
+                className={cn(open || !desktop ? undefined : styles.titleEllipsis)}
                 style={{ fontSize: desktop ? 13 : 14, minWidth: 0 }}
               >
                 {title}
-              </Text>
+              </div>
               {!check.required && (
-                <Tooltip title={t('acceptance.checks.notRequiredHint')}>
-                  <Tag size={'small'}>{t('acceptance.checks.notRequired')}</Tag>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span>
+                        <Badge size="sm" variant="secondary">
+                          {t('acceptance.checks.notRequired')}
+                        </Badge>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{t('acceptance.checks.notRequiredHint')}</TooltipContent>
                 </Tooltip>
               )}
               {/* The verdict pair travels WITH the title, not adrift at the row's
@@ -440,11 +455,8 @@ export const AcceptanceCheckRow = memo<{
               one glance, so a long checklist needs no eye round-trip across the
               row (and no mis-click onto a neighbour's buttons). */}
               {desktop && reviewable && reviewState === 'pending' && (
-                <Flexbox
-                  horizontal
-                  align={'center'}
-                  className={cx(styles.rowActions, 'acceptance-row-actions')}
-                  gap={2}
+                <div
+                  className={`flex items-center gap-0.5 ${cx(styles.rowActions, 'acceptance-row-actions')}`}
                   style={{
                     // The accept spinner must stay visible after the pointer leaves.
                     ...(accepting ? { opacity: 1 } : undefined),
@@ -455,7 +467,7 @@ export const AcceptanceCheckRow = memo<{
                     disabled={reviewPending && !accepting}
                     icon={Check}
                     loading={accepting}
-                    size={'small'}
+                    size="small"
                     title={t('acceptance.review.accept')}
                     onClick={handleAccept}
                   />
@@ -463,133 +475,159 @@ export const AcceptanceCheckRow = memo<{
                     disabled={reviewPending && !ignoring}
                     icon={Ban}
                     loading={ignoring}
-                    size={'small'}
+                    size="small"
                     title={t('acceptance.review.ignore')}
                     onClick={handleIgnore}
                   />
                   <ActionIcon
                     disabled={reviewPending}
                     icon={MessageSquareX}
-                    size={'small'}
+                    size="small"
                     title={t('acceptance.review.reject')}
                     onClick={(event) => {
                       event.stopPropagation();
                       openReject();
                     }}
                   />
-                </Flexbox>
+                </div>
               )}
-            </Flexbox>
-            <Flexbox
-              horizontal
-              align={'center'}
-              className={cx(styles.rowMeta, 'acceptance-row-meta')}
-              gap={6}
+            </div>
+            <div
+              className={`flex items-center gap-1.5 ${cx(styles.rowMeta, 'acceptance-row-meta')}`}
             >
               {/* An accept on a NON-passed verdict can't merge into the head icon
               (the failed/uncertain mark must stay visible) — mark it here. */}
               {reviewState === 'accepted' && check.state !== 'passed' && (
-                <Tooltip
-                  title={t('acceptance.review.acceptedNote', {
-                    time: dayjs(check.userReview!.createdAt).format('MM-DD HH:mm'),
-                  })}
-                >
-                  <Icon color={cssVar.colorTextQuaternary} icon={BadgeCheck} size={14} />
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span>
+                        <BadgeCheck color={cssVar.colorTextQuaternary} size={14} />
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {t('acceptance.review.acceptedNote', {
+                      time: dayjs(check.userReview!.createdAt).format('MM-DD HH:mm'),
+                    })}
+                  </TooltipContent>
                 </Tooltip>
               )}
               {visualization && <VisualizationDeltaBadge manifest={visualization} />}
               {EVIDENCE_BADGES.map(({ icon, key, labelKey }) =>
                 counts[key] ? (
-                  <Tooltip key={key} title={t(labelKey, { count: counts[key] })}>
-                    <Flexbox
-                      horizontal
-                      align={'center'}
-                      gap={3}
-                      style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}
-                    >
-                      <Icon icon={icon} size={13} />
-                      {counts[key] > 1 ? counts[key] : null}
-                    </Flexbox>
+                  <Tooltip key={key}>
+                    <TooltipTrigger
+                      render={
+                        <span>
+                          <div
+                            className="flex items-center gap-[3px]"
+                            style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}
+                          >
+                            {createElement(icon, { size: 13 })}
+                            {counts[key] > 1 ? counts[key] : null}
+                          </div>
+                        </span>
+                      }
+                    />
+                    <TooltipContent>{t(labelKey, { count: counts[key] })}</TooltipContent>
                   </Tooltip>
                 ) : null,
               )}
               {checkThreads.length > 0 && (
-                <Tooltip
-                  title={t('acceptance.comments.regionCount', { count: checkThreads.length })}
-                >
-                  <Flexbox
-                    horizontal
-                    align={'center'}
-                    gap={3}
-                    style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}
-                  >
-                    <Icon icon={MessageSquare} size={13} />
-                    {checkThreads.length}
-                  </Flexbox>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span>
+                        <div
+                          className="flex items-center gap-[3px]"
+                          style={{ color: cssVar.colorTextTertiary, fontSize: 11 }}
+                        >
+                          <MessageSquare size={13} />
+                          {checkThreads.length}
+                        </div>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {t('acceptance.comments.regionCount', { count: checkThreads.length })}
+                  </TooltipContent>
                 </Tooltip>
               )}
               {/* The iteration mark stays compact — [↻ N]; the words (verified N
               rounds · introduced in round X) live in its tooltip. Clicking
               jumps to the round the concern first appeared in. */}
               {onRound && check.revisions > 1 && (
-                <Tooltip
-                  title={[
-                    check.titleChanged
-                      ? t('acceptance.checks.iterated', { count: check.revisions })
-                      : t('acceptance.checks.rerun', { count: check.revisions }),
-                    check.resultRound !== undefined &&
-                    check.resultRound !== null &&
-                    check.introducedAtRound !== check.resultRound
-                      ? t('acceptance.checks.introduced', { round: check.introducedAtRound })
-                      : null,
-                  ]
-                    .filter(Boolean)
-                    .join(' · ')}
-                >
-                  <span
-                    className={cx(styles.chip, styles.chipClickable)}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onRound(check.introducedAtRound);
-                    }}
-                  >
-                    <Icon icon={Repeat} size={10} /> {check.revisions}
-                  </span>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span>
+                        <span
+                          className={cx(styles.chip, styles.chipClickable)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onRound(check.introducedAtRound);
+                          }}
+                        >
+                          <Repeat size={10} /> {check.revisions}
+                        </span>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {[
+                      check.titleChanged
+                        ? t('acceptance.checks.iterated', { count: check.revisions })
+                        : t('acceptance.checks.rerun', { count: check.revisions }),
+                      check.resultRound !== undefined &&
+                      check.resultRound !== null &&
+                      check.introducedAtRound !== check.resultRound
+                        ? t('acceptance.checks.introduced', { round: check.introducedAtRound })
+                        : null,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </TooltipContent>
                 </Tooltip>
               )}
               {onRound && check.resultRound !== undefined && check.resultRound !== null && (
-                <Tooltip title={t('acceptance.checks.finalRoundHint')}>
-                  <span
-                    className={cx(styles.chip, styles.chipClickable)}
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onRound(check.resultRound!);
-                    }}
-                  >
-                    {t('acceptance.round', { round: check.resultRound })}
-                  </span>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span>
+                        <span
+                          className={cx(styles.chip, styles.chipClickable)}
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            onRound(check.resultRound!);
+                          }}
+                        >
+                          {t('acceptance.round', { round: check.resultRound })}
+                        </span>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>{t('acceptance.checks.finalRoundHint')}</TooltipContent>
                 </Tooltip>
               )}
-            </Flexbox>
-            <Flexbox align={'center'} className={styles.rowChevron} height={22}>
-              <Icon
+            </div>
+            <div className={`flex flex-col items-center h-[22px] ${styles.rowChevron}`}>
+              <ChevronRight
                 color={cssVar.colorTextQuaternary}
-                icon={ChevronRight}
                 size={14}
                 style={{
                   transform: open ? 'rotate(90deg)' : 'none',
                   transition: 'transform 0.2s',
                 }}
               />
-            </Flexbox>
-          </Flexbox>
+            </div>
+          </div>
         )}
 
         {open && (
-          <Flexbox
-            gap={10}
-            paddingBlock={detailMode ? 0 : '0 14px'}
-            paddingInline={detailMode ? 0 : 16}
+          <div
+            className="flex flex-col gap-2.5"
+            style={{ paddingBlock: detailMode ? 0 : '0 14px', paddingInline: detailMode ? 0 : 16 }}
           >
             {/* The model's proposal leads the detail: it is a claim about this
               check that the reviewer is being asked to rule on, so it belongs
@@ -610,9 +648,9 @@ export const AcceptanceCheckRow = memo<{
               hid the middle of the argument behind an ellipsis with no way to
               open it — in a detail view there is nothing to preview. */}
             {check.result?.toulmin?.evidence && (
-              <Text fontSize={12} style={{ whiteSpace: 'pre-wrap' }} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground" style={{ whiteSpace: 'pre-wrap' }}>
                 {check.result.toulmin.evidence}
-              </Text>
+              </div>
             )}
             {/* An agent judge's argument is its run, not a paragraph — link the
               trace instead of trying to summarize it inline. `onOpenTrace`
@@ -622,19 +660,19 @@ export const AcceptanceCheckRow = memo<{
             {check.planItem?.verifierType === 'agent' &&
               check.result?.verifierOperationId &&
               onOpenTrace && (
-                <Flexbox horizontal>
+                <div className="flex">
                   <Button
-                    icon={<Icon icon={Route} />}
-                    size={'small'}
-                    type={'text'}
+                    size="sm"
+                    variant="ghost"
                     onClick={(event) => {
                       event.stopPropagation();
                       void onOpenTrace(check.result!.verifierOperationId!);
                     }}
                   >
+                    <Route />
                     {t('acceptance.checks.viewTrace')}
                   </Button>
-                </Flexbox>
+                </div>
               )}
             {visualization && <VisualizationRenderer manifest={visualization} />}
             <EvidenceList
@@ -643,22 +681,16 @@ export const AcceptanceCheckRow = memo<{
               onReviewEvidence={canReview ? (id) => openReject(undefined, id) : undefined}
             />
             {staleThreads.length > 0 && (
-              <Flexbox className={styles.staleRegions} gap={10}>
-                <Text fontSize={12} type={'secondary'}>
+              <div className={`flex flex-col gap-2.5 ${styles.staleRegions}`}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('acceptance.comments.historicalRegions', { count: staleThreads.length })}
-                </Text>
+                </div>
                 {staleThreads.map((thread) => {
                   const evidence = thread.root.evidenceId
                     ? evidenceById.get(thread.root.evidenceId)
                     : undefined;
                   return (
-                    <Flexbox
-                      horizontal
-                      align={'flex-start'}
-                      gap={12}
-                      key={thread.root.id}
-                      wrap={'wrap'}
-                    >
+                    <div className="flex items-start gap-3 flex-wrap" key={thread.root.id}>
                       {evidence && (
                         <ThreadEvidence
                           stale
@@ -671,42 +703,39 @@ export const AcceptanceCheckRow = memo<{
                           }
                         />
                       )}
-                      <Flexbox flex={1} style={{ minWidth: 200 }}>
+                      <div className="flex flex-col flex-1" style={{ minWidth: 200 }}>
                         <CommentThread
                           canComment={comments.canComment}
                           canResolve={canResolveThread(thread)}
                           thread={thread}
                           {...commentActions}
                         />
-                      </Flexbox>
-                    </Flexbox>
+                      </div>
+                    </div>
                   );
                 })}
-              </Flexbox>
+              </div>
             )}
             {check.state === 'not_executed' && (
-              <Flexbox
-                horizontal
-                align={'center'}
-                gap={8}
-                paddingBlock={8}
-                paddingInline={10}
+              <div
+                className="flex items-center gap-2"
                 style={{
+                  paddingBlock: 8,
+                  paddingInline: 10,
                   background: cssVar.colorFillQuaternary,
                   borderRadius: cssVar.borderRadius,
                   width: '100%',
                 }}
               >
-                <Icon
+                <CircleDashed
                   color={cssVar.colorTextQuaternary}
-                  icon={CircleDashed}
                   size={15}
                   style={{ flex: 'none' }}
                 />
-                <Text fontSize={12} type={'secondary'}>
+                <div className="text-[12px] text-muted-foreground">
                   {t('acceptance.focus.verifierDescription.notExecuted')}
-                </Text>
-              </Flexbox>
+                </div>
+              </div>
             )}
 
             {/* The verifier's record slot. An LLM judge's whole product IS its
@@ -718,37 +747,38 @@ export const AcceptanceCheckRow = memo<{
             {check.state !== 'not_executed' &&
               check.result &&
               (check.result.toulmin?.reasoning ? (
-                <Flexbox
-                  gap={4}
-                  paddingBlock={8}
-                  paddingInline={10}
+                <div
+                  className="flex flex-col gap-1"
                   style={{
+                    paddingBlock: 8,
+                    paddingInline: 10,
                     background: cssVar.colorFillQuaternary,
                     borderRadius: cssVar.borderRadius,
                     width: '100%',
                   }}
                 >
-                  <Text fontSize={11} type={'secondary'}>
+                  <div className="text-[11px] text-muted-foreground">
                     {t('acceptance.checks.judgeReason')}
-                  </Text>
-                  <Text fontSize={12} style={{ whiteSpace: 'pre-wrap' }}>
+                  </div>
+                  <div className="text-[12px]" style={{ whiteSpace: 'pre-wrap' }}>
                     {check.result.toulmin.reasoning}
-                  </Text>
-                </Flexbox>
+                  </div>
+                </div>
               ) : !hasRenderableEvidence(check.evidence.length, visualization) ? (
-                <Flexbox
-                  paddingBlock={6}
-                  paddingInline={10}
+                <div
+                  className="flex flex-col"
                   style={{
+                    paddingBlock: 6,
+                    paddingInline: 10,
                     background: cssVar.colorFillQuaternary,
                     borderRadius: cssVar.borderRadius,
                     width: '100%',
                   }}
                 >
-                  <Text fontSize={12} type={'secondary'}>
+                  <div className="text-[12px] text-muted-foreground">
                     {t('acceptance.evidence.empty')}
-                  </Text>
-                </Flexbox>
+                  </div>
+                </div>
               ) : null)}
 
             {/* The user's standing feedback hangs right under the evidence it
@@ -757,13 +787,13 @@ export const AcceptanceCheckRow = memo<{
               otherwise costs a whole repair round to walk back. */}
             {activeReview &&
               (activeReview.action === 'accept' ? (
-                <Flexbox horizontal align={'center'} gap={8}>
+                <div className="flex items-center gap-2">
                   <AcceptedNote review={activeReview} />
                   {reviewable && (
                     <Button
                       disabled={reviewPending}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={(event) => {
                         event.stopPropagation();
                         openReject();
@@ -772,16 +802,16 @@ export const AcceptanceCheckRow = memo<{
                       {t('acceptance.review.revertToReject')}
                     </Button>
                   )}
-                </Flexbox>
+                </div>
               ) : activeReview.action === 'ignore' ? (
-                <Flexbox horizontal align={'center'} gap={8}>
+                <div className="flex items-center gap-2">
                   <IgnoredNote review={activeReview} />
                   {reviewable && (
                     <>
                       <Button
                         disabled={reviewPending}
-                        size={'small'}
-                        type={'text'}
+                        size="sm"
+                        variant="ghost"
                         onClick={(event) => {
                           event.stopPropagation();
                           openReject();
@@ -792,35 +822,35 @@ export const AcceptanceCheckRow = memo<{
                       <Button
                         disabled={reviewPending && !accepting}
                         loading={accepting}
-                        size={'small'}
-                        type={'text'}
+                        size="sm"
+                        variant="ghost"
                         onClick={handleAccept}
                       >
                         {t('acceptance.review.revertToAccept')}
                       </Button>
                     </>
                   )}
-                </Flexbox>
+                </div>
               ) : (
-                <Flexbox gap={6}>
+                <div className="flex flex-col gap-1.5">
                   <FeedbackCard evidenceById={evidenceById} review={activeReview} />
                   {/* The mirror of the accept escape: take the send-back back.
                     A fresh accept supersedes the reject, so the check leaves
                     待修复 and the feedback drops out of the next round's input. */}
                   {reviewable && (
-                    <Flexbox horizontal>
+                    <div className="flex">
                       <Button
                         disabled={reviewPending && !accepting}
                         loading={accepting}
-                        size={'small'}
-                        type={'text'}
+                        size="sm"
+                        variant="ghost"
                         onClick={handleAccept}
                       >
                         {t('acceptance.review.revertToAccept')}
                       </Button>
-                    </Flexbox>
+                    </div>
                   )}
-                </Flexbox>
+                </div>
               ))}
 
             {/* Circling the evidence belongs WITH the evidence, above the
@@ -830,15 +860,15 @@ export const AcceptanceCheckRow = memo<{
               decision, never an appendix to one already made. */}
             {detailMode && reviewable && !activeReview && hasAnnotatableEvidence(check) && (
               <Button
-                outdent
-                icon={<Icon icon={Images} />}
+                className="-mx-2.5"
                 style={{ alignSelf: 'flex-start' }}
-                type={'text'}
+                variant="ghost"
                 onClick={(event) => {
                   event.stopPropagation();
                   openReject();
                 }}
               >
+                <Images />
                 {t('acceptance.review.annotate')}
               </Button>
             )}
@@ -847,8 +877,7 @@ export const AcceptanceCheckRow = memo<{
                 className={styles.historyToggle}
                 onClick={() => setHistoryOpen((open) => !open)}
               >
-                <Icon
-                  icon={ChevronRight}
+                <ChevronRight
                   size={12}
                   style={{
                     transform: historyOpen ? 'rotate(90deg)' : 'none',
@@ -872,37 +901,37 @@ export const AcceptanceCheckRow = memo<{
               styling and the left edge — but it sits ON the same line as the
               buttons instead of stacking a half-empty row above them. */}
             {(canCommentEvidence || (reviewable && !activeReview && !detailMode)) && (
-              <Flexbox horizontal align={'center'} gap={8} justify={'space-between'}>
+              <div className="flex items-center gap-2 justify-between">
                 {canCommentEvidence ? (
                   <Button
-                    outdent
-                    icon={<Icon icon={MessageSquare} />}
-                    type={'text'}
+                    className="-mx-2.5"
+                    variant="ghost"
                     onClick={(event) => {
                       event.stopPropagation();
                       openEvidenceComment();
                     }}
                   >
+                    <MessageSquare />
                     {t('acceptance.comments.commentEvidence')}
                   </Button>
                 ) : (
                   <span />
                 )}
                 {reviewable && !activeReview && !detailMode && (
-                  <Flexbox horizontal gap={4} justify={'flex-end'}>
+                  <div className="flex gap-1 justify-end">
                     <Button
                       disabled={reviewPending && !ignoring}
                       loading={ignoring}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={handleIgnore}
                     >
                       {t('acceptance.review.ignore')}
                     </Button>
                     <Button
                       disabled={reviewPending}
-                      size={'small'}
-                      type={'text'}
+                      size="sm"
+                      variant="ghost"
                       onClick={(event) => {
                         event.stopPropagation();
                         openReject();
@@ -912,57 +941,58 @@ export const AcceptanceCheckRow = memo<{
                     </Button>
                     <Button
                       disabled={reviewPending && !accepting}
-                      icon={<Icon icon={Check} />}
                       loading={accepting}
-                      size={'small'}
-                      type={'fill'}
+                      size="sm"
+                      variant="secondary"
                       onClick={handleAccept}
                     >
+                      <Check />
                       {t('acceptance.review.accept')}
                     </Button>
-                  </Flexbox>
+                  </div>
                 )}
-              </Flexbox>
+              </div>
             )}
             {/* The phone keeps its own stacked shape: a comment box over two
               full-width buttons, which no single row can hold. */}
             {reviewable && !activeReview && detailMode && (
-              <Flexbox gap={10} style={{ marginBlockStart: 6 }}>
-                <TextArea
-                  autoSize={{ maxRows: 8, minRows: 3 }}
+              <div className="flex flex-col gap-2.5" style={{ marginBlockStart: 6 }}>
+                <Textarea
                   placeholder={t('acceptance.review.detailPlaceholder')}
+                  rows={3}
+                  style={{ maxHeight: '8lh' }}
                   value={reviewComment}
                   onChange={(event) => setReviewComment(event.target.value)}
                 />
-                <Flexbox horizontal gap={8}>
+                <div className="flex gap-2">
                   <Button
-                    block
+                    className="w-full"
                     disabled={reviewPending || !reviewComment.trim()}
                     loading={rejecting}
-                    size={'large'}
+                    size="lg"
                     style={{ flex: 1 }}
                     onClick={handleReject}
                   >
                     {t('acceptance.review.reject')}
                   </Button>
                   <Button
-                    block
+                    className="w-full"
                     disabled={reviewPending && !accepting}
-                    icon={<Icon icon={Check} />}
                     loading={accepting}
-                    size={'large'}
+                    size="lg"
                     style={{ flex: 1 }}
-                    type={'fill'}
+                    variant="secondary"
                     onClick={handleAccept}
                   >
+                    <Check />
                     {t('acceptance.review.accept')}
                   </Button>
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

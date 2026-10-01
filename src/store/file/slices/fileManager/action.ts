@@ -1,4 +1,3 @@
-import { toast, type ToastInstance } from '@lobehub/ui/base-ui';
 import {
   buildFolderTree,
   createNanoId,
@@ -9,6 +8,8 @@ import { t } from 'i18next';
 import pMap from 'p-map';
 import { type SWRResponse } from 'swr';
 
+import type { ToastInstance } from '@/components/toast';
+import { toast } from '@/components/toast';
 import { FILE_UPLOAD_BLACKLIST, MAX_UPLOAD_FILE_COUNT } from '@/const/file';
 import { mutate, useClientDataSWR } from '@/libs/swr';
 import { fileKeys } from '@/libs/swr/keys';

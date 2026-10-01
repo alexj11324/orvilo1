@@ -1,9 +1,8 @@
 'use client';
 
-import { Flexbox, type FlexboxProps, Icon } from '@lobehub/ui';
 import { createStaticStyles, cx } from 'antd-style';
 import { ChevronRight } from 'lucide-react';
-import { memo, type ReactNode } from 'react';
+import { type ComponentProps, memo, type ReactNode } from 'react';
 
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
@@ -26,7 +25,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-export interface TitleProps extends FlexboxProps {
+export interface TitleProps extends ComponentProps<'div'> {
   icon?: ReactNode;
   id?: string;
   level?: 2 | 3;
@@ -47,33 +46,29 @@ const Title = memo<TitleProps>(
       moreLink.startsWith('http') ? (
         <a className={styles.more} href={moreLink} rel="noreferrer" target="_blank">
           <span style={{ marginRight: 4 }}>{more}</span>
-          <Icon icon={ChevronRight} />
+          <ChevronRight />
         </a>
       ) : (
         <WorkspaceLink className={styles.more} to={moreLink}>
           <span style={{ marginRight: 4 }}>{more}</span>
-          <Icon icon={ChevronRight} />
+          <ChevronRight />
         </WorkspaceLink>
       )
     ) : null;
 
     return (
-      <Flexbox horizontal align="center" gap={16} justify="space-between" width="100%" {...rest}>
+      <div className="flex items-center gap-4 justify-between" style={{ width: '100%' }} {...rest}>
         {tag || icon ? (
-          <Flexbox horizontal align="center" gap={8}>
+          <div className="flex items-center gap-2">
             {icon}
             {title}
-            {tag && (
-              <Flexbox horizontal align="center" gap={4}>
-                {tag}
-              </Flexbox>
-            )}
-          </Flexbox>
+            {tag && <div className="flex items-center gap-1">{tag}</div>}
+          </div>
         ) : (
           title
         )}
         {moreLinkElement}
-      </Flexbox>
+      </div>
     );
   },
 );

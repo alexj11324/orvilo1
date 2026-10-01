@@ -1,11 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Alert, Button } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { CircleAlertIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useAgentStore } from '@/store/agent';
@@ -49,20 +50,18 @@ const AgentConfigError = memo(() => {
 
   return (
     <WideScreenContainer>
-      <Flexbox paddingBlock={'0 18px'}>
-        <Alert
-          showIcon
-          classNames={{ action: styles.retry, description: styles.description }}
-          description={errorMessage}
-          title={t('agentConfigError.title')}
-          type={'error'}
-          action={
-            <Button size={'small'} onClick={() => retryAgentConfigFetch(agentId)}>
+      <div className="flex flex-col" style={{ paddingBlock: '0 18px' }}>
+        <Alert variant="destructive">
+          <CircleAlertIcon />
+          <AlertTitle>{t('agentConfigError.title')}</AlertTitle>
+          <AlertDescription className={styles.description}>{errorMessage}</AlertDescription>
+          <AlertAction className={styles.retry}>
+            <Button size="sm" variant="outline" onClick={() => retryAgentConfigFetch(agentId)}>
               {t('agentConfigError.retry')}
             </Button>
-          }
-        />
-      </Flexbox>
+          </AlertAction>
+        </Alert>
+      </div>
     </WideScreenContainer>
   );
 });

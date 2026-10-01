@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar } from '@lobehub/ui/base-ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import Avatar from '@/components/Avatar';
 import { shinyGroupStyles, shinyTextStyles } from '@/styles';
 
 import type { GetAgentInfoParams } from '../../../types';
@@ -51,11 +51,8 @@ export const GetAgentInfoInspector = memo<
   }
 
   return (
-    <Flexbox
-      horizontal
-      align={'center'}
-      className={cx(styles.root, shinyGroupStyles.shinyGroup)}
-      gap={8}
+    <div
+      className={cn('flex', 'items-center', 'gap-2', cx(styles.root, shinyGroupStyles.shinyGroup))}
     >
       <span
         className={cx(
@@ -69,7 +66,7 @@ export const GetAgentInfoInspector = memo<
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {title || agentId}
       </span>
-    </Flexbox>
+    </div>
   );
 });
 

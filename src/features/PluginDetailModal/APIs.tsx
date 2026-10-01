@@ -1,10 +1,10 @@
-import { Empty, Flexbox } from '@lobehub/ui';
-import { Table } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { Wrench } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import LiteTable from '@/components/LiteTable';
+import SimpleEmpty from '@/components/SimpleEmpty';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
 
@@ -16,7 +16,7 @@ const APIs = memo<{
 
   if (!pluginManifest?.api)
     return (
-      <Empty
+      <SimpleEmpty
         description={t('detailModal.info.description')}
         descriptionProps={{ fontSize: 14 }}
         icon={Wrench}
@@ -25,27 +25,24 @@ const APIs = memo<{
     );
 
   return (
-    <Flexbox paddingBlock={16} width={'100%'}>
-      <Table
-        bordered
+    <div className="flex flex-col py-4 w-[100%]">
+      <LiteTable
         dataSource={pluginManifest.api}
-        pagination={false}
-        rowKey={'name'}
-        size={'small'}
-        tableLayout="fixed"
+        rowKey={(api) => api.name}
         columns={[
           {
-            dataIndex: 'name',
-            render: (name: string) => <code>{name}</code>,
+            key: 'name',
+            render: (api) => <code>{api.name}</code>,
             title: t('detailModal.info.name'),
           },
           {
-            dataIndex: 'description',
+            key: 'description',
+            render: (api) => api.description,
             title: t('detailModal.info.description'),
           },
         ]}
       />
-    </Flexbox>
+    </div>
   );
 });
 

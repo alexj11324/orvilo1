@@ -63,21 +63,32 @@ describe('mobileRouter task routes', () => {
   });
 });
 
-describe('mobileRouter retired provider routes', () => {
-  it.each([
-    '/settings/provider',
-    '/settings/provider/openai',
-    '/acme/settings/provider',
-    '/acme/settings/provider/openai',
-    '/acme/settings/service-model',
-  ])('redirects retired provider route %s to the settings root', (pathname) => {
-    const matches = matchRoutes(mobileRoutes, pathname);
-    const redirect = matches?.find(
-      ({ route }) =>
-        (route.element as { props?: { to?: string } } | undefined)?.props?.to !== undefined,
-    )?.route;
+describe('mobileRouter workspace provider routes', () => {
+  it('registers workspace provider list and path-shaped deep-link redirect', async () => {
+    // The workspace settings leaves live in the shared registry — both routers
+    // derive their provider routes from it.
+    const leaves = await readFile(
+      path.join(process.cwd(), 'src/spa/router/sharedMainAreaLeaves.tsx'),
+      'utf8',
+    );
+    const config = await readFile(
+      path.join(process.cwd(), 'src/spa/router/mobileRouter.config.tsx'),
+      'utf8',
+    );
 
-    expect(redirect).toBeDefined();
+    // Without these, workspace-aware provider links (`/:slug/settings/provider/:id`)
+    // fall through to the mobile `*` route and kick the user out of the workspace.
+    expect(leaves).toContain("import('@/routes/(main)/[workspaceSlug]/settings/provider')");
+    // The mobile route must use the mobile variant, otherwise the page renders
+    // the desktop 280px provider menu layout on phones.
+    expect(leaves).toContain('m.WorkspaceProviderSettingMobile');
+    // The redirect is statically imported: lazy-loading it would flash the
+    // generic brand loader before redirecting.
+    expect(leaves).toContain("from '@/features/WorkspaceSetting/ProviderRedirect'");
+    expect(leaves).toContain("path: 'provider'");
+    expect(leaves).toContain("path: 'provider/:providerId'");
+    // Mobile registers the shared leaves through its mobile-chrome mapper.
+    expect(config).toContain('sharedWorkspaceSettingsLeaves.map(mobileWorkspaceSettingsLeaf)');
   });
 });
 

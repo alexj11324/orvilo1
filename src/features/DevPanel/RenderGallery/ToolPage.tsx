@@ -1,9 +1,11 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Tabs, Tag, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { useEffect, useRef, useState } from 'react';
+
+import { Badge as Tag } from '@/components/reui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import ApiList from './ApiList';
 import { LIFECYCLE_MODE_LABEL, LIFECYCLE_MODES, type LifecycleMode } from './lifecycleMode';
@@ -184,71 +186,88 @@ const DevtoolsToolPage = ({ toolset }: DevtoolsToolPageProps) => {
   };
 
   return (
-    <Flexbox horizontal height={'100%'} style={{ overflow: 'hidden' }} width={'100%'}>
+    <div className="flex h-full w-full" style={{ overflow: 'hidden' }}>
       {view === 'api' && (
         <ApiList activeApiName={activeApi} apis={toolset.apis} onSelect={handleSelect} />
       )}
       <div className={styles.content} ref={scrollRef}>
-        <Flexbox className={styles.body}>
-          <Flexbox className={styles.header}>
-            <Flexbox horizontal align={'center'} gap={10} wrap={'wrap'}>
-              <Text fontSize={22} weight={700}>
-                {toolset.toolsetName}
-              </Text>
+        <div className={cx(styles.body, 'flex flex-col')}>
+          <div className={cx(styles.header, 'flex flex-col')}>
+            <div className="flex items-center gap-2.5" style={{ flexWrap: 'wrap' }}>
+              <div className="text-[22px] font-bold">{toolset.toolsetName}</div>
               <Tag>{toolset.identifier}</Tag>
-              <Text fontSize={12} type={'secondary'}>
+              <div className="text-[12px] text-muted-foreground">
                 {toolset.apis.length} API{toolset.apis.length === 1 ? '' : 's'}
-              </Text>
-            </Flexbox>
+              </div>
+            </div>
             {toolset.toolsetDescription && (
-              <Text fontSize={13} type={'secondary'}>
-                {toolset.toolsetDescription}
-              </Text>
+              <div className="text-[13px] text-muted-foreground">{toolset.toolsetDescription}</div>
             )}
-          </Flexbox>
+          </div>
 
-          <Flexbox horizontal className={styles.modeBar} wrap={'wrap'}>
-            <Flexbox horizontal className={styles.controlGroup}>
-              <Text className={styles.controlLabel} fontSize={12} type={'secondary'} weight={600}>
+          <div className={cx(styles.modeBar, 'flex')} style={{ flexWrap: 'wrap' }}>
+            <div className={cx(styles.controlGroup, 'flex')}>
+              <div
+                className={cn(
+                  'text-[12px]',
+                  'text-muted-foreground',
+                  'font-semibold',
+                  styles.controlLabel,
+                )}
+              >
                 View
-              </Text>
+              </div>
               <Tabs
-                activeKey={view}
                 className={styles.controlTabs}
-                size={'small'}
-                items={[
-                  { key: 'api', label: 'By API' },
-                  { key: 'aggregate', label: 'Aggregate' },
-                ]}
-                onChange={(key) => setView(key as GalleryView)}
-              />
-            </Flexbox>
-            <Flexbox horizontal className={styles.controlGroup}>
-              <Text className={styles.controlLabel} fontSize={12} type={'secondary'} weight={600}>
+                value={view}
+                onValueChange={(key) => {
+                  if (typeof key === 'string') setView(key as GalleryView);
+                }}
+              >
+                <TabsList>
+                  <TabsTrigger value="api">By API</TabsTrigger>
+                  <TabsTrigger value="aggregate">Aggregate</TabsTrigger>
+                </TabsList>
+              </Tabs>
+            </div>
+            <div className={cx(styles.controlGroup, 'flex')}>
+              <div
+                className={cn(
+                  'text-[12px]',
+                  'text-muted-foreground',
+                  'font-semibold',
+                  styles.controlLabel,
+                )}
+              >
                 Lifecycle
-              </Text>
+              </div>
               <Tabs
-                activeKey={mode}
                 className={styles.controlTabs}
-                size={'small'}
-                items={LIFECYCLE_MODES.map((value) => ({
-                  key: value,
-                  label: LIFECYCLE_MODE_LABEL[value],
-                }))}
-                onChange={(key) => setMode(key as LifecycleMode)}
-              />
-            </Flexbox>
-          </Flexbox>
+                value={mode}
+                onValueChange={(key) => {
+                  if (typeof key === 'string') setMode(key as LifecycleMode);
+                }}
+              >
+                <TabsList>
+                  {LIFECYCLE_MODES.map((value) => (
+                    <TabsTrigger key={value} value={value}>
+                      {LIFECYCLE_MODE_LABEL[value]}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
+            </div>
+          </div>
 
           {view === 'api' &&
             toolset.apis.map((api) => (
               <ToolPreview api={api} key={`${api.identifier}:${api.apiName}`} mode={mode} />
             ))}
-        </Flexbox>
+        </div>
 
         {view === 'aggregate' && <MessageList apis={toolset.apis} mode={mode} />}
       </div>
-    </Flexbox>
+    </div>
   );
 };
 

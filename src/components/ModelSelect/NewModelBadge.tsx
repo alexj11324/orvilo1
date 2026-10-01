@@ -1,7 +1,7 @@
-import { Tag } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge } from '@/components/reui/badge';
 import { isNewReleaseDate } from '@/utils/time';
 
 interface NewModelBadgeProps {
@@ -17,9 +17,9 @@ export const NewModelBadge = memo<NewModelBadgeProps>(({ releasedAt, label }) =>
   if (!releasedAt || !isNewReleaseDate(releasedAt)) return null;
 
   return (
-    <Tag color="blue" size="small">
+    <Badge size="sm" variant="info">
       {label}
-    </Tag>
+    </Badge>
   );
 });
 

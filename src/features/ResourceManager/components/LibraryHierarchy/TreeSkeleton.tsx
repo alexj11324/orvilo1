@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { memo } from 'react';
+
+import { Skeleton } from '@/components/ui/skeleton';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
   container: css`
@@ -24,7 +24,7 @@ interface TreeSkeletonItemProps {
 
 const TreeSkeletonItem = memo<TreeSkeletonItemProps>(({ opacity = 1 }) => {
   return (
-    <Flexbox horizontal className={styles.container} style={{ opacity }}>
+    <div className={cx('flex flex-row', styles.container)} style={{ opacity }}>
       <Skeleton
         style={{
           flex: 'none',
@@ -32,8 +32,8 @@ const TreeSkeletonItem = memo<TreeSkeletonItemProps>(({ opacity = 1 }) => {
           width: 16,
         }}
       />
-      <Skeleton height={16} width={`${Math.floor(Math.random() * 30 + 40)}%`} />
-    </Flexbox>
+      <Skeleton style={{ height: 16, width: `${Math.floor(Math.random() * 30 + 40)}%` }} />
+    </div>
   );
 });
 
@@ -49,11 +49,11 @@ const TreeSkeleton = ({ count = 6 }: TreeSkeletonProps) => {
   const getOpacity = (index: number) => (count > 1 ? 1 - (index / (count - 1)) * 0.8 : 1);
 
   return (
-    <Flexbox gap={2}>
+    <div className="flex flex-col gap-0.5">
       {Array.from({ length: count }).map((_, i) => (
         <TreeSkeletonItem key={i} opacity={getOpacity(i)} />
       ))}
-    </Flexbox>
+    </div>
   );
 };
 

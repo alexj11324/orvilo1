@@ -1,7 +1,9 @@
 'use client';
 
-import { createModal, type ImperativeModalProps, type ModalInstance } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
+
+import type { ImperativeModalProps, ModalInstance } from '@/components/Modal';
+import { createModal } from '@/components/Modal';
 
 let formIdSeed = 0;
 

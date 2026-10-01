@@ -1,13 +1,15 @@
 'use client';
 
-import { Flexbox, Icon, Popover, Tooltip } from '@lobehub/ui';
 import { formatElapsedClockTime } from '@orvilo/utils';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import type { LucideIcon } from 'lucide-react';
 import { CircleDollarSignIcon, CoinsIcon, FootprintsIcon } from 'lucide-react';
-import { Fragment, memo, useEffect, useMemo, useState } from 'react';
+import { createElement, Fragment, memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 import { AI_RUNTIME_OPERATION_TYPES } from '@/store/chat/slices/operation/types';
@@ -200,8 +202,8 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 const ActivityGlyph = () => (
   <svg aria-hidden className={styles.activityGlyph} viewBox="0 0 16 16">
-    <circle className={styles.glyphOrbit} cx="8" cy="8" r="6.1" />
-    <circle className={styles.glyphCore} cx="8" cy="8" r="2.7" />
+    {createElement('circle', { className: styles.glyphOrbit, cx: '8', cy: '8', r: '6.1' })}
+    {createElement('circle', { className: styles.glyphCore, cx: '8', cy: '8', r: '2.7' })}
   </svg>
 );
 
@@ -366,44 +368,49 @@ const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
   const tokenMetric = metrics.find((metric) => metric.key === 'tokens');
 
   const renderMetric = ({ icon, title, value }: MetricItem) => (
-    <Tooltip title={title}>
-      <span className={styles.metric}>
-        <Icon className={styles.metricIcon} icon={icon} size={13} />
-        <span className={styles.metricValue}>{value}</span>
-      </span>
-    </Tooltip>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger
+          render={
+            <span style={{ display: 'inline-flex' }}>
+              <span className={styles.metric}>
+                {createElement(icon, { className: styles.metricIcon, size: 13 })}
+                <span className={styles.metricValue}>{value}</span>
+              </span>
+            </span>
+          }
+        />
+        <TooltipContent>{title}</TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 
   const metricPopoverContent = (
-    <Flexbox className={styles.metricPopover} gap={8}>
+    <div className={cn('flex flex-col gap-2', styles.metricPopover)}>
       {metrics.map(({ icon, key, label, value }) => (
-        <Flexbox
-          horizontal
-          align="center"
-          className={styles.metricPopoverRow}
-          gap={20}
-          justify="space-between"
+        <div
+          className={cn('flex items-center gap-5 justify-between', styles.metricPopoverRow)}
           key={key}
         >
           <span className={cx(styles.metric, styles.metricPopoverLabel)}>
-            <Icon className={styles.metricIcon} icon={icon} size={13} />
+            {createElement(icon, { className: styles.metricIcon, size: 13 })}
             <span>{label}</span>
           </span>
           <span className={styles.metricPopoverValue}>{value}</span>
-        </Flexbox>
+        </div>
       ))}
-    </Flexbox>
+    </div>
   );
 
   return (
-    <Flexbox
-      horizontal
-      align="center"
-      justify="space-between"
-      className={cx(
-        styles.container,
-        topAttached && styles.containerTopAttached,
-        seamless && styles.containerSeamless,
+    <div
+      className={cn(
+        'flex items-center justify-between',
+        cx(
+          styles.container,
+          topAttached && styles.containerTopAttached,
+          seamless && styles.containerSeamless,
+        ),
       )}
     >
       <span className={cx(styles.metric, styles.statusMetric)}>
@@ -427,16 +434,24 @@ const OpStatusTray = memo<OpStatusTrayProps>(({ seamless, topAttached }) => {
             ))}
           </span>
           {tokenMetric && (
-            <Popover content={metricPopoverContent} placement="topRight" trigger="hover">
-              <span className={cx(styles.metric, styles.compactMetric)}>
-                <Icon className={styles.metricIcon} icon={tokenMetric.icon} size={13} />
-                <span className={styles.metricValue}>{tokenMetric.value}</span>
-              </span>
+            <Popover>
+              <PopoverTrigger
+                openOnHover
+                render={
+                  <span className={cx(styles.metric, styles.compactMetric)}>
+                    <tokenMetric.icon className={styles.metricIcon} size={13} />
+                    <span className={styles.metricValue}>{tokenMetric.value}</span>
+                  </span>
+                }
+              />
+              <PopoverContent align="end" side="top">
+                {metricPopoverContent}
+              </PopoverContent>
             </Popover>
           )}
         </>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

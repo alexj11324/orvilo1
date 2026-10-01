@@ -1,11 +1,10 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { ExternalLinkIcon } from 'lucide-react';
 import { type CSSProperties } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AuthIcons from '@/components/AuthIcons';
+import { Button } from '@/components/ui/button';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useUserStore } from '@/store/user';
@@ -25,43 +24,34 @@ export const SSOProvidersList = memo(() => {
   const { t } = useTranslation('auth');
 
   return (
-    <Flexbox gap={8}>
+    <div className="flex flex-col gap-2">
       {providers.map((item) => (
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={6}
+        <div
+          className="flex flex-row gap-[6px] items-center"
           key={[item.provider, item.providerAccountId].join('-')}
           style={{ fontSize: 12 }}
         >
           {AuthIcons(item.provider, 16)}
           <span style={providerNameStyle}>{item.provider}</span>
-          {item.email && (
-            <Text fontSize={11} type="secondary">
-              · {item.email}
-            </Text>
-          )}
-        </Flexbox>
+          {item.email && <span className="text-[11px] text-muted-foreground">· {item.email}</span>}
+        </div>
       ))}
 
-      {providers.length === 0 && (
-        <Text fontSize={11} type="secondary">
-          --
-        </Text>
-      )}
+      {providers.length === 0 && <span>--</span>}
 
-      <Text
-        fontSize={12}
+      <Button
+        className="text-[12px] text-muted-foreground"
         style={{ cursor: 'pointer' }}
-        type="secondary"
+        type="button"
+        variant="link"
         onClick={() => window.open(accountsUrl, '_blank', 'noopener,noreferrer')}
       >
-        <Flexbox horizontal align={'center'} gap={4}>
+        <div className="flex items-center gap-1">
           {t('profile.sso.manageOnPortal')}
-          <Icon icon={ExternalLinkIcon} size={12} />
-        </Flexbox>
-      </Text>
-    </Flexbox>
+          <ExternalLinkIcon className="shrink-0" size={12} />
+        </div>
+      </Button>
+    </div>
   );
 });
 

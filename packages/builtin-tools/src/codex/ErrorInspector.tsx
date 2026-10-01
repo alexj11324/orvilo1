@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { inspectorTextStyles, shinyTextStyles } from '@orvilo/shared-tool-ui/styles';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
@@ -47,7 +46,7 @@ const ErrorInspector = memo<BuiltinInspectorProps<CodexErrorArgs>>(
         className={cx(inspectorTextStyles.root, styles.root)}
         data-testid="codex-error-inspector"
       >
-        <Icon className={styles.icon} icon={AlertTriangle} size={14} />
+        <AlertTriangle className={styles.icon} size={14} />
         <span
           className={cx(
             styles.message,

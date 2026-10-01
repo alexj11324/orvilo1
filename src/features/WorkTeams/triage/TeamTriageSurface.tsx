@@ -1,15 +1,14 @@
 'use client';
-
-import { Center, Empty, Flexbox } from '@lobehub/ui';
-import { Button, toast } from '@lobehub/ui/base-ui';
 import type { TeamTriageAction } from '@orvilo/types';
 import { ListChecksIcon, PlusIcon } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
 import { workAttentionService } from '@/services/workAttention';
 import { isTrpcErrorCode } from '@/utils/trpcError';
@@ -104,16 +103,24 @@ const TeamTriageSurface = memo<TeamTriageSurfaceProps>(
         {state === 'error' ? (
           <AsyncError error={error} onRetry={onRetry} />
         ) : state === 'loading' ? (
-          <SkeletonList aria-label={t('teams.loading')} rows={4} />
+          <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+            {Array.from({ length: 4 }, (_, index) => (
+              <Skeleton className="h-10 w-full" key={index} />
+            ))}
+          </div>
         ) : state === 'empty' ? (
-          <Center flex={1} gap={12} padding={48}>
-            <Empty description={t('teams.triageEmpty')} icon={ListChecksIcon} />
-            <Button icon={PlusIcon} size={'small'} onClick={openComposer}>
+          <div className="flex flex-col items-center justify-center gap-3 flex-1 p-12">
+            <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+              <ListChecksIcon aria-hidden className="size-8" />
+              <p>{t('teams.triageEmpty')}</p>
+            </div>
+            <Button variant="outline" onClick={openComposer}>
+              <PlusIcon aria-hidden className="size-4" />
               {t('teams.triageCreate')}
             </Button>
-          </Center>
+          </div>
         ) : (
-          <Flexbox gap={2}>
+          <div className="flex flex-col" style={{ gap: 2 }}>
             {tasks.map((task) => (
               <TeamTriageRow
                 creator={resolveTriageCreator(task, profiles)}
@@ -127,7 +134,7 @@ const TeamTriageSurface = memo<TeamTriageSurfaceProps>(
                 onTransferred={onChanged}
               />
             ))}
-          </Flexbox>
+          </div>
         )}
         <MarkDuplicateModal
           open={duplicateTaskId !== null}

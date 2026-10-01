@@ -46,24 +46,9 @@ const collectViolations = (
     ),
   );
 
+// P05's provider-binding/server-default surfaces are restored (P30 resurrection),
+// so only the P06 quota-routing retirement still applies here.
 const RETIRED_SURFACE_RULES: Rule[] = [
-  {
-    pattern: /\bproviderBinding\b/,
-    reason:
-      'P05 retired BYOK provider binding (host/port/drivers/module) — nothing re-registers it',
-  },
-  {
-    pattern: /\bclaudeCodeDirectEnv\b|HETEROGENEOUS_PROVIDER_BINDING_/,
-    reason: 'P05 retired the binding-specific env sanitizer',
-  },
-  {
-    pattern: /\bserverDefaultHeterogeneous|SERVER_DEFAULT_HETEROGENEOUS/,
-    reason: 'P05 retired the server-default relay surface',
-  },
-  {
-    pattern: /\bHeterogeneousApiConfig\b|\bHeterogeneousAuthMode\b/,
-    reason: 'P05 retired BYOK auth-mode types; persisted legacy fields are ignored, not typed',
-  },
   {
     pattern: /\bresolveQuotaAccountEnv\b|\bselectAccountForAgent\b|\bquotaAccountPlan\b/,
     reason: 'P06 retired quota-driven credential injection and account routing',
@@ -97,7 +82,7 @@ const ENGINE_LOOP_RULES: Rule[] = [
 ];
 
 describe('retirement guards (heterogeneous-agents)', () => {
-  it('keeps retired provider/quota surfaces out of production sources', () => {
+  it('keeps retired quota surfaces out of production sources', () => {
     expect(
       collectViolations([{ name: 'P05/P06 retirements', rules: RETIRED_SURFACE_RULES }]),
     ).toEqual([]);
@@ -113,7 +98,10 @@ describe('retirement guards (heterogeneous-agents)', () => {
 
   describe('the guards themselves are falsifiable', () => {
     it.each([
-      [[{ name: 'binding', rules: RETIRED_SURFACE_RULES }], "import x from './providerBinding'"],
+      [
+        [{ name: 'quota', rules: RETIRED_SURFACE_RULES }],
+        "import { selectAccountForAgent } from './quota'",
+      ],
       [[{ name: 'brand', rules: BRAND_RULES }], "const clientInfo = { name: 'lobehub' }"],
       [
         [{ name: 'engine', rules: ENGINE_LOOP_RULES }],

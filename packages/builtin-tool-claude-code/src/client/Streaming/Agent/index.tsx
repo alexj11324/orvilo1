@@ -1,13 +1,14 @@
 'use client';
 
-import { Flexbox, Markdown } from '@lobehub/ui';
-import { Button, Text } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinStreamingProps } from '@orvilo/types';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ListTree } from 'lucide-react';
 import { memo, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Button } from '@/components/ui/button';
 import { useChatStore } from '@/store/chat';
 import { portalThreadSelectors, threadSelectors } from '@/store/chat/selectors';
 
@@ -74,38 +75,33 @@ const AgentStreaming = memo<BuiltinStreamingProps<AgentArgs>>(({ args, toolCallI
   if (!prompt && !subagentThread) return null;
 
   return (
-    <Flexbox className={styles.container} gap={12}>
+    <div className={cx('flex flex-col gap-3', styles.container)}>
       {prompt && (
-        <Flexbox>
-          <Flexbox
-            horizontal
-            align={'center'}
-            className={styles.labelRow}
-            justify={'space-between'}
-          >
-            <Text className={styles.label}>
+        <div className="flex flex-col">
+          <div className={cx('flex flex-row items-center justify-between', styles.labelRow)}>
+            <div className={cn(styles.label)}>
               {t('builtins.orvilo-claude-code.agent.instruction')}
-            </Text>
+            </div>
             {subagentThread && (
               <Button
-                className={styles.openThread}
-                icon={ListTree}
-                size={'small'}
-                type={'text'}
+                className={cn(styles.openThread)}
+                size="sm"
+                variant="ghost"
                 onClick={handleToggleThread}
               >
+                <ListTree data-icon="inline-start" />
                 {isOpenInPortal
                   ? tChat('thread.closeSubagentThread')
                   : tChat('thread.openSubagentThread')}
               </Button>
             )}
-          </Flexbox>
-          <Flexbox className={styles.promptBox}>
+          </div>
+          <div className={cx('flex flex-col', styles.promptBox)}>
             <Markdown variant={'chat'}>{prompt}</Markdown>
-          </Flexbox>
-        </Flexbox>
+          </div>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -12,7 +12,11 @@ import {
   WORK_SEARCH_MAX_PER_TYPE,
   WORKFLOW_STATE_REQUIRED,
   type WorkQuery,
+  type WorkQueryEntityType,
+  type WorkQueryField,
+  workQueryFieldSpec,
   type WorkQueryFilter,
+  type WorkQueryOp,
   type WorkQueryPredicate,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -51,29 +55,57 @@ import { ActionSourceRegistry, buildInboxFeed } from '@/server/services/workAtte
 // (all/any are both optional), so the union must try predicates first and the
 // filter object must be strict, otherwise predicates collapse into empty
 // filters and unknown fields are silently stripped.
+const workQueryInItemSchema = z.union([
+  z.string().min(1),
+  z.number(),
+  z.object({ ref: z.literal('currentUser') }),
+]);
+
 const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.strictObject({
   field: z.enum([
+    'assigneeAgentId',
     'assigneeUserId',
+    'closedAt',
+    'completedAt',
+    'createdAt',
     'createdByUserId',
     'cycleId',
     'delegatedByUserId',
+    'hasActivity',
     'id',
     'labelId',
     'ownerUserId',
+    'parentTaskId',
     'priority',
     'projectId',
+    'projectMilestoneId',
     'reviewerUserId',
     'status',
+    'subscribed',
     'teamId',
+    'text',
     'triageStatus',
+    'updatedAt',
     'visibility',
     'workflowCategory',
   ]),
-  op: z.enum(['eq', 'in', 'isNotNull', 'isNull', 'neq', 'notIn']),
+  op: z.enum([
+    'between',
+    'contains',
+    'eq',
+    'gte',
+    'in',
+    'isNotNull',
+    'isNull',
+    'lt',
+    'neq',
+    'notIn',
+  ]),
   value: z
     .union([
       z.object({ ref: z.literal('currentUser') }),
-      z.array(z.string().min(1)).min(1).max(WORK_QUERY_MAX_IN_VALUES),
+      z.object({ from: z.string().min(1), to: z.string().min(1) }),
+      z.array(workQueryInItemSchema).min(1).max(WORK_QUERY_MAX_IN_VALUES),
       z.boolean(),
       z.null(),
       z.number(),
@@ -98,10 +130,74 @@ const workQueryNodeSchema: z.ZodType<WorkQueryFilter | WorkQueryPredicate> = z.l
   z.union([workQueryPredicateSchema, workQueryFilterSchema]),
 );
 
+const COLUMN_OPS = ['eq', 'in', 'isNotNull', 'isNull', 'neq', 'notIn'] as const satisfies readonly WorkQueryOp[];
+const DATE_OPS = ['between', 'gte', 'isNotNull', 'isNull', 'lt'] as const satisfies readonly WorkQueryOp[];
+
+/** Fields the compiler accepts that the visual builder does not offer. */
+const COMPILER_FIELD_OPS: Record<
+  WorkQueryEntityType,
+  Partial<Record<WorkQueryField, readonly WorkQueryOp[]>>
+> = {
+  project: { id: COLUMN_OPS },
+  task: {
+    closedAt: DATE_OPS,
+    delegatedByUserId: ['eq'],
+    id: COLUMN_OPS,
+    parentTaskId: COLUMN_OPS,
+    projectMilestoneId: COLUMN_OPS,
+  },
+};
+
+const opsForField = (
+  entityType: WorkQueryEntityType,
+  field: WorkQueryField,
+): readonly WorkQueryOp[] | undefined =>
+  workQueryFieldSpec(entityType, field)?.ops ?? COMPILER_FIELD_OPS[entityType][field];
+
+const rejectIllegalOps = (
+  node: WorkQueryFilter | WorkQueryPredicate | undefined,
+  entityType: WorkQueryEntityType,
+  ctx: z.RefinementCtx,
+  path: Array<number | string>,
+) => {
+  if (!node) return;
+  if ('field' in node) {
+    const ops = opsForField(entityType, node.field);
+    if (ops && !(ops as readonly string[]).includes(node.op)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `${node.field} does not support ${node.op}`,
+        path: [...path, 'op'],
+      });
+    }
+    return;
+  }
+  node.all?.forEach((child, index) =>
+    rejectIllegalOps(child, entityType, ctx, [...path, 'all', index]),
+  );
+  node.any?.forEach((child, index) =>
+    rejectIllegalOps(child, entityType, ctx, [...path, 'any', index]),
+  );
+};
+
 export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
   entityType: z.enum(['project', 'task']),
   filter: workQueryFilterSchema.optional(),
-  groupBy: z.enum(['attention', 'none', 'status', 'workflowCategory']).optional(),
+  groupBy: z
+    .enum([
+      'activityDate',
+      'agent',
+      'assignee',
+      'attention',
+      'cycle',
+      'milestone',
+      'none',
+      'priority',
+      'project',
+      'status',
+      'workflowCategory',
+    ])
+    .optional(),
   layout: z.enum(['board', 'list']).optional(),
   schemaVersion: z.literal(1),
   sort: z
@@ -131,6 +227,21 @@ export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
     )
     .optional(),
   sortMode: z.enum(['field', 'manual']).optional(),
+  subGroupBy: z
+    .enum([
+      'agent',
+      'assignee',
+      'milestone',
+      'none',
+      'priority',
+      'project',
+      'status',
+      'workflowCategory',
+    ])
+    .optional(),
+  timeZone: z.string().min(1).max(100).optional(),
+}).superRefine((query, ctx) => {
+  rejectIllegalOps(query.filter, query.entityType, ctx, ['filter']);
 });
 
 const mapQueryError = (error: unknown): never => {
@@ -311,25 +422,55 @@ export const workAttentionRouter = router({
     .input(
       z.object({
         afterId: z.string().min(1).optional(),
-        groupBy: z.enum(['attention', 'none', 'status', 'workflowCategory']).optional(),
+        groupBy: z
+          .enum([
+            'activityDate',
+            'agent',
+            'assignee',
+            'attention',
+            'cycle',
+            'milestone',
+            'none',
+            'priority',
+            'project',
+            'status',
+            'workflowCategory',
+          ])
+          .optional(),
         groupKey: z.string().min(1).optional(),
         layout: z.enum(['board', 'list']).optional(),
         limit: z.number().min(1).max(100).default(50),
         delegated: z.boolean().optional(),
+        /** Extra AND layer: completed window and the Add-filter builder. */
+        filter: workQueryFilterSchema.optional(),
         mode: z.enum(['activity', 'assigned', 'created', 'delegated', 'review', 'subscribed']),
         noProject: z.boolean().optional(),
         queryHash: z.string().min(1).optional(),
+        subGroupBy: z
+          .enum(['assignee', 'none', 'priority', 'project', 'status', 'workflowCategory'])
+          .optional(),
+        timeZone: z.string().min(1).max(100).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
       try {
+        const modeQuery = myWorkQueryForMode(input.mode as MyWorkMode);
+        const scoped: WorkQuery = {
+          ...modeQuery,
+          ...(input.subGroupBy ? { subGroupBy: input.subGroupBy } : {}),
+          ...(input.timeZone ? { timeZone: input.timeZone } : {}),
+          ...(input.filter
+            ? {
+                filter: {
+                  all: [...(modeQuery.filter?.all ?? []), input.filter],
+                  ...(modeQuery.filter?.any ? { any: modeQuery.filter.any } : {}),
+                },
+              }
+            : {}),
+        };
         const query = applyNoProjectFilter(
           applyDelegatedFilter(
-            applyWorkQueryLayout(
-              myWorkQueryForMode(input.mode as MyWorkMode),
-              input.layout,
-              input.groupBy,
-            ),
+            applyWorkQueryLayout(scoped, input.layout, input.groupBy),
             Boolean(input.delegated),
           ),
           Boolean(input.noProject),
@@ -415,6 +556,13 @@ export const workAttentionRouter = router({
         afterId: z.string().min(1).optional(),
         groupKey: z.string().min(1).optional(),
         limit: z.number().min(1).max(100).default(50),
+        /**
+         * Activity ordering still reads the notification clock. The AST carries
+         * the membership predicate; `mode` only selects that sort.
+         */
+        mode: z
+          .enum(['activity', 'assigned', 'created', 'delegated', 'review', 'subscribed'])
+          .optional(),
         query: workQuerySchema,
         queryHash: z.string().min(1).optional(),
       }),
@@ -424,6 +572,7 @@ export const workAttentionRouter = router({
         if (input.query.entityType === 'project') {
           const result = await ctx.workQueryModel.queryProjects({
             afterId: input.afterId,
+            groupKey: input.groupKey,
             limit: input.limit,
             query: input.query,
             queryHash: input.queryHash,
@@ -434,6 +583,7 @@ export const workAttentionRouter = router({
           afterId: input.afterId,
           groupKey: input.groupKey,
           limit: input.limit,
+          mode: input.mode,
           query: input.query,
           queryHash: input.queryHash,
         });
@@ -533,6 +683,7 @@ export const workAttentionRouter = router({
         id: z.string().min(1),
         limit: z.number().min(1).max(100).default(50),
         queryHash: z.string().min(1).optional(),
+        timeZone: z.string().min(1).max(100).optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -544,6 +695,7 @@ export const workAttentionRouter = router({
           groupKey: input.groupKey,
           limit: input.limit,
           queryHash: input.queryHash,
+          timeZone: input.timeZone,
         });
         return {
           data: { evaluation, view: await ctx.savedViewModel.present(view) },

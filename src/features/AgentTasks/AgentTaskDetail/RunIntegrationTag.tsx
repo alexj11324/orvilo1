@@ -1,7 +1,6 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Button, Tag, Text, toast } from '@lobehub/ui/base-ui';
+import { PreviewCard } from '@base-ui/react/preview-card';
 import type { TaskTopicIntegration } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import type { LucideIcon } from 'lucide-react';
@@ -17,6 +16,10 @@ import {
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Badge as Tag } from '@/components/reui/badge';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { POPUP_Z_CLASS } from '@/components/ui/zIndex';
 import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
 
@@ -87,30 +90,33 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
   };
 
   const tooltip = (
-    <Flexbox gap={4} style={{ maxWidth: 320 }}>
-      <Text fontSize={12} style={{ fontFamily: cssVar.fontFamilyCode }} type={'secondary'}>
+    <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
+      <div
+        className="text-[12px] text-muted-foreground"
+        style={{ fontFamily: cssVar.fontFamilyCode }}
+      >
         {integration.branch} → {integration.baseBranch}
         {integration.integratedSha ? ` @ ${integration.integratedSha.slice(0, 7)}` : ''}
-      </Text>
+      </div>
       {integration.role === 'integrate' && (
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {t('taskDetail.integration.mergeRun')}
-        </Text>
+        </div>
       )}
       {integration.attempts > 0 && (
-        <Text fontSize={12} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground">
           {t('taskDetail.integration.attempts', { count: integration.attempts })}
-        </Text>
+        </div>
       )}
       {!!integration.conflicts?.length && (
-        <Text fontSize={12} style={{ wordBreak: 'break-all' }} type={'secondary'}>
+        <div className="text-[12px] text-muted-foreground" style={{ wordBreak: 'break-all' }}>
           {t('taskDetail.integration.conflicts', { files: integration.conflicts.join(', ') })}
-        </Text>
+        </div>
       )}
       {integration.lastError && (
-        <Text fontSize={12} style={{ wordBreak: 'break-all' }} type={'danger'}>
+        <div className="text-[12px] text-destructive" style={{ wordBreak: 'break-all' }}>
           {integration.lastError}
-        </Text>
+        </div>
       )}
       {integration.prUrl && (
         <a
@@ -125,14 +131,14 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
       )}
       {retryable && taskId && topicId && (
         <Button
-          icon={<RefreshCw size={12} />}
           loading={retrying}
-          size={'small'}
+          size="sm"
           onClick={(event) => {
             event.stopPropagation();
             void retry();
           }}
         >
+          {<RefreshCw size={12} />}
           {t(
             integration.state === 'publish_failed'
               ? 'taskDetail.integration.retryPublish'
@@ -140,27 +146,50 @@ const RunIntegrationTag = memo<RunIntegrationTagProps>(({ integration, taskId, t
           )}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 
+  const StateGlyph = meta.icon;
+
+  const tag = (
+    <Tag
+      size="sm"
+      style={{ cursor: integration.prUrl && !retryable ? 'pointer' : undefined, flexShrink: 0 }}
+      onClick={
+        integration.prUrl && !retryable
+          ? (event) => {
+              event.stopPropagation();
+              window.open(integration.prUrl, '_blank', 'noopener,noreferrer');
+            }
+          : undefined
+      }
+    >
+      {
+        <StateGlyph
+          className={meta.spin ? 'animate-spin' : undefined}
+          color={meta.color}
+          size={12}
+        />
+      }
+      {label}
+    </Tag>
+  );
+
+  // Hover card, not a tooltip: the popup carries a retry button and a PR link
+  // the reader can actually click, which a tooltip's dismiss-on-leave forbids.
   return (
-    <Tooltip title={tooltip}>
-      <Tag
-        icon={<Icon color={meta.color} icon={meta.icon} size={12} spin={meta.spin} />}
-        size={'small'}
-        style={{ cursor: integration.prUrl && !retryable ? 'pointer' : undefined, flexShrink: 0 }}
-        onClick={
-          integration.prUrl && !retryable
-            ? (event) => {
-                event.stopPropagation();
-                window.open(integration.prUrl, '_blank', 'noopener,noreferrer');
-              }
-            : undefined
-        }
-      >
-        {label}
-      </Tag>
-    </Tooltip>
+    <PreviewCard.Root>
+      <PreviewCard.Trigger render={<span style={{ display: 'inline-flex' }}>{tag}</span>} />
+      <PreviewCard.Portal>
+        <PreviewCard.Positioner className={POPUP_Z_CLASS} side={'top'} sideOffset={4}>
+          <PreviewCard.Popup
+            className={`${POPUP_Z_CLASS} flex flex-col rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
+          >
+            {tooltip}
+          </PreviewCard.Popup>
+        </PreviewCard.Positioner>
+      </PreviewCard.Portal>
+    </PreviewCard.Root>
   );
 });
 

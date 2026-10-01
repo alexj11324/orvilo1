@@ -932,6 +932,66 @@ table agent_skills {
   }
 }
 
+table ai_models {
+  id varchar(150) [not null]
+  "_id" uuid [pk, not null, default: `gen_random_uuid()`]
+  display_name varchar(200)
+  description text
+  organization varchar(100)
+  enabled boolean
+  provider_id varchar(64) [not null]
+  type varchar(20) [not null, default: 'chat']
+  sort integer
+  user_id text [not null]
+  pricing jsonb
+  parameters jsonb [default: `{}`]
+  config jsonb
+  abilities jsonb [default: `{}`]
+  context_window_tokens integer
+  source varchar(20)
+  released_at varchar(10)
+  settings jsonb [default: `{}`]
+  workspace_id text
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (id, provider_id, user_id) [name: 'ai_models_id_provider_id_user_id_unique', unique]
+    (id, provider_id, user_id, workspace_id) [name: 'ai_models_id_provider_id_user_id_workspace_id_unique', unique]
+    user_id [name: 'ai_models_user_id_idx']
+    workspace_id [name: 'ai_models_workspace_id_idx']
+  }
+}
+
+table ai_providers {
+  id varchar(64) [not null]
+  name text
+  "_id" uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id text [not null]
+  sort integer
+  enabled boolean
+  fetch_on_client boolean
+  check_model text
+  logo text
+  description text
+  key_vaults text
+  source varchar(20)
+  settings jsonb
+  config jsonb
+  workspace_id text
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (id, user_id) [name: 'ai_providers_id_user_id_unique', unique]
+    (id, user_id, workspace_id) [name: 'ai_providers_id_user_id_workspace_id_unique', unique]
+    user_id [name: 'ai_providers_user_id_idx']
+    workspace_id [name: 'ai_providers_workspace_id_idx']
+  }
+}
+
 table api_keys {
   id text [pk, not null]
   name varchar(256) [not null]
@@ -4293,6 +4353,7 @@ table tasks {
   priority integer [default: 0]
   sort_order integer [default: 0]
   position "double precision"
+  due_date date
   automation_mode text
   heartbeat_interval integer
   heartbeat_timeout integer
@@ -4435,6 +4496,26 @@ table task_labels {
     workspace_id [name: 'task_labels_workspace_id_idx']
     (user_id, name) [name: 'task_labels_user_id_name_unique', unique]
     (workspace_id, name) [name: 'task_labels_workspace_id_name_unique', unique]
+  }
+}
+
+table task_reminders {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  task_id text [not null]
+  user_id text [not null]
+  workspace_id text
+  remind_at "timestamp with time zone" [not null]
+  delivered_at "timestamp with time zone"
+  attempt_count integer [not null, default: 0]
+  next_attempt_at "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (task_id, user_id) [name: 'task_reminders_task_user_unique', unique]
+    user_id [name: 'task_reminders_user_id_idx']
+    remind_at [name: 'task_reminders_pending_idx']
   }
 }
 

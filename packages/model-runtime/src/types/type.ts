@@ -18,6 +18,12 @@ export interface ChatCompletionErrorPayload {
   provider: string;
 }
 
+export interface CreateImageErrorPayload {
+  error: object;
+  errorType: IOrviloAgentRuntimeErrorType;
+  provider: string;
+}
+
 export interface CreateChatCompletionOptions {
   chatModel: OpenAI;
   payload: ChatStreamPayload;

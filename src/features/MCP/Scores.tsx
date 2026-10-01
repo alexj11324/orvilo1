@@ -1,10 +1,12 @@
 'use client';
 
-import { Center, Flexbox, Icon, stopPropagation, Tooltip } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { CircleDashedIcon, HammerIcon, LayersIcon, MessageSquareQuoteIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import {
   calculateScore,
@@ -142,103 +144,150 @@ const Scores = memo<ScoresProps>(
     const showExtra = showToolts || showResources || showPrompts;
 
     const scoreTag = (
-      <Tooltip title={`${t(`mcp.details.scoreLevel.${grade}.desc`)} (${Math.round(percentage)}%)`}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={cx(styles.tag, getGradeStyleClass(grade, styles))}
-          gap={8}
-          style={{
-            paddingLeft: 4,
-          }}
-        >
-          <Center
-            className={styles.gradeIcon}
-            style={{
-              borderColor:
-                grade === 'a'
-                  ? cssVar.colorSuccess
-                  : grade === 'b'
-                    ? cssVar.colorWarning
-                    : grade === 'f'
-                      ? cssVar.colorError
-                      : cssVar.colorTextSecondary,
-            }}
-          >
-            {grade.toUpperCase()}
-          </Center>
-          <span style={{ fontWeight: 500 }}>
-            {t(`mcp.details.scoreLevel.${grade}.title`).toUpperCase()}
-          </span>
-        </Flexbox>
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span style={{ display: 'inline-flex' }}>
+                <div
+                  className={cn(
+                    'flex items-center gap-2',
+                    cx(styles.tag, getGradeStyleClass(grade, styles)),
+                  )}
+                  style={{
+                    paddingLeft: 4,
+                  }}
+                >
+                  <div
+                    className={cn('flex items-center justify-center', styles.gradeIcon)}
+                    style={{
+                      borderColor:
+                        grade === 'a'
+                          ? cssVar.colorSuccess
+                          : grade === 'b'
+                            ? cssVar.colorWarning
+                            : grade === 'f'
+                              ? cssVar.colorError
+                              : cssVar.colorTextSecondary,
+                    }}
+                  >
+                    {grade.toUpperCase()}
+                  </div>
+                  <span style={{ fontWeight: 500 }}>
+                    {t(`mcp.details.scoreLevel.${grade}.title`).toUpperCase()}
+                  </span>
+                </div>
+              </span>
+            }
+          />
+          <TooltipContent>{`${t(`mcp.details.scoreLevel.${grade}.desc`)} (${Math.round(percentage)}%)`}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
 
     const unvalidatedTag = (
-      <Tooltip title={t('mcp.unvalidated.desc')}>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.tag}
-          gap={8}
-          style={{
-            color: cssVar.colorTextDescription,
-            paddingLeft: 4,
-          }}
-        >
-          <Icon color={cssVar.colorTextQuaternary} icon={CircleDashedIcon} size={22} />
-          {t('mcp.unvalidated.title')}
-        </Flexbox>
-      </Tooltip>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <span style={{ display: 'inline-flex' }}>
+                <div
+                  className={cn('flex items-center gap-2', styles.tag)}
+                  style={{
+                    color: cssVar.colorTextDescription,
+                    paddingLeft: 4,
+                  }}
+                >
+                  <CircleDashedIcon color={cssVar.colorTextQuaternary} size={22} />
+                  {t('mcp.unvalidated.title')}
+                </div>
+              </span>
+            }
+          />
+          <TooltipContent>{t('mcp.unvalidated.desc')}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
 
     return (
-      <Flexbox horizontal align={'center'} flex={'none'} gap={8} onClick={stopPropagation}>
+      <div
+        className="flex items-center gap-2"
+        style={{ flex: 'none' }}
+        onClick={(e) => {
+          e.stopPropagation();
+        }}
+      >
         {identifier && (isValidated ? scoreTag : unvalidatedTag)}
         {showExtra && (
-          <Flexbox horizontal align={'center'} className={styles.extraTag} gap={16}>
+          <div className={cn('flex items-center gap-4', styles.extraTag)}>
             {showToolts && (
-              <Tooltip
-                title={[
-                  t('mcp.details.schema.tools.title'),
-                  t('mcp.details.schema.tools.desc'),
-                ].join(': ')}
-              >
-                <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
-                  <Icon icon={HammerIcon} size={14} />
-                  {toolsCount}
-                </Flexbox>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <div className={cn('flex items-center gap-2', styles.extraTagActive)}>
+                          <HammerIcon size={14} />
+                          {toolsCount}
+                        </div>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {[t('mcp.details.schema.tools.title'), t('mcp.details.schema.tools.desc')].join(
+                      ': ',
+                    )}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             {showPrompts && (
-              <Tooltip
-                title={[
-                  t('mcp.details.schema.prompts.title'),
-                  t('mcp.details.schema.prompts.desc'),
-                ].join(': ')}
-              >
-                <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
-                  <Icon icon={MessageSquareQuoteIcon} size={14} />
-                  {promptsCount}
-                </Flexbox>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <div className={cn('flex items-center gap-2', styles.extraTagActive)}>
+                          <MessageSquareQuoteIcon size={14} />
+                          {promptsCount}
+                        </div>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {[
+                      t('mcp.details.schema.prompts.title'),
+                      t('mcp.details.schema.prompts.desc'),
+                    ].join(': ')}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
             {showResources && (
-              <Tooltip
-                title={[
-                  t('mcp.details.schema.resources.title'),
-                  t('mcp.details.schema.resources.desc'),
-                ].join(': ')}
-              >
-                <Flexbox horizontal align={'center'} className={styles.extraTagActive} gap={8}>
-                  <Icon icon={LayersIcon} size={14} />
-                  {resourcesCount}
-                </Flexbox>
-              </Tooltip>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger
+                    render={
+                      <span style={{ display: 'inline-flex' }}>
+                        <div className={cn('flex items-center gap-2', styles.extraTagActive)}>
+                          <LayersIcon size={14} />
+                          {resourcesCount}
+                        </div>
+                      </span>
+                    }
+                  />
+                  <TooltipContent>
+                    {[
+                      t('mcp.details.schema.resources.title'),
+                      t('mcp.details.schema.resources.desc'),
+                    ].join(': ')}
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

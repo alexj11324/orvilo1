@@ -1,10 +1,10 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import type { TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { WORKFLOW_STATE_REQUIRED } from '@orvilo/types';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import {
   type KanbanColumnDefinition,
   kanbanColumnForSelectableStatus,
@@ -173,6 +173,7 @@ export const commitWorkQueryBoardMove = async (input: {
         teamId: plan.task.teamId,
       });
     }
+    if (plan.groupBy !== 'status' && plan.groupBy !== 'workflowCategory') return false;
     return moveBoardMaybePickingState({
       expectedDomainRevision: plan.expectedDomainRevision,
       groupBy: plan.groupBy,

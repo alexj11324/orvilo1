@@ -1,10 +1,13 @@
 'use client';
 
-import { CodeDiff, Flexbox } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
+import { createTwoFilesPatch } from 'diff';
 import { CheckCircle, FileText } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { CodeBlock, parseUnifiedDiff } from '@/components/ui/code-block';
 
 const MAX_FALLBACK_LENGTH = 500;
 
@@ -98,44 +101,46 @@ const PromptDiffView = memo<PromptDiffViewProps>(({ newPrompt = '', previousProm
       : 'builtins.orvilo-agent-builder.render.updatePrompt.cleared';
 
   return (
-    <Flexbox className={styles.container} gap={8}>
-      <Flexbox horizontal align={'center'} className={styles.statusRow} gap={6}>
+    <div className={cn('flex', 'flex-col', 'gap-2', styles.container)}>
+      <div className={cn('flex', 'items-center', 'gap-[6px]', styles.statusRow)}>
         <CheckCircle size={14} />
         <span className={styles.statusText}>{t(statusKey)}</span>
-      </Flexbox>
+      </div>
 
       {hasDiff && (
         <div className={styles.diffCard}>
-          <CodeDiff
-            language={'markdown'}
-            newContent={withTrailingNewline(newPrompt)}
-            oldContent={withTrailingNewline(previousPrompt)}
-            showHeader={false}
-            variant={'borderless'}
-            viewMode={'unified'}
-          />
+          {parseUnifiedDiff(
+            createTwoFilesPatch(
+              'a/prompt.md',
+              'b/prompt.md',
+              withTrailingNewline(previousPrompt),
+              withTrailingNewline(newPrompt),
+            ),
+          ).map((file) => (
+            <CodeBlock key={file.file} language={'markdown'} lines={file.lines} variant="ghost" />
+          ))}
         </div>
       )}
 
       {/* Legacy tool results without `previousPrompt`: fall back to a truncated preview */}
       {!hasDiff && !isUnchanged && newPrompt && (
-        <Flexbox className={styles.promptCard} gap={8}>
-          <Flexbox horizontal align={'center'} gap={6}>
+        <div className={cn('flex', 'flex-col', 'gap-2', styles.promptCard)}>
+          <div className="flex items-center gap-[6px]">
             <FileText className={styles.fileIcon} size={14} />
             <span className={styles.promptLabel}>
               {t('builtins.orvilo-agent-builder.render.updatePrompt.newPrompt', {
                 count: newPrompt.length,
               })}
             </span>
-          </Flexbox>
+          </div>
           <div className={styles.promptContent}>
             {newPrompt.length > MAX_FALLBACK_LENGTH
               ? newPrompt.slice(0, MAX_FALLBACK_LENGTH) + '...'
               : newPrompt}
           </div>
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

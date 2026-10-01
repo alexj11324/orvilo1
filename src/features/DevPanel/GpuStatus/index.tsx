@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { GpuStatus } from '@orvilo/electron-client-ipc';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { Fragment, memo, useEffect, useState } from 'react';
@@ -124,7 +123,7 @@ const GpuStatusPanel = memo(() => {
   const features = Object.entries(status.featureStatus).sort(([a], [b]) => a.localeCompare(b));
 
   return (
-    <Flexbox className={devDockPanelStyles.root}>
+    <div className={cx(devDockPanelStyles.root, 'flex flex-col')}>
       <div className={styles.device}>
         {DEVICE_LABELS.map(([label, key]) => (
           <Fragment key={key}>
@@ -148,7 +147,7 @@ const GpuStatusPanel = memo(() => {
         switched off by design, and anything else is a hard disable worth investigating on
         chrome://gpu. Read once when the panel opens — reopen it to re-sample.
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

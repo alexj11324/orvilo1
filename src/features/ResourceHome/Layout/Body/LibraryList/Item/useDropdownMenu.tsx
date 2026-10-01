@@ -1,12 +1,12 @@
-import type { MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { confirmModal, toast } from '@lobehub/ui/base-ui';
 import { EyeOffIcon, FileText, GlobeIcon, PencilLine, Trash, UsersIcon } from 'lucide-react';
 import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import { useKnowledgeBaseTransferMenuItem } from '@/business/client/hooks/useKnowledgeBaseTransferMenuItem';
+import { type DropdownItem, type MenuProps } from '@/components/ItemsMenu';
+import { confirmModal } from '@/components/Modal';
+import { toast } from '@/components/toast';
 import { useCreateNewModal } from '@/features/LibraryModal';
 import VisibilityConfirmContent from '@/features/VisibilityConfirmContent';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -35,7 +35,7 @@ export const useDropdownMenu = ({
   toggleEditing,
   userId,
   visibility,
-}: ActionProps): (() => MenuProps['items']) => {
+}: ActionProps): (() => DropdownItem[]) => {
   const { t } = useTranslation(['file', 'common', 'chat', 'setting']);
 
   const removeKnowledgeBase = useKnowledgeBaseStore((s) => s.removeKnowledgeBase);
@@ -71,7 +71,11 @@ export const useDropdownMenu = ({
     () =>
       activeWorkspaceId && permissionManageable
         ? {
-            icon: <Icon icon={UsersIcon} />,
+            icon: (
+              <span className="anticon" role="img">
+                <UsersIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+            ),
             key: 'member-permissions',
             label: t('permission.page.entry', { ns: 'setting' }),
             onClick: (info: any) => {
@@ -160,7 +164,11 @@ export const useDropdownMenu = ({
       canEdit
         ? [
             {
-              icon: <Icon icon={PencilLine} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <PencilLine fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
               key: 'rename',
               label: t('rename', { ns: 'common' }),
               onClick: (info: any) => {
@@ -176,7 +184,11 @@ export const useDropdownMenu = ({
               },
             },
             {
-              icon: <Icon icon={FileText} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <FileText fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
               key: 'editDescription',
               label: t('edit', { ns: 'common' }),
               onClick: (info: any) => {
@@ -190,7 +202,11 @@ export const useDropdownMenu = ({
       [
         canEdit && isOwnPrivateKb
           ? {
-              icon: <Icon icon={GlobeIcon} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <GlobeIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
               key: 'publishToWorkspace',
               label: t('library.publish'),
               onClick: (info: any) => {
@@ -201,7 +217,11 @@ export const useDropdownMenu = ({
           : null,
         canEdit && isOwnPublicKb
           ? {
-              icon: <Icon icon={EyeOffIcon} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <EyeOffIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
               key: 'makePrivate',
               label: t('makePrivate', { ns: 'common' }),
               onClick: (info: any) => {
@@ -218,7 +238,11 @@ export const useDropdownMenu = ({
         ? [
             {
               danger: true,
-              icon: <Icon icon={Trash} />,
+              icon: (
+                <span className="anticon" role="img">
+                  <Trash fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+                </span>
+              ),
               key: 'delete',
               label: t('delete', { ns: 'common' }),
               onClick: handleDelete,

@@ -1,14 +1,29 @@
 'use client';
 
-import { Accordion, AccordionItem, Flexbox } from '@lobehub/ui';
-import { Avatar, Tag, Text } from '@lobehub/ui/base-ui';
-import { Steps } from 'antd';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import BubblesLoading from '@/components/BubblesLoading';
 import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
+import { Badge } from '@/components/reui/badge';
+import {
+  Stepper,
+  StepperDescription,
+  StepperIndicator,
+  StepperItem,
+  StepperNav,
+  StepperSeparator,
+  StepperTitle,
+} from '@/components/reui/stepper';
 import StreamingMarkdown from '@/components/StreamingMarkdown';
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { highlightTextStyles } from '@/styles';
 
 import type { AddPreferenceMemoryParams } from '../../types';
@@ -51,15 +66,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     line-height: 1.6;
     color: ${cssVar.colorTextSecondary};
     white-space: pre-wrap;
-  `,
-  stepsContainer: css`
-    .ant-steps-item-content {
-      min-height: auto;
-    }
-
-    .ant-steps-item-description {
-      padding-block-end: 12px !important;
-    }
   `,
   suggestion: css`
     padding-block: 8px;
@@ -145,177 +151,188 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
   ].filter((item) => item.content);
 
   return (
-    <Flexbox className={styles.container}>
+    <div className={cn('flex', 'flex-col', styles.container)}>
       {/* Header */}
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
-        <Flexbox flex={1}>
+      <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
+        <div className="flex flex-col flex-1">
           <div className={styles.title}>{title || 'Preference Memory'}</div>
-        </Flexbox>
-        {type && <Tag>{type}</Tag>}
+        </div>
+        {type && <Badge>{type}</Badge>}
         {loading && <NeuralNetworkLoading size={20} />}
-      </Flexbox>
+      </div>
 
       {/* When has context content: collapse summary */}
       {hasContextContent || hasAppContext ? (
         <>
           {/* Collapsed Summary */}
           {(summary || safeTags.length > 0) && (
-            <Accordion gap={0}>
-              <AccordionItem
-                itemKey="summary"
-                paddingBlock={8}
-                paddingInline={8}
-                styles={{
-                  base: { marginBlock: 4, marginInline: 4 },
-                }}
-                title={
-                  <Text fontSize={12} type={'secondary'} weight={500}>
-                    Summary
-                  </Text>
-                }
-              >
-                <Flexbox gap={8} paddingBlock={'8px 12px'} paddingInline={8}>
-                  {summary && <div className={styles.summary}>{summary}</div>}
-                  {details && <div className={styles.detail}>{details}</div>}
-                  {safeTags.length > 0 && (
-                    <Flexbox horizontal className={styles.tags} gap={8} wrap={'wrap'}>
-                      {safeTags.map((tag, index) => (
-                        <Tag key={index}>{tag}</Tag>
-                      ))}
-                    </Flexbox>
-                  )}
-                </Flexbox>
+            <Accordion>
+              <AccordionItem value="summary">
+                <AccordionTrigger>
+                  <div className="text-[12px] text-muted-foreground font-medium">Summary</div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex flex-col gap-2 px-2" style={{ paddingBlock: '8px 12px' }}>
+                    {summary && <div className={styles.summary}>{summary}</div>}
+                    {details && <div className={styles.detail}>{details}</div>}
+                    {safeTags.length > 0 && (
+                      <div className={cn('flex', 'gap-2', 'flex-wrap', styles.tags)}>
+                        {safeTags.map((tag, index) => (
+                          <Badge key={index}>{tag}</Badge>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </AccordionContent>
               </AccordionItem>
             </Accordion>
           )}
 
           {/* Origin Context Steps */}
           {hasContextContent && (
-            <Accordion className={styles.section} defaultExpandedKeys={['context']} gap={0}>
-              <AccordionItem
-                itemKey="context"
-                paddingBlock={8}
-                paddingInline={8}
-                title={
-                  <Text fontSize={12} type={'secondary'} weight={500}>
+            <Accordion className={styles.section} defaultValue={['context']}>
+              <AccordionItem value="context">
+                <AccordionTrigger>
+                  <div className="text-[12px] text-muted-foreground font-medium">
                     Origin Context
-                  </Text>
-                }
-              >
-                <Flexbox paddingBlock={'8px 12px'} paddingInline={8}>
-                  <Steps
-                    className={styles.stepsContainer}
-                    current={null as any}
-                    direction="vertical"
-                    size="small"
-                    items={contextItems.map((item) => ({
-                      description: <div className={styles.stepContent}>{item.content}</div>,
-                      icon: (
-                        <Avatar
-                          shadow
-                          avatar={item.avatar}
-                          shape={'square'}
-                          size={20}
-                          style={{
-                            border: `1px solid ${cssVar.colorBorderSecondary}`,
-                            fontSize: 11,
-                          }}
-                        />
-                      ),
-                      title: (
-                        <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
-                          {item.title}
-                        </Text>
-                      ),
-                    }))}
-                  />
-                </Flexbox>
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex flex-col px-2" style={{ paddingBlock: '8px 12px' }}>
+                    <Stepper orientation="vertical" value={0}>
+                      <StepperNav>
+                        {contextItems.map((item, index) => (
+                          <StepperItem
+                            className="w-full items-start"
+                            key={item.title}
+                            step={index + 1}
+                          >
+                            <div className="flex items-start gap-2">
+                              <StepperIndicator className="size-5 rounded-md">
+                                <Avatar
+                                  shadow
+                                  avatar={item.avatar}
+                                  shape={'square'}
+                                  size={20}
+                                  style={{
+                                    border: `1px solid ${cssVar.colorBorderSecondary}`,
+                                    fontSize: 11,
+                                  }}
+                                />
+                              </StepperIndicator>
+                              <div className="flex flex-col gap-1">
+                                <StepperTitle>
+                                  <span className="text-[12px] text-muted-foreground font-medium">
+                                    {item.title}
+                                  </span>
+                                </StepperTitle>
+                                <StepperDescription>
+                                  <div className={styles.stepContent}>{item.content}</div>
+                                </StepperDescription>
+                              </div>
+                            </div>
+                            {index < contextItems.length - 1 && (
+                              <StepperSeparator className="h-4" />
+                            )}
+                          </StepperItem>
+                        ))}
+                      </StepperNav>
+                    </Stepper>
+                  </div>
+                </AccordionContent>
               </AccordionItem>
             </Accordion>
           )}
 
           {/* App Context */}
           {hasAppContext && (
-            <Accordion className={styles.section} gap={0}>
-              <AccordionItem
-                itemKey="appContext"
-                paddingBlock={8}
-                paddingInline={8}
-                title={
-                  <Text fontSize={12} type={'secondary'} weight={500}>
-                    App Context
-                  </Text>
-                }
-              >
-                <Flexbox paddingBlock={'8px 12px'} paddingInline={8}>
-                  <Steps
-                    className={styles.stepsContainer}
-                    current={null as any}
-                    direction="vertical"
-                    size="small"
-                    items={appContextItems.map((item) => ({
-                      description: <div className={styles.stepContent}>{item.content}</div>,
-                      icon: (
-                        <Avatar
-                          shadow
-                          avatar={item.avatar}
-                          shape={'square'}
-                          size={20}
-                          style={{
-                            border: `1px solid ${cssVar.colorBorderSecondary}`,
-                            fontSize: 11,
-                          }}
-                        />
-                      ),
-                      title: (
-                        <Text as={'span'} fontSize={12} type={'secondary'} weight={500}>
-                          {item.title}
-                        </Text>
-                      ),
-                    }))}
-                  />
-                </Flexbox>
+            <Accordion className={styles.section}>
+              <AccordionItem value="appContext">
+                <AccordionTrigger>
+                  <div className="text-[12px] text-muted-foreground font-medium">App Context</div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <div className="flex flex-col px-2" style={{ paddingBlock: '8px 12px' }}>
+                    <Stepper orientation="vertical" value={0}>
+                      <StepperNav>
+                        {appContextItems.map((item, index) => (
+                          <StepperItem
+                            className="w-full items-start"
+                            key={item.title}
+                            step={index + 1}
+                          >
+                            <div className="flex items-start gap-2">
+                              <StepperIndicator className="size-5 rounded-md">
+                                <Avatar
+                                  shadow
+                                  avatar={item.avatar}
+                                  shape={'square'}
+                                  size={20}
+                                  style={{
+                                    border: `1px solid ${cssVar.colorBorderSecondary}`,
+                                    fontSize: 11,
+                                  }}
+                                />
+                              </StepperIndicator>
+                              <div className="flex flex-col gap-1">
+                                <StepperTitle>
+                                  <span className="text-[12px] text-muted-foreground font-medium">
+                                    {item.title}
+                                  </span>
+                                </StepperTitle>
+                                <StepperDescription>
+                                  <div className={styles.stepContent}>{item.content}</div>
+                                </StepperDescription>
+                              </div>
+                            </div>
+                            {index < appContextItems.length - 1 && (
+                              <StepperSeparator className="h-4" />
+                            )}
+                          </StepperItem>
+                        ))}
+                      </StepperNav>
+                    </Stepper>
+                  </div>
+                </AccordionContent>
               </AccordionItem>
             </Accordion>
           )}
 
           {/* Conclusion Directive */}
           {conclusionDirectives && (
-            <Flexbox
-              className={styles.section}
-              gap={8}
+            <div
+              className={cn('flex', 'flex-col', 'gap-2', styles.section)}
               style={{ paddingBlock: 16, paddingInline: 12 }}
             >
-              <Text fontSize={12} weight={500}>
+              <div className="text-[12px] font-medium">
                 <span className={highlightTextStyles.primary}>Directive</span>
-              </Text>
+              </div>
               <div className={styles.directive}>{conclusionDirectives}</div>
-            </Flexbox>
+            </div>
           )}
 
           {/* Suggestions */}
           {hasSuggestions && (
-            <Flexbox
-              className={styles.section}
-              gap={8}
+            <div
+              className={cn('flex', 'flex-col', 'gap-2', styles.section)}
               style={{ paddingBlock: 16, paddingInline: 12 }}
             >
-              <Text fontSize={12} weight={500}>
+              <div className="text-[12px] font-medium">
                 <span className={highlightTextStyles.info}>Suggestions</span>
-              </Text>
-              <Flexbox gap={8}>
+              </div>
+              <div className="flex flex-col gap-2">
                 {safeSuggestions.map((suggestion, index) => (
                   <div className={styles.suggestion} key={index}>
                     {suggestion}
                   </div>
                 ))}
-              </Flexbox>
-            </Flexbox>
+              </div>
+            </div>
           )}
         </>
       ) : (
         /* When no context content: show summary and details */
-        <Flexbox className={styles.content} gap={8}>
+        <div className={cn('flex', 'flex-col', 'gap-2', styles.content)}>
           {!summary && loading ? (
             <BubblesLoading />
           ) : (
@@ -323,39 +340,39 @@ export const PreferenceMemoryCard = memo<PreferenceMemoryCardProps>(({ data, loa
               {summary && <div className={styles.summary}>{summary}</div>}
               {details && <StreamingMarkdown>{details}</StreamingMarkdown>}
               {conclusionDirectives && (
-                <Flexbox gap={4} paddingBlock={8}>
-                  <Text fontSize={12} weight={500}>
+                <div className="flex flex-col gap-1 py-2">
+                  <div className="text-[12px] font-medium">
                     <span className={highlightTextStyles.primary}>Directive</span>
-                  </Text>
+                  </div>
                   <div className={styles.directive}>{conclusionDirectives}</div>
-                </Flexbox>
+                </div>
               )}
               {hasSuggestions && (
-                <Flexbox gap={8} paddingBlock={8}>
-                  <Text fontSize={12} weight={500}>
+                <div className="flex flex-col gap-2 py-2">
+                  <div className="text-[12px] font-medium">
                     <span className={highlightTextStyles.info}>Suggestions</span>
-                  </Text>
-                  <Flexbox gap={8}>
+                  </div>
+                  <div className="flex flex-col gap-2">
                     {safeSuggestions.map((suggestion, index) => (
                       <div className={styles.suggestion} key={index}>
                         {suggestion}
                       </div>
                     ))}
-                  </Flexbox>
-                </Flexbox>
+                  </div>
+                </div>
               )}
               {safeTags.length > 0 && (
-                <Flexbox horizontal className={styles.tags} gap={8} wrap={'wrap'}>
+                <div className={cn('flex', 'gap-2', 'flex-wrap', styles.tags)}>
                   {safeTags.map((tag, index) => (
-                    <Tag key={index}>{tag}</Tag>
+                    <Badge key={index}>{tag}</Badge>
                   ))}
-                </Flexbox>
+                </div>
               )}
             </>
           )}
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

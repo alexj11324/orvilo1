@@ -1,5 +1,3 @@
-import { Center, ContextMenuTrigger, Flexbox, Tooltip } from '@lobehub/ui';
-import { Avatar, Checkbox } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { isEqual } from 'es-toolkit';
 import { memo, useCallback } from 'react';
@@ -7,6 +5,11 @@ import { useTranslation } from 'react-i18next';
 import { shallow } from 'zustand/shallow';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
+import { remoteAvatarSrc } from '@/components/Avatar/fallback';
+import { ContextMenuTrigger } from '@/components/ItemsMenu';
+import { Checkbox } from '@/components/ui/checkbox';
+import { SimpleTooltip } from '@/components/ui/tooltip';
 import { useResourceManagerStore } from '@/features/ResourceManager/store';
 import { isExplorerItemSelected } from '@/features/ResourceManager/store/selectors';
 import { fileManagerSelectors, getChunkTargetId, useFileStore } from '@/store/file';
@@ -274,22 +277,21 @@ const FileListItem = ({
 
   return (
     <ContextMenuTrigger items={menuItems}>
-      <Flexbox
-        horizontal
-        align={'center'}
+      <div
         data-drop-target-id={id}
         data-is-folder={String(isFolder)}
         data-row-index={index}
         draggable={!!resourceManagerState.libraryId}
-        height={48}
-        paddingInline={8}
         className={cx(
-          styles.container,
-          'file-list-item-group',
-          index % 2 === 0 && styles.evenRow,
-          isSelected && styles.selected,
-          isDragging && styles.dragging,
-          isOver && styles.dragOver,
+          'flex flex-row items-center h-[48px] px-2',
+          cx(
+            styles.container,
+            'file-list-item-group',
+            index % 2 === 0 && styles.evenRow,
+            isSelected && styles.selected,
+            isDragging && styles.dragging,
+            isOver && styles.dragOver,
+          ),
         )}
         style={{
           borderBlockEnd: `1px solid ${cssVar.colorBorderSecondary}`,
@@ -303,20 +305,17 @@ const FileListItem = ({
         onDragStart={handleDragStart}
         onDrop={handleDrop}
       >
-        <Center
-          height={40}
+        <div
+          className="flex flex-col items-center justify-center h-[40px]"
           style={{ cursor: selectable ? 'pointer' : 'not-allowed', paddingInline: 4 }}
           title={selectable ? undefined : t('FileManager.selection.onlyOwn')}
           onClick={handleCheckboxClick}
           onPointerDown={handleCheckboxPointerDown}
         >
           <Checkbox checked={isSelected} disabled={!selectable} />
-        </Center>
-        <Flexbox
-          horizontal
-          align={'center'}
-          className={styles.item}
-          distribution={'space-between'}
+        </div>
+        <div
+          className={cx('flex flex-row items-center justify-between', styles.item)}
           style={{
             flexShrink: 0,
             maxWidth: columnWidths.name,
@@ -358,52 +357,48 @@ const FileListItem = ({
             parseFiles={fileStoreState.parseFiles}
             t={t}
           />
-        </Flexbox>
+        </div>
         {!isDragging && (
           <>
-            <Flexbox
-              horizontal
-              align={'center'}
-              className={styles.item}
-              gap={8}
-              style={{ flexShrink: 0 }}
-              width={columnWidths.date}
+            <div
+              className={cx('flex flex-row items-center gap-2', styles.item)}
+              style={{ flexShrink: 0, width: columnWidths.date }}
             >
               <span>{displayTime}</span>
-            </Flexbox>
+            </div>
             {showUploader && (
-              <Flexbox
-                horizontal
-                align={'center'}
-                className={styles.item}
-                gap={8}
-                style={{ flexShrink: 0 }}
-                width={columnWidths.uploader}
+              <div
+                className={cx('flex flex-row items-center gap-2', styles.item)}
+                style={{ flexShrink: 0, width: columnWidths.uploader }}
               >
                 {uploaderName ? (
-                  <Tooltip title={t('file:listView.uploadedBy', { name: uploaderName })}>
-                    <Flexbox horizontal align={'center'} gap={8} style={{ minWidth: 0 }}>
+                  <SimpleTooltip title={t('file:listView.uploadedBy', { name: uploaderName })}>
+                    <div className="flex flex-row items-center gap-2" style={{ minWidth: 0 }}>
                       <Avatar
                         alt={uploaderName}
-                        avatar={uploader?.avatar || uploaderName}
+                        avatar={remoteAvatarSrc(uploader?.avatar) || undefined}
+                        name={uploaderName}
                         shape={'circle'}
                         size={20}
                         style={{ flexShrink: 0 }}
                       />
                       <span className={styles.uploaderName}>{uploaderName}</span>
-                    </Flexbox>
-                  </Tooltip>
+                    </div>
+                  </SimpleTooltip>
                 ) : (
                   '-'
                 )}
-              </Flexbox>
+              </div>
             )}
-            <Flexbox className={styles.item} style={{ flexShrink: 0 }} width={columnWidths.size}>
+            <div
+              className={cx('flex flex-col', styles.item)}
+              style={{ flexShrink: 0, width: columnWidths.size }}
+            >
               {isFolder || isPage ? '-' : formatSize(size)}
-            </Flexbox>
+            </div>
           </>
         )}
-      </Flexbox>
+      </div>
     </ContextMenuTrigger>
   );
 };

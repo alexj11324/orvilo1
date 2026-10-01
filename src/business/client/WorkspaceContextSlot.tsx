@@ -1,6 +1,6 @@
 'use client';
 
-import { Alert, Button } from '@lobehub/ui/base-ui';
+import { CircleAlert } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useInRouterContext } from 'react-router';
@@ -8,6 +8,8 @@ import { useInRouterContext } from 'react-router';
 import { useFetchWorkspaces } from '@/business/client/hooks/useFetchWorkspaces';
 import { useIsWorkspaceLoading } from '@/business/client/hooks/useIsWorkspaceLoading';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { Alert, AlertAction, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import { useWorkspaceSyncPathname } from '@/features/Workspace/useWorkspaceSyncPathname';
 import {
   isWorkspaceSlugCandidatePath,
@@ -31,18 +33,16 @@ const RouterBoundWorkspaceSync = ({ children }: PropsWithChildren) => {
     // instead of spinning forever or falling through to a false 404.
     if (error !== undefined && data === undefined) {
       return (
-        <Alert
-          showIcon
-          message={t('workspace.loadFailedHint', { ns: 'setting' })}
-          style={{ margin: 16 }}
-          title={t('workspace.loadFailed', { ns: 'setting' })}
-          type="error"
-          extra={
-            <Button size="small" onClick={() => void mutate()}>
+        <Alert style={{ margin: 16 }} variant="destructive">
+          <CircleAlert size={16} />
+          <AlertTitle>{t('workspace.loadFailed', { ns: 'setting' })}</AlertTitle>
+          <AlertDescription>{t('workspace.loadFailedHint', { ns: 'setting' })}</AlertDescription>
+          <AlertAction>
+            <Button size="sm" onClick={() => void mutate()}>
               {t('retry', { ns: 'common' })}
             </Button>
-          }
-        />
+          </AlertAction>
+        </Alert>
       );
     }
     if (isLoading) return <RouteLoading />;

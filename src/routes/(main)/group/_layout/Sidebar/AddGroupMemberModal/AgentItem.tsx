@@ -1,13 +1,14 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Avatar, Checkbox, Text } from '@lobehub/ui/base-ui';
 import { agentDisplayName } from '@orvilo/types';
 import { useHover } from 'ahooks';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { X } from 'lucide-react';
 import { memo, useRef } from 'react';
 
+import Avatar from '@/components/Avatar';
+import { Checkbox } from '@/components/ui/checkbox';
 import { DEFAULT_AVATAR } from '@/const/meta';
 
 import { useAgentSelectionStore } from './store';
@@ -98,11 +99,11 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
       style={{ cursor: showCheckbox ? 'pointer' : 'default' }}
       onClick={showCheckbox ? handleClick : undefined}
     >
-      <Flexbox horizontal align="center" gap={8} width="100%">
+      <div className="flex items-center gap-2" style={{ width: '100%' }}>
         {showCheckbox && (
           <Checkbox
             checked={isSelected}
-            onChange={handleClick}
+            onCheckedChange={handleClick}
             onClick={(e) => {
               e.stopPropagation();
               handleClick();
@@ -116,15 +117,13 @@ const AgentItem = memo<AgentItemProps>(({ agent, defaultTitle, showCheckbox, sho
           shape="circle"
           size={28}
         />
-        <Text ellipsis className={styles.title}>
-          {title}
-        </Text>
+        <div className={cn('truncate', styles.title)}>{title}</div>
         {showRemove && (
           <div className={styles.removeButton} onClick={handleRemove}>
             <X size={14} />
           </div>
         )}
-      </Flexbox>
+      </div>
     </div>
   );
 });

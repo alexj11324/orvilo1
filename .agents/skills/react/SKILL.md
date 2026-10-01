@@ -16,43 +16,16 @@ user-invocable: false
 
 ## Component Priority
 
-1. **`src/components`** — project-specific reusable components
-2. **`@lobehub/ui/base-ui`** — headless primitives. **If the component lives here, use it. Do NOT import the same-named root export.**
-3. **`@lobehub/ui`** — higher-level / antd-wrapping components (only when no base-ui equivalent)
-4. **antd** — only when neither base-ui nor `@lobehub/ui` root provides it
-5. **Custom implementation** — true last resort
+1. **ReUI/shadcn primitives** — `@/components/ui/*` (dialog, button, tooltip, popover, dropdown-menu, select, checkbox, radio-group, switch, tabs, accordion, skeleton, alert, progress, slider, scroll-area, sheet, spinner, sonner, input, textarea, combobox) and `@/components/reui/*` (badge, stepper, sortable, code-block, autocomplete). **If the component lives here, use it.**
+2. **Local lobehub-compatible adapters** — keep the lobehub API surface so call sites stay mechanical:
+   `@/components/ActionIcon`, `@/components/Modal` (createModal/confirmModal/useModalContext/ModalHost/ModalFooter — see the **modal** skill), `@/components/toast` (toast/useToast/ToastHost), `@/components/Avatar` (+AvatarGroup), `@/components/Upload` (+UploadDragger), `@/components/ItemsMenu`, `@/components/Menu`, `@/components/GroupForm` (antd validation binding), `@/components/InputNumber`, `@/components/DatePicker`, `@/components/SimpleEmpty`, `@/components/SearchBar`, `@/components/ImperativeModal`.
+3. **`@lobehub/ui`** — kept-feature components only: Markdown, Mermaid, Image lightbox, HotkeyInput, ColorSwatches, Freeze, MaskShadow, DraggablePanel, FileTypeIcon, MaterialFileTypeIcon, CodeDiff/PatchDiff, Tree, FloatingSheet/FloatingPanel, EditableMessage, ChatHeader/TabBar mobile shells, Highlighter/Snippet, FluentEmoji, GroupAvatar, ContextMenuHost/ModalHost libs.
+4. **antd** — only as `GroupForm`'s validation layer; never import antd controls directly.
+5. **Custom implementation** — true last resort.
 
-If unsure about available components, search existing code or check `node_modules/@lobehub/ui/es/index.mjs` and `node_modules/@lobehub/ui/es/base-ui/`.
+For Modal specifically, see the dedicated **modal** skill — use the imperative `createModal({ content: … })` pattern over `<Modal open … />`. The new `ModalHost` and sonner `ToastHost` are mounted in `SPAGlobalProvider` and every app shell; the lobehub base-ui hosts stay mounted until call-site slices finish migrating.
 
-### `@lobehub/ui/base-ui` — always prefer for these
-
-| Component                                  | Import                                                                                                  |
-| ------------------------------------------ | ------------------------------------------------------------------------------------------------------- |
-| `Alert` (+ `AlertProps`)                   | `import { Alert, type AlertProps } from '@lobehub/ui/base-ui';`                                         |
-| `Select` (+ `SelectProps`, `SelectOption`) | `import { Select } from '@lobehub/ui/base-ui';`                                                         |
-| `Modal` (imperative API)                   | `import { createModal, confirmModal, useModalContext, type ModalInstance } from '@lobehub/ui/base-ui';` |
-| `DropdownMenu`                             | `import { DropdownMenu } from '@lobehub/ui/base-ui';`                                                   |
-| `ContextMenu`                              | `import { ContextMenu } from '@lobehub/ui/base-ui';`                                                    |
-| `Popover`                                  | `import { Popover } from '@lobehub/ui/base-ui';`                                                        |
-| `ScrollArea`                               | `import { ScrollArea } from '@lobehub/ui/base-ui';`                                                     |
-| `Switch`                                   | `import { Switch } from '@lobehub/ui/base-ui';`                                                         |
-| `Toast`                                    | `import { Toast } from '@lobehub/ui/base-ui';`                                                          |
-| `FloatingSheet`                            | `import { FloatingSheet } from '@lobehub/ui/base-ui';`                                                  |
-| `Drawer`                                   | `import { Drawer } from '@lobehub/ui/base-ui';`                                                         |
-
-For Modal specifically, see the dedicated **modal** skill — use the imperative `createModal({ content: … })` pattern over the legacy `<Modal open … />` declarative pattern. base-ui has its own `ModalHost` already mounted in `SPAGlobalProvider`.
-
-> Common slip: `import { Select } from '@lobehub/ui'` looks fine but it's the antd-backed Select. Use base-ui Select. Same for `Modal`, `DropdownMenu`, etc.
-
-### `@lobehub/ui` root — use when base-ui has no equivalent
-
-| Category     | Components                                                                            |
-| ------------ | ------------------------------------------------------------------------------------- |
-| General      | ActionIcon, ActionIconGroup, Block, Button, Icon                                      |
-| Data Display | Avatar, Collapse, Empty, Highlighter, Markdown, Tag, Tooltip                          |
-| Data Entry   | CodeEditor, CopyButton, EditableText, Form, Input, InputPassword, SearchBar, TextArea |
-| Layout       | Center, DraggablePanel, Flexbox, Grid, Header, MaskShadow                             |
-| Navigation   | Burger, Menu, SideNav, Tabs                                                           |
+> Common slip: `import { createModal } from '@lobehub/ui/base-ui'` is the legacy stack — use `@/components/Modal`. Same for `toast`, `useToast`, `ModalFooter`, `ModalInstance`.
 
 ## State
 
@@ -74,16 +47,16 @@ Use memoization only when the subtree is demonstrably expensive or frequently re
 
 ## Layout
 
-Use `Flexbox` and `Center` from `@lobehub/ui`. See `references/layout-kit.md` for full props and examples.
+Use plain Tailwind flex utilities — no `Flexbox`/`Center` imports. See `references/layout-kit.md` for the prop→class mapping.
 
-- Use `gap` instead of `margin` for spacing between flex children
-- Use `flex={1}` to fill available space
-- Nest Flexbox for complex layouts; set `overflow: 'auto'` for scrollable regions
+- `gap-*` instead of `margin` for spacing between flex children
+- `flex-1` to fill available space; `flex-none` for fixed-size items
+- Nest flex containers for complex layouts; `overflow-auto` for scrollable regions
 
 ## Related Skills
 
 - **`ux`**: loading visuals and user-facing interaction design. Do not use antd `Spin` / `<Spin />`.
-- **`modal`**: imperative base-ui modal patterns.
+- **`modal`**: imperative `@/components/Modal` patterns.
 - **`spa-routes`**: SPA navigation, route ownership, router configuration, and `.desktop` variants.
 - **`compose-atoms`**: split a heavy domain feature into mountable capability atoms; each host imports only what it mounts.
 - **`zustand`**: store structure and selector conventions.

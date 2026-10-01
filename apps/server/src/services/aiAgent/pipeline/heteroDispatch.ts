@@ -46,6 +46,11 @@ import {
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
+import {
+  driveEmbeddedCanonicalRun,
+  openEmbeddedDispatchHost,
+  resolveEmbeddedDispatchRoute,
+} from '@/server/services/controlPlane/embeddedDispatch';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 import { resolveGithubAccessToken } from '@/server/services/githubRepo';
@@ -1545,6 +1550,101 @@ export const dispatchHeteroAgent = async (
         log('execAgent: failed to patch runningOperation with device info: %O', err);
       }
     } else {
+      // Prime embedded harness (phase 5a): own-agent task dispatches on the
+      // sandbox plan route to the canonical embedded host when
+      // `prime_embedded_dispatch` admits them. Everything else — ACP/hetero
+      // kinds, chat runs, runs without canonical dispatch context — falls
+      // through to the unchanged sandbox path below.
+      const embeddedRoute = await resolveEmbeddedDispatchRoute(deps, {
+        appContext,
+        heteroType,
+        operationTaskId,
+      });
+      if (embeddedRoute) {
+        const prepared = await openEmbeddedDispatchHost(
+          { database: deps.db, userId: deps.userId },
+          {
+            ...embeddedRoute,
+            engine: heterogeneousProvider?.engine,
+            model: ctx.model,
+            operationId,
+            provider: ctx.provider,
+            topicId,
+          },
+        );
+        if (!prepared.ok) {
+          // Pre-launch denial (unavailable binding, bad manifest, stale
+          // contract): finalize through the same terminal funnel as every
+          // other dispatch rejection so the run and its task settle `error`.
+          await finalizeHeteroDispatchError(deps, {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            detail: prepared.error.message,
+            message: 'Embedded dispatch is unavailable',
+            operationId,
+            topicId,
+          });
+          return {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            autoStarted: false,
+            createdAt: new Date().toISOString(),
+            error: prepared.error.message,
+            message: 'Embedded dispatch is unavailable',
+            operationId,
+            status: 'error',
+            success: false,
+            timestamp: new Date().toISOString(),
+            topicId,
+            userMessageId: userMessageId ?? parentMessageId ?? '',
+          };
+        }
+        // Server-hosted admission — the run executes in-process, so the
+        // ledger records `embedded` (no device fields) for status/cancel.
+        await writeDispatchAdmission(deps, { channel: 'embedded', operationId });
+        // Fire-and-forget — same posture as the sandbox spawn: the driver
+        // finishes the run through heteroIngest/heteroFinish itself; the
+        // catch is the last-resort funnel if it throws before doing so.
+        void driveEmbeddedCanonicalRun(
+          { database: deps.db, userId: deps.userId, workspaceId: deps.workspaceId },
+          prepared.value,
+          {
+            agentType: resolveOrviloCliAgentType(heterogeneousProvider?.engine),
+            assistantMessageId,
+            operationId,
+            prompt: [systemContext, prompt].filter(Boolean).join('\n\n'),
+            topicId,
+          },
+        ).catch(async (err) => {
+          log('execAgent: embedded dispatch driver failed: %O', err);
+          if (await hasHeteroRunStarted(deps, { operationId, topicId })) return;
+          await finalizeHeteroDispatchError(deps, {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            detail: err instanceof Error ? err.message : String(err),
+            message: 'Embedded dispatch failed',
+            operationId,
+            topicId,
+          }).catch((finalizeErr) =>
+            log('execAgent: embedded-failure finalize failed: %O', finalizeErr),
+          );
+        });
+        return {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          autoStarted: true,
+          createdAt: new Date().toISOString(),
+          heteroType,
+          message: 'Hetero agent dispatched successfully',
+          operationId,
+          status: 'created',
+          success: true,
+          timestamp: new Date().toISOString(),
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        };
+      }
+
       if (!supportsCloudHeterogeneousSandbox(heteroType, heterogeneousProvider?.engine)) {
         const message = `${getHeterogeneousAgentTitle(heteroType)} requires a local or connected device; cloud sandbox execution is not supported.`;
         await finalizeHeteroDispatchError(deps, {

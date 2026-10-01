@@ -1,9 +1,8 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import { cssVar } from 'antd-style';
 import { LockIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 
 import LibIcon from './index';
 import LockedLibIcon from './Locked';
@@ -39,7 +38,7 @@ const LibraryStatusIcon = memo<LibraryStatusIconProps>(
     const variant = getLibraryIconVariant({ memberRestricted, visibility });
 
     if (variant === 'private') {
-      return <Icon color={cssVar.colorTextDescription} icon={LockIcon} size={size} />;
+      return createElement(LockIcon, { size: 16, style: { color: cssVar.colorTextDescription } });
     }
     if (variant === 'restricted') return <LockedLibIcon size={size} />;
 

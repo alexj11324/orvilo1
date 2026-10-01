@@ -1,12 +1,17 @@
 'use client';
 
-import { CopyButton, Flexbox, Markdown, ScrollShadow, TooltipGroup } from '@lobehub/ui';
-import { ActionIcon, Button } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { FileTextIcon, Maximize2, Minimize2, PencilLine } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import CopyButton from '@/components/CopyButton';
+import { Button } from '@/components/ui/button';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { TooltipProvider } from '@/components/ui/tooltip';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/slices/portal/selectors';
 
@@ -79,14 +84,14 @@ const DocumentCard = memo<DocumentCardProps>(({ content, documentId, title }) =>
   };
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
+    <div className={cn('flex', 'flex-col', styles.container)}>
+      <div className={cn('flex', 'items-center', 'gap-2', styles.header)}>
         <FileTextIcon className={styles.icon} size={16} />
-        <Flexbox flex={1}>
+        <div className="flex flex-col flex-1">
           <div className={styles.title}>{title}</div>
-        </Flexbox>
-        <TooltipGroup>
-          <Flexbox horizontal gap={4}>
+        </div>
+        <TooltipProvider>
+          <div className="flex gap-1">
             <CopyButton
               content={content}
               size={'small'}
@@ -100,29 +105,28 @@ const DocumentCard = memo<DocumentCardProps>(({ content, documentId, title }) =>
                 onClick={handleToggle}
               />
             )}
-          </Flexbox>
-        </TooltipGroup>
-      </Flexbox>
-      <ScrollShadow className={styles.content} offset={12} size={12} style={{ maxHeight: 400 }}>
+          </div>
+        </TooltipProvider>
+      </div>
+      <ScrollArea className={styles.content} style={{ maxHeight: 400 }}>
         <Markdown style={{ overflow: 'unset', paddingBottom: 40 }} variant={'chat'}>
           {content}
         </Markdown>
-      </ScrollShadow>
+      </ScrollArea>
 
       {documentId && (
         <Button
-          className={styles.expandButton}
-          icon={isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
-          shape={'round'}
-          type={'default'}
+          className={cn('rounded-full', styles.expandButton)}
+          variant="outline"
           onClick={handleToggle}
         >
+          {isExpanded ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
           {isExpanded
             ? t('builtins.orvilo-notebook.actions.collapse')
             : t('builtins.orvilo-notebook.actions.expand')}
         </Button>
       )}
-    </Flexbox>
+    </div>
   );
 });
 

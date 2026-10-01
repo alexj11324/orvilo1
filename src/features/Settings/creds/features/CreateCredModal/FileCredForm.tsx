@@ -1,25 +1,17 @@
 'use client';
-
-import { InboxOutlined } from '@ant-design/icons';
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon, Button, toast, UploadDragger } from '@lobehub/ui/base-ui';
 import { useMutation } from '@tanstack/react-query';
-import { Form, Input } from 'antd';
-import { createStaticStyles } from 'antd-style';
-import { X } from 'lucide-react';
+import { Inbox, Loader2, X } from 'lucide-react';
 import { type FC, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { type CredsApi } from '../useCredsApi';
+import Form from '@/components/GroupForm';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
+import { UploadDragger } from '@/components/Upload';
 
-const styles = createStaticStyles(({ css }) => ({
-  footer: css`
-    display: flex;
-    gap: 8px;
-    justify-content: flex-end;
-    margin-block-start: 24px;
-  `,
-}));
+import { type CredsApi } from '../useCredsApi';
 
 interface FileCredFormProps {
   credsApi: CredsApi;
@@ -111,11 +103,11 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
   };
 
   return (
-    <Form<FormValues> form={form} layout="vertical" onFinish={handleSubmit}>
+    <Form form={form} layout="vertical" onFinish={handleSubmit}>
       <Form.Item required label={t('creds.form.file')}>
         <UploadDragger beforeUpload={handleUpload} disabled={isUploading || disabled} maxCount={1}>
           <p className="ant-upload-drag-icon">
-            <InboxOutlined />
+            <Inbox className="mx-auto size-8 text-muted-foreground" />
           </p>
           <p className="ant-upload-text">
             {isUploading ? t('creds.file.uploading') : t('creds.form.uploadHint')}
@@ -123,19 +115,23 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
           <p className="ant-upload-hint">{t('creds.form.uploadDesc')}</p>
         </UploadDragger>
         {fileName && (
-          <Flexbox horizontal align={'center'} gap={4} style={{ marginTop: 8 }}>
+          <div className="flex flex-row gap-[4px] items-center" style={{ marginTop: 8 }}>
             <span>
               {t('creds.form.selectedFile')}: {fileName}
             </span>
-            <ActionIcon
-              icon={X}
-              size={'small'}
+            <Button
+              aria-label={t('cancel', { ns: 'common' })}
+              size="icon-sm"
+              type="button"
+              variant="ghost"
               onClick={() => {
                 setFileHashId(null);
                 setFileName('');
               }}
-            />
-          </Flexbox>
+            >
+              <X />
+            </Button>
+          </div>
         )}
       </Form.Item>
 
@@ -159,21 +155,23 @@ const FileCredForm: FC<FileCredFormProps> = ({ credsApi, disabled, onBack, onSuc
       </Form.Item>
 
       <Form.Item label={t('creds.form.description')} name="description">
-        <Input.TextArea
+        <Textarea
           disabled={disabled}
           placeholder={t('creds.form.descriptionPlaceholder')}
           rows={2}
         />
       </Form.Item>
 
-      <div className={styles.footer}>
-        <Button onClick={onBack}>{t('creds.form.back')}</Button>
+      <div className="mt-6 flex justify-end gap-2">
+        <Button type="button" variant="outline" onClick={onBack}>
+          {t('creds.form.back')}
+        </Button>
         <Button
-          disabled={!fileHashId || disabled}
-          htmlType="submit"
-          loading={createMutation.isPending}
-          type="primary"
+          disabled={createMutation.isPending || !fileHashId || disabled}
+          type="submit"
+          variant="default"
         >
+          {createMutation.isPending && <Loader2 className="animate-spin" />}
           {t('creds.form.submit')}
         </Button>
       </div>

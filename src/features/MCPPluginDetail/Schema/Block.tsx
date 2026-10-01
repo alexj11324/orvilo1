@@ -1,8 +1,9 @@
-import { Flexbox } from '@lobehub/ui';
-import { Tabs, Tag } from '@lobehub/ui/base-ui';
 import { type ReactNode } from 'react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Badge } from '@/components/reui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 
 import { styles } from './style';
 import { ModeType } from './types';
@@ -20,35 +21,30 @@ interface BlockProps {
 const Block = memo<BlockProps>(({ title, count, desc, children, mode, setMode, id }) => {
   const { t } = useTranslation('discover');
   return (
-    <Flexbox gap={12}>
-      <Flexbox horizontal align={'center'} gap={12} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} flex={'none'} gap={8}>
+    <div className="flex flex-col gap-3">
+      <div className="flex items-center gap-3 justify-between">
+        <div className="flex items-center gap-2" style={{ flex: 'none' }}>
           <h2 className={styles.sectionTitle} id={id}>
             {title}
           </h2>
-          <Tag>{count}</Tag>
-        </Flexbox>
+          <Badge variant="secondary">{count}</Badge>
+        </div>
         <Tabs
-          activeKey={mode}
           style={{ flex: 'none', width: 'auto' }}
-          items={[
-            {
-              key: ModeType.Docs,
-              label: t('mcp.details.schema.mode.docs'),
-            },
-            {
-              key: ModeType.JSON,
-              label: 'JSON',
-            },
-          ]}
-          onChange={(key) => setMode?.(key as ModeType)}
-        />
-      </Flexbox>
+          value={mode}
+          onValueChange={(key) => setMode?.(key as ModeType)}
+        >
+          <TabsList>
+            <TabsTrigger value={ModeType.Docs}>{t('mcp.details.schema.mode.docs')}</TabsTrigger>
+            <TabsTrigger value={ModeType.JSON}>JSON</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
       <p className={styles.sectionDesc} style={{ marginTop: -6 }}>
         {desc}
       </p>
       {children}
-    </Flexbox>
+    </div>
   );
 });
 

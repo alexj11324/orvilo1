@@ -11,8 +11,11 @@ const mocks = vi.hoisted(() => ({
   revalidateTree: vi.fn(async () => undefined),
 }));
 
-vi.mock('@lobehub/ui/base-ui', () => ({
+vi.mock('@/components/Modal', () => ({
   confirmModal: mocks.confirmModal,
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: {
     error: vi.fn(),
     loading: vi.fn(() => ({ close: vi.fn() })),

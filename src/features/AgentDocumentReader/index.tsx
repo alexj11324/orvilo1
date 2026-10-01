@@ -1,17 +1,16 @@
 'use client';
 
-import { Button } from '@lobehub/ui/base-ui';
-import ActionIcon from '@lobehub/ui/es/ActionIcon/index';
-import { Center, Flexbox } from '@lobehub/ui/es/Flex/index';
-import Markdown from '@lobehub/ui/es/Markdown/index';
-import Text from '@lobehub/ui/es/Text/index';
+import { Markdown } from '@lobehub/ui';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { ArrowLeft, RefreshCw } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
+import ActionIcon from '@/components/ActionIcon';
 import ContentLoading from '@/components/Loading/ContentLoading';
+import { Button } from '@/components/ui/button';
 import { agentDocumentService, agentDocumentSWRKeys } from '@/services/agentDocument';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -60,37 +59,50 @@ const AgentDocumentReader = memo<AgentDocumentReaderProps>(({ agentId, documentI
   const title = data?.title || data?.filename || '';
 
   return (
-    <Flexbox className={styles.page}>
-      <Flexbox horizontal align={'center'} className={styles.header} gap={8}>
+    <div className={cn('flex flex-col', styles.page)}>
+      <div className={cn('flex flex-row items-center gap-2', styles.header)}>
         <ActionIcon icon={ArrowLeft} title={t('back')} onClick={backToAgent} />
-        <Text ellipsis strong style={{ flex: 1, minWidth: 0 }} title={title}>
+        <div
+          className="truncate block font-semibold"
+          style={{ flex: 1, minWidth: 0 }}
+          title={title}
+        >
           {title}
-        </Text>
-      </Flexbox>
+        </div>
+      </div>
       <div className={styles.body}>
         {!error && isLoading ? (
-          <Center height={'100%'}>
+          <div className="flex items-center justify-center" style={{ height: '100%' }}>
             <ContentLoading />
-          </Center>
+          </div>
         ) : error ? (
-          <Center gap={16} height={'100%'} padding={24}>
-            <Text type={'secondary'}>{error.message}</Text>
+          <div
+            className="flex items-center justify-center gap-4"
+            style={{ height: '100%', padding: 24 }}
+          >
+            <div className="text-muted-foreground">{error.message}</div>
             <Button
-              icon={RefreshCw}
               onClick={() => {
                 void mutate();
               }}
             >
+              <RefreshCw data-icon="inline-start" />
               {t('retry')}
             </Button>
-          </Center>
+          </div>
         ) : (
           <article className={styles.article}>
-            {data?.content ? <Markdown>{data.content}</Markdown> : <Center padding={64}>—</Center>}
+            {data?.content ? (
+              <Markdown>{data.content}</Markdown>
+            ) : (
+              <div className="flex items-center justify-center" style={{ padding: 64 }}>
+                —
+              </div>
+            )}
           </article>
         )}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import {
   AGENT_CHAT_TOPIC_URL,
   DEFAULT_AVATAR,
@@ -256,7 +255,7 @@ const SearchResults = memo<SearchResultsProps>(
           return description ? `${description} · ${formattedDate}` : formattedDate;
         }
         return (
-          <Flexbox horizontal align="center" gap={6} style={{ minWidth: 0 }}>
+          <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
             <Avatar
               avatar={result.agent.avatar || DEFAULT_AVATAR}
               background={result.agent.backgroundColor || undefined}
@@ -276,7 +275,7 @@ const SearchResults = memo<SearchResultsProps>(
                 </span>
               </>
             )}
-          </Flexbox>
+          </div>
         );
       }
 

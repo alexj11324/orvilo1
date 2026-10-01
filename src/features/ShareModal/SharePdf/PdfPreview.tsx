@@ -1,13 +1,15 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Button, createModal, Spin } from '@lobehub/ui/base-ui';
-import { Input } from 'antd';
 import { createStaticStyles, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronLeft, ChevronRight, Expand, FileText } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { createModal } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Spinner } from '@/components/ui/spinner';
 import { useIsMobile } from '@/hooks/useIsMobile';
 import { Document, Page } from '@/libs/pdfjs';
 
@@ -162,21 +164,21 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
 
       {numPages > 1 && (
         <div className={styles.fullscreenNavigation}>
-          <Flexbox horizontal align="center" gap={12}>
+          <div className="flex flex-row items-center gap-3">
             <Button
-              className={styles.fullscreenButton}
+              className={cn(styles.fullscreenButton)}
               disabled={pageNumber <= 1}
-              icon={<ChevronLeft size={16} />}
-              size="small"
-              type="text"
+              size="icon-sm"
+              variant="ghost"
               onClick={goToPrev}
-            />
-            <Flexbox horizontal align="center" gap={8}>
+            >
+              <ChevronLeft size={16} />
+            </Button>
+            <div className="flex flex-row items-center gap-2">
               <Input
                 className={styles.fullscreenPageInput}
                 max={numPages}
                 min={1}
-                size="small"
                 type="number"
                 value={pageNumber}
                 onChange={(e) => {
@@ -185,16 +187,17 @@ const FullscreenContent = memo<FullscreenContentProps>(({ pdfDataUri, initialPag
                 }}
               />
               <span className={styles.fullscreenPageText}>/ {numPages}</span>
-            </Flexbox>
+            </div>
             <Button
-              className={styles.fullscreenButton}
+              className={cn(styles.fullscreenButton)}
               disabled={pageNumber >= numPages}
-              icon={<ChevronRight size={16} />}
-              size="small"
-              type="text"
+              size="icon-sm"
+              variant="ghost"
               onClick={goToNext}
-            />
-          </Flexbox>
+            >
+              <ChevronRight size={16} />
+            </Button>
+          </div>
         </div>
       )}
     </div>
@@ -259,7 +262,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
         style={{ padding: 12 }}
       >
         <div className={localStyles.loadingState}>
-          <Spin size={24} />
+          <Spinner style={{ height: 24, width: 24 }} />
           <div className={localStyles.loadingText}>{t('shareModal.generatingPdf')}</div>
         </div>
       </div>
@@ -273,7 +276,8 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
         style={{ padding: 12 }}
       >
         <div className={localStyles.emptyState}>
-          <Button icon={<FileText size={20} />} size="large" type="primary" onClick={onGeneratePdf}>
+          <Button size="lg" variant="default" onClick={onGeneratePdf}>
+            <FileText size={20} />
             {t('shareModal.generatePdf')}
           </Button>
         </div>
@@ -291,12 +295,13 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
     <div className={localStyles.containerWrapper}>
       {pdfData && (
         <Button
-          className={localStyles.expandButton}
-          icon={<Expand size={16} />}
-          size="small"
-          type="text"
+          className={cn(localStyles.expandButton)}
+          size="icon-sm"
+          variant="ghost"
           onClick={handleFullscreen}
-        />
+        >
+          <Expand size={16} />
+        </Button>
       )}
 
       <div
@@ -310,7 +315,7 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
           file={pdfDataUri}
           loading={
             <div className={localStyles.documentLoading}>
-              <Spin />
+              <Spinner />
               <div className={localStyles.loadingText}>{t('shareModal.loadingPdf')}</div>
             </div>
           }
@@ -327,20 +332,20 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
 
       {pdfData && numPages > 1 && (
         <div className={localStyles.footerNavigation}>
-          <Flexbox horizontal align="center" gap={8} justify="center">
+          <div className="flex flex-row items-center gap-2 justify-center">
             <Button
               disabled={pageNumber <= 1}
-              icon={<ChevronLeft size={16} />}
-              size="small"
-              type="text"
+              size="icon-sm"
+              variant="ghost"
               onClick={goToPrevPage}
-            />
-            <Flexbox horizontal align="center" gap={4}>
+            >
+              <ChevronLeft size={16} />
+            </Button>
+            <div className="flex flex-row items-center gap-1">
               <Input
                 className={localStyles.pageInput}
                 max={numPages}
                 min={1}
-                size="small"
                 type="number"
                 value={pageNumber}
                 onChange={(e) => {
@@ -349,15 +354,16 @@ const PdfPreview = memo<PdfPreviewProps>(({ loading, pdfData, onGeneratePdf }) =
                 }}
               />
               <span className={localStyles.pageNumberText}>/ {numPages}</span>
-            </Flexbox>
+            </div>
             <Button
               disabled={pageNumber >= numPages}
-              icon={<ChevronRight size={16} />}
-              size="small"
-              type="text"
+              size="icon-sm"
+              variant="ghost"
               onClick={goToNextPage}
-            />
-          </Flexbox>
+            >
+              <ChevronRight size={16} />
+            </Button>
+          </div>
         </div>
       )}
     </div>

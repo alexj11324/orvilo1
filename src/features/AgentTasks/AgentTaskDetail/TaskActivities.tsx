@@ -1,5 +1,3 @@
-import { Block, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Avatar, Collapsible, Text } from '@lobehub/ui/base-ui';
 import type {
   BriefType,
   TaskAutomationSnapshot,
@@ -19,12 +17,15 @@ import {
   UserRoundCog,
 } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { memo, useCallback, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useMemo, useState } from 'react';
 import { Trans, useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import Avatar from '@/components/Avatar';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { getPriorityIconColor } from '@/components/PriorityIcon';
+import SimpleEmpty from '@/components/SimpleEmpty';
+import { Collapsible, CollapsibleContent } from '@/components/ui/collapsible';
 import AgentProfilePopup from '@/features/AgentProfileCard/AgentProfilePopup';
 import LinearTaskSyncStatus from '@/features/AgentTasks/shared/LinearTaskSyncStatus';
 import type { BriefItem } from '@/features/DailyBrief/types';
@@ -157,13 +158,16 @@ const RelativeTime = memo<{ time?: string }>(({ time }) => {
  */
 const FeedLine = memo<{ children: ReactNode; mark: ReactNode; time?: string }>(
   ({ children, mark, time }) => (
-    <Flexbox horizontal align={'center'} className={styles.activityLine} gap={8}>
+    <div className={`flex items-center gap-2 ${styles.activityLine}`}>
       <div className={styles.activityMark}>{mark}</div>
-      <Text ellipsis style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}>
+      <div
+        className="truncate block"
+        style={{ color: cssVar.colorTextSecondary, flex: 1, minWidth: 0 }}
+      >
         {children}
         <RelativeTime time={time} />
-      </Text>
-    </Flexbox>
+      </div>
+    </div>
   ),
 );
 
@@ -181,7 +185,7 @@ const RowMark = ({
   author?.avatar ? (
     <Avatar avatar={author.avatar} size={16} />
   ) : (
-    <Icon color={cssVar.colorTextTertiary} icon={icon} size={14} />
+    createElement(icon, { color: cssVar.colorTextTertiary, size: 14 })
   );
 
 /** Compact one-line row for created / topic / comment bookkeeping. */
@@ -425,9 +429,9 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
     const flush = () => {
       if (run.length === 0) return;
       out.push(
-        <Flexbox className={styles.activityTimeline} key={`rail-${out.length}`}>
+        <div className={`flex flex-col ${styles.activityTimeline}`} key={`rail-${out.length}`}>
           {run}
-        </Flexbox>,
+        </div>,
       );
       run = [];
     };
@@ -488,7 +492,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         }),
       )
     ) : (
-      <Empty
+      <SimpleEmpty
         description={t('taskDetail.activitiesEmpty')}
         icon={BotMessageSquare}
         style={{ marginTop: 8 }}
@@ -504,40 +508,36 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   // report.
   if (variant === 'result') {
     return (
-      <Flexbox gap={12}>
+      <div className="flex flex-col gap-3">
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         {rows}
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox gap={8}>
-      <Block
-        clickable
-        horizontal
-        align="center"
-        gap={8}
-        paddingBlock={4}
-        paddingInline={8}
+    <div className="flex flex-col gap-2">
+      <div
+        className="flex items-center gap-2 px-2 py-1"
         style={{ cursor: 'pointer', width: 'fit-content' }}
-        variant="borderless"
         onClick={() => setIsExpanded((prev) => !prev)}
       >
-        <Icon color={cssVar.colorTextDescription} icon={BotMessageSquare} size={16} />
-        <Text color={cssVar.colorTextSecondary} fontSize={13} weight={500}>
+        <BotMessageSquare color={cssVar.colorTextDescription} size={16} />
+        <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.activities')}
-        </Text>
+        </div>
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
-      </Block>
+      </div>
       <Collapsible open={isExpanded}>
-        <Flexbox gap={12} paddingBlock={4} paddingInline={12}>
-          {commentInput}
-          {rows}
-        </Flexbox>
+        <CollapsibleContent>
+          <div className="flex flex-col gap-3 px-3 py-1">
+            {commentInput}
+            {rows}
+          </div>
+        </CollapsibleContent>
       </Collapsible>
-    </Flexbox>
+    </div>
   );
 });
 

@@ -23,7 +23,9 @@ import labs from './labs';
 import marketAuth from './marketAuth';
 import memory from './memory';
 import metadata from './metadata';
+import modelProvider from './modelProvider';
 import modelRuntime from './modelRuntime';
+import models from './models';
 import notification from './notification';
 import oauth from './oauth';
 import onboarding from './onboarding';
@@ -33,6 +35,7 @@ import pageShare from './pageShare';
 import plugin from './plugin';
 import portal from './portal';
 import project from './project';
+import providers from './providers';
 import ragEval from './ragEval';
 import selfLearning from './selfLearning';
 import setting from './setting';
@@ -72,16 +75,19 @@ const resources = {
   marketAuth,
   memory,
   metadata,
+  modelProvider,
   modelRuntime,
+  models,
   notification,
   oauth,
   onboarding,
-  opStatusTray,
   openInApp,
+  opStatusTray,
   pageShare,
   plugin,
   portal,
   project,
+  providers,
   ragEval,
   selfLearning,
   setting,

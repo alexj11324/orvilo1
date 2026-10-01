@@ -41,24 +41,12 @@ const mocks = vi.hoisted(() => ({
 
 // The real Popover only mounts its content after an open interaction; the
 // assertions read the selector list synchronously.
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Popover: ({
-    children,
-    content,
-    onOpenChange,
-  }: {
-    children: ReactNode;
-    content: ReactNode;
-    onOpenChange?: (open: boolean) => void;
-  }) => (
-    <div>
-      <button data-testid="open-popover" onClick={() => onOpenChange?.(true)}>
-        {children}
-      </button>
-      <div data-testid="popover-content">{content}</div>
-    </div>
+vi.mock('@/components/ui/popover', () => ({
+  Popover: ({ children }: { children: ReactNode }) => <>{children}</>,
+  PopoverContent: ({ children }: { children: ReactNode }) => (
+    <div data-testid="popover-content">{children}</div>
   ),
+  PopoverTrigger: ({ render }: { render: ReactNode }) => render,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -138,7 +126,7 @@ describe('AgentSelectorAction', () => {
 
   it('uses the active agent avatar and forwards agent changes', () => {
     const onAgentChange = vi.fn();
-    const { getByText, getByTestId } = render(
+    const { getByTestId, getByText } = render(
       <AgentSelectorAction onAgentChange={onAgentChange} />,
     );
 

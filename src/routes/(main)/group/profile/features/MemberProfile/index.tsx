@@ -1,8 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Alert, Button } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import isEqual from 'fast-deep-equal';
 import { InfoIcon, PlayIcon } from 'lucide-react';
 import React, { memo, useCallback, useEffect, useMemo } from 'react';
@@ -10,6 +7,9 @@ import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import urlJoin from 'url-join';
 
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Separator } from '@/components/ui/separator';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { usePermission } from '@/hooks/usePermission';
 import { useQueryRoute } from '@/hooks/useQueryRoute';
@@ -103,21 +103,19 @@ const MemberProfile = memo(() => {
   return (
     <>
       {/* External agent warning or AutoSaveHint */}
-      <Flexbox height={66} width={'100%'}>
+      <div className="flex flex-col" style={{ height: 66, width: '100%' }}>
         {isExternal && !isSupervisor && (
-          <Alert
-            icon={<Icon icon={InfoIcon} />}
-            style={{ width: '100%' }}
-            title={t('group.profile.externalAgentWarning', { ns: 'chat' })}
-            type="secondary"
-            variant={'outlined'}
-          />
+          <Alert style={{ width: '100%' }} variant="info">
+            <InfoIcon />
+            <AlertTitle>{t('group.profile.externalAgentWarning', { ns: 'chat' })}</AlertTitle>
+          </Alert>
         )}
-        <Flexbox paddingBlock={12}>
+        <div className="flex flex-col py-3">
           <AutoSaveHint />
-        </Flexbox>
-      </Flexbox>
-      <Flexbox
+        </div>
+      </div>
+      <div
+        className="flex flex-col"
         style={{ cursor: 'default', marginBottom: 12 }}
         onClick={(e) => {
           e.stopPropagation();
@@ -126,27 +124,20 @@ const MemberProfile = memo(() => {
         {/* Header: Avatar + Name */}
         <AgentHeader disabled={!canEdit} readOnly={isSupervisor} />
         <AgentTool />
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={8}
-          justify={'flex-start'}
-          style={{ marginTop: 16 }}
-        >
+        <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
           <Button
             disabled={!canEdit}
-            icon={PlayIcon}
-            type={'primary'}
             onClick={() => {
               if (!groupId) return;
               router.push(urlJoin('/group', groupId));
             }}
           >
+            <PlayIcon data-icon="inline-start" />
             {t('startConversation')}
           </Button>
-        </Flexbox>
-      </Flexbox>
-      <Divider />
+        </div>
+      </div>
+      <Separator />
       {/* Main Content: Prompt Editor */}
       <EditorCanvas
         disabled={!canEdit}

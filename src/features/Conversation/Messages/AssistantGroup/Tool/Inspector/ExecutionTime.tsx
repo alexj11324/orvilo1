@@ -1,4 +1,3 @@
-import { Text } from '@lobehub/ui/base-ui';
 import { memo, useEffect, useState } from 'react';
 
 interface ExecutionTimeProps {
@@ -75,9 +74,12 @@ const ExecutionTime = memo<ExecutionTimeProps>(({ isExecuting, startTime, timerK
   if (!isExecuting) return null;
 
   return (
-    <Text fontSize={12} style={{ flexShrink: 0, whiteSpace: 'nowrap' }} type="secondary">
+    <div
+      className="text-[12px] text-muted-foreground"
+      style={{ flexShrink: 0, whiteSpace: 'nowrap' }}
+    >
       {formatElapsedTime(elapsed)}
-    </Text>
+    </div>
   );
 });
 

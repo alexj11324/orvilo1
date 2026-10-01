@@ -1,16 +1,19 @@
-import { type MenuProps } from '@lobehub/ui';
-import { Icon } from '@lobehub/ui';
-import { confirmModal } from '@lobehub/ui/base-ui';
 import type { RecentItem } from '@orvilo/types';
 import { PencilLineIcon, Trash } from 'lucide-react';
-import { useCallback } from 'react';
+import { createElement, useCallback } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useDocumentTransferMenuItem } from '@/business/client/hooks/useDocumentTransferMenuItem';
 import { useTaskTransferMenuItem } from '@/business/client/hooks/useTaskTransferMenuItem';
+import type { ItemType } from '@/components/Menu';
+import { confirmModal } from '@/components/Modal';
 import { confirmRemoveTopic } from '@/features/DeleteTopicConfirm';
 import { FAVORITE_MARK, FAVORITE_MARK_OFF } from '@/features/HomeSidebar/Body/favoriteIcons';
 import { useWorkFavoriteToggle } from '@/features/HomeSidebar/Body/useWorkFavoriteToggle';
+import type {
+  SidebarMenuItemData,
+  SidebarMenuItems,
+} from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useCacheScope } from '@/libs/swr/useCacheScope';
@@ -96,12 +99,12 @@ export const useRecentItemDropdownMenu = (
     });
   }, [item, refreshRecents, scope, t]);
 
-  const dropdownMenu = useCallback((): MenuProps['items'] => {
-    const items: NativeContextMenuItem[] = [
+  const dropdownMenu = useCallback((): SidebarMenuItems => {
+    const items: (NativeContextMenuItem | SidebarMenuItemData | ItemType)[] = [
       ...(pinType
         ? ([
             {
-              icon: <Icon icon={pinned ? FAVORITE_MARK_OFF.pin : FAVORITE_MARK.pin} />,
+              icon: createElement(pinned ? FAVORITE_MARK_OFF.pin : FAVORITE_MARK.pin),
               key: 'pin',
               label: pinned ? t('pinOff') : t('pin'),
               onClick: () => void togglePin(),
@@ -113,7 +116,7 @@ export const useRecentItemDropdownMenu = (
         ? ([
             {
               disabled: !canEdit,
-              icon: <Icon icon={PencilLineIcon} />,
+              icon: <PencilLineIcon />,
               key: 'rename',
               label: t('rename'),
               onClick: () => toggleEditing(true),
@@ -130,7 +133,7 @@ export const useRecentItemDropdownMenu = (
             {
               danger: true,
               disabled: !canEdit,
-              icon: <Icon icon={Trash} />,
+              icon: <Trash />,
               key: 'delete',
               label: t('delete'),
               onClick: handleDelete,
@@ -139,7 +142,7 @@ export const useRecentItemDropdownMenu = (
           ] satisfies NativeContextMenuItem[])
         : []),
     ];
-    return items as MenuProps['items'];
+    return items as SidebarMenuItems;
   }, [
     canEdit,
     handleDelete,

@@ -1,5 +1,3 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { ActionIcon, Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar } from 'antd-style';
 import {
   CheckIcon,
@@ -13,6 +11,8 @@ import { AnimatePresence } from 'motion/react';
 import * as m from 'motion/react-m';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
 
 import Item from './Item';
 import {
@@ -107,14 +107,18 @@ const useAutoDismiss = (tasks: DockTask[]) => {
   useEffect(() => {
     if (!ids) return;
 
-    const timers = ids.split('|').map((id) =>
-      setTimeout(() => {
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    for (const id of ids.split('|')) {
+      const timer = setTimeout(() => {
         const task = tasksRef.current.find((candidate) => candidate.id === id);
         if (task && shouldAutoDismiss(task)) task.dismiss?.();
-      }, AUTO_DISMISS_DELAY),
-    );
+      }, AUTO_DISMISS_DELAY);
+      timers.push(timer);
+    }
 
-    return () => timers.forEach((timer) => clearTimeout(timer));
+    return () => {
+      for (const timer of timers) clearTimeout(timer);
+    };
   }, [ids]);
 };
 
@@ -156,16 +160,16 @@ const TaskDock = memo(() => {
   const icon = useMemo(() => {
     switch (status) {
       case 'success': {
-        return <Icon color={cssVar.colorSuccess} icon={CheckIcon} size={16} />;
+        return <CheckIcon color={cssVar.colorSuccess} size={16} />;
       }
       case 'error': {
-        return <Icon color={cssVar.colorError} icon={TriangleAlertIcon} size={16} />;
+        return <TriangleAlertIcon color={cssVar.colorError} size={16} />;
       }
       case 'cancelled': {
-        return <Icon color={cssVar.colorTextDescription} icon={CircleSlashIcon} size={16} />;
+        return <CircleSlashIcon color={cssVar.colorTextDescription} size={16} />;
       }
       default: {
-        return <Icon spin icon={LoaderCircleIcon} size={16} />;
+        return <LoaderCircleIcon className="animate-spin" size={16} />;
       }
     }
   }, [status]);
@@ -176,46 +180,41 @@ const TaskDock = memo(() => {
   // whatever it left behind.
   if (shape === 'solo') {
     return (
-      <Flexbox className={styles.container}>
+      <div className={`flex flex-col ${styles.container}`}>
         <Item {...tasks[0]} solo />
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox
-        horizontal
-        align={'center'}
-        className={`${styles.head} ${expand ? styles.headDivider : ''}`}
-        gap={10}
+    <div className={`flex flex-col ${styles.container}`}>
+      <div
+        className={`flex items-center gap-2.5 ${styles.head} ${expand ? styles.headDivider : ''}`}
         onClick={() => setExpand(!expand)}
       >
         {icon}
-        <Flexbox horizontal align={'baseline'} flex={1} gap={7} style={{ minWidth: 0 }}>
-          <Text style={{ fontSize: 14 }}>{t(`taskDock.status.${status}`)}</Text>
-          <Text ellipsis style={{ fontSize: 12 }} type={'secondary'}>
+        <div className="flex flex-1 items-baseline gap-[7px]" style={{ minWidth: 0 }}>
+          <div style={{ fontSize: 14 }}>{t(`taskDock.status.${status}`)}</div>
+          <div className="truncate min-w-0 text-muted-foreground" style={{ fontSize: 12 }}>
             {activeCount > 0
               ? t('taskDock.activeOf', { active: activeCount, total: tasks.length })
               : t('taskDock.totalCount', { count: tasks.length })}
-          </Text>
-        </Flexbox>
-        <Flexbox
-          horizontal
-          align={'center'}
-          gap={4}
+          </div>
+        </div>
+        <div
+          className="flex items-center gap-1"
           onClick={(e) => {
             e.stopPropagation();
           }}
         >
           {canCancel && (
-            <Text
+            <div
+              className="text-muted-foreground"
               style={{ cursor: 'pointer', flexShrink: 0, fontSize: 12 }}
-              type={'secondary'}
               onClick={cancelAll}
             >
               {t('taskDock.cancelAll')}
-            </Text>
+            </div>
           )}
           {isRunning ? (
             <ActionIcon
@@ -228,8 +227,8 @@ const TaskDock = memo(() => {
           ) : (
             <ActionIcon icon={XIcon} size={'small'} onClick={dismissAll} />
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
 
       <AnimatePresence initial={false}>
         {expand && (
@@ -240,15 +239,11 @@ const TaskDock = memo(() => {
             style={{ overflow: 'hidden' }}
             transition={{ duration: 0.22, ease: 'easeInOut' }}
           >
-            <Flexbox className={styles.list}>
+            <div className={`flex flex-col ${styles.list}`}>
               {groups.map((group) => (
-                <Flexbox key={group.label}>
-                  <Flexbox
-                    horizontal
-                    align={'center'}
-                    className={styles.groupHead}
-                    justify={'space-between'}
-                    paddingBlock={5}
+                <div className="flex flex-col" key={group.label}>
+                  <div
+                    className={`flex items-center justify-between py-[5px] ${styles.groupHead}`}
                     // The count aligns with the rows' action glyphs, which sit
                     // 5px inside their own hit area — not with the row padding.
                     style={{ paddingInlineEnd: 19, paddingInlineStart: 12 }}
@@ -259,19 +254,19 @@ const TaskDock = memo(() => {
                         ? `${group.tasks.filter(isActiveTask).length} / ${group.tasks.length}`
                         : group.tasks.length}
                     </span>
-                  </Flexbox>
+                  </div>
                   {group.tasks.map((task) => (
-                    <Flexbox className={styles.row} key={task.id}>
+                    <div className={`flex flex-col ${styles.row}`} key={task.id}>
                       <Item {...task} />
-                    </Flexbox>
+                    </div>
                   ))}
-                </Flexbox>
+                </div>
               ))}
-            </Flexbox>
+            </div>
           </m.div>
         )}
       </AnimatePresence>
-    </Flexbox>
+    </div>
   );
 });
 

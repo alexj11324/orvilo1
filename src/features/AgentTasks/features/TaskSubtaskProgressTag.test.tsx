@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({
   toastError: vi.fn(),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/ItemsMenu', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   DropdownMenu: ({
     children,
@@ -42,6 +42,9 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
       ))}
     </div>
   ),
+}));
+
+vi.mock('@/components/toast', () => ({
   toast: { error: mocks.toastError },
 }));
 

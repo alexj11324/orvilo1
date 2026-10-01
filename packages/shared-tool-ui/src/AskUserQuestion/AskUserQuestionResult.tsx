@@ -1,8 +1,7 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import type { AskUserQuestionItem } from './types';
@@ -119,27 +118,27 @@ const QuestionAnswer = memo<QuestionAnswerProps>(
       question.options.some((o) => o.label === label && o.recommended);
 
     return (
-      <Flexbox align="flex-start" gap={8} horizontal={!!index}>
+      <div className="flex items-start gap-2">
         {!!index && <span className={styles.ordinal}>{`Q${index}`}</span>}
-        <Flexbox className={styles.questionContent} flex={1} gap={4}>
+        <div className={cn('flex', 'flex-col', 'flex-1', 'gap-1', styles.questionContent)}>
           <div className={index ? styles.titleRow : undefined}>
             <span className={styles.question}>{question.question}</span>
             {!!index && question.header && <span className={styles.header}>{question.header}</span>}
           </div>
           {labels.length > 0 ? (
             labels.map((label) => (
-              <Flexbox horizontal align="center" gap={8} key={label}>
+              <div className="flex items-center gap-2" key={label}>
                 <span className={styles.answer}>{label}</span>
                 {isRecommended(label) && (
                   <span className={styles.recommendedBadge}>{recommendedTag}</span>
                 )}
-              </Flexbox>
+              </div>
             ))
           ) : (
             <span className={styles.unanswered}>{notAnswered}</span>
           )}
-        </Flexbox>
-      </Flexbox>
+        </div>
+      </div>
     );
   },
 );
@@ -169,14 +168,9 @@ export const AskUserQuestionResult = memo<AskUserQuestionResultProps>(
 
     if (freeformText) {
       return (
-        <Flexbox className={styles.container} gap={16}>
+        <div className={cn('flex', 'flex-col', 'gap-4', styles.container)}>
           {questions.map((question, index) => (
-            <Flexbox
-              align="flex-start"
-              gap={8}
-              horizontal={multiple}
-              key={`${question.question}-${index}`}
-            >
+            <div className="flex items-start gap-2" key={`${question.question}-${index}`}>
               {multiple && <span className={styles.ordinal}>{`Q${index + 1}`}</span>}
               <div
                 className={`${styles.questionContent} ${multiple ? styles.titleRow : ''}`.trim()}
@@ -186,17 +180,17 @@ export const AskUserQuestionResult = memo<AskUserQuestionResultProps>(
                   <span className={styles.header}>{question.header}</span>
                 )}
               </div>
-            </Flexbox>
+            </div>
           ))}
           {multiple && <div className={styles.divider} />}
           <span className={styles.answer}>{freeformText}</span>
-          {isError && <Text type="warning">{labels.noAnswer}</Text>}
-        </Flexbox>
+          {isError && <div className="text-warning">{labels.noAnswer}</div>}
+        </div>
       );
     }
 
     return (
-      <Flexbox className={styles.container} gap={16}>
+      <div className={cn('flex', 'flex-col', 'gap-4', styles.container)}>
         {questions.map((question, index) => (
           <QuestionAnswer
             answer={answers?.[question.question]}
@@ -208,13 +202,13 @@ export const AskUserQuestionResult = memo<AskUserQuestionResultProps>(
           />
         ))}
         {supplementText && (
-          <Flexbox gap={4}>
+          <div className="flex flex-col gap-1">
             <span className={styles.header}>{labels.supplement}</span>
             <span className={styles.answer}>{supplementText}</span>
-          </Flexbox>
+          </div>
         )}
-        {isError && <Text type="warning">{labels.noAnswer}</Text>}
-      </Flexbox>
+        {isError && <div className="text-warning">{labels.noAnswer}</div>}
+      </div>
     );
   },
 );

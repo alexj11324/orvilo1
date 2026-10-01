@@ -6,6 +6,7 @@ export const HATCHET_TASK_NAMES = {
   goalSweep: 'orvilo-goal-sweep',
   linearSyncSweep: 'orvilo-linear-sync-sweep',
   taskHeartbeat: 'orvilo-task-heartbeat',
+  taskReminderSweep: 'orvilo-task-reminder-sweep',
   taskScheduleDispatch: 'orvilo-task-schedule-dispatch',
   taskScheduleExecute: 'orvilo-task-schedule-execute',
   taskScheduledTopicDispatch: 'orvilo-task-scheduled-topic-dispatch',

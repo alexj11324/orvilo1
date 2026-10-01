@@ -1,11 +1,11 @@
-import { Flexbox, Icon, Markdown } from '@lobehub/ui';
-import { Tabs } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import { BoltIcon, FileIcon } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Loading from '@/components/Loading/CircleLoading';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import FileNotFound from '@/features/FileNotFound';
 import FileViewer from '@/features/FileViewer';
 import { normalizeAsyncError } from '@/libs/swr/normalizeError';
@@ -45,54 +45,51 @@ const FilePreview = () => {
   // Other failures offer Reload.
   if (error && normalizeAsyncError(error).status !== 404) {
     return (
-      <Flexbox flex={1} padding={16}>
+      <div className="flex flex-col flex-1 p-4">
         <AsyncError error={error} variant={'block'} onRetry={() => void mutate()} />
-      </Flexbox>
+      </div>
     );
   }
   if (error || !data) return <FileNotFound />;
 
   const showChunk = tab === FilePreviewTab.Chunk && !!chunkText;
   return (
-    <Flexbox
-      height={'100%'}
-      paddingBlock={'0 4px'}
-      paddingInline={4}
-      style={{ borderRadius: 4, overflow: 'hidden' }}
+    <div
+      className="flex flex-col h-[100%] px-1"
+      style={{ borderRadius: 4, overflow: 'hidden', paddingBlock: '0 4px' }}
     >
       {chunkText && (
         <Tabs
-          activeKey={tab}
-          items={[
-            {
-              icon: <Icon icon={BoltIcon} />,
-              key: FilePreviewTab.Chunk,
-              label: t('FilePreview.tabs.chunk'),
-            },
-            {
-              icon: <Icon icon={FileIcon} />,
-              key: FilePreviewTab.File,
-              label: t('FilePreview.tabs.file'),
-            },
-          ]}
-          styles={{
-            list: { display: 'flex', width: '100%' },
-            tab: { flex: 1 },
-          }}
-          onChange={(key) =>
+          value={tab}
+          onValueChange={(key) =>
             setTabByTopic((prev) => ({ ...prev, [topicKey]: key as FilePreviewTab }))
           }
-        />
+        >
+          <TabsList className="flex w-full">
+            <TabsTrigger className="flex-1" value={FilePreviewTab.Chunk}>
+              <span className="anticon" role="img">
+                <BoltIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+              {t('FilePreview.tabs.chunk')}
+            </TabsTrigger>
+            <TabsTrigger className="flex-1" value={FilePreviewTab.File}>
+              <span className="anticon" role="img">
+                <FileIcon fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
+              </span>
+              {t('FilePreview.tabs.file')}
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
       )}
 
       {showChunk ? (
         <Markdown style={{ overflow: 'scroll', paddingInline: 8 }}>{chunkText}</Markdown>
       ) : (
-        <Flexbox flex={1} paddingBlock={8} style={{ overflow: 'scroll' }}>
+        <div className="flex flex-col flex-1 py-2" style={{ overflow: 'scroll' }}>
           <FileViewer {...data} />
-        </Flexbox>
+        </div>
       )}
-    </Flexbox>
+    </div>
   );
 };
 

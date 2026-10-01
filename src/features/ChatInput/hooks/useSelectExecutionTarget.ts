@@ -1,10 +1,10 @@
 'use client';
 
-import { toast } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { type DeviceExecutionTarget, snapshotTopicExecutionConfig } from '@orvilo/types';
 import { t } from 'i18next';
 
+import { toast } from '@/components/toast';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
 import { useChatStore } from '@/store/chat';

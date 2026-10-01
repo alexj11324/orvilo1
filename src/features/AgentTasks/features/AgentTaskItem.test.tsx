@@ -26,9 +26,8 @@ vi.mock('react-router', () => ({
   useNavigate: () => mocks.navigate,
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Tooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
+vi.mock('./SimpleTooltip', () => ({
+  SimpleTooltip: ({ children, title }: { children: ReactNode; title?: ReactNode }) => (
     <span data-tooltip={String(title ?? '')}>{children}</span>
   ),
 }));

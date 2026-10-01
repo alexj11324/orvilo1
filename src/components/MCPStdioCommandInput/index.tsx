@@ -6,10 +6,16 @@ import {
   SiPnpm,
   SiPython,
 } from '@icons-pack/react-simple-icons';
-import { Flexbox } from '@lobehub/ui';
-import { AutoComplete, type AutoCompleteProps } from '@lobehub/ui/base-ui';
-import { type FC } from 'react';
+import { type ComponentProps, type FC } from 'react';
 import { memo } from 'react';
+
+import {
+  Autocomplete,
+  AutocompleteContent,
+  AutocompleteInput,
+  AutocompleteItem,
+  AutocompleteList,
+} from '@/components/reui/autocomplete';
 
 import { parseCommandInput } from './parseCommandInput';
 
@@ -32,36 +38,54 @@ const STDIO_COMMAND_OPTIONS: {
   { color: '#2496ED', icon: SiDocker, value: 'docker' },
 ];
 
-interface MCPStdioCommandInputProps extends AutoCompleteProps {
+interface MCPStdioCommandInputProps extends Omit<
+  ComponentProps<typeof AutocompleteInput>,
+  'onChange' | 'value'
+> {
+  onChange?: (value: string) => void;
   onParsedArgs?: (args: string[]) => void;
+  value?: string;
 }
 
-const MCPStdioCommandInput = memo<MCPStdioCommandInputProps>(({ onParsedArgs, ...props }) => {
-  const handleBlur = () => {
-    if (typeof props.value !== 'string') return;
-    const parsed = parseCommandInput(props.value);
-    if (!parsed) return;
+const MCPStdioCommandInput = memo<MCPStdioCommandInputProps>(
+  ({ onParsedArgs, onChange, value, ...props }) => {
+    const handleBlur = () => {
+      if (typeof value !== 'string') return;
+      const parsed = parseCommandInput(value);
+      if (!parsed) return;
 
-    props.onChange?.(parsed.command);
-    if (parsed.args.length > 0) onParsedArgs?.(parsed.args);
-  };
+      onChange?.(parsed.command);
+      if (parsed.args.length > 0) onParsedArgs?.(parsed.args);
+    };
 
-  return (
-    <div style={{ display: 'contents' }} onBlur={handleBlur}>
-      <AutoComplete
-        options={STDIO_COMMAND_OPTIONS.map(({ value, icon: Icon, color }) => ({
-          label: (
-            <Flexbox horizontal align={'center'} gap={8}>
-              {Icon && <Icon color={color} size={16} />}
-              {value}
-            </Flexbox>
-          ),
-          value,
-        }))}
-        {...props}
-      />
-    </div>
-  );
-});
+    return (
+      <div style={{ display: 'contents' }} onBlur={handleBlur}>
+        <Autocomplete
+          items={STDIO_COMMAND_OPTIONS.map((option) => option.value)}
+          value={value}
+          onValueChange={onChange}
+        >
+          <AutocompleteInput
+            value={value}
+            onChange={(event) => onChange?.(event.target.value)}
+            {...props}
+          />
+          <AutocompleteContent>
+            <AutocompleteList>
+              {STDIO_COMMAND_OPTIONS.map(({ value, icon: Icon, color }) => (
+                <AutocompleteItem key={value} value={value}>
+                  <div className={'flex gap-2 items-center'}>
+                    {Icon && <Icon color={color} size={16} />}
+                    {value}
+                  </div>
+                </AutocompleteItem>
+              ))}
+            </AutocompleteList>
+          </AutocompleteContent>
+        </Autocomplete>
+      </div>
+    );
+  },
+);
 
 export default MCPStdioCommandInput;

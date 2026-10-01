@@ -1,10 +1,10 @@
-import { Form, Markdown } from '@lobehub/ui';
+import { Markdown } from '@lobehub/ui';
 import { type ToolManifestSettings } from '@orvilo/types';
-import { Form as AForm } from 'antd';
 import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
 import { memo } from 'react';
 
+import Form from '@/components/GroupForm';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
 
@@ -43,7 +43,7 @@ const PluginSettingsConfig = memo<PluginSettingsConfigProps>(({ schema, id }) =>
   const [updatePluginSettings] = useToolStore((s) => [s.updatePluginSettings]);
   const pluginSetting = useToolStore(pluginSelectors.getPluginSettingsById(id), isEqual);
 
-  const [form] = AForm.useForm();
+  const [form] = Form.useForm();
 
   const items = transformPluginSettings(schema);
 

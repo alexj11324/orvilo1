@@ -1,19 +1,15 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import {
-  Alert,
-  Button,
-  ModalFooter,
-  Select,
-  SkeletonText,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import { AlertTriangle } from 'lucide-react';
 import { memo, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { ModalFooter, useModalContext } from '@/components/Modal';
+import Select from '@/components/Select';
+import { Alert, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 
 import type { WorkspaceMemberSummary } from '../api/contract';
 import { useRemovalPreview, useTeammateActions } from '../api/hooks';
@@ -80,60 +76,65 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
       preview.sharedDeviceCount > 0);
 
   return (
-    <Flexbox className={styles.body} gap={16}>
-      <Alert
-        icon={<Icon icon={AlertTriangle} size={16} />}
-        title={t('workspaceSetting.members.removeWarning', { name: target.displayName })}
-        type="warning"
-      />
+    <div className={cx(styles.body, 'flex flex-col gap-4')}>
+      <Alert variant="warning">
+        <AlertTriangle size={16} />
+        <AlertTitle>
+          {t('workspaceSetting.members.removeWarning', { name: target.displayName })}
+        </AlertTitle>
+      </Alert>
 
       {isLoading && (
-        <Flexbox gap={10}>
-          <SkeletonText style={{ marginBottom: 0, width: '70%' }} />
-          <SkeletonText style={{ marginBottom: 0, width: '55%' }} />
-          <SkeletonText style={{ marginBottom: 0, width: '60%' }} />
-        </Flexbox>
+        <div className="flex flex-col gap-2.5">
+          <Skeleton className="h-3" style={{ marginBottom: 0, width: '70%' }} />
+          <Skeleton className="h-3" style={{ marginBottom: 0, width: '55%' }} />
+          <Skeleton className="h-3" style={{ marginBottom: 0, width: '60%' }} />
+        </div>
       )}
-      {error && <Alert title={t('workspaceSetting.members.previewFailed')} type="error" />}
+      {error && (
+        <Alert variant="destructive">
+          <AlertTitle>{t('workspaceSetting.members.previewFailed')}</AlertTitle>
+        </Alert>
+      )}
       {preview && (
-        <Flexbox gap={4}>
-          <Text fontSize={13} weight={500}>
+        <div className="flex flex-col gap-1">
+          <div className="text-[13px] font-medium">
             {t('workspaceSetting.members.previewTitle')}
-          </Text>
-          <div className={styles.previewRow}>
-            <Text fontSize={13} type="secondary">
-              {t('workspaceSetting.members.previewTasks', { count: preview.assignedTaskCount })}
-            </Text>
           </div>
           <div className={styles.previewRow}>
-            <Text fontSize={13} type="secondary">
+            <div className="text-[13px] text-muted-foreground">
+              {t('workspaceSetting.members.previewTasks', { count: preview.assignedTaskCount })}
+            </div>
+          </div>
+          <div className={styles.previewRow}>
+            <div className="text-[13px] text-muted-foreground">
               {t('workspaceSetting.members.previewReviews', {
                 count: preview.reviewingTaskCount,
               })}
-            </Text>
+            </div>
           </div>
           <div className={styles.previewRow}>
-            <Text fontSize={13} type="secondary">
+            <div className="text-[13px] text-muted-foreground">
               {t('workspaceSetting.members.previewDelegations', {
                 count: preview.runningDelegationCount,
               })}
-            </Text>
+            </div>
           </div>
           <div className={styles.previewRow}>
-            <Text fontSize={13} type="secondary">
+            <div className="text-[13px] text-muted-foreground">
               {t('workspaceSetting.members.previewDevices', {
                 count: preview.sharedDeviceCount,
               })}
-            </Text>
+            </div>
           </div>
-        </Flexbox>
+        </div>
       )}
 
       {preview && hasImpact && reassignOptions.length > 0 && (
-        <Flexbox gap={6}>
-          <Text fontSize={13} weight={500}>
+        <div className="flex flex-col gap-1.5">
+          <div className="text-[13px] font-medium">
             {t('workspaceSetting.members.reassignLabel')}
-          </Text>
+          </div>
           <Select
             allowClear
             options={reassignOptions}
@@ -141,25 +142,24 @@ const RemoveMemberContent = memo<RemoveMemberContentProps>(({ candidates, target
             value={reassignTo}
             onChange={(value) => setReassignTo(value as string | undefined)}
           />
-        </Flexbox>
+        </div>
       )}
 
       <ModalFooter>
         <Button onClick={close}>{t('cancel', { ns: 'common' })}</Button>
+        {/* Remove stays armed only after the preview actually landed: a
+            failed or in-flight preview means the impact numbers were never
+            seen so the destructive action must not be clickable. */}
         <Button
-          danger
-          // Remove stays armed only after the preview actually landed: a
-          // failed or in-flight preview means the impact numbers were never
-          // seen, so the destructive action must not be clickable.
           disabled={!removalArmed({ error, isLoading, mutating, preview })}
           loading={mutating}
-          type="primary"
+          variant="destructive"
           onClick={handleRemove}
         >
           {t('workspaceSetting.members.removeAction')}
         </Button>
       </ModalFooter>
-    </Flexbox>
+    </div>
   );
 });
 

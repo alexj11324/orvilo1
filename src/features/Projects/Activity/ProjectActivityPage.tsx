@@ -1,7 +1,4 @@
 'use client';
-
-import { Center, Icon } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import type { ProjectUpdate, TaskActivityLogType } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import { createStaticStyles } from 'antd-style';
@@ -26,8 +23,10 @@ import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
 import { STATUS_PROPERTY_ICON, type StatusVisual } from '@/components/ExecutionStatus';
 import { RouteLoading } from '@/components/Skeleton/RouteSegment';
+import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Spinner } from '@/components/ui/spinner';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { getProjectOverviewPath } from '@/features/Projects/Layout/navigation';
 import MilestoneIcon from '@/features/Projects/MilestoneIcon';
 import { getMilestoneAnchorId } from '@/features/Projects/milestoneRow';
@@ -315,7 +314,7 @@ const ActivityRowItem = memo<{ row: ActivityFeedRow }>(({ row }) => {
   return (
     <div className={styles.row}>
       <span className={styles.glyph}>
-        <Icon icon={RowIcon} size={16} />
+        <RowIcon size={16} />
       </span>
       {row.actor ? (
         <Avatar
@@ -416,11 +415,7 @@ const EventRowItem = memo<{ event: ProjectFeedEvent; projectRef: string }>(
     return (
       <div className={styles.row}>
         <span className={styles.glyph}>
-          {event.type === 'milestone_added' ? (
-            <MilestoneIcon size={16} />
-          ) : (
-            <Icon icon={EventIcon} size={16} />
-          )}
+          {event.type === 'milestone_added' ? <MilestoneIcon size={16} /> : <EventIcon size={16} />}
         </span>
         {event.actorName || event.actorAvatar ? (
           <Avatar
@@ -551,12 +546,19 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
     [events, rows, updatesSWR.data, nextCursor],
   );
 
-  if (isLoading && !data) return <SkeletonList padding={12} rows={8} />;
+  if (isLoading && !data)
+    return (
+      <div aria-busy="true" className="flex flex-col gap-2" role="status" style={{ padding: 12 }}>
+        {Array.from({ length: 8 }, (_, index) => (
+          <Skeleton className="h-8 w-full" key={index} />
+        ))}
+      </div>
+    );
   if (error && rows.length === 0)
     return (
-      <Center flex={1} padding={24}>
+      <div className="flex flex-col items-center justify-center" style={{ flex: 1, padding: 24 }}>
         <AsyncError error={error} variant={'block'} onRetry={() => void mutate()} />
-      </Center>
+      </div>
     );
   const composer = (
     <ProjectUpdateComposer
@@ -595,11 +597,17 @@ const ProjectActivityFeed = ({ detail }: { detail: ProjectDetail }) => {
         <AsyncError error={moreError} variant={'inline'} onRetry={() => void loadMore()} />
       ) : null}
       {nextCursor ? (
-        <Center paddingBlock={16}>
-          <Button loading={loadingMore} onClick={() => void loadMore()}>
+        <div className="flex flex-col items-center justify-center" style={{ paddingBlock: 16 }}>
+          <Button
+            aria-busy={loadingMore}
+            disabled={loadingMore}
+            variant="outline"
+            onClick={() => void loadMore()}
+          >
+            {loadingMore && <Spinner />}
             {t('activity.loadMore', { defaultValue: 'Load more' })}
           </Button>
-        </Center>
+        </div>
       ) : null}
       {!nextCursor && <ProjectCreationActivity project={project} />}
     </div>

@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { MessagesSquare } from 'lucide-react';
 import { useCallback } from 'react';
@@ -51,10 +50,10 @@ const AcceptanceOriginTopic = () => {
       type={'button'}
       onClick={openTopic}
     >
-      <Flexbox horizontal align={'center'} gap={4}>
-        <Icon icon={MessagesSquare} size={13} />
+      <div className="flex items-center gap-1">
+        <MessagesSquare size={13} />
         {data.origin.topic.title ?? data.subject.title ?? data.origin.topic.id}
-      </Flexbox>
+      </div>
     </button>
   );
 };

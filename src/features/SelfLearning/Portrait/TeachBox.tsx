@@ -1,9 +1,10 @@
 'use client';
 
-import { Flexbox, TextArea } from '@lobehub/ui';
-import { Button } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { Button } from '@/components/ui/button';
+import { Textarea } from '@/components/ui/textarea';
 
 interface TeachBoxProps {
   autoFocus?: boolean;
@@ -30,23 +31,23 @@ const TeachBox = memo<TeachBoxProps>(({ autoFocus, onSubmit, placeholder }) => {
   };
 
   return (
-    <Flexbox horizontal align={'flex-end'} gap={8} width={'100%'}>
-      <TextArea
+    <div className="flex items-end gap-2 w-full">
+      <Textarea
         autoFocus={autoFocus}
-        autoSize={{ maxRows: 4, minRows: 1 }}
         disabled={busy}
         placeholder={placeholder}
-        style={{ flex: 1 }}
+        rows={1}
+        style={{ flex: 1, maxHeight: 96, minHeight: 0 }}
         value={value}
         onChange={(e) => setValue(e.target.value)}
         onKeyDown={(e) => {
           if ((e.metaKey || e.ctrlKey) && e.key === 'Enter') void submit();
         }}
       />
-      <Button disabled={!value.trim()} loading={busy} type={'primary'} onClick={submit}>
+      <Button disabled={!value.trim()} loading={busy} variant="outline" onClick={submit}>
         {t('habit.teach.send')}
       </Button>
-    </Flexbox>
+    </div>
   );
 });
 

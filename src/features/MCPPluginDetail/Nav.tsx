@@ -1,14 +1,15 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Tabs, type TabsItem, Tag } from '@lobehub/ui/base-ui';
 import { SOCIAL_URL } from '@orvilo/business-const';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { BookOpenIcon, CodeIcon, DownloadIcon, PackageCheckIcon, SettingsIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
+import { Badge } from '@/components/reui/badge';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useToolStore } from '@/store/tool';
 import { pluginSelectors } from '@/store/tool/selectors';
 import { McpNavKey } from '@/types/discover';
@@ -61,85 +62,86 @@ const Nav = memo<NavProps>(
 
     const nav = (
       <Tabs
-        activeKey={activeTab}
         className={styles.tabs}
-        variant="square"
-        items={
-          [
+        value={activeTab}
+        onValueChange={(key) => setActiveTab?.(key as McpNavKey)}
+      >
+        <TabsList className="w-full">
+          {[
             // Only show the settings tab for installed plugins
             !noSettings &&
               installedPlugin && {
-                icon: <Icon icon={SettingsIcon} size={16} />,
+                icon: <SettingsIcon size={16} />,
                 key: McpNavKey.Settings,
                 label: t('mcp.details.settings.title'),
               },
             {
-              icon: <Icon icon={BookOpenIcon} size={16} />,
+              icon: <BookOpenIcon size={16} />,
               key: McpNavKey.Overview,
               label: t('mcp.details.overview.title'),
             },
             {
-              icon: <Icon icon={DownloadIcon} size={16} />,
+              icon: <DownloadIcon size={16} />,
               key: McpNavKey.Deployment,
               label:
                 deploymentCount > 1 ? (
-                  <Flexbox
-                    horizontal
-                    align={'center'}
-                    gap={6}
+                  <div
+                    className="flex items-center gap-1.5"
                     style={{
                       display: 'inline-flex',
                     }}
                   >
                     {t('mcp.details.deployment.title')}
-                    <Tag>{deploymentCount}</Tag>
-                  </Flexbox>
+                    <Badge variant="secondary">{deploymentCount}</Badge>
+                  </div>
                 ) : (
                   t('mcp.details.deployment.title')
                 ),
             },
             {
-              icon: <Icon icon={CodeIcon} size={16} />,
+              icon: <CodeIcon size={16} />,
               key: McpNavKey.Schema,
               label:
                 schemaCount > 1 ? (
-                  <Flexbox
-                    horizontal
-                    align={'center'}
-                    gap={6}
+                  <div
+                    className="flex items-center gap-1.5"
                     style={{
                       display: 'inline-flex',
                     }}
                   >
                     {t('mcp.details.schema.title')}
-                    <Tag>{schemaCount}</Tag>
-                  </Flexbox>
+                    <Badge variant="secondary">{schemaCount}</Badge>
+                  </div>
                 ) : (
                   t('mcp.details.schema.title')
                 ),
             },
             {
-              icon: <Icon icon={PackageCheckIcon} size={16} />,
+              icon: <PackageCheckIcon size={16} />,
               key: McpNavKey.Score,
               label: t('mcp.details.score.title'),
             },
-          ].filter(Boolean) as TabsItem[]
-        }
-        onChange={(key) => setActiveTab?.(key as McpNavKey)}
-      />
+          ].map((item) =>
+            item ? (
+              <TabsTrigger key={item.key} value={item.key}>
+                {item.icon}
+                {item.label}
+              </TabsTrigger>
+            ) : null,
+          )}
+        </TabsList>
+      </Tabs>
     );
 
     return mobile ? (
       nav
     ) : (
-      <Flexbox horizontal align={'center'} className={styles.nav} justify={'space-between'}>
+      <div className={cn('flex items-center justify-between', styles.nav)}>
         {nav}
         {!inModal && (
-          <Flexbox
-            horizontal
-            flex="none"
-            gap={12}
-            style={{ marginInlineStart: 12, whiteSpace: 'nowrap' }}
+          <div
+            className="flex gap-3"
+            style={{ flex: 'none', marginInlineStart: 12, whiteSpace: 'nowrap' }}
           >
             {/* A white-label deployment may have no community server to point
                 at; drop the entry rather than render a link that goes nowhere. */}
@@ -163,9 +165,9 @@ const Nav = memo<NavProps>(
                 </a>
               </>
             )}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

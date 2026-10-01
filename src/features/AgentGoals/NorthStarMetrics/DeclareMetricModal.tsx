@@ -1,20 +1,22 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Select,
-  Text,
-  toast,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
 import type { GoalMetricComparison } from '@orvilo/types';
 import { t } from 'i18next';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import type { ModalInstance } from '@/components/Modal';
+import { createModal, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useGoalStore } from '@/store/goal';
 
 /**
@@ -56,65 +58,76 @@ const DeclareMetricContent = memo<{ goalId: string }>(({ goalId }) => {
   };
 
   return (
-    <Flexbox gap={16} paddingBlock={'4px 8px'}>
-      <Flexbox gap={6}>
-        <Text fontSize={13} weight={500}>
-          {t('goalProcess.northStar.declare.keyLabel')}
-        </Text>
+    <div className="flex flex-col gap-4" style={{ paddingBlock: '4px 8px' }}>
+      <div className="flex flex-col gap-1.5">
+        <div className="text-[13px] font-medium">{t('goalProcess.northStar.declare.keyLabel')}</div>
         <Input
           autoFocus
           placeholder={t('goalProcess.northStar.declare.keyPlaceholder')}
           value={key}
           onChange={(e) => setKey(e.target.value)}
         />
-      </Flexbox>
-      <Flexbox gap={6}>
-        <Text fontSize={13} weight={500}>
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <div className="text-[13px] font-medium">
           {t('goalProcess.northStar.declare.titleLabel')}
-        </Text>
+        </div>
         <Input
           placeholder={t('goalProcess.northStar.declare.titlePlaceholder')}
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-      </Flexbox>
-      <Flexbox horizontal gap={12}>
-        <Flexbox flex={1} gap={6}>
-          <Text fontSize={13} weight={500}>
+      </div>
+      <div className="flex gap-3">
+        <div className="flex flex-col flex-1 gap-1.5">
+          <div className="text-[13px] font-medium">
             {t('goalProcess.northStar.declare.opLabel')}
-          </Text>
+          </div>
           <Select
             value={op}
-            options={(['gte', 'lte', 'gt', 'lt', 'eq'] as const).map((value) => ({
+            items={(['gte', 'lte', 'gt', 'lt', 'eq'] as const).map((value) => ({
               label: t(`goalProcess.northStar.op.${value}` as const),
               value,
             }))}
-            onChange={(value) => setOp(value as GoalMetricComparison)}
-          />
-        </Flexbox>
-        <Flexbox flex={1} gap={6}>
-          <Text fontSize={13} weight={500}>
+            onValueChange={(value) => setOp(value as GoalMetricComparison)}
+          >
+            <SelectTrigger>
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {(['gte', 'lte', 'gt', 'lt', 'eq'] as const).map((value) => (
+                <SelectItem key={value} value={value}>
+                  {t(`goalProcess.northStar.op.${value}` as const)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        <div className="flex flex-col flex-1 gap-1.5">
+          <div className="text-[13px] font-medium">
             {t('goalProcess.northStar.declare.targetLabel')}
-          </Text>
+          </div>
           <Input
             placeholder={'10000'}
             value={target}
             onChange={(e) => setTarget(e.target.value)}
-            onPressEnter={() => void submit()}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') void submit();
+            }}
           />
-        </Flexbox>
-      </Flexbox>
-      <Flexbox horizontal justify={'flex-end'}>
+        </div>
+      </div>
+      <div className="flex justify-end">
         <Button
           disabled={!key.trim() || !Number.isFinite(Number(target)) || target.trim() === ''}
           loading={busy}
-          type={'primary'}
+          variant="outline"
           onClick={() => void submit()}
         >
           {t('goalProcess.northStar.declare.submit')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

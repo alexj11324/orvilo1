@@ -1,6 +1,5 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { type FC, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Outlet, useMatch } from 'react-router';
@@ -30,6 +29,7 @@ const COMPACT_HEADER_TABS = new Set<string>([
   WorkspaceSettingsTabs.Notification,
   WorkspaceSettingsTabs.Plans,
   WorkspaceSettingsTabs.Profile,
+  WorkspaceSettingsTabs.ServiceModel,
   WorkspaceSettingsTabs.Stats,
   WorkspaceSettingsTabs.Storage,
   WorkspaceSettingsTabs.Usage,
@@ -79,7 +79,7 @@ const WorkspaceSettingsContentLayout: FC = memo(() => {
   return (
     <>
       <NavHeader styles={{ center: { alignItems: 'center' } }}>
-        {title && <Text weight={500}>{title}</Text>}
+        {title && <span style={{ fontWeight: 500 }}>{title}</span>}
       </NavHeader>
       {content}
     </>

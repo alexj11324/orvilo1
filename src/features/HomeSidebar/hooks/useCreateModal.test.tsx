@@ -1,7 +1,8 @@
-import { createModal, type ModalInstance } from '@lobehub/ui/base-ui';
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { createModal, type ModalInstance } from '@/components/Modal';
 
 import { CreateAgentModal, openCreateAgentModal } from './useCreateModal';
 
@@ -39,7 +40,7 @@ vi.mock('@/libs/analytics/client', () => ({
   analyticsClient: { track: analyticsTrack },
 }));
 
-vi.mock('@lobehub/ui', async (importOriginal) => ({
+vi.mock('@/components/ui/button', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   Button: ({
     children,
@@ -66,31 +67,8 @@ vi.mock('@lobehub/ui', async (importOriginal) => ({
   ),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
+vi.mock('@/components/Modal', async (importOriginal) => ({
   ...(await importOriginal<object>()),
-  Button: ({
-    children,
-    disabled,
-    loading,
-    onClick,
-    type,
-  }: {
-    children?: ReactNode;
-    disabled?: boolean;
-    loading?: boolean;
-    onClick?: () => void;
-    type?: string;
-  }) => (
-    <button
-      data-button-loading={loading ? 'true' : undefined}
-      data-button-type={type}
-      disabled={disabled}
-      type="button"
-      onClick={onClick}
-    >
-      {children}
-    </button>
-  ),
   createModal: vi.fn(),
 }));
 

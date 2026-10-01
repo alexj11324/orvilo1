@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox, Grid } from '@lobehub/ui';
 import { type FC } from 'react';
 import { memo } from 'react';
 
@@ -22,15 +21,21 @@ const AboutList = memo<AboutListProps>(({ grid, items, ItemRender }) => {
   // list; wrap keeps them intact on narrow viewports.
   if (!grid)
     return (
-      <Flexbox horizontal align={'center'} gap={24} wrap={'wrap'}>
+      <div
+        className={'flex min-w-0'}
+        style={{ flexDirection: 'row', alignItems: 'center', gap: 24, flexWrap: 'wrap' }}
+      >
         {content}
-      </Flexbox>
+      </div>
     );
 
   return (
-    <Grid gap={8} maxItemWidth={160} rows={5} width={'100%'}>
+    <div
+      className="grid w-full"
+      style={{ gap: 8, gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))' }}
+    >
       {content}
-    </Grid>
+    </div>
   );
 });
 

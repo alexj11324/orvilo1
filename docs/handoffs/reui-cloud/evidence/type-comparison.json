@@ -1,0 +1,15 @@
+{
+  "baseDiagnostics": 230,
+  "baseline": "f2a9d4283fe206044918a9bf496274a2ddbc60bb",
+  "candidate": "15466979a6320f531071a6eca272bae4962d3d90",
+  "candidateDiagnostics": 230,
+  "compiler": "TypeScript 6.0.3",
+  "exitCodes": {
+    "base": 2,
+    "candidate": 2
+  },
+  "newDiagnostics": [],
+  "normalization": "Root directory replaced with <repo>; compare multiset of file, TS code and complete diagnostic message, ignoring line/column shifts. Locations retained in records.",
+  "resolvedDiagnostics": [],
+  "sharedDiagnostics": 230
+}

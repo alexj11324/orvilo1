@@ -5,7 +5,9 @@
   "exports": {
     ".": "./src/index.ts",
     "./controlPlane": "./src/controlPlane/index.ts",
-    "./controlPlane/server": "./src/controlPlane/server.ts"
+    "./controlPlane/server": "./src/controlPlane/server.ts",
+    "./controlPlane/harnessProtocol": "./src/controlPlane/harnessProtocol.ts",
+    "./controlPlane/harnessTransport": "./src/controlPlane/harnessTransport.ts"
   },
   "main": "./src/index.ts",
   "scripts": {

@@ -40,6 +40,8 @@ import { agentSkillsRouter } from './agentSkills';
 import { agentTraceRouter } from './agentTrace';
 import { aiAgentRouter } from './aiAgent';
 import { aiChatRouter } from './aiChat';
+import { aiModelRouter } from './aiModel';
+import { aiProviderRouter } from './aiProvider';
 import { apiKeyRouter } from './apiKey';
 import { asrRouter } from './asr';
 import { briefRouter } from './brief';
@@ -73,6 +75,7 @@ import { messageRouter } from './message';
 import { metricRouter } from './metric';
 import { notebookRouter } from './notebook';
 import { notificationRouter } from './notification';
+import { oauthDeviceFlowRouter } from './oauthDeviceFlow';
 import { pluginRouter } from './plugin';
 import { projectRouter } from './project';
 import { providerBindingRouter } from './providerBinding';
@@ -125,6 +128,8 @@ export const lambdaRouter = router({
   brief: briefRouter,
   aiAgent: aiAgentRouter,
   aiChat: aiChatRouter,
+  aiModel: aiModelRouter,
+  aiProvider: aiProviderRouter,
   agentQuota: agentQuotaRouter,
   agentShare: agentShareRouter,
   apiKey: apiKeyRouter,
@@ -161,6 +166,7 @@ export const lambdaRouter = router({
   metric: metricRouter,
   notebook: notebookRouter,
   notification: notificationRouter,
+  oauthDeviceFlow: oauthDeviceFlowRouter,
   plugin: pluginRouter,
   project: projectRouter,
   projectMember: projectMemberRouter,

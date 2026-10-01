@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { CheckIcon } from 'lucide-react';
 import { memo, useCallback } from 'react';
@@ -50,12 +48,9 @@ const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwit
     selected: boolean,
     onClick: () => void,
   ) => (
-    <Flexbox
-      horizontal
-      align={'center'}
-      gap={8}
+    <div
+      className="flex items-center gap-2 p-2"
       key={key}
-      padding={8}
       style={{ borderRadius: 8, cursor: 'pointer' }}
       onClick={onClick}
       onMouseEnter={(e) => {
@@ -71,18 +66,18 @@ const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwit
         shape={'square'}
         size={20}
       />
-      <Text ellipsis fontSize={13} style={{ flex: 1 }}>
+      <div className="truncate min-w-0 text-[13px]" style={{ flex: 1 }}>
         {name}
-      </Text>
-      {selected && <Icon color={cssVar.colorTextSecondary} icon={CheckIcon} size={16} />}
-    </Flexbox>
+      </div>
+      {selected && <CheckIcon size={16} style={{ color: cssVar.colorTextSecondary }} />}
+    </div>
   );
 
   return (
-    <Flexbox gap={1} paddingInline={4}>
-      <Text fontSize={11} style={{ paddingInline: 8 }} type={'secondary'} weight={500}>
+    <div className="flex flex-col gap-px px-1">
+      <div className="text-[11px] text-muted-foreground font-medium" style={{ paddingInline: 8 }}>
         {t('workspaceSwitcher.label')}
-      </Text>
+      </div>
       {workspaces.map((workspace) =>
         row(
           workspace.id,
@@ -92,7 +87,7 @@ const UserPanelWorkspaceSection = memo<UserPanelWorkspaceSectionProps>(({ onSwit
           () => void handlePick(workspace.id),
         ),
       )}
-    </Flexbox>
+    </div>
   );
 });
 

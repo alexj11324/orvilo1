@@ -1,16 +1,14 @@
 'use client';
-
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import type { TeamItem } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
+import { cn } from 'cn';
 import { InboxIcon, LayoutListIcon, ListChecksIcon } from 'lucide-react';
-import { memo } from 'react';
+import { createElement, memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
 import Avatar from '@/components/Avatar';
-import SkeletonList from '@/features/NavPanel/components/SkeletonList';
+import { Skeleton } from '@/components/ui/skeleton';
 import { PROJECT_ENTITY_ICON } from '@/features/Projects/ProjectIcon';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
@@ -218,7 +216,7 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
       <div className={styles.root}>
         <div className={styles.left}>
           <div className={styles.main}>
-            <Flexbox horizontal align="center" className={styles.identity} gap={12}>
+            <div className={cn('flex flex-row items-center gap-3', styles.identity)}>
               <TeamIdentity
                 color={team.color}
                 id={team.id}
@@ -226,10 +224,10 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
                 size={36}
               />
               <h1 className={styles.name}>{team.name}</h1>
-            </Flexbox>
-            <Text className={styles.description} type="secondary">
+            </div>
+            <span className={cn('text-sm text-muted-foreground', styles.description)}>
               {team.description || tProject('overview.descriptionEmpty')}
-            </Text>
+            </span>
           </div>
 
           <div className={styles.rest}>
@@ -243,19 +241,23 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
           <div className={styles.memberGroup}>
             <div className={styles.railTitle}>{t('teams.members')}</div>
             {membersLoading ? (
-              <SkeletonList aria-label={t('teams.loading')} rows={1} />
+              <div aria-busy aria-label={t('teams.loading')} className="flex flex-col gap-2">
+                {Array.from({ length: 1 }, (_, index) => (
+                  <Skeleton className="h-10 w-full" key={index} />
+                ))}
+              </div>
             ) : membersError ? (
               <AsyncError error={membersError} variant="inline" onRetry={onMembersRetry} />
             ) : members.length === 0 ? (
-              <Text type="secondary">{t('teams.membersEmpty')}</Text>
+              <span className="text-sm text-muted-foreground">{t('teams.membersEmpty')}</span>
             ) : (
-              <Flexbox horizontal align="center" gap={4} wrap="wrap">
+              <div className="flex flex-row items-center gap-1 flex-wrap">
                 {members.map((member) => (
                   <span className={styles.member} key={member.userId} title={member.name}>
                     <Avatar avatar={member.avatar} name={member.name} size={26} />
                   </span>
                 ))}
-              </Flexbox>
+              </div>
             )}
           </div>
 
@@ -263,10 +265,11 @@ const TeamHomeOverview = memo<TeamHomeOverviewProps>(
             <div className={styles.railTitle}>{t('teams.quickLinks')}</div>
             {destinations.map(({ key, to }) => (
               <WorkspaceLink className={styles.navLink} key={key} to={to}>
-                <Icon icon={destinationIcons[key]} size={16} />
-                <Text fontSize={13} weight={400}>
-                  {t(destinationLabels[key])}
-                </Text>
+                {createElement(destinationIcons[key], {
+                  'aria-hidden': true,
+                  'className': 'size-4 shrink-0',
+                })}
+                <span className="text-[13px]">{t(destinationLabels[key])}</span>
               </WorkspaceLink>
             ))}
           </nav>

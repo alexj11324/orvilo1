@@ -1,10 +1,12 @@
 'use client';
 
-import { Highlighter, Markdown } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
+import { Markdown } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import path from 'path-browserify-esm';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/reui/code-block/code-block';
+import { Skeleton } from '@/components/ui/skeleton';
 
 interface WriteArgs {
   content?: string;
@@ -12,7 +14,15 @@ interface WriteArgs {
 }
 
 const Write = memo<BuiltinRenderProps<WriteArgs>>(({ args }) => {
-  if (!args) return <Skeleton.Text rows={4} />;
+  if (!args)
+    return (
+      <div className="flex flex-col gap-2">
+        <Skeleton />
+        <Skeleton />
+        <Skeleton />
+        <Skeleton style={{ width: '60%' }} />
+      </div>
+    );
 
   const filePath = args.file_path || '';
   const ext = filePath ? path.extname(filePath).slice(1).toLowerCase() : '';
@@ -29,15 +39,13 @@ const Write = memo<BuiltinRenderProps<WriteArgs>>(({ args }) => {
     }
 
     return (
-      <Highlighter
+      <CodeBlock
         wrap
+        code={args.content}
         language={ext || 'text'}
-        showLanguage={false}
         style={{ maxHeight: 240, overflow: 'auto' }}
-        variant={'borderless'}
-      >
-        {args.content}
-      </Highlighter>
+        variant={'ghost'}
+      />
     );
   };
 

@@ -1,11 +1,11 @@
 'use client';
 
-import { confirmModal } from '@lobehub/ui/base-ui';
 import debug from 'debug';
 import { debounce } from 'es-toolkit/compat';
 import { useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { confirmModal } from '@/components/Modal';
 import { useDocumentStore } from '@/store/document';
 import { editorSelectors } from '@/store/document/slices/editor';
 

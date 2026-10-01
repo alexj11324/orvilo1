@@ -1,8 +1,8 @@
 'use client';
 
-import { createModal } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 
+import { createModal } from '@/components/Modal';
 import { PageAgentPanelOverrideProvider } from '@/features/PageEditor/RightPanel/OverrideContext';
 import PageExplorer from '@/features/PageExplorer';
 

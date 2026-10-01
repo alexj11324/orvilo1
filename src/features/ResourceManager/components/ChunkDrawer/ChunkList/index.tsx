@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { Virtuoso } from 'react-virtuoso';
 
@@ -23,19 +22,19 @@ const ChunkList = memo<ChunkListProps>(({ fileId }) => {
   return isLoading ? (
     <SkeletonLoading />
   ) : (
-    <Flexbox flex={1}>
+    <div className="flex flex-col flex-1">
       <Virtuoso
         data={dataSource}
         endReached={() => {
           fetchNextPage();
         }}
         itemContent={(index, item) => (
-          <Flexbox key={item.id} paddingInline={12}>
+          <div className="flex flex-col px-3" key={item.id}>
             <ChunkItem {...item} index={index} />
-          </Flexbox>
+          </div>
         )}
       />
-    </Flexbox>
+    </div>
   );
 });
 

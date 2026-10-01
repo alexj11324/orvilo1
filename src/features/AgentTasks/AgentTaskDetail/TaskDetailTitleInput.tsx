@@ -1,7 +1,7 @@
-import { Input } from 'antd';
 import { memo, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Textarea } from '@/components/ui/textarea';
 import { usePermission } from '@/hooks/usePermission';
 import { useTaskStore } from '@/store/task';
 import { taskDetailSelectors } from '@/store/task/selectors';
@@ -42,13 +42,12 @@ const TaskDetailTitleInput = memo(() => {
   );
 
   return (
-    <Input.TextArea
-      autoSize={{ minRows: 1 }}
-      className={styles.titleInput}
+    <Textarea
+      className={`${styles.titleInput} min-h-0`}
       disabled={!canEditTask}
       placeholder={t('taskDetail.titlePlaceholder')}
+      rows={1}
       value={localName}
-      variant={'borderless'}
       onBlur={flush}
       onChange={handleNameChange}
     />

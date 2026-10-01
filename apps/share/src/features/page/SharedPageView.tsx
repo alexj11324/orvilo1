@@ -1,6 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { memo } from 'react';
 import { useParams } from 'react-router';
 import useSWR from 'swr';
@@ -26,9 +25,9 @@ const SharedPageView = memo(() => {
   // with it in cache — gating on `isLoading` alone would blank it.
   if (!error && !data && isLoading) {
     return (
-      <Center height={'100vh'}>
+      <div className="flex items-center justify-center" style={{ height: '100vh' }}>
         <Loading debugId="SharedPageView" />
-      </Center>
+      </div>
     );
   }
 

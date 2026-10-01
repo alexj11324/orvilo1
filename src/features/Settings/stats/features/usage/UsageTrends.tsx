@@ -1,8 +1,9 @@
 import { type BarChartProps } from '@lobehub/charts';
-import { Skeleton, Tabs } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { type UsageLog, type UsageRecordItem } from '@/types/usage/usageRecord';
 import { formatNumber } from '@/utils/format';
 
@@ -119,17 +120,24 @@ const UsageTrends = memo<UsageChartProps>(({ isLoading, data, groupBy, resolveUs
     <StatsFormGroup
       extra={
         <Tabs
-          activeKey={type}
           style={{ width: 'auto' }}
-          items={[
-            { key: ShowType.Spend, label: t('usage.trends.spend') },
-            { key: ShowType.Token, label: t('usage.trends.tokens') },
-          ]}
-          onChange={(key) => setType(key as ShowType)}
-        />
+          value={type}
+          onValueChange={(key) => setType(key as ShowType)}
+        >
+          <TabsList>
+            {[
+              { key: ShowType.Spend, label: t('usage.trends.spend') },
+              { key: ShowType.Token, label: t('usage.trends.tokens') },
+            ].map((item) => (
+              <TabsTrigger key={item.key} value={item.key}>
+                {item.label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
       }
     >
-      {isLoading ? <Skeleton height={280} /> : charts}
+      {isLoading ? <Skeleton style={{ height: 280 }} /> : charts}
     </StatsFormGroup>
   );
 });

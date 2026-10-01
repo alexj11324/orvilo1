@@ -1,12 +1,17 @@
 'use client';
 
-import { Block, Flexbox, Icon } from '@lobehub/ui';
-import { Accordion, Text } from '@lobehub/ui/base-ui';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { AnchorIcon, CircleCheckIcon, CircleXIcon } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import type { ExpertiseDomainItem } from '@/services/expertise';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -87,124 +92,140 @@ const AnchorCard = memo<{ domain: ExpertiseDomainItem }>(({ domain }) => {
   const domainFilter = domain.domainFilter.trim();
   const outOfScope = domain.outOfScope?.trim();
   const title = (
-    <Flexbox horizontal align={'center'} gap={8}>
-      <Icon color={cssVar.colorTextTertiary} icon={AnchorIcon} size={15} />
-      <Text weight={600}>{t('anchor.title')}</Text>
-      <Text fontSize={12} type={'secondary'}>
-        {t('anchor.subtitle')}
-      </Text>
-    </Flexbox>
+    <div className="flex items-center gap-2">
+      <AnchorIcon color={cssVar.colorTextTertiary} size={15} />
+      <div className="font-semibold">{t('anchor.title')}</div>
+      <div className="text-[12px] text-muted-foreground">{t('anchor.subtitle')}</div>
+    </div>
   );
 
   return (
-    <Block className={styles.anchorCard} variant={'outlined'}>
-      <Accordion
-        classNames={{ header: styles.anchorHeader }}
-        defaultValue={['anchor']}
-        indicatorPlacement={'end'}
-        styles={{ trigger: { paddingBlock: 12, paddingInline: 16 } }}
-        variant={'borderless'}
-        items={[
+    <div
+      className={cx(styles.anchorCard, 'flex flex-col border')}
+      style={{ borderColor: cssVar.colorBorderSecondary, background: cssVar.colorBgContainer }}
+    >
+      <Accordion defaultValue={['anchor']}>
+        {[
           {
             key: 'anchor',
             title,
             children: (
-              <Flexbox className={styles.anchorContent} gap={24}>
+              <div className={cx(styles.anchorContent, 'flex flex-col gap-6')}>
                 {(domainFilter || outOfScope) && (
                   <div className={styles.definition}>
                     {domainFilter && (
                       <>
-                        <Text className={styles.definitionLabel} fontSize={12.5} type={'secondary'}>
-                          <Icon color={cssVar.colorSuccess} icon={CircleCheckIcon} size={13} />
+                        <div
+                          className={cn('text-muted-foreground', styles.definitionLabel)}
+                          style={{ fontSize: 12.5 }}
+                        >
+                          <CircleCheckIcon color={cssVar.colorSuccess} size={13} />
                           {t('anchor.filter')}
-                        </Text>
-                        <Text fontSize={13} lineHeight={1.7}>
+                        </div>
+                        <div className="text-[13px]" style={{ lineHeight: 1.7 }}>
                           {domainFilter}
-                        </Text>
+                        </div>
                       </>
                     )}
                     {outOfScope && (
                       <>
-                        <Text className={styles.definitionLabel} fontSize={12.5} type={'secondary'}>
-                          <Icon color={cssVar.colorTextTertiary} icon={CircleXIcon} size={13} />
+                        <div
+                          className={cn('text-muted-foreground', styles.definitionLabel)}
+                          style={{ fontSize: 12.5 }}
+                        >
+                          <CircleXIcon color={cssVar.colorTextTertiary} size={13} />
                           {t('anchor.outOfScope')}
-                        </Text>
-                        <Text fontSize={13} lineHeight={1.7} type={'secondary'}>
+                        </div>
+                        <div
+                          className="text-[13px] text-muted-foreground"
+                          style={{ lineHeight: 1.7 }}
+                        >
                           {outOfScope}
-                        </Text>
+                        </div>
                       </>
                     )}
                   </div>
                 )}
 
-                <Flexbox gap={10}>
-                  <Flexbox horizontal align={'baseline'} gap={8}>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-baseline gap-2">
                     <span className={styles.sectionLabel}>{t('create.anchor.canon')}</span>
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[12px] text-muted-foreground">
                       {domain.canonEntries.length > 0
                         ? t('create.anchor.canonHint')
                         : t('anchor.noCanon')}
-                    </Text>
-                  </Flexbox>
+                    </div>
+                  </div>
                   {domain.canonEntries.length > 0 && (
                     <div className={styles.grid}>
                       {domain.canonEntries.map((c) => (
                         <div className={styles.canonCard} key={c.key}>
-                          <Text fontSize={13.5} weight={600}>
+                          <div className="font-semibold" style={{ fontSize: 13.5 }}>
                             {c.title}
-                          </Text>
-                          <Text fontSize={12.5} lineHeight={1.65} type={'secondary'}>
+                          </div>
+                          <div
+                            className="text-muted-foreground"
+                            style={{ fontSize: 12.5, lineHeight: 1.65 }}
+                          >
                             {c.statement}
-                          </Text>
-                          <Text
-                            ellipsis
-                            fontSize={11.5}
-                            style={{ opacity: 0.75 }}
-                            type={'secondary'}
+                          </div>
+                          <div
+                            className="truncate min-w-0 text-muted-foreground"
+                            style={{ fontSize: 11.5, opacity: 0.75 }}
                           >
                             — {c.source}
-                          </Text>
+                          </div>
                         </div>
                       ))}
                     </div>
                   )}
-                </Flexbox>
+                </div>
 
-                <Flexbox gap={10}>
-                  <Flexbox horizontal align={'baseline'} gap={8}>
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-baseline gap-2">
                     <span className={styles.sectionLabel}>{t('create.anchor.layers')}</span>
-                    <Text fontSize={12} type={'secondary'}>
+                    <div className="text-[12px] text-muted-foreground">
                       {domain.layers.length === 0
                         ? t('anchor.noLayers')
                         : canonRef
                           ? t('create.anchor.layersFrom', { ref: canonRef })
                           : t('create.anchor.layersInvented')}
-                    </Text>
-                  </Flexbox>
+                    </div>
+                  </div>
                   {domain.layers.length > 0 && (
                     <div className={styles.grid}>
                       {domain.layers.map((l, i) => (
                         <div className={styles.layerCell} key={l.key}>
                           <span className={styles.layerIndex}>L{i + 1}</span>
-                          <Text fontSize={13.5} weight={600}>
+                          <div className="font-semibold" style={{ fontSize: 13.5 }}>
                             {l.title}
-                          </Text>
+                          </div>
                           {l.description && (
-                            <Text fontSize={12.5} lineHeight={1.6} type={'secondary'}>
+                            <div
+                              className="text-muted-foreground"
+                              style={{ fontSize: 12.5, lineHeight: 1.6 }}
+                            >
                               {l.description}
-                            </Text>
+                            </div>
                           )}
                         </div>
                       ))}
                     </div>
                   )}
-                </Flexbox>
-              </Flexbox>
+                </div>
+              </div>
             ),
           },
-        ]}
-      />
-    </Block>
+        ]
+          .filter(Boolean)
+          .map((item) => (
+            <AccordionItem key={item.key} value={item.key}>
+              <AccordionTrigger>{item.title}</AccordionTrigger>
+              <AccordionContent>{item.children}</AccordionContent>
+            </AccordionItem>
+          ))}
+      </Accordion>
+    </div>
   );
 });
 

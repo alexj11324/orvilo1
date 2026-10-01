@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { useParams } from 'react-router';
 import useSWR from 'swr';
@@ -35,19 +34,18 @@ const SharedTopicView = memo(() => {
   // Mirror WideScreenContainer's centered column so the pre-hydration document
   // matches the hydrated ChatList headerSlot layout instead of hugging the left.
   const hero = data ? (
-    <Flexbox width={'100%'}>
-      <Flexbox
-        paddingInline={16}
-        style={{ alignSelf: 'center' }}
-        width={`min(${CONVERSATION_MIN_WIDTH}px, 100%)`}
+    <div className="flex flex-col" style={{ width: '100%' }}>
+      <div
+        className="flex flex-col px-4"
+        style={{ width: `min(${CONVERSATION_MIN_WIDTH}px, 100%)`, alignSelf: 'center' }}
       >
         <ShareHero
           avatar={<TopicAvatar data={data} size={40} />}
           byline={buildTopicByline(data)}
           title={data.title}
         />
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   ) : null;
 
   return (

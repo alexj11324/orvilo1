@@ -1,10 +1,16 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Accordion, Text } from '@lobehub/ui/base-ui';
-import { Divider } from 'antd';
 import { createStaticStyles } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight } from 'lucide-react';
 import { memo, type ReactNode, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
+import { Separator } from '@/components/ui/separator';
 
 const PROCESS_KEY = 'process';
 
@@ -60,14 +66,13 @@ const ProcessFold = memo<ProcessFoldProps>(
     const value = useMemo(() => (expanded ? [PROCESS_KEY] : []), [expanded]);
 
     const title = (
-      <Flexbox horizontal align={'center'} className={styles.title} gap={6}>
-        <Text style={{ color: 'inherit', minWidth: 0 }}>
+      <div className={cn('flex items-center gap-1.5', styles.title)}>
+        <div style={{ color: 'inherit', minWidth: 0 }}>
           {durationText
             ? t('turnProcess.ranFor', { count: stepCount, duration: durationText })
             : t('turnProcess.done', { count: stepCount })}
-        </Text>
-        <Icon
-          icon={ChevronRight}
+        </div>
+        <ChevronRight
           size={14}
           style={{
             flex: 'none',
@@ -75,20 +80,22 @@ const ProcessFold = memo<ProcessFoldProps>(
             transition: 'transform 200ms',
           }}
         />
-      </Flexbox>
+      </div>
     );
 
     return (
       <>
         <Accordion
-          hideIndicator
-          items={[{ children, key: PROCESS_KEY, title }]}
-          styles={{ content: CONTENT_STYLE, header: HEADER_STYLE, trigger: TRIGGER_STYLE }}
+          multiple
           value={value}
-          variant={'borderless'}
           onValueChange={(next) => setExpanded(next.includes(PROCESS_KEY))}
-        />
-        <Divider style={{ marginBlock: 0 }} />
+        >
+          <AccordionItem style={HEADER_STYLE} value={PROCESS_KEY}>
+            <AccordionTrigger style={TRIGGER_STYLE}>{title}</AccordionTrigger>
+            <AccordionContent style={CONTENT_STYLE}>{children}</AccordionContent>
+          </AccordionItem>
+        </Accordion>
+        <Separator style={{ marginBlock: 0 }} />
       </>
     );
   },

@@ -1,10 +1,15 @@
-import { SliderWithInput, type SliderWithInputProps } from '@lobehub/ui/base-ui';
+'use client';
+
+import type { ComponentProps } from 'react';
 import { memo, useEffect, useState } from 'react';
 
-interface FormSliderWithInputProps extends Omit<SliderWithInputProps, 'onChange' | 'value'> {
+import InputNumber from '@/components/InputNumber';
+import { Slider } from '@/components/ui/slider';
+
+type FormSliderWithInputProps = Omit<ComponentProps<typeof Slider>, 'onValueChange' | 'value'> & {
   onChange?: (value: number) => void;
   value?: number;
-}
+};
 
 /**
  * Form-integrated slider with delayed onChange behavior.
@@ -19,18 +24,41 @@ const FormSliderWithInput = memo<FormSliderWithInputProps>(
     }, [defaultValue]);
 
     return (
-      <SliderWithInput
-        onBlur={() => {
-          onChange?.(value);
-        }}
-        onChange={(newValue) => {
-          if (typeof newValue === 'number') {
-            setValue(newValue);
-          }
-        }}
-        {...props}
-        value={value}
-      />
+      <div className="flex items-center gap-3">
+        <Slider
+          {...props}
+          className="flex-1"
+          value={value}
+          onValueChange={(newValue) => {
+            if (typeof newValue === 'number') {
+              setValue(newValue);
+            }
+          }}
+          onValueCommitted={(newValue) => {
+            if (typeof newValue === 'number') {
+              onChange?.(newValue);
+            }
+          }}
+        />
+        <div
+          onBlur={() => {
+            onChange?.(value);
+          }}
+        >
+          <InputNumber
+            disabled={props.disabled}
+            max={props.max}
+            min={props.min}
+            step={props.step}
+            value={value}
+            onChange={(newValue) => {
+              if (typeof newValue === 'number') {
+                setValue(newValue);
+              }
+            }}
+          />
+        </div>
+      </div>
     );
   },
 );

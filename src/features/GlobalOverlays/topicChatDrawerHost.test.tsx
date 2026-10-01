@@ -85,6 +85,7 @@ vi.mock('@/features/DesktopLayoutContainer', () => ({ default: passthrough }));
 vi.mock('@/features/Electron/AuthRequiredModal', () => ({ default: nullComponent }));
 vi.mock('@/features/HotkeyHelperPanel', () => ({ default: nullComponent }));
 vi.mock('@/features/NavPanel/Shell', () => ({ default: nullComponent }));
+vi.mock('@/features/ReUIShell/SidebarShell', () => ({ SidebarShell: nullComponent }));
 vi.mock('@/features/ResourceManager/DndContextWrapper', () => ({ DndContextWrapper: passthrough }));
 vi.mock('@/features/RouteMeta', () => ({ RouteMetaBridge: nullComponent }));
 vi.mock('@/components/Skeleton/RouteSegment', () => ({ default: nullComponent }));

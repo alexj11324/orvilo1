@@ -1,11 +1,15 @@
 import { ClaudeCode, Codex } from '@lobehub/icons';
-import { Flexbox, Icon, ScrollShadow, Tooltip } from '@lobehub/ui';
-import { ActionIcon, DraggablePanel, Text } from '@lobehub/ui/base-ui';
+import { DraggablePanel } from '@lobehub/ui/base-ui';
 import type { HeteroSessionDirGroup, HeteroSessionDirPref } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronRight, Eye, EyeOff, Folder, FolderGit2, Timer, X } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import ActionIcon from '@/components/ActionIcon';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 
 import { baseName, dirKeyOf } from './utils';
 
@@ -86,49 +90,74 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
     const key = dirKeyOf(group.source, group.workingDirectory);
     const isWatched = group.dirPref === 'watched';
     return (
-      <Tooltip key={key} placement="right" title={group.workingDirectory}>
-        <Flexbox
-          horizontal
-          align="center"
-          className={cx(styles.child, scope === key && styles.childActive)}
-          gap={8}
-          justify="space-between"
-          onClick={() => onScopeChange(key)}
-        >
-          <Flexbox horizontal align="center" gap={6} style={{ minWidth: 0 }}>
-            {leading}
-            <Text ellipsis fontSize={13}>
-              {baseName(group.workingDirectory)}
-            </Text>
-          </Flexbox>
-          <span className="tree-actions" onClick={(e) => e.stopPropagation()}>
-            {isWatched ? (
-              <Tooltip title={t('heteroImport.action.unwatch')}>
-                <ActionIcon icon={X} size="small" onClick={() => onSetPref(key, null)} />
-              </Tooltip>
-            ) : (
-              <>
-                <Tooltip title={t('heteroImport.action.watch')}>
-                  <ActionIcon icon={Timer} size="small" onClick={() => onSetPref(key, 'watched')} />
-                </Tooltip>
-                <Tooltip title={t('heteroImport.action.ignore')}>
-                  <ActionIcon
-                    icon={EyeOff}
-                    size="small"
-                    onClick={() => {
-                      onSetPref(key, 'ignored');
-                      if (scope === key) onScopeChange(group.source);
-                    }}
-                  />
-                </Tooltip>
-              </>
-            )}
-          </span>
-          <Text className="tree-count" fontSize={12} type="secondary">
-            {group.sessionCount}
-          </Text>
-        </Flexbox>
-      </Tooltip>
+      <TooltipProvider key={key}>
+        <Tooltip>
+          <TooltipTrigger
+            render={
+              <div
+                className={cx(
+                  cx(styles.child, scope === key && styles.childActive),
+                  'flex items-center gap-2 justify-between',
+                )}
+                onClick={() => onScopeChange(key)}
+              >
+                <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                  {leading}
+                  <div className="truncate block text-[13px]">
+                    {baseName(group.workingDirectory)}
+                  </div>
+                </div>
+                <span className="tree-actions" onClick={(e) => e.stopPropagation()}>
+                  {isWatched ? (
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <ActionIcon icon={X} size="small" onClick={() => onSetPref(key, null)} />
+                        }
+                      />
+                      <TooltipContent>{t('heteroImport.action.unwatch')}</TooltipContent>
+                    </Tooltip>
+                  ) : (
+                    <>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <ActionIcon
+                              icon={Timer}
+                              size="small"
+                              onClick={() => onSetPref(key, 'watched')}
+                            />
+                          }
+                        />
+                        <TooltipContent>{t('heteroImport.action.watch')}</TooltipContent>
+                      </Tooltip>
+                      <Tooltip>
+                        <TooltipTrigger
+                          render={
+                            <ActionIcon
+                              icon={EyeOff}
+                              size="small"
+                              onClick={() => {
+                                onSetPref(key, 'ignored');
+                                if (scope === key) onScopeChange(group.source);
+                              }}
+                            />
+                          }
+                        />
+                        <TooltipContent>{t('heteroImport.action.ignore')}</TooltipContent>
+                      </Tooltip>
+                    </>
+                  )}
+                </span>
+                <div className="tree-count text-[12px] text-muted-foreground">
+                  {group.sessionCount}
+                </div>
+              </div>
+            }
+          />
+          <TooltipContent side="right">{group.workingDirectory}</TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
@@ -141,29 +170,24 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
       minWidth={180}
       placement="left"
     >
-      <ScrollShadow className={styles.sidebar}>
-        <Flexbox
-          horizontal
-          align="center"
-          className={cx(styles.parent, scope === 'all' && styles.childActive)}
-          justify="space-between"
+      <ScrollArea className={styles.sidebar}>
+        <div
+          className={cx(
+            cx(styles.parent, scope === 'all' && styles.childActive),
+            'flex items-center justify-between',
+          )}
           onClick={() => onScopeChange('all')}
         >
-          <Text fontSize={13} weight={scope === 'all' ? 600 : 400}>
+          <div className={cn('text-[13px]', scope === 'all' ? 600 : 400)}>
             {t('heteroImport.allSessions')}
-          </Text>
-          <Text fontSize={12} type="secondary">
-            {totalCount.toLocaleString()}
-          </Text>
-        </Flexbox>
+          </div>
+          <div className="text-[12px] text-muted-foreground">{totalCount.toLocaleString()}</div>
+        </div>
 
         {watched.length > 0 && (
-          <Flexbox style={{ marginBottom: 4 }}>
-            <Flexbox
-              horizontal
-              align="center"
-              className={styles.parent}
-              gap={4}
+          <div className="flex flex-col" style={{ marginBottom: 4 }}>
+            <div
+              className={cx(styles.parent, 'flex items-center gap-1')}
               onClick={() =>
                 setCollapsed((prev) => {
                   const next = new Set(prev);
@@ -173,28 +197,25 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                 })
               }
             >
-              <Icon
-                icon={ChevronRight}
+              <ChevronRight
                 size={13}
                 style={{
                   transform: collapsed.has('watched') ? 'none' : 'rotate(90deg)',
                   transition: 'transform .15s',
                 }}
               />
-              <Icon icon={Timer} size={13} style={{ opacity: 0.55 }} />
-              <Text fontSize={13} style={{ flex: 1 }} weight={500}>
+              <Timer size={13} style={{ opacity: 0.55 }} />
+              <div className="text-[13px] font-medium" style={{ flex: 1 }}>
                 {t('heteroImport.watchedGroup')}
-              </Text>
-              <Text fontSize={12} type="secondary">
-                {watched.length}
-              </Text>
-            </Flexbox>
+              </div>
+              <div className="text-[12px] text-muted-foreground">{watched.length}</div>
+            </div>
             {!collapsed.has('watched') &&
               watched.map((group) => {
                 const Brand = BRAND[group.source];
                 return renderDirRow(group, <Brand size={12} style={{ flex: 'none' }} />);
               })}
-          </Flexbox>
+          </div>
         )}
 
         {SOURCES.map((source) => {
@@ -204,16 +225,15 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
           const count = dirs.reduce((sum, g) => sum + g.sessionCount, 0);
           const Brand = BRAND[source];
           return (
-            <Flexbox key={source}>
-              <Flexbox
-                horizontal
-                align="center"
-                className={cx(styles.parent, scope === source && styles.childActive)}
-                gap={4}
+            <div className="flex flex-col" key={source}>
+              <div
+                className={cx(
+                  cx(styles.parent, scope === source && styles.childActive),
+                  'flex items-center gap-1',
+                )}
                 onClick={() => onScopeChange(source)}
               >
-                <Icon
-                  icon={ChevronRight}
+                <ChevronRight
                   size={13}
                   style={{
                     transform: open ? 'rotate(90deg)' : 'none',
@@ -230,85 +250,89 @@ const SidebarTree = memo<SidebarTreeProps>(({ groups, scope, onScopeChange, onSe
                   }}
                 />
                 <Brand size={15} />
-                <Text fontSize={13} style={{ flex: 1 }} weight={scope === source ? 600 : 500}>
+                <div
+                  className={cn('text-[13px]', scope === source ? 600 : 500)}
+                  style={{ flex: 1 }}
+                >
                   {AGENT_LABEL[source]}
-                </Text>
-                <Text fontSize={12} type="secondary">
-                  {count}
-                </Text>
-              </Flexbox>
+                </div>
+                <div className="text-[12px] text-muted-foreground">{count}</div>
+              </div>
               {open &&
                 dirs.map((group) =>
                   renderDirRow(
                     group,
-                    <Icon
-                      icon={group.isGit ? FolderGit2 : Folder}
-                      size={13}
-                      style={{ flex: 'none', opacity: 0.55 }}
-                    />,
+                    createElement(group.isGit ? FolderGit2 : Folder, {
+                      size: 13,
+                      style: { flex: 'none', opacity: 0.55 },
+                    }),
                   ),
                 )}
-            </Flexbox>
+            </div>
           );
         })}
 
         {ignored.length > 0 && (
-          <Flexbox style={{ marginTop: 8 }}>
-            <Flexbox
-              horizontal
-              align="center"
-              className={styles.parent}
-              gap={4}
+          <div className="flex flex-col" style={{ marginTop: 8 }}>
+            <div
+              className={cx(styles.parent, 'flex items-center gap-1')}
               onClick={() => setShowIgnored((v) => !v)}
             >
-              <Icon
-                icon={ChevronRight}
+              <ChevronRight
                 size={13}
                 style={{
                   transform: showIgnored ? 'rotate(90deg)' : 'none',
                   transition: 'transform .15s',
                 }}
               />
-              <Text fontSize={12} type="secondary">
+              <div className="text-[12px] text-muted-foreground">
                 {t('heteroImport.ignoredGroup', { count: ignored.length })}
-              </Text>
-            </Flexbox>
+              </div>
+            </div>
             {showIgnored &&
               ignored.map((group) => {
                 const key = dirKeyOf(group.source, group.workingDirectory);
                 const Brand = BRAND[group.source];
                 return (
-                  <Tooltip key={key} placement="right" title={group.workingDirectory}>
-                    <Flexbox
-                      horizontal
-                      align="center"
-                      className={styles.child}
-                      gap={8}
-                      justify="space-between"
-                      style={{ opacity: 0.55 }}
-                    >
-                      <Flexbox horizontal align="center" gap={6} style={{ minWidth: 0 }}>
-                        <Brand size={12} style={{ flex: 'none' }} />
-                        <Text ellipsis fontSize={13}>
-                          {baseName(group.workingDirectory)}
-                        </Text>
-                      </Flexbox>
-                      <span className="tree-actions" onClick={(e) => e.stopPropagation()}>
-                        <Tooltip title={t('heteroImport.action.restore')}>
-                          <ActionIcon
-                            icon={Eye}
-                            size="small"
-                            onClick={() => onSetPref(key, null)}
-                          />
-                        </Tooltip>
-                      </span>
-                    </Flexbox>
-                  </Tooltip>
+                  <TooltipProvider key={key}>
+                    <Tooltip>
+                      <TooltipTrigger
+                        render={
+                          <div
+                            className={cx(styles.child, 'flex items-center gap-2 justify-between')}
+                            style={{ opacity: 0.55 }}
+                          >
+                            <div className="flex items-center gap-1.5" style={{ minWidth: 0 }}>
+                              <Brand size={12} style={{ flex: 'none' }} />
+                              <div className="truncate block text-[13px]">
+                                {baseName(group.workingDirectory)}
+                              </div>
+                            </div>
+                            <span className="tree-actions" onClick={(e) => e.stopPropagation()}>
+                              <Tooltip>
+                                <TooltipTrigger
+                                  render={
+                                    <ActionIcon
+                                      icon={Eye}
+                                      size="small"
+                                      onClick={() => onSetPref(key, null)}
+                                    />
+                                  }
+                                />
+                                <TooltipContent>{t('heteroImport.action.restore')}</TooltipContent>
+                              </Tooltip>
+                            </span>
+                          </div>
+                        }
+                      />
+                      <TooltipContent side="right">{group.workingDirectory}</TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
                 );
               })}
-          </Flexbox>
+          </div>
         )}
-      </ScrollShadow>
+      </ScrollArea>
     </DraggablePanel>
   );
 });

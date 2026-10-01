@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { memo, useMemo } from 'react';
@@ -58,12 +57,12 @@ export const SearchAgentInspector = memo<BuiltinInspectorProps<SearchAgentParams
     }
 
     return (
-      <Flexbox horizontal align={'center'} className={styles.root} gap={8}>
+      <div className={cx('flex flex-row items-center gap-2', styles.root)}>
         <span className={cx(styles.title, isArgumentsStreaming && shinyTextStyles.shinyText)}>
           {t(titleKey)}
         </span>
         {keyword && <span className={highlightTextStyles.primary}>{keyword}</span>}
-      </Flexbox>
+      </div>
     );
   },
 );

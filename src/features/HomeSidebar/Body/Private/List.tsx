@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import isEqual from 'fast-deep-equal';
 import { MoreHorizontal } from 'lucide-react';
 import { memo } from 'react';
@@ -68,14 +67,14 @@ const PrivateList = memo<PrivateListProps>(({ hideCreateButton, onMoreClick }) =
   if (!hasPinned && !hasGroups && !hasUngrouped) {
     if (hideCreateButton) return null;
     return (
-      <Flexbox gap={1} paddingBlock={1}>
+      <div className="flex flex-col gap-[1px] py-[1px]">
         <CreateAgentButton visibility={'private'} />
-      </Flexbox>
+      </div>
     );
   }
 
   return (
-    <Flexbox gap={1} paddingBlock={1}>
+    <div className="flex flex-col gap-[1px] py-[1px]">
       {hasPinned && <SessionList dataSource={privatePinned} />}
       {hasGroups && <Group dataSource={privateGroups} />}
       {hasUngrouped && <SessionList dataSource={privateUngrouped} />}
@@ -83,7 +82,7 @@ const PrivateList = memo<PrivateListProps>(({ hideCreateButton, onMoreClick }) =
         <NavItem icon={MoreHorizontal} title={t('input.more')} onClick={handleMoreClick} />
       )}
       {!hideCreateButton && <CreateAgentButton visibility={'private'} />}
-    </Flexbox>
+    </div>
   );
 });
 

@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, Icon, Tooltip } from '@lobehub/ui';
-import { Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import {
   type HeterogeneousAgentRuntimeState,
@@ -11,9 +9,10 @@ import {
 import { resolveHeteroCliAgentType } from '@orvilo/types';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import { ActivityIcon, CircleAlertIcon, RadioTowerIcon, TimerResetIcon } from 'lucide-react';
-import { memo, useState } from 'react';
+import { createElement, memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Skeleton } from '@/components/ui/skeleton';
 import HeteroDeviceSwitcher from '@/features/ChatInput/ControlBar/HeteroDeviceSwitcher';
 import WorkspaceControls from '@/features/ChatInput/ControlBar/WorkspaceControls';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
@@ -23,6 +22,7 @@ import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
+import { SimpleTooltip } from '../../SimpleTooltip';
 import { ClaudeCodeQuotaMenu, CodexQuotaMenu } from './QuotaMenu';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -171,9 +171,9 @@ const HeteroControlBar = memo(() => {
   if (!canConfigureResource) {
     if (!agentId || isLoading) return null;
     return (
-      <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
+      <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
         <HeteroDeviceSwitcher agentId={agentId} />
-      </Flexbox>
+      </div>
     );
   }
 
@@ -185,35 +185,37 @@ const HeteroControlBar = memo(() => {
   if (!isDesktop) {
     if (!agentId) return null;
     return (
-      <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
-        <Flexbox horizontal align={'center'} className={styles.leftGroup} gap={4}>
+      <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
+        <div className={cx('flex flex-row items-center gap-1', styles.leftGroup)}>
           <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
-        </Flexbox>
+        </div>
         {shouldShowClaudeQuota && quotaDeviceId && (
-          <Flexbox horizontal align={'center'} className={styles.rightGroup} gap={4}>
+          <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
             <ClaudeCodeQuotaMenu
               agentId={agentId}
               deviceId={quotaDeviceId}
               env={heteroProvider?.env}
             />
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   }
 
   if (!agentId || isLoading) {
     return (
-      <Flexbox horizontal align={'center'} className={styles.bar} gap={4} justify={'space-between'}>
+      <div className={cx('flex flex-row items-center gap-1 justify-between', styles.bar)}>
         <Skeleton style={{ height: 22, minWidth: 100, width: 100 }} />
         <Skeleton style={{ height: 22, minWidth: 80, width: 80 }} />
-      </Flexbox>
+      </div>
     );
   }
 
   const fullAccessBadge = (
     <div className={styles.fullAccess}>
-      <Icon icon={CircleAlertIcon} size={14} />
+      <span className="anticon" role="img">
+        <CircleAlertIcon fill={'transparent'} height={14} size={14} width={14} />
+      </span>
       <span className={styles.fullAccessLabel}>{tChat('heteroAgent.fullAccess.label')}</span>
     </div>
   );
@@ -245,27 +247,29 @@ const HeteroControlBar = memo(() => {
         ? TimerResetIcon
         : ActivityIcon;
   const sdkRuntimeBadge = shouldShowSdkRuntime ? (
-    <Tooltip
+    <SimpleTooltip
       title={tChat('heteroAgent.claudeSdkRuntime.tooltip', {
         count: runtimeStatus.activeTasks.length,
         state: tChat(`heteroAgent.claudeSdkRuntime.state.${runtimeStatus.state}`),
       })}
     >
       <div className={cx(styles.sdkRuntime, sdkRuntimeClassName)}>
-        <Icon icon={sdkRuntimeIcon} size={14} />
+        <span className="anticon" role="img">
+          {createElement(sdkRuntimeIcon, { size: 14, width: 14, height: 14, fill: 'transparent' })}
+        </span>
         <span className={styles.fullAccessLabel}>
           {tChat(`heteroAgent.claudeSdkRuntime.state.${runtimeStatus.state}`)}
         </span>
       </div>
-    </Tooltip>
+    </SimpleTooltip>
   ) : null;
 
   return (
-    <Flexbox horizontal align={'center'} className={styles.bar} justify={'space-between'}>
-      <Flexbox horizontal align={'center'} className={styles.leftGroup} gap={4}>
+    <div className={cx('flex flex-row items-center justify-between', styles.bar)}>
+      <div className={cx('flex flex-row items-center gap-1', styles.leftGroup)}>
         <WorkspaceControls alwaysShowWorkspace agentId={agentId} />
-      </Flexbox>
-      <Flexbox horizontal align={'center'} className={styles.rightGroup} gap={4}>
+      </div>
+      <div className={cx('flex flex-row items-center gap-1', styles.rightGroup)}>
         {shouldShowCodexQuota && (
           <CodexQuotaMenu command={heteroProvider?.command} env={heteroProvider?.env} />
         )}
@@ -277,9 +281,11 @@ const HeteroControlBar = memo(() => {
           />
         )}
         {sdkRuntimeBadge}
-        <Tooltip title={tChat('heteroAgent.fullAccess.tooltip')}>{fullAccessBadge}</Tooltip>
-      </Flexbox>
-    </Flexbox>
+        <SimpleTooltip title={tChat('heteroAgent.fullAccess.tooltip')}>
+          {fullAccessBadge}
+        </SimpleTooltip>
+      </div>
+    </div>
   );
 });
 

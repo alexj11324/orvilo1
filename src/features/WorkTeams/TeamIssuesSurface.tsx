@@ -1,28 +1,31 @@
 'use client';
-
-import { Center, Empty, Flexbox, Icon } from '@lobehub/ui';
-import { Button, Segmented, Tag, Text } from '@lobehub/ui/base-ui';
 import type { TaskStatus, TaskWorkflowCategory, WorkQuerySortMode } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
-import { PlusIcon, UsersIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { cn } from 'cn';
+import { PlusIcon, UsersIcon, XIcon } from 'lucide-react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import AsyncError from '@/components/AsyncError';
 import { PriorityIcon } from '@/components/PriorityIcon';
+import { Badge } from '@/components/reui/badge';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import WorkFavoriteButton from '@/features/HomeSidebar/Body/WorkFavoriteButton';
 import {
+  completedWindowQueryFilter,
   MY_WORK_PRIORITY_LABEL_KEYS,
-  myWorkPriorityGroupRank,
-  workQueryFieldSections,
 } from '@/features/MyWork/myWorkDisplay';
 import {
   EMPTY_FILTER_BUILDER,
+  mergeWorkQueryFilters,
   myWorkActiveFilterCount,
+  parseWorkQueryFilterParam,
+  serializeWorkQueryFilterParam,
   workQueryFilterHasPredicates,
 } from '@/features/MyWork/myWorkFilters';
 import MyWorkIssuePane from '@/features/MyWork/MyWorkIssuePane';
@@ -38,6 +41,7 @@ import NewViewModal from '@/features/SavedViews/NewViewModal';
 import {
   type BuilderState,
   builderToFilter,
+  filterToBuilder,
   stableStringify,
 } from '@/features/SavedViews/workQueryBuilder';
 import { useWorkspaceMembersQuery } from '@/features/Teammates/api/hooks';
@@ -55,14 +59,14 @@ import TeamIssuesControls from './TeamIssuesControls';
 import { nextTeamIssueScopeNavigation } from './teamIssueScopeNavigation';
 import {
   filterTeamIssueRows,
-  isTeamIssuesClientGrouping,
   patchTeamIssuesParams,
   readTeamIssuesUrlState,
   resetTeamIssuesDisplayParams,
   TEAM_ISSUES_ORDERING_SORTS,
-  teamIssuesDisplayFiltersRows,
+  teamIssuesBoardLane,
   teamIssuesServerGroupBy,
   type TeamIssuesUrlPatch,
+  teamIssuesVisibilityQueryFilter,
 } from './teamIssuesDisplay';
 import { teamSurfaceState } from './teamSurfaceState';
 import { ALL_TEAM_CYCLES, type TeamIssueScope, teamTaskQuery } from './teamWorkQuery';
@@ -190,9 +194,30 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
 
   /* ----------------------------- filters ----------------------------- */
 
-  // The Add-filter builder state is component-local like My issues — the
-  // durable form of a filter set is the saved view "Add new view" produces.
-  const [builder, setBuilder] = useState<BuilderState>(EMPTY_FILTER_BUILDER);
+  // The applied AST lives in `?filter=`. Incomplete builder rows stay local
+  // until they produce a predicate.
+  const filterParam = searchParams.get('filter');
+  const [builder, setBuilderState] = useState<BuilderState>(() =>
+    filterToBuilder('task', parseWorkQueryFilterParam(filterParam)),
+  );
+  useEffect(() => {
+    const parsed = parseWorkQueryFilterParam(filterParam);
+    setBuilderState((current) => {
+      if (stableStringify(builderToFilter('task', current)) === stableStringify(parsed)) {
+        return current;
+      }
+      return filterToBuilder('task', parsed);
+    });
+  }, [filterParam]);
+  const setBuilder = useCallback(
+    (next: BuilderState) => {
+      setBuilderState(next);
+      const serialized = serializeWorkQueryFilterParam(builderToFilter('task', next));
+      if ((serialized ?? null) === (filterParam ?? null)) return;
+      updateParams({ filter: serialized });
+    },
+    [filterParam, updateParams],
+  );
   const builderFilter = builderToFilter('task', builder);
   const hasCustomFilters = workQueryFilterHasPredicates(builderFilter);
   const activeFilterCount = myWorkActiveFilterCount(builder);
@@ -200,26 +225,36 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
   /* ------------------------------ fetch ------------------------------ */
 
   const serverGroupBy = teamIssuesServerGroupBy(display, layout);
+  const boardLane =
+    layout === 'board' ? teamIssuesBoardLane(display.boardGrouping, display.boardLane) : 'none';
   const sort =
     display.ordering === 'default' ? undefined : TEAM_ISSUES_ORDERING_SORTS[display.ordering];
   // A field sort on the board is an ordering, not a manual position — the
   // kanban refuses same-column position writes under it.
   const sortMode: WorkQuerySortMode | undefined = sort && boardActive ? 'field' : undefined;
+  const queryFilter = mergeWorkQueryFilters(
+    mergeWorkQueryFilters(
+      hasCustomFilters ? builderFilter : undefined,
+      completedWindowQueryFilter(display.completed),
+    ),
+    teamIssuesVisibilityQueryFilter(display),
+  );
   const tasksQuery = useMemo(
     () =>
       teamTaskQuery(teamId, cycleId, noProject, layout, issueScope, triageCapable, {
-        filter: hasCustomFilters ? builderFilter : undefined,
+        filter: queryFilter,
         groupBy: serverGroupBy,
         sort,
         sortMode,
+        subGroupBy: boardLane === 'none' ? undefined : boardLane,
       }),
     [
-      builderFilter,
+      boardLane,
       cycleId,
-      hasCustomFilters,
       issueScope,
       layout,
       noProject,
+      queryFilter,
       serverGroupBy,
       sort,
       sortMode,
@@ -227,6 +262,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
       triageCapable,
     ],
   );
+  const pageLimit = boardLane !== 'none' ? 10 : undefined;
   const tasksQueryKey = stableStringify(tasksQuery);
   const tasksKey = useMemo(
     () => ['team-tasks', workspaceId, teamId, tasksQueryKey],
@@ -237,7 +273,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     error: teamTasksError,
     isLoading: isTeamTasksLoading,
   } = useClientDataSWR(workspaceId ? tasksKey : null, () =>
-    workAttentionService.query({ query: tasksQuery }),
+    workAttentionService.query({ limit: pageLimit, query: tasksQuery }),
   );
 
   const firstTeamTasks =
@@ -248,6 +284,9 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     teamTasksData?.data && 'queryHash' in teamTasksData.data
       ? teamTasksData.data.queryHash
       : undefined;
+  const pageToken = `${tasksQueryKey}\u001F${teamQueryHash ?? ''}`;
+  const pageTokenRef = useRef(pageToken);
+  pageTokenRef.current = pageToken;
   const [teamTail, setTeamTail] = useState<typeof firstTeamTasks>([]);
   const [teamGroupTail, setTeamGroupTail] = useState<typeof firstTeamGroups>([]);
   const {
@@ -297,16 +336,19 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
       workAttentionService.query({
         afterId: input.afterId,
         groupKey: input.groupKey,
+        limit: pageLimit,
         query: tasksQuery,
         queryHash: teamQueryHash,
       }),
-    [tasksQuery, teamQueryHash],
+    [pageLimit, tasksQuery, teamQueryHash],
   );
 
   const loadMore = useCallback(async () => {
     const last = teamTasks.at(-1);
+    const started = pageTokenRef.current;
     if (!last || !teamQueryHash) return;
     const next = await fetchNextPage({ afterId: last.id });
+    if (pageTokenRef.current !== started) return;
     const incoming = next.data && 'tasks' in next.data ? next.data.tasks : [];
     setTeamTail((current) => mergeWorkQueryPage(current, incoming));
   }, [fetchNextPage, teamQueryHash, teamTasks]);
@@ -315,8 +357,10 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     async (groupKey: string) => {
       const column = teamGroups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
       if (!last || !teamQueryHash) return;
       const next = await fetchNextPage({ afterId: last.id, groupKey });
+      if (pageTokenRef.current !== started) return;
       const incoming = next.data && 'groups' in next.data ? (next.data.groups ?? []) : [];
       setTeamGroupTail((current) => mergeWorkQueryGroups(current, incoming));
     },
@@ -325,22 +369,23 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
 
   /* --------------------------- display pass --------------------------- */
 
-  // Display filters (completed window, sub-issues) are a presentation-only
-  // pass over the loaded page — ordering stays server-side.
-  const displayFiltersRows = teamIssuesDisplayFiltersRows(display);
-  const displayTasks = useMemo(() => filterTeamIssueRows(teamTasks, display), [display, teamTasks]);
+  // Sub-issues stay a presentation pass. The completed window is a query
+  // predicate, and neither pass replaces the server group total.
+  const displayTasks = useMemo(
+    () => filterTeamIssueRows(teamTasks, { ...display, completed: 'all' }),
+    [display, teamTasks],
+  );
   const displayGroups = useMemo(
     () =>
-      teamGroups.map((group) => {
-        const filteredTasks = filterTeamIssueRows(group.tasks, display);
-        return {
-          ...group,
-          tasks: filteredTasks,
-          // A display-filtered group counts what it actually shows.
-          total: displayFiltersRows ? filteredTasks.length : group.total,
-        };
-      }),
-    [display, displayFiltersRows, teamGroups],
+      teamGroups.map((group) => ({
+        ...group,
+        tasks: filterTeamIssueRows(group.tasks, { ...display, completed: 'all' }),
+      })),
+    [display, teamGroups],
+  );
+  const hiddenRowProperties = useMemo(
+    () => (display.projectChip ? undefined : new Set(['project'] as const)),
+    [display.projectChip],
   );
 
   const cycleOptions = useMemo(
@@ -394,90 +439,59 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     return map;
   }, [members]);
 
-  // Client-side list groupings — the work-query enum has no priority, project,
-  // assignee or cycle dimension, so the surface fetches the flat feed
-  // (`teamIssuesServerGroupBy` → 'none') and buckets the loaded page here.
-  // Arrival order inside a section is the feed's own ordering; Load-more
-  // keeps paging the flat list at the bottom.
-  const flatSections = useMemo(() => {
-    if (layout !== 'list' || !isTeamIssuesClientGrouping(display.grouping)) return undefined;
-    if (display.grouping === 'priority') {
-      return workQueryFieldSections(displayTasks, {
-        // null and 0 are the same "No priority" bucket.
-        keyOf: (task) => task.priority ?? 0,
-        rankOf: myWorkPriorityGroupRank,
-        titleOf: (key) =>
-          t(
-            `chat:${
-              MY_WORK_PRIORITY_LABEL_KEYS[Number(key ?? 0)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0]
-            }` as never,
-          ),
-      }).map((section) => ({
-        ...section,
-        icon: (
-          <PriorityIcon priority={section.key === 'none' ? 0 : Number(section.key)} size={14} />
-        ),
-      }));
+  const groupTitle = useCallback(
+    (axis: string, key: string) => {
+      if (axis === 'priority') {
+        const label =
+          MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
+        return t(`chat:${label}` as never);
+      }
+      if (axis === 'project') {
+        if (key === 'none') return t('myWork.noProject');
+        return projectNameById.get(key) ?? key;
+      }
+      if (axis === 'assignee') {
+        if (key === 'none') return t('chat:taskList.unassigned');
+        return memberNameById.get(key) ?? key;
+      }
+      if (axis === 'cycle') {
+        if (key === 'none') return t('teams.noCycle');
+        return cycleNameById.get(key) ?? key;
+      }
+      return undefined;
+    },
+    [cycleNameById, memberNameById, projectNameById, t],
+  );
+  const groupIcon = useCallback((axis: string, key: string) => {
+    if (axis === 'priority') {
+      return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
     }
-    if (display.grouping === 'project') {
-      return workQueryFieldSections(displayTasks, {
-        keyOf: (task) => task.projectId,
-        // A projectId that resolves to no known name keeps its id as the
-        // honest group label instead of folding into "No project".
-        titleOf: (key) =>
-          key === null ? t('myWork.noProject') : (projectNameById.get(key) ?? key),
-      }).map((section) => ({
-        ...section,
-        icon: (
-          <Icon
-            color={section.key === 'none' ? cssVar.colorTextQuaternary : undefined}
-            icon={PROJECT_ENTITY_ICON}
-            size={14}
-          />
-        ),
-      }));
+    if (axis === 'project') {
+      return (
+        <PROJECT_ENTITY_ICON
+          aria-hidden
+          className="size-4 shrink-0"
+          color={key === 'none' ? cssVar.colorTextQuaternary : undefined}
+        />
+      );
     }
-    if (display.grouping === 'assignee') {
-      return workQueryFieldSections(displayTasks, {
-        keyOf: (task) => task.assigneeUserId,
-        titleOf: (key) =>
-          key === null ? t('chat:taskList.unassigned') : (memberNameById.get(key) ?? key),
-      }).map((section) => ({
-        ...section,
-        icon: <AssigneeUserAvatar size={18} userId={section.key === 'none' ? null : section.key} />,
-      }));
+    if (axis === 'assignee') {
+      return <AssigneeUserAvatar size={18} userId={key === 'none' ? null : key} />;
     }
-    // 'cycle' — buckets follow the team's own cycle list order; a cycle the
-    // roster doesn't know and the "No cycle" bucket both trail.
-    return workQueryFieldSections(displayTasks, {
-      keyOf: (task) => task.cycleRefId,
-      rankOf: (key) =>
-        key === null
-          ? Number.MAX_SAFE_INTEGER
-          : (cycleRankById.get(key) ?? Number.MAX_SAFE_INTEGER),
-      titleOf: (key) => (key === null ? t('teams.noCycle') : (cycleNameById.get(key) ?? key)),
-    });
-  }, [
-    cycleNameById,
-    cycleRankById,
-    display.grouping,
-    displayTasks,
-    layout,
-    memberNameById,
-    projectNameById,
-    t,
-  ]);
+    return undefined;
+  }, []);
 
   const rowExtras = useCallback(
     (task: WorkQueryResultTask) => {
       const name = task.projectId ? projectNameById.get(task.projectId) : undefined;
       if (!name) return null;
       return (
-        <Flexbox flex="none">
-          <Tag icon={<Icon icon={PROJECT_ENTITY_ICON} size={12} />} size="small" variant="outlined">
+        <div className="flex flex-col shrink-0">
+          <Badge variant="secondary">
+            <PROJECT_ENTITY_ICON aria-hidden className="size-4 shrink-0" />
             {name}
-          </Tag>
-        </Flexbox>
+          </Badge>
+        </div>
       );
     },
     [projectNameById],
@@ -533,36 +547,60 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           ? { status: groupKey as TaskStatus }
           : serverGroupBy === 'workflowCategory'
             ? { workflowCategory: groupKey as TaskWorkflowCategory }
-            : undefined,
+            : serverGroupBy === 'project'
+              ? { projectId: groupKey === 'none' ? undefined : groupKey }
+              : undefined,
       ),
     [openCreateModal, serverGroupBy],
   );
-  // Of the client-bucketed groupings only Project can preset a create-modal
-  // field — the `+` stays off the other client buckets.
-  const createInFlatSection = useCallback(
-    (key: string) => openCreateModal({ projectId: key === 'none' ? undefined : key }),
-    [openCreateModal],
-  );
+  const listCreateInGroup =
+    display.grouping === 'priority' || display.grouping === 'assignee' || display.grouping === 'cycle'
+      ? undefined
+      : createInGroup;
 
   const chipsRow =
     noProject || activeFilterCount > 0 || cycleId !== ALL_TEAM_CYCLES ? (
-      <Flexbox horizontal align="center" className={styles.filterChips} gap={8}>
+      <div className={cn('flex flex-row items-center gap-2', styles.filterChips)}>
         {cycleId !== ALL_TEAM_CYCLES ? (
-          <Tag closable size="small" onClose={() => updateParams({ cycleId: ALL_TEAM_CYCLES })}>
+          <Badge variant="secondary">
             {t('teams.cycle')}: {cycleNameById.get(cycleId) ?? cycleId}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => updateParams({ cycleId: ALL_TEAM_CYCLES })}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
         {noProject ? (
-          <Tag closable size="small" onClose={() => updateParams({ noProject: false })}>
+          <Badge variant="secondary">
             {t('teams.noProject')}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => updateParams({ noProject: false })}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
         {activeFilterCount > 0 ? (
-          <Tag closable size="small" onClose={() => setBuilder(EMPTY_FILTER_BUILDER)}>
+          <Badge variant="secondary">
             {t('myWork.filtersActive', { count: activeFilterCount })}
-          </Tag>
+            <Button
+              aria-label={t('close')}
+              size="icon-xs"
+              variant="ghost"
+              onClick={() => setBuilder(EMPTY_FILTER_BUILDER)}
+            >
+              <XIcon />
+            </Button>
+          </Badge>
         ) : null}
-      </Flexbox>
+      </div>
     ) : null;
 
   const results =
@@ -576,11 +614,15 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           <AsyncError error={teamTasksError} variant={'inline'} onRetry={() => refresh()} />
         ) : null}
         <WorkQueryResults
+          collapsedColumns={display.collapsedColumns}
+          collapsedGroups={display.collapsedGroups}
           createContext={{ teamId }}
           emptyLabel={t('teams.workEmpty')}
           flatNested={display.showSubIssues && display.nestedSubIssues}
-          flatSections={flatSections}
+          groupIcon={groupIcon}
+          groupTitle={groupTitle}
           groups={displayGroups}
+          hiddenRowProperties={hiddenRowProperties}
           hideEmptyColumns={!display.showEmptyColumns}
           layout={layout}
           loadMoreError={loadMoreError}
@@ -593,10 +635,19 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           rowExtras={display.projectChip ? rowExtras : undefined}
           selectedTaskId={selected?.identifier}
           sortMode={sortMode}
+          subGroupBy={boardLane === 'none' ? undefined : boardLane}
           tasks={displayTasks}
           groupBy={
             teamTasksData?.data && 'groupBy' in teamTasksData.data
               ? teamTasksData.data.groupBy
+              : undefined
+          }
+          groupRank={
+            layout === 'list' && display.grouping === 'cycle'
+              ? (key) =>
+                  key === 'none'
+                    ? Number.MAX_SAFE_INTEGER
+                    : (cycleRankById.get(key) ?? Number.MAX_SAFE_INTEGER - 1)
               : undefined
           }
           total={
@@ -604,7 +655,9 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
               ? teamTasksData.data.total
               : undefined
           }
-          onCreateInGroup={createInGroup}
+          onCollapsedColumnsChange={(keys) => updateParams({ collapsedColumns: keys })}
+          onCollapsedGroupsChange={(keys) => updateParams({ collapsedGroups: keys })}
+          onCreateInGroup={listCreateInGroup}
           onLoadMore={teamGroups.length === 0 ? () => runLoadMore(loadMore) : undefined}
           onLoadMoreGroup={(key) => runLoadMoreGroup(key, () => loadMoreGroup(key))}
           onMoved={refreshWork}
@@ -612,7 +665,6 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
           onRetryLoadMore={retryLoadMore}
           onRetryLoadMoreGroup={retryLoadMoreGroup}
           onSelectTask={(task) => setSelected(task)}
-          onCreateInFlatSection={display.grouping === 'project' ? createInFlatSection : undefined}
         />
       </>
     );
@@ -621,7 +673,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     <WorkSurface>
       <NavHeader
         left={
-          <Flexbox horizontal align={'center'} gap={8} style={{ paddingInlineStart: 4 }}>
+          <div className="flex flex-row items-center gap-2" style={{ paddingInlineStart: 4 }}>
             {team ? (
               <TeamIdentity
                 color={team.color}
@@ -629,23 +681,26 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
                 letter={(team.key || team.name).slice(0, 1)}
               />
             ) : null}
-            {team ? <Text type="secondary">{team.name}</Text> : null}
+            {team ? <span className="text-sm text-muted-foreground">{team.name}</span> : null}
             <span aria-hidden className={styles.separator}>
               ›
             </span>
-            <Text weight={500}>{t('teams.navIssues')}</Text>
-          </Flexbox>
+            <span className="text-sm font-medium">{t('teams.navIssues')}</span>
+          </div>
         }
         right={
-          <Flexbox horizontal align={'center'} gap={8}>
+          <div className="flex flex-row items-center gap-2">
             <WorkFavoriteButton targetId={teamId} targetType="team" />
-          </Flexbox>
+          </div>
         }
       />
       {!workspaceId ? (
-        <Center flex={1}>
-          <Empty description={t('teams.personal')} icon={UsersIcon} />
-        </Center>
+        <div className="flex flex-col items-center justify-center flex-1">
+          <div className="flex flex-col items-center justify-center gap-3 text-center text-sm text-muted-foreground">
+            <UsersIcon aria-hidden className="size-8" />
+            <p>{t('teams.personal')}</p>
+          </div>
+        </div>
       ) : teamError ? (
         <AsyncError error={teamError} onRetry={() => revalidateTeam()} />
       ) : (
@@ -681,28 +736,30 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
                 />
               }
             >
-              <Segmented
-                size="small"
+              <Tabs
                 value={issueScope}
-                options={ISSUE_SCOPES.map((scope) => ({
-                  // Linear labels the unfiltered scope "All issues".
-                  label: scope === 'all' ? t('teams.scope.allIssues') : t(`teams.scope.${scope}`),
-                  value: scope,
-                }))}
-                onChange={(value) =>
+                onValueChange={(value) =>
                   setSearchParams(
                     ...nextTeamIssueScopeNavigation(searchParams, value as TeamIssueScope),
                   )
                 }
-              />
+              >
+                <TabsList>
+                  {ISSUE_SCOPES.map((scope) => ({
+                    // Linear labels the unfiltered scope "All issues".
+                    label: scope === 'all' ? t('teams.scope.allIssues') : t(`teams.scope.${scope}`),
+                    value: scope,
+                  })).map((option) => (
+                    <TabsTrigger key={option.value} value={option.value}>
+                      {option.label}
+                    </TabsTrigger>
+                  ))}
+                </TabsList>
+              </Tabs>
               {/* "Add new view" opens the shared view builder scoped to this
                   team — same contract as the Projects tab's button. */}
-              <Button
-                icon={PlusIcon}
-                size="small"
-                type="text"
-                onClick={() => setViewBuilderOpen(true)}
-              >
+              <Button variant="ghost" onClick={() => setViewBuilderOpen(true)}>
+                <PlusIcon aria-hidden className="size-4" />
                 {t('savedViews.newView')}
               </Button>
             </WorkSurfaceToolbar>
@@ -736,6 +793,7 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
         defaultEntityType="task"
         defaultTeamId={teamId}
         open={viewBuilderOpen}
+        seedFilter={hasCustomFilters ? builderFilter : undefined}
         onClose={() => setViewBuilderOpen(false)}
       />
     </WorkSurface>

@@ -13,8 +13,7 @@ const readExternalAssetForPublish = vi.hoisted(() => vi.fn());
 const toastError = vi.hoisted(() => vi.fn());
 const toastSuccess = vi.hoisted(() => vi.fn());
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
+vi.mock('@/components/toast', () => ({
   toast: { error: toastError, success: toastSuccess },
 }));
 

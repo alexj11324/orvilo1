@@ -1,7 +1,5 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { Text } from '@lobehub/ui/base-ui';
 import { cssVar } from 'antd-style';
 import { memo, useCallback } from 'react';
 
@@ -25,25 +23,26 @@ const Item = memo<ItemProps>(({ title, description, disabled, prompt }) => {
   }, [disabled, prompt, mainInputEditor]);
 
   return (
-    <Block
-      clickable={!disabled}
-      variant={'outlined'}
+    <div
+      className={`flex flex-col border${disabled ? '' : ' hover:bg-[var(--ant-color-fill-tertiary)]'}`}
       style={{
+        borderColor: cssVar.colorBorderSecondary,
+        background: cssVar.colorBgContainer,
         borderRadius: cssVar.borderRadiusLG,
         cursor: disabled ? 'not-allowed' : 'pointer',
         opacity: disabled ? 0.65 : undefined,
       }}
       onClick={handleClick}
     >
-      <Flexbox gap={4} paddingBlock={12} paddingInline={14}>
-        <Text ellipsis fontSize={14} style={{ fontWeight: 500 }}>
+      <div className="flex flex-col gap-1 py-3 px-[14px]">
+        <div className="truncate min-w-0 text-[14px]" style={{ fontWeight: 500 }}>
           {title}
-        </Text>
-        <Text color={cssVar.colorTextTertiary} ellipsis={{ rows: 2 }} fontSize={12}>
+        </div>
+        <div className="line-clamp-2 text-[12px]" style={{ color: cssVar.colorTextTertiary }}>
           {description}
-        </Text>
-      </Flexbox>
-    </Block>
+        </div>
+      </div>
+    </div>
   );
 });
 

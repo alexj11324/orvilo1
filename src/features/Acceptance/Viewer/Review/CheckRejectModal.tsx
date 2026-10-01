@@ -1,9 +1,9 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { createModal, Text } from '@lobehub/ui/base-ui';
 import { useResponsive } from 'antd-style';
 import { memo } from 'react';
+
+import { createModal } from '@/components/Modal';
 
 import { DesktopEvidenceReview } from '../Evidence/DesktopEvidenceReview';
 import { MobileEvidenceReview } from '../Evidence/MobileEvidenceReview';
@@ -51,16 +51,14 @@ export const openCheckRejectModal = (options: CheckRejectModalProps) => {
     footer: null,
     maskClosable: true,
     title: (
-      <Flexbox gap={2}>
-        <Text strong style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>
+      <div className="flex flex-col gap-0.5">
+        <div className="font-semibold" style={{ overflowWrap: 'anywhere', whiteSpace: 'normal' }}>
           {modalTitle.title}
-        </Text>
+        </div>
         {modalTitle.description && (
-          <Text fontSize={12} type={'secondary'}>
-            {modalTitle.description}
-          </Text>
+          <div className="text-[12px] text-muted-foreground">{modalTitle.description}</div>
         )}
-      </Flexbox>
+      </div>
     ),
   });
 };

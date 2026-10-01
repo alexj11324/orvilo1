@@ -1,12 +1,12 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import { ActionIcon } from '@lobehub/ui/base-ui';
 import { ChatHeader } from '@lobehub/ui/mobile';
+import { cx } from 'antd-style';
 import { MessageSquarePlus } from 'lucide-react';
 import { memo } from 'react';
 import { useNavigate } from 'react-router';
 
+import ActionIcon from '@/components/ActionIcon';
 import { ProductLogo } from '@/components/Branding';
 import { MOBILE_HEADER_ICON_SIZE } from '@/const/layoutTokens';
 import UserAvatar from '@/features/User/UserAvatar';
@@ -23,10 +23,10 @@ const Header = memo(() => {
     <ChatHeader
       style={mobileHeaderSticky}
       left={
-        <Flexbox horizontal align={'center'} className={styles.leftContainer} gap={8}>
+        <div className={cx(styles.leftContainer, 'flex items-center gap-2')}>
           <UserAvatar size={32} onClick={() => navigate('/me')} />
           <ProductLogo type={'text'} />
-        </Flexbox>
+        </div>
       }
       right={
         <ActionIcon

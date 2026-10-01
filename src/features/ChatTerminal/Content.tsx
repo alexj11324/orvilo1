@@ -1,18 +1,6 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
-import {
-  ActionIcon,
-  Button,
-  type ContextMenuItem,
-  ContextMenuTrigger,
-  TabsIndicator,
-  TabsList,
-  TabsRoot,
-  TabsTab,
-  Text,
-} from '@lobehub/ui/base-ui';
-import { createStaticStyles } from 'antd-style';
+import { createStaticStyles, cx } from 'antd-style';
 import {
   CopyXIcon,
   PlusIcon,
@@ -23,6 +11,10 @@ import {
 import { memo, useEffect, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
+import { ContextMenuTrigger, type DropdownItem as ContextMenuItem } from '@/components/ItemsMenu';
+import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -156,21 +148,19 @@ const Content = memo(() => {
   ];
 
   return (
-    <Flexbox className={styles.container}>
-      <Flexbox horizontal align={'center'} className={styles.tabBar} gap={4}>
-        <TabsRoot
+    <div className={cx(styles.container, 'flex flex-col')}>
+      <div className={cx(styles.tabBar, 'flex items-center gap-1')}>
+        <Tabs
           className={styles.tabs}
-          size={'small'}
           value={activeTab?.id ?? null}
           onValueChange={(next) => {
             if (typeof next === 'string') setActiveTab(topicKey, next);
           }}
         >
           <TabsList className={styles.tabList}>
-            <TabsIndicator className={styles.indicator} />
             {tabs.map((tab) => (
               <ContextMenuTrigger items={() => tabMenuItems(tab.id)} key={tab.id}>
-                <TabsTab className={styles.tab} value={tab.id}>
+                <TabsTrigger className={styles.tab} value={tab.id}>
                   <SquareTerminalIcon size={12} />
                   {tab.title}
                   <ActionIcon
@@ -182,11 +172,11 @@ const Content = memo(() => {
                       closeTab(topicKey, tab.id);
                     }}
                   />
-                </TabsTab>
+                </TabsTrigger>
               </ContextMenuTrigger>
             ))}
           </TabsList>
-        </TabsRoot>
+        </Tabs>
         <ActionIcon
           icon={PlusIcon}
           loading={creating}
@@ -194,7 +184,7 @@ const Content = memo(() => {
           title={t('terminalPanel.newTab')}
           onClick={() => createTab(topicKey, cwd)}
         />
-        <Flexbox flex={1} />
+        <div className="flex flex-col flex-1" />
         <ActionIcon
           disabled={!activeTab || creating}
           icon={SquareSplitHorizontalIcon}
@@ -208,7 +198,7 @@ const Content = memo(() => {
           title={t('terminalPanel.close')}
           onClick={() => toggleTerminalPanel(false)}
         />
-      </Flexbox>
+      </div>
       <div className={styles.view}>
         {activeTab ? (
           <SplitView
@@ -219,15 +209,15 @@ const Content = memo(() => {
             onResize={(flex) => setPaneFlex(topicKey, activeTab.id, flex)}
           />
         ) : createError ? (
-          <Flexbox align={'center'} flex={1} gap={8} height={'100%'} justify={'center'}>
-            <Text type={'secondary'}>{t('terminalPanel.createFailed')}</Text>
-            <Button size={'small'} onClick={() => createTab(topicKey, cwd)}>
+          <div className="flex flex-col items-center flex-1 gap-2 h-full justify-center">
+            <div className="text-muted-foreground">{t('terminalPanel.createFailed')}</div>
+            <Button size="sm" onClick={() => createTab(topicKey, cwd)}>
               {t('retry', { ns: 'common' })}
             </Button>
-          </Flexbox>
+          </div>
         ) : null}
       </div>
-    </Flexbox>
+    </div>
   );
 });
 

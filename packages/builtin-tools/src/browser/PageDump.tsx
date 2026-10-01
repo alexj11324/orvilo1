@@ -1,8 +1,9 @@
 'use client';
 
-import { Highlighter } from '@lobehub/ui';
 import type { BuiltinRenderProps } from '@orvilo/types';
 import { memo } from 'react';
+
+import { CodeBlock } from '@/components/ui/code-block';
 
 import type { BrowserReadPageState, BrowserSnapshotState } from './types';
 
@@ -15,9 +16,13 @@ export const PageDump = memo<BuiltinRenderProps<unknown, BrowserPageDumpState, s
       content;
     if (!pageContent) return null;
     return (
-      <Highlighter wrap language={'text'} showLanguage={false} style={{ maxHeight: 360 }}>
-        {pageContent}
-      </Highlighter>
+      <CodeBlock
+        wrap
+        code={pageContent}
+        language={'text'}
+        style={{ maxHeight: 360 }}
+        variant="ghost"
+      />
     );
   },
 );

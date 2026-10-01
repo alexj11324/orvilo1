@@ -1,6 +1,6 @@
-import { Avatar } from '@lobehub/ui/base-ui';
 import { memo, useMemo } from 'react';
 
+import Avatar from '@/components/Avatar';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@/const/meta';
 import GroupAvatar from '@/features/GroupAvatar';
 import { type SharedTopicData } from '@/types/topic';

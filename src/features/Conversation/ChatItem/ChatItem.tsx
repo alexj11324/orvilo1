@@ -1,8 +1,8 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { agentDisplayName } from '@orvilo/types';
 import { cx } from 'antd-style';
+import { cn } from 'cn';
 import { memo } from 'react';
 
 import FollowUpChips from '../FollowUp/FollowUpChips';
@@ -67,32 +67,29 @@ const ChatItem = memo<ChatItemProps>(
     );
 
     return (
-      <Flexbox
-        align={isUser ? 'flex-end' : 'flex-start'}
-        className={cx('message-wrapper', styles.container, className)}
+      <div
+        {...rest}
         data-message-id={id}
-        gap={8}
-        paddingBlock={8}
+        className={cn(
+          'flex flex-col gap-2 py-2',
+          cx('message-wrapper', styles.container, className),
+        )}
         style={{
           paddingInlineStart: isUser ? 36 : 0,
           ...style,
         }}
-        {...rest}
       >
-        <Flexbox
-          align={'center'}
-          className={'message-header'}
-          direction={isUser ? 'horizontal-reverse' : 'horizontal'}
-          gap={8}
+        <div
+          className={cn('flex items-center gap-2', 'message-header')}
+          style={{ flexDirection: isUser ? 'row-reverse' : 'row' }}
         >
           {showAvatar &&
             (customAvatarRender ? customAvatarRender(avatar, avatarContent) : avatarContent)}
           {headerAddon}
           <Title avatar={avatar} showTitle={showTitle} time={time} titleAddon={titleAddon} />
-        </Flexbox>
-        <Flexbox
-          className={'message-body'}
-          gap={8}
+        </div>
+        <div
+          className={cn('flex flex-col gap-2', 'message-body')}
           style={{
             maxWidth: '100%',
             overflow: 'hidden',
@@ -122,7 +119,7 @@ const ChatItem = memo<ChatItemProps>(
             </MessageContent>
           )}
           {belowMessage}
-        </Flexbox>
+        </div>
         {id && conversationKey && (
           <FollowUpChips conversationKey={conversationKey} messageId={id} />
         )}
@@ -130,15 +127,16 @@ const ChatItem = memo<ChatItemProps>(
           <Actions actionAddon={actionAddon} actions={actions} placement={placement} />
         )}
         {afterActions && (
-          <Flexbox
+          <div
+            className="flex flex-col"
             style={{
               width: isUser ? undefined : '100%',
             }}
           >
             {afterActions}
-          </Flexbox>
+          </div>
         )}
-      </Flexbox>
+      </div>
     );
   },
 );

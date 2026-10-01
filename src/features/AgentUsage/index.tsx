@@ -1,11 +1,10 @@
 'use client';
 
-import { Block, Flexbox } from '@lobehub/ui';
-import { Segmented, Text } from '@lobehub/ui/base-ui';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AsyncError from '@/components/AsyncError';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
 import AgentProfileTabs, { AGENT_PROFILE_TABS_CENTER_STYLE } from '@/features/AgentProfileTabs';
 import NavHeader from '@/features/NavHeader';
@@ -68,7 +67,7 @@ const AgentUsage = memo(() => {
   const showError = !!error && !data;
 
   return (
-    <Flexbox height={'100%'} width={'100%'}>
+    <div className="flex flex-col h-full w-full">
       <NavHeader
         // No section title — the Segmented beside it names the current tab.
         left={activeAgentId ? <AgentBreadcrumb agentId={activeAgentId} /> : null}
@@ -82,48 +81,54 @@ const AgentUsage = memo(() => {
       >
         {activeAgentId && <AgentProfileTabs active={'statistics'} agentId={activeAgentId} />}
       </NavHeader>
-      <Flexbox flex={1} style={styles.body} width={'100%'}>
+      <div className="flex flex-col flex-1 w-full" style={{ ...styles.body }}>
         <WideScreenContainer>
-          <Flexbox gap={16} paddingBlock={16}>
-            <Block gap={16} padding={20} variant={'outlined'}>
-              <Flexbox horizontal align={'center'} gap={16} justify={'space-between'} wrap={'wrap'}>
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <Text fontSize={13} type={'secondary'}>
+          <div className="flex flex-col gap-4" style={{ paddingBlock: 16 }}>
+            <div
+              className="flex flex-col gap-4 rounded-md border border-border"
+              style={{ padding: 20 }}
+            >
+              <div className="flex items-center gap-4 justify-between flex-wrap">
+                <div className="flex items-center gap-2">
+                  <div className="text-[13px] text-muted-foreground">
                     {t('usageStats.dimension')}
-                  </Text>
-                  <Segmented
-                    size={'small'}
-                    value={granularity}
-                    options={[
-                      { label: t('usageStats.byDay'), value: 'day' },
-                      { label: t('usageStats.byWeek'), value: 'week' },
-                    ]}
-                    onChange={(v) => handleGranularityChange(v as AgentUsageGranularity)}
-                  />
-                </Flexbox>
-                <Flexbox horizontal align={'center'} gap={8}>
-                  <Text fontSize={13} type={'secondary'}>
-                    {t('usageStats.range')}
-                  </Text>
-                  <Segmented
-                    size={'small'}
-                    value={range}
-                    options={
-                      granularity === 'week'
-                        ? [
-                            { label: '30d', value: '30d' },
-                            { label: '90d', value: '90d' },
-                          ]
-                        : [
-                            { label: '7d', value: '7d' },
-                            { label: '30d', value: '30d' },
-                            { label: '90d', value: '90d' },
-                          ]
+                  </div>
+                  <ToggleGroup
+                    size="sm"
+                    value={[granularity]}
+                    onValueChange={(v) =>
+                      v[0] && handleGranularityChange(v[0] as AgentUsageGranularity)
                     }
-                    onChange={(v) => setRange(v as TimeRange)}
-                  />
-                </Flexbox>
-              </Flexbox>
+                  >
+                    <ToggleGroupItem value="day">{t('usageStats.byDay')}</ToggleGroupItem>
+                    <ToggleGroupItem value="week">{t('usageStats.byWeek')}</ToggleGroupItem>
+                  </ToggleGroup>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="text-[13px] text-muted-foreground">{t('usageStats.range')}</div>
+                  <ToggleGroup
+                    size="sm"
+                    value={[range]}
+                    onValueChange={(v) => v[0] && setRange(v[0] as TimeRange)}
+                  >
+                    {(granularity === 'week'
+                      ? [
+                          { label: '30d', value: '30d' },
+                          { label: '90d', value: '90d' },
+                        ]
+                      : [
+                          { label: '7d', value: '7d' },
+                          { label: '30d', value: '30d' },
+                          { label: '90d', value: '90d' },
+                        ]
+                    ).map((o) => (
+                      <ToggleGroupItem key={o.value} value={o.value}>
+                        {o.label}
+                      </ToggleGroupItem>
+                    ))}
+                  </ToggleGroup>
+                </div>
+              </div>
               {showError ? (
                 <AsyncError error={error} variant={'metric'} onRetry={() => mutate()} />
               ) : (
@@ -133,21 +138,27 @@ const AgentUsage = memo(() => {
                   summary={data?.summary ?? EMPTY_SUMMARY}
                 />
               )}
-            </Block>
+            </div>
             {!showError && (
               <>
-                <Block padding={20} variant={'outlined'}>
+                <div
+                  className="flex flex-col rounded-md border border-border"
+                  style={{ padding: 20 }}
+                >
                   <UsageTrendChart buckets={data?.buckets} isLoading={isLoading} />
-                </Block>
-                <Block padding={20} variant={'outlined'}>
+                </div>
+                <div
+                  className="flex flex-col rounded-md border border-border"
+                  style={{ padding: 20 }}
+                >
                   <ModelBreakdown isLoading={isLoading} rows={data?.byModel ?? []} />
-                </Block>
+                </div>
               </>
             )}
-          </Flexbox>
+          </div>
         </WideScreenContainer>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

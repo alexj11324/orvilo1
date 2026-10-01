@@ -1,18 +1,13 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
-import { type InputRef } from 'antd';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface CreateBranchContentProps {
   /**
@@ -29,7 +24,7 @@ const CreateBranchContent = memo<CreateBranchContentProps>(({ onSubmit }) => {
   const [value, setValue] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     queueMicrotask(() => inputRef.current?.focus());
@@ -53,29 +48,31 @@ const CreateBranchContent = memo<CreateBranchContentProps>(({ onSubmit }) => {
   }, [close, loading, onSubmit, value]);
 
   return (
-    <Flexbox gap={16}>
-      <Flexbox gap={6}>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
         <Input
           placeholder={tDevice('workingDirectory.newBranchPlaceholder')}
           ref={inputRef}
           value={value}
-          onPressEnter={handleSubmit}
           onChange={(e) => {
             setValue(e.target.value);
             setError(undefined);
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSubmit();
+          }}
         />
-        {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
-      </Flexbox>
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+      </div>
+      <div className="flex flex-row gap-2 justify-end">
         <Button disabled={loading} onClick={close}>
           {tCommon('cancel')}
         </Button>
-        <Button disabled={!value.trim()} loading={loading} type={'primary'} onClick={handleSubmit}>
+        <Button disabled={!value.trim()} loading={loading} variant="default" onClick={handleSubmit}>
           {tDevice('workingDirectory.checkoutAction')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

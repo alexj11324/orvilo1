@@ -1,6 +1,5 @@
 'use client';
 
-import { Flexbox } from '@lobehub/ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -36,10 +35,10 @@ const Header = memo(() => {
         root rather than in whatever folder the URL happens to be in; each
         folder row carries its own "+" for creating inside that folder.
       */}
-      <Flexbox horizontal align={'center'} gap={8} paddingBlock={'0 8px'} paddingInline={8}>
+      <div className="flex flex-row items-center gap-2 px-2" style={{ paddingBlock: '0 8px' }}>
         <LibrarySearchBar />
         <AddButton iconOnly rootLevel />
-      </Flexbox>
+      </div>
     </>
   );
 });

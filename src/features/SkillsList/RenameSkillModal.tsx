@@ -1,18 +1,13 @@
 'use client';
 
-import { Flexbox, Input } from '@lobehub/ui';
-import {
-  Button,
-  createModal,
-  type ModalInstance,
-  Text,
-  useModalContext,
-} from '@lobehub/ui/base-ui';
-import { type InputRef } from 'antd';
 import { cssVar } from 'antd-style';
 import { t } from 'i18next';
 import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
+
+import { createModal, type ModalInstance, useModalContext } from '@/components/Modal';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 interface RenameSkillContentProps {
   /** The skill's current name — prefilled and selected for quick editing. */
@@ -31,7 +26,7 @@ const RenameSkillContent = memo<RenameSkillContentProps>(({ currentName, onSubmi
   const [value, setValue] = useState(currentName);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string>();
-  const inputRef = useRef<InputRef>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     // Focus + select the whole name so the user can immediately retype.
@@ -57,34 +52,35 @@ const RenameSkillContent = memo<RenameSkillContentProps>(({ currentName, onSubmi
 
   const trimmed = value.trim();
   return (
-    <Flexbox gap={16}>
-      <Flexbox gap={6}>
+    <div className="flex flex-col gap-4">
+      <div className="flex flex-col gap-1.5">
         <Input
           placeholder={tChat('workingPanel.skills.rename.placeholder')}
           ref={inputRef}
           value={value}
-          onPressEnter={handleSubmit}
           onChange={(e) => {
             setValue(e.target.value);
             setError(undefined);
           }}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') handleSubmit();
+          }}
         />
-        {error ? <Text style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</Text> : null}
-      </Flexbox>
-      <Flexbox horizontal gap={8} justify={'flex-end'}>
+        {error ? <div style={{ color: cssVar.colorError, fontSize: 12 }}>{error}</div> : null}
+      </div>
+      <div className="flex gap-2 justify-end">
         <Button disabled={loading} onClick={close}>
           {tCommon('cancel')}
         </Button>
         <Button
           disabled={!trimmed || trimmed === currentName}
           loading={loading}
-          type={'primary'}
           onClick={handleSubmit}
         >
           {tChat('workingPanel.skills.rename.action')}
         </Button>
-      </Flexbox>
-    </Flexbox>
+      </div>
+    </div>
   );
 });
 

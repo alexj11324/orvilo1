@@ -1,13 +1,14 @@
 'use client';
 
-import type { FormGroupItemType } from '@lobehub/ui';
-import { Flexbox, Form } from '@lobehub/ui';
-import { Select, Skeleton } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import AutoSaveHint from '@/components/Editor/AutoSaveHint';
+import type { FormGroupItemType } from '@/components/GroupForm';
+import Form from '@/components/GroupForm';
+import Select from '@/components/Select';
+import { Skeleton } from '@/components/ui/skeleton';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
 import { useSaveState } from '@/hooks/useSaveState';
@@ -68,44 +69,57 @@ const FontSettings = memo(() => {
         ...(isDesktop
           ? [
               {
-                children: <Skeleton height={32} width={320} />,
-                desc: <Skeleton height={12} style={loadingTextStyle} width={240} />,
-                label: <Skeleton height={16} style={loadingTextStyle} width={96} />,
+                children: <Skeleton style={{ width: 320, height: 32 }} />,
+                desc: <Skeleton style={{ width: 240, height: 12, ...loadingTextStyle }} />,
+                label: <Skeleton style={{ width: 96, height: 16, ...loadingTextStyle }} />,
                 minWidth: undefined,
               },
               {
-                children: <Skeleton height={32} width={320} />,
-                desc: <Skeleton height={12} style={loadingTextStyle} width={280} />,
-                label: <Skeleton height={16} style={loadingTextStyle} width={128} />,
+                children: <Skeleton style={{ width: 320, height: 32 }} />,
+                desc: <Skeleton style={{ width: 280, height: 12, ...loadingTextStyle }} />,
+                label: <Skeleton style={{ width: 128, height: 16, ...loadingTextStyle }} />,
                 minWidth: undefined,
               },
             ]
           : []),
         {
           children: (
-            <Flexbox gap={16} width={'100%'}>
-              <Flexbox gap={24}>
-                <Skeleton height={4} width={'100%'} />
-                <Flexbox horizontal align={'center'} justify={'space-between'}>
-                  <Skeleton height={14} width={12} />
-                  <Skeleton height={14} width={64} />
-                  <Skeleton height={14} width={12} />
-                </Flexbox>
-              </Flexbox>
-              <Flexbox justify={'center'} style={{ height: 30 }}>
-                <Skeleton height={16} style={{ maxWidth: '100%' }} width={400} />
-              </Flexbox>
-            </Flexbox>
+            <div
+              className={'flex min-w-0'}
+              style={{ flexDirection: 'column', gap: 16, width: '100%' }}
+            >
+              <div className={'flex min-w-0'} style={{ flexDirection: 'column', gap: 24 }}>
+                <Skeleton style={{ width: '100%', height: 4 }} />
+                <div
+                  className={'flex min-w-0'}
+                  style={{
+                    flexDirection: 'row',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
+                >
+                  <Skeleton style={{ width: 12, height: 14 }} />
+                  <Skeleton style={{ width: 64, height: 14 }} />
+                  <Skeleton style={{ width: 12, height: 14 }} />
+                </div>
+              </div>
+              <div
+                className={'flex min-w-0'}
+                style={{ flexDirection: 'column', justifyContent: 'center', height: 30 }}
+              >
+                <Skeleton style={{ width: 400, height: 16, maxWidth: '100%' }} />
+              </div>
+            </div>
           ),
-          desc: <Skeleton height={12} style={loadingTextStyle} width={144} />,
-          label: <Skeleton height={16} style={loadingTextStyle} width={72} />,
+          desc: <Skeleton style={{ width: 144, height: 12, ...loadingTextStyle }} />,
+          label: <Skeleton style={{ width: 72, height: 16, ...loadingTextStyle }} />,
           layout: 'vertical',
           minWidth: '100%',
           wrapperCol,
         },
       ],
-      extra: <Skeleton height={16} width={136} />,
-      title: <Skeleton height={18} width={48} />,
+      extra: <Skeleton style={{ width: 136, height: 16 }} />,
+      title: <Skeleton style={{ width: 48, height: 18 }} />,
     };
 
     return (
@@ -133,7 +147,8 @@ const FontSettings = memo(() => {
                   options={interfaceFonts.options}
                   style={{ width: 320 }}
                   value={interfaceStack[0] || APPLICATION_DEFAULT_FONT}
-                  onChange={(value: string) =>
+                  onChange={(value) =>
+                    typeof value === 'string' &&
                     saveInterfaceStack(
                       value === APPLICATION_DEFAULT_FONT ? [] : [value, ...interfaceStack.slice(1)],
                     )
@@ -178,7 +193,8 @@ const FontSettings = memo(() => {
                   options={monospaceFonts.options}
                   style={{ width: 320 }}
                   value={monospaceStack[0] || APPLICATION_DEFAULT_FONT}
-                  onChange={(value: string) =>
+                  onChange={(value) =>
+                    typeof value === 'string' &&
                     saveMonospaceStack(
                       value === APPLICATION_DEFAULT_FONT ? [] : [value, ...monospaceStack.slice(1)],
                     )

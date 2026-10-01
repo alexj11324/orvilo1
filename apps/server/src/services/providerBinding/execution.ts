@@ -1,44 +1,64 @@
-import type { OrviloEngineKind } from '@orvilo/types';
+import type { ProviderBinding } from '@orvilo/agent-execution/controlPlane';
+import { CONTROL_PLANE_VERSION } from '@orvilo/agent-execution/controlPlane';
+import type { OrviloEngineKind, ProviderBindingConfig } from '@orvilo/types';
+import { resolveOrviloEngine } from '@orvilo/types';
 
 import { ProviderBindingModel } from '@/database/models/providerBinding';
 import type { OrviloDatabase } from '@/database/type';
 
 import { resolveProviderCredentialHeaders } from './controlPlane';
 
-/**
- * BYOK binding → Orvilo-agent execution resolution.
- *
- * Selection convention: a binding applies to a run when its
- * `config.selection` matches the run being dispatched —
- * `runtime: 'orvilo'` (Orvilo-owned harness only; `claude-code`/`codex`
- * bindings target the external CLI configs and are never matched here),
- * `engine` unset or equal to the resolved engine, and `target` matching the
- * dispatch plan: `sandbox` → cloud sandbox, `local`/`device` → device
- * dispatch (`device` additionally requires `selection.deviceId` to equal the
- * plan's device). When several bindings match, the most recently updated
- * wins (`list()` ordering).
- *
- * Issuing is revision-fenced: the candidate's `revision` is re-read at mint
- * time and must still be `enabled` — an edited, disabled, or deleted binding
- * never silently issues credentials. Secrets are decrypted only inside this
- * trusted boundary and leave as spawn env / wrapper args for the Orvilo-owned
- * runtime process (over the authenticated device-dispatch channel or the
- * sandbox env contract) — they are never returned to a client.
- */
+export type ProviderBindingRow = NonNullable<Awaited<ReturnType<ProviderBindingModel['find']>>>;
 
+/**
+ * Binding rows whose selection admits a run on the Orvilo runtime. Resolution
+ * is a read only — it never issues credentials; `issueBindingExecution` is the
+ * fence. `list` orders by `updatedAt` descending, so the most recently saved
+ * matching binding wins.
+ *
+ * `match` narrows the candidates to the task's requested provider/model — a
+ * run configured for provider X may only resolve binding X; absent fields are
+ * unconstrained. No match means `undefined`, and callers fail loudly rather
+ * than falling back to a different binding or an environment key.
+ */
+export interface ProviderBindingMatch {
+  model?: string;
+  provider?: string;
+}
+
+/**
+ * Spawn-side dispatch target used by execAgent's BYOK gate
+ * (feat/byok-execution-chain). Distinct from the canonical
+ * `selection.target` literal: `device` admits `local` bindings (any of the
+ * user's devices) and `device` bindings pinned to `deviceId`; `sandbox`
+ * admits sandbox-targeted bindings only.
+ */
 export interface OrviloBindingTarget {
   deviceId?: string;
   kind: 'device' | 'sandbox';
 }
 
-export interface IssuedByokExecution {
+/**
+ * Issued BYOK execution for a spawned Orvilo runtime, as execAgent consumes
+ * it: a descriptor (`bindingId`/`revision`/`provider`/`model`/`endpoint`)
+ * plus the engine-specific spawn material.
+ *
+ * `env`/`execArgs` are materialized ONLY for `device` dispatch — the
+ * authenticated device-dispatch channel carries server-minted spawn env into
+ * the user's own process, the one arm where that surface legitimately lives.
+ * For `sandbox` dispatch they stay empty: a spawned CLI in a cloud sandbox
+ * receives provider credentials through the embedded inference broker
+ * (host-side resolution via `secretReference`), never through process env.
+ */
+export interface IssuedByokSpawnExecution {
   bindingId: string;
   endpoint: string;
-  /** Spawn env minted for the engine's CLI family — carries the credentials. */
+  /** Spawn env minted for the engine's CLI family; empty unless `device`. */
   env: Record<string, string>;
   /**
    * Extra `lh hetero exec` wrapper args (`--agent-arg=<native arg>` encoded so
-   * wrapper flags like `-c` cannot collide with native ones).
+   * wrapper flags like `-c` cannot collide with native ones); empty unless
+   * `device`.
    */
   execArgs: string[];
   model: string;
@@ -46,11 +66,154 @@ export interface IssuedByokExecution {
   revision: number;
 }
 
+/**
+ * execAgent-facing resolution shape (#367): `unavailable` distinguishes "a
+ * binding matched but could not issue credentials" from "no binding applies"
+ * — callers must fail the run loudly rather than fall back to another
+ * provider account.
+ */
 export type OrviloBindingResolution =
   | { status: 'none' }
   /** A candidate matched but failed the mint-time fence (stale/disabled/gone). */
   | { status: 'unavailable' }
-  | { status: 'applied'; execution: IssuedByokExecution };
+  | { status: 'applied'; execution: IssuedByokSpawnExecution };
+
+// The compat overload sits above the canonical signature: `target` as an
+// `OrviloBindingTarget` object selects the spawn-material resolution while a
+// `selection.target` string keeps the canonical row lookup.
+export function resolveOrviloProviderBinding(
+  db: OrviloDatabase,
+  userId: string,
+  engine: OrviloEngineKind | string | null | undefined,
+  target: OrviloBindingTarget,
+): Promise<OrviloBindingResolution>;
+export function resolveOrviloProviderBinding(
+  db: OrviloDatabase,
+  userId: string,
+  engine: OrviloEngineKind | string | null | undefined,
+  target: ProviderBindingConfig['selection']['target'],
+  match?: ProviderBindingMatch,
+): Promise<ProviderBindingRow | undefined>;
+export async function resolveOrviloProviderBinding(
+  db: OrviloDatabase,
+  userId: string,
+  engine: OrviloEngineKind | string | null | undefined,
+  target: ProviderBindingConfig['selection']['target'] | OrviloBindingTarget,
+  match?: ProviderBindingMatch,
+) {
+  const wanted = resolveOrviloEngine(engine);
+  if (typeof target === 'object') {
+    const candidate = await selectOrviloProviderBinding(db, userId, wanted, target);
+    if (!candidate) return { status: 'none' };
+    const execution = await issueBindingExecution(
+      db,
+      userId,
+      { id: candidate.id, revision: candidate.revision },
+      wanted,
+      target,
+    );
+    if (!execution) return { status: 'unavailable' };
+    return { execution, status: 'applied' };
+  }
+  const rows = await new ProviderBindingModel(db, userId).list();
+  return rows.find((row) => {
+    const selection = row.config?.selection;
+    if (!selection || selection.runtime !== 'orvilo' || selection.target !== target) return false;
+    if (resolveOrviloEngine(selection.engine) !== wanted) return false;
+    if (match?.provider && row.config?.provider !== match.provider) return false;
+    if (match?.model && row.config?.model !== match.model) return false;
+    return true;
+  });
+}
+
+/**
+ * The canonical row-resolution call shape — what broker seams such as
+ * `EmbeddedInferenceBridgeDeps.resolveBinding` substitute. `typeof`
+ * `resolveOrviloProviderBinding` now covers the whole overload set, so seams
+ * name this alias to keep the canonical contract.
+ */
+export type ResolveOrviloProviderBindingForTarget = (
+  db: OrviloDatabase,
+  userId: string,
+  engine: OrviloEngineKind | string | null | undefined,
+  target: ProviderBindingConfig['selection']['target'],
+  match?: ProviderBindingMatch,
+) => Promise<ProviderBindingRow | undefined>;
+
+/**
+ * The run-grant scope a binding may be issued in. `ownerId` is the
+ * server-derived delegation subject (never agent payload); `tenantId` is the
+ * canonical run tenant (workspace id) stamped onto the contract binding.
+ */
+export interface BindingExecutionClaim {
+  bindingId: string;
+  bindingRevision: number;
+  ownerId: string;
+  tenantId: string;
+}
+
+export interface IssuedByokExecution {
+  binding: ProviderBinding;
+}
+
+// The claim form (canonical) stays the last signature; seams that substitute
+// the broker path name `IssueBindingExecutionForClaim` instead of `typeof`.
+export function issueBindingExecution(
+  db: OrviloDatabase,
+  userId: string,
+  candidate: { id: string; revision: number },
+  engine: OrviloEngineKind | string | null | undefined,
+  target: OrviloBindingTarget,
+): Promise<IssuedByokSpawnExecution | undefined>;
+/**
+ * Revision-fenced issuance: re-load the binding inside the caller's
+ * transaction, refuse a row that moved, and prove the referenced credential is
+ * still a personal credential owned by the claiming user. Decryption never
+ * happens here — the issued binding carries only the vault `secretReference`,
+ * which `SqlTrustedProviderBackend` resolves host-side at request time.
+ * `undefined` means unavailable; callers fail loudly, never fall back to
+ * environment keys.
+ */
+export function issueBindingExecution(
+  db: OrviloDatabase,
+  claim: BindingExecutionClaim,
+): Promise<IssuedByokExecution | undefined>;
+export async function issueBindingExecution(
+  db: OrviloDatabase,
+  claimOrUserId: BindingExecutionClaim | string,
+  candidate?: { id: string; revision: number },
+  engine?: OrviloEngineKind | string | null,
+  target?: OrviloBindingTarget,
+) {
+  if (typeof claimOrUserId === 'string') {
+    if (!candidate || !target) return undefined;
+    return issueByokSpawnExecution(db, claimOrUserId, candidate, engine, target);
+  }
+  const claim = claimOrUserId;
+  const model = new ProviderBindingModel(db, claim.ownerId);
+  const row = await model.find(claim.bindingId);
+  if (!row || row.revision !== claim.bindingRevision) return undefined;
+  const config = row.config;
+  if (!config || !(await model.ownsCredentialReference(config.secretReference))) return undefined;
+  return {
+    binding: {
+      bindingId: row.id,
+      modelRoutes: [config.model],
+      ownerId: row.userId,
+      providerId: config.provider,
+      revision: row.revision,
+      schemaVersion: CONTROL_PLANE_VERSION,
+      secretReference: config.secretReference,
+      tenantId: claim.tenantId,
+    },
+  };
+}
+
+/** The canonical claim-fence call shape — see `ResolveOrviloProviderBindingForTarget`. */
+export type IssueBindingExecutionForClaim = (
+  db: OrviloDatabase,
+  claim: BindingExecutionClaim,
+) => Promise<IssuedByokExecution | undefined>;
 
 /** Codex provider id minted for the binding; config travels via `-c` args. */
 const CODEX_BYOK_PROVIDER_ID = 'orvilo_byok';
@@ -180,12 +343,7 @@ export const buildByokExecutionCredentials = (input: {
     : buildClaudeSdkCredentials(input);
 
 const selectionMatches = (
-  config: {
-    engine?: 'claude-sdk' | 'codex-app-server';
-    runtime: 'claude-code' | 'codex' | 'orvilo';
-    target: 'device' | 'local' | 'sandbox';
-    deviceId?: string;
-  },
+  config: ProviderBindingConfig['selection'],
   engine: OrviloEngineKind,
   target: OrviloBindingTarget,
 ) => {
@@ -199,50 +357,66 @@ const selectionMatches = (
 };
 
 /**
- * Pick the binding that applies to this run (see the selection convention
- * above). Candidates are evaluated in `updatedAt`-descending order.
+ * Pick the binding that applies to a spawned run (the union-target selection
+ * #367's execAgent gate uses). `config.enabled` is the runtime gate — only a
+ * binding verified since its last edit resolves. Candidates are evaluated in
+ * `updatedAt`-descending order, so the most recently saved match wins.
  */
 export const selectOrviloProviderBinding = async (
   db: OrviloDatabase,
   userId: string,
-  engine: OrviloEngineKind,
+  engine: OrviloEngineKind | string | null | undefined,
   target: OrviloBindingTarget,
 ) => {
+  const wanted = resolveOrviloEngine(engine);
   const model = new ProviderBindingModel(db, userId);
   const rows = await model.list();
   return rows.find(
-    (row) => row.config.enabled === true && selectionMatches(row.config.selection, engine, target),
+    (row) =>
+      // `enabled` persists inside config JSONB and is set out-of-band
+      // (`ProviderBindingModel.setEnabled`, direct fixtures), outside the
+      // `literal(false)` input schema — read the stored value, not the type.
+      Boolean(row.config.enabled) && selectionMatches(row.config.selection, wanted, target),
   );
 };
 
 /**
- * Mint the execution descriptor for a selected binding. Re-reads the row and
- * re-checks the fence (`revision` + `enabled` + credential ownership) so a
- * binding edited, disabled, or deleted between selection and mint never
- * issues credentials. Returns undefined when the fence trips.
+ * Mint the spawn-side execution descriptor for a selected binding. Re-reads
+ * the row and re-checks the fence (`revision` + `enabled` + credential
+ * ownership) so a binding edited, disabled, or deleted between selection and
+ * mint never silently issues credentials. Secrets are decrypted only inside
+ * this trusted boundary, and only for `device` dispatch where they leave as
+ * spawn env / wrapper args over the authenticated channel — `sandbox` issues
+ * the descriptor alone (empty `env`/`execArgs`); its credentials are served
+ * through the embedded inference broker instead.
  */
-export const issueBindingExecution = async (
+const issueByokSpawnExecution = async (
   db: OrviloDatabase,
   userId: string,
   candidate: { id: string; revision: number },
-  engine: OrviloEngineKind,
-): Promise<IssuedByokExecution | undefined> => {
+  engine: OrviloEngineKind | string | null | undefined,
+  target: OrviloBindingTarget,
+): Promise<IssuedByokSpawnExecution | undefined> => {
   const model = new ProviderBindingModel(db, userId);
   const row = await model.find(candidate.id);
   const config = row?.config;
-  if (!row || !config || row.revision !== candidate.revision || config.enabled !== true) {
+  if (!row || !config || row.revision !== candidate.revision || !Boolean(config.enabled)) {
     return undefined;
   }
   if (!(await model.ownsCredentialReference(config.secretReference))) return undefined;
-  const headers = await resolveProviderCredentialHeaders(db, userId, config.secretReference);
-  if (!headers) return undefined;
   const endpoint = config.endpoint.replace(/\/+$/, '');
-  const { env, execArgs } = buildByokExecutionCredentials({
-    endpoint,
-    engine,
-    headers,
-    model: config.model,
-  });
+  let env: Record<string, string> = {};
+  let execArgs: string[] = [];
+  if (target.kind === 'device') {
+    const headers = await resolveProviderCredentialHeaders(db, userId, config.secretReference);
+    if (!headers) return undefined;
+    ({ env, execArgs } = buildByokExecutionCredentials({
+      endpoint,
+      engine: resolveOrviloEngine(engine),
+      headers,
+      model: config.model,
+    }));
+  }
   return {
     bindingId: row.id,
     endpoint,
@@ -252,27 +426,4 @@ export const issueBindingExecution = async (
     provider: config.provider,
     revision: row.revision,
   };
-};
-
-/**
- * Select + issue in one step. `unavailable` distinguishes "a binding matched
- * but could not issue credentials" from "no binding applies" — callers must
- * fail the run loudly rather than fall back to another provider account.
- */
-export const resolveOrviloProviderBinding = async (
-  db: OrviloDatabase,
-  userId: string,
-  engine: OrviloEngineKind,
-  target: OrviloBindingTarget,
-): Promise<OrviloBindingResolution> => {
-  const candidate = await selectOrviloProviderBinding(db, userId, engine, target);
-  if (!candidate) return { status: 'none' };
-  const execution = await issueBindingExecution(
-    db,
-    userId,
-    { id: candidate.id, revision: candidate.revision },
-    engine,
-  );
-  if (!execution) return { status: 'unavailable' };
-  return { execution, status: 'applied' };
 };

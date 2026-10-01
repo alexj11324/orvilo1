@@ -1,6 +1,5 @@
 'use client';
 
-import { Center } from '@lobehub/ui';
 import { createStaticStyles } from 'antd-style';
 import { useParams } from 'react-router';
 import useSWR from 'swr';
@@ -45,9 +44,9 @@ const SharedArtifactView = () => {
 
   if (!error && !data && isLoading) {
     return (
-      <Center height={'100dvh'}>
+      <div className="flex items-center justify-center" style={{ height: '100dvh' }}>
         <Loading debugId="SharedArtifactView" />
-      </Center>
+      </div>
     );
   }
 

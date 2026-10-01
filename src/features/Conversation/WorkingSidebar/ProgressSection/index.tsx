@@ -1,10 +1,18 @@
-import { Flexbox, Icon } from '@lobehub/ui';
-import { Checkbox } from '@lobehub/ui/base-ui';
 import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { cn } from 'cn';
 import { ChevronDown, ChevronUp, CircleArrowRight } from 'lucide-react';
-import { type KeyboardEvent, memo, useCallback, useId, useMemo, useState } from 'react';
+import {
+  createElement,
+  type KeyboardEvent,
+  memo,
+  useCallback,
+  useId,
+  useMemo,
+  useState,
+} from 'react';
 import { useTranslation } from 'react-i18next';
 
+import { Checkbox } from '@/components/ui/checkbox';
 import { useChatStore } from '@/store/chat';
 import { selectCurrentTurnTodosFromMessages } from '@/store/chat/slices/message/selectors/dbMessage';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
@@ -159,20 +167,16 @@ const ProgressSection = memo<{ className?: string }>(({ className }) => {
 
   return (
     <div className={className} data-testid="workspace-progress">
-      <Flexbox
-        horizontal
-        align="center"
+      <div
         aria-controls={listId}
         aria-expanded={expanded}
-        className={styles.headerRow}
-        gap={8}
-        justify="space-between"
+        className={cn('flex items-center gap-2 justify-between', styles.headerRow)}
         role="button"
         tabIndex={0}
         onClick={toggleExpanded}
         onKeyDown={handleHeaderKeyDown}
       >
-        <Flexbox horizontal align="center" gap={8} style={{ flex: 1, minWidth: 0 }}>
+        <div className="flex items-center gap-2" style={{ flex: 1, minWidth: 0 }}>
           <svg className={styles.ring} height={RING_SIZE} width={RING_SIZE}>
             <circle
               className={styles.ringTrack}
@@ -199,13 +203,12 @@ const ProgressSection = memo<{ className?: string }>(({ className }) => {
           <span className={styles.count}>
             {completed}/{total}
           </span>
-        </Flexbox>
-        <Icon
-          icon={expanded ? ChevronUp : ChevronDown}
-          size={14}
-          style={{ color: cssVar.colorTextTertiary, flexShrink: 0 }}
-        />
-      </Flexbox>
+        </div>
+        {createElement(expanded ? ChevronUp : ChevronDown, {
+          size: 14,
+          style: { color: cssVar.colorTextTertiary, flexShrink: 0 },
+        })}
+      </div>
 
       <div
         className={cx(styles.listContainer, expanded ? styles.expanded : styles.collapsed)}
@@ -219,33 +222,29 @@ const ProgressSection = memo<{ className?: string }>(({ className }) => {
             if (isProcessing) {
               return (
                 <div className={cx(styles.itemRow, styles.processingRow)} key={item.id ?? index}>
-                  <Icon
-                    icon={CircleArrowRight}
-                    size={17}
-                    style={{ color: cssVar.colorTextSecondary }}
-                  />
+                  <CircleArrowRight size={17} style={{ color: cssVar.colorTextSecondary }} />
                   <span className={styles.textProcessing}>{item.text}</span>
                 </div>
               );
             }
 
             return (
-              <Checkbox
-                backgroundColor={cssVar.colorSuccess}
-                checked={isCompleted}
-                key={item.id ?? index}
-                shape="circle"
-                style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
-                classNames={{
-                  text: cx(styles.textTodo, isCompleted && styles.textCompleted),
-                  wrapper: styles.itemRow,
-                }}
-                textProps={{
-                  type: isCompleted ? 'secondary' : undefined,
-                }}
-              >
-                {item.text}
-              </Checkbox>
+              <label className={styles.itemRow} key={item.id ?? index}>
+                <Checkbox
+                  checked={isCompleted}
+                  className="rounded-full data-checked:border-success data-checked:bg-success"
+                  style={{ borderWidth: 1.5, cursor: 'default', pointerEvents: 'none' }}
+                />
+                <span
+                  className={cx(
+                    styles.textTodo,
+                    isCompleted && styles.textCompleted,
+                    isCompleted && 'text-muted-foreground',
+                  )}
+                >
+                  {item.text}
+                </span>
+              </label>
             );
           })}
         </div>

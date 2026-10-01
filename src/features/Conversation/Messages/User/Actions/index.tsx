@@ -1,4 +1,3 @@
-import { Flexbox } from '@lobehub/ui';
 import { type UIChatMessage } from '@orvilo/types';
 import { memo, useMemo } from 'react';
 
@@ -70,11 +69,11 @@ const Actions = memo<ActionsProps>(({ id, data, disableEditing }) => {
   if (!shouldShowUserActions(data)) return null;
 
   return (
-    <Flexbox horizontal align={'center'}>
+    <div className="flex items-center">
       {!disableEditing && (
-        <Flexbox align={'flex-start'} role="menubar">
+        <div className="flex flex-col items-start" role="menubar">
           {actionBarHolder}
-        </Flexbox>
+        </div>
       )}
       {isDevMode && branch && (
         <MessageBranch
@@ -83,7 +82,7 @@ const Actions = memo<ActionsProps>(({ id, data, disableEditing }) => {
           messageId={id}
         />
       )}
-    </Flexbox>
+    </div>
   );
 });
 

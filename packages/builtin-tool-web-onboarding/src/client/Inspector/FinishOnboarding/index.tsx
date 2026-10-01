@@ -1,6 +1,5 @@
 'use client';
 
-import { Icon } from '@lobehub/ui';
 import type { BuiltinInspectorProps } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { CheckCircle2 } from 'lucide-react';
@@ -26,7 +25,7 @@ export const FinishOnboardingInspector = memo<
       <span className={cx((isArgumentsStreaming || isLoading) && shinyTextStyles.shinyText)}>
         {t('builtins.orvilo-web-onboarding.apiName.finishOnboarding')}
       </span>
-      {succeeded && <Icon className={styles.done} icon={CheckCircle2} size={14} />}
+      {succeeded && <CheckCircle2 className={styles.done} size={14} />}
     </div>
   );
 });

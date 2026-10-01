@@ -1,13 +1,12 @@
 'use client';
 
-import { Text } from '@lobehub/ui/base-ui';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 const Title = memo(() => {
   const { t } = useTranslation('portal');
 
-  return <Text type={'secondary'}>{t('notebook.title')}</Text>;
+  return <div className="text-muted-foreground">{t('notebook.title')}</div>;
 });
 
 export default Title;

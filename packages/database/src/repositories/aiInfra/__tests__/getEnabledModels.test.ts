@@ -1,7 +1,7 @@
 import type { EnabledAiModel } from 'model-bank';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { AiInfraRepos } from '../index';
+import { AiInfraCatalogRepos } from '../index';
 
 // vitest.config.server.mts runs with isolate:false, so one file's module mock
 // serves every file; delegate through a per-test-installed global instead.
@@ -37,10 +37,10 @@ beforeEach(() => {
     ]);
 });
 
-describe('AiInfraRepos', () => {
+describe('AiInfraCatalogRepos', () => {
   describe('getEnabledModels', () => {
     it('returns builtin models of deployment-enabled providers', async () => {
-      const repo = new AiInfraRepos({ openai: { enabled: true } });
+      const repo = new AiInfraCatalogRepos({ openai: { enabled: true } });
       const models = await repo.getEnabledModels();
 
       expect(models.map((m) => `${m.providerId}/${m.id}`)).toEqual([
@@ -50,14 +50,14 @@ describe('AiInfraRepos', () => {
     });
 
     it('excludes models of providers that are not deployment-enabled', async () => {
-      const repo = new AiInfraRepos({ anthropic: { enabled: true } });
+      const repo = new AiInfraCatalogRepos({ anthropic: { enabled: true } });
       const models = await repo.getEnabledModels();
 
       expect(models.map((m) => `${m.providerId}/${m.id}`)).toEqual(['anthropic/claude']);
     });
 
     it('returns all catalog models including disabled ones when filterEnabled is false', async () => {
-      const repo = new AiInfraRepos({ openai: { enabled: true } });
+      const repo = new AiInfraCatalogRepos({ openai: { enabled: true } });
       const models = await repo.getEnabledModels(false);
 
       expect(models.map((m) => m.id)).toEqual(
@@ -66,7 +66,7 @@ describe('AiInfraRepos', () => {
     });
 
     it('injects search settings for models that enable builtin search', async () => {
-      const repo = new AiInfraRepos({ openai: { enabled: true } });
+      const repo = new AiInfraCatalogRepos({ openai: { enabled: true } });
       const models = await repo.getEnabledModels();
 
       const searchModel = models.find((m) => m.id === 'm-search');
@@ -74,7 +74,7 @@ describe('AiInfraRepos', () => {
     });
 
     it('prefers serverModelLists from deployment config over the catalog', async () => {
-      const repo = new AiInfraRepos({
+      const repo = new AiInfraCatalogRepos({
         openai: {
           enabled: true,
           serverModelLists: [chatModel({ id: 'deployed-only' })],

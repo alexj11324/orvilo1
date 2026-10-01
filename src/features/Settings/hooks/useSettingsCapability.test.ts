@@ -104,12 +104,13 @@ describe('useSettingsCapabilityContext', () => {
   it('withholds a withdrawn tab and a tab this deployment does not serve', () => {
     const { result } = renderContext();
 
-    // Retired, with a live equivalent: the renderer redirects instead.
-    expect(resolveSettingsCapability(SettingsTabs.ServiceModel, result.current)).toMatchObject({
-      redirectTo: SettingsTabs.Profile,
+    // Retired, with a live equivalent: the renderer redirects instead. The
+    // withdrawn agent surface lands on the restored service-model tab.
+    expect(resolveSettingsCapability(SettingsTabs.Agent, result.current)).toMatchObject({
+      redirectTo: SettingsTabs.ServiceModel,
       status: 'retired',
     });
-    expect(isSettingsTabAvailable(SettingsTabs.ServiceModel, result.current)).toBe(false);
+    expect(isSettingsTabAvailable(SettingsTabs.Agent, result.current)).toBe(false);
 
     // Live, but the deployment has no business pages: not-found, not a blank
     // page and not somebody else's tab.

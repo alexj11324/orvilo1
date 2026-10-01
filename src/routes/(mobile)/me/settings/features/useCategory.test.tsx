@@ -28,6 +28,7 @@ vi.mock('react-router', () => ({
 }));
 
 const createWrapper = (
+  showProvider: boolean,
   extraFlags: Record<string, unknown> = {},
   serverConfig: Partial<GlobalServerConfig> = {},
 ) => {
@@ -36,7 +37,10 @@ const createWrapper = (
       createStore={() =>
         initServerConfigStore({
           featureFlags: {
-            ...mapFeatureFlagsEnvToState({}),
+            ...mapFeatureFlagsEnvToState({
+              provider_settings: true,
+            }),
+            showProvider,
             ...extraFlags,
           },
           serverConfig: { aiProvider: {}, telemetry: {}, ...serverConfig },
@@ -59,20 +63,35 @@ afterEach(() => {
 });
 
 describe('mobile settings useCategory', () => {
-  it('never lists the retired provider or service-model tabs', () => {
+  it('keeps Provider visible and routes to the provider list when provider settings are enabled', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(true),
+    });
+
+    const provider = result.current
+      .flatMap((group) => group.items)
+      .find((item) => item.key === SettingsTabs.Provider);
+
+    expect(provider).toBeDefined();
+
+    provider?.onClick?.();
+
+    expect(navigate).toHaveBeenCalledWith('/settings/provider/all');
+  });
+
+  it('hides Provider when provider settings are disabled', () => {
+    const { result } = renderHook(() => useCategory(), {
+      wrapper: createWrapper(false),
     });
 
     const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
 
     expect(keys).not.toContain(SettingsTabs.Provider);
-    expect(keys).not.toContain(SettingsTabs.ServiceModel);
   });
 
   it('hides OAuth Apps by default', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(true),
     });
 
     const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
@@ -91,7 +110,7 @@ describe('mobile settings useCategory', () => {
     });
 
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(true),
     });
 
     const toolsGroup = result.current.find((group) => group.key === SettingsGroupKey.Tools);
@@ -107,7 +126,7 @@ describe('mobile settings useCategory', () => {
   // business-only entries stay behind the flag.
   it('keeps Stats visible without business features while gating plans and billing', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper(),
+      wrapper: createWrapper(true),
     });
 
     const usageAndCost = result.current.find(
@@ -120,7 +139,7 @@ describe('mobile settings useCategory', () => {
 
   it('adds the business entries after Stats when business features are enabled', () => {
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper({}, { enableBusinessFeatures: true }),
+      wrapper: createWrapper(true, {}, { enableBusinessFeatures: true }),
     });
 
     const usageAndCost = result.current.find(
@@ -151,7 +170,7 @@ describe('mobile settings useCategory', () => {
     });
 
     const { result } = renderHook(() => useCategory(), {
-      wrapper: createWrapper({ showApiKeyManage: true }),
+      wrapper: createWrapper(true, { showApiKeyManage: true }),
     });
     const keys = result.current.flatMap((group) => group.items.map((item) => item.key));
 

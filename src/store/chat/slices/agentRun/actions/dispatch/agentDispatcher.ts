@@ -1,5 +1,9 @@
 import { isDesktop as defaultIsDesktop } from '@orvilo/const';
-import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import {
+  HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR,
+  HETEROGENEOUS_PROVIDER_BINDING_PERSONAL_ONLY_ERROR,
+  isRemoteHeterogeneousType,
+} from '@orvilo/heterogeneous-agents';
 import { type DeviceExecutionTarget, type HeterogeneousProviderConfig } from '@orvilo/types';
 
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
@@ -28,10 +32,11 @@ export const GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR =
 /**
  * Which agent runtime should handle an operation.
  *
+ * - `client`: in-browser AgentRuntime (default)
  * - `gateway`: cloud sandbox via Gateway WebSocket
  * - `hetero`: heterogeneous CLI agent (Claude Code, Codex, …) via desktop IPC or sandbox
  */
-export type AgentRuntimeType = 'gateway' | 'hetero';
+export type AgentRuntimeType = 'client' | 'gateway' | 'hetero';
 
 /**
  * Unified intent for a non-hetero, non-group sub-agent invocation.
@@ -49,8 +54,9 @@ export type AgentRuntimeType = 'gateway' | 'hetero';
 export interface AgentInvocationIntent {
   /**
    * Instruction delivered to the sub-agent.
-   * In gateway mode it becomes the `message` param of `executeGatewayAgent`
-   * (i.e. a real user message on the server).
+   * In client mode it is injected as a virtual user message prepended to the
+   * existing message history. In gateway mode it becomes the `message` param
+   * of `executeGatewayAgent` (i.e. a real user message on the server).
    */
   instruction: string;
   /**
@@ -130,14 +136,47 @@ interface SelectRuntimeTypeOptions {
  * resume, continue, sub-agent dispatch, …) so adding a new entry point does
  * not require re-deriving the routing rules.
  *
- * Priority: `parentRuntime` > `hetero` (desktop only) > `gateway`. When none
- * apply, it throws {@link AGENT_BINDING_REQUIRED_ERROR} instead of falling
- * back to an in-browser runtime (retired).
+ * Priority: `parentRuntime` > `hetero` (desktop only) > `gateway` > `client`.
  */
 export const selectRuntimeType = (
   ctx: RuntimeSelectionContext,
   { isDesktop = defaultIsDesktop }: SelectRuntimeTypeOptions = {},
 ): AgentRuntimeType => {
+  if (ctx.heterogeneousProvider?.authMode === 'api') {
+    // Personal-scope invariant: Desktop main resolves the binding's providerId
+    // with NO workspace header (see `providerBindingPort`), while a workspace
+    // agent's binding was configured against workspace-scoped providers. The
+    // author (or an explicitly overriding member) CAN spawn a workspace agent
+    // in-process — `workspaceScoped` alone does not block them — so a colliding
+    // personal provider id (e.g. builtin `anthropic`) would silently supply
+    // different credentials. Reject before any IPC.
+    // The deployment-default API source uses deployment-owned credentials
+    // rather than a user provider id, so this guard stays on user-provider
+    // bindings only.
+    if (
+      ctx.heterogeneousProvider.apiConfig &&
+      ctx.heterogeneousProvider.apiConfig?.source !== 'server-default' &&
+      ctx.isWorkspaceAgent
+    ) {
+      throw new Error(HETEROGENEOUS_PROVIDER_BINDING_PERSONAL_ONLY_ERROR);
+    }
+    const target = resolveExecutionTarget(
+      {
+        boundDeviceId: ctx.boundDeviceId,
+        executionTarget: ctx.executionTarget,
+        heterogeneousProvider: ctx.heterogeneousProvider,
+      },
+      {
+        isHetero: true,
+        clientExecutionAvailable: isDesktop,
+        workspaceScoped: ctx.workspaceScoped,
+      },
+    );
+    if (target !== 'local' || (ctx.parentRuntime && ctx.parentRuntime !== 'hetero')) {
+      throw new Error(HETEROGENEOUS_PROVIDER_BINDING_LOCAL_ONLY_ERROR);
+    }
+  }
+
   // Group supervisor turns orchestrate members via server-side callbacks
   // (`ctx.agentMember` in the group-management server runtime). The retired
   // client runtime used to supply `groupOrchestration` locally; a local hetero
@@ -181,5 +220,5 @@ export const selectRuntimeType = (
     return target === 'local' ? 'hetero' : 'gateway';
   }
   if (ctx.isGatewayMode) return 'gateway';
-  throw new Error(AGENT_BINDING_REQUIRED_ERROR);
+  return 'client';
 };

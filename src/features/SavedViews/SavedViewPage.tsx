@@ -16,7 +16,7 @@ import {
   Settings2Icon,
   TriangleAlert,
 } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import useSWR from 'swr';
@@ -337,6 +337,9 @@ const SavedViewPage = memo(() => {
     [evaluation?.projectGroups],
   );
   const queryHash = evaluation?.queryHash;
+  const pageToken = `${workspaceId ?? ''}\u001F${viewId ?? ''}\u001F${queryHash ?? ''}`;
+  const pageTokenRef = useRef(pageToken);
+  pageTokenRef.current = pageToken;
   const [tail, setTail] = useState<typeof firstTasks>([]);
   const [projectTail, setProjectTail] = useState<typeof firstProjects>([]);
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
@@ -408,6 +411,7 @@ const SavedViewPage = memo(() => {
 
   const loadMore = useCallback(async () => {
     if (!queryHash || !viewId) return;
+    const started = pageTokenRef.current;
     if (view?.entityType === 'project') {
       const last = projectRows.at(-1);
       if (!last) return;
@@ -416,6 +420,7 @@ const SavedViewPage = memo(() => {
         id: viewId,
         queryHash,
       });
+      if (pageTokenRef.current !== started) return;
       setProjectTail((current) => mergeWorkQueryPage(current, next.data.evaluation.projects ?? []));
       return;
     }
@@ -426,6 +431,7 @@ const SavedViewPage = memo(() => {
       id: viewId,
       queryHash,
     });
+    if (pageTokenRef.current !== started) return;
     setTail((current) => mergeWorkQueryPage(current, next.data.evaluation.tasks ?? []));
   }, [projectRows, queryHash, tasks, view?.entityType, viewId]);
 
@@ -433,6 +439,7 @@ const SavedViewPage = memo(() => {
     async (groupKey: string) => {
       const column = groups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
       if (!last || !queryHash || !viewId) return;
       const next = await workAttentionService.savedViewEvaluate({
         afterId: last.id,
@@ -440,6 +447,7 @@ const SavedViewPage = memo(() => {
         id: viewId,
         queryHash,
       });
+      if (pageTokenRef.current !== started) return;
       setGroupTail((current) => mergeWorkQueryGroups(current, next.data.evaluation.groups ?? []));
     },
     [groups, queryHash, viewId],
@@ -449,6 +457,7 @@ const SavedViewPage = memo(() => {
     async (groupKey: string) => {
       const column = projectGroups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
       if (!last || !queryHash || !viewId) return;
       const next = await workAttentionService.savedViewEvaluate({
         afterId: last.id,
@@ -456,6 +465,7 @@ const SavedViewPage = memo(() => {
         id: viewId,
         queryHash,
       });
+      if (pageTokenRef.current !== started) return;
       setProjectGroupTail((current) =>
         mergeWorkQueryGroups(
           current,

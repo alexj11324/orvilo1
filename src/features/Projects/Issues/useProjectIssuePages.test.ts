@@ -75,4 +75,38 @@ describe('useProjectIssuePages', () => {
     rerender({ projectId: 'p2' });
     expect(result.current.tasks.map((task) => task.id)).toEqual(['c']);
   });
+
+  it('drops a load-more that resolves after the query changes', async () => {
+    let resolveNext: (value: unknown) => void = () => {};
+    query.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveNext = resolve;
+        }),
+    );
+    const { rerender, result } = renderHook(
+      ({ projectId }: { projectId: string }) => useProjectIssuePages(listQuery(projectId)),
+      { initialProps: { projectId: 'p1' } },
+    );
+    let pending: Promise<void> = Promise.resolve();
+    act(() => {
+      pending = result.current.loadMore();
+    });
+    swr.data = {
+      data: {
+        queryHash: 'h2',
+        tasks: [{ id: 'c', identifier: 'C' }],
+        total: 1,
+      },
+    };
+    rerender({ projectId: 'p2' });
+    expect(result.current.tasks.map((task) => task.id)).toEqual(['c']);
+    await act(async () => {
+      resolveNext({
+        data: { queryHash: 'h1', tasks: [{ id: 'b', identifier: 'B' }], total: 3 },
+      });
+      await pending;
+    });
+    expect(result.current.tasks.map((task) => task.id)).toEqual(['c']);
+  });
 });

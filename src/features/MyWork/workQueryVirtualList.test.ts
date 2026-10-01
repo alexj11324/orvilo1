@@ -1,6 +1,7 @@
 import { WORK_QUERY_BOARD_KEY_SEP } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
+import { myWorkPriorityGroupRank } from './myWorkDisplay';
 import {
   flattenWorkQueryVirtualItems,
   nestWorkQueryListGroups,
@@ -80,5 +81,50 @@ describe('flattenWorkQueryVirtualItems', () => {
     expect(flat.items.filter((item) => item.kind === 'header').map((item) => item.labelKey)).toEqual(
       ['day:0', 'week:1'],
     );
+  });
+
+  it('orders priority headers urgent-first and assignee lanes by name', () => {
+    const priority = nestWorkQueryListGroups(
+      [
+        { key: '0', tasks: [task('none')], total: 1 },
+        { key: '4', tasks: [task('low')], total: 1 },
+        { key: '1', tasks: [task('urgent')], total: 1 },
+      ],
+      false,
+    );
+    const priorityFlat = flattenWorkQueryVirtualItems({
+      allTasks: [task('none'), task('low'), task('urgent')],
+      collapsed: new Set(),
+      groups: priority,
+      nestRows: false,
+      primaryAxis: 'priority',
+      rankOf: (key) => myWorkPriorityGroupRank(key),
+    });
+    expect(
+      priorityFlat.items.filter((item) => item.kind === 'header').map((item) => item.labelKey),
+    ).toEqual(['1', '4', '0']);
+
+    const sep = WORK_QUERY_BOARD_KEY_SEP;
+    const lanes = nestWorkQueryListGroups(
+      [
+        { key: `todo${sep}b`, tasks: [task('b')], total: 1 },
+        { key: `todo${sep}none`, tasks: [task('n')], total: 1 },
+        { key: `todo${sep}a`, tasks: [task('a')], total: 1 },
+      ],
+      true,
+    );
+    const names: Record<string, string> = { a: 'Ada', b: 'Bea', none: 'Unassigned' };
+    const laneFlat = flattenWorkQueryVirtualItems({
+      allTasks: [task('a'), task('b'), task('n')],
+      collapsed: new Set(),
+      groups: lanes,
+      laneRankOf: (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0),
+      laneTitleOf: (key) => names[key] ?? key,
+      nestRows: false,
+      primaryAxis: 'status',
+    });
+    expect(
+      laneFlat.items.filter((item) => item.depth === 1).map((item) => item.labelKey),
+    ).toEqual(['a', 'b', 'none']);
   });
 });

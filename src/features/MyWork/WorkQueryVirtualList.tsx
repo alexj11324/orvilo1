@@ -33,6 +33,7 @@ export interface WorkQueryVirtualListProps {
   groups?: readonly WorkQueryGroupPage<WorkQueryResultTask>[];
   groupTitle?: (axis: string, key: string) => string | undefined;
   laneAxis?: string;
+  laneRankOf?: (key: string) => number;
   listGroupBy: string;
   loadMoreGroupErrors?: Record<string, unknown>;
   loadMoreLabel?: string;
@@ -69,6 +70,7 @@ const WorkQueryVirtualList = ({
   groupTitle,
   groups,
   laneAxis,
+  laneRankOf,
   listGroupBy,
   loadMoreGroupErrors,
   loadMoreLabel,
@@ -105,16 +107,35 @@ const WorkQueryVirtualList = ({
   const { items, orderedIds } = useMemo(() => {
     if (listGroupBy === 'none') return flattenWorkQueryFlatItems(tasks, nestRows);
     const nested = nestWorkQueryListGroups(groups ?? [], Boolean(laneAxis));
+    const nameTitle = (axis: string) =>
+      axis === 'assignee' || axis === 'project'
+        ? (key: string) => groupTitle?.(axis, key) ?? key
+        : undefined;
     return flattenWorkQueryVirtualItems({
       allTasks,
       collapsed,
       groups: nested,
       laneAxis,
+      laneRankOf,
+      laneTitleOf: laneAxis ? nameTitle(laneAxis) : undefined,
       nestRows,
       primaryAxis,
       rankOf,
+      titleOf: nameTitle(primaryAxis),
     });
-  }, [allTasks, collapsed, groups, laneAxis, listGroupBy, nestRows, primaryAxis, rankOf, tasks]);
+  }, [
+    allTasks,
+    collapsed,
+    groupTitle,
+    groups,
+    laneAxis,
+    laneRankOf,
+    listGroupBy,
+    nestRows,
+    primaryAxis,
+    rankOf,
+    tasks,
+  ]);
 
   const labelFor = (item: WorkQueryVirtualItem) => {
     const titled = groupTitle?.(item.axis, item.labelKey);

@@ -844,6 +844,63 @@ describe('WorkQueryModel', () => {
     expect(laned.groups?.some((group) => group.key === `canceled${'\u001F'}3`)).toBe(false);
   });
 
+  it('pages an activity-date group by notification time, not updatedAt', async () => {
+    const notified = await createTask(userId, { name: 'Notified today' });
+    const edited = await createTask(userId, { name: 'Edited without a new ping' });
+    const recentPing = new Date('2026-09-20T15:00:00Z');
+    const olderPing = new Date('2026-09-20T10:00:00Z');
+    await serverDB.execute(
+      sql`update tasks set updated_at = ${new Date(Date.now() - 20 * 24 * 60 * 60 * 1000)} where id = ${notified.id}`,
+    );
+    await serverDB.insert(notifications).values([
+      {
+        category: 'work',
+        content: 'x',
+        lastActivityAt: recentPing,
+        resourceId: notified.id,
+        resourceType: 'task',
+        title: 'x',
+        type: 'task.assigned',
+        userId,
+        workspaceId,
+      },
+      {
+        category: 'work',
+        content: 'x',
+        lastActivityAt: olderPing,
+        resourceId: edited.id,
+        resourceType: 'task',
+        title: 'x',
+        type: 'task.assigned',
+        userId,
+        workspaceId,
+      },
+    ]);
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const query = {
+      entityType: 'task' as const,
+      groupBy: 'activityDate' as const,
+      layout: 'list' as const,
+      schemaVersion: 1 as const,
+      timeZone: 'UTC',
+    };
+    const first = await model.queryTasks({ limit: 1, mode: 'activity', query });
+    const today = first.groups?.find((group) => group.tasks.some((row) => row.id === notified.id));
+    expect(today?.tasks.map((row) => row.id)).toEqual([notified.id]);
+    expect((today?.tasks[0] as { activityAt?: Date } | undefined)?.activityAt).toEqual(recentPing);
+    const second = await model.queryTasks({
+      afterId: notified.id,
+      groupKey: today!.key,
+      limit: 1,
+      mode: 'activity',
+      query,
+      queryHash: first.queryHash,
+    });
+    expect(second.groups?.find((group) => group.key === today!.key)?.tasks.map((row) => row.id)).toEqual([
+      edited.id,
+    ]);
+  });
+
   it('groups a list in the database so status sections are not a page rearrange', async () => {
     const stamp = new Date('2026-09-18T16:00:00Z');
     const parent = await createTask(userId, {

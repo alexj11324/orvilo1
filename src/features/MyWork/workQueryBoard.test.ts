@@ -1,4 +1,4 @@
-import { WORK_QUERY_BOARD_KEY_SEP, type TaskListItem } from '@orvilo/types';
+import { type TaskListItem,WORK_QUERY_BOARD_KEY_SEP } from '@orvilo/types';
 import { describe, expect, it } from 'vitest';
 
 import {
@@ -129,6 +129,13 @@ describe('workQuerySourceKeysForKanbanColumn', () => {
     ]);
     expect(workQuerySourceKeysForKanbanColumn('status', 'st:failed')).toEqual(['failed']);
     expect(workQuerySourceKeysForKanbanColumn('status', 'st:running')).toEqual(['running']);
+  });
+
+  it('keeps the swimlane on the load-more cursor a cell error is stored under', () => {
+    const cell = `${'pr:1'}${WORK_QUERY_BOARD_KEY_SEP}${'as:user-1'}`;
+    expect(workQuerySourceKeysForKanbanColumn('priority', cell)).toEqual([
+      `1${WORK_QUERY_BOARD_KEY_SEP}user-1`,
+    ]);
   });
 });
 

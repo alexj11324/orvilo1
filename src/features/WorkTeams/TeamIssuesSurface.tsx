@@ -3,7 +3,7 @@ import type { TaskStatus, TaskWorkflowCategory, WorkQuerySortMode } from '@orvil
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { PlusIcon, UsersIcon, XIcon } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -284,6 +284,9 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     teamTasksData?.data && 'queryHash' in teamTasksData.data
       ? teamTasksData.data.queryHash
       : undefined;
+  const pageToken = `${tasksQueryKey}\u001F${teamQueryHash ?? ''}`;
+  const pageTokenRef = useRef(pageToken);
+  pageTokenRef.current = pageToken;
   const [teamTail, setTeamTail] = useState<typeof firstTeamTasks>([]);
   const [teamGroupTail, setTeamGroupTail] = useState<typeof firstTeamGroups>([]);
   const {
@@ -342,8 +345,10 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
 
   const loadMore = useCallback(async () => {
     const last = teamTasks.at(-1);
+    const started = pageTokenRef.current;
     if (!last || !teamQueryHash) return;
     const next = await fetchNextPage({ afterId: last.id });
+    if (pageTokenRef.current !== started) return;
     const incoming = next.data && 'tasks' in next.data ? next.data.tasks : [];
     setTeamTail((current) => mergeWorkQueryPage(current, incoming));
   }, [fetchNextPage, teamQueryHash, teamTasks]);
@@ -352,8 +357,10 @@ const TeamIssuesSurface = memo<{ teamId: string }>(({ teamId }) => {
     async (groupKey: string) => {
       const column = teamGroups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
       if (!last || !teamQueryHash) return;
       const next = await fetchNextPage({ afterId: last.id, groupKey });
+      if (pageTokenRef.current !== started) return;
       const incoming = next.data && 'groups' in next.data ? (next.data.groups ?? []) : [];
       setTeamGroupTail((current) => mergeWorkQueryGroups(current, incoming));
     },

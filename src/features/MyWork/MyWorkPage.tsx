@@ -9,7 +9,7 @@ import {
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { XIcon } from 'lucide-react';
-import { createElement, memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { createElement, memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Navigate, useSearchParams } from 'react-router';
 import useSWR from 'swr';
@@ -396,6 +396,9 @@ const MyWorkPage = memo(() => {
   const firstTasks = workQueryResponseTasks<WorkQueryResultTask>(data?.data);
   const firstGroups = workQueryResponseGroups<WorkQueryResultTask>(data?.data);
   const queryHash = data?.data.queryHash;
+  const pageToken = `${swrKey.join('\u001F')}\u001F${queryHash ?? ''}`;
+  const pageTokenRef = useRef(pageToken);
+  pageTokenRef.current = pageToken;
   const [groupTail, setGroupTail] = useState<typeof firstGroups>([]);
   const [taskTail, setTaskTail] = useState<typeof firstTasks>([]);
   const [extraSubscribed, setExtraSubscribed] = useState<string[]>([]);
@@ -486,8 +489,10 @@ const MyWorkPage = memo(() => {
     async (groupKey: string) => {
       const column = groups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
+      const started = pageTokenRef.current;
       if (!last || !queryHash) return;
       const next = await fetchNextPage({ afterId: last.id, groupKey });
+      if (pageTokenRef.current !== started) return;
       setGroupTail((current) =>
         mergeWorkQueryGroups(current, workQueryResponseGroups<WorkQueryResultTask>(next.data)),
       );
@@ -503,8 +508,10 @@ const MyWorkPage = memo(() => {
   // default to `none` grouping instead of per-status groups.
   const loadMore = useCallback(async () => {
     const last = tasks.at(-1);
+    const started = pageTokenRef.current;
     if (!last || !queryHash) return;
     const next = await fetchNextPage({ afterId: last.id });
+    if (pageTokenRef.current !== started) return;
     setTaskTail((current) =>
       mergeWorkQueryPage(current, workQueryResponseTasks<WorkQueryResultTask>(next.data)),
     );

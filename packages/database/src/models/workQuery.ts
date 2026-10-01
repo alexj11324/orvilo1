@@ -1261,6 +1261,7 @@ export class WorkQueryModel {
         layout: board ? 'board' : 'list',
         // Board swimlanes page 10 cards per cell. List sub-groups page 25.
         limit: lane ? Math.min(limit, board ? 10 : 25) : limit,
+        mode: params.mode,
         queryHash,
         requestedHash: params.queryHash,
         sort,
@@ -1360,6 +1361,7 @@ export class WorkQueryModel {
     lane?: BoardLaneAxis;
     layout: WorkQueryLayout;
     limit: number;
+    mode?: MyWorkMode;
     queryHash: string;
     requestedHash?: string;
     sort: WorkQuerySort[];
@@ -1434,13 +1436,19 @@ export class WorkQueryModel {
 
     // `manual` board ordering keeps position so a same-column drop persists
     // where the user left it; `field` orders each column by the query's own
-    // sort — switching to board never silently overrides it.
+    // sort — switching to board never silently overrides it. Activity-date
+    // groups, and activity mode off a manual board, use the notification
+    // clock the bucket already uses — not the row's updatedAt.
     const boardOrdered = params.layout === 'board' && params.sortMode === 'manual';
-    const orderBy = boardOrdered
-      ? [sql`${taskEffectivePosition} asc`, desc(tasks.createdAt), desc(tasks.seq)]
-      : params.sort.map((item) =>
-          item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
-        );
+    const activityOrdered =
+      params.groupBy === 'activityDate' || (params.mode === 'activity' && !boardOrdered);
+    const orderBy = activityOrdered
+      ? [desc(axisCtx.activity), asc(tasks.id)]
+      : boardOrdered
+        ? [sql`${taskEffectivePosition} asc`, desc(tasks.createdAt), desc(tasks.seq)]
+        : params.sort.map((item) =>
+            item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
+          );
 
     const groups = await Promise.all(
       pageKeys.map(async (key) => {
@@ -1456,19 +1464,46 @@ export class WorkQueryModel {
           if (!cursor) {
             throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
           }
-          groupConditions.push(
-            boardOrdered
-              ? keysetAfterBoardPosition(cursor)
-              : keysetAfter(params.sort, sortColumn, (f) => sortValue(cursor, f)),
-          );
+          if (activityOrdered) {
+            const [activityCursor] = await this.db
+              .select({ at: sql<Date | null>`${axisCtx.activity}`.mapWith(tasks.updatedAt) })
+              .from(tasks)
+              .where(eq(tasks.id, cursor.id))
+              .limit(1);
+            const at = activityCursor?.at ?? null;
+            groupConditions.push(
+              at
+                ? or(
+                    sql`${axisCtx.activity} < ${at}`,
+                    and(sql`${axisCtx.activity} = ${at}`, gt(tasks.id, cursor.id)),
+                  )!
+                : and(sql`${axisCtx.activity} is null`, gt(tasks.id, cursor.id))!,
+            );
+          } else {
+            groupConditions.push(
+              boardOrdered
+                ? keysetAfterBoardPosition(cursor)
+                : keysetAfter(params.sort, sortColumn, (f) => sortValue(cursor, f)),
+            );
+          }
         }
 
-        const rows = await this.db
-          .select()
-          .from(tasks)
-          .where(and(...groupConditions))
-          .orderBy(...orderBy)
-          .limit(params.limit);
+        const rows = activityOrdered
+          ? await this.db
+              .select({
+                ...getTableColumns(tasks),
+                activityAt: sql<Date | null>`${axisCtx.activity}`.mapWith(tasks.updatedAt),
+              })
+              .from(tasks)
+              .where(and(...groupConditions))
+              .orderBy(...orderBy)
+              .limit(params.limit)
+          : await this.db
+              .select()
+              .from(tasks)
+              .where(and(...groupConditions))
+              .orderBy(...orderBy)
+              .limit(params.limit);
 
         return {
           hasMore: params.afterId ? rows.length === params.limit : rows.length < groupTotal,

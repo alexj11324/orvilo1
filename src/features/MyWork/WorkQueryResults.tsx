@@ -33,7 +33,6 @@ import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
 import {
   COLUMN_I18N_KEYS,
   type TaskStatusChoice,
-  workQueryKeyForKanbanColumn,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
@@ -53,6 +52,7 @@ import { externalReviewIdentifier, externalReviewOpenHref } from './externalRevi
 import {
   activityBucketRank,
   isInteractiveRowClick,
+  myWorkPriorityGroupRank,
   type MyWorkRowProperty,
 } from './myWorkDisplay';
 import {
@@ -816,6 +816,17 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
     const nestRows =
       Boolean(flatNested) && (listGroupBy === 'none' || listGroupBy === 'attention');
+    const axisRank = (axis: string | undefined): ((key: string) => number) | undefined => {
+      if (axis === 'activityDate') return activityBucketRank;
+      if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
+      if (axis === 'assignee' || axis === 'project') {
+        return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
+      }
+      if (axis === 'cycle') return groupRank;
+      return undefined;
+    };
+    const serverGroupKey = (columnKey: string) =>
+      workQuerySourceKeysForKanbanColumn(boardGroupBy, columnKey)[0];
 
     // While any selection exists every row keeps its checkbox revealed —
     // Linear's signal that multi-select is armed.
@@ -885,7 +896,10 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               movable,
               sortMode,
               loadMoreGroupError: loadMoreGroupErrors
-                ? (columnKey) => loadMoreGroupErrors[workQueryKeyForKanbanColumn(columnKey)]
+                ? (columnKey) => {
+                    const key = serverGroupKey(columnKey);
+                    return key ? loadMoreGroupErrors[key] : undefined;
+                  }
                 : undefined,
               onLoadMoreGroup: onLoadMoreGroup
                 ? (columnKey) => {
@@ -897,7 +911,10 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               onHiddenColumnKeysChange: onCollapsedColumnsChange,
               onRefresh: onMoved,
               onRetryLoadMoreGroup: onRetryLoadMoreGroup
-                ? (columnKey) => onRetryLoadMoreGroup(workQueryKeyForKanbanColumn(columnKey))
+                ? (columnKey) => {
+                    const key = serverGroupKey(columnKey);
+                    if (key) onRetryLoadMoreGroup(key);
+                  }
                 : undefined,
               queryGroupBy: boardGroupBy,
               settled: true,
@@ -957,12 +974,13 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
               groupTitle={groupTitle}
               groups={groups}
               laneAxis={listLane}
+              laneRankOf={axisRank(listLane)}
               listGroupBy={listGroupBy}
               loadMoreGroupErrors={loadMoreGroupErrors}
               loadMoreLabel={loadMoreLabel}
               nestRows={nestRows}
               primaryAxis={listGroupBy}
-              rankOf={listGroupBy === 'activityDate' ? activityBucketRank : groupRank}
+              rankOf={axisRank(listGroupBy)}
               tasks={tasks}
               renderRow={(task, item, orderedIds) => (
                 <WorkQueryTaskRow

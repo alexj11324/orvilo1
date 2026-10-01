@@ -131,20 +131,42 @@ const rowItems = (
  * load-more controls. `orderedIds` is the shift-range order — parent-context
  * rows stay visible but are not range targets.
  */
+const compareGroupKeys = (
+  left: string,
+  right: string,
+  rank?: (key: string) => number,
+  title?: (key: string) => string,
+) => {
+  if (left === 'none' && right !== 'none') return 1;
+  if (right === 'none' && left !== 'none') return -1;
+  const byRank = (rank?.(left) ?? 0) - (rank?.(right) ?? 0);
+  if (byRank !== 0) return byRank;
+  if (title) return title(left).localeCompare(title(right));
+  return 0;
+};
+
+const orderedGroups = <T>(
+  groups: readonly NestedWorkQueryGroup<T>[],
+  rank?: (key: string) => number,
+  title?: (key: string) => string,
+): readonly NestedWorkQueryGroup<T>[] => {
+  if (!rank && !title) return groups;
+  return [...groups].sort((left, right) => compareGroupKeys(left.key, right.key, rank, title));
+};
+
 export const flattenWorkQueryVirtualItems = (input: {
   allTasks: readonly WorkQueryResultTask[];
   collapsed: ReadonlySet<string>;
   groups: readonly NestedWorkQueryGroup<WorkQueryResultTask>[];
   laneAxis?: string;
+  laneRankOf?: (key: string) => number;
+  laneTitleOf?: (key: string) => string;
   nestRows: boolean;
   primaryAxis: string;
   rankOf?: (key: string) => number;
+  titleOf?: (key: string) => string;
 }): { items: WorkQueryVirtualItem[]; orderedIds: string[] } => {
-  const groups = input.rankOf
-    ? [...input.groups].sort(
-        (left, right) => input.rankOf!(left.key) - input.rankOf!(right.key),
-      )
-    : input.groups;
+  const groups = orderedGroups(input.groups, input.rankOf, input.titleOf);
   const items: WorkQueryVirtualItem[] = [];
   const orderedIds: string[] = [];
   const pushRows = (
@@ -173,7 +195,8 @@ export const flattenWorkQueryVirtualItems = (input: {
     });
     if (collapsed) continue;
     if (group.children.length > 0) {
-      for (const child of group.children) {
+      const children = orderedGroups(group.children, input.laneRankOf, input.laneTitleOf);
+      for (const child of children) {
         const collapseKey = `${group.key}${WORK_QUERY_BOARD_KEY_SEP}${child.key}`;
         const childCollapsed = input.collapsed.has(collapseKey);
         items.push({

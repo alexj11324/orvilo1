@@ -1,5 +1,5 @@
 import type { WorkQuery } from '@orvilo/types';
-import { useCallback, useState } from 'react';
+import { useCallback, useRef, useState } from 'react';
 
 import {
   mergeWorkQueryGroups,
@@ -37,6 +37,8 @@ export const useProjectIssuePages = (query: WorkQuery | null) => {
   const [groupTail, setGroupTail] = useState<WorkQueryGroupPage<WorkQueryResultTask>[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [seenKey, setSeenKey] = useState(key);
+  const queryKeyRef = useRef(key);
+  queryKeyRef.current = key;
   const queryChanged = seenKey !== key;
   if (queryChanged) {
     setSeenKey(key);
@@ -50,6 +52,7 @@ export const useProjectIssuePages = (query: WorkQuery | null) => {
 
   const loadMore = useCallback(async () => {
     const last = tasks.at(-1);
+    const started = queryKeyRef.current;
     if (!query || !queryHash || !last || loadingMore) return;
     setLoadingMore(true);
     try {
@@ -59,11 +62,12 @@ export const useProjectIssuePages = (query: WorkQuery | null) => {
         query,
         queryHash,
       });
+      if (queryKeyRef.current !== started) return;
       setTaskTail((current) =>
         mergeWorkQueryPage(current, workQueryResponseTasks<WorkQueryResultTask>(next.data).map(asListItem)),
       );
     } finally {
-      setLoadingMore(false);
+      if (queryKeyRef.current === started) setLoadingMore(false);
     }
   }, [loadingMore, query, queryHash, tasks]);
 
@@ -71,6 +75,7 @@ export const useProjectIssuePages = (query: WorkQuery | null) => {
     async (groupKey: string) => {
       const column = groups.find((group) => group.key === groupKey);
       const last = column?.tasks.at(-1);
+      const started = queryKeyRef.current;
       if (!query || !queryHash || !last || loadingMore) return;
       setLoadingMore(true);
       try {
@@ -81,11 +86,12 @@ export const useProjectIssuePages = (query: WorkQuery | null) => {
           query,
           queryHash,
         });
+        if (queryKeyRef.current !== started) return;
         setGroupTail((current) =>
           mergeWorkQueryGroups(current, workQueryResponseGroups<WorkQueryResultTask>(next.data)),
         );
       } finally {
-        setLoadingMore(false);
+        if (queryKeyRef.current === started) setLoadingMore(false);
       }
     },
     [groups, loadingMore, query, queryHash],

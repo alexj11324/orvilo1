@@ -23,13 +23,16 @@ import { CanonicalRunAuthority } from './canonicalRun';
 export interface EmbeddedInferenceBridge {
   /** Session-pinned admission seam for `PrimeEmbeddedRuntime`. */
   buildInferenceRequest: BuildInferenceRequest;
+  /** The revision-fenced issuance pinned at composition. The host re-verifies
+   * it under the canonical launch locks so a mid-compose bump fails closed. */
+  claim: BindingExecutionClaim;
   /** Trusted broker port the runtime answers `broker.infer` with. */
   inferenceBroker: InferenceBroker;
   /** Model identity pinned into `harness.init` — runner-visible, never secret. */
   initModel: HarnessInitModel;
 }
 
-interface EmbeddedInferenceBridgeDeps {
+export interface EmbeddedInferenceBridgeDeps {
   backend?: TrustedProviderBackend;
   /** Canonically registered run — the only scope the bridge may serve. */
   binding: CanonicalRunBinding;
@@ -170,6 +173,7 @@ export async function createEmbeddedInferenceBridge(
     ok: true,
     value: {
       buildInferenceRequest,
+      claim,
       inferenceBroker: createInferenceBroker({ authority, backend, now: deps.now }),
       initModel: { id: capability.modelRoute, maxOutputTokens: capability.maxOutputTokens },
     },

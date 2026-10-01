@@ -40,4 +40,20 @@ describe('mergeWorkQueryGroups', () => {
     expect(next.find((group) => group.key === 'todo')?.hasMore).toBe(false);
     expect(next.find((group) => group.key === 'done')?.hasMore).toBe(false);
   });
+
+  it('keeps a sibling column when the page only returns the column that advanced', () => {
+    const first = [
+      { hasMore: true, key: 'todo', tasks: [{ id: 'a' }], total: 3 },
+      { hasMore: true, key: 'done', tasks: [{ id: 'z' }], total: 4 },
+    ];
+    const next = mergeWorkQueryGroups(first, [
+      { hasMore: false, key: 'todo', tasks: [{ id: 'b' }], total: 3 },
+    ]);
+    expect(next.find((group) => group.key === 'todo')?.tasks.map((row) => row.id)).toEqual([
+      'a',
+      'b',
+    ]);
+    expect(next.find((group) => group.key === 'todo')?.hasMore).toBe(false);
+    expect(next.find((group) => group.key === 'done')).toEqual(first[1]);
+  });
 });

@@ -173,6 +173,7 @@ export const commitWorkQueryBoardMove = async (input: {
         teamId: plan.task.teamId,
       });
     }
+    if (plan.groupBy !== 'status' && plan.groupBy !== 'workflowCategory') return false;
     return moveBoardMaybePickingState({
       expectedDomainRevision: plan.expectedDomainRevision,
       groupBy: plan.groupBy,

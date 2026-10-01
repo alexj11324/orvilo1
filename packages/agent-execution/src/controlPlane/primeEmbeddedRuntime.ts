@@ -26,7 +26,11 @@ import type {
   RuntimeSession,
 } from './contracts';
 import { CONTROL_PLANE_VERSION } from './contracts';
-import type { HarnessSessionEvent, SanitizedInferenceRequest } from './harnessProtocol';
+import type {
+  HarnessInitModel,
+  HarnessSessionEvent,
+  SanitizedInferenceRequest,
+} from './harnessProtocol';
 import {
   BROKER_CANCEL_METHOD,
   BROKER_EVENT_NOTIFICATION,
@@ -63,6 +67,16 @@ export type BuildInferenceRequest = (input: {
   session: RuntimeSession;
 }) => ControlResult<InferenceRequest>;
 
+/**
+ * Fallback model pin for composition-less sessions (tests and the phase-2 stub
+ * seam). The phase-3 bridge always supplies `initModel` — a mismatched default
+ * fails closed at the first `broker.infer` route check.
+ */
+export const DEFAULT_EMBEDDED_INIT_MODEL: HarnessInitModel = {
+  id: 'orvilo-broker',
+  maxOutputTokens: 8192,
+};
+
 export interface PrimeEmbeddedRuntimeOptions {
   /** Runner arguments; defaults to [artifact]. */
   args?: string[];
@@ -79,6 +93,8 @@ export interface PrimeEmbeddedRuntimeOptions {
   home: string;
   /** Trusted inference broker port; runner inference is denied without it. */
   inferenceBroker?: InferenceBroker;
+  /** Model identity pinned into harness.init — resolved from the issued binding. */
+  initModel?: HarnessInitModel;
   now?: () => number;
   /** Trusted supervisor mapping of the host workspace into the isolated tree. */
   runtimeWorkspace?: string;
@@ -92,6 +108,8 @@ export interface PrimeEmbeddedRuntimeOptions {
 }
 
 interface Entry {
+  /** Wakes the pump for an in-flight infer so it can drop the backend stream. */
+  brokerCancels?: Map<string, () => void>;
   brokerStreams?: Set<string>;
   interrupt?: () => void;
   isolation: IsolationEvidence;
@@ -199,6 +217,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       const ack = await transport.request(HARNESS_INIT_METHOD, {
         protocolVersion: HARNESS_PROTOCOL_VERSION,
         controlPlaneVersion: CONTROL_PLANE_VERSION,
+        model: options.initModel ?? DEFAULT_EMBEDDED_INIT_MODEL,
         pin: {
           commit: PRIME_EMBEDDED_PIN.commit,
           version: PRIME_EMBEDDED_PIN.version,
@@ -255,6 +274,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         transport,
         prompting: false,
         stopping: false,
+        brokerCancels: new Map(),
         brokerStreams: new Set(),
       };
       transport.setReverseHandler((method, params) =>
@@ -417,6 +437,12 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
     if (entry.stop) return entry.stop;
     entry.stopping = true;
     entry.interrupt?.();
+    // Wake in-flight infer pumps so they unwind the backend stream now rather
+    // than at the next provider event.
+    if (entry.brokerCancels) {
+      for (const cancel of entry.brokerCancels.values()) cancel();
+      entry.brokerCancels.clear();
+    }
     // Deny further runner reverse requests before closing the channel.
     try {
       entry.transport.setReverseHandler(undefined);
@@ -460,7 +486,14 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         return;
       }
       case 'usage': {
-        // v1 contract has no usage surface; carried on the wire for phase 3.
+        push({
+          type: 'usage',
+          sessionId,
+          inputTokens: event.inputTokens,
+          outputTokens: event.outputTokens,
+          ...(event.totalTokens !== undefined ? { totalTokens: event.totalTokens } : {}),
+          ...(event.cost !== undefined ? { cost: { ...event.cost } } : {}),
+        });
         return;
       }
       case 'tool-violation': {
@@ -530,6 +563,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
     if (!isBrokerCancelParams(params))
       return { error: { code: -32602, message: 'Invalid broker.cancel params' } };
     entry.brokerStreams?.delete(params.requestId);
+    entry.brokerCancels?.get(params.requestId)?.();
     return { result: { ok: true } };
   }
 
@@ -562,10 +596,25 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
   ): Promise<void> {
     const broker = this.options?.inferenceBroker;
     if (!broker) return;
+    const cancelled = new Promise<'cancelled'>((resolve) => {
+      entry.brokerCancels?.set(requestId, () => resolve('cancelled'));
+    });
+    const iterator = broker.infer(request)[Symbol.asyncIterator]();
     try {
-      for await (const event of broker.infer(request)) {
-        if (entry.stopping || !entry.brokerStreams?.has(requestId)) return;
-        entry.transport.notify(BROKER_EVENT_NOTIFICATION, { requestId, event });
+      for (;;) {
+        // `for await` cannot interrupt a pending next() — race it against the
+        // cancel latch and unwind the backend stream on session.abort/close.
+        const step = await Promise.race([iterator.next(), cancelled]);
+        if (step === 'cancelled') {
+          await iterator.return?.();
+          return;
+        }
+        if (step.done) break;
+        if (entry.stopping || !entry.brokerStreams?.has(requestId)) {
+          await iterator.return?.();
+          return;
+        }
+        entry.transport.notify(BROKER_EVENT_NOTIFICATION, { requestId, event: step.value });
       }
       if (entry.stopping || !entry.brokerStreams?.has(requestId)) return;
       entry.transport.notify(BROKER_EVENT_NOTIFICATION, { requestId, event: { type: 'end' } });
@@ -581,6 +630,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       });
       console.error('prime-embedded broker pump failed', error);
     } finally {
+      entry.brokerCancels?.delete(requestId);
       entry.brokerStreams?.delete(requestId);
     }
   }

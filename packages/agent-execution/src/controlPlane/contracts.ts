@@ -125,6 +125,20 @@ export interface RuntimeSession {
 export type RuntimeEvent =
   | { type: 'text'; sessionId: string; text: string }
   | { type: 'turn-ended'; sessionId: string; reason: 'end_turn' | 'gate' | 'budget' | 'cancelled' }
+  | {
+      type: 'usage';
+      sessionId: string;
+      inputTokens: number;
+      outputTokens: number;
+      totalTokens?: number;
+      cost?: {
+        input?: number;
+        output?: number;
+        cacheRead?: number;
+        cacheWrite?: number;
+        total?: number;
+      };
+    }
   | { type: 'error'; sessionId: string; error: ControlError };
 
 export interface QuiescenceProof {

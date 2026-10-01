@@ -47,8 +47,20 @@ export type HarnessReverseMethod = (typeof HARNESS_REVERSE_METHODS)[number];
 
 // ---------- host → runner ----------
 
+/**
+ * Model identity the host pins into the handshake — resolved host-side from the
+ * issued provider binding, so the runner presents the real route upstream and
+ * `broker.infer` requests carry a `modelRoute` the authority actually granted.
+ * Runner-visible metadata only; never an endpoint or credential.
+ */
+export interface HarnessInitModel {
+  id: string;
+  maxOutputTokens: number;
+}
+
 export interface HarnessInitParams {
   controlPlaneVersion: number;
+  model: HarnessInitModel;
   /** Source pin echo — the runner must return it verbatim. */
   pin: { commit: string; version: string; license: string };
   protocolVersion: number;

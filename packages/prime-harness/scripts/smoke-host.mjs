@@ -72,6 +72,7 @@ rl.on('line', (line) => {
 
 const init = await request('harness.init', {
   controlPlaneVersion: 3,
+  model: { id: 'orvilo-broker-mock', maxOutputTokens: 8192 },
   pin: { commit: '7d442aafa985f9342134fac16c2ef41f03fb45c1', license: 'MIT', version: '0.9.8' },
   protocolVersion: 1,
   workspace: '/tmp/harness-smoke',

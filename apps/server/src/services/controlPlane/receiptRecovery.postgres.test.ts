@@ -37,7 +37,7 @@ import { CanonicalCoreRuntimeHost } from './coreRuntimeHost';
 const execute = promisify(execFile);
 const databaseUrl = process.env.CORE_RECOVERY_DATABASE_URL;
 const container = 'orvilo-core-recovery-20260930';
-const docker = '/usr/local/bin/docker';
+const docker = process.env.DOCKER_PATH ?? 'docker';
 
 // Explicit opt-in: this suite restarts ONLY its labelled disposable PostgreSQL.
 describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server restart', () => {

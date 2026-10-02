@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import { memo, useCallback, useMemo } from 'react';
 
 import AsyncError from '@/components/AsyncError';
+import { TopicNotFoundRedirect } from '@/features/TopicNotFound';
 import { useFetchTopicMemories } from '@/hooks/useFetchMemoryForTopic';
 import { useFetchNotebookDocuments } from '@/hooks/useFetchNotebookDocuments';
 import { getMessageListCacheIdentity } from '@/services/message/cache';
@@ -260,6 +261,10 @@ const ChatList = memo<ChatListProps>(
     // `messagesInit` is the settled-data signal: [] is a valid loaded result.
     // A first-load failure owns the whole surface, while a background failure
     // must preserve either the messages or the welcome state below.
+    if (feedback.showNotFound) {
+      return <TopicNotFoundRedirect topicId={context.topicId} />;
+    }
+
     if (feedback.showFirstLoadError) {
       return (
         <AsyncError

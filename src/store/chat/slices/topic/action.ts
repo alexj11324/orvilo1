@@ -1354,13 +1354,36 @@ export class ChatTopicActionImpl {
       () => topicService.getTopicDetail(topicId!),
       {
         onData: (topic) => {
-          if (!topic) return;
+          if (!topic) {
+            // A settled `null` means the id is gone or inaccessible — a
+            // deleted topic on a stale list row or deep link. Flag it for the
+            // route guard, unless the id is a client-minted topic whose server
+            // row isn't confirmed yet (detail legitimately resolves null
+            // during the first-send window).
+            if (topicId && !this.#get().creatingTopicIds.includes(topicId)) {
+              this.#set(
+                (state) => ({
+                  topicNotFoundMap: { ...state.topicNotFoundMap, [topicId]: true },
+                }),
+                false,
+                n('useFetchTopicDetail(notFound)', { topicId }),
+              );
+            }
+            return;
+          }
 
-          const currentMap = this.#get().topicDetailMap;
-          if (isEqual(currentMap[topic.id], topic)) return;
+          const state = this.#get();
+          const currentMap = state.topicDetailMap;
+          const isNew = !isEqual(currentMap[topic.id], topic);
+          const wasNotFound = !!state.topicNotFoundMap[topic.id];
+          if (!isNew && !wasNotFound) return;
+
+          const nextDetailMap = { ...currentMap, [topic.id]: topic };
+          const nextNotFoundMap = { ...state.topicNotFoundMap };
+          delete nextNotFoundMap[topic.id];
 
           this.#set(
-            { topicDetailMap: { ...currentMap, [topic.id]: topic } },
+            { topicDetailMap: nextDetailMap, topicNotFoundMap: nextNotFoundMap },
             false,
             n('useFetchTopicDetail(onData)', { topicId: topic.id }),
           );
@@ -1625,6 +1648,20 @@ export class ChatTopicActionImpl {
     void evictMessageCache((ctx) => ctx.topicId === id);
 
     // switch back to default topic
+    if (activeTopicId === id) switchTopic(null);
+  };
+
+  /**
+   * Local-only eviction for a topic the server already proved gone (a settled
+   * `null` detail or a NOT_FOUND response) — mirrors the post-delete cleanup
+   * of `removeTopic` without the server call, so a stale row can't keep
+   * deep-linking into a crashed conversation.
+   */
+  evictStaleTopic = (id: string): void => {
+    const { activeTopicId, switchTopic } = this.#get();
+
+    this.#get().internal_dispatchTopic({ type: 'deleteTopic', id }, 'evictStaleTopic');
+    void evictMessageCache((ctx) => ctx.topicId === id);
     if (activeTopicId === id) switchTopic(null);
   };
 

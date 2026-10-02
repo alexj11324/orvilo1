@@ -93,6 +93,9 @@ export default {
   'permission.configAccess.groupRoleRestricted':
     'Your workspace role cannot configure Agent Groups. You were returned to chat.',
   'agentNotFound.title': 'Agent Unavailable',
+  'topicNotFound.desc':
+    'This conversation does not exist or is no longer accessible — it may have been deleted or the link is out of date.',
+  'topicNotFound.title': 'Conversation Unavailable',
   'groupNotFound.desc':
     'This group does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'groupNotFound.title': 'Group Unavailable',

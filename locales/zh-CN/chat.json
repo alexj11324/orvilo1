@@ -2284,6 +2284,8 @@
   "topicComment.thread": "评论线程",
   "topicComment.title": "评论",
   "topicComment.updateFailed": "评论更新失败",
+  "topicNotFound.desc": "该会话不存在或您已无权访问，可能已被删除，或链接已失效。",
+  "topicNotFound.title": "会话不可用",
   "traeInstallGuide.actions.openDocs": "打开官方文档",
   "traeInstallGuide.actions.openSystemTools": "打开系统工具",
   "traeInstallGuide.afterInstall": "安装并授权 TRAE CLI 后，请确认 PATH 中可以使用 traecli 命令，然后重试消息或在系统工具中点击重新检测。",

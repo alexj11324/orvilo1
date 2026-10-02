@@ -68,7 +68,17 @@ describe('computeMaxKeepalivePings', () => {
 });
 
 describe('resolveCacheKeepalive', () => {
-  const cleanEnv = {} as NodeJS.ProcessEnv;
+  // Repo augmentation marks these env keys required — provide them so plain
+  // literals satisfy `NodeJS.ProcessEnv` without reaching for process.env.
+  const testEnv = (overrides: Record<string, string> = {}): NodeJS.ProcessEnv => ({
+    NODE_ENV: 'test',
+    NEXT_PUBLIC_DEVELOPER_DEBUG: '',
+    NEXT_PUBLIC_I18N_DEBUG: '',
+    NEXT_PUBLIC_I18N_DEBUG_BROWSER: '',
+    NEXT_PUBLIC_I18N_DEBUG_SERVER: '',
+    ...overrides,
+  });
+  const cleanEnv = testEnv();
 
   it('enables capable engines by default', () => {
     const resolved = resolveCacheKeepalive('claude-code', cleanEnv);
@@ -88,34 +98,40 @@ describe('resolveCacheKeepalive', () => {
   it('honours the global kill switch', () => {
     for (const value of ['0', 'off', 'false', 'no']) {
       expect(
-        resolveCacheKeepalive('claude-code', { [CACHE_KEEPALIVE_ENV]: value }),
+        resolveCacheKeepalive('claude-code', testEnv({ [CACHE_KEEPALIVE_ENV]: value })),
       ).toBeUndefined();
     }
-    expect(resolveCacheKeepalive('claude-code', { [CACHE_KEEPALIVE_ENV]: '1' })).toBeDefined();
+    expect(
+      resolveCacheKeepalive('claude-code', testEnv({ [CACHE_KEEPALIVE_ENV]: '1' })),
+    ).toBeDefined();
   });
 
   it('honours the per-engine kill switch and interval/window overrides', () => {
     expect(
-      resolveCacheKeepalive('codex', { [`${CACHE_KEEPALIVE_ENV}_CODEX`]: '0' }),
+      resolveCacheKeepalive('codex', testEnv({ [`${CACHE_KEEPALIVE_ENV}_CODEX`]: '0' })),
     ).toBeUndefined();
     // Per-engine env does not leak across engines.
     expect(
-      resolveCacheKeepalive('claude-code', { [`${CACHE_KEEPALIVE_ENV}_CODEX`]: '0' }),
+      resolveCacheKeepalive('claude-code', testEnv({ [`${CACHE_KEEPALIVE_ENV}_CODEX`]: '0' })),
     ).toBeDefined();
 
-    const tuned = resolveCacheKeepalive('codex', {
-      [`${CACHE_KEEPALIVE_ENV}_CODEX_INTERVAL_MS`]: '60000',
-      [`${CACHE_KEEPALIVE_ENV}_CODEX_WINDOW_MS`]: '120000',
-    });
+    const tuned = resolveCacheKeepalive(
+      'codex',
+      testEnv({
+        [`${CACHE_KEEPALIVE_ENV}_CODEX_INTERVAL_MS`]: '60000',
+        [`${CACHE_KEEPALIVE_ENV}_CODEX_WINDOW_MS`]: '120000',
+      }),
+    );
     expect(tuned).toMatchObject({ maxWindowMs: 120_000, pingIntervalMs: 60_000 });
   });
 
   it('lets explicit overrides win over env', () => {
-    const resolved = resolveCacheKeepalive(
-      'claude-code',
-      { [CACHE_KEEPALIVE_ENV]: '0' },
-      { enabled: true, maxPings: 3, maxWindowMs: 9_000, pingIntervalMs: 40 },
-    );
+    const resolved = resolveCacheKeepalive('claude-code', testEnv({ [CACHE_KEEPALIVE_ENV]: '0' }), {
+      enabled: true,
+      maxPings: 3,
+      maxWindowMs: 9_000,
+      pingIntervalMs: 40,
+    });
     expect(resolved).toMatchObject({
       enabled: true,
       maxPings: 3,
@@ -128,11 +144,13 @@ describe('resolveCacheKeepalive', () => {
   it('offers prompt_cache_key for codex only under the env opt-in', () => {
     expect(resolveCacheKeepalive('codex', cleanEnv)?.promptCacheKey).toBeUndefined();
     expect(
-      resolveCacheKeepalive('codex', { [CODEX_PROMPT_CACHE_KEY_ENV]: '1' })?.promptCacheKey,
+      resolveCacheKeepalive('codex', testEnv({ [CODEX_PROMPT_CACHE_KEY_ENV]: '1' }))
+        ?.promptCacheKey,
     ).toBe('prompt_cache_key');
     // Only codex's policy declares the option.
     expect(
-      resolveCacheKeepalive('claude-code', { [CODEX_PROMPT_CACHE_KEY_ENV]: '1' })?.promptCacheKey,
+      resolveCacheKeepalive('claude-code', testEnv({ [CODEX_PROMPT_CACHE_KEY_ENV]: '1' }))
+        ?.promptCacheKey,
     ).toBeUndefined();
   });
 });

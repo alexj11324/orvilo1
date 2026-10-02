@@ -181,7 +181,7 @@ const createSessionOptions = (
       clientVersion: '1.2.3',
       commandPath: 'claude-agent-acp',
       cwd: '/workspace',
-      env: {},
+      env: testEnv(),
       onEvents: (batch) => {
         events.push(...batch);
       },
@@ -199,6 +199,16 @@ const createSessionOptions = (
     statuses,
   };
 };
+
+/** Repo augmentation marks these env keys required — provide them all. */
+const testEnv = (overrides: Record<string, string> = {}): NodeJS.ProcessEnv => ({
+  NODE_ENV: 'test',
+  NEXT_PUBLIC_DEVELOPER_DEBUG: '',
+  NEXT_PUBLIC_I18N_DEBUG: '',
+  NEXT_PUBLIC_I18N_DEBUG_BROWSER: '',
+  NEXT_PUBLIC_I18N_DEBUG_SERVER: '',
+  ...overrides,
+});
 
 /** The client's detached-group kill goes through `process.kill(-pid)`. */
 const spyProcessKill = (child: ChildProcess) =>
@@ -349,7 +359,7 @@ describe('AcpAgentSession cache keep-alive', () => {
     spawnMock.mockReturnValue(fake.child);
     const killSpy = spyProcessKill(fake.child);
     const { options, statuses } = createSessionOptions({
-      env: { ORVILO_CACHE_KEEPALIVE: '0' },
+      env: testEnv({ ORVILO_CACHE_KEEPALIVE: '0' }),
     });
     const session = createStandardAcpSession('claude-code', options);
 
@@ -385,7 +395,7 @@ describe('AcpAgentSession cache keep-alive', () => {
     const clock = createFakeClock();
     const { options } = createSessionOptions({
       cacheKeepalive: { clock: clock.clock, maxPings: 1 },
-      env: { ORVILO_CODEX_PROMPT_CACHE_KEY: '1' },
+      env: testEnv({ ORVILO_CODEX_PROMPT_CACHE_KEY: '1' }),
     });
     const session = createStandardAcpSession('codex', options);
 

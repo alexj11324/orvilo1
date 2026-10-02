@@ -350,8 +350,13 @@ export const rawWorkQueryBoardKey = (key: string): string => {
 };
 
 /**
- * Status and workflow category are one state machine. Using both as the two
- * board axes would write the same transition twice.
+ * `status` and `workflowCategory` are different layers of the task state
+ * model, not one state machine: workflow category is the canonical Issue
+ * Status, while `status` is the legacy projection of the execution/attention
+ * layers. Pairing them as the board's column + lane axes still writes
+ * ambiguous moves (each axis drags a different field), so the combination is
+ * rejected — that is a query-shape conflict, not a claim that the layers are
+ * the same thing.
  */
 export const workQueryAxesConflict = (
   column: string | undefined,
@@ -393,6 +398,12 @@ export const WORK_QUERY_WORKFLOW_COLUMNS = [
   'canceled',
 ] as const;
 
+/**
+ * Legacy `tasks.status` values accepted as board columns.
+ * @deprecated `tasks.status` is the legacy compatibility projection — not the
+ * Issue Status. Boards should group by `workflowCategory`
+ * ({@link WORK_QUERY_WORKFLOW_COLUMNS}).
+ */
 export const WORK_QUERY_STATUS_COLUMNS = [
   'backlog',
   'scheduled',
@@ -453,6 +464,10 @@ export const TASK_WORKFLOW_CATEGORY_VALUES = [
   'canceled',
 ] as const;
 
+/**
+ * @deprecated Legacy `tasks.status` values — the compatibility projection,
+ * not the Issue Status ({@link TASK_WORKFLOW_CATEGORY_VALUES}).
+ */
 export const TASK_STATUS_VALUES = [
   'backlog',
   'scheduled',

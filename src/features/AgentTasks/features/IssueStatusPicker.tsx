@@ -13,6 +13,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { Input } from '@/components/ui/input';
 import { usePermission } from '@/hooks/usePermission';
 
 import {
@@ -264,7 +265,7 @@ const IssueStatusPicker = memo<IssueStatusPickerProps>(
       <DropdownMenu open={open} onOpenChange={setOpen}>
         <DropdownMenuTrigger render={triggerNode as ReactElement} />
         <DropdownMenuContent className="min-w-52">
-          <input
+          <Input
             autoFocus
             className={styles.searchInput}
             value={query}

@@ -746,11 +746,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     async (task: TaskListItem, choice: TaskStatusChoice) => {
       // Issue-status choices are always a workflow move — the picker's rows
       // never carry a raw execution status.
-      const applied = await applyWorkQueryStatusChoice({
-        choice,
-        groupBy: 'workflowCategory',
-        task,
-      });
+      const applied = await applyWorkQueryStatusChoice({ choice, task });
       if (!applied) return;
       try {
         await refreshGroups();

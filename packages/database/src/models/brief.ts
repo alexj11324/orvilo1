@@ -7,6 +7,7 @@ import { briefs, tasks } from '../schemas/task';
 import type { OrviloDatabase } from '../type';
 import { normalizeInboxAgentAvatar, normalizeInboxAgentTitle } from '../utils/inboxAgent';
 import { buildWorkspacePayload } from '../utils/workspace';
+import { legacyStatusExpr } from './taskExecutionSql';
 
 export interface UnresolvedBriefRow {
   agentAvatar: string | null;
@@ -183,7 +184,11 @@ export class BriefModel {
     brief: briefs,
     taskIdentifier: tasks.identifier,
     taskName: tasks.name,
-    taskStatus: tasks.status,
+    // No parent task → no label; `legacyStatusExpr` alone would fall through
+    // to 'backlog' on the missing LEFT JOIN row.
+    taskStatus: sql<
+      string | null
+    >`case when ${tasks.id} is null then null else ${legacyStatusExpr} end`,
   });
 
   private normalizeEnrichedRows = (

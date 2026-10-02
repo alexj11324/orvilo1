@@ -17,7 +17,7 @@ import type {
   GoalMetricComparison,
   TaskItem,
 } from '@orvilo/types';
-import { toMetricScale } from '@orvilo/types';
+import { deriveLegacyTaskStatus, toMetricScale } from '@orvilo/types';
 
 export { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
 
@@ -87,19 +87,20 @@ export const selectFrontier = (graph: GoalGraphSnapshot): FrontierSelection => {
  * that is merely waiting on a running Task does not pay for a budget query on
  * every sweep.
  */
-export const needsBudget = (task?: TaskItem | null): boolean => {
+export const needsBudget = (task?: TaskItem | null, status?: string | null): boolean => {
   // A candidate with no task yet will need one created and then dispatched.
   if (task === undefined) return true;
   if (task === null) return false;
   // A failure the coordinator can retry spends money too.
-  if (task.status === 'paused') {
+  const resolved = status ?? deriveLegacyTaskStatus(task);
+  if (resolved === 'paused') {
     return (
       task.error === LEASE_EXPIRED_ERROR ||
       task.error === VERIFICATION_FAILED_ERROR ||
       task.error === VERIFICATION_ERRORED_ERROR
     );
   }
-  return !['completed', 'failed', 'canceled', 'running', 'scheduled'].includes(task.status);
+  return !['completed', 'failed', 'canceled', 'running', 'scheduled'].includes(resolved);
 };
 
 /**
@@ -114,11 +115,13 @@ export const needsBudget = (task?: TaskItem | null): boolean => {
 export const frontierNeedsBudget = (
   frontier: FrontierSelection,
   tasksById: Map<string, TaskItem>,
+  statusById?: ReadonlyMap<string, string>,
 ): boolean =>
   frontier.eligible.some(({ blockedBy, node }) => {
     if (blockedBy.length > 0) return false;
     if (!node.taskId) return true;
-    return needsBudget(tasksById.get(node.taskId) ?? null);
+    const task = tasksById.get(node.taskId) ?? null;
+    return needsBudget(task, task ? statusById?.get(task.id) : null);
   });
 
 /**
@@ -185,6 +188,12 @@ export interface GoalMoveInput {
    */
   metricCriteria?: GoalMetricCriteriaState;
   /**
+   * Canonical execution truth per task id — the SQL-derived retired `status`
+   * labels ({@link TaskModel.derivedStatusByIds}). Rows missing from the map
+   * fall back to the row-level derivation ({@link deriveLegacyTaskStatus}).
+   */
+  statusById?: ReadonlyMap<string, string>;
+  /**
    * The responsible Task of every candidate that has one, keyed by task id.
    * A candidate whose task id is absent from the map has lost its row.
    */
@@ -198,8 +207,8 @@ const IN_FLIGHT_STATUSES = new Set(['running', 'scheduled']);
  * Whether this candidate is one the coordinator is already waiting on, and so
  * neither actionable nor a reason to stop looking at the others.
  */
-const isInFlight = (task: TaskItem | undefined): boolean =>
-  Boolean(task && IN_FLIGHT_STATUSES.has(task.status));
+const isInFlight = (task: TaskItem | undefined, status?: string | null): boolean =>
+  Boolean(task && IN_FLIGHT_STATUSES.has(status ?? deriveLegacyTaskStatus(task)));
 
 export interface GoalMove {
   branch: GoalTickBranch;
@@ -233,6 +242,7 @@ export const decideNextMove = ({
   frontier,
   graph,
   metricCriteria,
+  statusById,
   tasksById,
 }: GoalMoveInput): GoalMove => {
   const { candidates, chosen } = frontier;
@@ -274,9 +284,13 @@ export const decideNextMove = ({
   // old single-node frontier made them: the running node stayed eligible, was
   // re-picked every tick, and reported `waiting_external`, which ends the
   // advance before anything behind it is even considered.
-  const inFlight = graph.nodes.filter(
-    (node) => node.kind === 'task' && isInFlight(tasksById.get(node.taskId ?? '')),
-  ).length;
+  const statusOf = (task: TaskItem): string =>
+    statusById?.get(task.id) ?? deriveLegacyTaskStatus(task);
+
+  const inFlight = graph.nodes.filter((node) => {
+    const task = tasksById.get(node.taskId ?? '');
+    return node.kind === 'task' && isInFlight(task, task ? statusOf(task) : null);
+  }).length;
 
   let parked = false;
   let capacityBlocked = false;
@@ -286,7 +300,7 @@ export const decideNextMove = ({
     if (candidate.blockedBy.length > 0) continue;
 
     const task = candidate.node.taskId ? tasksById.get(candidate.node.taskId) : undefined;
-    if (isInFlight(task)) {
+    if (isInFlight(task, task ? statusOf(task) : null)) {
       waitingOn ??= { node: candidate.node, task: task! };
       continue;
     }
@@ -297,6 +311,7 @@ export const decideNextMove = ({
       candidates,
       graph,
       node: candidate.node,
+      status: task ? statusOf(task) : undefined,
       task: candidate.node.taskId ? (task ?? null) : undefined,
     });
 
@@ -323,7 +338,7 @@ export const decideNextMove = ({
       chosenNodeId: waitingOn?.node.id ?? base.chosenNodeId,
       message: capacityBlocked
         ? `${inFlight} task(s) running at the concurrency limit of ${concurrency}`
-        : `Task ${waitingOn!.task.identifier} is ${waitingOn!.task.status}`,
+        : `Task ${waitingOn!.task.identifier} is ${statusOf(waitingOn!.task)}`,
       outcome: 'waiting_external',
       taskId: waitingOn?.task.id,
     };
@@ -349,6 +364,7 @@ const decideForCandidate = ({
   candidates,
   graph,
   node,
+  status,
   task,
 }: {
   budget?: GoalBudgetState;
@@ -356,6 +372,7 @@ const decideForCandidate = ({
   candidates: FrontierCandidate[];
   graph: GoalGraphSnapshot;
   node: GoalGraphNode;
+  status?: string;
   task: TaskItem | null | undefined;
 }): CandidateMove => {
   const base = { candidates, chosenNodeId: node.id };
@@ -379,7 +396,7 @@ const decideForCandidate = ({
     };
   }
 
-  return decideForTask(base, task, budget, graph, capacity);
+  return decideForTask(base, task, status ?? deriveLegacyTaskStatus(task), budget, graph, capacity);
 };
 
 const decideWithoutFrontier = (
@@ -495,11 +512,12 @@ const decideWithoutFrontier = (
 const decideForTask = (
   base: { candidates: FrontierCandidate[]; chosenNodeId?: string },
   task: TaskItem,
+  status: string,
   budget: GoalBudgetState | undefined,
   graph: GoalGraphSnapshot,
   capacity = true,
 ): CandidateMove => {
-  if (task.status === 'completed') {
+  if (status === 'completed') {
     return {
       ...base,
       branch: 'consume_completed',
@@ -508,14 +526,10 @@ const decideForTask = (
     };
   }
 
-  if (
-    task.status === 'failed' ||
-    task.status === 'canceled' ||
-    (task.status === 'paused' && task.error)
-  ) {
+  if (status === 'failed' || status === 'canceled' || (status === 'paused' && task.error)) {
     if (
       budget?.deadlinePassed &&
-      task.status === 'paused' &&
+      status === 'paused' &&
       (task.error === LEASE_EXPIRED_ERROR ||
         task.error === VERIFICATION_FAILED_ERROR ||
         task.error === VERIFICATION_ERRORED_ERROR)
@@ -527,7 +541,7 @@ const decideForTask = (
         outcome: 'no_progress',
       };
     }
-    if (task.status === 'paused' && task.error === LEASE_EXPIRED_ERROR) {
+    if (status === 'paused' && task.error === LEASE_EXPIRED_ERROR) {
       if (!capacity) return 'needs-capacity';
       return {
         ...base,
@@ -541,7 +555,7 @@ const decideForTask = (
     // rejection does; without a branch it fell through to the human gate, which
     // stopped the goal on a failure nobody needed to judge.
     if (
-      task.status === 'paused' &&
+      status === 'paused' &&
       (task.error === VERIFICATION_FAILED_ERROR || task.error === VERIFICATION_ERRORED_ERROR)
     ) {
       if (!capacity) return 'needs-capacity';
@@ -558,17 +572,17 @@ const decideForTask = (
     return {
       ...base,
       branch: 'failure_decision',
-      message: task.error ?? `Task ${task.status}`,
+      message: task.error ?? `Task ${status}`,
       outcome: 'waiting_human',
     };
   }
 
   // Parked on a person, and holding no slot. The goal has other Tasks.
-  if (task.status === 'paused') return 'parked';
+  if (status === 'paused') return 'parked';
 
   // Callers filter these out before they get here; kept so the classification
   // stays total if a status slips through.
-  if (task.status === 'running' || task.status === 'scheduled') return 'parked';
+  if (status === 'running' || status === 'scheduled') return 'parked';
 
   if (budget?.deadlinePassed) {
     return {

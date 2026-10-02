@@ -316,6 +316,20 @@ async function resolveOrThrow(model: TaskModel, id: string) {
 }
 
 /**
+ * Wire `status` is a deprecated compatibility field: project the label derived
+ * from canonical workflow/execution rows instead of the stored `tasks.status`
+ * value, which no longer receives writes.
+ */
+async function withDerivedStatus<T extends { id: string; status?: unknown }>(
+  model: TaskModel,
+  rows: T[],
+): Promise<T[]> {
+  if (rows.length === 0) return rows;
+  const statusById = await model.derivedStatusByIds(rows.map((row) => row.id));
+  return rows.map((row) => ({ ...row, status: statusById[row.id] ?? 'backlog' }));
+}
+
+/**
  * Task-steering capability for `instruction` inputs: the assignee or reviewer
  * steers by role on the task, a project manager steers inside their project,
  * and a workspace owner/admin steers anywhere in the workspace. Members
@@ -1177,7 +1191,7 @@ export const taskRouter = router({
     try {
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
-      return { data: task, success: true };
+      return { data: (await withDerivedStatus(model, [task]))[0], success: true };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
       console.error('[task:find]', error);
@@ -1245,7 +1259,7 @@ export const taskRouter = router({
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
       const subtasks = await model.findSubtasks(task.id);
-      return { data: subtasks, success: true };
+      return { data: await withDerivedStatus(model, subtasks), success: true };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
       console.error('[task:getSubtasks]', error);
@@ -1262,7 +1276,7 @@ export const taskRouter = router({
       const model = ctx.taskModel;
       const task = await resolveOrThrow(model, input.id);
       const tree = await model.getTaskTree(task.id);
-      return { data: tree, success: true };
+      return { data: await withDerivedStatus(model, tree), success: true };
     } catch (error) {
       if (error instanceof TRPCError) throw error;
       console.error('[task:getTaskTree]', error);
@@ -1370,7 +1384,19 @@ export const taskRouter = router({
         ...(scope === 'created' ? { createdByUserId: ctx.userId } : {}),
         ...(scope === 'delegated' ? { delegatedByUserId: ctx.userId } : {}),
       });
-      return { data: groups, success: true };
+      const statusById = await model.derivedStatusByIds(
+        groups.flatMap((group) => group.tasks.map((task) => task.id)),
+      );
+      return {
+        data: groups.map((group) => ({
+          ...group,
+          tasks: group.tasks.map((task) => ({
+            ...task,
+            status: statusById[task.id] ?? 'backlog',
+          })),
+        })),
+        success: true,
+      };
     } catch (error) {
       console.error('[task:groupList]', error);
       throw new TRPCError({
@@ -1405,6 +1431,7 @@ export const taskRouter = router({
         ...(scope === 'created' ? { createdByUserId: ctx.userId } : {}),
         parentTaskId,
       });
+      result.tasks = await withDerivedStatus(model, result.tasks);
 
       const assigneeIds = [
         ...new Set(result.tasks.map((t) => t.assigneeAgentId).filter((id): id is string => !!id)),
@@ -2162,7 +2189,11 @@ export const taskRouter = router({
         if (task.assigneeUserId !== resolved.assigneeUserId) {
           notifyAssignedBestEffort(ctx, task);
         }
-        return { data: task, message: 'Task updated', success: true };
+        return {
+          data: (await withDerivedStatus(model, [task]))[0],
+          message: 'Task updated',
+          success: true,
+        };
       } catch (error) {
         if (error instanceof TRPCError) throw error;
         if (error instanceof TaskDependencyError) {
@@ -2458,7 +2489,7 @@ export const taskRouter = router({
         const { task, unlocked, paused, checkpointTriggered, allSubtasksDone, parentTaskId } =
           result;
         return {
-          data: task,
+          data: (await withDerivedStatus(ctx.taskModel, [task]))[0],
           message: `Task ${input.status}`,
           success: true,
           ...(unlocked.length > 0 && { unlocked }),

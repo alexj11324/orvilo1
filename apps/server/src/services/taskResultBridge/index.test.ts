@@ -326,8 +326,10 @@ describe('TaskResultBridgeService.deliver', () => {
   it('defers automation tasks until the task itself is terminal', async () => {
     findById.mockResolvedValue({
       automationMode: 'schedule',
-      context: { origin: ORIGIN },
-      status: 'running',
+      context: {
+        execution: { parked: { at: '2024-01-01T00:00:00.000Z' } },
+        origin: ORIGIN,
+      },
     } as any);
 
     await new TaskResultBridgeService(db, TEST_USER).deliver(baseParams);
@@ -343,7 +345,7 @@ describe('TaskResultBridgeService.deliver', () => {
     findById.mockResolvedValue({
       automationMode: 'schedule',
       context: { origin: ORIGIN },
-      status: 'completed',
+      workflowCategory: 'done',
     } as any);
 
     await new TaskResultBridgeService(db, TEST_USER).deliver(baseParams);

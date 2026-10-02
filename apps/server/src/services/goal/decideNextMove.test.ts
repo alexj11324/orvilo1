@@ -41,8 +41,29 @@ const graph = (overrides: Partial<GoalGraphSnapshot> = {}): GoalGraphSnapshot =>
     ...overrides,
   }) as GoalGraphSnapshot;
 
-const task = (overrides: Partial<TaskItem> = {}): TaskItem =>
-  ({ error: null, id: 'task_1', identifier: 'T-1', status: 'backlog', ...overrides }) as TaskItem;
+const task = (overrides: Partial<TaskItem> = {}): TaskItem => {
+  const { status = 'backlog', ...rest } = overrides;
+  const parked = status === 'paused' || status === 'failed';
+  return {
+    context: parked
+      ? {
+          execution: {
+            parked: {
+              at: '2024-01-01T00:00:00.000Z',
+              ...(status === 'failed' ? { reason: 'failed' } : {}),
+            },
+          },
+        }
+      : undefined,
+    error: null,
+    id: 'task_1',
+    identifier: 'T-1',
+    status,
+    workflowCategory:
+      status === 'completed' ? 'done' : status === 'canceled' ? 'canceled' : 'in_progress',
+    ...rest,
+  } as TaskItem;
+};
 
 /**
  * `frontierTask` is the old single-node shape these tests were written
@@ -61,12 +82,16 @@ const decide = (
 ) => {
   const { budget, concurrency = 3, frontierTask, metricCriteria, tasks } = extra;
   const listed = tasks ?? (frontierTask ? [frontierTask] : []);
+  // The mock row's `status` field stands in for the SQL-derived
+  // `derivedStatusByIds` map — live execution states like 'running' have no
+  // row-level derivation, so the scheduler's callers always pass this map.
   return decideNextMove({
     budget,
     concurrency,
     frontier: selectFrontier(snapshot),
     graph: snapshot,
     metricCriteria,
+    statusById: new Map(listed.map((item) => [item.id, item.status])),
     tasksById: new Map(listed.map((item) => [item.id, item])),
   });
 };
@@ -361,7 +386,9 @@ describe('decideNextMove', () => {
 describe('needsBudget', () => {
   it('is true only for a task the coordinator could still start', () => {
     expect(needsBudget(task({ status: 'backlog' }))).toBe(true);
-    expect(needsBudget(task({ status: 'running' }))).toBe(false);
+    // Execution states have no row-level derivation — callers pass the
+    // SQL-derived status explicitly.
+    expect(needsBudget(task({ status: 'running' }), 'running')).toBe(false);
     expect(needsBudget(task({ status: 'completed' }))).toBe(false);
     expect(needsBudget(null)).toBe(false);
   });
@@ -450,7 +477,11 @@ describe('decideNextMove concurrency', () => {
 
 describe('frontierNeedsBudget', () => {
   const withTasks = (snapshot: GoalGraphSnapshot, tasks: TaskItem[]) =>
-    frontierNeedsBudget(selectFrontier(snapshot), new Map(tasks.map((item) => [item.id, item])));
+    frontierNeedsBudget(
+      selectFrontier(snapshot),
+      new Map(tasks.map((item) => [item.id, item])),
+      new Map(tasks.map((item) => [item.id, item.status])),
+    );
 
   it('is true when a later candidate can start even though the head cannot', () => {
     // The hole parallelism opened: the head is running and needs no budget, so

@@ -1,5 +1,21 @@
 import type { TaskStatus, TaskWorkflowCategory, TeamWorkflowStateItem } from '@orvilo/types';
 
+/**
+ * The Issue-workflow category a legacy `status` vocabulary value implies on
+ * the task, when one exists. 'paused'/'failed' are park operations (the
+ * parked marker handles them — the Issue stays where it is); 'running' and
+ * 'scheduled' are execution outcomes that no status write can synthesize;
+ * 'backlog' means "open and un-armed" on the legacy axis and intentionally
+ * maps to no category — a backlog drop parks-clears only.
+ */
+const LEGACY_STATUS_WORKFLOW_CATEGORY: Partial<Record<TaskStatus, TaskWorkflowCategory>> = {
+  canceled: 'canceled',
+  completed: 'done',
+};
+
+export const workflowCategoryForLegacyStatus = (status: string): TaskWorkflowCategory | undefined =>
+  LEGACY_STATUS_WORKFLOW_CATEGORY[status as TaskStatus];
+
 export type WorkflowMoveState = Pick<TeamWorkflowStateItem, 'category' | 'id' | 'remoteStateId'>;
 
 export type WorkflowMoveResolution =

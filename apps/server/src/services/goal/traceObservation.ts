@@ -9,6 +9,7 @@ import type {
   GoalTickOutcome,
 } from '@orvilo/agent-tracing';
 import type { GoalGraphSnapshot, GoalItem, TaskItem } from '@orvilo/types';
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 
 /**
  * What one tick read and what it did, handed to the trajectory recorder.
@@ -80,12 +81,16 @@ export const toTraceGraphState = (graph: GoalGraphSnapshot): GoalGraphState => (
   })),
 });
 
-export const toFrontierTaskState = (task: TaskItem, nodeId?: string): GoalFrontierTaskState => ({
+export const toFrontierTaskState = (
+  task: TaskItem,
+  nodeId?: string,
+  status?: string,
+): GoalFrontierTaskState => ({
   error: task.error,
   id: task.id,
   identifier: task.identifier,
   nodeId,
-  status: task.status,
+  status: status ?? deriveLegacyTaskStatus(task),
   updatedAt: new Date(task.updatedAt).getTime(),
 });
 

@@ -515,7 +515,7 @@ export const groupTaskItems = (
 /** Depth cap — guards a malformed parent chain from recursing without end. */
 const MAX_NEST_DEPTH = 8;
 
-export interface TaskRow {
+export interface TaskRow<T extends TaskListItem = TaskListItem> {
   /** Indent level inside its group; 0 for a row that isn't nested. */
   depth: number;
   /**
@@ -524,7 +524,7 @@ export interface TaskRow {
    * and is not counted as one of the group's tasks.
    */
   isParentContext: boolean;
-  task: TaskListItem;
+  task: T;
 }
 
 /**
@@ -547,22 +547,22 @@ export const collapseSubTasks = (items: TaskListItem[]): TaskListItem[] => {
  * muted context row for its parent rather than sitting at the top level, where
  * an indent-free row would read as an unrelated task.
  */
-export const buildTaskRows = (
-  groupItems: TaskListItem[],
+export const buildTaskRows = <T extends TaskListItem>(
+  groupItems: T[],
   options: {
-    compare: (a: TaskListItem, b: TaskListItem) => number;
+    compare: (a: T, b: T) => number;
     nested: boolean;
     /** Every task on the list, keyed by id — resolves parents outside the group. */
-    taskById: Map<string, TaskListItem>;
+    taskById: Map<string, T>;
   },
-): TaskRow[] => {
+): TaskRow<T>[] => {
   const { compare, nested, taskById } = options;
   if (!nested) return groupItems.map((task) => ({ depth: 0, isParentContext: false, task }));
 
   interface TaskNode {
     children: string[];
     isParentContext: boolean;
-    task: TaskListItem;
+    task: T;
   }
 
   const nodes = new Map<string, TaskNode>();
@@ -615,7 +615,7 @@ export const buildTaskRows = (
   const sortIds = (ids: string[]) =>
     [...ids].sort((a, b) => compare(nodes.get(a)!.task, nodes.get(b)!.task));
 
-  const rows: TaskRow[] = [];
+  const rows: TaskRow<T>[] = [];
   const visit = (id: string, depth: number) => {
     const node = nodes.get(id);
     if (!node) return;

@@ -11,6 +11,7 @@ import type {
   TaskDomainEventType,
   TaskItem,
   TaskMoveScope,
+  TaskStatus,
   TaskSubtaskProgress,
   TaskVerifyConfig,
   TaskWorkflowCategory,
@@ -18,6 +19,7 @@ import type {
   WorkspaceDocNode,
   WorkspaceTreeNode,
 } from '@orvilo/types';
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 import {
   and,
   desc,
@@ -67,6 +69,20 @@ import { buildWorkspaceWhere } from '../utils/workspace';
 import { LinearSyncModel } from './linearSync';
 import { projectEffectiveRequireHumanReview, ProjectModel } from './project';
 import { TaskDependencyError } from './taskDependency';
+import {
+  hasActiveExecution,
+  hasUnresolvedExecution,
+  isAutomationArmed,
+  isExecutionParked,
+  isParked,
+  legacyStatusExpr,
+  parkMarkerClear,
+  parkMarkerSet,
+  predicateForLegacyStatus,
+  predicateForLegacyStatuses,
+  TASK_OPEN_WORKFLOW,
+} from './taskExecutionSql';
+import { workflowCategoryForLegacyStatus } from './workflowMove';
 
 /** Columns whose change is worth a line in the task activity feed. */
 const TRACKED_TASK_COLUMNS = [
@@ -81,8 +97,11 @@ const TRACKED_TASK_COLUMNS = [
   'reviewerUserId',
   'schedulePattern',
   'scheduleTimezone',
+  // Retired as state: still tracked so an explicit `status` write (legacy
+  // vocabulary) produces the activity row the feed and authorship audit read.
   'status',
   'triageStatus',
+  'workflowCategory',
 ] as const satisfies readonly (keyof NewTask)[];
 
 /** Task fields that must wake a linked Linear issue even without an activity row. */
@@ -128,7 +147,6 @@ const TASK_DOMAIN_COLUMNS = [
   'schedulePattern',
   'scheduleTimezone',
   'sortOrder',
-  'status',
   'teamId',
   'triageStatus',
   'visibility',
@@ -373,7 +391,7 @@ export const isTaskIdentifierUniqueViolation = (error: unknown): boolean => {
  * complements and no row falls into neither bucket.
  */
 const RUNNABLE_AUTOMATION = and(
-  notInArray(tasks.status, ['canceled', 'completed', 'failed']),
+  TASK_OPEN_WORKFLOW,
   or(
     and(
       eq(tasks.automationMode, 'schedule'),
@@ -649,7 +667,28 @@ export class TaskModel {
       mutation?: TaskMutationContext;
     } = {},
   ): Promise<TaskItem> {
-    const { identifierPrefix = 'T', ...rest } = data;
+    const { identifierPrefix = 'T', status: legacyPreset, ...rest } = data;
+    // A create-time `status` preset speaks the retired column's vocabulary —
+    // translate it so the column never receives a write: park presets stamp
+    // the parked marker, terminal presets land the Issue category, and
+    // running/scheduled/backlog carry no writable truth.
+    if (legacyPreset === 'paused' || legacyPreset === 'failed') {
+      const context = (rest.context ?? {}) as Record<string, unknown>;
+      const execution = (context.execution ?? {}) as Record<string, unknown>;
+      rest.context = {
+        ...context,
+        execution: {
+          ...execution,
+          parked: {
+            at: new Date().toISOString(),
+            ...(legacyPreset === 'failed' ? { reason: 'failed' } : {}),
+          },
+        },
+      } as NewTask['context'];
+    } else if (legacyPreset) {
+      const category = workflowCategoryForLegacyStatus(legacyPreset);
+      if (category && rest.workflowCategory === undefined) rest.workflowCategory = category;
+    }
 
     const createInDatabase = async (runner: OrviloDatabase): Promise<TaskItem> => {
       // Seq is allocated per ownership scope: workspace-wide in team mode,
@@ -782,6 +821,20 @@ export class TaskModel {
       .where(and(inArray(tasks.id, ids), this.ownership()));
   }
 
+  /**
+   * Deprecated `status` labels per task, derived from canonical fields —
+   * display-only consumers that still speak the retired vocabulary call this
+   * instead of reading `tasks.status`.
+   */
+  async derivedStatusByIds(ids: string[]): Promise<Record<string, TaskStatus>> {
+    if (ids.length === 0) return {};
+    const rows = await this.db
+      .select({ id: tasks.id, status: sql<string>`${legacyStatusExpr}` })
+      .from(tasks)
+      .where(and(inArray(tasks.id, ids), this.ownership()));
+    return Object.fromEntries(rows.map((row) => [row.id, row.status as TaskStatus]));
+  }
+
   async resolveMany(idsOrIdentifiers: string[]): Promise<TaskItem[]> {
     if (idsOrIdentifiers.length === 0) return [];
     const identifiers = idsOrIdentifiers.map((value) => value.toUpperCase());
@@ -821,6 +874,43 @@ export class TaskModel {
    * (either a non-null `reviewer_user_id` already on the row, or a caller-
    * supplied `data.reviewerUserId`) instead of overwriting it.
    */
+  /**
+   * `tasks.status` is retired — callers still pass the legacy transition
+   * vocabulary ('running' | 'paused' | 'failed' | 'completed' | 'canceled' |
+   * 'scheduled' | 'backlog') to `updateStatus*`, but nothing is written to
+   * the column. Park transitions stamp the canonical parked marker under
+   * `context.execution.parked`; every other transition clears it.
+   */
+  private static statusTransitionPatch(transition: string) {
+    if (transition === 'paused' || transition === 'failed') {
+      return {
+        context: parkMarkerSet({
+          at: new Date().toISOString(),
+          ...(transition === 'failed' ? { reason: 'failed' } : {}),
+        }),
+      };
+    }
+    return { context: parkMarkerClear };
+  }
+
+  /**
+   * A terminal legacy transition also lands the Issue category — the one part
+   * of a 'completed'/'canceled' write that is unambiguous without team-state
+   * resolution (exact state ids still arrive via `workflowStateId` /
+   * `workflowStateRefId` from the service layer). A caller-supplied
+   * `workflowCategory` always wins.
+   */
+  private static workflowCategorySet(
+    transition: string | undefined,
+    workflowCategory?: TaskWorkflowCategory,
+  ) {
+    const category =
+      transition === undefined ? undefined : workflowCategoryForLegacyStatus(transition);
+    return category !== undefined && workflowCategory === undefined
+      ? { workflowCategory: category }
+      : {};
+  }
+
   private static reviewerBackfillSet(status: string | undefined, explicit?: string | null) {
     if (status !== 'paused' || explicit !== undefined) return {};
     return {
@@ -860,13 +950,16 @@ export class TaskModel {
         scoped.dependencyLockHeld = true;
         scoped.assigneeGuardHeld = true;
         const [before] = await runner
-          .select({ assigneeAgentId: tasks.assigneeAgentId, status: tasks.status })
+          .select({
+            assigneeAgentId: tasks.assigneeAgentId,
+            executionLive: sql<boolean>`${hasActiveExecution}`,
+          })
           .from(tasks)
           .where(and(eq(tasks.id, id), this.ownership()))
           .for('update')
           .limit(1);
         if (!before) return null;
-        if (before.status === 'running' && data.assigneeAgentId !== before.assigneeAgentId) {
+        if (before.executionLive && data.assigneeAgentId !== before.assigneeAgentId) {
           throw new TaskHandoffRequiredError();
         }
         return scoped.update(id, data, mutation);
@@ -906,12 +999,17 @@ export class TaskModel {
       return null;
     };
 
+    const { status: transition, ...writeData } = data;
+    const transitionPatch =
+      transition === undefined ? {} : TaskModel.statusTransitionPatch(transition);
     if (!eventType) {
       const updated = await this.db
         .update(tasks)
         .set({
-          ...data,
-          ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
+          ...writeData,
+          ...transitionPatch,
+          ...TaskModel.workflowCategorySet(transition, data.workflowCategory),
+          ...TaskModel.reviewerBackfillSet(transition, data.reviewerUserId),
           updatedAt: new Date(),
         })
         .where(and(...updateWhere))
@@ -928,8 +1026,10 @@ export class TaskModel {
       const [updated] = await runner
         .update(tasks)
         .set({
-          ...data,
-          ...TaskModel.reviewerBackfillSet(data.status, data.reviewerUserId),
+          ...writeData,
+          ...transitionPatch,
+          ...TaskModel.workflowCategorySet(transition, data.workflowCategory),
+          ...TaskModel.reviewerBackfillSet(transition, data.reviewerUserId),
           domainRevision: sql`${tasks.domainRevision} + 1`,
           ...(changesPolicy ? { policyRevision: sql`${tasks.policyRevision} + 1` } : {}),
           ...(changesRequirement
@@ -1467,7 +1567,8 @@ export class TaskModel {
 
     const baseConditions = this.buildListConditions(options);
     if (excludeStatuses?.length) {
-      baseConditions.push(notInArray(tasks.status, excludeStatuses));
+      const excluded = predicateForLegacyStatuses(excludeStatuses);
+      if (excluded) baseConditions.push(sql`NOT ${excluded}`);
     }
 
     interface GroupQuery {
@@ -1708,8 +1809,8 @@ export class TaskModel {
         const legacyStatusCondition =
           group.statuses.length > 0
             ? group.workflowCategories.length > 0
-              ? and(isNull(tasks.workflowStateId), inArray(tasks.status, group.statuses))
-              : inArray(tasks.status, group.statuses)
+              ? and(isNull(tasks.workflowStateId), predicateForLegacyStatuses(group.statuses))
+              : predicateForLegacyStatuses(group.statuses)
             : undefined;
         const membership = or(linkedWorkflowCondition, legacyStatusCondition);
         if (!membership) throw new Error(`Task group ${group.key} has no membership criteria`);
@@ -1836,11 +1937,11 @@ export class TaskModel {
 
     const result = await this.db.execute<TaskSubtaskProgressRow>(sql`
       WITH RECURSIVE task_tree AS (
-        SELECT ${tasks.id} AS root_id, ${tasks.id} AS task_id, ${tasks.status} AS status
+        SELECT ${tasks.id} AS root_id, ${tasks.id} AS task_id, ${tasks.workflowCategory} AS workflow_category
         FROM ${tasks}
         WHERE ${inArray(tasks.id, taskIds)} AND ${this.ownership()}
         UNION ALL
-        SELECT task_tree.root_id, child.id, child.status
+        SELECT task_tree.root_id, child.id, child.workflow_category
         FROM ${tasks} child
         JOIN task_tree ON child.parent_task_id = task_tree.task_id
         WHERE ${this.ownershipSql('child')}
@@ -1848,7 +1949,7 @@ export class TaskModel {
       SELECT
         task_tree.root_id,
         count(*) filter (
-          where task_tree.task_id <> task_tree.root_id and task_tree.status = 'completed'
+          where task_tree.task_id <> task_tree.root_id and task_tree.workflow_category = 'done'
         ) AS completed,
         count(*) filter (where task_tree.task_id <> task_tree.root_id) AS total
       FROM task_tree
@@ -1869,7 +1970,10 @@ export class TaskModel {
 
     const conditions = this.buildListConditions(options);
 
-    if (statuses?.length) conditions.push(inArray(tasks.status, statuses));
+    if (statuses?.length) {
+      const statusesPredicate = predicateForLegacyStatuses(statuses);
+      if (statusesPredicate) conditions.push(statusesPredicate);
+    }
     if (priorities?.length) conditions.push(inArray(tasks.priority, priorities));
     if (after) {
       conditions.push(
@@ -2005,12 +2109,13 @@ export class TaskModel {
             inArray(tasks.workflowCategory, scope.workflowCategories),
           ),
           scope.statuses?.length
-            ? and(isNull(tasks.workflowStateId), inArray(tasks.status, scope.statuses))
+            ? and(isNull(tasks.workflowStateId), predicateForLegacyStatuses(scope.statuses))
             : undefined,
         ) as SQL,
       );
     } else if (scope.statuses?.length) {
-      conditions.push(inArray(tasks.status, scope.statuses));
+      const scopeStatuses = predicateForLegacyStatuses(scope.statuses);
+      if (scopeStatuses) conditions.push(scopeStatuses);
     }
     if ('assigneeAgentId' in scope) {
       conditions.push(
@@ -2232,32 +2337,38 @@ export class TaskModel {
     return this.update(id, { status, ...extra });
   }
 
-  /** Atomically transition a task only while it still has the expected status. */
+  /**
+   * Atomically transition a task only while it still matches the expected
+   * legacy state. `expected`/`transition` use the retired vocabulary — the
+   * guard is evaluated against the canonical fields (`workflowCategory`,
+   * execution rows, parked marker), never `tasks.status`.
+   */
   async updateStatusIfCurrent(
     id: string,
-    currentStatus: string,
-    status: string,
+    expected: string,
+    transition: string,
     extra?: TaskStatusTransitionExtra,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) =>
-        model.updateStatusIfCurrent(id, currentStatus, status, extra, mutation),
+        model.updateStatusIfCurrent(id, expected, transition, extra, mutation),
       );
     }
-    const current = await this.findById(id);
-    if (!current || current.status !== currentStatus) return null;
-    await this.assertDependenciesForStatus([id], status);
+    const expectedGuard = predicateForLegacyStatus(expected);
+    if (!expectedGuard) return null;
+    await this.assertDependenciesForStatus([id], transition);
     const [task] = await this.db
       .update(tasks)
       .set({
-        status,
         updatedAt: new Date(),
         ...extra,
-        ...TaskModel.reviewerBackfillSet(status),
+        ...TaskModel.statusTransitionPatch(transition),
+        ...TaskModel.workflowCategorySet(transition, extra?.workflowCategory),
+        ...TaskModel.reviewerBackfillSet(transition),
         domainRevision: sql`${tasks.domainRevision} + 1`,
       })
-      .where(and(eq(tasks.id, id), eq(tasks.status, currentStatus), this.ownership()))
+      .where(and(eq(tasks.id, id), expectedGuard, this.ownership()))
       .returning();
     if (!task) return null;
     if (this.workspaceId && !mutation.suppressDomainEvent) {
@@ -2298,27 +2409,25 @@ export class TaskModel {
       );
     }
     const current = await this.findById(id);
-    if (
-      !current ||
-      current.status !== currentStatus ||
-      current.runReservationId !== reservationId
-    ) {
+    if (!current || current.runReservationId !== reservationId) {
       return null;
     }
+    const expectedGuard = predicateForLegacyStatus(currentStatus);
+    if (!expectedGuard) return null;
     await this.assertDependenciesForStatus([id], status);
     const [task] = await this.db
       .update(tasks)
       .set({
-        status,
         updatedAt: new Date(),
         ...extra,
+        ...TaskModel.statusTransitionPatch(status),
         ...TaskModel.reviewerBackfillSet(status),
       })
       .where(
         and(
           eq(tasks.id, id),
           eq(tasks.runReservationId, reservationId),
-          eq(tasks.status, currentStatus),
+          expectedGuard,
           this.ownership(),
         ),
       )
@@ -2351,14 +2460,16 @@ export class TaskModel {
     status: string,
     partial: Record<string, unknown>,
   ): Promise<boolean> {
+    const expectedGuard = predicateForLegacyStatus(status);
+    if (!expectedGuard) return false;
     const task = await this.findById(id);
-    if (!task || task.status !== status) return false;
+    if (!task) return false;
 
     const current = (task.context as Record<string, unknown>) || {};
     const [updated] = await this.db
       .update(tasks)
       .set({ context: merge(current, partial), updatedAt: new Date() })
-      .where(and(eq(tasks.id, id), eq(tasks.status, status), this.ownership()))
+      .where(and(eq(tasks.id, id), expectedGuard, this.ownership()))
       .returning({ id: tasks.id });
     return Boolean(updated);
   }
@@ -2392,8 +2503,9 @@ export class TaskModel {
         runReservationExpiresAt: new Date(now.getTime() + leaseMs),
         runReservationId: reservationId,
         startedAt: now,
-        status: 'running',
         updatedAt: now,
+        // Claimed — no longer parked; execution truth lives on the dispatch row.
+        context: parkMarkerClear,
       })
       .where(
         and(
@@ -2468,8 +2580,9 @@ export class TaskModel {
         error,
         runReservationExpiresAt: null,
         runReservationId: null,
-        status,
         updatedAt: new Date(),
+        ...TaskModel.statusTransitionPatch(status),
+        ...TaskModel.workflowCategorySet(status),
       })
       .where(and(eq(tasks.id, id), eq(tasks.runReservationId, reservationId), this.ownership()))
       .returning({ id: tasks.id });
@@ -2504,9 +2617,10 @@ export class TaskModel {
       const [task] = await runner
         .update(tasks)
         .set({
-          status,
           updatedAt: new Date(),
           ...extra,
+          ...TaskModel.statusTransitionPatch(status),
+          ...TaskModel.workflowCategorySet(status, extra?.workflowCategory),
           ...TaskModel.reviewerBackfillSet(status),
           domainRevision: sql`${tasks.domainRevision} + 1`,
         })
@@ -2516,7 +2630,7 @@ export class TaskModel {
             eq(tasks.executionGeneration, expected.executionGeneration),
             eq(tasks.policyRevision, expected.policyRevision),
             eq(tasks.requirementRevision, expected.requirementRevision),
-            expected.status ? eq(tasks.status, expected.status) : undefined,
+            expected.status ? predicateForLegacyStatus(expected.status) : undefined,
             expected.runReservationId
               ? eq(tasks.runReservationId, expected.runReservationId)
               : undefined,
@@ -2579,9 +2693,10 @@ export class TaskModel {
     const updated = await this.db
       .update(tasks)
       .set({
-        status,
         updatedAt: new Date(),
         ...extra,
+        ...TaskModel.statusTransitionPatch(status),
+        ...TaskModel.workflowCategorySet(status, extra?.workflowCategory),
         ...TaskModel.reviewerBackfillSet(status),
         domainRevision: sql`${tasks.domainRevision} + 1`,
       })
@@ -2706,7 +2821,6 @@ export class TaskModel {
         and(
           eq(tasks.id, id),
           this.ownership(),
-          eq(tasks.status, 'scheduled'),
           eq(tasks.automationMode, 'heartbeat'),
           eq(tasks.heartbeatInterval, interval),
           sql`${tasks.context} #>> '{scheduler,tickToken}' IS NOT DISTINCT FROM ${tickToken ?? null}`,
@@ -2907,7 +3021,10 @@ export class TaskModel {
         and(
           eq(tasks.automationMode, 'schedule'),
           isNotNull(tasks.schedulePattern),
-          notInArray(tasks.status, ['canceled', 'completed', 'failed', 'paused', 'running']),
+          TASK_OPEN_WORKFLOW,
+          sql`NOT ${hasActiveExecution}`,
+          sql`NOT ${hasUnresolvedExecution}`,
+          sql`NOT ${isParked}`,
         ),
       );
   }
@@ -2927,7 +3044,7 @@ export class TaskModel {
       .from(tasks)
       .where(
         and(
-          eq(tasks.status, 'running'),
+          hasActiveExecution,
           options.createdByUserId ? eq(tasks.createdByUserId, options.createdByUserId) : undefined,
           options.workspaceId ? eq(tasks.workspaceId, options.workspaceId) : undefined,
           options.createdByUserId && !options.workspaceId ? isNull(tasks.workspaceId) : undefined,
@@ -3048,7 +3165,12 @@ export class TaskModel {
       `);
       if (cycle.rows.length > 0)
         throw new TaskDependencyError('This dependency would create a cycle.');
-      if (['running', 'completed'].includes(task.status) && dependsOn.status !== 'completed') {
+      // A task mid-flight or already done cannot take a new open prerequisite —
+      // canonical check: live execution or terminal workflow on the row itself.
+      if (
+        (task.workflowCategory === 'in_progress' || task.workflowCategory === 'done') &&
+        dependsOn.workflowCategory !== 'done'
+      ) {
         throw new TaskDependencyError(
           'Pause or reopen this task before adding an unfinished prerequisite.',
           'PRECONDITION_FAILED',
@@ -3357,7 +3479,7 @@ export class TaskModel {
         and(
           inArray(taskDependencies.taskId, readableIds),
           eq(taskDependencies.type, 'blocks'),
-          or(isNull(tasks.id), ne(tasks.status, 'completed')),
+          or(isNull(tasks.id), ne(tasks.workflowCategory, 'done')),
           this.depsOwnership(),
         ),
       );
@@ -3414,7 +3536,16 @@ export class TaskModel {
     const candidates = await this.db
       .select()
       .from(tasks)
-      .where(and(inArray(tasks.id, dependentIds), eq(tasks.status, 'backlog'), this.ownership()));
+      .where(
+        and(
+          inArray(tasks.id, dependentIds),
+          inArray(tasks.workflowCategory, ['backlog', 'todo']),
+          sql`NOT ${hasActiveExecution}`,
+          sql`NOT ${isExecutionParked}`,
+          sql`NOT ${isAutomationArmed}`,
+          this.ownership(),
+        ),
+      );
     const byOwner = new Map<string, string[]>();
     for (const task of candidates) {
       const ownerId = task.createdByUserId ?? task.createdBySubjectId;
@@ -3441,7 +3572,11 @@ export class TaskModel {
       .select({ count: sql<number>`count(*)` })
       .from(tasks)
       .where(
-        and(eq(tasks.parentTaskId, parentTaskId), ne(tasks.status, 'completed'), this.ownership()),
+        and(
+          eq(tasks.parentTaskId, parentTaskId),
+          ne(tasks.workflowCategory, 'done'),
+          this.ownership(),
+        ),
       );
 
     return Number(result[0].count) === 0;
@@ -3875,7 +4010,11 @@ export class TaskModel {
     if (ids.length === 0) return [];
     await this.lockDependencyGraph();
     return this.db
-      .select({ id: tasks.id, status: tasks.status, visibility: tasks.visibility })
+      .select({
+        id: tasks.id,
+        status: sql<string>`${legacyStatusExpr}`,
+        visibility: tasks.visibility,
+      })
       .from(tasks)
       .where(and(inArray(tasks.id, ids), this.ownership()))
       .for('update');
@@ -3924,12 +4063,14 @@ export class TaskModel {
           assigneeUserId: tasks.assigneeUserId,
           automationMode: tasks.automationMode,
           config: tasks.config,
+          context: tasks.context,
           heartbeatInterval: tasks.heartbeatInterval,
           priority: tasks.priority,
           reviewerUserId: tasks.reviewerUserId,
           schedulePattern: tasks.schedulePattern,
           scheduleTimezone: tasks.scheduleTimezone,
-          status: tasks.status,
+          workflowCategory: tasks.workflowCategory,
+          executionLive: sql<boolean>`${hasActiveExecution}`,
         })
         .from(tasks)
         .where(and(eq(tasks.id, id), this.ownership()))
@@ -3937,13 +4078,13 @@ export class TaskModel {
         .limit(1);
       if (!before) return null;
 
-      // Server-side invariant (execution ownership): a `running` task's
-      // agent assignee IS its incumbent executor, so it may only be changed
-      // by an ownership-transfer protocol that first fences the active
-      // dispatch. The check lives inside the row lock so a task cannot slip
-      // into `running` between a caller's own pre-read and this write.
+      // Server-side invariant (execution ownership): a task with a live
+      // execution's agent assignee IS its incumbent executor, so it may only
+      // be changed by an ownership-transfer protocol that first fences the
+      // active dispatch. The check lives inside the row lock so a task cannot
+      // slip into `running` between a caller's own pre-read and this write.
       if (
-        before.status === 'running' &&
+        before.executionLive &&
         data.assigneeAgentId !== undefined &&
         data.assigneeAgentId !== before.assigneeAgentId &&
         mutation.executionTransfer !== true
@@ -3984,8 +4125,15 @@ export class TaskModel {
           type: 'reviewer',
         });
       }
-      if (before.status !== updated.status) {
-        events.push({ payload: { from: before.status, to: updated.status }, type: 'status' });
+      // 'status' events carry the legacy status vocabulary — derived from
+      // canonical workflow/execution state, the column itself is never read.
+      const statusBefore = before.executionLive ? 'running' : deriveLegacyTaskStatus(before);
+      const statusAfter = (await scoped.derivedStatusByIds([id]))[id] ?? 'backlog';
+      if (statusBefore !== statusAfter) {
+        events.push({
+          payload: { from: statusBefore, to: statusAfter },
+          type: 'status',
+        });
       }
       if ((before.priority ?? null) !== (updated.priority ?? null)) {
         events.push({
@@ -4307,8 +4455,8 @@ export class TaskModel {
             scheduleTimezone: original.scheduleTimezone,
             seq,
             sortOrder: original.sortOrder,
-            // Reset lifecycle: copy starts fresh, not mid-run.
-            status: 'backlog',
+            // Reset lifecycle: copy starts fresh, not mid-run. `tasks.status`
+            // is retired — the column default keeps the legacy projection.
             totalTopics: 0,
             workspaceId: targetWorkspaceId,
             ...visibilityOverride,

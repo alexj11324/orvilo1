@@ -21,9 +21,10 @@ import type {
   TaskTopicHandoff,
   WorkVersionEventItem,
 } from '@orvilo/types';
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { experimentOwner, provenanceParentId } from '@orvilo/utils/goalGraph';
 import { TRPCError } from '@trpc/server';
-import { sql } from 'drizzle-orm';
+import { and, eq, inArray, sql } from 'drizzle-orm';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { GoalModel } from '@/database/models/goal';
@@ -32,8 +33,10 @@ import { MetricModel } from '@/database/models/metric';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { ACTIVE_DISPATCH_PHASES } from '@/database/models/taskExecutionSql';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
+import { taskDispatches } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import {
   assertAgentUsableBy,
@@ -1065,13 +1068,15 @@ export class GoalService {
       const taskIds = graph.nodes.flatMap((node) => (node.taskId ? [node.taskId] : []));
       const reassignable = (await this.taskModel.findByIds(taskIds)).filter(
         (task) =>
-          task.status !== 'completed' &&
-          task.status !== 'canceled' &&
+          task.workflowCategory !== 'done' &&
+          task.workflowCategory !== 'canceled' &&
           task.assigneeAgentId !== agentId,
       );
-      const runningTaskIds = reassignable
-        .filter((task) => task.status === 'running')
-        .map((task) => task.id);
+      const derivedStatuses = await this.taskModel.derivedStatusByIds(
+        reassignable.map((task) => task.id),
+      );
+      const isRunning = (task: { id: string }) => derivedStatuses[task.id] === 'running';
+      const runningTaskIds = reassignable.filter(isRunning).map((task) => task.id);
       // Fence running incumbents BEFORE rewriting any assignee — the
       // ownership-transfer ordering (never commit "stored owner B / running
       // executor A"). The cancellation sweep then interrupts the remote
@@ -1084,7 +1089,7 @@ export class GoalService {
         await this.taskModel.update(
           task.id,
           { assigneeAgentId: agentId },
-          task.status === 'running' ? { executionTransfer: true } : {},
+          isRunning(task) ? { executionTransfer: true } : {},
         );
         reassignedTaskIds.push(task.id);
       }
@@ -1148,14 +1153,36 @@ export class GoalService {
       // tick dispatching concurrently moves the row between our read and the
       // write, the CAS loses, and that task is skipped instead of yanked out
       // from under a freshly claimed run (which would double-dispatch it).
+      const derivedStatuses = await this.taskModel.derivedStatusByIds(unfinishedTaskIds);
+      // Interrupt live executions first: `cancelTopic` stops the operation, and
+      // the stop request retires the dispatch row so the task frees up once the
+      // runtime acknowledges (the cancel sweep settles it; the parks route
+      // through the same recovery path as any other interrupted attempt).
+      const liveTaskIds = unfinishedTaskIds.filter(
+        (taskId) => derivedStatuses[taskId] === 'running',
+      );
+      if (liveTaskIds.length > 0) {
+        await TaskDispatchModel.requestStopForTasks(this.db, liveTaskIds, 'goal_restart');
+      }
       for (const task of await this.taskModel.findByIds(unfinishedTaskIds)) {
-        if (task.status === 'completed') continue;
-        const reset = await this.taskModel.updateStatusIfCurrent(task.id, task.status, 'backlog', {
-          error: null,
-        });
+        if (task.workflowCategory === 'done') continue;
+        const reset = await this.taskModel.updateStatusIfCurrent(
+          task.id,
+          derivedStatuses[task.id] ?? deriveLegacyTaskStatus(task),
+          'backlog',
+          {
+            error: null,
+          },
+        );
         if (!reset) continue;
         if (options?.agentId) {
-          await this.taskModel.update(task.id, { assigneeAgentId: options.agentId });
+          // The stop request above already fenced the incumbent run, so this
+          // rebind is an ownership transfer, not a mid-flight reassignment.
+          await this.taskModel.update(
+            task.id,
+            { assigneeAgentId: options.agentId },
+            derivedStatuses[task.id] === 'running' ? { executionTransfer: true } : {},
+          );
         }
         restartedTaskIds.push(task.id);
       }
@@ -1356,12 +1383,18 @@ export class GoalService {
         (task) => [task.id, task],
       ),
     );
+    // Canonical execution truth per candidate — the retired `tasks.status`
+    // label recomputed from workflow/execution rows, so a stale column value
+    // cannot steer the coordinator.
+    const statusById = new Map(
+      Object.entries(await this.taskModel.derivedStatusByIds(candidateTaskIds)),
+    );
 
     // Asked of every unblocked candidate, not just the head: the scheduler
     // walks past a running head to start an independent task, so a head that
     // needs no budget must not decide that nothing does. A goal with nothing
     // startable still skips the query.
-    const budget = frontierNeedsBudget(frontier, tasksById)
+    const budget = frontierNeedsBudget(frontier, tasksById, statusById)
       ? toBudgetState(graph.goal, await this.evaluateBudget(graph.goal, graph))
       : undefined;
 
@@ -1378,6 +1411,7 @@ export class GoalService {
       frontier,
       graph,
       metricCriteria,
+      statusById,
       tasksById,
     });
     // The scheduler may pick past the head of the frontier, so every arm below
@@ -1401,7 +1435,7 @@ export class GoalService {
         effects,
         candidateTasks: frontier.eligible.flatMap(({ node }) => {
           const task = node.taskId ? tasksById.get(node.taskId) : undefined;
-          return task ? [toFrontierTaskState(task, node.id)] : [];
+          return task ? [toFrontierTaskState(task, node.id, statusById.get(task.id))] : [];
         }),
         concurrency,
         graphState: toTraceGraphState(graph),
@@ -1554,7 +1588,8 @@ export class GoalService {
           }
 
           case 'task_running': {
-            if (task.status === 'running') {
+            const taskStatus = (await this.taskModel.derivedStatusByIds([task.id]))[task.id];
+            if (taskStatus === 'running') {
               const recovered = await this.recoverAbandonedTask(graph, acting!.id, task, effects);
               if (recovered) return observe(recovered);
             }
@@ -1891,9 +1926,14 @@ export class GoalService {
           ? 'The assigned agent is no longer usable — reassign the goal or this task'
           : 'The assigned agent cannot mount the builtin tools this goal task requires ' +
             '(its runtime cannot host the MCP tool surface) — reassign it to a capable agent';
-        const parked = await this.taskModel.updateStatusIfCurrent(task.id, task.status, 'paused', {
-          error: reason,
-        });
+        const parked = await this.taskModel.updateStatusIfCurrent(
+          task.id,
+          deriveLegacyTaskStatus(task),
+          'paused',
+          {
+            error: reason,
+          },
+        );
         if (!parked) {
           return {
             goalId,
@@ -1912,7 +1952,9 @@ export class GoalService {
     // in flight by reading the task's topics and only then creating one, so two
     // overlapping advances would both dispatch this Task and pay for it twice.
     // Claim the task first: the transition is a single conditional UPDATE, so
-    // exactly one advance can win it.
+    // exactly one advance can win it. The durable claim is the dispatch row
+    // itself — `hasActiveExecution` flips inside this transaction, so a racing
+    // advance's fence fails instead of minting a second run.
     //
     // Counting free slots is a *separate* race the per-task claim cannot cover:
     // two advances reading the same `inFlight` below the cap would each claim a
@@ -1920,6 +1962,12 @@ export class GoalService {
     // `maxConcurrentTasks`. So the count and the claim happen together, under a
     // per-goal advisory lock — the planner's cap check is a fast path, this is
     // the enforcement.
+    const attemptKey = taskRunIdempotencyKey.goalTaskAttempt({
+      executionGeneration: task.executionGeneration ?? 0,
+      goalId: graph.goal.id,
+      taskId: task.id,
+      taskRevision: task.domainRevision ?? 0,
+    });
     const claimed = await this.db.transaction(async (tx) => {
       await tx.execute(
         sql`SELECT pg_advisory_xact_lock(${GOAL_DISPATCH_LOCK_NAMESPACE}, hashtext(${goalId}))`,
@@ -1972,10 +2020,26 @@ export class GoalService {
       ).countRunningTasks(goalId);
       if (inFlight >= resolveMaxConcurrentTasks(graph.goal)) return 'at-capacity' as const;
 
-      return claimGoalTask(new TaskModel(tx, this.userId, this.workspaceId), task, 'running', {
-        error: null,
-        startedAt: new Date(),
+      const fenced = await claimGoalTask(
+        new TaskModel(tx, this.userId, this.workspaceId),
+        // Fence on the derived status the decision read — `task.status` is the
+        // frozen column and cannot stand in for what the tick actually saw.
+        { id: task.id, status: deriveLegacyTaskStatus(task) },
+        'running',
+        {
+          error: null,
+          startedAt: new Date(),
+        },
+      );
+      if (!fenced) return false;
+      const claim = await new TaskDispatchModel(tx, this.workspaceId).request({
+        idempotencyKey: attemptKey,
+        initiator: GOAL_COORDINATOR_ACTOR_ID,
+        requestedBy: GOAL_COORDINATOR_ACTOR_ID,
+        taskId: task.id,
+        trigger: 'goal',
       });
+      return claim.state === 'busy' ? false : { dispatchId: claim.dispatch.id };
     });
 
     if (claimed === 'stopped')
@@ -2025,12 +2089,7 @@ export class GoalService {
             ? graph.goal.config.managerState.submitted.reason
             : undefined),
         maxSteps: resolveTaskMaxSteps(graph.goal),
-        idempotencyKey: taskRunIdempotencyKey.goalTaskAttempt({
-          executionGeneration: task.executionGeneration ?? 0,
-          goalId: graph.goal.id,
-          taskId: task.id,
-          taskRevision: task.domainRevision ?? 0,
-        }),
+        idempotencyKey: attemptKey,
         taskId: task.id,
         trigger: 'goal',
       });
@@ -2053,15 +2112,52 @@ export class GoalService {
         taskId: run.taskId,
       };
     } catch (error) {
-      // We claimed the task, so nothing else will put it back. Release it or the
-      // Task stays 'running' with no run behind it and only the lease reclaims it.
-      await this.taskModel
-        .updateStatusIfCurrent(task.id, 'running', task.status)
-        .catch((releaseError) => {
-          console.error('[GoalService.tick] failed to release claimed task:', releaseError);
-        });
+      // We claimed the task, so nothing else will put it back. Release the
+      // orphaned dispatch or the Task reads as running with no run behind it
+      // and only the lease reclaims it. Abandoning parks it (`paused`), which
+      // routes through the same recovery path as any other dead attempt.
+      await this.releaseOrphanedDispatch(
+        claimed.dispatchId,
+        `goal dispatch claim released: ${error}`,
+      ).catch((releaseError) => {
+        console.error('[GoalService.tick] failed to release claimed task:', releaseError);
+      });
       throw error;
     }
+  };
+
+  /** Dispatch phases a task with no live operation can only be orphaned in. */
+  private static readonly UNSTARTED_CLAIM_PHASES = [
+    'requested',
+    'claimed',
+    'provisioning',
+    'dispatched',
+    'running',
+  ] as const;
+
+  /**
+   * Settle a dispatch that never produced a run — the claim's terminal write.
+   * `abandoned` leaves the active phase set, so the task's derived status falls
+   * to `paused` and the recovery coordinator can pick it up.
+   */
+  private releaseOrphanedDispatch = async (dispatchId: string, reason: string) => {
+    const settled = await this.db
+      .update(taskDispatches)
+      .set({
+        lastCancelError: reason,
+        leaseExpiresAt: null,
+        leaseOwner: null,
+        phase: 'abandoned',
+        waitingReason: reason,
+      })
+      .where(
+        and(
+          eq(taskDispatches.id, dispatchId),
+          inArray(taskDispatches.phase, ACTIVE_DISPATCH_PHASES),
+        ),
+      )
+      .returning({ id: taskDispatches.id });
+    return settled.length > 0;
   };
 
   private requireGraph = async (goalId: string) => {
@@ -2128,10 +2224,26 @@ export class GoalService {
       // the sliver between the claim and `runTask` creating the topic; if the
       // worker died in there it is permanent, and every later advance would
       // report `waiting_external` forever because there is no operation to
-      // reclaim. Once the claim is older than the lease, hand it back.
+      // reclaim. Once the claim is older than the lease, hand it back — the
+      // orphaned dispatch abandons and the task parks (`paused`) for recovery.
       if (new Date(task.updatedAt) >= staleBefore) return undefined;
-      const released = await this.taskModel.updateStatusIfCurrent(task.id, 'running', 'backlog');
-      if (!released) return undefined;
+      const released = await this.db
+        .update(taskDispatches)
+        .set({
+          lastCancelError: 'goal dispatch claim lease expired without a run',
+          leaseExpiresAt: null,
+          leaseOwner: null,
+          phase: 'abandoned',
+          waitingReason: 'goal dispatch claim lease expired without a run',
+        })
+        .where(
+          and(
+            eq(taskDispatches.taskId, task.id),
+            inArray(taskDispatches.phase, GoalService.UNSTARTED_CLAIM_PHASES),
+          ),
+        )
+        .returning({ id: taskDispatches.id });
+      if (released.length === 0) return undefined;
       return {
         goalId: graph.goal.id,
         message: `Released the abandoned dispatch claim on task ${task.identifier}`,
@@ -2648,8 +2760,10 @@ export class GoalService {
           taskId,
         };
       }
-      const task = await new TaskModel(tx, this.userId, this.workspaceId).findById(taskId);
-      if (task && ['running', 'backlog', 'completed'].includes(task.status)) {
+      const taskModel = new TaskModel(tx, this.userId, this.workspaceId);
+      const task = await taskModel.findById(taskId);
+      const taskStatus = task ? (await taskModel.derivedStatusByIds([taskId]))[taskId] : undefined;
+      if (task && ['running', 'backlog', 'completed'].includes(taskStatus ?? '')) {
         return {
           goalId: graph.goal.id,
           message: 'Task state changed while recovery was being evaluated',

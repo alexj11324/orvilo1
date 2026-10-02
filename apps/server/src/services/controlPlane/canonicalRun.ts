@@ -120,7 +120,8 @@ export class CanonicalRunAuthority {
             !task ||
             task.isDeleted ||
             task.deletedAt ||
-            task.status !== 'running' ||
+            // Live execution is the dispatch contract checked above — the
+            // retired `tasks.status` column is never consulted.
             task.currentTopicId !== binding.topicId ||
             task.executionGeneration !== binding.generation ||
             task.domainRevision !== binding.stateRevision ||

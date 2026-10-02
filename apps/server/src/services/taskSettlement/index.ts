@@ -1,4 +1,9 @@
-import { deriveTaskExecutionState, type TaskItem, type TaskStatus } from '@orvilo/types';
+import {
+  deriveLegacyTaskStatus,
+  deriveTaskExecutionState,
+  type TaskItem,
+  type TaskStatus,
+} from '@orvilo/types';
 
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
@@ -22,7 +27,7 @@ const TERMINAL_LEGACY_STATUSES = new Set(['canceled', 'completed', 'failed']);
  * Given `taskId` + what just happened (`outcome`, or `verifyOutcome` for the
  * verify-driven path), the policy table decides the three canonical layers —
  * Issue Status (`workflowCategory`/`workflowStateRefId`), execution
- * projection, attention reason — plus the legacy `tasks.status` projection,
+ * projection, attention reason — plus the legacy status-transition vocabulary,
  * and applies them atomically through the caller-supplied concurrency guard
  * (`expectedContract`, `reservationId`, `expectedStatus`) or plain write.
  *
@@ -56,7 +61,7 @@ export const settleTaskExecution = async (
   if (!task) {
     return noWrite({ type: 'hold' }, null, 'no_task');
   }
-  if (TERMINAL_LEGACY_STATUSES.has(task.status)) {
+  if (TERMINAL_LEGACY_STATUSES.has(deriveLegacyTaskStatus(task))) {
     return noWrite({ type: 'hold' }, null, 'terminal');
   }
 
@@ -176,7 +181,7 @@ const applyPlan = async (
 ) => {
   const { context } = input;
   const taskModel = new TaskModel(db, userId, workspaceId);
-  const status = plan.legacyStatus ?? task.status;
+  const status = plan.legacyStatus ?? deriveLegacyTaskStatus(task);
 
   const extra = {
     ...workflowPatch,
@@ -213,7 +218,7 @@ const applyPlan = async (
           serviceInput,
           undefined,
           {
-            currentStatus: (context.expectedStatus ?? task.status) as TaskStatus,
+            currentStatus: (context.expectedStatus ?? deriveLegacyTaskStatus(task)) as TaskStatus,
             reservationId: context.reservationId,
           },
           options,
@@ -238,7 +243,7 @@ const applyPlan = async (
     return taskModel.updateStatusIfReservation(
       task.id,
       context.reservationId,
-      context.expectedStatus ?? task.status,
+      context.expectedStatus ?? deriveLegacyTaskStatus(task),
       status,
       extra,
     );

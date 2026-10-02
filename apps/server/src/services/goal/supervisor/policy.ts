@@ -5,6 +5,7 @@ import type {
   GoalItem,
   TaskItem,
 } from '@orvilo/types';
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
 import { HETERO_DISPATCH_ERROR_HEADLINES } from '@/server/services/aiAgent/helpers/heteroErrors';
@@ -116,8 +117,12 @@ export const recoveryEligibility = (
   ) {
     return { eligible: false, reason: 'Operation stopped at an explicit intervention or limit' };
   }
-  if (!RECOVERABLE_TASK_STATUSES.has(task.status)) {
-    return { eligible: false, reason: `A ${task.status} Task is not supervision's to restart` };
+  const taskStatus = deriveLegacyTaskStatus(task);
+  if (!RECOVERABLE_TASK_STATUSES.has(taskStatus)) {
+    return {
+      eligible: false,
+      reason: `A ${taskStatus} Task is not supervision's to restart`,
+    };
   }
   // `TaskService.updateStatus` replaces `error` only when a new one is supplied, so a
   // person can move a Task the pipeline paused — or one whose run genuinely errored —

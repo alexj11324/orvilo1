@@ -1,6 +1,5 @@
 import { randomUUID } from 'node:crypto';
 
-import { UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import { TASK_ASSIGNEE_PERMISSION_CODES } from '@orvilo/const/rbac';
 import type {
   TaskAssignmentKind,
@@ -20,6 +19,7 @@ import type {
   TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
@@ -35,9 +35,14 @@ import {
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
 import { TaskTopicModel } from '@/database/models/taskTopic';
+import { TeamModel } from '@/database/models/team';
 import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { VerifyRunModel } from '@/database/models/verifyRun';
+import {
+  resolveWorkflowMove,
+  workflowCategoryForLegacyStatus,
+} from '@/database/models/workflowMove';
 import { WorkspaceMemberModel } from '@/database/models/workspaceMember';
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
@@ -632,6 +637,10 @@ export class TaskService {
     }
 
     const resolved = await this.resolveOrThrow(id);
+    // The task's canonical execution truth before this write — the retired
+    // `tasks.status` label recomputed from workflow/execution rows.
+    const resolvedStatus =
+      (await this.taskModel.derivedStatusByIds([resolved.id]))[resolved.id] ?? 'backlog';
     if (
       (status === 'running' || status === 'completed') &&
       !(await this.taskModel.areAllDependenciesCompleted(resolved.id))
@@ -642,7 +651,7 @@ export class TaskService {
       });
     }
 
-    if (resolved.status === 'running' && status !== 'running') {
+    if (resolvedStatus === 'running' && status !== 'running') {
       const topics = await this.taskTopicModel.findByTaskId(resolved.id);
       const aiAgentService = new AiAgentService(this.db, this.userId, {
         workspaceId: this.workspaceId,
@@ -705,6 +714,25 @@ export class TaskService {
     }
 
     const extra: TaskStatusTransitionExtra = { ...input.workflow };
+    // A legacy terminal drop without an explicit workflow patch still means
+    // "move the Issue" — resolve the team's states exactly like a workflow
+    // drag (ambiguous state sets keep the bare category, never a guess).
+    if (input.workflow === undefined) {
+      const category = workflowCategoryForLegacyStatus(status);
+      if (category) {
+        const states = resolved.teamId
+          ? await new TeamModel(this.db, this.userId, this.workspaceId ?? '').listWorkflowStates(
+              resolved.teamId,
+            )
+          : [];
+        const move = resolveWorkflowMove({ category, states });
+        extra.workflowCategory = category;
+        if (move.type === 'exact') {
+          extra.workflowStateId = move.workflowStateId;
+          extra.workflowStateRefId = move.workflowStateRefId;
+        }
+      }
+    }
     if (status === 'running') extra.startedAt = new Date();
     // A person changing state owns the generation boundary. Clear any dispatch
     // or completion lease so a crashed callback cannot reclaim after their
@@ -773,7 +801,7 @@ export class TaskService {
     if (
       status === 'scheduled' &&
       task.automationMode === 'schedule' &&
-      resolved.status !== 'running'
+      resolvedStatus !== 'running'
     ) {
       await this.taskModel.updateContext(task.id, {
         scheduler: { scheduleStartedAt: new Date().toISOString() },
@@ -789,8 +817,8 @@ export class TaskService {
       task.automationMode === 'heartbeat' &&
       task.heartbeatInterval &&
       task.heartbeatInterval > 0 &&
-      resolved.status !== 'running' &&
-      resolved.status !== 'scheduled'
+      resolvedStatus !== 'running' &&
+      resolvedStatus !== 'scheduled'
     ) {
       const scheduler = createTaskSchedulerModule();
       const schedulerContext = (resolved.context as TaskContext | null)?.scheduler as
@@ -830,8 +858,8 @@ export class TaskService {
         // The logged transition really happened and is now being undone, so
         // the undo is logged too (same actor, back to the same value): the
         // audit trail stays truthful and the feed folds the pair away.
-        if (actor) await this.taskModel.updateWithLog(task.id, { status: resolved.status }, actor);
-        else await this.taskModel.updateStatus(task.id, resolved.status);
+        if (actor) await this.taskModel.updateWithLog(task.id, { status: resolvedStatus }, actor);
+        else await this.taskModel.updateStatus(task.id, resolvedStatus);
         throw error;
       }
 
@@ -893,8 +921,9 @@ export class TaskService {
   ): Promise<UpdateStatusCascadeResult> {
     const resolved = await this.resolveOrThrow(input.id);
     const subtasks = await this.taskModel.findAllDescendants(resolved.id);
-    const unfinishedStatuses = new Set<string>(UNFINISHED_TASK_STATUSES);
-    const openSubtasks = subtasks.filter((task) => unfinishedStatuses.has(task.status));
+    const openSubtasks = subtasks.filter(
+      (task) => task.workflowCategory !== 'done' && task.workflowCategory !== 'canceled',
+    );
     // Freeze the cascade to this snapshot: both the interrupt pass and the
     // status update operate on the same id set, so a subtask created or
     // transitioned after the confirmation dialog is never rewritten.
@@ -1006,6 +1035,10 @@ export class TaskService {
       // task-status boundary, so no new execution can slip between this check
       // and the terminal status update.
       const locked = await taskModel.lockForStatusChange(targetIds);
+      // What each task is leaving, derived before the interrupt passes below
+      // disturb the execution rows — the activity feed logs this, not the
+      // frozen `tasks.status` column.
+      const statusBeforeById = await taskModel.derivedStatusByIds(locked.map((task) => task.id));
       const transactionRunningTopics = await taskTopicModel.findRunningByTaskIds(targetIds);
       if (transactionRunningTopics.some((topic) => !topic.operationId)) {
         throw new TRPCError({
@@ -1032,11 +1065,47 @@ export class TaskService {
       // The pre-transaction snapshot only chose *which* tasks; what each one
       // is leaving is read under the lock, so a collaborator's edit between
       // the dialog and this write is logged as it really was.
-      updatedTasks = await taskModel.updateStatusForIds(targetIds, input.status, {
-        completedAt,
-        runReservationExpiresAt: null,
-        runReservationId: null,
-      });
+      //
+      // The drop also moves every task's Issue Status — `status` vocab maps
+      // to done/canceled — resolved per team like a workflow drag. Ambiguous
+      // state sets keep the bare category; a family that spans teams commits
+      // as one statement per team inside this same transaction.
+      const cascadeCategory = workflowCategoryForLegacyStatus(input.status);
+      const idsByTeam = new Map<string | null, string[]>();
+      for (const target of targetTasks) {
+        const key = target.teamId ?? null;
+        idsByTeam.set(key, [...(idsByTeam.get(key) ?? []), target.id]);
+      }
+      updatedTasks = (
+        await Promise.all(
+          [...idsByTeam.entries()].map(async ([teamId, ids]) => {
+            let workflow: Partial<TaskStatusTransitionExtra> = {};
+            if (cascadeCategory) {
+              const states = teamId
+                ? await new TeamModel(tx, this.userId, this.workspaceId ?? '').listWorkflowStates(
+                    teamId,
+                  )
+                : [];
+              const move = resolveWorkflowMove({ category: cascadeCategory, states });
+              workflow = {
+                workflowCategory: cascadeCategory,
+                ...(move.type === 'exact'
+                  ? {
+                      workflowStateId: move.workflowStateId,
+                      workflowStateRefId: move.workflowStateRefId,
+                    }
+                  : {}),
+              };
+            }
+            return taskModel.updateStatusForIds(ids, input.status, {
+              completedAt,
+              runReservationExpiresAt: null,
+              runReservationId: null,
+              ...workflow,
+            });
+          }),
+        )
+      ).flat();
 
       // The board's drop slot for the parent, stamped in the same commit as
       // the family status — a cascade drop never lands its status without
@@ -1054,10 +1123,14 @@ export class TaskService {
         const { actorKind, ...actorColumns } = taskActivityActor(actor);
         await taskModel.addActivities(
           locked
-            .filter((before) => before.status !== input.status)
+            .filter((before) => statusBeforeById[before.id] !== input.status)
             .map((before) => ({
               ...actorColumns,
-              payload: { actorKind, from: before.status, to: input.status },
+              payload: {
+                actorKind,
+                from: statusBeforeById[before.id] ?? 'backlog',
+                to: input.status,
+              },
               taskId: before.id,
               type: 'status' as const,
               visibility: before.visibility,
@@ -1342,11 +1415,13 @@ export class TaskService {
       });
     }
 
-    // A non-running task has no incumbent execution to fence — the transfer
-    // is an ordinary (but CAS'd) assignment. The running-assignee guard stays
-    // armed: if the row flipped to 'running' between resolve and write, the
+    // A task with no live execution has no incumbent execution to fence —
+    // the transfer is an ordinary (but CAS'd) assignment. The live-assignee
+    // guard stays armed: if a run started between resolve and write, the
     // caller gets HANDOFF_REQUIRED and retries through this saga.
-    if (task.status !== 'running') {
+    const taskIsRunning =
+      (await this.taskModel.derivedStatusByIds([task.id]))[task.id] === 'running';
+    if (!taskIsRunning) {
       const updated = await this.updateTaskWithAssigneeLock(
         task.id,
         { assigneeAgentId: input.toAgentId },
@@ -1512,19 +1587,22 @@ export class TaskService {
     let task = await this.taskModel.resolve(taskIdOrIdentifier);
     if (!task) return null;
 
-    // Auto-detect heartbeat timeout for running tasks before assembling detail.
-    if (task.status === 'running' && task.heartbeatTimeout && task.lastHeartbeatAt) {
+    // Auto-detect heartbeat timeout for tasks with a live execution before
+    // assembling detail.
+    let heartbeatStatus = (await this.taskModel.derivedStatusByIds([task.id]))[task.id];
+    if (heartbeatStatus === 'running' && task.heartbeatTimeout && task.lastHeartbeatAt) {
       const elapsed = (Date.now() - new Date(task.lastHeartbeatAt).getTime()) / 1000;
       if (elapsed > task.heartbeatTimeout) {
         await this.taskModel.updateStatus(task.id, 'paused', { error: 'Heartbeat timeout' });
         await this.taskTopicModel.timeoutRunning(task.id);
         task = await this.taskModel.resolve(taskIdOrIdentifier);
         if (!task) return null;
+        heartbeatStatus = (await this.taskModel.derivedStatusByIds([task.id]))[task.id];
       }
     }
 
-    // Clear stale heartbeat timeout error once the task is no longer running.
-    if (task.status !== 'running' && task.error === 'Heartbeat timeout') {
+    // Clear stale heartbeat timeout error once execution is no longer live.
+    if (heartbeatStatus !== 'running' && task.error === 'Heartbeat timeout') {
       await this.taskModel.update(task.id, { error: null });
       task = { ...task, error: null };
     }
@@ -1607,13 +1685,16 @@ export class TaskService {
     const fileById = new Map(allFileMetadata.map((f) => [f.id, f]));
     const taskFiles = taskFileIds.map((id) => fileById.get(id)).filter((f) => !!f);
 
-    const [allDescendantDeps, allDescendantTopics] =
+    const [allDescendantDeps, allDescendantTopics, descendantStatusById] =
       allDescendantIds.length > 0
         ? await Promise.all([
             this.taskModel.getDependenciesByTaskIds(allDescendantIds).catch(() => []),
             this.taskTopicModel.findRunningByTaskIds(allDescendantIds).catch(() => []),
+            // `tasks.status` is retired — project the derived label instead of
+            // the frozen column.
+            this.taskModel.derivedStatusByIds(allDescendantIds),
           ])
-        : [[], []];
+        : [[], [], {} as Record<string, TaskStatus>];
 
     // Build dependency map for all descendants
     const idToIdentifier = new Map(allDescendants.map((s) => [s.id, s.identifier]));
@@ -1688,7 +1769,7 @@ export class TaskService {
           ...(s.schedulePattern || s.scheduleTimezone
             ? { schedule: { pattern: s.schedulePattern, timezone: s.scheduleTimezone } }
             : {}),
-          status: s.status,
+          status: descendantStatusById[s.id] ?? deriveLegacyTaskStatus(s),
           updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : undefined,
           ...(s.workflowCategory ? { workflowCategory: s.workflowCategory } : {}),
           ...(s.workflowStateId ? { workflowStateId: s.workflowStateId } : {}),
@@ -1721,7 +1802,10 @@ export class TaskService {
 
     // Resolve dependency task identifiers
     const depTaskIds = [...new Set(dependencies.map((d) => d.dependsOnId))];
-    const depTasks = await this.taskModel.findByIds(depTaskIds);
+    const [depTasks, depStatusById] = await Promise.all([
+      this.taskModel.findByIds(depTaskIds),
+      this.taskModel.derivedStatusByIds(depTaskIds),
+    ]);
     const depIdToInfo = new Map(
       depTasks
         .filter((t) => !t.deletedAt && !t.isDeleted)
@@ -1730,7 +1814,7 @@ export class TaskService {
           {
             identifier: t.identifier,
             name: t.name,
-            status: t.status,
+            status: depStatusById[t.id] ?? deriveLegacyTaskStatus(t),
             workflowCategory: t.workflowCategory,
             workflowStateId: t.workflowStateId,
           },
@@ -2019,7 +2103,7 @@ export class TaskService {
           : undefined,
       reviewerUserId: task.reviewerUserId,
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
-      status: task.status,
+      status: heartbeatStatus ?? deriveLegacyTaskStatus(task),
       userId: task.assigneeUserId,
       verify: acceptance
         ? { ...acceptance.config, requirement: acceptance.requirement }

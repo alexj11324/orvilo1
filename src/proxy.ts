@@ -45,6 +45,10 @@ export const config = {
     '/agents(.*)',
     '/automations',
     '/automations(.*)',
+    // Canonical conversation URLs (`/chat/:topicId`, `/chat/new`) — the
+    // `(/.*)?` tail keeps asset names that merely start with `chat` out.
+    '/chat',
+    '/chat(/.*)?',
     '/group',
     '/group(.*)',
     '/changelog(.*)',
@@ -143,6 +147,7 @@ export const config = {
     '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/agents(/.*)?',
     '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/automations(/.*)?',
     '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/billing(/.*)?',
+    '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/chat(/.*)?',
     '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/community(/.*)?',
     '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/drafts(/.*)?',
     '/:workspaceSlug((?!(?:_next|_deprecated|api|trpc|webapi|oidc|oauth|market|f|middleware|spa|spa-auth|spa-share|spa-workbench|\\.well-known)/)[^/]+)/eval(/.*)?',

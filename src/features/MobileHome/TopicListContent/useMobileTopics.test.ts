@@ -62,7 +62,7 @@ describe('useLastUsedAgentId', () => {
 });
 
 const pageItem = (id: string): TopicListItem =>
-  ({ agentId: 'agent-1', id, title: id, updatedAt: new Date(1) }) as TopicListItem;
+  ({ agentId: 'agent-1', id, title: id, updatedAt: new Date(1) }) as unknown as TopicListItem;
 
 const feedPage = (ids: string[], nextCursor: string | null): TopicListPage => ({
   items: ids.map(pageItem),

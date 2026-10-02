@@ -118,8 +118,12 @@ export const tasks = pgTable(
     // Optional: when null, callers fall back to parsing `instruction` markdown.
     editorData: jsonb('editor_data'),
 
-    // Lifecycle (same state machine for user and agent)
-    // 'backlog' | 'running' | 'paused' | 'completed' | 'failed' | 'canceled'
+    // Legacy compatibility projection — maintained for old readers, NOT the
+    // Issue Status. The canonical Issue Status is `workflowCategory` +
+    // `workflowStateRefId`; execution state lives on `task_dispatches.phase` +
+    // `task_topics.run_state`. Do not read this column to decide business
+    // state; transitions between the layers run through the settlement policy.
+    // 'backlog' | 'scheduled' | 'running' | 'paused' | 'failed' | 'completed' | 'canceled'
     status: text('status').notNull().default('backlog'),
     /**
      * External workflow-state projection (provider state UUID as received).
@@ -152,6 +156,7 @@ export const tasks = pgTable(
     projectMilestoneId: uuid('project_milestone_id').references(() => projectMilestones.id, {
       onDelete: 'set null',
     }),
+    // Canonical Issue Status, together with `workflowStateRefId`.
     workflowCategory: text('workflow_category')
       .$type<TaskWorkflowCategory>()
       .notNull()

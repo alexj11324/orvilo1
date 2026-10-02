@@ -17,11 +17,12 @@ import {
   workspaceMembers,
   workspaces,
 } from '../../schemas';
-import { taskTopics } from '../../schemas/task';
+import { taskDispatches, taskTopics } from '../../schemas/task';
 import { works } from '../../schemas/work';
 import type { OrviloDatabase } from '../../type';
 import { ProjectModel } from '../project';
 import { taskActivityActor, TaskModel } from '../task';
+import { legacyStatusExpr } from '../taskExecutionSql';
 import { WorkModel } from '../work';
 
 const serverDB: OrviloDatabase = await getTestDB();
@@ -37,6 +38,41 @@ const createAgent = async (id: string, uid = userId) => {
 const createTopic = async (id: string, uid = userId) => {
   await serverDB.insert(topics).values({ id, userId: uid }).onConflictDoNothing();
   return id;
+};
+
+/**
+ * `tasks.status` is retired: execution truth lives on `task_dispatches.phase`
+ * and the parked marker on `context.execution.parked`. Fixture helpers stamp
+ * the canonical rows instead of the frozen column.
+ */
+const dispatchFixture = async (
+  taskId: string,
+  phase: 'running' | 'waiting' | 'failed' | 'canceled' | 'succeeded',
+  generation = 1,
+) => {
+  await serverDB.insert(taskDispatches).values({
+    generation,
+    id: `disp_${taskId}_${phase}_${generation}`,
+    idempotencyKey: `idem_${taskId}_${phase}_${generation}`,
+    phase,
+    policyRevision: 1,
+    requestedBy: 'task-test',
+    requirementRevision: 1,
+    taskId,
+    taskRevision: 1,
+  });
+};
+
+const settleDispatches = async (taskId: string, phase: 'failed' | 'canceled' | 'succeeded') => {
+  await serverDB.update(taskDispatches).set({ phase }).where(eq(taskDispatches.taskId, taskId));
+};
+
+const derivedStatus = async (id: string) => {
+  const [row] = await serverDB
+    .select({ status: legacyStatusExpr })
+    .from(tasks)
+    .where(eq(tasks.id, id));
+  return row?.status;
 };
 
 beforeEach(async () => {
@@ -276,7 +312,7 @@ describe('TaskModel', () => {
 
       const updated = await model.update(task.id, { status: 'paused' });
 
-      expect(updated!.status).toBe('paused');
+      expect(await derivedStatus(task.id)).toBe('paused');
       expect(updated!.reviewerUserId).toBe(userId2);
     });
 
@@ -337,7 +373,7 @@ describe('TaskModel', () => {
     it('backfills the reviewer when the transition lands on paused', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ assigneeUserId: userId2, instruction: 'Do X' });
-      await model.update(task.id, { status: 'running' });
+      await dispatchFixture(task.id, 'running');
 
       const updated = await model.updateStatusIfCurrent(task.id, 'running', 'paused');
 
@@ -402,14 +438,14 @@ describe('TaskModel', () => {
     it('should filter by statuses', async () => {
       const model = new TaskModel(serverDB, userId);
       const t1 = await model.create({ instruction: 'Task 1' });
-      await model.updateStatus(t1.id, 'running', { startedAt: new Date() });
+      await dispatchFixture(t1.id, 'running');
       const t2 = await model.create({ instruction: 'Task 2' });
       await model.updateStatus(t2.id, 'paused');
       await model.create({ instruction: 'Task 3' }); // backlog
 
       const { tasks } = await model.list({ statuses: ['running', 'paused'] });
       expect(tasks).toHaveLength(2);
-      expect(tasks.map((t) => t.status).sort()).toEqual(['paused', 'running']);
+      expect(tasks.map((t) => t.id).sort()).toEqual([t1.id, t2.id].sort());
     });
 
     it('should filter by priorities', async () => {
@@ -784,7 +820,7 @@ describe('TaskModel', () => {
       // Create tasks with different statuses
       const _t1 = await model.create({ instruction: 'Backlog task' });
       const t2 = await model.create({ instruction: 'Running task' });
-      await model.updateStatus(t2.id, 'running', { startedAt: new Date() });
+      await dispatchFixture(t2.id, 'running');
       const t3 = await model.create({ instruction: 'Paused task' });
       await model.updateStatus(t3.id, 'paused');
       const t4 = await model.create({ instruction: 'Failed task' });
@@ -1118,23 +1154,24 @@ describe('TaskModel', () => {
 
       const startedAt = new Date();
       const updated = await model.updateStatus(task.id, 'running', { startedAt });
-      expect(updated!.status).toBe('running');
+      expect(updated).not.toBeNull();
       expect(updated!.startedAt).toBeDefined();
     });
 
     it('should update status only when the current status matches', async () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Test' });
-      await model.updateStatus(task.id, 'running');
+      await dispatchFixture(task.id, 'running');
 
       const completed = await model.updateStatusIfCurrent(task.id, 'running', 'completed', {
         completedAt: new Date(),
       });
+      await settleDispatches(task.id, 'succeeded');
       const staleUpdate = await model.updateStatusIfCurrent(task.id, 'running', 'failed');
 
-      expect(completed?.status).toBe('completed');
+      expect(completed?.workflowCategory).toBe('done');
       expect(staleUpdate).toBeNull();
-      expect((await model.findById(task.id))?.status).toBe('completed');
+      expect((await model.findById(task.id))?.workflowCategory).toBe('done');
     });
 
     it('reserves one run when two callers race', async () => {
@@ -1147,7 +1184,7 @@ describe('TaskModel', () => {
       ]);
 
       expect(results.filter(Boolean)).toHaveLength(1);
-      expect((await model.findById(task.id))?.status).toBe('running');
+      expect((await model.findById(task.id))?.runReservationId).not.toBeNull();
     });
 
     it('only lets the reservation owner roll back its generation', async () => {
@@ -1163,17 +1200,19 @@ describe('TaskModel', () => {
       ).resolves.toBe(false);
       expect(await model.findById(task.id)).toMatchObject({
         runReservationId: 'reservation-b',
-        status: 'running',
       });
     });
 
     it('fences lifecycle status and context writes to the reservation owner', async () => {
       const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Fenced lifecycle' });
+      const task = await model.create({
+        automationMode: 'schedule',
+        instruction: 'Fenced lifecycle',
+      });
       await model.reserveRun(task.id, 'completion:owner');
 
       await expect(
-        model.updateStatusIfReservation(task.id, 'completion:stale', 'running', 'scheduled'),
+        model.updateStatusIfReservation(task.id, 'completion:stale', 'scheduled', 'paused'),
       ).resolves.toBeNull();
       await expect(
         model.updateContextIfReservation(task.id, 'completion:stale', {
@@ -1187,18 +1226,21 @@ describe('TaskModel', () => {
         }),
       ).resolves.toBe(true);
       await expect(
-        model.updateStatusIfReservation(task.id, 'completion:owner', 'running', 'scheduled'),
-      ).resolves.toMatchObject({ status: 'scheduled' });
+        model.updateStatusIfReservation(task.id, 'completion:owner', 'scheduled', 'paused'),
+      ).resolves.not.toBeNull();
       expect(await model.findById(task.id)).toMatchObject({
         context: { scheduler: { tickToken: 'current' } },
-        status: 'scheduled',
       });
+      expect(await derivedStatus(task.id)).toBe('paused');
     });
 
     it('fences a post-verify scheduler write to the scheduled state', async () => {
       const model = new TaskModel(serverDB, userId);
-      const task = await model.create({ instruction: 'Heartbeat' });
-      await model.updateStatus(task.id, 'scheduled');
+      const task = await model.create({
+        automationMode: 'schedule',
+        context: { scheduler: { tickToken: 'initial' } },
+        instruction: 'Heartbeat',
+      });
 
       await expect(
         model.updateContextIfStatus(task.id, 'scheduled', {
@@ -1213,8 +1255,8 @@ describe('TaskModel', () => {
       ).resolves.toBe(false);
       expect(await model.findById(task.id)).toMatchObject({
         context: { scheduler: { tickToken: 'current' } },
-        status: 'paused',
       });
+      expect(await derivedStatus(task.id)).toBe('paused');
     });
 
     it('does not reclaim a crashed dispatch while its agent operation is active', async () => {
@@ -1369,7 +1411,7 @@ describe('TaskModel', () => {
       await model.addDependency(taskB.id, taskA.id);
       // A must complete before B can leave backlog.
       await model.updateStatus(taskA.id, 'completed');
-      await model.updateStatus(taskB.id, 'running', { startedAt: new Date() });
+      await dispatchFixture(taskB.id, 'running');
       const unlocked = await model.getUnlockedTasks(taskA.id);
       expect(unlocked).toHaveLength(0); // B is already running, not unlocked
     });
@@ -2114,9 +2156,9 @@ describe('TaskModel', () => {
       const model = new TaskModel(serverDB, userId);
       const task = await model.create({ instruction: 'Test' });
 
-      const updated = await model.updateWithLog(task.id, { status: 'completed' }, { userId });
+      const updated = await model.updateWithLog(task.id, { workflowCategory: 'done' }, { userId });
 
-      expect(updated!.status).toBe('completed');
+      expect(updated!.workflowCategory).toBe('done');
       const [activity] = await model.getActivities(task.id);
       expect(activity).toMatchObject({
         actorUserId: userId,
@@ -2195,7 +2237,8 @@ describe('TaskModel', () => {
 
     it('locks a family for a bulk status write and inserts its rows in one go', async () => {
       const model = new TaskModel(serverDB, userId);
-      const parent = await model.create({ instruction: 'Parent', status: 'running' });
+      const parent = await model.create({ instruction: 'Parent' });
+      await dispatchFixture(parent.id, 'running');
       const child = await model.create({
         instruction: 'Child',
         parentTaskId: parent.id,
@@ -2513,8 +2556,8 @@ describe('TaskModel', () => {
       const count = await model1.batchUpdateStatus([a.id, b.id, other.id], 'completed');
       expect(count).toBe(2);
 
-      expect((await model1.findById(a.id))!.status).toBe('completed');
-      expect((await model2.findById(other.id))!.status).toBe('backlog');
+      expect((await model1.findById(a.id))!.workflowCategory).toBe('done');
+      expect((await model2.findById(other.id))!.workflowCategory).toBe('backlog');
     });
   });
 
@@ -2531,12 +2574,11 @@ describe('TaskModel', () => {
       });
 
       expect(updated.map(({ id }) => id).sort()).toEqual([open.id, parent.id].sort());
-      expect((await model.findById(parent.id))!.status).toBe('completed');
-      expect((await model.findById(open.id))!.status).toBe('completed');
-      expect(await model.findById(failed.id)).toMatchObject({
-        error: 'Needs attention',
-        status: 'failed',
-      });
+      expect((await model.findById(parent.id))!.workflowCategory).toBe('done');
+      expect((await model.findById(open.id))!.workflowCategory).toBe('done');
+      const failedRow = await model.findById(failed.id);
+      expect(failedRow).toMatchObject({ error: 'Needs attention' });
+      expect(await derivedStatus(failed.id)).toBe('failed');
     });
 
     it('does not touch an open subtask outside the frozen id set', async () => {
@@ -2549,13 +2591,13 @@ describe('TaskModel', () => {
       // Simulates a subtask created (or started) after the caller's snapshot:
       // still unfinished, but absent from the frozen id set.
       const late = await model.create({ instruction: 'Late', parentTaskId: parent.id });
-      await model.updateStatus(late.id, 'running');
+      await dispatchFixture(late.id, 'running');
 
       await model.updateStatusForIds([parent.id, snapshotted.id], 'canceled');
 
-      expect((await model.findById(parent.id))!.status).toBe('canceled');
-      expect((await model.findById(snapshotted.id))!.status).toBe('canceled');
-      expect((await model.findById(late.id))!.status).toBe('running');
+      expect((await model.findById(parent.id))!.workflowCategory).toBe('canceled');
+      expect((await model.findById(snapshotted.id))!.workflowCategory).toBe('canceled');
+      expect(await derivedStatus(late.id)).toBe('running');
     });
 
     it('can clear run reservations atomically with a terminal cascade', async () => {
@@ -2572,7 +2614,7 @@ describe('TaskModel', () => {
       expect(await model.findById(task.id)).toMatchObject({
         runReservationExpiresAt: null,
         runReservationId: null,
-        status: 'canceled',
+        workflowCategory: 'canceled',
       });
     });
 
@@ -2614,7 +2656,7 @@ describe('TaskModel', () => {
       const started = await model.create({ instruction: 'Already started' });
       await model.addDependency(started.id, done.id);
       await model.updateStatus(done.id, 'completed');
-      await model.updateStatus(started.id, 'running');
+      await dispatchFixture(started.id, 'running');
 
       await expect(model.getUnlockedTasksForMany([done.id])).resolves.toEqual([]);
     });
@@ -2837,7 +2879,7 @@ describe('TaskModel', () => {
         instruction: 'Running',
         schedulePattern: '0 * * * *',
       });
-      await model.updateStatus(running.id, 'running', { startedAt: new Date() });
+      await dispatchFixture(running.id, 'running');
       // No schedulePattern excluded
       await model.create({ automationMode: 'schedule', instruction: 'No pattern' });
       // Not schedule mode excluded
@@ -2854,10 +2896,8 @@ describe('TaskModel', () => {
     it('should find running tasks whose heartbeat timed out', async () => {
       const model = new TaskModel(serverDB, userId);
       const stuck = await model.create({ instruction: 'Stuck' });
-      await model.update(stuck.id, {
-        heartbeatTimeout: 1,
-        status: 'running',
-      });
+      await model.update(stuck.id, { heartbeatTimeout: 1 });
+      await dispatchFixture(stuck.id, 'running');
       // Force a stale heartbeat in the past
       await serverDB
         .update(tasks)
@@ -2866,7 +2906,8 @@ describe('TaskModel', () => {
 
       // Healthy running task with a fresh heartbeat
       const healthy = await model.create({ instruction: 'Healthy' });
-      await model.update(healthy.id, { heartbeatTimeout: 600, status: 'running' });
+      await model.update(healthy.id, { heartbeatTimeout: 600 });
+      await dispatchFixture(healthy.id, 'running');
       await model.updateHeartbeat(healthy.id);
 
       const result = await TaskModel.findStuckTasks(serverDB);
@@ -2878,10 +2919,8 @@ describe('TaskModel', () => {
     it('should keep an active completion lease out of the heartbeat sweep', async () => {
       const model = new TaskModel(serverDB, userId);
       const completing = await model.create({ instruction: 'Completing' });
-      await model.update(completing.id, {
-        heartbeatTimeout: 1,
-        status: 'running',
-      });
+      await model.update(completing.id, { heartbeatTimeout: 1 });
+      await dispatchFixture(completing.id, 'running');
       await serverDB
         .update(tasks)
         .set({
@@ -2904,8 +2943,8 @@ describe('TaskModel', () => {
       for (const task of [own, foreign]) {
         await new TaskModel(serverDB, task.createdByUserId ?? userId).update(task.id, {
           heartbeatTimeout: 1,
-          status: 'running',
         });
+        await dispatchFixture(task.id, 'running');
         await serverDB
           .update(tasks)
           .set({ lastHeartbeatAt: new Date(Date.now() - 60_000) })
@@ -3166,7 +3205,7 @@ describe('TaskModel', () => {
       expect(clonedRoot!.workspaceId).toBe(wsId);
       expect(clonedRoot!.name).toBe('Root name');
       // Lifecycle reset on the clone
-      expect(clonedRoot!.status).toBe('backlog');
+      expect(clonedRoot!.workflowCategory).toBe('backlog');
       expect(clonedRoot!.assigneeAgentId).toBeNull();
       expect(clonedRoot!.totalTopics).toBe(0);
       // Provenance recorded in context
@@ -3180,7 +3219,7 @@ describe('TaskModel', () => {
       expect(clonedChildren[0].id).not.toBe(child.id);
 
       // Original subtree untouched in the personal scope
-      expect((await model.findById(root.id))!.status).toBe('completed');
+      expect(await derivedStatus(root.id)).toBe('completed');
     });
 
     it('should clone a workspace task into the personal scope (null target)', async () => {

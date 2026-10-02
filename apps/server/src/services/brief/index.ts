@@ -3,6 +3,8 @@ import type { TaskStatus } from '@orvilo/types';
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
 import { TaskModel } from '@/database/models/task';
+import { TeamModel } from '@/database/models/team';
+import { resolveWorkflowMove } from '@/database/models/workflowMove';
 import type { BriefItem } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { TaskRunnerService } from '@/server/services/taskRunner';
@@ -111,16 +113,14 @@ export class BriefService {
       ...new Set([...directAgentIds, ...Object.values(treeAgentIdsByTaskId).flat()]),
     ];
 
-    const [taskRows, agentList] = await Promise.all([
-      taskIds.length > 0 ? this.taskModel.findByIds(taskIds) : Promise.resolve([]),
+    const [taskStatusMap, agentList] = await Promise.all([
+      taskIds.length > 0
+        ? this.taskModel.derivedStatusByIds(taskIds)
+        : Promise.resolve({} as Record<string, TaskStatus>),
       allAgentIds.length > 0
         ? this.agentModel.getAgentAvatarsByIds(allAgentIds)
         : Promise.resolve([]),
     ]);
-
-    const taskStatusMap = Object.fromEntries(
-      taskRows.map((t) => [t.id, (t.status as TaskStatus) ?? null]),
-    );
     const agentMap: Record<string, AgentAvatarInfo> = Object.fromEntries(
       agentList.map((a) => [a.id, a]),
     );
@@ -240,7 +240,26 @@ export class BriefService {
     if (options?.action === 'approve' && brief.taskId && brief.type === 'result') {
       const task = await this.taskModel.findById(brief.taskId);
       if (task && task.status !== 'scheduled') {
-        await this.taskModel.updateStatus(brief.taskId, 'completed', { error: null });
+        // Approval completes the Issue too — the same workflow-state
+        // resolution a board drag to Done would run.
+        const move = resolveWorkflowMove({
+          category: 'done',
+          states: task.teamId
+            ? await new TeamModel(this.db, this.userId, this.workspaceId ?? '').listWorkflowStates(
+                task.teamId,
+              )
+            : [],
+        });
+        await this.taskModel.updateStatus(brief.taskId, 'completed', {
+          error: null,
+          workflowCategory: 'done',
+          ...(move.type === 'exact'
+            ? {
+                workflowStateId: move.workflowStateId,
+                workflowStateRefId: move.workflowStateRefId,
+              }
+            : {}),
+        });
         // Cascade to downstream tasks whose dependencies are now satisfied.
         // Without this, dependents stay in `backlog` until the user manually
         // triggers them — defeating the point of the dependency edge.

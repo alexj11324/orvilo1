@@ -13,12 +13,15 @@ import {
 import { stableStringify } from '@/features/SavedViews/workQueryBuilder';
 import { useClientDataSWR } from '@/libs/swr';
 import { workAttentionService } from '@/services/workAttention';
-import type { TaskListItem } from '@/store/task/slices/list/initialState';
 
 import { PROJECT_ISSUE_PAGE_SIZE } from './projectIssueWorkQuery';
 
-const asListItem = (task: WorkQueryResultTask): TaskListItem =>
-  ({ ...task, participants: task.participants ?? [] }) as TaskListItem;
+const asListItem = (
+  task: WorkQueryResultTask,
+): WorkQueryResultTask & { participants: NonNullable<WorkQueryResultTask['participants']> } => ({
+  ...task,
+  participants: task.participants ?? [],
+});
 
 /**
  * One page of a project-issue work query, plus a tail the caller appends.
@@ -31,9 +34,10 @@ export const useProjectIssuePages = (query: WorkQuery | null) => {
   );
   const firstTasks = workQueryResponseTasks<WorkQueryResultTask>(swr.data?.data).map(asListItem);
   const firstGroups = workQueryResponseGroups<WorkQueryResultTask>(swr.data?.data);
-  const queryHash = swr.data?.data && 'queryHash' in swr.data.data ? swr.data.data.queryHash : undefined;
+  const queryHash =
+    swr.data?.data && 'queryHash' in swr.data.data ? swr.data.data.queryHash : undefined;
   const total = swr.data?.data && 'total' in swr.data.data ? swr.data.data.total : undefined;
-  const [taskTail, setTaskTail] = useState<TaskListItem[]>([]);
+  const [taskTail, setTaskTail] = useState<ReturnType<typeof asListItem>[]>([]);
   const [groupTail, setGroupTail] = useState<WorkQueryGroupPage<WorkQueryResultTask>[]>([]);
   const [loadingMore, setLoadingMore] = useState(false);
   const [seenKey, setSeenKey] = useState(key);
@@ -64,7 +68,10 @@ export const useProjectIssuePages = (query: WorkQuery | null) => {
       });
       if (queryKeyRef.current !== started) return;
       setTaskTail((current) =>
-        mergeWorkQueryPage(current, workQueryResponseTasks<WorkQueryResultTask>(next.data).map(asListItem)),
+        mergeWorkQueryPage(
+          current,
+          workQueryResponseTasks<WorkQueryResultTask>(next.data).map(asListItem),
+        ),
       );
     } finally {
       if (queryKeyRef.current === started) setLoadingMore(false);

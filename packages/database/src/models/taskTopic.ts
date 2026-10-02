@@ -29,6 +29,7 @@ import { tasks, taskTopics } from '../schemas/task';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { isAutomationArmed, predicateForLegacyStatus } from './taskExecutionSql';
 
 const TERMINAL_TOPIC_STATUSES = new Set(['canceled', 'completed', 'failed', 'timeout']);
 
@@ -638,7 +639,7 @@ export class TaskTopicModel {
                   and(
                     eq(tasks.id, taskId),
                     eq(tasks.currentTopicId, topicId),
-                    eq(tasks.status, 'running'),
+                    predicateForLegacyStatus('running'),
                   ),
                 ),
             ),
@@ -660,7 +661,7 @@ export class TaskTopicModel {
             and(
               eq(tasks.id, taskId),
               eq(tasks.currentTopicId, topicId),
-              eq(tasks.status, 'running'),
+              predicateForLegacyStatus('running'),
               this.taskOwnership(),
             ),
           )
@@ -687,7 +688,7 @@ export class TaskTopicModel {
           and(
             eq(tasks.id, taskId),
             eq(tasks.currentTopicId, topicId),
-            inArray(tasks.status, ['running', 'scheduled']),
+            or(predicateForLegacyStatus('running'), isAutomationArmed),
             sql`${tasks.runReservationId} like ${`${reservationPrefix}%`}`,
             sql`${tasks.runReservationExpiresAt} <= ${now}`,
             this.taskOwnership(),

@@ -49,6 +49,7 @@ describe('BriefService', () => {
   };
 
   const mockTaskModel = {
+    derivedStatusByIds: vi.fn(),
     findById: vi.fn(),
     findByIds: vi.fn(),
     getTreeAgentIdsForTaskIds: vi.fn(),
@@ -74,7 +75,7 @@ describe('BriefService', () => {
 
   describe('enrichBriefsWithAgents', () => {
     beforeEach(() => {
-      mockTaskModel.findByIds.mockResolvedValue([]);
+      mockTaskModel.derivedStatusByIds.mockResolvedValue({});
       mockTaskModel.getTreeAgentIdsForTaskIds.mockResolvedValue({});
     });
 
@@ -93,7 +94,7 @@ describe('BriefService', () => {
       expect(result[0].taskStatus).toBeNull();
       expect(result[1].agent).toBeNull();
       expect(result[1].taskStatus).toBeNull();
-      expect(mockTaskModel.findByIds).not.toHaveBeenCalled();
+      expect(mockTaskModel.derivedStatusByIds).not.toHaveBeenCalled();
       expect(mockAgentModel.getAgentAvatarsByIds).not.toHaveBeenCalled();
     });
 
@@ -105,10 +106,10 @@ describe('BriefService', () => {
         { agentId: 'agent-c', id: 'b2', taskId: 'task-2', title: 'Brief 2' },
       ] as any[];
 
-      mockTaskModel.findByIds.mockResolvedValue([
-        { id: 'task-1', status: 'scheduled' },
-        { id: 'task-2', status: 'paused' },
-      ]);
+      mockTaskModel.derivedStatusByIds.mockResolvedValue({
+        'task-1': 'scheduled',
+        'task-2': 'paused',
+      });
 
       mockAgentModel.getAgentAvatarsByIds.mockResolvedValue([
         { avatar: '🤖', backgroundColor: null, id: 'agent-a', title: 'Agent A' },
@@ -133,7 +134,7 @@ describe('BriefService', () => {
       expect(result[1].taskStatus).toBe('paused');
 
       expect(mockTaskModel.getTreeAgentIdsForTaskIds).toHaveBeenCalledWith(['task-1', 'task-2']);
-      expect(mockTaskModel.findByIds).toHaveBeenCalledWith(['task-1', 'task-2']);
+      expect(mockTaskModel.derivedStatusByIds).toHaveBeenCalledWith(['task-1', 'task-2']);
       expect(mockAgentModel.getAgentAvatarsByIds).toHaveBeenCalledWith(
         expect.arrayContaining(['agent-a', 'agent-c']),
       );
@@ -147,7 +148,7 @@ describe('BriefService', () => {
         { agentId: null, id: 'b2', taskId: null, title: 'No task' },
       ] as any[];
 
-      mockTaskModel.findByIds.mockResolvedValue([{ id: 'task-1', status: 'scheduled' }]);
+      mockTaskModel.derivedStatusByIds.mockResolvedValue({ 'task-1': 'scheduled' });
 
       mockAgentModel.getAgentAvatarsByIds.mockResolvedValue([
         { avatar: '🤖', backgroundColor: null, id: 'agent-a', title: 'Agent A' },
@@ -173,7 +174,7 @@ describe('BriefService', () => {
         { agentId: 'agent-gone', id: 'b1', taskId: 'task-1', title: 'Brief' },
       ] as any[];
 
-      mockTaskModel.findByIds.mockResolvedValue([{ id: 'task-1', status: 'paused' }]);
+      mockTaskModel.derivedStatusByIds.mockResolvedValue({ 'task-1': 'paused' });
       mockAgentModel.getAgentAvatarsByIds.mockResolvedValue([]);
 
       const result = await service.enrichBriefsWithAgents(briefs);
@@ -217,7 +218,7 @@ describe('BriefService', () => {
       ]);
       expect(result[0].taskStatus).toBeNull();
       expect(mockTaskModel.getTreeAgentIdsForTaskIds).not.toHaveBeenCalled();
-      expect(mockTaskModel.findByIds).not.toHaveBeenCalled();
+      expect(mockTaskModel.derivedStatusByIds).not.toHaveBeenCalled();
       expect(mockAgentModel.getAgentAvatarsByIds).toHaveBeenCalledWith(['agent-direct']);
     });
 
@@ -231,7 +232,7 @@ describe('BriefService', () => {
       mockTaskModel.getTreeAgentIdsForTaskIds.mockResolvedValue({
         'task-1': ['agent-a', 'agent-b'],
       });
-      mockTaskModel.findByIds.mockResolvedValue([{ id: 'task-1', status: 'scheduled' }]);
+      mockTaskModel.derivedStatusByIds.mockResolvedValue({ 'task-1': 'scheduled' });
 
       mockAgentModel.getAgentAvatarsByIds.mockResolvedValue([
         { avatar: '🤖', backgroundColor: null, id: 'agent-a', title: 'Agent A' },
@@ -250,7 +251,7 @@ describe('BriefService', () => {
         { agentId: 'agent-a', id: 'b1', taskId: 'task-1', title: 'Brief 1' },
       ] as any[];
 
-      mockTaskModel.findByIds.mockResolvedValue([{ id: 'task-1', status: 'scheduled' }]);
+      mockTaskModel.derivedStatusByIds.mockResolvedValue({ 'task-1': 'scheduled' });
       mockAgentModel.getAgentAvatarsByIds.mockResolvedValue([
         { avatar: '🤖', backgroundColor: null, id: 'agent-a', title: 'Agent A' },
       ]);
@@ -286,7 +287,7 @@ describe('BriefService', () => {
       expect(result[0].agent).toBeNull();
       expect(result[1].agent).toBeNull();
       expect(mockAgentModel.getAgentAvatarsByIds).not.toHaveBeenCalled();
-      expect(mockTaskModel.findByIds).not.toHaveBeenCalled();
+      expect(mockTaskModel.derivedStatusByIds).not.toHaveBeenCalled();
       expect(mockTaskModel.getTreeAgentIdsForTaskIds).not.toHaveBeenCalled();
     });
 
@@ -320,7 +321,7 @@ describe('BriefService', () => {
       expect(mockAgentModel.getAgentAvatarsByIds).toHaveBeenCalledWith(
         expect.arrayContaining(['agent-a', 'agent-b']),
       );
-      expect(mockTaskModel.findByIds).not.toHaveBeenCalled();
+      expect(mockTaskModel.derivedStatusByIds).not.toHaveBeenCalled();
       expect(mockTaskModel.getTreeAgentIdsForTaskIds).not.toHaveBeenCalled();
     });
 
@@ -397,7 +398,7 @@ describe('BriefService', () => {
         taskStatus: 'scheduled',
       });
       // No follow-up enrichment SQLs.
-      expect(mockTaskModel.findByIds).not.toHaveBeenCalled();
+      expect(mockTaskModel.derivedStatusByIds).not.toHaveBeenCalled();
       expect(mockTaskModel.getTreeAgentIdsForTaskIds).not.toHaveBeenCalled();
       expect(mockAgentModel.getAgentAvatarsByIds).not.toHaveBeenCalled();
     });
@@ -455,6 +456,7 @@ describe('BriefService', () => {
       expect(mockBriefModel.resolve).toHaveBeenCalledWith('b1', { action: 'approve' });
       expect(mockTaskModel.updateStatus).toHaveBeenCalledWith('task-1', 'completed', {
         error: null,
+        workflowCategory: 'done',
       });
       // Brief approval must trigger downstream kickoff via the runner so
       // dependents don't sit in `backlog` waiting for a manual nudge.
@@ -533,7 +535,12 @@ describe('BriefService', () => {
         taskId: 'task-6',
         type: 'result',
       });
-      mockTaskModel.findById.mockResolvedValue({ id: 'task-6', status: 'scheduled' });
+      mockTaskModel.findById.mockResolvedValue({
+        automationMode: 'schedule',
+        context: { scheduler: { tickToken: 'tick-1' } },
+        id: 'task-6',
+        status: 'scheduled',
+      });
 
       await service.resolve('b6', { action: 'approve' });
 

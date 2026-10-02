@@ -176,3 +176,37 @@ export const deriveTaskExecutionState = ({
 
   return legacyStatus ? (LEGACY_STATUS_EXECUTION[legacyStatus as TaskStatus] ?? null) : null;
 };
+
+/**
+ * Canonical parked-execution marker persisted on `tasks.context` as
+ * `{execution: {parked: {at, reason?}}}` — the successor to the retired
+ * `tasks.status` values `paused`/`failed`. A set marker means the task sits in
+ * a review/hold state; any live dispatch or new transition clears it.
+ */
+export const executionParkedReason = (context: unknown): string | null => {
+  const parked = (context as { execution?: { parked?: { reason?: string } } } | null)?.execution
+    ?.parked;
+  return parked ? (parked.reason ?? 'paused') : null;
+};
+
+/**
+ * Row-level derivation of the retired `tasks.status` label for code that
+ * still needs the legacy vocabulary (display-only consumers, stored
+ * transition vocabulary, stale-row guards). Never reads the column and never
+ * fetches execution rows, so a live run with no parked marker reports
+ * `'backlog'` — callers that must distinguish running from queued query
+ * `task_dispatches.phase`/`task_topics.run_state` instead.
+ */
+export const deriveLegacyTaskStatus = (task: {
+  automationMode?: string | null;
+  context?: unknown;
+  workflowCategory?: string | null;
+}): TaskStatus => {
+  if (task.workflowCategory === 'done') return 'completed';
+  if (task.workflowCategory === 'canceled') return 'canceled';
+  const parked = executionParkedReason(task.context);
+  if (parked) return parked === 'failed' ? 'failed' : 'paused';
+  const scheduler = (task.context as { scheduler?: { tickToken?: unknown } } | null)?.scheduler;
+  if (task.automationMode && scheduler?.tickToken != null) return 'scheduled';
+  return 'backlog';
+};

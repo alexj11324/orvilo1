@@ -138,7 +138,7 @@ describe('completed window', () => {
   const now = new Date('2026-09-23T12:00:00Z').getTime();
 
   it('never hides non-completed rows', () => {
-    const open = task({ status: 'in_progress' });
+    const open = task({ status: 'running' });
     expect(isCompletedWindowHidden(open, 'none', now)).toBe(false);
   });
 

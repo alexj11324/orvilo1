@@ -12,10 +12,11 @@ cross-layer transitions lives in `apps/server/src/services/taskSettlement/`.
 | **Execution**      | The agent-run truth            | `task_dispatches.phase` + `task_topics.run_state`     | queued / provisioning / running / waiting / succeeded / failed / canceled / outcome_unknown         |
 | **Attention**      | Does this need a human?        | Derived from the other two layers                     | none / needs_input / review_required / execution_failed / blocked / outcome_unknown / needs_changes |
 
-`tasks.status` is a **legacy compatibility projection**, not the Issue Status.
-It is still written (paused / completed / scheduled / …) so old readers keep
-working, but no code may consult it to decide business state. Its retirement
-is a follow-up change.
+`tasks.status` is **retired**. The column still exists for historical rows,
+but no code path reads it to decide business state and nothing writes new
+truth to it — a stale or wrong value cannot change Issue Status, execution
+routing, or kanban placement. See [Retired `tasks.status`](#retired-tasksstatus)
+below.
 
 ## Execution projection
 
@@ -29,8 +30,11 @@ single function that folds a task's dispatch/run rows into the canonical
   (`succeeded` dispatch + `running` topic → `succeeded`).
 - `abandoned` dispatches project `outcome_unknown` — the remote writer's fate
   is unknowable.
-- The legacy status is consulted only when no execution rows exist;
-  `backlog`/`scheduled` project `null` (no execution to project).
+- The TS-side `legacyStatus` input is consulted only when no execution rows
+  exist — a last-resort read for pre-contract historical rows. The SQL
+  `taskExecutionStateExpr` (WorkQuery filters) does not consult it: a stored
+  filter can never resurrect a stale column value.
+- `backlog`/`scheduled` project `null` (no execution to project).
 
 ## Settlement policy
 
@@ -152,11 +156,11 @@ stored v1 predicates on the `status` field meant "whatever `tasks.status`
 projected", a mix of both layers. `2` is the write epoch introduced when the
 fields split by axis:
 
-| Query field           | Layer it reads                                                                                                                                                                                            | Surface label           |
-| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `workflowCategory`    | Issue Workflow (`workflowStateRefId`/`workflowCategory`)                                                                                                                                                  | "Status"                |
-| `executionState`      | Execution — the `deriveTaskExecutionState` projection of `task_dispatches.phase` / `task_topics.run_state` (falls back to `tasks.status` only when no execution row exists; NULL when the task never ran) | "Execution"             |
-| `status` (deprecated) | Legacy `tasks.status` projection                                                                                                                                                                          | read-only compatibility |
+| Query field           | Layer it reads                                                                                                                                                           | Surface label           |
+| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ----------------------- |
+| `workflowCategory`    | Issue Workflow (`workflowStateRefId`/`workflowCategory`)                                                                                                                 | "Status"                |
+| `executionState`      | Execution — the `deriveTaskExecutionState` projection of `task_dispatches.phase` / `task_topics.run_state` (NULL when the task never ran; never consults `tasks.status`) | "Execution"             |
+| `status` (deprecated) | Retired-vocabulary label, derived from canonical fields via `legacyStatusExpr` / `deriveLegacyTaskStatus` — never the stored column                                      | read-only compatibility |
 
 `normalizeWorkQuery` (types package) migrates a task query's `status`
 predicates at read time: unambiguous Issue-Status values
@@ -179,3 +183,30 @@ My Work filter directory offer `workflowCategory` as "Status" and
 boards group by `workflowCategory` ("Status"); a `status`-grouped column is
 the execution axis ("Execution") for old views and is not offered to new
 ones.
+
+## Retired `tasks.status`
+
+The column is dead-code-level retired; it remains only to keep historical
+rows legible.
+
+- **Writes**: `updateStatus*` still accepts the legacy transition vocabulary
+  (`paused`/`running`/`completed`/…) as the API contract, but
+  `statusTransitionPatch` translates it — the `status` key never reaches the
+  column. `paused`/`failed` transitions stamp the canonical parked marker at
+  `context.execution.parked`; every other transition clears it. Terminal
+  transitions also land `workflowCategory` (exact state refs arrive via
+  `resolveWorkflowMove` at the service layer).
+- **Reads**: every decisional read is translated — `predicateForLegacyStatus`
+  maps each vocabulary value onto canonical predicates (live dispatch rows,
+  parked marker, workflow category, automation arm), `legacyStatusExpr`
+  projects the label for display surfaces, and `derivedStatusByIds` answers
+  per-task derived maps. No code reads the stored value to decide anything.
+- **API surfaces**: response projections that still carry a `status` field
+  emit the derived label (subtask trees, dependency entries, recent/brief
+  feeds, activity "from" values) — never the frozen column.
+- **Backfill**: migration `0201_retire_task_status_parked_backfill` projects
+  existing rows' parked state into `context.execution.parked` so historical
+  rows derive correctly under the new predicates.
+- **Schema drop**: dropping the column is a separate migration decision
+  (destructive, needs a compat window for any external consumer). It is
+  intentionally not part of the retirement change.

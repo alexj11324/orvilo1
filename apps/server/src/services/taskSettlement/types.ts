@@ -111,7 +111,7 @@ export interface SettlementPlan {
   decision: SettlementDecision;
   /** Canonical execution state after this settle. */
   execution: TaskExecutionState | null;
-  /** Legacy `tasks.status` projection to write — absent = leave unchanged. */
+  /** Legacy status-transition vocabulary to apply — routed to canonical fields, never written to `tasks.status`. Absent = leave unchanged. */
   legacyStatus?: TaskStatus;
   /** Target workflow category — absent = leave unchanged. */
   workflowCategory?: TaskWorkflowCategory;

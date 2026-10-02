@@ -586,10 +586,11 @@ describe('TaskDispatchModel', () => {
       currentGeneration: true,
       dispatch: { phase: 'succeeded' },
     });
+    // `tasks.status` is retired — the park lands as the canonical marker.
     await expect(db.select().from(tasks).where(eq(tasks.id, task.id))).resolves.toMatchObject([
       {
+        context: { execution: { parked: { reason: 'stale-contract' } } },
         error: 'Task changed while this run was active; review before retrying.',
-        status: 'paused',
       },
     ]);
   });
@@ -971,7 +972,7 @@ describe('TaskDispatchModel', () => {
       phase: 'canceled',
     });
     await expect(db.select().from(tasks).where(eq(tasks.id, task.id))).resolves.toMatchObject([
-      { status: 'paused' },
+      { context: { execution: { parked: { reason: 'canceled' } } } },
     ]);
   });
 });

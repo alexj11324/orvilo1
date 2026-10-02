@@ -34,6 +34,7 @@ vi.mock('@/database/models/linearSync', () => ({
 }));
 vi.mock('@/database/models/task', () => ({ TaskModel: class {} }));
 vi.mock('@/database/schemas/task', () => ({
+  taskDispatches: {},
   tasks: { domainRevision: 'domainRevision', id: 'id', workspaceId: 'workspaceId' },
 }));
 vi.mock('./integrationTask', () => ({

@@ -212,13 +212,13 @@ describe('BriefModel', () => {
         userId,
       });
       await serverDB.insert(tasks).values({
+        context: { execution: { parked: { at: '2026-05-02T00:00:00.000Z' } } },
         createdByUserId: userId,
         id: 'task-x',
         identifier: 'TASK-X',
         instruction: 'do work',
         name: 'Task X',
         seq: 1,
-        status: 'paused',
       });
 
       const model = new BriefModel(serverDB, userId);

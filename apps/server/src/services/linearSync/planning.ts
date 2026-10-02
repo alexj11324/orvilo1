@@ -7,6 +7,7 @@ import { LinearSyncModel } from '@/database/models/linearSync';
 import { normalizeProjectOrchestrationPolicy } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
 import type { TaskDomainEventItem, TaskPlanningScopeItem } from '@/database/schemas';
 import {
   linearProjectBindings,
@@ -737,8 +738,9 @@ export class LinearPlanningWorker {
         if (!inScope) {
           throw new Error('Planning resume requires a task in the active scope');
         }
-        if (!['backlog', 'failed', 'paused'].includes(task.status)) {
-          throw new Error(`Task ${action.taskId} is not ready to resume from ${task.status}`);
+        const taskStatus = task.status;
+        if (!['backlog', 'failed', 'paused'].includes(taskStatus)) {
+          throw new Error(`Task ${action.taskId} is not ready to resume from ${taskStatus}`);
         }
         if (!(await taskModel.areAllDependenciesCompleted(task.id))) {
           throw new Error(`Task ${action.taskId} still has incomplete dependencies`);
@@ -1011,7 +1013,7 @@ export class LinearPlanningWorker {
       parentTaskId: tasks.parentTaskId,
       priority: tasks.priority,
       projectId: tasks.projectId,
-      status: tasks.status,
+      status: sql<string>`${legacyStatusExpr}`,
       updatedAt: tasks.updatedAt,
     };
   }

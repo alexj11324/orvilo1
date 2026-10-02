@@ -435,11 +435,9 @@ export class TaskRunnerService {
           Boolean(task.runReservationId) &&
           !!task.runReservationExpiresAt &&
           new Date(task.runReservationExpiresAt).getTime() > now;
-        if (
-          task.status === 'running' &&
-          (hasRunningTopic || hasActiveReservation) &&
-          elapsed > task.heartbeatTimeout
-        ) {
+        // A running topic row or an unexpired reservation IS the canonical
+        // live-execution check — the retired column adds nothing here.
+        if ((hasRunningTopic || hasActiveReservation) && elapsed > task.heartbeatTimeout) {
           // A stale heartbeat is evidence that the run needs attention, not
           // proof that its external writer has stopped. Starting a replacement
           // here can put two agents in the same delivery pipeline. Keep the

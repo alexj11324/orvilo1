@@ -3,8 +3,10 @@ import type { Context } from 'hono';
 import { getServerDB } from '@/database/server';
 import { sweepMcpEventSubscriptions } from '@/server/services/mcpEvents/maintenance';
 import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
+import { sweepTaskBacklogIntake } from '@/server/services/taskBacklogIntake';
 import { sweepTaskCancellations } from '@/server/services/taskCancellation';
 import { sweepTaskDispatchRecovery } from '@/server/services/taskDispatchRecovery';
+import { sweepTaskDispatchResume } from '@/server/services/taskDispatchResume';
 import { sweepPlanningTaskDispatchStarts } from '@/server/services/taskDispatchStart';
 import { sweepTaskOwnershipInvariants } from '@/server/services/taskOwnership';
 import { runTaskWatchdog } from '@/server/services/taskWatchdog';
@@ -43,8 +45,16 @@ export async function watchdog(c: Context) {
     // Ownership invariants run between recovery and cancellation: a drifted
     // dispatch fenced here is consumed by the same cancellation sweep pass.
     const ownershipOutcomes = await sweepTaskOwnershipInvariants({ db });
+    // The resume sweep runs between recovery and cancellation: it re-drives
+    // stranded requested/claimed rows and parked waiting rows under their
+    // stored idempotency keys, and rows it cannot resume (unresumable trigger
+    // or the attempt bound) land in the same cancellation pass.
+    const resumeOutcomes = await sweepTaskDispatchResume({ db });
     const cancellationOutcomes = await sweepTaskCancellations({ db });
     const result = await runTaskWatchdog(db);
+    // Intake last: cancellations/resume settle stale intents first, so a
+    // project autoDispatch pull sees the freed capacity this pass created.
+    const intakeOutcomes = await sweepTaskBacklogIntake({ db });
     // Event ingress has its own durable leases, but shares this maintenance
     // invocation and the core admission boundary with ordinary task dispatch.
     // A missing event migration must not stop cancellation/watchdog recovery.
@@ -62,9 +72,9 @@ export async function watchdog(c: Context) {
       eventInbox = { status: 'unavailable' };
       console.error('[task/watchdog] MCP event inbox sweep unavailable');
     }
-    const abandonedDispatches = cancellationOutcomes.filter(
-      (outcome) => outcome.outcome === 'abandoned',
-    ).length;
+    const abandonedDispatches =
+      cancellationOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length +
+      dispatchRecoveryOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length;
     const driftFencedDispatches = ownershipOutcomes.filter(
       (outcome) => outcome.outcome === 'drift_fenced',
     ).length;
@@ -77,6 +87,17 @@ export async function watchdog(c: Context) {
     const cancellationRetries = cancellationOutcomes.filter(
       (outcome) => outcome.outcome === 'retry',
     ).length;
+    const resumedDispatches = resumeOutcomes.filter(
+      (outcome) => outcome.outcome === 'resumed',
+    ).length;
+    const resumeRetries = resumeOutcomes.filter((outcome) => outcome.outcome === 'retry').length;
+    const stoppedDispatches = resumeOutcomes.filter(
+      (outcome) => outcome.outcome === 'stopped',
+    ).length;
+    const intakeStarted = intakeOutcomes.filter((outcome) => outcome.outcome === 'started').length;
+    const intakeWaiting = intakeOutcomes.filter((outcome) => outcome.outcome === 'waiting').length;
+    const intakeBlocked = intakeOutcomes.filter((outcome) => outcome.outcome === 'blocked').length;
+    const intakeErrors = intakeOutcomes.filter((outcome) => outcome.outcome === 'error').length;
 
     return c.json({
       abandonedDispatches,
@@ -85,9 +106,16 @@ export async function watchdog(c: Context) {
       activeDispatches,
       canceledDispatches,
       driftFencedDispatches,
+      intakeBlocked,
+      intakeErrors,
+      intakeStarted,
+      intakeWaiting,
       orphanedTasksParked,
       cancellationRetries,
       dispatchRecoveryRetries,
+      resumeRetries,
+      resumedDispatches,
+      stoppedDispatches,
       ...result,
       plannedStartRetries,
       plannedStarts,

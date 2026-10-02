@@ -12,7 +12,8 @@ const migrations = readMigrationFiles({
 // Forward additions after the shared 0196 base: the consolidated
 // 0197_cloud_control_plane migration (provider-binding and experience-memory
 // additions alongside the event/handoff tables) plus 0198_sudden_magma, which
-// restores the ai_providers/ai_models tables retired by the P30 drop.
+// restores the ai_providers/ai_models tables retired by the P30 drop, plus
+// 0199_dispatch_recovery_bounds (task_dispatches.recovery_attempts).
 const additions = migrations.slice(197);
 const db = new PGlite({ extensions: { vector } });
 const applyAdditions = async () => {
@@ -37,7 +38,7 @@ describe('provider and experience forward migrations', () => {
   });
 
   it('rolls back a failed upgrade without deleting existing memories', async () => {
-    expect(additions).toHaveLength(2);
+    expect(additions).toHaveLength(3);
     await db.exec('BEGIN');
     await applyAdditions();
     await expect(

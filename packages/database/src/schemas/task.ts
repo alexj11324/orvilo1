@@ -327,6 +327,12 @@ export const taskDispatches = pgTable(
     cancelAttempts: integer('cancel_attempts').notNull().default(0),
     cancelRequestedAt: timestamptz('cancel_requested_at'),
     lastCancelError: text('last_cancel_error'),
+    // Bounded sweep bookkeeping (resume + recovery): incremented each time a
+    // sweep-claimed row is re-driven or its `outcome_unknown` reconcile is
+    // rescheduled; reset to 0 when a waiting row resumes or a reconcile finds
+    // a stable live identity. Sweeps stop the dispatch once attempts pass the
+    // ceiling so a permanently stuck intent cannot pin the execution slot.
+    recoveryAttempts: integer('recovery_attempts').notNull().default(0),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
     ...timestamps,
   },

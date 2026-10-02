@@ -229,3 +229,55 @@ Semantics to expect:
   (e.g. ollama, deepseek, or any provider whose `*_API_KEY` env var is set in
   the dev server env) CANNOT be disabled from the UI — pick a provider that
   is not force-enabled (e.g. xAI) for toggle tests.
+
+## Real-Postgres live-path harness for backend PRs (no dev server, no Hatchet)
+
+When a PR's surface is backend-only (tRPC procedures, services, DB models), the
+fastest end-to-end check is a scratch vitest spec driven against a real local
+Postgres — full production code path, real SQL, durable row evidence.
+
+1. **DB**: brew Postgres on :5432. Create a scratch DB, run
+   `DATABASE_URL=postgresql://postgres:postgres@localhost:5432/<db> bun run db:migrate`
+   (pg_search gap: apply the sandwiched non-pg_search .sql files by hand and give
+   them their own marker rows — the migrator uses a single `max(created_at)`
+   watermark, so marking a later migration first permanently skips earlier ones).
+2. **Spec placement**: must live under `apps/server/**` to match the root
+   `vitest.config.mts` `|server|` project (its include is `**/apps/server/**/*.test.ts`).
+   Run:
+   `TEST_SERVER_DB=1 DATABASE_TEST_URL=postgresql://... DATABASE_URL=postgresql://... bunx vitest run --project server <file>`
+   `TEST_SERVER_DB=1` flips `packages/database/src/core/getTestDB.ts` to
+   node-postgres (assertTestDatabaseUrl accepts `localhost`) and runs
+   `nodeMigrate` — a no-op on an already-migrated DB. Seed with drizzle inserts
+   using `@/database/schemas` table objects.
+3. **tRPC procedures**: `createCallerFactory(<router>)(await createContextInner({userId}))`
+   from `@/libs/trpc/lambda` + `@/libs/trpc/lambda/context`. No `workspaceId` →
+   personal mode: `cloudWorkspaceAuth` passes membership:null and
+   PERSONAL_DEFAULT_PERMISSIONS grant `*:owner` codes (e.g. `agent:update:owner`).
+   **Pitfall**: `getDBInstance()` returns `{}` when `NODE_ENV==='test'`, so the
+   real `serverDatabase` middleware gets a dead handle
+   (`this.db.select is not a function`). Fix by mocking only the adaptor, not the
+   chain:
+   ```ts
+   vi.mock('@/database/core/db-adaptor', async () => {
+     const { getTestDB } = await import('@/database/core/getTestDB');
+     const db = await getTestDB();
+     return { getServerDB: () => Promise.resolve(db), serverDB: {} };
+   });
+   ```
+   Zod input validation, RBAC, the resolver and the model then all run for real;
+   `BAD_REQUEST` on invalid enum input is exercised at the real input layer.
+4. **Services**: orchestration sweeps like `sweepTaskBacklogIntake({db})` are
+   plain exported functions — call them directly; `findBacklogIntakeCandidates`,
+   `resolveBacklogIntakeAssignment`, `TaskDispatchModel.request/settle` are all
+   real over PG. To escalate: `model.settle({phase:'failed', fence, generation,
+expected:[<current phase>]})` is the same transition the runtime callback uses.
+5. **Boundary you'll see locally**: with no agent runtime admission
+   (`caid_dispatch` flag off), prepared dispatches park `phase='waiting'`,
+   `waiting_reason='caid_dispatch_disabled'`, sweep outcome `'waiting'` —
+   never `'started'`. The durable artifacts (assignee rebind via
+   `updateWithLog`, `task_dispatches` rows with `requested_by='orchestrator:…'`,
+   tier snapshots, generation bumps) still persist and are the evidence;
+   actual agent execution needs a live runtime (Hatchet + CAID) elsewhere.
+6. vitest suppresses `console.log` for passing tests — write evidence rows to a
+   file (`fs.writeFileSync('/tmp/evidence.json', ...)`) or snapshot them via
+   `psql -P pager=off` after the run instead of relying on stdout.

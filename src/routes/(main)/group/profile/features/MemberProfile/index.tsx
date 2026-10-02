@@ -1,18 +1,16 @@
 'use client';
 
 import isEqual from 'fast-deep-equal';
-import { InfoIcon, PlayIcon, PlusIcon } from 'lucide-react';
+import { InfoIcon, PlusIcon } from 'lucide-react';
 import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
-import urlJoin from 'url-join';
 
 import { Alert, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { EditorCanvas } from '@/features/EditorCanvas';
 import { usePermission } from '@/hooks/usePermission';
-import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 import { useAgentGroupStore } from '@/store/agentGroup';
@@ -39,7 +37,6 @@ const MemberProfile = memo(() => {
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
 
   const { gid } = useParams<{ gid: string }>();
-  const groupId = useAgentGroupStore(agentGroupSelectors.activeGroupId);
   const currentGroup = useAgentGroupStore(
     (s) => agentGroupSelectors.getGroupById(gid ?? '')(s),
     isEqual,
@@ -48,7 +45,6 @@ const MemberProfile = memo(() => {
     (s) => agentGroupSelectors.getGroupAgents(gid ?? '')(s),
     isEqual,
   );
-  const router = useQueryRoute();
 
   // Check if the current agent is the supervisor
   const isSupervisor = currentGroup?.supervisorAgentId === agentId;
@@ -135,18 +131,6 @@ const MemberProfile = memo(() => {
         {/* Header: Avatar + Name */}
         <AgentHeader disabled={!canEdit} readOnly={isSupervisor} />
         <AgentTool />
-        <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
-          <Button
-            disabled={!canEdit}
-            onClick={() => {
-              if (!groupId) return;
-              router.push(urlJoin('/group', groupId));
-            }}
-          >
-            <PlayIcon data-icon="inline-start" />
-            {t('startConversation')}
-          </Button>
-        </div>
       </div>
       <Separator />
       {/* Main Content: Prompt Editor — hidden until the member actually has

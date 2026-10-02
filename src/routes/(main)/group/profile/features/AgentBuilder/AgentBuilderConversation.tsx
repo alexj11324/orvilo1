@@ -1,8 +1,8 @@
 import { memo } from 'react';
 
 import AgentBuilderWelcome from '@/features/AgentBuilder/AgentBuilderWelcome';
+import { builderLeftActions, builderRightActions } from '@/features/AgentBuilder/composerActions';
 import { useResolveFeedbackOnSend } from '@/features/AgentBuilder/SuggestionChips/useResolveFeedbackOnSend';
-import { type ActionKeys } from '@/features/ChatInput';
 import { ChatInput, ChatList } from '@/features/Conversation';
 import { usePermission } from '@/hooks/usePermission';
 
@@ -11,8 +11,6 @@ import TopicSelector from './TopicSelector';
 interface AgentBuilderConversationProps {
   agentId: string;
 }
-const actions: ActionKeys[] = [];
-const rightActions: ActionKeys[] = ['model'];
 
 /**
  * Agent Builder Conversation Component
@@ -31,7 +29,11 @@ const AgentBuilderConversation = memo<AgentBuilderConversationProps>(({ agentId 
       <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
         <ChatList welcome={<AgentBuilderWelcome disabled={!canCreate} mode="groupBuilder" />} />
       </div>
-      <ChatInput leftActions={actions} rightActions={rightActions} showControlBar={false} />
+      <ChatInput
+        leftActions={builderLeftActions}
+        rightActions={builderRightActions}
+        showControlBar={false}
+      />
     </div>
   );
 });

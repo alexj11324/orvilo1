@@ -23,7 +23,9 @@ const Toolbar = memo(() => {
   const [activeTopicId, switchTopic, topics] = useChatStore((s) => [
     s.activeTopicId,
     s.switchTopic,
-    topicSelectors.currentTopics(s),
+    // The panel names its own agent — `currentTopics` resolves the workspace
+    // conversation feed now, which is not this panel's list.
+    topicSelectors.getTopicsByAgentId(agentId)(s),
   ]);
   const currentTopic = useChatStore(topicSelectors.currentActiveTopic);
 

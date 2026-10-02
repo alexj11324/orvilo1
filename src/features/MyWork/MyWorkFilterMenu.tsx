@@ -471,7 +471,7 @@ const DirectoryFieldPane = memo<{
   return (
     <div className="flex flex-col">
       {spec.valueKind === 'text' ? (
-        <input
+        <Input
           className="mx-2 my-1 rounded border border-border bg-transparent px-2 py-1 text-sm"
           defaultValue={typeof textValue === 'string' ? textValue : ''}
           placeholder={t('savedViews.filters.textPlaceholder')}

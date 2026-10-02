@@ -108,7 +108,7 @@ import {
 import { isLocalOnlyMessage } from '@/store/chat/utils/localMessages';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { snapshotAgentModel, snapshotAgentReasoning } from '@/store/chat/utils/snapshotAgentModel';
-import { topicMapKey } from '@/store/chat/utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
 import { deviceSelectors, getDeviceStoreState } from '@/store/device';
 import { getElectronStoreState } from '@/store/electron';
 import { getFileStoreState } from '@/store/file/store';
@@ -282,7 +282,12 @@ export class ConversationLifecycleActionImpl {
     | { excludeStatuses?: string[]; excludeTriggers?: string[]; includeTriggers?: string[] }
     | undefined => {
     if (!agentId && !groupId) return undefined;
-    const data = this.#get().topicDataMap[topicMapKey({ agentId, groupId })];
+    // Outside a group session the sidebar reads the workspace conversation
+    // feed — its bucket carries the filter (excludeTriggers etc.).
+    const data =
+      this.#get().topicDataMap[
+        groupId ? topicMapKey({ agentId, groupId }) : WORKSPACE_TOPIC_MAP_KEY
+      ];
     if (!data) return undefined;
     const { excludeStatuses, excludeTriggers } = data;
     if (!excludeStatuses?.length && !excludeTriggers?.length) return undefined;

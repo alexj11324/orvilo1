@@ -1,7 +1,5 @@
 'use client';
 
-import { Flexbox, TooltipGroup } from '@lobehub/ui';
-import { Button, Segmented, Select, Text } from '@lobehub/ui/base-ui';
 import { isDesktop } from '@orvilo/const';
 import { type BinaryStatus, type ClaudeAuthStatus } from '@orvilo/electron-client-ipc';
 import { isHeterogeneousProviderBindingSupported } from '@orvilo/heterogeneous-agents';
@@ -23,7 +21,11 @@ import { useTranslation } from 'react-i18next';
 import ActionIcon from '@/components/ActionIcon';
 import { ProviderItemRender } from '@/components/ModelSelect';
 import { Badge } from '@/components/reui/badge';
+import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/components/SelectOptions';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
 import {
@@ -31,11 +33,7 @@ import {
   resolveOrviloEngineCliType,
 } from '@/features/HeterogeneousAgent/engine';
 import { useProviderBindingCompatibleProviders } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
-import {
-  buildServerDefaultModelOptions,
-  MODEL_PICKER_STYLE,
-  modelPickerStyles,
-} from '@/features/HeterogeneousAgent/modelPicker';
+import { buildServerDefaultModelOptions } from '@/features/HeterogeneousAgent/modelPicker';
 import ModelSelect from '@/features/ModelSelect';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -109,6 +107,16 @@ const styles = createStaticStyles(({ css }) => ({
 
     & + & {
       border-block-start: 1px solid ${cssVar.colorBorderSecondary};
+    }
+  `,
+  apiModeSelect: css`
+    width: fit-content;
+    min-width: 200px;
+
+    > span {
+      display: flex;
+      flex: 1;
+      min-width: 0;
     }
   `,
   detailLabel: css`
@@ -275,7 +283,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     onCommandChange,
     onServerDefaultRetry,
   }) => {
-    const { t } = useTranslation('setting');
+    const { t } = useTranslation(['setting', 'common']);
     const navigate = useWorkspaceAwareNavigate();
     const { allowed: canEdit } = usePermission('edit_own_content');
     // The builtin Orvilo harness has no client-config entry of its own — its
@@ -323,11 +331,13 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
               provider="orvilo"
             />
           ),
+          title: t('heterogeneousStatus.apiMode.defaultProvider'),
           value: SERVER_DEFAULT_PROVIDER_VALUE,
         },
         ...compatibleProviders.map(({ id, logo, name, source }) => ({
           disabled: !apiModeAvailable,
           label: <ProviderItemRender logo={logo} name={name || id} provider={id} source={source} />,
+          title: name || id,
           value: `${USER_PROVIDER_VALUE_PREFIX}${id}`,
         })),
       ],
@@ -619,16 +629,14 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                     <span style={{ display: 'inline-flex' }}>
                       <div className={cn('flex items-center gap-1', styles.pathWrap)}>
                         <div className={cn('truncate', styles.path)}>{status.path}</div>
-                        <button
-                          className="inline-flex items-center"
-                          style={{ opacity: 0.6 }}
-                          type="button"
+                        <ActionIcon
+                          aria-label={t('copy', { ns: 'common' })}
+                          icon={Copy}
+                          size="small"
                           onClick={() => {
                             if (status.path) void copyToClipboard(status.path);
                           }}
-                        >
-                          <Copy size={14} />
-                        </button>
+                        />
                       </div>
                     </span>
                   }
@@ -715,50 +723,47 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
 
       return (
         <div className={styles.detailRow}>
-          <Text className={styles.detailLabel}>{t('heterogeneousStatus.auth.label')}</Text>
-          <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
-            <Segmented
+          <div className={styles.detailLabel}>{t('heterogeneousStatus.auth.label')}</div>
+          <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+            <ToggleGroup
               disabled={!canEdit}
-              size="small"
-              value={authMode}
-              options={[
-                {
-                  label: t('heterogeneousStatus.auth.subscription'),
-                  value: 'subscription',
-                },
-                {
-                  disabled: !runnableApiAvailable && authMode !== 'api',
-                  label: t('heterogeneousStatus.auth.api'),
-                  value: 'api',
-                },
-              ]}
-              onChange={(value) => {
-                void handleAuthModeChange(value as HeterogeneousAuthMode);
+              size="sm"
+              value={[authMode]}
+              onValueChange={(value) => {
+                const next = value[0] as HeterogeneousAuthMode | undefined;
+                if (next) void handleAuthModeChange(next);
               }}
-            />
+            >
+              <ToggleGroupItem value="subscription">
+                {t('heterogeneousStatus.auth.subscription')}
+              </ToggleGroupItem>
+              <ToggleGroupItem disabled={!runnableApiAvailable && authMode !== 'api'} value="api">
+                {t('heterogeneousStatus.auth.api')}
+              </ToggleGroupItem>
+            </ToggleGroup>
             {!runnableApiAvailable && serverDefaultLoading ? (
-              <Text className={styles.unavailableText}>
+              <div className={styles.unavailableText}>
                 {t('heterogeneousStatus.apiMode.serverDefault.checking')}
-              </Text>
+              </div>
             ) : !runnableApiAvailable && serverDefaultUnavailableReason ? (
               <>
-                <Text className={styles.unavailableText}>{serverDefaultUnavailableReason}</Text>
+                <div className={styles.unavailableText}>{serverDefaultUnavailableReason}</div>
                 {onServerDefaultRetry && (
-                  <Button size="small" type="text" onClick={onServerDefaultRetry}>
+                  <Button size="sm" variant="ghost" onClick={onServerDefaultRetry}>
                     {t('heterogeneousStatus.apiMode.serverDefault.retry')}
                   </Button>
                 )}
               </>
             ) : showLocalProviderUnavailable && !apiModeAvailable ? (
-              <Text className={styles.unavailableText}>
+              <div className={styles.unavailableText}>
                 {t(
                   apiModeWorkspaceBlocked
                     ? 'heterogeneousStatus.apiMode.workspaceUnsupported'
                     : 'heterogeneousStatus.apiMode.localOnly',
                 )}
-              </Text>
+              </div>
             ) : null}
-          </Flexbox>
+          </div>
         </div>
       );
     };
@@ -802,60 +807,78 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
       return (
         <>
           <div className={styles.detailRow}>
-            <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.provider')}</Text>
-            <TooltipGroup>
+            <div className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.provider')}</div>
+            <TooltipProvider>
               <Select
-                popupMatchSelectWidth
-                className={modelPickerStyles.picker}
                 disabled={!canEdit}
-                options={providerOptions}
-                placeholder={t('heterogeneousStatus.apiMode.providerPlaceholder')}
-                style={MODEL_PICKER_STYLE}
+                items={selectItems(providerOptions)}
                 value={selectedProviderValue}
-                onChange={(value) => {
+                onValueChange={(value) => {
                   if (typeof value === 'string') void handleApiProviderChange(value);
                 }}
-              />
-            </TooltipGroup>
+              >
+                <SelectTrigger className={styles.apiModeSelect}>
+                  <SelectValue placeholder={t('heterogeneousStatus.apiMode.providerPlaceholder')}>
+                    {(value: string) =>
+                      flattenSelectOptions(providerOptions).find((option) => option.value === value)
+                        ?.label ?? value
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectOptionItems options={providerOptions} />
+                </SelectContent>
+              </Select>
+            </TooltipProvider>
           </div>
           {serverDefaultSelected ? (
             <div className={styles.detailRow}>
-              <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</Text>
+              <div className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</div>
               {serverDefaultLoading ? (
-                <Text className={styles.unavailableText}>
+                <div className={styles.unavailableText}>
                   {t('heterogeneousStatus.apiMode.serverDefault.checking')}
-                </Text>
+                </div>
               ) : selectedServerDefaultModel ? (
-                <TooltipGroup>
+                <TooltipProvider>
                   <Select
-                    popupMatchSelectWidth
-                    className={modelPickerStyles.picker}
                     disabled={!canEdit}
-                    options={serverDefaultModelOptions}
-                    style={MODEL_PICKER_STYLE}
+                    items={selectItems(serverDefaultModelOptions)}
                     value={selectedServerDefaultModel.model}
-                    onChange={(value) => {
+                    onValueChange={(value) => {
                       if (typeof value === 'string') void handleServerDefaultModelChange(value);
                     }}
-                  />
-                </TooltipGroup>
+                  >
+                    <SelectTrigger className={styles.apiModeSelect}>
+                      <SelectValue>
+                        {(value: string) =>
+                          flattenSelectOptions(serverDefaultModelOptions).find(
+                            (option) => option.value === value,
+                          )?.label ?? value
+                        }
+                      </SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectOptionItems options={serverDefaultModelOptions} />
+                    </SelectContent>
+                  </Select>
+                </TooltipProvider>
               ) : (
-                <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
-                  <Text className={styles.unavailableText}>
+                <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                  <div className={styles.unavailableText}>
                     {serverDefaultUnavailableReason ||
                       t('heterogeneousStatus.apiMode.serverDefault.noModels')}
-                  </Text>
+                  </div>
                   {onServerDefaultRetry && (
-                    <Button size="small" type="text" onClick={onServerDefaultRetry}>
+                    <Button size="sm" variant="ghost" onClick={onServerDefaultRetry}>
                       {t('heterogeneousStatus.apiMode.serverDefault.retry')}
                     </Button>
                   )}
-                </Flexbox>
+                </div>
               )}
             </div>
           ) : providerApiConfig ? (
             <div className={styles.detailRow}>
-              <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</Text>
+              <div className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</div>
               <ModelSelect
                 initialWidth
                 disabled={!canEdit || !apiModeAvailable}
@@ -873,31 +896,32 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
             </div>
           ) : (
             <div className={styles.detailRow}>
-              <Text className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</Text>
-              <Flexbox horizontal align="center" gap={8} style={{ flexWrap: 'wrap' }}>
-                <Text className={styles.unavailableText}>
+              <div className={styles.detailLabel}>{t('heterogeneousStatus.apiMode.model')}</div>
+              <div className="flex items-center gap-2" style={{ flexWrap: 'wrap' }}>
+                <div className={styles.unavailableText}>
                   {t(
                     detectionType === 'codex'
                       ? 'heterogeneousStatus.apiMode.noResponsesProviders'
                       : 'heterogeneousStatus.apiMode.noProviders',
                   )}
-                </Text>
-                <Text
+                </div>
+                <Button
                   className={styles.metaText}
-                  style={{ cursor: 'pointer', textDecoration: 'underline' }}
+                  size="sm"
+                  variant="link"
                   onClick={() => navigate('/settings/provider')}
                 >
                   {t('heterogeneousStatus.apiMode.configureProvider')}
-                </Text>
-              </Flexbox>
+                </Button>
+              </div>
             </div>
           )}
           {detectionType === 'claude-code' && providerApiConfig && (
             <div className={styles.detailRow} style={{ alignItems: 'flex-start' }}>
-              <Text className={styles.detailLabel} style={{ paddingBlockStart: 14 }}>
+              <div className={styles.detailLabel} style={{ paddingBlockStart: 14 }}>
                 {t('heterogeneousStatus.apiMode.smallFastModel')}
-              </Text>
-              <Flexbox gap={4} style={{ flex: 1, minWidth: 0 }}>
+              </div>
+              <div className="flex flex-col gap-1" style={{ flex: 1, minWidth: 0 }}>
                 <ModelSelect
                   allowClear
                   initialWidth
@@ -920,10 +944,10 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
                     void handleSmallFastModelChange(null);
                   }}
                 />
-                <Text className={styles.metaText}>
+                <div className={styles.metaText}>
                   {t('heterogeneousStatus.apiMode.smallFastModelDesc')}
-                </Text>
-              </Flexbox>
+                </div>
+              </div>
             </div>
           )}
         </>

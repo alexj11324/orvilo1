@@ -1516,7 +1516,6 @@ export default {
   'skillStore.tabs.orvilo': 'Orvilo',
   'skillView.connectors': 'Connectors',
   'skillView.skills': 'Skills',
-  'startConversation': 'Start Conversation',
   'storage.actions.transfer.button': 'Move to…',
   'storage.actions.transfer.desc':
     'Move agents and their data to another Workspace or your personal account. The originals leave the current space. Orvilo AI cannot be moved; copy it instead.',

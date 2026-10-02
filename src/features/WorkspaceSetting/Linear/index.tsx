@@ -2034,7 +2034,9 @@ const LinearWorkspaceSettings = memo(() => {
                           color: mapping ? undefined : 'var(--muted-foreground)',
                         }}
                       >
-                        {mapping?.localStatus ?? t('workspaceSetting.linear.unmapped')}
+                        {mapping?.workflowCategory ??
+                          mapping?.localStatus ??
+                          t('workspaceSetting.linear.unmapped')}
                       </span>
                     </div>
                   );

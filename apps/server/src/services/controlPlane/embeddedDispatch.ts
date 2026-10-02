@@ -60,7 +60,11 @@ import {
   resolveOrviloProviderBinding,
 } from '@/server/services/providerBinding/execution';
 
-import type { CanonicalRunBinding } from './canonicalRun';
+import type {
+  CanonicalRunAuthorityPort,
+  CanonicalRunBinding,
+  CanonicalRunRegistrationPort,
+} from './canonicalRun';
 import type { HostSupervisorPort } from './coreRuntimeHost';
 import { CanonicalCoreRuntimeHost } from './coreRuntimeHost';
 
@@ -283,6 +287,40 @@ export const openEmbeddedDispatchHost = async (
     workspaceId,
   };
 
+  return composeEmbeddedRunHost(deps, {
+    binding,
+    environment: input.environment,
+    model: input.model,
+  });
+};
+
+export interface ComposeEmbeddedHostInput {
+  /** Canonical binding the run is admitted under (task or chat shaped). */
+  binding: CanonicalRunBinding;
+  environment?: EmbeddedDispatchEnvironment;
+  /** Task's requested model route — narrows which binding may issue. */
+  model?: string;
+  /** Chat runs substitute their own canonical contracts (canonicalChatRun.ts). */
+  overrides?: {
+    authority?: CanonicalRunAuthorityPort;
+    registration?: CanonicalRunRegistrationPort;
+    runAuthority?: CanonicalRunAuthorityPort;
+  };
+}
+
+/**
+ * Shared embedded-host composition for both admission shapes: read + verify
+ * the pinned runner artifact, resolve + issue the provider binding inside the
+ * run's tenant scope, then open `CanonicalCoreRuntimeHost` with the embedded
+ * bridge. Task dispatches and chat runs reach this with their own binding +
+ * canonical contracts; everything from here down is identical.
+ */
+export const composeEmbeddedRunHost = async (
+  deps: { database: OrviloDatabase; userId: string },
+  input: ComposeEmbeddedHostInput,
+): Promise<ControlResult<EmbeddedDispatchHost>> => {
+  const { database: db, userId } = deps;
+  const { binding } = input;
   const environment = input.environment ?? {};
   const artifact = environment.artifact ?? defaultRunnerArtifact();
   const manifestPath = path.join(path.dirname(artifact), 'runner.manifest.json');
@@ -334,7 +372,7 @@ export const openEmbeddedDispatchHost = async (
       bindingId: resolved.id,
       bindingRevision: resolved.revision,
       ownerId: userId,
-      tenantId: workspaceId,
+      tenantId: binding.workspaceId,
     };
     const issued = await issueBindingExecution(db, claim);
     if (!issued)
@@ -350,6 +388,7 @@ export const openEmbeddedDispatchHost = async (
     initModelId = capability.modelRoute;
 
     host = await CanonicalCoreRuntimeHost.open({
+      authority: input.overrides?.authority,
       binding,
       controlDirectory: directories.control,
       database: db,
@@ -363,11 +402,13 @@ export const openEmbeddedDispatchHost = async (
         artifact,
         backend,
         resolveBinding: async () => resolved,
+        runAuthority: input.overrides?.runAuthority,
         target: 'sandbox',
         verifyArtifact: embeddedArtifactVerifier(manifest),
       },
       fileCommitments: [],
       outputDirectory: directories.output,
+      registration: input.overrides?.registration,
       supervisor: environment.supervisor,
     });
   } catch (error) {

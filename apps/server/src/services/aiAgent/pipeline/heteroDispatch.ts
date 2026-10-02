@@ -48,6 +48,10 @@ import { CompletionLifecycle } from '@/server/services/agentExecution/Completion
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
 import {
+  openEmbeddedChatDispatchHost,
+  resolveEmbeddedChatDispatchRoute,
+} from '@/server/services/controlPlane/embeddedChatDispatch';
+import {
   driveEmbeddedCanonicalRun,
   openEmbeddedDispatchHost,
   resolveEmbeddedDispatchRoute,
@@ -1515,16 +1519,24 @@ export const dispatchHeteroAgent = async (
         heteroType,
         operationTaskId,
       });
-      if (heteroType === 'orvilo' && !embeddedRoute) {
-        // Honest boundary (see docs/development/prime-cutover.md): a chat run
-        // reaching the embedded host carries no canonical task-dispatch
-        // context — the embedded contract is task-shaped
-        // (CanonicalRunAuthority/TaskExecutionControlModel/claims all
-        // row-lock task rows), so chat-scoped admission is a control-plane
-        // expansion tracked separately. Fail loudly rather than silently
-        // spawning the retired engine-CLI path.
+      // Chat-scoped sibling admission (prime-cutover.md): a `type:'orvilo'`
+      // chat run (topic-bound, no task row) is admitted through the
+      // agent_operations chat-parallel contract.
+      const embeddedChatRoute =
+        !embeddedRoute && heteroType === 'orvilo'
+          ? resolveEmbeddedChatDispatchRoute({
+              agentId: resolvedAgentId,
+              heteroType,
+              operationId,
+              operationTaskId,
+              topicId,
+            })
+          : null;
+      if (heteroType === 'orvilo' && !embeddedRoute && !embeddedChatRoute) {
+        // Malformed or context-less orvilo plans only — a valid chat plan
+        // carries agentId + operationId + topicId and never lands here.
         const message =
-          'The builtin Orvilo agent runs the Prime harness on the embedded host; chat admission to that host is being wired in a follow-up and cannot execute in this build.';
+          'The builtin Orvilo agent runs the Prime harness on the embedded host; this run is missing its chat execution context (agent/operation/topic) and cannot be admitted.';
         log('execAgent: orvilo run lacks embedded dispatch context op=%s', operationId);
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,
@@ -1549,16 +1561,21 @@ export const dispatchHeteroAgent = async (
           userMessageId: userMessageId ?? parentMessageId ?? '',
         };
       }
-      if (embeddedRoute) {
-        const prepared = await openEmbeddedDispatchHost(
-          { database: deps.db, userId: deps.userId },
-          {
-            ...embeddedRoute,
-            model: ctx.model,
-            operationId,
-            topicId,
-          },
-        );
+      if (embeddedRoute || embeddedChatRoute) {
+        const prepared = embeddedRoute
+          ? await openEmbeddedDispatchHost(
+              { database: deps.db, userId: deps.userId },
+              {
+                ...embeddedRoute,
+                model: ctx.model,
+                operationId,
+                topicId,
+              },
+            )
+          : await openEmbeddedChatDispatchHost(
+              { database: deps.db, userId: deps.userId },
+              { ...embeddedChatRoute!, model: ctx.model },
+            );
         if (!prepared.ok) {
           // Pre-launch denial (unavailable binding, bad manifest, stale
           // contract): finalize through the same terminal funnel as every

@@ -2,6 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } fr
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import {
+  openEmbeddedChatDispatchHost,
+  resolveEmbeddedChatDispatchRoute,
+} from '@/server/services/controlPlane/embeddedChatDispatch';
 
 import { AiAgentService } from '../index';
 
@@ -259,6 +263,29 @@ vi.mock('@/server/services/deviceGateway/dispatchAuthorization', () => ({
 vi.mock('@/server/services/heterogeneousAgent/remoteDeviceHeteroContext', () => ({
   buildRemoteDeviceHeteroContext: mockBuildRemoteDeviceHeteroContext,
 }));
+
+// The chat-scoped embedded admission seam: the real route predicate runs
+// (pure — a valid chat plan always produces a context); the host open is
+// stubbed because `mockDb` is not a real database. A prepared-failure result
+// exercises the shared embedded-finalize funnel.
+vi.mock('@/server/services/controlPlane/embeddedChatDispatch', async () => {
+  const actual = await vi.importActual<{
+    openEmbeddedChatDispatchHost: typeof openEmbeddedChatDispatchHost;
+    resolveEmbeddedChatDispatchRoute: typeof resolveEmbeddedChatDispatchRoute;
+  }>('@/server/services/controlPlane/embeddedChatDispatch');
+  return {
+    ...actual,
+    openEmbeddedChatDispatchHost: vi.fn(async () => ({
+      error: {
+        code: 'stale_fence' as const,
+        message: 'Chat operation contract is not current',
+        retryable: false,
+      },
+      ok: false as const,
+    })),
+    resolveEmbeddedChatDispatchRoute: vi.fn(actual.resolveEmbeddedChatDispatchRoute),
+  };
+});
 
 describe('AiAgentService.execAgent - hetero early-exit file attachments', () => {
   let service: AiAgentService;
@@ -540,9 +567,49 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       prompt: 'Continue with the Orvilo topic model',
     } as any);
 
-    // Chat admission to the embedded Prime harness is not yet wired — the
-    // run terminates at the honest boundary rather than spawning the
-    // retired engine→CLI path.
+    // Chat admission IS wired: a valid chat plan routes to the embedded chat
+    // host — never the retired engine→CLI path. The stubbed compose failure
+    // exercises the same embedded-finalize funnel a real denial uses.
+    expect(openEmbeddedChatDispatchHost).toHaveBeenCalledWith(
+      expect.objectContaining({ userId }),
+      expect.objectContaining({
+        agentId: 'agent-1',
+        model: 'topic-model',
+        topicId: 'topic-existing',
+      }),
+    );
+    expect(result).toEqual(
+      expect.objectContaining({
+        error: 'Chat operation contract is not current',
+        message: 'Embedded dispatch is unavailable',
+        status: 'error',
+        success: false,
+      }),
+    );
+    expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+    expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+  });
+
+  it('still fails with EMBEDDED_CHAT_NOT_ADMITTED on a context-less orvilo plan', async () => {
+    heteroAgentConfig.agencyConfig = {
+      executionTarget: 'sandbox',
+      heterogeneousProvider: { model: 'agent-model', type: 'orvilo' },
+    } as any;
+    topicMock.findById.mockResolvedValue({
+      id: 'topic-existing',
+      metadata: undefined,
+      model: 'topic-model',
+      provider: 'orvilo',
+    });
+    // Only malformed/missing-context plans land here — the route declines.
+    vi.mocked(resolveEmbeddedChatDispatchRoute).mockReturnValueOnce(null);
+
+    const result = await service.execAgent({
+      agentId: 'agent-1',
+      appContext: { topicId: 'topic-existing' },
+      prompt: 'Continue with the Orvilo topic model',
+    } as any);
+
     expect(result).toEqual(
       expect.objectContaining({
         error: 'EMBEDDED_CHAT_NOT_ADMITTED',
@@ -550,6 +617,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
         success: false,
       }),
     );
+    expect(openEmbeddedChatDispatchHost).not.toHaveBeenCalled();
     expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
     expect(mockDispatchAgentRun).not.toHaveBeenCalled();
   });

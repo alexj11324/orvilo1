@@ -19,8 +19,10 @@ mid-cutover. The fence is marked in code, pinned by a flip test, and the
 resolved deviceId is still recorded on the run's operation row (see the
 dispatch section).
 
-This document records the data-model, UI, and dispatch changes plus the
-known boundary that remains open.
+This document records the data-model, UI, and dispatch changes: the
+data-model and settings-UI engine removal first, then the chat-path cutover
+that admitted `type:'orvilo'` chat runs onto the same embedded Prime host
+task dispatches already use.
 
 ## What was deleted
 
@@ -108,31 +110,57 @@ adapter lands. For external types, an unbound plan still fails at the
 A fenced orvilo plan — sandbox or device-resolved alike — reaches the
 embedded fork:
 
-- `resolveEmbeddedDispatchRoute` returns a canonical context only for
-  real task dispatches (`operationTaskId` + `taskRunner`-written
-  `appContext` dispatch fields). Task runs open
-  `openEmbeddedDispatchHost` → `driveEmbeddedCanonicalRun` →
-  `PrimeEmbeddedRuntime`, same as before.
-- **Chat runs have no canonical task context**, so they hit the honest
-  boundary `EMBEDDED_CHAT_NOT_ADMITTED` and fail loudly through
-  `finalizeHeteroDispatchError` — they never fall back to the retired
-  engine→CLI spawn path. See "Open boundary" below. (The embedded fork
-  is now the only orvilo route: sandbox-plan runs land here directly and
-  device-resolved plans are fenced into it.)
+- `resolveEmbeddedDispatchRoute` returns a canonical context for real task
+  dispatches (`operationTaskId` + `taskRunner`-written `appContext`
+  dispatch fields) → `openEmbeddedDispatchHost`.
+- `resolveEmbeddedChatDispatchRoute` returns the chat-scoped context
+  (`agentId` + `operationId` + `topicId`, `operationTaskId` absent) →
+  `openEmbeddedChatDispatchHost`. `EMBEDDED_CHAT_NOT_ADMITTED` remains only
+  for a malformed or context-less orvilo plan.
+- Both paths converge on `composeEmbeddedRunHost` (shared artifact
+  verification + binding issuance + `CanonicalCoreRuntimeHost` open) and
+  `driveEmbeddedCanonicalRun` → `PrimeEmbeddedRuntime` → the same
+  `heteroIngest`/`heteroFinish` `'orvilo'` producer surface — a chat run
+  streams and settles exactly like a task run.
+- (The embedded fork is the only orvilo route: sandbox plans land here
+  directly and device-resolved plans are fenced into it — see the
+  transitional fence above.)
 
-## Open boundary — chat admission to the embedded host
+## Chat-scoped canonical contract
 
-`CanonicalCoreRuntimeHost` / `CanonicalRunAuthority` /
-`TaskExecutionControlModel` / `executionGrants` are row-locked to
-task-shaped rows (`createGrant` requires `task:{id,projectId,workspaceId}`),
-and `agent_operations` / `topics` carry no execution-control columns. A
-chat-scoped admission needs a control-plane expansion (the deferred item
-the dispatch doc names): either chat-shaped canonical rows or a
-chat-scoped grant contract — with an explicit `RunSubject`
-(`{kind:'conversation',topicId}` | `{kind:'task',taskId,dispatchId}`) so a
-conversation id can never stand in for a task id. Until that lands, orvilo
-chat runs on the embedded host fail at `EMBEDDED_CHAT_NOT_ADMITTED`
-rather than executing on the retired engine path.
+Chat runs carry no task rows, so the canonical fence is re-anchored on the
+chat-parallel execution record — `agent_operations` — instead of a new
+table or migration:
+
+- `CanonicalChatRunBinding` (apps/server/src/services/controlPlane/
+  canonicalChatRun.ts) extends `CanonicalRunBinding`: `operationId` stands
+  in for `dispatchId`/`grantId`, `executionEpoch`/`generation` are 1,
+  `dispatchFence`/`policyRevision`/`stateRevision` are 0, `taskId` maps to
+  the topic id, and `workspaceId` is the run tenant (`chatWorkspaceId ??
+'personal:<userId>'` — a personal chat gets a synthetic tenant so its
+  fence can never collide with workspace scope).
+- `runExpiresAt` is the bounded window the server mints at admission — the
+  chat parallel of a delegated grant's expiry (chat runs carry no grant
+  row; `allowedActions` is always empty).
+- `agent_operations.metadata.executionControl` holds the same version-1
+  process-ownership blob `task_topics.execution_control` does;
+  `metadata.executionControlRevision` is the revision counter.
+- The operation row's `status` is the kill fence: interrupt/settle
+  transitions it out of `'running'` and every subsequent admission fails
+  `stale_fence` — the same posture as the task path's dispatch-fence
+  advance.
+- `CanonicalChatRunAuthority` applies the identical NOWAIT row-lock chain
+  (agent_operations → topics → workspaceMembers for workspace-scoped
+  chats) and the same ownership/lease/state checks as
+  `CanonicalRunAuthority`; `ChatExecutionControlModel`
+  (packages/database/src/models/chatExecutionControl.ts) provides
+  register/activate/stop/readControl/renew on the metadata blob. The
+  handoff family throws loudly — chat runs never hand off.
+- `CanonicalCoreRuntimeHost` gained `authority`/`registration` option
+  ports (`CanonicalRunAuthorityPort`/`CanonicalRunRegistrationPort` in
+  canonicalRun.ts — structural, since the concrete classes carry private
+  members); the embedded bridge's existing `runAuthority` seam admits
+  every inference resolve under the same chat row locks.
 
 ## Non-negotiables preserved
 

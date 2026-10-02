@@ -1,6 +1,11 @@
 import type { ControlResult, ExecutionFence } from '@orvilo/agent-execution';
 import { and, eq } from 'drizzle-orm';
 
+import type {
+  HandoffIntent,
+  RuntimeIdentity,
+  RuntimeRunBinding,
+} from '@/database/models/taskExecutionControl';
 import {
   executionGrants,
   taskDispatches,
@@ -9,6 +14,11 @@ import {
   topics,
   workspaceMembers,
 } from '@/database/schemas';
+import type {
+  TaskExecutionControl,
+  TaskExecutionHandoffRecord,
+  TaskExecutionProof,
+} from '@/database/schemas/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
 import { AgentDelegationService } from '@/server/services/agentDelegation/executionGrants';
 
@@ -29,6 +39,71 @@ export interface CanonicalRunBinding {
   topicId: string;
   userId: string;
   workspaceId: string;
+}
+
+/**
+ * The authority port `CanonicalCoreRuntimeHost` admits against. The task
+ * implementation is {@link CanonicalRunAuthority}; the chat-scoped
+ * implementation (`CanonicalChatRunAuthority`, canonicalChatRun.ts) presents
+ * the same surface over the `agent_operations` chat-parallel record. Typed
+ * structurally — the concrete classes carry private members, so they are not
+ * mutually assignable.
+ */
+export interface CanonicalRunAuthorityPort {
+  withRegistration: <T>(
+    input: CanonicalRunBinding,
+    run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
+  ) => Promise<ControlResult<T>>;
+  withRun: <T>(
+    input: CanonicalRunBinding,
+    run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
+  ) => Promise<ControlResult<T>>;
+  withSnapshot: <T>(
+    input: CanonicalRunBinding,
+    run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
+  ) => Promise<ControlResult<T>>;
+}
+
+interface CanonicalHandoffRow {
+  id: string;
+  phase: string;
+  record: TaskExecutionHandoffRecord;
+  revision: number;
+}
+
+/**
+ * The registration port `CanonicalCoreRuntimeHost` owns process state through.
+ * `TaskExecutionControlModel` is the task implementation;
+ * `ChatExecutionControlModel` presents the same surface over
+ * `agent_operations.metadata.executionControl` (its handoff family is
+ * unreachable for chat and fails loudly). Only the members the host calls are
+ * ported; unused members (`renew`) are implementation details.
+ */
+export interface CanonicalRunRegistrationPort {
+  activate: (binding: RuntimeRunBinding, identity: RuntimeIdentity) => Promise<unknown>;
+  advance: (
+    id: string,
+    revision: number,
+    phase: 'quiescing' | 'quiescent',
+    proof?: TaskExecutionProof,
+  ) => Promise<CanonicalHandoffRow>;
+  beginHandoff: (binding: RuntimeRunBinding, intent: HandoffIntent) => Promise<CanonicalHandoffRow>;
+  read: (id: string) => Promise<CanonicalHandoffRow | undefined>;
+  readControl: (binding: RuntimeRunBinding) => Promise<
+    | {
+        control: TaskExecutionControl | null | undefined;
+        epoch: number | null | undefined;
+        revision: number;
+      }
+    | undefined
+  >;
+  register: (binding: RuntimeRunBinding, leaseMs: number) => Promise<unknown>;
+  resume: (id: string, revision: number, identity: RuntimeIdentity) => Promise<unknown>;
+  stop: (binding: RuntimeRunBinding) => Promise<unknown>;
+  transfer: (
+    id: string,
+    revision: number,
+  ) => Promise<{ record: CanonicalHandoffRow; control: TaskExecutionControl; epoch: number }>;
 }
 
 export interface CanonicalRunSnapshot {

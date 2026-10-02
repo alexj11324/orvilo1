@@ -38,7 +38,11 @@ import type { OrviloDatabase } from '@/database/type';
 import { issueBindingExecution } from '../providerBinding/execution';
 import type { CanonicalCompletionOutcome, CanonicalReceiptMapping } from './canonicalCompletion';
 import { CanonicalVerifyCompletion } from './canonicalCompletion';
-import type { CanonicalRunBinding } from './canonicalRun';
+import type {
+  CanonicalRunAuthorityPort,
+  CanonicalRunBinding,
+  CanonicalRunRegistrationPort,
+} from './canonicalRun';
 import { CanonicalRunAuthority } from './canonicalRun';
 import { CanonicalSessionSnapshots } from './canonicalSessionSnapshot';
 import type { EmbeddedInferenceBridge, EmbeddedInferenceBridgeDeps } from './embeddedBroker';
@@ -56,6 +60,10 @@ interface HostJournal {
 }
 
 export interface CanonicalCoreHostOptions {
+  /** Canonical admission authority — defaults to the task-row-locked
+   * `CanonicalRunAuthority`. Chat runs substitute `CanonicalChatRunAuthority`
+   * (the agent_operations chat-parallel contract). */
+  authority?: CanonicalRunAuthorityPort;
   binding: CanonicalRunBinding;
   /** Loaded from trusted server registration; never accepted as completion request data. */
   completionMappings?: CanonicalReceiptMapping[];
@@ -74,6 +82,10 @@ export interface CanonicalCoreHostOptions {
   outputDirectory: string;
   /** Stable private receipt namespace shared by successor registrations of this task. */
   receiptDirectory?: string;
+  /** Canonical process-ownership model — defaults to
+   * `TaskExecutionControlModel` (task_topics.execution_control). Chat runs
+   * substitute `ChatExecutionControlModel` (agent_operations.metadata). */
+  registration?: CanonicalRunRegistrationPort;
   runtimeLeaseMs?: number;
   /** Test seam — substitutes the supervised-tree port (e.g. without a daemon).
    * The supplied port must honour the launch/connect/recover/terminate contract
@@ -116,8 +128,8 @@ const failure = (message: string): ControlResult<never> => ({
  * them and persists a fence advance before quiescence can be acknowledged. */
 export class CanonicalCoreRuntimeHost {
   private readonly runtime: ExecutionRuntime;
-  private readonly authority: CanonicalRunAuthority;
-  private readonly registration: TaskExecutionControlModel;
+  private readonly authority: CanonicalRunAuthorityPort;
+  private readonly registration: CanonicalRunRegistrationPort;
   private readonly supervisor: HostSupervisorPort;
   private readonly commitments: Map<string, Commitment>;
   private readonly embeddedBridge?: EmbeddedInferenceBridge;
@@ -138,12 +150,14 @@ export class CanonicalCoreRuntimeHost {
     this.recovering = recovering;
     this.embeddedBridge = embeddedBridge;
     this.receipts = options.receiptDirectory ?? path.join(options.controlDirectory, 'receipts');
-    this.authority = new CanonicalRunAuthority(options.database);
-    this.registration = new TaskExecutionControlModel(
-      options.database,
-      options.binding.userId,
-      options.binding.workspaceId,
-    );
+    this.authority = options.authority ?? new CanonicalRunAuthority(options.database);
+    this.registration =
+      options.registration ??
+      new TaskExecutionControlModel(
+        options.database,
+        options.binding.userId,
+        options.binding.workspaceId,
+      );
     this.commitments = new Map(
       options.fileCommitments.map((commitment) => [commitment.id, structuredClone(commitment)]),
     );

@@ -293,9 +293,12 @@ export class LinearIntegrationTaskService {
     // transfer, not an attribute edit: fence the incumbent's dispatch first,
     // then rewrite — a bare update would produce the "stored owner B /
     // running executor A" split-brain the handoff protocol exists to
-    // prevent (and the model-layer guard would reject it outright). Linear
-    // reassignment uses the park policy: settle + pause, and the
-    // orchestrator decides whether a successor dispatch starts.
+    // prevent (and the model-layer guard would reject it outright). Human-
+    // initiated Linear writes (conflict resolution) use the park policy:
+    // settle + pause, and the orchestrator decides whether a successor
+    // dispatch starts. Inbound sync never reaches this path — the worker
+    // defers live reassignments into a link conflict instead
+    // (deferRunningTaskAssignee).
     if (patch.assigneeAgentId === undefined || mutation.executionTransfer === true) {
       return this.taskModel.update(taskId, patch, mutation);
     }

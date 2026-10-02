@@ -3479,9 +3479,7 @@ export class LinearSyncModel {
     const workflowChanged =
       changedFields.has('workflowCategory') || changedFields.has('workflowStateId');
     let statusId = settings?.statusMappings?.find(
-      (mapping) =>
-        mapping.workflowCategory === input.task.workflowCategory ||
-        (!mapping.workflowCategory && mapping.localStatus === input.task.status),
+      (mapping) => mapping.workflowCategory === input.task.workflowCategory,
     )?.linearStateId;
     // Team-scope links carry no binding.statusMappings — the remote state id
     // comes from the synced team workflow states matching the new category.

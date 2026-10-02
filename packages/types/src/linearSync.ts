@@ -106,7 +106,12 @@ export type TaskDomainEventType =
 /** Status mapping is explicit per Linear workflow-state UUID. */
 export interface LinearStatusMapping {
   linearStateId: string;
-  /** Legacy execution projection retained for existing bindings. */
+  /**
+   * Read-only legacy execution projection: still parsed so existing bindings
+   * load, but never consulted to set execution state (`tasks.status`,
+   * `run_state`, dispatch phase) and never authored for new mappings — use
+   * `workflowCategory`.
+   */
   localStatus?: TaskStatus;
   /** Business workflow projection. This must be used for new mappings. */
   workflowCategory?: TaskWorkflowCategory;

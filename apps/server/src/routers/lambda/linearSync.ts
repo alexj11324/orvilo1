@@ -77,6 +77,8 @@ const settingsSchema = z.object({
       z
         .object({
           linearStateId: z.string().min(1),
+          // Read-only legacy projection: accepted so stored legacy mappings
+          // still parse; new mappings must use workflowCategory.
           localStatus: z.enum(TASK_STATUSES).optional(),
           workflowCategory: z
             .enum(['backlog', 'canceled', 'done', 'in_progress', 'in_review', 'todo', 'triage'])

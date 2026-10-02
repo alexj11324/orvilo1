@@ -69,6 +69,7 @@ import {
   extractStandardAcpSelectors,
   getAcpAgentRuntime,
   GrokAcpSession,
+  type HeterogeneousAgentCacheKeepaliveStatus,
   type HeterogeneousAgentRuntimeStatus,
   isCursorAcpSessionNotFoundError,
   isDevinAcpSessionNotFoundError,
@@ -382,6 +383,9 @@ interface OrviloHeteroExecTask {
 }
 
 interface InteractiveAcpSession {
+  cacheKeepaliveTelemetry?: HeterogeneousAgentCacheKeepaliveStatus;
+  /** True while the session's cache keep-alive holds the child alive post-run. */
+  keepaliveArmed?: boolean;
   run: () => Promise<void>;
 }
 
@@ -1577,6 +1581,13 @@ export default class HeterogeneousAgentCtr {
     params: SendPromptParams,
     session: AgentSession,
   ): Promise<void> {
+    // A previous turn's cache keep-alive may still hold the old child warm —
+    // retire it so this prompt spawns fresh; the new process's session/load
+    // replays the same prefix against the still-warm provider cache.
+    if (session.devinAcpSession?.keepaliveArmed) {
+      session.devinAcpSession.close();
+      session.devinAcpSession = undefined;
+    }
     const cwd = this.resolveSessionWorkingDirectory(session);
     const spawnEnv = this.buildSessionSpawnEnv(session);
     const commandPath = session.resolvedCommandPath ?? this.resolveSessionCommand(session);
@@ -1675,6 +1686,7 @@ export default class HeterogeneousAgentCtr {
     try {
       await acpSession.run();
       void this.writeCliTraceJson(traceSession, 'exit.json', {
+        cacheKeepalive: acpSession.cacheKeepaliveTelemetry,
         finishedAt: new Date().toISOString(),
         transport,
       });
@@ -1708,13 +1720,30 @@ export default class HeterogeneousAgentCtr {
       });
     } finally {
       await cleanup?.();
-      if (activeSessionKey === 'cursorAcpSession' && session.cursorAcpSession === acpSession) {
+      // A session that armed its cache keep-alive stays referenced so the
+      // keeper's disarm → close path (and cancel/stop) can still reach it;
+      // the next sendPrompt retires it before spawning a fresh process.
+      const clearable = !acpSession.keepaliveArmed;
+      if (
+        clearable &&
+        activeSessionKey === 'cursorAcpSession' &&
+        session.cursorAcpSession === acpSession
+      ) {
         session.cursorAcpSession = undefined;
-      } else if (activeSessionKey === 'devinAcpSession' && session.devinAcpSession === acpSession) {
+      } else if (
+        clearable &&
+        activeSessionKey === 'devinAcpSession' &&
+        session.devinAcpSession === acpSession
+      ) {
         session.devinAcpSession = undefined;
-      } else if (activeSessionKey === 'traeAcpSession' && session.traeAcpSession === acpSession) {
+      } else if (
+        clearable &&
+        activeSessionKey === 'traeAcpSession' &&
+        session.traeAcpSession === acpSession
+      ) {
         session.traeAcpSession = undefined;
       } else if (
+        clearable &&
         activeSessionKey === 'standardAcpSession' &&
         session.standardAcpSession === acpSession
       ) {
@@ -1826,6 +1855,13 @@ export default class HeterogeneousAgentCtr {
     params: SendPromptParams,
     session: AgentSession,
   ): Promise<void> {
+    // A previous turn's cache keep-alive may still hold the old child warm —
+    // retire it so this prompt spawns fresh; the new process's session/load
+    // replays the same prefix against the still-warm provider cache.
+    if (session.standardAcpSession?.keepaliveArmed) {
+      session.standardAcpSession.close();
+      session.standardAcpSession = undefined;
+    }
     const agentType = session.agentType;
     const spec = getAcpAgentRuntime(agentType);
     const transport: HeterogeneousAgentRuntimeStatus['transport'] = spec?.transport ?? 'acp-stdio';

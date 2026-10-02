@@ -362,6 +362,10 @@ const spawnDevinAcpAgent = async (
   const session = new DevinAcpSession({
     args: options.extraArgs ?? [],
     askUserBridge: options.askUserBridge,
+    // One-shot exec turns: the bridge process exits at turn end, so a
+    // keeper could never ping again — it would only hold the event loop
+    // (or orphan the child) for up to the residency window.
+    cacheKeepalive: { enabled: false },
     clientVersion: 'orvilo-cli',
     commandPath: command,
     cwd,
@@ -412,6 +416,10 @@ const spawnStandardAcpAgent = async (
   const session = createStandardAcpSession(options.agentType, {
     args: selectors.args,
     askUserBridge: options.askUserBridge,
+    // One-shot exec turns: the bridge process exits at turn end, so a
+    // keeper could never ping again — it would only hold the event loop
+    // (or orphan the child) for up to the residency window.
+    cacheKeepalive: { enabled: false },
     clientVersion: 'orvilo-cli',
     commandArgs: target.commandArgs,
     commandPath: target.commandPath,

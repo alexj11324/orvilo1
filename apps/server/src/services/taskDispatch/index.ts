@@ -31,15 +31,15 @@ const DEFAULT_LEASE_MS = 5 * 60 * 1000;
  * typed conflict (TRPC `CONFLICT` upstream) instead of a raw driver error,
  * so callers can retry idempotently.
  */
-const throwIfAdmissionConflict = (error: unknown, dispatchId: string): never => {
+const asAdmissionConflict = (error: unknown, dispatchId: string) => {
   const pg = unwrapPgError(error);
   if (pg?.code === '40P01' || pg?.code === '40001') {
-    throw new TaskDispatchConflictError(
+    return new TaskDispatchConflictError(
       `Dispatch admission ${dispatchId} collided with a concurrent claim (${pg.code})`,
       dispatchId,
     );
   }
-  throw error;
+  return error;
 };
 
 export class TaskDispatchConflictError extends Error {
@@ -154,7 +154,7 @@ export class TaskDispatchService {
         // inherit an internal claim it can no longer prove (SB09).
         throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
       }
-      throwIfAdmissionConflict(error, input.idempotencyKey);
+      throw asAdmissionConflict(error, input.idempotencyKey);
     }
     if (requested.state === 'busy') {
       throw new TaskDispatchConflictError(
@@ -216,7 +216,9 @@ export class TaskDispatchService {
     const owner = `task-runner:${randomUUID()}`;
     const lease = await this.model
       .claimForProvisioning(dispatch.id, owner, DEFAULT_LEASE_MS)
-      .catch((error) => throwIfAdmissionConflict(error, dispatch.id));
+      .catch((error) => {
+        throw asAdmissionConflict(error, dispatch.id);
+      });
     if (!lease) {
       throw new TaskDispatchConflictError(
         `Dispatch ${dispatch.id} could not be claimed`,
@@ -246,7 +248,9 @@ export class TaskDispatchService {
         fence: prepared.fence,
         owner: prepared.owner,
       })
-      .catch((error) => throwIfAdmissionConflict(error, prepared.dispatch.id));
+      .catch((error) => {
+        throw asAdmissionConflict(error, prepared.dispatch.id);
+      });
     if (!updated) {
       throw new TaskDispatchConflictError(
         `Dispatch ${prepared.dispatch.id} lost its lease or changed phase`,

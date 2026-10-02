@@ -36,6 +36,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
+import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useElectronStore } from '@/store/electron';
 
 import { useTopicNavigation } from '../../hooks/useTopicNavigation';
@@ -365,9 +366,13 @@ const TopicItemRow = memo<TopicItemRowProps>(
 
     // Surface a WeChat-style red "[Draft]" hint when this topic holds unsent
     // input. Drafts live in localStorage keyed by topic id; the default
-    // topic (no id) maps to the new-topic draft. `useHasDraft` re-renders the
+    // topic (no id) maps to the agent's new-topic draft. `useHasDraft` re-renders the
     // row only when the draft appears or clears.
-    const draftKey = useMemo(() => (id ? topicDraftKey(id) : undefined), [id]);
+    const draftKey = useMemo(
+      () =>
+        id ? topicDraftKey(id) : rowAgentId ? messageMapKey({ agentId: rowAgentId }) : undefined,
+      [id, rowAgentId],
+    );
     const hasDraft = useHasDraft(draftKey);
     const draftPrefix = hasDraft ? (
       <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>

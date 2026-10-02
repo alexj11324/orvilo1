@@ -1,6 +1,6 @@
 {
   "name": "orvilo",
-  "version": "2.5.0",
+  "version": "2.6.0",
   "description": "Orvilo is a task-first workspace for agent teams: plan work on a board, run it on a schedule, and trace every result.",
   "keywords": [
     "framework",

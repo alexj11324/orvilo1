@@ -2,6 +2,22 @@
   {
     "children": {
       "fixes": [
+        "pass children inside Provider props in useAgentId test.",
+        "/settings/agents shadowed by workspace slug; topic list agentId projection; task-agent labels.",
+        "categorize experienceMemory, mcpEvents, providerBinding API-key scopes."
+      ],
+      "features": [
+        "topic-centric agent workspace + Settings→Agents config exile.",
+        "restore P30-retired provider settings UI and client-side inference runtime.",
+        "add durable MCP event consumer with guarded execution."
+      ]
+    },
+    "date": "2026-10-02",
+    "version": "2.6.0"
+  },
+  {
+    "children": {
+      "fixes": [
         "persist milestone reorders after sortable drag.",
         "repair 8 typecheck errors from ReUI migration and sidebar-merge rewrite.",
         "restore route nav panels beside global sidebar via in-page RoutePanelColumn.",

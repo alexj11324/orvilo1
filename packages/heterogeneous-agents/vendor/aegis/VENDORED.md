@@ -22,7 +22,13 @@
    node scripts/vendor-aegis.mjs
    ```
 
-4. Commit the vendor tree and the regenerated
+4. Run `bun run check` once: repo markdown lint (remark) normalizes the
+   vendored `*.md` in place, so the checked-in tree carries repo formatting
+   rather than byte-exact upstream bytes — content is unchanged. Then
+   regenerate the manifest once more so `files.generated.ts` embeds the
+   same linted bytes as the vendor tree.
+
+5. Commit the vendor tree and the regenerated
    `src/aegis/files.generated.ts` together.
 
 `files.generated.ts` is checked in (not a build artifact) so the published

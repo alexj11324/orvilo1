@@ -10,7 +10,7 @@ import type {
 import { CONTROL_PLANE_VERSION, createInferenceBroker } from '@orvilo/agent-execution/controlPlane';
 import type { HarnessInitModel } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import type { BuildInferenceRequest } from '@orvilo/agent-execution/controlPlane/server';
-import type { OrviloEngineKind, ProviderBindingConfig } from '@orvilo/types';
+import type { ProviderBindingConfig } from '@orvilo/types';
 
 import type { OrviloDatabase } from '@/database/type';
 
@@ -41,7 +41,6 @@ export interface EmbeddedInferenceBridgeDeps {
   /** Canonically registered run — the only scope the bridge may serve. */
   binding: CanonicalRunBinding;
   database: OrviloDatabase;
-  engine?: OrviloEngineKind | string | null;
   issueExecution?: IssueBindingExecutionForClaim;
   now?: () => number;
   /** Test seams — replace binding resolution and issuance. */
@@ -96,7 +95,7 @@ export async function createEmbeddedInferenceBridge(
   const issue = deps.issueExecution ?? issueBindingExecution;
   const runAuthority = deps.runAuthority ?? new CanonicalRunAuthority(deps.database);
 
-  const row = await resolve(deps.database, deps.binding.userId, deps.engine ?? null, target);
+  const row = await resolve(deps.database, deps.binding.userId, target);
   if (!row) return failure('unauthorized', 'No provider binding resolves in this run scope');
 
   const claim: BindingExecutionClaim = {

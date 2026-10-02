@@ -28,10 +28,6 @@ import { Select, SelectContent, SelectTrigger, SelectValue } from '@/components/
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import HeterogeneousAgentStatusGuide from '@/features/Electron/HeterogeneousAgent/StatusGuide';
-import {
-  isBuiltinEngineType,
-  resolveOrviloEngineCliType,
-} from '@/features/HeterogeneousAgent/engine';
 import { useProviderBindingCompatibleProviders } from '@/features/HeterogeneousAgent/hooks/useProviderBinding';
 import { buildServerDefaultModelOptions } from '@/features/HeterogeneousAgent/modelPicker';
 import ModelSelect from '@/features/ModelSelect';
@@ -286,14 +282,7 @@ const HeterogeneousAgentStatusCard = memo<HeterogeneousAgentStatusCardProps>(
     const { t } = useTranslation(['setting', 'common']);
     const navigate = useWorkspaceAwareNavigate();
     const { allowed: canEdit } = usePermission('edit_own_content');
-    // The builtin Orvilo harness has no client-config entry of its own — its
-    // spawned binary, detection, and install guide all resolve through the
-    // selected engine's CLI family (`claude` for claude-sdk, `codex` for
-    // codex-app-server). Provider binding stays keyed on `provider.type`: the
-    // managed session has no provider-binding capability of its own.
-    const detectionType = isBuiltinEngineType(provider.type)
-      ? resolveOrviloEngineCliType(provider.engine)
-      : provider.type;
+    const detectionType = provider.type;
     const providerConfig = getHeterogeneousAgentClientConfig(detectionType);
     const defaultCommand = providerConfig?.defaultCommand || '';
     const resolvedCommand = provider.command?.trim() || defaultCommand;

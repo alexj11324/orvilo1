@@ -58,6 +58,10 @@ export const providerBindingConfigSchema = z
     selection: z
       .object({
         runtime: z.enum(['orvilo', 'claude-code', 'codex']),
+        // Retired Orvilo engine key: the builtin agent is bound to Prime,
+        // fixed. Rows written before the cutover may still carry it — the
+        // schema keeps accepting the field so old rows parse, but no
+        // resolver or writer consults it.
         engine: z.enum(['claude-sdk', 'codex-app-server']).optional(),
         effort: z
           .enum(['default', 'low', 'medium', 'high', 'xhigh', 'max', 'ultra'])

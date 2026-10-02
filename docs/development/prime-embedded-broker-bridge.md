@@ -45,10 +45,11 @@ the runner asks for is exactly the route the host granted.
 `createEmbeddedInferenceBridge(deps)` is the one place where binding, fence,
 and capability are bound together:
 
-1. `resolveOrviloProviderBinding(db, userId, engine, target)` — scans the
+1. `resolveOrviloProviderBinding(db, userId, target, match)` — scans the
    caller's `providerBindings` for `selection.runtime === 'orvilo'` + matching
-   target + `resolveOrviloEngine`-normalized engine; `list()`'s
-   updatedAt-descending order means the most recently saved match wins.
+   target + `enabled`, narrowed by the run's `model` route when pinned;
+   `list()`'s updatedAt-descending order means the most recently saved match
+   wins.
 2. `issueBindingExecution(db, claim)` — re-loads the row **inside the caller's
    transaction**, rejects on stale revision, and proves credential ownership
    (`ownsCredentialReference` — personal credentials only). `undefined` → the

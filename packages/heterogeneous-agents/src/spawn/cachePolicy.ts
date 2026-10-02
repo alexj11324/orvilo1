@@ -59,9 +59,9 @@ const UNSUPPORTED_EVIDENCE =
 /**
  * The policy table, keyed by the CLI adapter type a session is spawned as
  * (`AgentSession.agentType` / `StandardAcpSessionConfig.agentType`).
- * Engine kinds (`claude-sdk`, `codex-app-server`) and Prime-via-* routes are
- * resolved to these keys upstream by `resolveOrviloCliAgentType`; the alias
- * map below lets callers pass engine kinds directly too.
+ * Pre-cutover engine kinds (`claude-sdk`, `codex-app-server`) persist on
+ * legacy rows — the alias map below keeps resolving them onto the CLI
+ * adapter they used to wrap.
  */
 export const AGENT_CACHE_POLICIES: Record<string, AgentCachePolicy> = {
   'amp': {
@@ -180,7 +180,7 @@ export const AGENT_CACHE_POLICIES: Record<string, AgentCachePolicy> = {
   },
 };
 
-/** Engine kinds / route aliases resolving onto a table entry. */
+/** Legacy engine-kind strings resolving onto their CLI adapter's entry. */
 const CACHE_POLICY_ALIASES: Record<string, string> = {
   'claude-sdk': 'claude-code',
   'codex-app-server': 'codex',

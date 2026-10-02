@@ -39,9 +39,8 @@ import {
   isEmbeddedArtifactManifest,
 } from '@orvilo/agent-execution/controlPlane/server';
 import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
-import type { LocalHeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
+import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { toStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
-import type { OrviloEngineKind } from '@orvilo/types';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
 
@@ -152,12 +151,10 @@ export interface EmbeddedDispatchEnvironment {
 }
 
 export interface OpenEmbeddedHostInput extends EmbeddedDispatchContext {
-  engine?: OrviloEngineKind | string | null;
   environment?: EmbeddedDispatchEnvironment;
-  /** Task's requested model/provider — narrows which binding may issue. */
+  /** Task's requested model route — narrows which binding may issue. */
   model?: string;
   operationId: string;
-  provider?: string;
   topicId: string;
 }
 
@@ -320,9 +317,10 @@ export const openEmbeddedDispatchHost = async (
   };
   await mkdir(directories.workspace, { mode: 0o700, recursive: true });
   try {
-    const resolved = await resolveOrviloProviderBinding(db, userId, input.engine, 'sandbox', {
+    // Model-route narrowing only: the run's provider pin is the `orvilo`
+    // type marker, not a binding provider id, so it must not filter rows.
+    const resolved = await resolveOrviloProviderBinding(db, userId, 'sandbox', {
       model: input.model,
-      provider: input.provider,
     });
     if (!resolved) return failure('unauthorized', 'No provider binding resolves in this run scope');
     const claim = {
@@ -357,7 +355,6 @@ export const openEmbeddedDispatchHost = async (
       embedded: {
         artifact,
         backend,
-        engine: input.engine,
         resolveBinding: async () => resolved,
         target: 'sandbox',
         verifyArtifact: embeddedArtifactVerifier(manifest),
@@ -378,7 +375,8 @@ export const openEmbeddedDispatchHost = async (
 // ---------------------------------------------------------------------------
 
 export interface EmbeddedRunDriverInput {
-  agentType: LocalHeterogeneousAgentType;
+  /** Ingest label — the declared hetero type; `'orvilo'` for embedded runs. */
+  agentType: HeterogeneousAgentType;
   assistantMessageId: string;
   operationId: string;
   /** Single composed prompt (cloud system context + task instruction). */

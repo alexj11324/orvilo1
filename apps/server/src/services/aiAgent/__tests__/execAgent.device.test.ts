@@ -72,6 +72,10 @@ vi.mock('@/database/models/message', () => ({
 }));
 
 const baseAgentConfig = {
+  // An external-agent binding: device/sandbox routing is exercised on
+  // claude-code — the builtin orvilo agent is embedded-only and its runs
+  // terminate at the EMBEDDED_CHAT_NOT_ADMITTED boundary.
+  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
   chatConfig: {},
   files: [],
   id: 'agent-1',
@@ -220,7 +224,8 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
 }));
 
 vi.mock('@/server/services/providerBinding/execution', () => ({
-  resolveOrviloProviderBinding: vi.fn().mockResolvedValue({ status: 'none' }),
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/server/services/deviceGateway', () => ({
@@ -306,7 +311,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       return {
         getAgentConfig: vi.fn().mockResolvedValue({
           ...baseAgentConfig,
-          agencyConfig,
+          agencyConfig: {
+            heterogeneousProvider: { type: 'claude-code' },
+            ...agencyConfig,
+          },
         }),
       } as any;
     });

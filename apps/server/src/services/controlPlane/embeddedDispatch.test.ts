@@ -545,7 +545,8 @@ const seedBinding = async (userId: string) => {
     .insert(providerBindings)
     .values({
       config: {
-        enabled: false,
+        // Armed — `enabled` gates both binding resolution and issuance.
+        enabled: true,
         endpoint: 'https://provider.example.test/',
         model: MODEL_ID,
         name: 'Embedded dispatch fixture',

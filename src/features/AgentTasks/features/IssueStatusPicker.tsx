@@ -33,9 +33,11 @@ import { useTeamWorkflowStates } from './useTeamWorkflowStates';
 const styles = createStaticStyles(({ css, cssVar }) => ({
   searchInput: css`
     width: 100%;
+    height: auto;
     padding-block: 4px;
     padding-inline: 10px;
     border: none;
+    border-radius: 0;
 
     font-family: inherit;
     font-size: 13px;
@@ -43,6 +45,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     background: transparent;
     outline: none;
+    box-shadow: none;
 
     &::placeholder {
       color: ${cssVar.colorTextPlaceholder};

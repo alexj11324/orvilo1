@@ -1,6 +1,6 @@
 'use client';
 
-import type { TaskStatus } from '@orvilo/types';
+import type { TaskWorkflowCategory } from '@orvilo/types';
 import { ArrowRight } from 'lucide-react';
 import { memo, type MouseEvent, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -22,10 +22,10 @@ import type { TaskGroupItem } from '@/store/task/slices/list/initialState';
 
 import StatusGroup from './StatusGroup';
 
-const SIDEBAR_GROUPS: Array<{ key: string; statuses: TaskStatus[] }> = [
-  { key: 'needsInput', statuses: ['paused', 'failed'] },
-  { key: 'backlog', statuses: ['backlog'] },
-  { key: 'running', statuses: ['running', 'scheduled'] },
+const SIDEBAR_GROUPS: Array<{ key: string; workflowCategories: TaskWorkflowCategory[] }> = [
+  { key: 'in_review', workflowCategories: ['in_review'] },
+  { key: 'backlog', workflowCategories: ['backlog'] },
+  { key: 'in_progress', workflowCategories: ['in_progress'] },
 ];
 const STATUS_ORDER = SIDEBAR_GROUPS.map((g) => g.key);
 

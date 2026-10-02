@@ -32,9 +32,10 @@ import AssigneeAvatar from './AssigneeAvatar';
 import AssigneeMemberSelector from './AssigneeMemberSelector';
 import AssigneeUserAvatar from './AssigneeUserAvatar';
 import { formatTaskItemDate } from './formatTaskItemDate';
+import IssueStatusPicker from './IssueStatusPicker';
 import { SimpleTooltip } from './SimpleTooltip';
+import TaskExecutionBadge from './TaskExecutionBadge';
 import TaskPriorityTag from './TaskPriorityTag';
-import TaskStatusTag from './TaskStatusTag';
 import TaskSubtaskProgressTag from './TaskSubtaskProgressTag';
 import TaskTriggerTag from './TaskTriggerTag';
 import { TASK_VISIBILITY_ICONS } from './taskVisibilityLabel';
@@ -244,10 +245,9 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         data-collab-id-alt={`task:${task.identifier}:status`}
         style={{ display: 'inline-flex', flex: 'none' }}
       >
-        <TaskStatusTag
+        <IssueStatusPicker
           glyph={workflowGlyph}
           size={14}
-          status={status}
           taskIdentifier={task.identifier}
           teamId={task.teamId}
           workflowCategory={task.workflowCategory}
@@ -256,6 +256,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           onChange={onStatusChange}
         />
       </span>
+      <TaskExecutionBadge size={13} status={status} />
       <LinearTaskSyncStatus taskId={task.id} />
       {privacyBadge}
       <div className={cn('truncate', 'block', 'font-medium', styles.title)}>
@@ -297,8 +298,8 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
       data-collab-id={`task:${task.id}:assignee`}
       data-collab-id-alt={`task:${task.identifier}:assignee`}
     >
-      {status === 'paused'
-        ? // Pending review: the member slot shows who owns the review — the
+      {task.workflowCategory === 'in_review'
+        ? // In review: the member slot shows who owns the review — the
           // reviewer (auto-stamped as assignee → creator), not the executor.
           shouldShowMemberAssignee(activeWorkspaceId, task.reviewerUserId) && (
             <AssigneeMemberSelector

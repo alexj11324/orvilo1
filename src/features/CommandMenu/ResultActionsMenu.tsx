@@ -20,14 +20,15 @@ import {
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import { toast } from '@/components/toast';
-import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
 import {
-  STATUS_META,
-  USER_SELECTABLE_STATUSES,
-} from '@/features/AgentTasks/features/taskStatusMeta';
-import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
+  COLUMN_I18N_KEYS,
+  issueStatusChoices,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
+import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
+import { useIssueStatusMove } from '@/features/AgentTasks/features/useIssueStatusMove';
 import { ProjectStatusIcon } from '@/features/Projects/ProjectStatusIcon';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
@@ -75,7 +76,7 @@ const ResultActionsMenu = memo(() => {
   const { allowed: canEdit } = usePermission('create_content');
   const selfUserId = useUserStore(userProfileSelectors.userId);
   const updateTask = useTaskStore((s) => s.updateTask);
-  const changeTaskStatus = useTaskStatusChange();
+  const moveWorkflow = useIssueStatusMove();
 
   // Close first: mutations surface toasts and the status cascade modal mounts
   // outside the palette, so the overlay must not linger over them (same
@@ -196,16 +197,25 @@ const ResultActionsMenu = memo(() => {
   const statusEntries = useMemo<ActionEntry[]>(() => {
     if (!actionTarget) return [];
     if (actionTarget.type === 'task') {
-      return USER_SELECTABLE_STATUSES.map((status) => ({
-        disabled: !canEdit,
-        icon: createElement(STATUS_META[status].icon, { color: STATUS_META[status].color }),
-        key: `status-${status}`,
-        label: t(`taskDetail.status.${status}`, { ns: 'chat' }),
-        run: () =>
-          runMutation(async () => {
-            await changeTaskStatus(actionTarget.id, status);
-          }),
-      }));
+      // Issue status picks are workflow moves — execution statuses are
+      // never a user pick on a task.
+      return issueStatusChoices().map((choice) => {
+        const category = choice.workflowCategory ?? 'backlog';
+        const visual = WORKFLOW_CATEGORY_VISUALS[category];
+        return {
+          disabled: !canEdit,
+          icon: createElement(visual.icon, { color: visual.color }),
+          key: `status-${category}`,
+          label: t(COLUMN_I18N_KEYS[choice.column.key] as never, { ns: 'chat' }),
+          run: () =>
+            runMutation(async () => {
+              await moveWorkflow({
+                taskIdentifier: actionTarget.id,
+                target: { category },
+              });
+            }),
+        };
+      });
     }
     if (actionTarget.type === 'project') {
       return PROJECT_CREATABLE_STATUSES.map((status) => ({
@@ -217,7 +227,7 @@ const ResultActionsMenu = memo(() => {
       }));
     }
     return [];
-  }, [actionTarget, canEdit, changeTaskStatus, runMutation, t]);
+  }, [actionTarget, canEdit, moveWorkflow, runMutation, t]);
 
   const priorityEntries = useMemo<ActionEntry[]>(() => {
     if (!actionTarget) return [];

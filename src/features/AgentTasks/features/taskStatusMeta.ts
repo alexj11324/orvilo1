@@ -10,6 +10,12 @@ interface StatusMeta {
   labelKey: string;
 }
 
+/**
+ * Labels for the legacy `tasks.status` projection — used by the subtask
+ * cascade modal, which still writes raw execution statuses onto subtree
+ * rows. Issue Status picks never go through this table; they pick workflow
+ * categories/states via `issueStatusChoices`.
+ */
 export const STATUS_META: Record<TaskStatus, StatusMeta> = {
   backlog: { ...TASK_STATUS_VISUALS.backlog, label: 'Backlog', labelKey: 'status.backlog' },
   canceled: { ...TASK_STATUS_VISUALS.canceled, label: 'Canceled', labelKey: 'status.canceled' },
@@ -19,10 +25,3 @@ export const STATUS_META: Record<TaskStatus, StatusMeta> = {
   running: { ...TASK_STATUS_VISUALS.running, label: 'Running', labelKey: 'status.running' },
   scheduled: { ...TASK_STATUS_VISUALS.scheduled, label: 'Scheduled', labelKey: 'status.scheduled' },
 };
-
-export const USER_SELECTABLE_STATUSES: TaskStatus[] = [
-  'backlog',
-  'paused',
-  'completed',
-  'canceled',
-];

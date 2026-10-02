@@ -3,7 +3,7 @@
 import {
   type MyWorkMode,
   normalizeWorkQuerySubGroupBy,
-  type TaskStatus,
+  type TaskWorkflowCategory,
   type WorkQueryLayout,
 } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
@@ -24,9 +24,9 @@ import { Badge } from '@/components/reui/badge';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Tabs as TabsRoot, TabsList, TabsTrigger as TabsTab } from '@/components/ui/tabs';
+import { kanbanColumnForWorkflowCategory } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { createTaskModal } from '@/features/AgentTasks/CreateTaskModal';
 import AssigneeUserAvatar from '@/features/AgentTasks/features/AssigneeUserAvatar';
-import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { taskDetailPath } from '@/features/AgentTasks/shared/taskDetailPath';
 import NavHeader from '@/features/NavHeader';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
@@ -86,8 +86,8 @@ import { isMyWorkSaveableMode } from './myWorkSaveAs';
 import { isTaskFollowed } from './myWorkSubscribe';
 import { useBulkSelection } from './useBulkSelection';
 import { useMyWorkQueryFilter } from './useMyWorkQueryFilter';
-import { isMyWorkBoardMode, workQueryListGroupBy } from './workQueryBoard';
-import { applyWorkQueryStatusChange } from './workQueryBoardMove';
+import { isMyWorkBoardMode } from './workQueryBoard';
+import { applyWorkQueryStatusChoice } from './workQueryBoardMove';
 import {
   mergeWorkQueryGroups,
   mergeWorkQueryPage,
@@ -565,7 +565,6 @@ const MyWorkPage = memo(() => {
 
   /* ---------------------------- bulk selection ---------------------------- */
 
-  const changeTaskStatus = useTaskStatusChange();
   const { allowed: canBulkEdit } = usePermission('create_content');
 
   // Rendered-row ids — the selection prunes to this set and bulk actions
@@ -643,25 +642,22 @@ const MyWorkPage = memo(() => {
     [bulkBusy, bulkTasks, refresh, t],
   );
 
-  // Status writes reuse the row path: Linear-linked tasks go through
-  // `moveBoard` (state picker included), unlinked ones through `task.update`.
-  // Attention/flat groupings write `status`, matching the rows' own choice.
-  const bulkStatusGroupBy =
-    workQueryListGroupBy(data?.data.groupBy) === 'workflowCategory' ? 'workflowCategory' : 'status';
-
+  // Bulk status moves are workflow moves — the same CAS + picker path a row's
+  // IssueStatusPicker commits, one task at a time so pickers never stack.
   const bulkSetStatus = useCallback(
-    (status: TaskStatus) =>
+    (category: TaskWorkflowCategory) => {
+      const column = kanbanColumnForWorkflowCategory(category);
+      if (!column) return;
       void runBulk(
         (task) =>
-          applyWorkQueryStatusChange({
-            changeLocal: changeTaskStatus,
-            groupBy: bulkStatusGroupBy,
-            status,
+          applyWorkQueryStatusChoice({
+            choice: { column, workflowCategory: category },
             task,
           }),
         'myWork.bulk.updated',
-      ),
-    [bulkStatusGroupBy, changeTaskStatus, runBulk],
+      );
+    },
+    [runBulk],
   );
 
   const bulkSetPriority = useCallback(

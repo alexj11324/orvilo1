@@ -92,6 +92,28 @@ every successful root task paused for review.
 - Attention: derive from the layers above via the settlement service's
   attention module.
 
+## UI surfaces
+
+The client follows the same split:
+
+- **Kanban boards** group only by Issue Status — the seven workflow
+  categories (`ISSUE_WORKFLOW_COLUMNS`). `tasks.status`-derived columns, the
+  `needsInput` (paused+failed) and `running` (running+scheduled) folds are
+  removed from the Issue board. External saved-view boards may still group
+  by the legacy execution projection via the `st:`/`wf:` column families
+  (`RAW_STATUS_KANBAN_COLUMNS` / `WORKFLOW_KANBAN_COLUMNS`) — the Runs view.
+- **`IssueStatusPicker`** is the single Issue-status mutation surface: card
+  mark, detail properties, list rows, context-menu submenu and kanban drops
+  all commit through one `moveIssueWorkflow` command (CAS `moveBoard` for
+  team-linked tasks, `updateTask` otherwise).
+- **`TaskExecutionBadge`** renders `deriveTaskExecutionState` read-only —
+  it never mutates issue status.
+- **Auto-run**: only a move INTO `in_progress` may spawn a builder
+  (`AUTO_RUN_CATEGORIES`); `in_review` never does — verification is Verify's
+  job.
+- **Reviewer ownership** keys off workflow `in_review` (the reviewer
+  assigned to the issue/review gate), not the legacy `paused` projection.
+
 ## Settlement call sites
 
 Every writer of task outcome state delegates to `settleTaskExecution` — no

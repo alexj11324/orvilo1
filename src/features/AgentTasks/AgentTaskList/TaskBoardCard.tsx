@@ -6,6 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import ActionIcon from '@/components/ActionIcon';
+import { WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import GeneratingBorder from '@/components/GeneratingBorder';
 import { Badge as Tag } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -22,8 +23,8 @@ import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
 import { formatTaskItemDate } from '../features/formatTaskItemDate';
+import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskPriorityTag from '../features/TaskPriorityTag';
-import TaskStatusIcon from '../features/TaskStatusIcon';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { TASK_VISIBILITY_ICONS } from '../features/taskVisibilityLabel';
@@ -144,7 +145,7 @@ interface TaskBoardCardProps {
  * The Cordy board card, rebuilt on Orvilo's task fields: identifier row,
  * status-icon + two-line title, optional description preview, a chip row
  * (priority / schedule / privacy), and a meta row carrying the human owner
- * (reviewer while paused) plus live-run and subtask affordances.
+ * (reviewer while in review) plus live-run and subtask affordances.
  */
 const TaskBoardCard = memo<TaskBoardCardProps>(
   ({ hiddenProperties, onStatusChange, overlay, routeScope = 'agent', task }) => {
@@ -257,10 +258,10 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
       </AssigneeAgentSelector>
     );
 
-    // Owner slot (meta row, left): who is accountable to a human reader. While
-    // paused the reviewer owns the review — not the executor assignee.
+    // Owner slot (meta row, left): who is accountable to a human reader. In
+    // review the reviewer owns the review — not the executor assignee.
     const ownerNode =
-      status === 'paused'
+      task.workflowCategory === 'in_review'
         ? shouldShowMemberAssignee(activeWorkspaceId, task.reviewerUserId) && (
             <AssigneeMemberSelector
               currentUserId={task.reviewerUserId}
@@ -404,7 +405,13 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
                   </Tooltip>
                 </TooltipProvider>
               ) : (
-                <TaskStatusIcon size={14} status={status} />
+                // The Issue Status mark — the canonical category glyph; an
+                // uncategorized task reads as backlog, never an execution
+                // status icon.
+                createElement(WORKFLOW_CATEGORY_VISUALS[task.workflowCategory ?? 'backlog'].icon, {
+                  color: WORKFLOW_CATEGORY_VISUALS[task.workflowCategory ?? 'backlog'].color,
+                  size: 14,
+                })
               )}
             </span>
           ) : null}
@@ -426,6 +433,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           {shows('priority') ? (
             <TaskPriorityTag priority={task.priority} taskIdentifier={task.identifier} />
           ) : null}
+          <TaskExecutionBadge size={13} status={status} />
           <LinearTaskSyncStatus taskId={task.id} />
           {shows('project') && projectName ? (
             <Tag size="sm" variant="primary-outline">

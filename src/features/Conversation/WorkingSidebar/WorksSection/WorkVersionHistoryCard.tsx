@@ -4,8 +4,8 @@ import { cn } from 'cn';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 
+import TaskExecutionBadge from '@/features/AgentTasks/features/TaskExecutionBadge';
 import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
-import TaskStatusTag from '@/features/AgentTasks/features/TaskStatusTag';
 import { getWorkTypeDescriptor, isSafeExternalUrl } from '@/features/Work/descriptors';
 import { useResourceDeletedPrompt } from '@/features/Work/useResourceDeletedPrompt';
 import { useChatStore } from '@/store/chat';
@@ -114,7 +114,7 @@ const WorkVersionHistoryCard = memo<{ work: WorkListItem }>(({ work }) => {
         {work.type === 'task' ? (
           <>
             <TaskPriorityTag disableDropdown priority={work.task.priority} size={14} />
-            <TaskStatusTag disableDropdown size={14} status={toTaskStatus(work.task.status)} />
+            <TaskExecutionBadge size={14} status={toTaskStatus(work.task.status)} />
           </>
         ) : (
           <TypeIcon className={styles.context} size={16} />

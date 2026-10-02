@@ -21,27 +21,26 @@ import {
   getKanbanColumnHeaderVariant,
   getKanbanMoveAnchors,
   getKanbanTaskPatch,
+  ISSUE_WORKFLOW_COLUMNS,
+  issueStatusChoices,
   issueWorkflowStateChoices,
-  KANBAN_STATUS_COLUMN_KEY,
-  KANBAN_WORKFLOW_COLUMN_KEY,
   kanbanBoardCapabilities,
   kanbanColumnAllowsCreate,
   kanbanColumnCreatePreset,
   type KanbanColumnDefinition,
+  kanbanColumnForWorkflowCategory,
   kanbanColumnMoveScope,
   kanbanCreateTaskProjectId,
-  kanbanStatusColumnsExcludedBy,
   normalizeKanbanGroupBy,
   placeKanbanCardInColumn,
   preserveKanbanColumnOrder,
+  RAW_STATUS_KANBAN_COLUMNS,
   resolveKanbanDragTask,
   resolveKanbanDropColumn,
-  STATUS_KANBAN_COLUMNS,
   taskKanbanColumnKey,
   taskMatchesKanbanColumn,
   taskStatusBoardColumnKey,
   taskStatusChoiceIsCurrent,
-  taskStatusChoices,
 } from './kanbanBoardModel';
 
 const task = (
@@ -214,63 +213,82 @@ describe('kanbanBoardModel', () => {
     expect(canDropTaskIntoKanbanColumn(privateTask, 'member', otherMemberColumn)).toBe(false);
   });
 
-  describe('status columns', () => {
-    it('keeps legacy execution statuses in their merged columns', () => {
-      expect(KANBAN_STATUS_COLUMN_KEY.failed).toBe('needsInput');
-      expect(KANBAN_STATUS_COLUMN_KEY.paused).toBe('needsInput');
-      expect(KANBAN_STATUS_COLUMN_KEY.scheduled).toBe('running');
-      expect(KANBAN_STATUS_COLUMN_KEY.completed).toBe('done');
-      expect(taskKanbanColumnKey(task('1', null, null, { status: 'failed' }), 'status')).toBe(
-        'needsInput',
-      );
+  describe('Issue workflow columns', () => {
+    it('is exactly the seven workflow categories — no execution-status folds', () => {
+      // The Issue board's membership is workflowCategory only: there is no
+      // needsInput (paused+failed) or running (running+scheduled) bucket,
+      // and no `st:` column.
+      expect(ISSUE_WORKFLOW_COLUMNS.map((column) => column.key)).toEqual([
+        'triage',
+        'backlog',
+        'todo',
+        'in_progress',
+        'in_review',
+        'done',
+        'canceled',
+      ]);
+      for (const column of ISSUE_WORKFLOW_COLUMNS) {
+        expect(column.droppable).toBe(true);
+        expect(column.targetStatus).toBeNull();
+        expect(column.targetWorkflowCategory).toBe(column.key);
+        expect(column.workflowCategories).toEqual([column.key]);
+      }
     });
 
-    it('uses business workflow categories for linked tasks even when execution disagrees', () => {
+    it('keeps the raw execution columns only for the work-query `st:` Runs view', () => {
+      expect(RAW_STATUS_KANBAN_COLUMNS.map((column) => column.key)).toEqual([
+        'st:backlog',
+        'st:scheduled',
+        'st:running',
+        'st:paused',
+        'st:failed',
+        'st:completed',
+        'st:canceled',
+      ]);
+      for (const column of RAW_STATUS_KANBAN_COLUMNS) {
+        expect(column.targetStatus).toBe(column.key.slice(3));
+        expect(column.workflowCategories).toBeUndefined();
+      }
+    });
+
+    it('buckets every task by workflowCategory — the legacy status never picks a column', () => {
+      const failedExecution = task('exec', null, null, { status: 'failed' });
+      const inReview = task('review', null, null, {
+        status: 'paused',
+        workflowCategory: 'in_review',
+        workflowStateId: 'linear-state-review',
+      });
       const linkedDone = task('linked', null, null, {
         status: 'paused',
         workflowCategory: 'done',
         workflowStateId: 'linear-state-done',
       });
 
-      expect(KANBAN_WORKFLOW_COLUMN_KEY.done).toBe('done');
+      // No workflow state yet → the category bucket, never the execution fold.
+      expect(taskKanbanColumnKey(failedExecution, 'status')).toBe('backlog');
+      expect(taskKanbanColumnKey(inReview, 'status')).toBe('in_review');
       expect(taskKanbanColumnKey(linkedDone, 'status')).toBe('done');
-      expect(taskMatchesKanbanColumn(linkedDone, 'status', 'needsInput')).toBe(false);
+      expect(taskMatchesKanbanColumn(linkedDone, 'status', 'in_review')).toBe(false);
     });
 
-    it('keeps execution-only running closed while linked tasks can target mapped workflow states', () => {
-      const running = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'running')!;
-      const needsInput = STATUS_KANBAN_COLUMNS.find((column) => column.key === 'needsInput')!;
+    it('writes only the workflow category on a column drop — never the legacy status', () => {
+      const inReview = kanbanColumnForWorkflowCategory('in_review')!;
       const legacyTask = task('legacy');
-      const linkedTask = task('linked', null, null, {
-        workflowCategory: 'backlog',
-        workflowStateId: 'linear-state-backlog',
-      });
 
-      expect(running.droppable).toBe(true);
-      expect(running.targetStatus).toBeNull();
-      expect(canDropTaskIntoKanbanColumn(legacyTask, 'status', running)).toBe(false);
-      expect(canDropTaskIntoKanbanColumn(linkedTask, 'status', running)).toBe(true);
-      expect(needsInput.droppable).toBe(true);
-      expect(needsInput.targetStatus).toBe('paused');
-      expect(getKanbanTaskPatch('status', needsInput, linkedTask)).toEqual({
+      expect(canDropTaskIntoKanbanColumn(legacyTask, 'status', inReview)).toBe(true);
+      expect(getKanbanTaskPatch('status', inReview)).toEqual({
         workflowCategory: 'in_review',
       });
     });
 
-    it('treats a failed task dropped back on needsInput as already inside — no status rewrite', () => {
-      const failedTask = task('1', null, null, { status: 'failed' });
+    it('treats an in-review task dropped back on its column as already inside', () => {
+      const reviewTask = task('1', null, null, {
+        status: 'paused',
+        workflowCategory: 'in_review',
+      });
 
-      expect(taskMatchesKanbanColumn(failedTask, 'status', 'needsInput')).toBe(true);
-      expect(taskMatchesKanbanColumn(failedTask, 'status', 'backlog')).toBe(false);
-    });
-
-    it('excludes a column only when every member status is filtered out', () => {
-      expect(kanbanStatusColumnsExcludedBy(['completed', 'canceled'])).toEqual(
-        new Set(['done', 'canceled']),
-      );
-      // needsInput survives a partial exclusion (failed still shows).
-      expect(kanbanStatusColumnsExcludedBy(['paused'])).toEqual(new Set());
-      expect(kanbanStatusColumnsExcludedBy(undefined)).toEqual(new Set());
+      expect(taskMatchesKanbanColumn(reviewTask, 'status', 'in_review')).toBe(true);
+      expect(taskMatchesKanbanColumn(reviewTask, 'status', 'backlog')).toBe(false);
     });
   });
 
@@ -562,41 +580,48 @@ describe('kanbanBoardModel', () => {
   });
 
   describe('resolveKanbanDropColumn', () => {
-    const defs = new Map(STATUS_KANBAN_COLUMNS.map((column) => [column.key, column]));
-    const keys = new Set(STATUS_KANBAN_COLUMNS.map((column) => column.key));
+    const defs = new Map(ISSUE_WORKFLOW_COLUMNS.map((column) => [column.key, column]));
+    const keys = new Set(ISSUE_WORKFLOW_COLUMNS.map((column) => column.key));
 
     it('commits to the release column, not the mirror’s parked preview slot', () => {
       // Regression: the card previewed onto `done`, then the pointer moved to
       // `backlog` — the drop must write `backlog`, not the stale preview.
-      const columns = { backlog: [], done: ['T-1'], running: [] };
+      const columns = { backlog: [], done: ['T-1'], in_progress: [] };
       expect(resolveKanbanDropColumn(task('1'), 'status', columns, 'backlog', keys, defs)).toBe(
         'backlog',
       );
     });
 
-    it('rejects a legacy release over a column with no execution-status target', () => {
-      // The preview moved the id into `running` before the last over was
-      // rejected — the release column is still the truth.
-      const columns = { backlog: [], done: [], running: ['T-1'] };
+    it('rejects a release over a column with no workflow-category target', () => {
+      // A column that is not an Issue column (no workflowCategory target) is
+      // never a drop target on the Issue board — the preview move is ignored.
+      const ghost: KanbanColumnDefinition = {
+        droppable: true,
+        key: 'ghost',
+        targetStatus: 'paused',
+      };
+      const columns = { backlog: [], done: [], ghost: ['T-1'] };
+      const ghostDefs = new Map([...defs, ['ghost', ghost] as const]);
+      const ghostKeys = new Set([...keys, 'ghost']);
       expect(
-        resolveKanbanDropColumn(task('1'), 'status', columns, 'running', keys, defs),
+        resolveKanbanDropColumn(task('1'), 'status', columns, 'ghost', ghostKeys, ghostDefs),
       ).toBeNull();
     });
 
-    it('keeps a same-column reorder inside `running` legal', () => {
-      // `running` is closed to incoming legacy status writes, but reordering a
-      // member writes position only — membership is checked first.
-      const columns = { running: ['T-1', 'T-2'] };
+    it('keeps a same-column reorder legal', () => {
+      // Reordering a member writes position only — membership is checked
+      // before the drop rules.
+      const columns = { in_progress: ['T-1', 'T-2'] };
       expect(
         resolveKanbanDropColumn(
-          task('1', undefined, undefined, { status: 'running' }),
+          task('1', undefined, undefined, { workflowCategory: 'in_progress' }),
           'status',
           columns,
           'T-2',
           keys,
           defs,
         ),
-      ).toBe('running');
+      ).toBe('in_progress');
     });
 
     it('returns null when the release is outside every column', () => {
@@ -606,10 +631,9 @@ describe('kanbanBoardModel', () => {
   });
 
   describe('kanbanColumnMoveScope', () => {
-    it('scopes a workflow column by linked category or legacy execution statuses', () => {
-      const column = STATUS_KANBAN_COLUMNS.find((c) => c.key === 'needsInput')!;
+    it('scopes an Issue column by its workflow category only', () => {
+      const column = kanbanColumnForWorkflowCategory('in_review')!;
       expect(kanbanColumnMoveScope('status', column)).toEqual({
-        statuses: ['paused', 'failed'],
         workflowCategories: ['in_review'],
       });
     });
@@ -715,7 +739,10 @@ describe('kanbanColumnAllowsCreate', () => {
   });
 
   it('presets the clicked column dimension on the created issue', () => {
-    expect(kanbanColumnCreatePreset('backlog')).toEqual({ status: 'backlog' });
+    // The bare Issue columns create in the canonical Issue Status — never the
+    // legacy execution projection; only a `st:` Runs-view column still presets
+    // `status`.
+    expect(kanbanColumnCreatePreset('backlog')).toEqual({ workflowCategory: 'backlog' });
     expect(kanbanColumnCreatePreset('wf:in_progress')).toEqual({
       workflowCategory: 'in_progress',
     });
@@ -723,7 +750,9 @@ describe('kanbanColumnAllowsCreate', () => {
     expect(kanbanColumnCreatePreset('pr:2')).toEqual({ priority: 2 });
     expect(kanbanColumnCreatePreset('as:none')).toEqual({ assigneeUserId: null });
     expect(kanbanColumnCreatePreset('ag:agt_1')).toEqual({ assigneeAgentId: 'agt_1' });
-    expect(externalKanbanTaskPatch('agent', { droppable: true, key: 'ag:none', targetStatus: null })).toEqual({
+    expect(
+      externalKanbanTaskPatch('agent', { droppable: true, key: 'ag:none', targetStatus: null }),
+    ).toEqual({
       assigneeAgentId: null,
     });
     expect(kanbanColumnCreatePreset(`wf:todo${'\u001F'}pj:proj_1`)).toEqual({
@@ -783,20 +812,19 @@ describe('externalVisibleKanbanColumns', () => {
 });
 
 /**
- * The status pickers (task detail rail, row glyphs, card context menus) read
- * the board's own columns through `taskStatusChoices` — the hardcoded
- * four-status list they used to carry lost triage and disagreed with the
- * board's glyphs. These pins keep the menus 1:1 with the board: same
- * options, order, labels and icons, and the same reachability rule a drop
- * obeys.
+ * The Issue status pickers (task detail rail, row glyphs, card context
+ * menus, bulk bar, command palette) read the board's own columns through
+ * `issueStatusChoices` — workflow categories only, 1:1 with the board:
+ * same options, order, labels and icons. Execution statuses are never a
+ * user pick (run state is read-only).
  */
-describe('board-driven status choices', () => {
-  it('mirrors the board columns 1:1 — same options, order, labels and glyphs', () => {
-    const choices = taskStatusChoices({ workflowStateId: undefined });
+describe('board-driven Issue status choices', () => {
+  it('mirrors the Issue board columns 1:1 — same options, order, labels and glyphs', () => {
+    const choices = issueStatusChoices();
     expect(choices.map((choice) => choice.column.key)).toEqual(
-      STATUS_KANBAN_COLUMNS.map((column) => column.key),
+      ISSUE_WORKFLOW_COLUMNS.map((column) => column.key),
     );
-    // triage leads — the column the old hardcoded list missed entirely.
+    // triage leads — the column a hardcoded status list used to miss.
     expect(choices[0].column.key).toBe('triage');
     for (const choice of choices) {
       expect(COLUMN_I18N_KEYS[choice.column.key]).toBeTruthy();
@@ -807,49 +835,24 @@ describe('board-driven status choices', () => {
     }
   });
 
-  it('keeps workflow-only columns unreachable for an unlinked task — like a drop', () => {
-    const choices = taskStatusChoices({ workflowStateId: undefined });
-    const pickable = choices.filter((choice) => choice.status || choice.workflowCategory);
-    expect(pickable.map((choice) => choice.column.key)).toEqual([
-      'backlog',
-      'needsInput',
-      'done',
-      'canceled',
-    ]);
-    expect(pickable.every((choice) => choice.status && !choice.workflowCategory)).toBe(true);
-    // triage, todo and running are workflow categories the board could not
-    // take either — they render disabled, never hidden.
-    const blocked = choices.filter((choice) => !choice.status && !choice.workflowCategory);
-    expect(blocked.map((choice) => choice.column.key)).toEqual(['triage', 'todo', 'running']);
-  });
-
-  it('makes every board column pickable once the task has a workflow state', () => {
-    const choices = taskStatusChoices({ workflowStateId: 'ls-1' });
+  it('makes every row a workflow move — execution statuses never appear', () => {
+    const choices = issueStatusChoices();
     expect(choices.every((choice) => Boolean(choice.workflowCategory))).toBe(true);
+    expect(choices.every((choice) => !('status' in choice))).toBe(true);
+    // Linked or not, every column is pickable — an unlinked task's category
+    // write goes through the same CAS path a drop does.
     expect(choices[0]).toMatchObject({
       column: { key: 'triage' },
       workflowCategory: 'triage',
     });
   });
 
-  it('check-marks the board column the task sits in', () => {
-    expect(taskStatusBoardColumnKey({ status: 'paused' })).toBe('needsInput');
-    expect(taskStatusBoardColumnKey({ status: 'failed' })).toBe('needsInput');
-    expect(taskStatusBoardColumnKey({ status: 'running' })).toBe('running');
-    expect(
-      taskStatusBoardColumnKey({
-        status: 'running',
-        workflowCategory: 'triage',
-        workflowStateId: 'ls-1',
-      }),
-    ).toBe('triage');
-    expect(
-      taskStatusBoardColumnKey({
-        status: 'paused',
-        workflowCategory: 'in_review',
-        workflowStateId: 'ls-1',
-      }),
-    ).toBe('needsInput');
+  it('check-marks the board column the task sits in — by workflow category', () => {
+    expect(taskStatusBoardColumnKey({ workflowCategory: 'in_review' })).toBe('in_review');
+    expect(taskStatusBoardColumnKey({ workflowCategory: 'triage' })).toBe('triage');
+    // An uncategorized task check-marks backlog regardless of its run state.
+    expect(taskStatusBoardColumnKey({})).toBe('backlog');
+    expect(taskStatusBoardColumnKey({ workflowCategory: 'in_progress' })).toBe('in_progress');
   });
 });
 
@@ -891,7 +894,7 @@ describe('issueWorkflowStateChoices', () => {
     expect(choices[0].workflowCategory).toBe('in_progress');
     // The wf: column resolves the same moveBoard targetKey a category drop would.
     expect(choices[0].column.targetWorkflowCategory).toBe('in_progress');
-    expect(choices[0].status).toBeUndefined();
+    expect('status' in choices[0]).toBe(false);
   });
 
   it('keeps two custom states in one category individually pickable', () => {
@@ -943,7 +946,7 @@ describe('taskStatusChoiceIsCurrent', () => {
   });
 
   it('falls back to the column bucket for category rows', () => {
-    const choice = taskStatusChoices({})[0];
+    const choice = issueStatusChoices()[0];
     expect(choice.state).toBeUndefined();
     expect(taskStatusChoiceIsCurrent({}, choice, choice.column.key)).toBe(true);
     expect(taskStatusChoiceIsCurrent({}, choice, 'elsewhere')).toBe(false);

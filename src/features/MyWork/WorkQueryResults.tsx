@@ -38,7 +38,6 @@ import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/Kanban
 import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
 import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
-import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { issueIdColumnStyle } from '@/features/AgentTasks/shared/issueIdColumn';
 import WorkQueryVirtualList from '@/features/MyWork/WorkQueryVirtualList';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
@@ -270,7 +269,6 @@ export const WorkQueryTaskRow = memo(
   ({
     followed,
     depth = 0,
-    groupBy,
     bulkSelected,
     bulkSelectionActive,
     hiddenProperties,
@@ -289,7 +287,6 @@ export const WorkQueryTaskRow = memo(
   }: {
     followed?: boolean;
     depth?: number;
-    groupBy: 'status' | 'workflowCategory';
     bulkSelected?: boolean;
     /** Any selection — every row's checkbox stays revealed (Linear). */
     bulkSelectionActive?: boolean;
@@ -315,18 +312,12 @@ export const WorkQueryTaskRow = memo(
     muted?: boolean;
   }) => {
     const { t } = useTranslation('common');
-    const changeTaskStatus = useTaskStatusChange();
     const handleStatusChange = useCallback(
       async (choice: TaskStatusChoice) => {
-        const applied = await applyWorkQueryStatusChoice({
-          changeLocal: changeTaskStatus,
-          choice,
-          groupBy,
-          task,
-        });
+        const applied = await applyWorkQueryStatusChoice({ choice, task });
         if (applied) onMoved?.();
       },
-      [changeTaskStatus, groupBy, onMoved, task],
+      [onMoved, task],
     );
 
     /**
@@ -671,7 +662,6 @@ const WorkQueryStatusGroup = memo<{
                     bulkSelectionActive={bulkSelectionActive}
                     depth={row.depth}
                     followed={isFollowed?.(row.task.id)}
-                    groupBy={groupBy}
                     hiddenProperties={hiddenProperties}
                     key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
                     milestoneFor={milestoneFor}
@@ -821,8 +811,6 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     const listGroupBy = workQueryListGroupBy(groupBy);
     const listLane =
       layout === 'list' ? normalizeWorkQuerySubGroupBy(listGroupBy, subGroupBy) : undefined;
-    const headerGroupBy =
-      listGroupBy === 'status' || listGroupBy === 'workflowCategory' ? listGroupBy : 'status';
     const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup && listGroupBy !== 'none');
     const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
     const nestRows =
@@ -833,12 +821,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       const builtin = (): ((key: string) => number) | undefined => {
         if (axis === 'activityDate') return activityBucketRank;
         if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
-        if (
-          axis === 'agent' ||
-          axis === 'assignee' ||
-          axis === 'milestone' ||
-          axis === 'project'
-        ) {
+        if (axis === 'agent' || axis === 'assignee' || axis === 'milestone' || axis === 'project') {
           return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
         }
         if (axis === 'cycle' && groupRank) return groupRank;
@@ -1010,7 +993,6 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                   bulkSelected={bulkSelectedIds?.has(task.id)}
                   depth={item.rowDepth}
                   followed={isFollowed?.(task.id)}
-                  groupBy={headerGroupBy}
                   muted={item.parentContext}
                   rangeIds={orderedIds}
                   selected={rowSelected(task)}

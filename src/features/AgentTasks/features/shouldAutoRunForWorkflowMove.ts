@@ -1,7 +1,11 @@
 import type { TaskWorkflowCategory } from '@orvilo/types';
 
-/** Stages where the agent should start on its own. A manual Run button is not the trigger. */
-const AUTO_RUN_CATEGORIES = new Set<TaskWorkflowCategory>(['in_progress', 'in_review']);
+/**
+ * The only category whose move spawns a builder: In Progress. In Review is
+ * deliberate — moving a task into review never starts a run (verification is
+ * Verify's job); moving out of review back to In Progress may re-run.
+ */
+const AUTO_RUN_CATEGORIES = new Set<TaskWorkflowCategory>(['in_progress']);
 
 export const shouldAutoRunForWorkflowMove = (input: {
   automationMode?: string | null;

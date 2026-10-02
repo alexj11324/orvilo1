@@ -71,3 +71,25 @@ intent rekeys on the next generation rather than jamming permanently.
 `task_dispatches.recovery_attempts` (int, default 0) — shared counter for
 resume claims and outcome_unknown reschedules; reset on waiting-resume and on
 a reconcile that finds a stable live identity.
+
+## Orphan live-lock guard (`taskDispatchRecovery`)
+
+A reconcile that finds a persisted `running` operation must still prove the
+executor is alive: `touchRunning` refreshes `agent_operations.updatedAt` per
+execution step, so a row stale beyond the operation lease window
+(`DEFAULT_STALE_OPERATION_MS`, 5m — same convention as `settleStaleRunning`)
+is a dead executor's signature, not a live one. Stale `running` ops release
+back to `outcome_unknown` (a counted attempt toward `MAX_RECOVERY_ATTEMPTS`)
+instead of `running` + heartbeat re-arm — otherwise every pass resets
+`recovery_attempts` and re-arms the heartbeat, pinning the task's active
+dispatch slot forever. `waiting_*` statuses park legitimately quiet and are
+exempt; they converge through `AbandonOperationService`.
+
+## Admission contention translation (`taskDispatch`)
+
+Postgres lock-kills (`40P01`) and serialization failures (`40001`) on the
+single-active-dispatch path — `request`, `claimForProvisioning`,
+`transition` — are translated into `TaskDispatchConflictError` (same outcome
+class as the `busy` branch, TRPC `CONFLICT` upstream) rather than escaping as
+raw driver errors, so callers retry idempotently instead of seeing 500-class
+failures.

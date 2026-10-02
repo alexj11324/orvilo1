@@ -342,7 +342,6 @@ describe('driveTaskFromVerify', () => {
           executionGeneration: 1,
           policyRevision: 1,
           requirementRevision: 1,
-          status: 'running',
         },
         id: 'task-1',
         status: 'completed',

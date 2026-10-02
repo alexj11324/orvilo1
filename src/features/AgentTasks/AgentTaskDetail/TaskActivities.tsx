@@ -526,7 +526,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         onClick={() => setIsExpanded((prev) => !prev)}
       >
         <BotMessageSquare color={cssVar.colorTextDescription} size={16} />
-        <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
+        <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.activities')}
         </div>
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />

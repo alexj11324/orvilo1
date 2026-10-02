@@ -225,7 +225,7 @@ const TaskDock = memo(() => {
               onClick={() => setExpand(!expand)}
             />
           ) : (
-            <ActionIcon icon={XIcon} size={'small'} onClick={dismissAll} />
+            <ActionIcon icon={XIcon} size={'small'} title={t('close')} onClick={dismissAll} />
           )}
         </div>
       </div>

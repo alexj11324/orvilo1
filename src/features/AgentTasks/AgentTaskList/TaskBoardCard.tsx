@@ -99,7 +99,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
 
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     line-height: 20px;
     color: ${cssVar.colorText};
@@ -370,7 +370,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           assigned executor top-right). */}
         <div className="flex items-center gap-2" style={{ minHeight: 24 }}>
           <div
-            className="truncate block text-[12px] text-muted-foreground font-[450]"
+            className="truncate block font-mono text-xs text-muted-foreground"
             style={{ flex: 1, minWidth: 0 }}
           >
             {task.identifier}
@@ -442,7 +442,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
             />
           ) : null}
           {status === 'scheduled' ? (
-            <div className="text-[12px] text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {tChat('taskDetail.status.scheduled', { defaultValue: 'Scheduled' })}
             </div>
           ) : null}
@@ -463,7 +463,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
           </div>
           {shows('updated') && time ? (
             <div
-              className="truncate block text-[12px] text-muted-foreground"
+              className="truncate block font-mono text-xs text-muted-foreground"
               style={{ minWidth: 0 }}
             >
               {/* Linear cards stamp the creation date, not the last touch. */}

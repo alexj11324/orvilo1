@@ -429,7 +429,7 @@ const TopicCard = memo<TopicCardProps>(({ activity, defaultExpanded = true, prim
         <div className={primary ? 'flex flex-col gap-3' : 'flex flex-col gap-2 px-1'}>
           {activity.summary && !(primary && activity.content) && (
             <div
-              className="text-[13px]"
+              className="text-sm"
               style={{ color: cssVar.colorTextDescription, whiteSpace: 'pre-wrap' }}
             >
               {activity.summary}

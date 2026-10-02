@@ -3107,6 +3107,7 @@ export default {
   'workingPanel.tabs.closeRight': 'Close tabs to the right',
   'workingPanel.tabs.pin': 'Pin tab',
   'workingPanel.tabs.pinned': 'Pinned tab',
+  'workingPanel.tabs.swapThreads': 'Swap threads',
   'workingPanel.tabs.unpin': 'Unpin tab',
   'workingPanel.documents.close': 'Close',
   'workingPanel.documents.error': 'Failed to load document',

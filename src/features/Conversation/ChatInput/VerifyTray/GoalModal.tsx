@@ -59,9 +59,7 @@ export const GoalContent = memo<GoalContentProps>(({ initialGoal, onDelete, onSu
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="text-[13px] text-muted-foreground">
-        {tv('acceptance.tray.goalModal.hint')}
-      </div>
+      <div className="text-sm text-muted-foreground">{tv('acceptance.tray.goalModal.hint')}</div>
       <Textarea
         placeholder={tv('acceptance.tray.goalModal.placeholder')}
         rows={3}

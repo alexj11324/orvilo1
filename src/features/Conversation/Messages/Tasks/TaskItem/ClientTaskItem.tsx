@@ -122,7 +122,7 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
             <div className="flex flex-col gap-4 p-3" style={{border: `1px solid ${cssVar.colorBorder}`, borderRadius: cssVar.borderRadiusLG,  marginBlock: 8 }}>
               {instruction && (
                 <div className="flex flex-col p-3">
-                  <div className='text-[13px] text-muted-foreground'>
+                  <div className='text-sm text-muted-foreground'>
                     {instruction}
                   </div>
                 </div>

@@ -204,9 +204,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   count: css`
     flex: none;
-
-    font-size: 13px;
-    font-weight: 450;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
     color: ${cssVar.colorTextDescription};
   `,
@@ -375,7 +373,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
               <>
                 {statusIcon &&
                   createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
-                <div className="text-[13px] font-medium">{label}</div>
+                <div className="text-sm font-medium">{label}</div>
               </>
             )}
             {headerVariant !== 'loading' && <span className={styles.count}>{total}</span>}

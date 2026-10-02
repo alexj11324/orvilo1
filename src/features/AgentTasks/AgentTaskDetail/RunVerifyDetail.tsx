@@ -99,7 +99,7 @@ const RunVerifyDetail = memo<{
               <div className={`flex flex-col gap-1 ${styles.check}`} key={result.id}>
                 <div className="flex items-center gap-2">
                   <meta.icon color={meta.color} size={14} style={{ flex: 'none' }} />
-                  <div className="truncate block text-[13px]" style={{ flex: 1, minWidth: 0 }}>
+                  <div className="truncate block text-sm" style={{ flex: 1, minWidth: 0 }}>
                     {result.checkItemTitle}
                   </div>
                 </div>

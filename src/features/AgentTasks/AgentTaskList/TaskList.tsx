@@ -386,7 +386,7 @@ const TaskList = memo<TaskListProps>((props) => {
   );
 
   const hiddenFooter = hiddenCount > 0 && (
-    <div className="flex items-center justify-center gap-4 py-4" style={{ fontSize: 13 }}>
+    <div className="flex items-center justify-center gap-4 py-4" style={{ fontSize: 12 }}>
       <div className="flex items-center gap-1.5">
         <div className="font-medium">
           {t('taskList.hiddenCompleted.count', { count: hiddenCount })}
@@ -403,7 +403,7 @@ const TaskList = memo<TaskListProps>((props) => {
 
   const truncatedFooter = isTruncated && (
     <div className="flex items-center justify-center py-4">
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t('taskList.truncated', { loaded: tasks.length, total: storeTasksTotal })}
       </div>
     </div>

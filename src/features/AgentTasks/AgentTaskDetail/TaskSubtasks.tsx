@@ -96,11 +96,11 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         </TaskStatusTag>
       </span>
       {hasName && (
-        <div className="text-[13px] text-muted-foreground" style={{ flex: 'none' }}>
+        <div className="font-mono text-xs text-muted-foreground" style={{ flex: 'none' }}>
           {task.identifier}
         </div>
       )}
-      <div className="truncate block text-[13px]" style={{ flex: 1, minWidth: 0 }}>
+      <div className="truncate block text-sm" style={{ flex: 1, minWidth: 0 }}>
         {task.name || task.identifier}
       </div>
       {task.automationMode ? (
@@ -337,10 +337,7 @@ const TaskSubtasks = memo(() => {
                 onClick={() => setIsExpanded((prev) => !prev)}
               >
                 <ListTodoIcon color={cssVar.colorTextDescription} size={16} />
-                <div
-                  className="text-[13px] font-medium"
-                  style={{ color: cssVar.colorTextSecondary }}
-                >
+                <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
                   {t('taskDetail.subtasks')}
                 </div>
                 <AccordionArrowIcon
@@ -419,7 +416,7 @@ const TaskSubtasks = memo(() => {
             onClick={toggleCreating}
           >
             <Plus color={cssVar.colorTextDescription} size={16} />
-            <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
+            <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
               {t('taskDetail.addSubtask')}
             </div>
           </div>

@@ -653,7 +653,7 @@ const QuotaMenu = <S extends QuotaSnapshotBase>({
     <div className={cx('flex flex-col gap-2.5', styles.popover)} style={{ width: contentWidth }}>
       <div className={cx('flex flex-row items-center gap-2 justify-between', styles.header)}>
         <div className="flex flex-row items-baseline gap-1.5" style={{ minWidth: 0 }}>
-          <div className="font-semibold" style={{ fontSize: 13 }}>
+          <div className="font-semibold" style={{ fontSize: 14 }}>
             {title}
           </div>
           {quota?.updatedAt && (

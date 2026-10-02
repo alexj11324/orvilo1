@@ -26,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 import { formatInboxAge } from './inboxAge';
 import { INBOX_SNOOZE_DAYS, type InboxSnoozeDays, snoozeUntilForDays } from './inboxOrganize';
+import { inboxRowSelectKeyDown } from './inboxRowKeyboard';
 import { inboxCardIcon } from './notificationIcons';
 
 /**
@@ -171,15 +172,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
       role="button"
       tabIndex={0}
       onClick={() => onSelect(card.notificationId, true)}
-      onKeyDown={(event) => {
-        // Portaled menus stay React descendants of this row — let their
-        // items keep Enter/Space instead of re-selecting the card.
-        if ((event.target as HTMLElement).closest('[role="menu"]')) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onSelect(card.notificationId, true);
-        }
-      }}
+      onKeyDown={(event) => inboxRowSelectKeyDown(event, () => onSelect(card.notificationId, true))}
     >
       {card.read ? null : <span aria-hidden className={styles.unreadDot} />}
       <span className={styles.avatarDisc}>
@@ -205,7 +198,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
             <span className="text-muted-foreground">{card.content}</span>
             {'.'}
           </p>
-          <div className="hidden shrink-0 items-center gap-2 group-hover:flex">
+          <div className="hidden shrink-0 items-center gap-2 group-focus-within:flex group-hover:flex">
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -311,10 +304,12 @@ const InboxListRow = memo((props: InboxListRowProps) => {
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">
-            {card.resourceIdentifier ? `${card.resourceIdentifier} ` : ''}
+            {card.resourceIdentifier ? (
+              <span className="font-mono">{`${card.resourceIdentifier} `}</span>
+            ) : null}
             {card.title}
           </span>
-          <span className="flex shrink-0 items-center gap-1 text-tertiary">
+          <span className="flex shrink-0 items-center gap-1 font-mono text-tertiary">
             {card.snoozedUntil ? (
               <>
                 <ClockIcon aria-hidden className="size-3" />

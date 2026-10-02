@@ -41,7 +41,7 @@ import { TASK_VISIBILITY_ICONS } from './taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 
-// Linear's issue-row type ramp: 13px identifier (450) and title (500) on a
+// Issue-row type ramp: mono 12px identifier (400) and 14px title (500) on a
 // 44px row. The identifier column's width comes from the list
 // (`issueIdColumnStyle`), so every status mark lines up.
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -50,19 +50,19 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     min-width: var(${ISSUE_ID_WIDTH_VAR}, auto);
 
-    font-size: 13px;
-    font-weight: 450;
+    font-family: ${cssVar.fontFamilyCode};
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
   `,
   parent: css`
     min-width: 68px;
     max-width: 240px;
-    font-size: 13px;
+    font-size: 12px;
   `,
   parentSeparator: css`
     flex: none;
     width: 17px;
-    font-size: 13px;
+    font-size: 12px;
     text-align: center;
   `,
   row: css`
@@ -76,7 +76,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   title: css`
     min-width: 0;
-    font-size: 13px;
+    font-size: 14px;
   `,
 }));
 
@@ -386,8 +386,8 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
 
   const timeNode = time ? (
     <div
-      className="text-right text-[12px] text-muted-foreground"
-      style={{ fontWeight: 450, whiteSpace: 'nowrap', width: 48 }}
+      className="text-right font-mono text-xs text-muted-foreground"
+      style={{ whiteSpace: 'nowrap', width: 48 }}
     >
       {time}
     </div>

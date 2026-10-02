@@ -2828,6 +2828,7 @@
   "workingPanel.tabs.closeRight": "关闭右侧标签页",
   "workingPanel.tabs.pin": "固定标签页",
   "workingPanel.tabs.pinned": "已固定标签页",
+  "workingPanel.tabs.swapThreads": "切换会话",
   "workingPanel.tabs.unpin": "取消固定标签页",
   "workingPanel.title": "工作面板",
   "workingPanel.works.changeType.created": "已创建",

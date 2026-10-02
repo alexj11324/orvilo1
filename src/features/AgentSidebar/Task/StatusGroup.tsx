@@ -37,10 +37,7 @@ const StatusGroup = memo<StatusGroupProps>(({ group }) => {
           <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[24px]">
             <meta.icon color={meta.color} size={14} strokeWidth={1.75} />
           </div>
-          <div
-            className="truncate text-[13px]"
-            style={{ color: cssVar.colorTextSecondary, flex: 1 }}
-          >
+          <div className="truncate text-sm" style={{ color: cssVar.colorTextSecondary, flex: 1 }}>
             {t(meta.titleKey as 'taskList.kanban.backlog')}
           </div>
           <div className="text-[11px] text-muted-foreground">{group.tasks.length}</div>

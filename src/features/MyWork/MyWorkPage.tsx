@@ -61,7 +61,6 @@ import type { BulkSelectGesture } from './bulkSelection';
 import MyWorkControls from './MyWorkControls';
 import {
   activityBucketTitle,
-  completedWindowQueryFilter,
   filterMyWorkTaskRows,
   MY_WORK_PRIORITY_LABEL_KEYS,
   MY_WORK_ROW_PROPERTIES,
@@ -86,6 +85,7 @@ import MyWorkIssuePane from './MyWorkIssuePane';
 import { isMyWorkSaveableMode } from './myWorkSaveAs';
 import { isTaskFollowed } from './myWorkSubscribe';
 import { useBulkSelection } from './useBulkSelection';
+import { useMyWorkQueryFilter } from './useMyWorkQueryFilter';
 import { isMyWorkBoardMode, workQueryListGroupBy } from './workQueryBoard';
 import { applyWorkQueryStatusChange } from './workQueryBoardMove';
 import {
@@ -276,7 +276,10 @@ const MyWorkPage = memo(() => {
     },
     [filterParam, filterSupported, mode, searchParams, setSearchParams],
   );
-  const builderFilter = filterSupported ? builderToFilter('task', builder) : undefined;
+  const builderFilter = useMemo(
+    () => (filterSupported ? builderToFilter('task', builder) : undefined),
+    [builder, filterSupported],
+  );
   const activeFilterCount = myWorkActiveFilterCount(builder);
 
   const serverGroupBy = myWorkServerGroupBy(display, layout);
@@ -304,10 +307,7 @@ const MyWorkPage = memo(() => {
     () => myWorkVisibilityQueryFilter({ showSubIssues, showTriage }),
     [showSubIssues, showTriage],
   );
-  const queryFilter = mergeWorkQueryFilters(
-    mergeWorkQueryFilters(builderFilter, completedWindowQueryFilter(completed)),
-    visibilityFilter,
-  );
+  const queryFilter = useMyWorkQueryFilter(builderFilter, completed, visibilityFilter);
   // A non-default ordering needs the generic endpoint. Filters, the completed
   // window, priority/assignee columns and swimlanes ride `myWork` so the
   // follow bells stay on the mode feed.
@@ -825,8 +825,7 @@ const MyWorkPage = memo(() => {
         });
       }
       if (axis === 'priority') {
-        const label =
-          MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
+        const label = MY_WORK_PRIORITY_LABEL_KEYS[Number(key)] ?? MY_WORK_PRIORITY_LABEL_KEYS[0];
         return t(`chat:${label}` as never);
       }
       if (axis === 'project') {
@@ -841,24 +840,21 @@ const MyWorkPage = memo(() => {
     },
     [i18n.language, memberNameById, projectNameById, t],
   );
-  const groupIcon = useCallback(
-    (axis: string, key: string) => {
-      if (axis === 'priority') {
-        return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
-      }
-      if (axis === 'project') {
-        return createElement(PROJECT_ENTITY_ICON, {
-          className: 'size-4 shrink-0',
-          color: key === 'none' ? cssVar.colorTextQuaternary : undefined,
-        });
-      }
-      if (axis === 'assignee') {
-        return <AssigneeUserAvatar size={18} userId={key === 'none' ? null : key} />;
-      }
-      return undefined;
-    },
-    [],
-  );
+  const groupIcon = useCallback((axis: string, key: string) => {
+    if (axis === 'priority') {
+      return <PriorityIcon priority={key === 'none' ? 0 : Number(key)} size={14} />;
+    }
+    if (axis === 'project') {
+      return createElement(PROJECT_ENTITY_ICON, {
+        className: 'size-4 shrink-0',
+        color: key === 'none' ? cssVar.colorTextQuaternary : undefined,
+      });
+    }
+    if (axis === 'assignee') {
+      return <AssigneeUserAvatar size={18} userId={key === 'none' ? null : key} />;
+    }
+    return undefined;
+  }, []);
 
   // Display-property toggles — the set of row chips hidden in place. Project
   // and milestone drop out upstream (`rowExtras`/`milestoneFor`).

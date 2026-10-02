@@ -3,6 +3,7 @@
 import { AlertDialog as AlertDialogPrimitive } from '@base-ui/react/alert-dialog';
 import { Dialog } from '@base-ui/react/dialog';
 import { cn } from 'cn';
+import { t } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { type CSSProperties, type HTMLAttributes, type ReactNode } from 'react';
 
@@ -121,6 +122,7 @@ interface AlertModalCloseProps extends React.ComponentProps<typeof AlertDialogPr
 }
 const AlertModalClose = ({ className, children, style, ...rest }: AlertModalCloseProps) => (
   <AlertDialogPrimitive.Close
+    aria-label={t('close', { ns: 'common' })}
     style={{ ...modalCloseStyle, ...style }}
     className={cn(
       'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-lg border-none bg-transparent p-0 text-muted-foreground transition-all hover:scale-[1.04] hover:bg-muted hover:text-foreground',
@@ -137,6 +139,7 @@ interface ModalCloseProps extends React.ComponentProps<typeof Dialog.Close> {
 }
 const ModalClose = ({ className, children, style, ...rest }: ModalCloseProps) => (
   <Dialog.Close
+    aria-label={t('close', { ns: 'common' })}
     style={{ ...modalCloseStyle, ...style }}
     className={cn(
       'absolute top-2 right-3 inline-flex cursor-pointer items-center justify-center rounded-lg border-none bg-transparent p-0 text-muted-foreground transition-all hover:scale-[1.04] hover:bg-muted hover:text-foreground',

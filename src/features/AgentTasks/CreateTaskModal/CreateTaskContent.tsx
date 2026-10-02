@@ -352,7 +352,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                 onClick={handleInline}
               />
             )}
-            <ActionIcon icon={X} onClick={close} />
+            <ActionIcon icon={X} title={t('close', { ns: 'common' })} onClick={close} />
           </div>
         </div>
 

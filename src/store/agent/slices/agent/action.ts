@@ -29,8 +29,7 @@ import {
   resolveAgentDocumentsContext,
 } from '@/services/agentDocument';
 import { aiAgentService } from '@/services/aiAgent';
-import { useHomeStore } from '@/store/home';
-import { homeAgentListSelectors } from '@/store/home/selectors';
+import { homeService } from '@/services/home';
 import type { StoreSetter } from '@/store/types';
 import { getUserStoreState } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -167,10 +166,26 @@ export class AgentSliceActionImpl {
     // shared workspace agent prefixes the creator so members can distinguish
     // identical tools.
     const heteroProvider = params.config?.agencyConfig?.heterogeneousProvider;
-    const takenNames = homeAgentListSelectors
-      .allAgents(useHomeStore.getState())
-      .map((agent) => agent.name)
-      .filter((name): name is string => !!name);
+    // Names already in use reserve their slot. Read the same sidebar list the
+    // sidebar itself renders (server truth, so a stale or unloaded local copy
+    // can't mint a duplicate); if the fetch fails, a repeated name is better
+    // than no agent — the creation proceeds unnumbered.
+    let takenNames: string[] = [];
+    try {
+      const list = await homeService.getSidebarAgentList();
+      takenNames = [
+        ...list.pinned,
+        ...list.groups.flatMap((group) => group.items),
+        ...list.ungrouped,
+        ...list.privatePinned,
+        ...list.privateGroups.flatMap((group) => group.items),
+        ...list.privateUngrouped,
+      ]
+        .map((item) => item.name)
+        .filter((name): name is string => !!name);
+    } catch {
+      // Naming must never block agent creation.
+    }
     const baseName = heteroProvider
       ? heteroAgentDefaultName({
           productTitle: params.config?.title || getHeterogeneousTypeLabel(heteroProvider.type),

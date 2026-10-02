@@ -3,6 +3,8 @@ import { useMemo } from 'react';
 import { useClientDataSWR } from '@/libs/swr';
 import { topicKeys } from '@/libs/swr/keys';
 import { topicService } from '@/services/topic';
+import { useGlobalStore } from '@/store/global';
+import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
 
@@ -36,13 +38,13 @@ export const useMobileTopics = () => {
 };
 
 /**
- * The agent a "new conversation" should open on: the owner of the most recent
- * conversation, which is what "last used" means for a chat app.
+ * The agent a "new conversation" should open on. Reads the persisted
+ * `systemStatus.lastUsedAgentId`, which only explicit actions move (composer
+ * pick / send / handoff) — a background run bumping a topic's `updatedAt`
+ * must never change it, so it is deliberately not derived from `topics[0]`.
  */
-export const useLastUsedAgentId = (): string | undefined => {
-  const { topics } = useMobileTopics();
-  return topics[0]?.agentId;
-};
+export const useLastUsedAgentId = (): string | undefined =>
+  useGlobalStore(systemStatusSelectors.lastUsedAgentId);
 
 /** Cross-agent topic search — the search bar and the list share one SWR key. */
 export const useSearchTopics = (keywords?: string) => {

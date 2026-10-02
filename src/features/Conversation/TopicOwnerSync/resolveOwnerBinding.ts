@@ -27,6 +27,6 @@ export const resolveOwnerBinding = (params: {
 
   return {
     activeAgentId: undefined,
-    configAgentId: composerAgentId ?? lastUsedAgentId,
+    configAgentId: composerAgentId ?? lastUsedAgentId ?? undefined,
   };
 };

@@ -2,6 +2,7 @@ export * from './acpExecution';
 export * from './agencyConfig';
 export * from './agentConfig';
 export * from './agentIntervention';
+export * from './agentTier';
 export * from './chatConfig';
 export * from './displayName';
 export * from './document';

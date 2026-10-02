@@ -1,4 +1,5 @@
 import type {
+  AgentTier,
   BriefArtifacts,
   BriefMetadata,
   TaskActivityLogPayload,
@@ -292,6 +293,13 @@ export const taskDispatches = pgTable(
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
     agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    /**
+     * Capability band the bound agent ran under — snapshotted from
+     * `project_agents.tier` whenever the dispatch binds an agent, so a later
+     * roster edit cannot rewrite history. The tiered orchestrator escalates
+     * the next attempt off the tier recorded on a terminally failed row.
+     */
+    tier: text('tier').$type<AgentTier>(),
     phase: text('phase').$type<TaskDispatchPhase>().notNull().default('requested'),
     generation: integer('generation').notNull(),
     taskRevision: integer('task_revision').notNull(),

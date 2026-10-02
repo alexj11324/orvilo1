@@ -3244,6 +3244,7 @@ table project_agents {
   added_by_user_id text
   workspace_id text
   role text
+  tier text
   responsibility text
   enabled boolean [not null, default: true]
   sort_order integer [not null, default: 0]
@@ -4205,6 +4206,7 @@ table task_dispatches {
   workspace_id text
   project_id text
   agent_id text
+  tier text
   phase text [not null, default: 'requested']
   generation integer [not null]
   task_revision integer [not null]

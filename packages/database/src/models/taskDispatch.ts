@@ -1,4 +1,6 @@
 import type {
+  AgentTier,
+  ProjectOrchestrationPolicy,
   TaskDispatchOrigin,
   TaskDispatchPhase,
   TaskDispatchSettlementGrant,
@@ -9,6 +11,7 @@ import type {
 import {
   and,
   asc,
+  desc,
   eq,
   inArray,
   isNotNull,
@@ -255,13 +258,33 @@ export interface TaskDispatchResumeCandidate {
 
 /** A `backlog` task eligible for project `autoDispatch` intake. */
 export interface TaskBacklogIntakeCandidate {
+  assigneeAgentId: string | null;
   createdBySubjectId: string | null;
   createdByUserId: string | null;
   executionGeneration: number;
+  orchestrationPolicy: ProjectOrchestrationPolicy;
+  priority: number | null;
   projectId: string;
   taskId: string;
   userId: string | null;
   workspaceId: string;
+}
+
+/** The latest terminally settled dispatch for a task, used for tier escalation. */
+export interface TaskTerminalDispatchOutcome {
+  agentId: string | null;
+  generation: number;
+  phase: TaskDispatchPhase;
+  requestedBy: string;
+  tier: AgentTier | null;
+}
+
+/** A tiered roster row the intake matcher may route a task onto. */
+export interface ProjectAgentRosterEntry {
+  agentId: string;
+  role: string | null;
+  sortOrder: number;
+  tier: AgentTier | null;
 }
 
 /**
@@ -288,6 +311,34 @@ export class TaskDispatchModel {
         `Idempotency key already belongs to Task ${existing.taskId}`,
       );
     }
+  }
+
+  /**
+   * Capability band the task's bound agent holds on the project roster — the
+   * snapshot persisted as `task_dispatches.tier` so a later roster edit cannot
+   * rewrite which tier an attempt ran at. Non-project tasks and agents absent
+   * from the roster have no band.
+   */
+  private async projectAgentTier(
+    db: OrviloDatabase,
+    projectId: string | null,
+    agentId: string | null,
+  ): Promise<AgentTier | null> {
+    if (!projectId || !agentId) return null;
+    const [row] = await db
+      .select({ tier: projectAgents.tier })
+      .from(projectAgents)
+      .where(
+        and(
+          eq(projectAgents.projectId, projectId),
+          eq(projectAgents.agentId, agentId),
+          this.workspaceId
+            ? eq(projectAgents.workspaceId, this.workspaceId)
+            : isNull(projectAgents.workspaceId),
+        ),
+      )
+      .limit(1);
+    return row?.tier ?? null;
   }
 
   private async projectDispatchWaitingReason(
@@ -549,9 +600,12 @@ export class TaskDispatchModel {
     const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 10)));
     const rows = await db
       .select({
+        assigneeAgentId: tasks.assigneeAgentId,
         createdBySubjectId: tasks.createdBySubjectId,
         createdByUserId: tasks.createdByUserId,
         executionGeneration: tasks.executionGeneration,
+        orchestrationPolicy: projects.orchestrationPolicy,
+        priority: tasks.priority,
         // The join keys on the project, so the column is always present here.
         projectId: sql<string>`${tasks.projectId}`,
         taskId: tasks.id,
@@ -582,6 +636,66 @@ export class TaskDispatchModel {
         ? []
         : [{ ...row, userId: row.userId, workspaceId: row.workspaceId }],
     );
+  }
+
+  /**
+   * The task's most recent terminally settled dispatch — the durable outcome
+   * the tiered orchestrator escalates from. `generation` is minted under the
+   * task row lock, so it orders attempts strictly within a task.
+   */
+  static async findLatestTerminalDispatch(
+    db: OrviloDatabase,
+    input: { taskId: string; workspaceId: string | null },
+  ): Promise<TaskTerminalDispatchOutcome | undefined> {
+    const [row] = await db
+      .select({
+        agentId: taskDispatches.agentId,
+        generation: taskDispatches.generation,
+        phase: taskDispatches.phase,
+        requestedBy: taskDispatches.requestedBy,
+        tier: taskDispatches.tier,
+      })
+      .from(taskDispatches)
+      .where(
+        and(
+          eq(taskDispatches.taskId, input.taskId),
+          input.workspaceId
+            ? eq(taskDispatches.workspaceId, input.workspaceId)
+            : isNull(taskDispatches.workspaceId),
+          inArray(taskDispatches.phase, ['canceled', 'failed', 'succeeded', 'abandoned']),
+        ),
+      )
+      .orderBy(desc(taskDispatches.generation))
+      .limit(1);
+    return row;
+  }
+
+  /**
+   * The enabled roster rows a tiered intake may route work onto, in roster
+   * order (`sortOrder`, then insertion) so cheap-first matching is stable.
+   */
+  static async listProjectAgentRoster(
+    db: OrviloDatabase,
+    input: { projectId: string; workspaceId: string | null },
+  ): Promise<ProjectAgentRosterEntry[]> {
+    return db
+      .select({
+        agentId: projectAgents.agentId,
+        role: projectAgents.role,
+        sortOrder: projectAgents.sortOrder,
+        tier: projectAgents.tier,
+      })
+      .from(projectAgents)
+      .where(
+        and(
+          eq(projectAgents.projectId, input.projectId),
+          eq(projectAgents.enabled, true),
+          input.workspaceId
+            ? eq(projectAgents.workspaceId, input.workspaceId)
+            : isNull(projectAgents.workspaceId),
+        ),
+      )
+      .orderBy(asc(projectAgents.sortOrder), asc(projectAgents.createdAt));
   }
 
   /** Discover committed planner dispatch intents whose post-commit wakeup was lost. */
@@ -677,6 +791,11 @@ export class TaskDispatchModel {
         throw new TaskDispatchNotFoundError('Task not found in dispatch scope');
       }
 
+      // The roster band the bound agent runs at — snapshotted once under the
+      // task lock so every agentId write below records the tier the attempt
+      // was made at (the escalation signal for the next dispatch).
+      const attemptedTier = await this.projectAgentTier(tx, task.projectId, task.assigneeAgentId);
+
       // Resolve idempotency only after locking the Task. Besides serializing
       // concurrent retries, this makes the assignee and revision snapshots
       // below authoritative for the exact dispatch we are about to claim.
@@ -751,6 +870,7 @@ export class TaskDispatchModel {
               recoveryAttempts: 0,
               requirementRevision: task.requirementRevision,
               taskRevision: task.domainRevision,
+              tier: attemptedTier,
               waitingReason: null,
             })
             .where(and(eq(taskDispatches.id, existing.id), eq(taskDispatches.phase, 'waiting')))
@@ -802,6 +922,7 @@ export class TaskDispatchModel {
             recoveryAttempts: 0,
             requirementRevision: task.requirementRevision,
             taskRevision: task.domainRevision,
+            tier: attemptedTier,
             waitingReason: null,
           })
           .where(and(eq(taskDispatches.id, active.id), eq(taskDispatches.phase, 'waiting')))
@@ -854,6 +975,7 @@ export class TaskDispatchModel {
           sourceDispatchId: input.sourceDispatchId ?? null,
           taskId: task.id,
           taskRevision: task.domainRevision,
+          tier: attemptedTier,
           waitingReason,
           workspaceId: task.workspaceId,
         })
@@ -1252,6 +1374,12 @@ export class TaskDispatchModel {
         }
       }
 
+      // Rebinding the agent re-snapshots its roster tier alongside — the
+      // durable record of which band this attempt ran at.
+      const tierSnapshot =
+        input.agentId === undefined
+          ? undefined
+          : await this.projectAgentTier(tx, dispatch.projectId, input.agentId);
       const [updated] = await tx
         .update(taskDispatches)
         .set({
@@ -1260,6 +1388,7 @@ export class TaskDispatchModel {
           leaseExpiresAt: input.leaseExpiresAt,
           operationId: input.operationId,
           phase: input.phase,
+          tier: tierSnapshot,
           waitingReason: input.waitingReason,
         })
         .where(

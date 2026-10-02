@@ -1,4 +1,5 @@
 import {
+  AGENT_TIERS,
   PROJECT_CREATABLE_STATUSES,
   PROJECT_DATE_PRECISIONS,
   PROJECT_HEALTH_STATES,
@@ -203,6 +204,7 @@ export const projectRouter = router({
         responsibility: z.string().nullish(),
         role: z.string().nullish(),
         sortOrder: z.number().int().optional(),
+        tier: z.enum(AGENT_TIERS).nullish(),
       }),
     )
     .mutation(async ({ ctx, input: { id, ...input } }) => {

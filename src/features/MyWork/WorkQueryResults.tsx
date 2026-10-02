@@ -40,7 +40,6 @@ import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
 import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { issueIdColumnStyle } from '@/features/AgentTasks/shared/issueIdColumn';
-import WorkQueryVirtualList from '@/features/MyWork/WorkQueryVirtualList';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 
 import {
@@ -67,6 +66,7 @@ import {
   workQueryHasMore,
   type WorkQueryResultTask,
 } from './workQueryPaging';
+import WorkQueryVirtualList from './WorkQueryVirtualList';
 
 export type { WorkQueryResultTask } from './workQueryPaging';
 
@@ -833,12 +833,7 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
       const builtin = (): ((key: string) => number) | undefined => {
         if (axis === 'activityDate') return activityBucketRank;
         if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
-        if (
-          axis === 'agent' ||
-          axis === 'assignee' ||
-          axis === 'milestone' ||
-          axis === 'project'
-        ) {
+        if (axis === 'agent' || axis === 'assignee' || axis === 'milestone' || axis === 'project') {
           return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
         }
         if (axis === 'cycle' && groupRank) return groupRank;

@@ -103,7 +103,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
 
     const handleHeaderClick = () => {
       setOpen(false);
-      navigate(`/agent/${agentId}/profile`);
+      navigate(`/settings/agents/${agentId}`);
     };
 
     const hasDisplay = Boolean(agentDisplayName(merged) || merged.avatar || merged.description);

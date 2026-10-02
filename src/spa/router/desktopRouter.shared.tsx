@@ -21,6 +21,7 @@ import {
   Suspense,
 } from 'react';
 import type { RouteObject } from 'react-router';
+import { Navigate, useParams } from 'react-router';
 
 import {
   BusinessDesktopRoutesWithMainLayout,
@@ -89,6 +90,17 @@ import { SettingsTabs } from '@/store/global/initialState';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
 
 const LazyResourceCategorySkeleton = lazy(() => import('@/features/ResourceHome/Skeleton'));
+
+/**
+ * `/agent/:aid/profile` → `/settings/agents/:aid`. The profile surface moved
+ * under Settings → Agents (config exile); deep links and the sidebar agent
+ * switcher keep landing on it. `redirectElement` can't interpolate the `:aid`
+ * param, so this reads it explicitly.
+ */
+const AgentProfileRedirect = () => {
+  const { aid } = useParams();
+  return <Navigate replace to={`/settings/agents/${aid ?? ''}`} />;
+};
 
 export const ResourceCategorySkeleton = (props: RouteSkeletonProps) => (
   <Suspense fallback={null}>
@@ -238,10 +250,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
             path: 'goal/:goalId',
           },
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/profile'),
-              'Desktop > Chat > Profile',
-            ),
+            element: <AgentProfileRedirect />,
             handle: { meta: agentProfileRouteMeta },
             path: 'profile',
           },

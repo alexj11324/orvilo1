@@ -436,6 +436,46 @@ export class ChatTopicActionImpl {
     );
   };
 
+  /**
+   * Rebind a topic to a different agent mid-conversation (the topic-centric
+   * agent switch). Records the handoff in `metadata.agentHandoffs` so the
+   * message stream can render the separator marker, then moves the topic row
+   * under the new owner's container. Callers navigate to the new agent's room
+   * — the topic lives with its bound agent.
+   */
+  rebindTopicAgent = async (topicId: string, toAgentId: string): Promise<void> => {
+    const topic = topicSelectors.getTopicById(topicId)(this.#get());
+    const fromAgentId = topic?.agentId ?? this.#get().activeAgentId ?? null;
+    if (fromAgentId === toAgentId) return;
+
+    const agentHandoffs = [
+      ...(topic?.metadata?.agentHandoffs ?? []),
+      { at: new Date().toISOString(), fromAgentId, toAgentId },
+    ];
+
+    // Optimistic rebind so the row's bound-agent metadata flips immediately.
+    const containerKey = topicSelectors.getTopicContainerKeyById(topicId)(this.#get());
+    this.#get().internal_dispatchTopic({
+      type: 'updateTopic',
+      id: topicId,
+      value: { agentId: toAgentId },
+      containerKey,
+    });
+
+    // Persistence goes through the move mutation, not updateTopic: only it
+    // writes `topics.agent_id` AND re-parents the topic's messages/threads —
+    // the conversation context the spec requires to travel with the switch.
+    await topicService.batchMoveTopics([topicId], toAgentId);
+    await this.#get().refreshTopic(containerKey);
+
+    // If the handoff write fails the switch still happened — it only loses
+    // its stream marker. If the rebind itself fails the topic stays with its
+    // original agent and no stale handoff row is left behind.
+    await this.#get()
+      .updateTopicMetadata(topicId, { agentHandoffs })
+      .catch(() => undefined);
+  };
+
   updateTopicMetadata = async (id: string, metadata: Partial<ChatTopicMetadata>): Promise<void> => {
     const topic = topicSelectors.getTopicById(id)(this.#get());
     if (!topic) {

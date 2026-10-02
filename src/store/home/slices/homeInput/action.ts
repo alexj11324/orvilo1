@@ -178,8 +178,9 @@ export class HomeInputActionImpl {
         useGlobalStore.getState().toggleAgentBuilderPanel(true);
       }
 
-      // 3. Navigate to Agent profile page
-      stableWorkspaceAwareNavigate(`/agent/${result.agentId}/profile`);
+      // 3. Navigate to the agent's settings page (the profile surface's home
+      // under Settings → Agents — the route redirects there anyway).
+      stableWorkspaceAwareNavigate(`/settings/agents/${result.agentId}`);
 
       // 4. Refresh agent list
       this.#get().refreshAgentList();

@@ -45,6 +45,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
           {children.map((topic) => (
             <TopicItem
               showWorkingDirectory
+              agentId={topic.agentId}
               fav={topic.favorite}
               id={topic.id}
               key={topic.id}

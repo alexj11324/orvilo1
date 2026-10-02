@@ -41,6 +41,7 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
     isLoading,
   } = useCreateMenuItems();
 
@@ -49,10 +50,14 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
   // to private here. Session-group creation lives in the "More" dropdown.
   const addMenuItems = useMemo(() => {
     const connectItem = createConnectAgentMenuItem({ visibility: 'private' });
+    const groupFromDescription = createGroupFromDescriptionMenuItem({
+      visibility: 'private',
+    });
 
     return [
       createAgentMenuItem({ visibility: 'private' }),
       createGroupChatMenuItem({ visibility: 'private' }),
+      ...(groupFromDescription ? [groupFromDescription] : []),
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
       // Same discovery entries as the workspace-public section — the agent
       // list opens on the Private tab so the surface matches this bucket.
@@ -64,6 +69,7 @@ const Private = memo<PrivateProps>(({ itemKey }) => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
   ]);
 
   const handleOpenConfigGroupModal = useCallback(() => {

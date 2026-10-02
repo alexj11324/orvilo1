@@ -29,7 +29,7 @@ const ResolvingSkeleton = createSurfaceSkeleton('list', false);
 const GroupIndex = memo(() => {
   const { t } = useTranslation('chat');
   const isLogin = useUserStore(authSelectors.isLogin);
-  useAgentGroupStore((s) => s.useFetchGroups)(!!isLogin, isLogin);
+  useAgentGroupStore((s) => s.useFetchGroups)(!!isLogin, !!isLogin);
 
   const groups = useAgentGroupStore(agentGroupSelectors.getAllGroups);
   const groupsInit = useAgentGroupStore(agentGroupSelectors.isGroupsInitialized);
@@ -52,7 +52,9 @@ const GroupIndex = memo(() => {
       agentId: inboxAgentId,
       type: 'group',
       onCreateBlank: () => createEmptyGroup(),
-      onSubmit: (prompt) => sendAsGroup({ message: prompt }),
+      onSubmit: async (prompt) => {
+        await sendAsGroup({ message: prompt });
+      },
     });
   };
 

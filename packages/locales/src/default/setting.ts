@@ -77,6 +77,8 @@ export default {
     'Optional. Copies this agent’s conversation history into the new agent.',
   'agentImport.modal.knowledgeNotice': 'Knowledge bindings and files are not copied yet.',
   'agentImport.success': 'Agent copied to {{name}}.',
+  'agentsIndexHint':
+    'Pick an agent to configure its model, runtime, tools, permissions, and environment.',
   'agentImport.title': 'Copy to Workspace',
   'agentConnectorUsage.goToAgent': 'Go to agent',
   'agentConnectorUsage.label': 'Used by agent',
@@ -1705,6 +1707,7 @@ export default {
   'tab.addCustomMcp.desc': 'Manually configure a custom MCP server',
   'tab.addCustomSkill': 'Add',
   'tab.agent': 'Agent',
+  'tab.agents': 'Agents',
   'tab.all': 'All',
   'tab.apikey': 'API Keys',
   'tab.appearance': 'Appearance',

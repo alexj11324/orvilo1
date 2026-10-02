@@ -69,6 +69,12 @@ export enum SettingsTabs {
   Advanced = 'advanced',
   /** @deprecated Use ServiceModel instead */
   Agent = 'agent',
+  /**
+   * Per-agent configuration home (General / Runtime / Model / Tools &
+   * Permissions / Environment / Advanced) — the topic-centric workspace keeps
+   * config out of the work surface; it lives here under Settings → Agents.
+   */
+  Agents = 'agents',
   APIKey = 'apikey',
   Appearance = 'appearance',
   Billing = 'billing',
@@ -335,6 +341,14 @@ export interface SystemStatus {
   lastSelectedImageProvider?: string;
   lastSelectedVideoModel?: string;
   lastSelectedVideoProvider?: string;
+  /**
+   * Agent the user's most recent send ran under — the blank composer's default
+   * agent (a new topic binds on first message, so the composer offers the
+   * last-used agent rather than always the route agent). Updated whenever a
+   * conversation send completes against an agent context, and when the user
+   * explicitly re-binds a topic to another agent.
+   */
+  lastUsedAgentId?: string;
   latestChangelogId?: string;
   leftPanelWidth: number;
   mobileShowPortal?: boolean;

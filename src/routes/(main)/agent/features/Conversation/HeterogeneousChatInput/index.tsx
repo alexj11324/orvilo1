@@ -146,7 +146,7 @@ const HeterogeneousChatInput = memo(() => {
   const { status, refresh } = useRemoteAgentDeviceGuard({ agentId, enabled: isDeviceExecution });
 
   const goToAgentProfile = () => {
-    if (agentId) navigate(`/agent/${agentId}/profile`);
+    if (agentId) navigate(`/settings/agents/${agentId}`);
   };
 
   const deviceBlocked =

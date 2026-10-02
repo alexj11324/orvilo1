@@ -152,6 +152,17 @@ export const snapshotTopicExecutionConfig = (
 });
 
 export interface ChatTopicMetadata {
+  /**
+   * User-visible record of mid-conversation agent handoffs. Each entry marks
+   * the moment the topic's bound agent was switched by the user; the message
+   * stream renders a weak separator marker at that point so the handoff is
+   * never silent. `at` anchors the marker against message `createdAt`.
+   */
+  agentHandoffs?: {
+    at: string;
+    fromAgentId: string | null;
+    toAgentId: string;
+  }[];
   /** Watermark written by the background topic-summary workflow. */
   autoSummary?: {
     lastMessageId: string;
@@ -535,6 +546,15 @@ export const parseTopicScheduledRun = (raw: unknown): TopicScheduledRun | null =
 };
 
 export const chatTopicMetadataUpdateSchema = z.object({
+  agentHandoffs: z
+    .array(
+      z.object({
+        at: z.string(),
+        fromAgentId: z.string().nullable(),
+        toAgentId: z.string(),
+      }),
+    )
+    .optional(),
   executionConfig: topicExecutionConfigSchema.optional(),
   boundDeviceId: z.string().optional(),
   heteroEffort: z
@@ -666,6 +686,13 @@ export const chatTopicStatusSchema = z.enum(TOPIC_STATUSES);
 export type ChatTopicStatus = z.infer<typeof chatTopicStatusSchema>;
 
 export interface ChatTopic extends Omit<BaseDataModel, 'meta'> {
+  /**
+   * The agent the conversation runs under (`topics.agent_id`). The agent is an
+   * execution attribute of the topic: set when the topic binds on first
+   * message and changed when the user switches agents mid-conversation (see
+   * `ChatTopicMetadata.agentHandoffs`).
+   */
+  agentId?: string | null;
   completedAt?: Date | null;
   /** Server-side mock until real cost aggregation lands. */
   cost?: number | null;

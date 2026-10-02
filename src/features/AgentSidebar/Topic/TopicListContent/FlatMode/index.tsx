@@ -44,6 +44,7 @@ const FlatMode = memo(() => {
     <div className="flex flex-col gap-[1px]" ref={listRef}>
       {activeTopicList?.map((topic) => (
         <TopicItem
+          agentId={topic.agentId}
           fav={topic.favorite}
           id={topic.id}
           key={topic.id}

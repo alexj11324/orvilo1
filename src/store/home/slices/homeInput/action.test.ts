@@ -185,7 +185,7 @@ describe('HomeInputActionImpl', () => {
 
       expect(toggleAgentBuilderPanelMock).toHaveBeenCalledWith(true);
       expect(toggleRightPanelMock).not.toHaveBeenCalled();
-      expect(navigateMock).toHaveBeenCalledWith('/agent/agent-new/profile');
+      expect(navigateMock).toHaveBeenCalledWith('/settings/agents/agent-new');
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           context: { agentId: 'agentBuilder', scope: 'agent_builder' },

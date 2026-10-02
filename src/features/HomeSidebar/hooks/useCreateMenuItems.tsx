@@ -82,7 +82,7 @@ export const useCreateMenuItems = () => {
     },
     {
       onSuccess: async (result) => {
-        navigate(`/agent/${result.agentId}/profile`);
+        navigate(`/settings/agents/${result.agentId}`);
         await refreshAgentList();
       },
     },

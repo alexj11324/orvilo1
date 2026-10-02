@@ -37,6 +37,9 @@ const COMPACT_HEADER_TABS = [
 
 /** Tabs whose pages own their internal layout and must not be wrapped. */
 const FULL_WIDTH_TABS: readonly string[] = [
+  // Agents hosts the full per-agent config surface (index list + the exiled
+  // profile page) — it owns its layout end to end.
+  SettingsTabs.Agents,
   SettingsTabs.Provider,
   SettingsTabs.Connector,
   SettingsTabs.Creds,

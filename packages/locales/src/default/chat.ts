@@ -81,6 +81,7 @@ export default {
   'agentDocument.emptyTitle': 'No document open',
   'agentDocument.linkCopied': 'Link copied',
   'agentDocument.openAsPage': 'Open as full page',
+  'agentHandoffMarker': '── Agent changed to {{name}} ──',
   'agentNotFound.desc':
     'This agent does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'permission.configAccess.agentChatOnly':
@@ -120,6 +121,9 @@ export default {
   'agentSignal.receipts.skill.detail': 'Self-refined how this agent handles similar requests',
   'agentSignal.receipts.skill.title': 'Auto-learned a new skill',
   'agents': 'Agents',
+  'agentSwitchConfirm': '{{name}} will continue this conversation with the existing context.',
+  'agentSwitchConfirmAction': 'Switch to {{name}}',
+  'agentSwitchConfirmTitle': 'Switch agent?',
   'artifact.generating': 'Generating',
   'artifact.inThread':
     'Cannot view in subtopic, please switch to the main conversation area to open',

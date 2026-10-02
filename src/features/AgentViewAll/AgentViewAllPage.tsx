@@ -399,6 +399,7 @@ const AgentViewAllPage = memo(() => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
     isMutatingAgent,
   } = useCreateMenuItems();
 
@@ -416,12 +417,22 @@ const AgentViewAllPage = memo(() => {
   // very page.
   const createMenuItems = useMemo(() => {
     const connectItem = createConnectAgentMenuItem(createOptions);
+    const groupFromDescription = createGroupFromDescriptionMenuItem(createOptions);
     return [
       createAgentMenuItem(createOptions),
       createGroupChatMenuItem(createOptions),
+      // Optional secondary: template generation stays available but never gates
+      // the direct-create path above.
+      ...(groupFromDescription ? [groupFromDescription] : []),
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
     ];
-  }, [createAgentMenuItem, createConnectAgentMenuItem, createGroupChatMenuItem, createOptions]);
+  }, [
+    createAgentMenuItem,
+    createConnectAgentMenuItem,
+    createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
+    createOptions,
+  ]);
 
   return (
     <div className="flex flex-col flex-1" style={{ height: '100%' }}>

@@ -5,7 +5,9 @@ import { useActiveLocation } from '@/hooks/useActiveLocation';
 
 // Sub-routes that are agent-scoped views (not tied to a specific topic/task id),
 // safe to carry over when switching between agents from the sidebar switcher.
-const PRESERVED_AGENT_SUB_PATHS = new Set(['profile']);
+// `profile` is intentionally absent: agent config lives under Settings →
+// Agents, so clicking another agent always lands on its conversation.
+const PRESERVED_AGENT_SUB_PATHS = new Set<string>();
 
 /**
  * When switching from an agent's sub-view (e.g. `/agent/A/profile`) to another

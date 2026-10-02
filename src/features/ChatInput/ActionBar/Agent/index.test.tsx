@@ -15,9 +15,17 @@ const mocks = vi.hoisted(() => ({
     } as Record<string, unknown>,
   } as Record<string, Record<string, unknown>>,
   agentId: 'agt_current',
+  chatState: {
+    activeTopicId: undefined as string | undefined,
+    clearPortalStack: vi.fn(),
+    rebindTopicAgent: vi.fn(),
+  },
+  confirmModal: vi.fn(),
   fetchAgentList: vi.fn(),
   listSelect: vi.fn(),
-  navigateToAgent: vi.fn(),
+  navigate: vi.fn(),
+  setState: vi.fn(),
+  updateSystemStatus: vi.fn(),
 }));
 
 vi.mock('@/components/ui/popover', () => ({
@@ -40,6 +48,10 @@ vi.mock('@/components/Avatar', () => ({
   default: ({ avatar, name }: { avatar?: string; name?: string }) => (
     <span data-avatar={avatar} data-name={name} data-testid="avatar" />
   ),
+}));
+
+vi.mock('@/components/Modal', () => ({
+  confirmModal: (options: unknown) => mocks.confirmModal(options),
 }));
 
 vi.mock('@/features/Home/AgentSelect/AgentList', () => ({
@@ -66,6 +78,10 @@ vi.mock('@/features/Home/AgentSelect/AgentList', () => ({
   },
 }));
 
+vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
+  useWorkspaceAwareNavigate: () => mocks.navigate,
+}));
+
 vi.mock('@/hooks/useFetchAgentList', () => ({
   useFetchAgentList: () => {
     mocks.fetchAgentList();
@@ -77,18 +93,32 @@ vi.mock('@/hooks/useInitBuiltinAgent', () => ({
   useInitBuiltinAgent: vi.fn(),
 }));
 
-vi.mock('@/hooks/useNavigateToAgent', () => ({
-  useNavigateToAgent: () => mocks.navigateToAgent,
-}));
-
 vi.mock('@/store/agent', () => ({
-  useAgentStore: (selector: (state: typeof mocks) => unknown) => selector(mocks),
+  useAgentStore: Object.assign((selector: (state: typeof mocks) => unknown) => selector(mocks), {
+    getState: () => mocks,
+  }),
 }));
 
 vi.mock('@/store/agent/selectors', () => ({
   agentSelectors: {
     getAgentMetaById: (id: string) => (s: typeof mocks) => s.agentMap[id] ?? {},
   },
+}));
+
+vi.mock('@/store/chat', () => ({
+  useChatStore: Object.assign(
+    (selector: (state: typeof mocks.chatState) => unknown) => selector(mocks.chatState),
+    { getState: () => mocks.chatState, setState: mocks.setState },
+  ),
+}));
+
+vi.mock('@/store/chat/utils/messageMapKey', () => ({
+  messageMapKey: ({ agentId, topicId }: { agentId: string; topicId?: string }) =>
+    `${agentId}_${topicId ?? 'blank'}`,
+}));
+
+vi.mock('@/store/global', () => ({
+  useGlobalStore: { getState: () => ({ updateSystemStatus: mocks.updateSystemStatus }) },
 }));
 
 vi.mock('../../components/SelectorTrigger', () => ({
@@ -100,6 +130,12 @@ vi.mock('../../components/SelectorTrigger', () => ({
   ),
 }));
 
+vi.mock('../../draftStorage', () => ({
+  getDraft: vi.fn(() => undefined),
+  removeDraft: vi.fn(),
+  saveDraft: vi.fn(),
+}));
+
 vi.mock('../../hooks/useAgentId', () => ({
   useAgentId: () => mocks.agentId,
 }));
@@ -108,6 +144,7 @@ describe('Agent action', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.agentId = 'agt_current';
+    mocks.chatState.activeTopicId = undefined;
   });
 
   it('shows the bound agent avatar and display name on the chip', () => {
@@ -123,17 +160,44 @@ describe('Agent action', () => {
     );
   });
 
-  it('navigates to the picked agent conversation', () => {
+  it('retargets the blank composer pick without navigating or confirming', () => {
     const { getByText } = render(<Agent />);
 
     fireEvent.click(getByText('Other Agent'));
-    expect(mocks.navigateToAgent).toHaveBeenCalledWith('agt_other');
+
+    expect(mocks.setState).toHaveBeenCalledWith(
+      { composerAgentId: 'agt_other' },
+      false,
+      'composerAgent/switch',
+    );
+    expect(mocks.confirmModal).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it('does not navigate when the current agent is re-picked', () => {
+  it('confirms, rebinds, and navigates in place when a topic is open', async () => {
+    mocks.chatState.activeTopicId = 'tpc_1';
+    const { getByText } = render(<Agent />);
+
+    fireEvent.click(getByText('Other Agent'));
+
+    expect(mocks.confirmModal).toHaveBeenCalledWith(
+      expect.objectContaining({ title: 'agentSwitchConfirmTitle' }),
+    );
+    const { onOk } = mocks.confirmModal.mock.calls[0][0] as { onOk: () => Promise<void> };
+    await onOk();
+
+    expect(mocks.chatState.rebindTopicAgent).toHaveBeenCalledWith('tpc_1', 'agt_other');
+    expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ lastUsedAgentId: 'agt_other' });
+    expect(mocks.navigate).toHaveBeenCalledWith('/agent/agt_other/tpc_1');
+  });
+
+  it('does nothing when the current agent is re-picked', () => {
     const { getByText } = render(<Agent />);
 
     fireEvent.click(getByText('Current Row'));
-    expect(mocks.navigateToAgent).not.toHaveBeenCalled();
+
+    expect(mocks.setState).not.toHaveBeenCalled();
+    expect(mocks.confirmModal).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });

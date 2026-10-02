@@ -262,7 +262,7 @@ const ChatList = memo<ChatListProps>(
     // A first-load failure owns the whole surface, while a background failure
     // must preserve either the messages or the welcome state below.
     if (feedback.showNotFound) {
-      return <TopicNotFoundRedirect topicId={context.topicId} />;
+      return <TopicNotFoundRedirect topicId={context.topicId ?? undefined} />;
     }
 
     if (feedback.showFirstLoadError) {

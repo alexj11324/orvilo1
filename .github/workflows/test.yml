@@ -40,6 +40,15 @@ jobs:
           # do_not_skip gives the pair a deterministic owner: the push run
           # always executes, the PR run always mirrors it.
           do_not_skip: '["push", "workflow_dispatch", "schedule"]'
+          # `do_not_skip` only stops a run from skipping itself — it does not
+          # stop a sibling run's check from cancelling it. With the default
+          # `cancel_others: 'true'`, the PR-synchronize run's check found the
+          # older push run to be the skippable duplicate and cancelled every
+          # leaf mid-flight, so the gate mirror then failed fast on
+          # owner=cancelled and no push ever produced a verdict. Disabling
+          # cross-run cancellation keeps the push owner alive; the PR run can
+          # still skip itself and mirror the owner's gate.
+          cancel_others: 'false'
 
   # Path triage — one cheap job diffs the PR and reports which test areas
   # actually need to run. Leaf jobs skip when their area is untouched, and the

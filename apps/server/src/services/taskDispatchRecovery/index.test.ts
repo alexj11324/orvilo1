@@ -13,6 +13,7 @@ const mocks = vi.hoisted(() => ({
   abandonRecovery: vi.fn(),
   claimForRecovery: vi.fn(),
   findById: vi.fn(),
+  hasLiveChildOperation: vi.fn(),
   findLatestAssistantByOperationId: vi.fn(),
   findRecoveryCandidates: vi.fn(),
   onTopicComplete: vi.fn(),
@@ -22,7 +23,10 @@ const mocks = vi.hoisted(() => ({
 
 vi.mock('@/database/models/agentOperation', () => ({
   AgentOperationModel: vi.fn(function () {
-    return { findById: mocks.findById };
+    return {
+      findById: mocks.findById,
+      hasLiveChildOperation: mocks.hasLiveChildOperation,
+    };
   }),
 }));
 vi.mock('@/database/models/message', () => ({
@@ -99,6 +103,7 @@ describe('task dispatch recovery', () => {
     mocks.onTopicComplete.mockResolvedValue(undefined);
     mocks.releaseRecovery.mockResolvedValue(true);
     mocks.updateHeartbeat.mockResolvedValue(undefined);
+    mocks.hasLiveChildOperation.mockResolvedValue(true);
   });
 
   it('replays a terminal lifecycle callback with the original stable identity', async () => {
@@ -204,6 +209,58 @@ describe('task dispatch recovery', () => {
       expect.objectContaining({ phase: 'running', reason: 'runtime_running' }),
     );
     expect(mocks.updateHeartbeat).toHaveBeenCalledWith('task-1');
+  });
+
+  it('counts a stale async-tool wait with no live child toward the bound', async () => {
+    mocks.findById.mockResolvedValue(
+      operation('waiting_for_async_tool', {
+        updatedAt: new Date(Date.now() - 10 * 60 * 1000),
+      }),
+    );
+    mocks.hasLiveChildOperation.mockResolvedValue(false);
+
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        retryMs: 1500,
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({
+      outcome: 'retry',
+      reason: 'operation_orphaned_wait:waiting_for_async_tool',
+    });
+
+    expect(mocks.releaseRecovery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phase: 'outcome_unknown',
+        reason: 'operation_orphaned_wait:waiting_for_async_tool',
+        retryAfterMs: 1500,
+      }),
+    );
+    expect(mocks.updateHeartbeat).not.toHaveBeenCalled();
+    expect(mocks.onTopicComplete).not.toHaveBeenCalled();
+  });
+
+  it('restores a stale async-tool wait while a child operation is still live', async () => {
+    mocks.findById.mockResolvedValue(
+      operation('waiting_for_async_tool', {
+        updatedAt: new Date(Date.now() - 10 * 60 * 1000),
+      }),
+    );
+    mocks.hasLiveChildOperation.mockResolvedValue(true);
+
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({ outcome: 'active' });
+
+    expect(mocks.releaseRecovery).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'running', reason: 'runtime_waiting_for_async_tool' }),
+    );
   });
 
   it('keeps an unknown outcome visible when the operation row is missing', async () => {

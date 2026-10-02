@@ -1,3 +1,4 @@
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { and, eq } from 'drizzle-orm';
 
@@ -46,4 +47,35 @@ export async function assertAgentUsableBy(
   if (rows.length === 0) {
     throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
   }
+}
+
+/**
+ * The agent's execution-binding inputs (`agencyConfig`, `model`) when the
+ * agent is usable by `ctx` — the same `buildWorkspaceWhere` visibility
+ * semantics as `assertAgentUsableBy` — or null when it is missing or not
+ * visible. Callers that gate on engine capabilities (e.g. whether the
+ * resolved binding can mount the builtin tool surface) read this instead of
+ * re-checking visibility themselves.
+ */
+export async function findUsableAgentExecutionBinding(
+  db: OrviloDatabase,
+  agentId: string,
+  ctx: AgentAccessCtx,
+): Promise<{ agencyConfig: OrviloAgentAgencyConfig | null; model: string | null } | null> {
+  const rows = await db
+    .select({ agencyConfig: agents.agencyConfig, model: agents.model })
+    .from(agents)
+    .where(
+      and(
+        eq(agents.id, agentId),
+        buildWorkspaceWhere(ctx, {
+          userId: agents.userId,
+          workspaceId: agents.workspaceId,
+          visibility: agents.visibility,
+        }),
+      ),
+    )
+    .limit(1);
+
+  return rows[0] ?? null;
 }

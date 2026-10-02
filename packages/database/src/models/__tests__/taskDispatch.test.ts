@@ -1472,7 +1472,13 @@ describe('tiered orchestration', () => {
   it('lists the enabled roster in stable order and skips disabled rows', async () => {
     await db.insert(agents).values([
       { id: 'roster-a', userId, workspaceId },
-      { id: 'roster-b', userId, workspaceId },
+      {
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        id: 'roster-b',
+        model: 'codex-model',
+        userId,
+        workspaceId,
+      },
       { id: 'roster-c', userId, workspaceId },
     ]);
     const project = await seedTieredProject('T4');
@@ -1492,8 +1498,22 @@ describe('tiered orchestration', () => {
     await expect(
       TaskDispatchModel.listProjectAgentRoster(db, { projectId: project.id, workspaceId }),
     ).resolves.toEqual([
-      { agentId: 'roster-a', role: null, sortOrder: 1, tier: 'low' },
-      { agentId: 'roster-b', role: null, sortOrder: 2, tier: 'high' },
+      {
+        agencyConfig: null,
+        agentId: 'roster-a',
+        model: null,
+        role: null,
+        sortOrder: 1,
+        tier: 'low',
+      },
+      {
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        agentId: 'roster-b',
+        model: 'codex-model',
+        role: null,
+        sortOrder: 2,
+        tier: 'high',
+      },
     ]);
   });
 

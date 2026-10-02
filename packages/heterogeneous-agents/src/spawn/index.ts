@@ -127,6 +127,7 @@ export type {
 // resolveCliCommand` subpath instead.
 export {
   ACP_AGENT_RUNTIMES,
+  ACP_MCP_MOUNT_AGENT_TYPES,
   ACP_RUNTIME_AGENT_TYPES,
   type AcpAgentRuntimeSpec,
   type AcpBridgeRunnerTarget,
@@ -137,6 +138,7 @@ export {
   getAcpAgentRuntime,
   isAcpBridgeAgent,
 } from './acpRuntime';
+export { canMountBuiltinToolSurface } from './builtinToolMount';
 export {
   ensureClaudeCodeResumeTranscript,
   type EnsureResumeTranscriptReason,

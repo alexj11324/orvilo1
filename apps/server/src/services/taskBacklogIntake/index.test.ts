@@ -11,9 +11,11 @@ import { sweepTaskBacklogIntake } from './index';
 const mocks = vi.hoisted(() => ({
   areAllDependenciesCompleted: vi.fn(),
   findBacklogIntakeCandidates: vi.fn(),
+  findById: vi.fn(),
   findLatestTerminalDispatch: vi.fn(),
   listProjectAgentRoster: vi.fn(),
   runTask: vi.fn(),
+  taskRequiresBuiltinToolMount: vi.fn(),
   updateWithLog: vi.fn(),
 }));
 
@@ -21,6 +23,7 @@ vi.mock('@/database/models/task', () => ({
   TaskModel: vi.fn(function () {
     return {
       areAllDependenciesCompleted: mocks.areAllDependenciesCompleted,
+      findById: mocks.findById,
       updateWithLog: mocks.updateWithLog,
     };
   }),
@@ -47,6 +50,9 @@ vi.mock('@/server/services/taskDispatch', async (importOriginal) => {
     TaskDispatchService: vi.fn(),
   };
 });
+vi.mock('@/server/services/taskRunner/toolMountRequirement', () => ({
+  taskRequiresBuiltinToolMount: mocks.taskRequiresBuiltinToolMount,
+}));
 
 const candidate = (overrides: Record<string, unknown> = {}) => ({
   assigneeAgentId: 'agent-1',
@@ -66,9 +72,11 @@ describe('sweepTaskBacklogIntake', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.areAllDependenciesCompleted.mockResolvedValue(true);
+    mocks.findById.mockResolvedValue({});
     mocks.findLatestTerminalDispatch.mockResolvedValue(undefined);
     mocks.listProjectAgentRoster.mockResolvedValue([]);
     mocks.runTask.mockResolvedValue({ dispatchId: 'dispatch-1' });
+    mocks.taskRequiresBuiltinToolMount.mockResolvedValue(false);
     mocks.updateWithLog.mockResolvedValue({});
   });
 

@@ -3,7 +3,7 @@ import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { builtinSkills } from '@orvilo/builtin-skills';
 import { isBuiltinToolIdentifier } from '@orvilo/builtin-tools';
 import type { OrviloDatabase } from '@orvilo/database';
-import { ACP_RUNTIME_AGENT_TYPES } from '@orvilo/heterogeneous-agents';
+import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
 import type {
   ExecAgentResult,
   ExecGroupAgentParams,
@@ -15,12 +15,7 @@ import type {
   ScheduleAgentRunResult,
   WorkingDirConfig,
 } from '@orvilo/types';
-import {
-  getActivePluginIds,
-  getWorkingDirEffectivePath,
-  RequestTrigger,
-  resolveOrviloCliAgentType,
-} from '@orvilo/types';
+import { getActivePluginIds, getWorkingDirEffectivePath, RequestTrigger } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
@@ -1018,14 +1013,15 @@ export class AiAgentService {
       externalTools,
       requiredToolIds,
       selectedToolIds,
-      // MCP-mountable harnesses are the standard-ACP runtimes; remote platform
-      // types and the non-standard adapters (cursor/devin/droid/grok/trae)
-      // never see a spec, so they never advertise uncallable tools.
-      supportsBuiltinToolMount: ACP_RUNTIME_AGENT_TYPES.has(
-        turn.heteroType === 'orvilo'
-          ? resolveOrviloCliAgentType(turn.heterogeneousProvider?.engine)
-          : turn.heteroType,
-      ),
+      // MCP-mountable harnesses are the standard-ACP runtimes whose adapter
+      // delivers `session/new` mcpServers; remote platform types, the
+      // non-standard adapters (cursor/devin/droid/grok/trae) and bridges that
+      // drop the payload (pi-acp) never see a spec, so they never advertise
+      // uncallable tools.
+      supportsBuiltinToolMount: canMountBuiltinToolSurface({
+        engine: turn.heterogeneousProvider?.engine,
+        type: turn.heteroType,
+      }),
     });
 
     const dispatchResult = await dispatchHeteroAgent(

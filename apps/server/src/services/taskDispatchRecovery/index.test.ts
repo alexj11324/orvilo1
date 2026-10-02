@@ -76,7 +76,7 @@ const claim = () => ({
   },
 });
 
-const operation = (status: string) => ({
+const operation = (status: string, overrides: Record<string, unknown> = {}) => ({
   appContext: {
     dispatchFence: 4,
     dispatchId: 'dispatch-1',
@@ -86,6 +86,8 @@ const operation = (status: string) => ({
   status,
   taskId: 'task-1',
   topicId: 'topic-1',
+  updatedAt: new Date(),
+  ...overrides,
 });
 
 describe('task dispatch recovery', () => {
@@ -157,6 +159,51 @@ describe('task dispatch recovery', () => {
     });
     expect(mocks.updateHeartbeat).toHaveBeenCalledWith('task-1');
     expect(mocks.onTopicComplete).not.toHaveBeenCalled();
+  });
+
+  it('counts a stale running operation toward the bound instead of re-arming it', async () => {
+    mocks.findById.mockResolvedValue(
+      operation('running', { updatedAt: new Date(Date.now() - 10 * 60 * 1000) }),
+    );
+
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        retryMs: 1500,
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({
+      outcome: 'retry',
+      reason: 'operation_stale:running',
+    });
+
+    expect(mocks.releaseRecovery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phase: 'outcome_unknown',
+        reason: 'operation_stale:running',
+        retryAfterMs: 1500,
+      }),
+    );
+    expect(mocks.updateHeartbeat).not.toHaveBeenCalled();
+    expect(mocks.onTopicComplete).not.toHaveBeenCalled();
+  });
+
+  it('keeps re-arming a running operation whose lease is still being touched', async () => {
+    mocks.findById.mockResolvedValue(operation('running'));
+
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({ outcome: 'active', operationId: 'operation-1' });
+
+    expect(mocks.releaseRecovery).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'running', reason: 'runtime_running' }),
+    );
+    expect(mocks.updateHeartbeat).toHaveBeenCalledWith('task-1');
   });
 
   it('keeps an unknown outcome visible when the operation row is missing', async () => {

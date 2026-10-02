@@ -20,8 +20,27 @@ import {
 import type { TaskDispatchItem } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
+import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
 
 const DEFAULT_LEASE_MS = 5 * 60 * 1000;
+
+/**
+ * Admission contention codes: a lock-kill (`40P01` deadlock) or serialization
+ * failure (`40001`) on the single-active-dispatch path is the same outcome
+ * class as the `busy` branch — a concurrent claim won. Surface it as the
+ * typed conflict (TRPC `CONFLICT` upstream) instead of a raw driver error,
+ * so callers can retry idempotently.
+ */
+const throwIfAdmissionConflict = (error: unknown, dispatchId: string): never => {
+  const pg = unwrapPgError(error);
+  if (pg?.code === '40P01' || pg?.code === '40001') {
+    throw new TaskDispatchConflictError(
+      `Dispatch admission ${dispatchId} collided with a concurrent claim (${pg.code})`,
+      dispatchId,
+    );
+  }
+  throw error;
+};
 
 export class TaskDispatchConflictError extends Error {
   constructor(
@@ -135,7 +154,7 @@ export class TaskDispatchService {
         // inherit an internal claim it can no longer prove (SB09).
         throw new TaskDispatchConflictError(error.message, input.idempotencyKey);
       }
-      throw error;
+      throwIfAdmissionConflict(error, input.idempotencyKey);
     }
     if (requested.state === 'busy') {
       throw new TaskDispatchConflictError(
@@ -195,7 +214,9 @@ export class TaskDispatchService {
     }
 
     const owner = `task-runner:${randomUUID()}`;
-    const lease = await this.model.claimForProvisioning(dispatch.id, owner, DEFAULT_LEASE_MS);
+    const lease = await this.model
+      .claimForProvisioning(dispatch.id, owner, DEFAULT_LEASE_MS)
+      .catch((error) => throwIfAdmissionConflict(error, dispatch.id));
     if (!lease) {
       throw new TaskDispatchConflictError(
         `Dispatch ${dispatch.id} could not be claimed`,
@@ -206,24 +227,26 @@ export class TaskDispatchService {
   }
 
   async transition(prepared: PreparedTaskDispatch, input: TaskDispatchTransitionInput) {
-    const updated = await this.model.transition({
-      ...input,
-      // Final host-admission re-check (SA05-B): before the runtime starts,
-      // the persisted origin must still pass the CAID gate — a rollout
-      // flip after prepare parks the claim `waiting` instead of starting
-      // a new orchestrated writer.
-      admissionRecheck:
-        input.phase === 'dispatched'
-          ? (dispatch) =>
-              isCaidDispatchAllowed({
-                userId: dispatch.initiator ?? undefined,
-                workspaceId: dispatch.workspaceId ?? this.workspaceId,
-              })
-          : undefined,
-      dispatchId: prepared.dispatch.id,
-      fence: prepared.fence,
-      owner: prepared.owner,
-    });
+    const updated = await this.model
+      .transition({
+        ...input,
+        // Final host-admission re-check (SA05-B): before the runtime starts,
+        // the persisted origin must still pass the CAID gate — a rollout
+        // flip after prepare parks the claim `waiting` instead of starting
+        // a new orchestrated writer.
+        admissionRecheck:
+          input.phase === 'dispatched'
+            ? (dispatch) =>
+                isCaidDispatchAllowed({
+                  userId: dispatch.initiator ?? undefined,
+                  workspaceId: dispatch.workspaceId ?? this.workspaceId,
+                })
+            : undefined,
+        dispatchId: prepared.dispatch.id,
+        fence: prepared.fence,
+        owner: prepared.owner,
+      })
+      .catch((error) => throwIfAdmissionConflict(error, prepared.dispatch.id));
     if (!updated) {
       throw new TaskDispatchConflictError(
         `Dispatch ${prepared.dispatch.id} lost its lease or changed phase`,

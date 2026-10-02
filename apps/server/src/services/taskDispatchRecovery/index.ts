@@ -11,6 +11,16 @@ import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 const DEFAULT_LEASE_MS = 2 * 60 * 1000;
 const DEFAULT_RETRY_MS = 30 * 1000;
 /**
+ * Window matching the operation lease convention (`settleStaleRunning`): a
+ * `running` operation row is liveness evidence only while the runner keeps
+ * touching `updatedAt` (`touchRunning`). A stale row is the signature of a
+ * dead executor — treating it as active would reset the reconcile bound and
+ * re-arm the task heartbeat every pass, live-locking the dispatch forever.
+ * `waiting_*` statuses park legitimately quiet and converge through their
+ * own abandonment path, so the staleness gate applies to `running` only.
+ */
+const DEFAULT_STALE_OPERATION_MS = 5 * 60 * 1000;
+/**
  * Bound on consecutive unresolved `outcome_unknown` reconciles: each
  * reschedule bumps `recovery_attempts` (a stable live identity resets it),
  * so an op that never reaches a persisted terminal state cannot retry
@@ -78,6 +88,7 @@ export const processTaskDispatchRecovery = async (input: {
   dispatchId: string;
   leaseMs?: number;
   retryMs?: number;
+  staleOperationMs?: number;
   workspaceId?: string;
 }): Promise<TaskDispatchRecoveryOutcome> => {
   const model = new TaskDispatchModel(input.db, input.workspaceId);
@@ -142,6 +153,16 @@ export const processTaskDispatchRecovery = async (input: {
     }
 
     if (['running', 'waiting_for_async_tool', 'waiting_for_human'].includes(operation.status)) {
+      const staleBefore = Date.now() - (input.staleOperationMs ?? DEFAULT_STALE_OPERATION_MS);
+      if (operation.status === 'running' && new Date(operation.updatedAt).getTime() < staleBefore) {
+        return releaseUnknown({
+          claim,
+          model,
+          owner,
+          reason: `operation_stale:${operation.status}`,
+          retryMs,
+        });
+      }
       const restored = await model.releaseRecovery({
         dispatchId: claim.dispatch.id,
         fence: claim.fence,

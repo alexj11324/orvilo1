@@ -7,6 +7,7 @@ import { Outlet, useLocation } from 'react-router';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
 import Loading from '@/components/Loading/BrandTextLoading';
+import { MobileNavVisibleContext } from '@/features/MobileNav/navContext';
 import { RouteMetaBridge } from '@/features/RouteMeta';
 import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { stripWorkspaceSlug } from '@/features/Workspace/workspaceAwarePath';
@@ -63,8 +64,10 @@ const MobileMainLayout: FC = () => {
       <RouteMetaBridge />
       <Suspense fallback={null}>{showCloudPromotion && <CloudBanner mobile />}</Suspense>
       <Suspense fallback={<Loading debugId="MobileMainLayout > Outlet" />}>
-        <Outlet />
-        {showNav && <NavBar />}
+        <MobileNavVisibleContext value={showNav}>
+          <Outlet />
+          {showNav && <NavBar />}
+        </MobileNavVisibleContext>
       </Suspense>
     </WorkspaceContextSlot>
   );

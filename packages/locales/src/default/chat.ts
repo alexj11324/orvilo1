@@ -1298,6 +1298,7 @@ export default {
   'search.title': 'Web Search',
   'searchAgentPlaceholder': 'Search agents...',
   'searchAgents': 'Search agents...',
+  'searchTopicPlaceholder': 'Search conversations...',
   'selectedAgents': 'Selected agents',
   'floatingChatPanel.collapse': 'Collapse chat',
   'floatingChatPanel.expand': 'Expand chat',

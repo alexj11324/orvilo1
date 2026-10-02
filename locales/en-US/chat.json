@@ -1457,6 +1457,7 @@
   "search.title": "Web Search",
   "searchAgentPlaceholder": "Search agents...",
   "searchAgents": "Search agents...",
+  "searchTopicPlaceholder": "Search conversations...",
   "selectedAgents": "Selected agents",
   "sendPlaceholder": "Ask, create, or start a task, <hotkey><hotkey/>",
   "sendPlaceholderChat": "Ask, search, or brainstorm, <hotkey><hotkey/>",

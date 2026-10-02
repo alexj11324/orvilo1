@@ -1,0 +1,34 @@
+---
+title: Mobile Chat tab becomes a real conversation list
+description: >-
+  The mobile web Chat tab now lists conversations instead of agents, drops
+  raw model badges from navigation, moves agent management into settings, and
+  stops the tab bar from covering content.
+tags:
+  - Mobile
+  - Chat
+---
+
+# Mobile Chat tab becomes a real conversation list
+
+The mobile Chat tab (会话) now works like a chat app instead of an agent
+directory.
+
+## Improvements and fixes
+
+- **Conversations, not agents.** The tab lists workspace conversations newest
+  activity first. Each row leads with the conversation title; the owning
+  agent appears only as secondary metadata (status mark + agent name). Raw
+  model badges like "deepseek-v4-flash" are gone from navigation — model is
+  configuration and lives in settings.
+- **"+" starts a conversation.** The header action opens a new conversation
+  on the most recently used agent — falling back to Orvilo AI when there are
+  no conversations yet — instead of creating another agent card.
+- **Search searches conversations.** The tab's search bar now filters
+  conversations across agents rather than listing matching agent cards.
+- **Agent management moved to settings.** 我 → Settings → Agents opens the
+  agent list, where profile/model/tools configuration lives. The bottom tab
+  bar keeps its four tabs.
+- **Tab bar no longer covers content.** The bar now respects the iOS home
+  indicator safe area, and the inbox / my-issues pages reserve space for the
+  fixed bar so list ends are reachable.

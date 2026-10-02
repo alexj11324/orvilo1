@@ -1,4 +1,5 @@
 import type { TaskRunTrigger } from '@orvilo/types';
+import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
 import {
@@ -6,10 +7,7 @@ import {
   type TaskDispatchResumeCandidate,
 } from '@/database/models/taskDispatch';
 import type { OrviloDatabase } from '@/database/type';
-import {
-  TaskDispatchConflictError,
-  TaskDispatchWaitingError,
-} from '@/server/services/taskDispatch';
+import { TaskDispatchWaitingError } from '@/server/services/taskDispatch';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
 const log = debug('task-dispatch-resume');
@@ -98,14 +96,17 @@ export const processTaskDispatchResume = async (input: {
     });
     return { dispatchId: candidate.dispatchId, outcome: 'resumed' };
   } catch (error) {
-    if (error instanceof TaskDispatchWaitingError) {
+    // `runTask` surfaces a held dispatch as PRECONDITION_FAILED with the
+    // typed cause preserved, and a lost reservation as CONFLICT — unwrap
+    // both the same way the completion cascade does.
+    if (error instanceof TRPCError && error.cause instanceof TaskDispatchWaitingError) {
       return {
         dispatchId: candidate.dispatchId,
         outcome: 'waiting',
-        reason: error.message.slice(0, 200),
+        reason: error.cause.message.slice(0, 200),
       };
     }
-    if (error instanceof TaskDispatchConflictError) {
+    if (error instanceof TRPCError && error.code === 'CONFLICT') {
       return { dispatchId: candidate.dispatchId, outcome: 'skipped', reason: 'busy' };
     }
     log('resume %s failed: %O', candidate.dispatchId, error);

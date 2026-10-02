@@ -1,12 +1,10 @@
+import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
 import { TaskModel } from '@/database/models/task';
 import { type TaskBacklogIntakeCandidate, TaskDispatchModel } from '@/database/models/taskDispatch';
 import type { OrviloDatabase } from '@/database/type';
-import {
-  TaskDispatchConflictError,
-  TaskDispatchWaitingError,
-} from '@/server/services/taskDispatch';
+import { TaskDispatchWaitingError } from '@/server/services/taskDispatch';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 
@@ -51,10 +49,16 @@ const processBacklogIntake = async (input: {
     });
     return { outcome: 'started', taskId: candidate.taskId };
   } catch (error) {
-    if (error instanceof TaskDispatchWaitingError) {
-      return { outcome: 'waiting', reason: error.message.slice(0, 200), taskId: candidate.taskId };
+    // `runTask` surfaces a held dispatch as PRECONDITION_FAILED with the
+    // typed cause preserved, and a lost reservation as CONFLICT.
+    if (error instanceof TRPCError && error.cause instanceof TaskDispatchWaitingError) {
+      return {
+        outcome: 'waiting',
+        reason: error.cause.message.slice(0, 200),
+        taskId: candidate.taskId,
+      };
     }
-    if (error instanceof TaskDispatchConflictError) {
+    if (error instanceof TRPCError && error.code === 'CONFLICT') {
       return { outcome: 'blocked', reason: 'busy', taskId: candidate.taskId };
     }
     log('intake %s failed: %O', candidate.taskId, error);

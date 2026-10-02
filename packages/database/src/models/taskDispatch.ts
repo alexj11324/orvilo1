@@ -57,7 +57,7 @@ const PROJECT_CONCURRENCY_PHASES: TaskDispatchPhase[] = [
 const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
 
 /** Column projection shared by the resume-sweep candidate finders. */
-const RESUME_CANDIDATE_COLUMNS = {
+const resumeCandidateColumns = () => ({
   dispatchId: taskDispatches.id,
   fence: taskDispatches.fence,
   generation: taskDispatches.generation,
@@ -72,7 +72,7 @@ const RESUME_CANDIDATE_COLUMNS = {
   >`coalesce(${projects.userId}, ${teams.createdByUserId}, ${tasks.createdByUserId}, ${tasks.createdBySubjectId})`,
   waitingReason: taskDispatches.waitingReason,
   workspaceId: taskDispatches.workspaceId,
-} as const;
+});
 
 const resumeCandidates = (
   rows: Array<Omit<TaskDispatchResumeCandidate, 'userId'> & { userId: string | null }>,
@@ -473,7 +473,7 @@ export class TaskDispatchModel {
     const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
     const staleBefore = new Date(now.getTime() - (input.graceMs ?? 5 * 60 * 1000));
     const rows = await db
-      .select(RESUME_CANDIDATE_COLUMNS)
+      .select(resumeCandidateColumns())
       .from(taskDispatches)
       .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
       .leftJoin(projects, eq(projects.id, tasks.projectId))
@@ -507,7 +507,7 @@ export class TaskDispatchModel {
     const limit = Math.max(1, Math.min(100, Math.trunc(input.limit ?? 20)));
     const staleBefore = new Date(now.getTime() - (input.graceMs ?? 5 * 60 * 1000));
     const rows = await db
-      .select(RESUME_CANDIDATE_COLUMNS)
+      .select(resumeCandidateColumns())
       .from(taskDispatches)
       .innerJoin(tasks, eq(tasks.id, taskDispatches.taskId))
       .leftJoin(projects, eq(projects.id, tasks.projectId))

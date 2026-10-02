@@ -1,11 +1,9 @@
 // @vitest-environment node
+import { TRPCError } from '@trpc/server';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { TaskModel } from '@/database/models/task';
-import {
-  TaskDispatchConflictError,
-  TaskDispatchWaitingError,
-} from '@/server/services/taskDispatch';
+import { TaskDispatchWaitingError } from '@/server/services/taskDispatch';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
 import { sweepTaskBacklogIntake } from './index';
@@ -86,8 +84,14 @@ describe('sweepTaskBacklogIntake', () => {
 
   it('keeps a policy-gated start parked at waiting for the resume sweep', async () => {
     mocks.findBacklogIntakeCandidates.mockResolvedValue([candidate()]);
+    // `runTask` wraps the held signal in PRECONDITION_FAILED with the typed
+    // cause — the sweep must read it back off `error.cause`.
     mocks.runTask.mockRejectedValue(
-      new TaskDispatchWaitingError('project_concurrency_limit', 'dispatch-1'),
+      new TRPCError({
+        cause: new TaskDispatchWaitingError('project_concurrency_limit', 'dispatch-1'),
+        code: 'PRECONDITION_FAILED',
+        message: 'project_concurrency_limit',
+      }),
     );
 
     await expect(sweepTaskBacklogIntake({ db: {} as never })).resolves.toEqual([
@@ -97,7 +101,7 @@ describe('sweepTaskBacklogIntake', () => {
 
   it('does not treat a live-dispatch conflict as an error', async () => {
     mocks.findBacklogIntakeCandidates.mockResolvedValue([candidate()]);
-    mocks.runTask.mockRejectedValue(new TaskDispatchConflictError('busy', 'dispatch-2'));
+    mocks.runTask.mockRejectedValue(new TRPCError({ code: 'CONFLICT', message: 'busy' }));
 
     await expect(sweepTaskBacklogIntake({ db: {} as never })).resolves.toEqual([
       { outcome: 'blocked', reason: 'busy', taskId: 'task-1' },

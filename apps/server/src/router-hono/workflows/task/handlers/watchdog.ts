@@ -72,9 +72,9 @@ export async function watchdog(c: Context) {
       eventInbox = { status: 'unavailable' };
       console.error('[task/watchdog] MCP event inbox sweep unavailable');
     }
-    const abandonedDispatches = cancellationOutcomes.filter(
-      (outcome) => outcome.outcome === 'abandoned',
-    ).length;
+    const abandonedDispatches =
+      cancellationOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length +
+      dispatchRecoveryOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length;
     const driftFencedDispatches = ownershipOutcomes.filter(
       (outcome) => outcome.outcome === 'drift_fenced',
     ).length;
@@ -96,6 +96,8 @@ export async function watchdog(c: Context) {
     ).length;
     const intakeStarted = intakeOutcomes.filter((outcome) => outcome.outcome === 'started').length;
     const intakeWaiting = intakeOutcomes.filter((outcome) => outcome.outcome === 'waiting').length;
+    const intakeBlocked = intakeOutcomes.filter((outcome) => outcome.outcome === 'blocked').length;
+    const intakeErrors = intakeOutcomes.filter((outcome) => outcome.outcome === 'error').length;
 
     return c.json({
       abandonedDispatches,
@@ -104,6 +106,8 @@ export async function watchdog(c: Context) {
       activeDispatches,
       canceledDispatches,
       driftFencedDispatches,
+      intakeBlocked,
+      intakeErrors,
       intakeStarted,
       intakeWaiting,
       orphanedTasksParked,

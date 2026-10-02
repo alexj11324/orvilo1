@@ -21,16 +21,22 @@ import {
 } from '@/utils/client/topic';
 
 import { type ChatStoreState } from '../../initialState';
-import { topicMapKey } from '../../utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '../../utils/topicMapKey';
 import { operationSelectors } from '../operation/selectors';
 import { type TopicData } from './initialState';
 
 // Helper selector: get current topic data based on session context
 const currentTopicData = (s: ChatStoreState): TopicData | undefined => {
-  const key = topicMapKey({
-    agentId: s.activeAgentId,
-    groupId: s.activeGroupId,
-  });
+  // Conversation-first navigation: outside a group session the sidebar reads
+  // the single workspace-wide conversation feed — every visible non-group
+  // topic, whatever agent owns it. Agent identity degrades to weak row
+  // metadata on each row. Group sessions keep their container-scoped bucket.
+  const key = s.activeGroupId
+    ? topicMapKey({
+        agentId: s.activeAgentId,
+        groupId: s.activeGroupId,
+      })
+    : WORKSPACE_TOPIC_MAP_KEY;
   return s.topicDataMap[key];
 };
 
@@ -53,14 +59,12 @@ const currentTopicsWithoutSystemTriggers = (s: ChatStoreState): ChatTopic[] | un
   );
 };
 
-const currentActiveTopic = (s: ChatStoreState): ChatTopic | undefined => {
-  const inList = currentTopics(s)?.find((topic) => topic.id === s.activeTopicId);
-  if (inList) return inList;
+const currentActiveTopic = (s: ChatStoreState): ChatTopic | undefined =>
   // The active topic can be absent from the list bucket — archived (completed)
-  // topics are excluded by the sidebar fetch's `excludeStatuses`. Fall back to
-  // the by-id detail cache so consumers keep real data (title, metadata, …).
-  return s.activeTopicId ? s.topicDetailMap?.[s.activeTopicId] : undefined;
-};
+  // topics are excluded by the sidebar fetch's `excludeStatuses`, and the
+  // workspace feed may simply not have paged it in yet. getTopicById already
+  // falls back through every loaded bucket to the by-id detail cache.
+  s.activeTopicId ? getTopicById(s.activeTopicId)(s) : undefined;
 const searchTopics = (s: ChatStoreState): ChatTopic[] => s.searchTopics;
 
 const displayTopics = (s: ChatStoreState): ChatTopic[] | undefined =>

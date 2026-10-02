@@ -7,7 +7,7 @@ import NeuralNetworkLoading from '@/components/NeuralNetworkLoading';
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import SidebarContextMenu from '@/features/NavPanel/components/SidebarContextMenu';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import { useFetchChatTopics } from '@/hooks/useFetchChatTopics';
+import { useWorkspaceConversationFeed } from '@/hooks/useFetchChatTopics';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 
@@ -27,7 +27,7 @@ const Topic = memo<TopicProps>(({ expanded, itemKey }) => {
   const topicCount = useChatStore((s) => topicSelectors.currentTopicCount(s));
   const cleanupStaleRunningTopics = useChatStore((s) => s.cleanupStaleRunningTopics);
   const dropdownMenu = useTopicActionsDropdownMenu();
-  const { isRevalidating } = useFetchChatTopics();
+  const { isRevalidating } = useWorkspaceConversationFeed();
   const hasRunWatchdogRef = useRef(false);
 
   useEffect(() => {

@@ -32,7 +32,11 @@ import { aiModelSelectors } from '@/store/aiInfra/slices/aiModel/selectors';
 import { type ChatStore } from '@/store/chat';
 import { evictMessageCache } from '@/store/chat/utils/evictMessageCache';
 import { snapshotAgentModel, snapshotAgentReasoning } from '@/store/chat/utils/snapshotAgentModel';
-import { topicMapKey, type TopicMapScope } from '@/store/chat/utils/topicMapKey';
+import {
+  topicMapKey,
+  type TopicMapScope,
+  WORKSPACE_TOPIC_MAP_KEY,
+} from '@/store/chat/utils/topicMapKey';
 import {
   isAudioOnlyFirstUserMessage,
   normalizeTopicTitleMessages,
@@ -833,11 +837,14 @@ export class ChatTopicActionImpl {
   #prefetchUnreadTopicMessages = (
     fetchedTopics: ChatTopic[],
     previousItems: ChatTopic[] | undefined,
-    context: { agentId?: string | null; groupId?: string | null },
+    context: { agentId?: string | null; groupId?: string | null; scope?: TopicMapScope },
   ): void => {
     // Message buckets for group scopes key on more than agentId/topicId; the
     // canonical message:list prefetch only represents plain agent topics.
-    if (!context.agentId || context.groupId) return;
+    if (context.groupId) return;
+    // The workspace feed carries no container agent — each row binds its own.
+    const isWorkspaceFetch = context.scope === 'workspace';
+    if (!isWorkspaceFetch && !context.agentId) return;
 
     const previousStatus = new Map(previousItems?.map((item) => [item.id, item.status]) ?? []);
     // First load (no previous items) sweeps every unread topic — those runs
@@ -847,8 +854,11 @@ export class ChatTopicActionImpl {
     );
 
     for (const topic of flipped.slice(0, UNREAD_TOPIC_PREFETCH_LIMIT)) {
+      const ownerAgentId = topic.agentId ?? context.agentId;
+      // Orphan rows (no owning agent) have no message bucket to warm.
+      if (!ownerAgentId) continue;
       void this.#get().prefetchMessages({
-        agentId: context.agentId,
+        agentId: ownerAgentId,
         scope: 'main',
         topicId: topic.id,
       });
@@ -1187,6 +1197,7 @@ export class ChatTopicActionImpl {
       groupId,
       pageSize: customPageSize,
       isInbox,
+      scope,
       sortBy,
     }: {
       agentId?: string;
@@ -1195,6 +1206,12 @@ export class ChatTopicActionImpl {
       groupId?: string;
       isInbox?: boolean;
       pageSize?: number;
+      /**
+       * `'workspace'` fetches the workspace-wide conversation feed — every
+       * visible non-group topic regardless of owning agent — into the
+       * `workspace` bucket that the sidebar selectors read.
+       */
+      scope?: TopicMapScope;
       sortBy?: TopicQuerySortBy;
     } = {},
   ): SWRResponse<{ items: ChatTopic[]; total: number }> => {
@@ -1204,8 +1221,8 @@ export class ChatTopicActionImpl {
     const effectiveExcludeStatuses =
       excludeStatuses && excludeStatuses.length > 0 ? excludeStatuses : undefined;
     // Use topicMapKey to generate the container key for topic data map
-    const containerKey = topicMapKey({ agentId, groupId });
-    const hasValidContainer = !!(groupId || agentId);
+    const containerKey = topicMapKey({ agentId, groupId, scope });
+    const hasValidContainer = !!(groupId || agentId || scope === 'workspace');
 
     return useClientDataSWRWithSync<{ items: ChatTopic[]; total: number }>(
       enable && hasValidContainer
@@ -1219,7 +1236,7 @@ export class ChatTopicActionImpl {
         : null,
       async () => {
         // agentId, groupId, isInbox, pageSize come from the outer scope closure
-        if (!agentId && !groupId) return { items: [], total: 0 };
+        if (!agentId && !groupId && scope !== 'workspace') return { items: [], total: 0 };
 
         const membershipRevision = this.#topicListMembershipRevisions.get(containerKey) ?? 0;
 
@@ -1243,6 +1260,7 @@ export class ChatTopicActionImpl {
           groupId,
           isInbox,
           pageSize,
+          ...(scope === 'workspace' ? { scope: 'workspace' as const } : {}),
           sortBy,
         });
 
@@ -1278,7 +1296,11 @@ export class ChatTopicActionImpl {
           // Fire BEFORE the no-change early return below: on a cold boot the
           // cached list arrives with no `currentData`, and that first delivery
           // is exactly the sweep that must warm app-closed-while-running runs.
-          this.#prefetchUnreadTopicMessages(topics, currentData?.items, { agentId, groupId });
+          this.#prefetchUnreadTopicMessages(topics, currentData?.items, {
+            agentId,
+            groupId,
+            scope,
+          });
 
           const isRefreshingExpandedList =
             !!currentData &&
@@ -1393,10 +1415,15 @@ export class ChatTopicActionImpl {
 
   loadMoreTopics = async (): Promise<void> => {
     const { activeAgentId, activeGroupId, topicDataMap } = this.#get();
-    const key = topicMapKey({ agentId: activeAgentId, groupId: activeGroupId });
+    // Outside a group session the sidebar pages the workspace feed, not the
+    // active agent's bucket — the key must match `currentTopicData`.
+    const isWorkspaceFeed = !activeGroupId;
+    const key = isWorkspaceFeed
+      ? WORKSPACE_TOPIC_MAP_KEY
+      : topicMapKey({ agentId: activeAgentId, groupId: activeGroupId });
     const currentData = topicDataMap[key];
 
-    if ((!activeAgentId && !activeGroupId) || currentData?.isLoadingMore) return;
+    if (currentData?.isLoadingMore) return;
 
     const currentPage = currentData?.currentPage || 0;
     const nextPage = currentPage + 1;
@@ -1420,12 +1447,13 @@ export class ChatTopicActionImpl {
       const excludeTriggers = currentData?.excludeTriggers;
       const excludeStatuses = currentData?.excludeStatuses;
       const result = await topicService.getTopics({
-        agentId: activeAgentId,
         current: nextPage,
         excludeStatuses,
         excludeTriggers,
-        groupId: activeGroupId,
         pageSize,
+        ...(isWorkspaceFeed
+          ? { scope: 'workspace' as const }
+          : { agentId: activeAgentId, groupId: activeGroupId }),
       });
 
       const latestData = this.#get().topicDataMap[key];
@@ -1502,15 +1530,29 @@ export class ChatTopicActionImpl {
     {
       agentId,
       groupId,
+      scope,
     }: {
       agentId?: string;
       groupId?: string;
+      /** `'workspace'` searches the workspace-wide conversation feed. */
+      scope?: 'workspace';
     } = {},
   ): SWRResponse<ChatTopic[]> => {
     return useSWR<ChatTopic[]>(
-      keywords ? topicKeys.search(keywords, agentId, groupId) : null,
+      keywords
+        ? topicKeys.search(
+            keywords,
+            scope === 'workspace' ? WORKSPACE_TOPIC_MAP_KEY : agentId,
+            groupId,
+          )
+        : null,
       ([, keywords, agentId, groupId]: [string, string, string | undefined, string | undefined]) =>
-        topicService.searchTopics(keywords, agentId, groupId),
+        topicService.searchTopics(
+          keywords,
+          agentId === WORKSPACE_TOPIC_MAP_KEY ? undefined : agentId,
+          groupId,
+          scope,
+        ),
       {
         onSuccess: (data) => {
           // Search rows render the same status icon as the sidebar — pin
@@ -1732,7 +1774,10 @@ export class ChatTopicActionImpl {
         Array.isArray(key) &&
         key[0] === topicKeys.list.root &&
         typeof key[1] === 'string' &&
-        key[1] === containerKey,
+        // Every topic write may affect the workspace feed too — its bucket
+        // holds the same rows keyed under `workspace`, so revalidate it
+        // alongside the owning container.
+        (key[1] === containerKey || key[1] === WORKSPACE_TOPIC_MAP_KEY),
     );
   };
 
@@ -1882,8 +1927,13 @@ export class ChatTopicActionImpl {
   #writeThroughTopicListCache = (containerKey: string, payload: ChatTopicDispatch): void => {
     if (payload.type !== 'updateTopic') return;
 
+    // The workspace feed caches the same rows under `workspace` — patch it
+    // alongside the owning bucket so a cold boot can't resurrect a stale row.
     void mutate(
-      (key) => Array.isArray(key) && key[0] === topicKeys.list.root && key[1] === containerKey,
+      (key) =>
+        Array.isArray(key) &&
+        key[0] === topicKeys.list.root &&
+        (key[1] === containerKey || key[1] === WORKSPACE_TOPIC_MAP_KEY),
       (cached?: { items: ChatTopic[]; total: number }) => {
         if (!cached?.items) return cached;
 
@@ -1953,6 +2003,33 @@ export class ChatTopicActionImpl {
     const currentData = this.#get().topicDataMap[key];
     const nextItems = topicReducer(currentData?.items, payload);
 
+    // Mirror the write into the workspace conversation feed: outside a group
+    // session the sidebar renders `topicDataMap.workspace`, so a dispatch
+    // scoped to `agent_<x>` must also move the row there or the feed goes
+    // stale until the next refetch. Only when the feed bucket actually exists
+    // (a context that never mounted the feed must not materialize one) and
+    // the write isn't group-scoped — the feed holds no group topics.
+    const workspaceData =
+      key === WORKSPACE_TOPIC_MAP_KEY || scopedGroupId
+        ? undefined
+        : this.#get().topicDataMap[WORKSPACE_TOPIC_MAP_KEY];
+    const mirrorToWorkspace =
+      !!workspaceData && (payload.type !== 'addTopic' || !payload.value.groupId);
+    const nextWorkspaceItems = mirrorToWorkspace
+      ? topicReducer(workspaceData!.items, payload)
+      : undefined;
+    if (
+      mirrorToWorkspace &&
+      (payload.type === 'addTopic' ||
+        payload.type === 'replaceTopicId' ||
+        payload.type === 'deleteTopic')
+    ) {
+      this.#topicListMembershipRevisions.set(
+        WORKSPACE_TOPIC_MAP_KEY,
+        (this.#topicListMembershipRevisions.get(WORKSPACE_TOPIC_MAP_KEY) ?? 0) + 1,
+      );
+    }
+
     const detailMap = this.#get().topicDetailMap ?? {};
     const detailId = payload.type === 'addTopic' ? undefined : payload.id;
     const detailTopic = detailId ? detailMap[detailId] : undefined;
@@ -1983,33 +2060,53 @@ export class ChatTopicActionImpl {
 
     // no need to update if all maps are unchanged
     const mainChanged = !isEqual(nextItems, currentData?.items);
+    const workspaceChanged =
+      nextWorkspaceItems !== undefined && !isEqual(nextWorkspaceItems, workspaceData?.items);
     const detailChanged = nextDetailMap !== detailMap;
-    if (!mainChanged && !detailChanged) return;
+    if (!mainChanged && !workspaceChanged && !detailChanged) return;
 
-    const currentTotal = currentData?.total ?? currentData?.items?.length ?? 0;
-    const total =
-      payload.type === 'addTopic'
+    const bucketTotal = (data: TopicData | undefined, items: ChatTopic[]): number => {
+      const currentTotal = data?.total ?? data?.items?.length ?? 0;
+      return payload.type === 'addTopic'
         ? currentTotal + 1
         : payload.type === 'deleteTopic'
-          ? Math.max(nextItems.length, currentTotal - 1)
+          ? Math.max(items.length, currentTotal - 1)
           : currentTotal;
+    };
 
     const nextState: Record<string, unknown> = {};
 
     if (detailChanged) nextState.topicDetailMap = nextDetailMap;
 
-    if (mainChanged) {
-      nextState.topicDataMap = {
-        ...this.#get().topicDataMap,
-        [key]: {
+    if (mainChanged || workspaceChanged) {
+      const topicDataMap = { ...this.#get().topicDataMap };
+
+      if (mainChanged) {
+        const total = bucketTotal(currentData, nextItems);
+        topicDataMap[key] = {
           ...currentData,
           currentPage: currentData?.currentPage ?? 0,
           hasMore: total > nextItems.length,
           isInbox: currentData?.isInbox,
           items: nextItems,
           total,
-        },
-      };
+        };
+      }
+
+      if (workspaceChanged) {
+        const total = bucketTotal(workspaceData, nextWorkspaceItems!);
+        topicDataMap[WORKSPACE_TOPIC_MAP_KEY] = {
+          // `mirrorToWorkspace` guarantees the bucket exists.
+          ...workspaceData!,
+          currentPage: workspaceData!.currentPage ?? 0,
+          hasMore: total > nextWorkspaceItems!.length,
+          isInbox: workspaceData!.isInbox,
+          items: nextWorkspaceItems!,
+          total,
+        };
+      }
+
+      nextState.topicDataMap = topicDataMap;
     }
 
     this.#set(nextState, false, action ?? n(`dispatchTopic/${payload.type}`));
@@ -2038,22 +2135,46 @@ export class ChatTopicActionImpl {
 
     const nextItems = append ? [...(currentData?.items || []), ...items] : items;
 
+    const nextDataMap: Record<string, TopicData> = {
+      [key]: {
+        currentPage,
+        excludeStatuses: currentData?.excludeStatuses,
+        excludeTriggers: currentData?.excludeTriggers,
+        hasMore: total > nextItems.length,
+        isInbox: currentData?.isInbox,
+        isExpandingPageSize: false,
+        isLoadingMore: false,
+        items: nextItems,
+        pageSize,
+        total,
+      },
+    };
+
+    // The response is one agent's page — merge it into the workspace feed:
+    // upsert returned rows, prepend genuinely new topics (freshest first),
+    // and keep rows owned by other agents untouched.
+    if (!groupId) {
+      const workspaceData = this.#get().topicDataMap[WORKSPACE_TOPIC_MAP_KEY];
+      if (workspaceData) {
+        const incomingById = new Map(items.map((topic) => [topic.id, topic]));
+        const existingIds = new Set(workspaceData.items.map((topic) => topic.id));
+        const merged = workspaceData.items.map((topic) => incomingById.get(topic.id) ?? topic);
+        const prepend = items.filter((topic) => !existingIds.has(topic.id));
+        const nextWorkspaceItems = [...prepend, ...merged];
+        nextDataMap[WORKSPACE_TOPIC_MAP_KEY] = {
+          ...workspaceData,
+          hasMore: workspaceData.total > nextWorkspaceItems.length,
+          items: nextWorkspaceItems,
+          total: workspaceData.total + prepend.length,
+        };
+      }
+    }
+
     this.#set(
       {
         topicDataMap: {
           ...this.#get().topicDataMap,
-          [key]: {
-            currentPage,
-            excludeStatuses: currentData?.excludeStatuses,
-            excludeTriggers: currentData?.excludeTriggers,
-            hasMore: total > nextItems.length,
-            isInbox: currentData?.isInbox,
-            isExpandingPageSize: false,
-            isLoadingMore: false,
-            items: nextItems,
-            pageSize,
-            total,
-          },
+          ...nextDataMap,
         },
       },
       false,

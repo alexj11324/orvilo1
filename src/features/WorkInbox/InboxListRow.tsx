@@ -205,7 +205,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
             <span className="text-muted-foreground">{card.content}</span>
             {'.'}
           </p>
-          <div className="hidden shrink-0 items-center gap-2 group-hover:flex">
+          <div className="hidden shrink-0 items-center gap-2 group-focus-within:flex group-hover:flex">
             <Tooltip>
               <TooltipTrigger
                 render={
@@ -311,10 +311,12 @@ const InboxListRow = memo((props: InboxListRowProps) => {
         </div>
         <div className="flex items-center gap-3 text-xs text-muted-foreground">
           <span className="min-w-0 flex-1 truncate">
-            {card.resourceIdentifier ? `${card.resourceIdentifier} ` : ''}
+            {card.resourceIdentifier ? (
+              <span className="font-mono">{`${card.resourceIdentifier} `}</span>
+            ) : null}
             {card.title}
           </span>
-          <span className="flex shrink-0 items-center gap-1 text-tertiary">
+          <span className="flex shrink-0 items-center gap-1 font-mono text-tertiary">
             {card.snoozedUntil ? (
               <>
                 <ClockIcon aria-hidden className="size-3" />

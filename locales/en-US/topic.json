@@ -43,6 +43,7 @@
   "actions.removeUnstarred": "Delete Unstarred Topics",
   "actions.removeUnstarredOwn": "Delete My Unstarred Topics",
   "actions.removeUnstarredWorkspace": "Delete All Unstarred Topics",
+  "actions.showTopics": "Topics",
   "actions.unfavorite": "Unfavorite",
   "actions.unmarkCompleted": "Unarchive",
   "defaultTitle": "Default Topic",

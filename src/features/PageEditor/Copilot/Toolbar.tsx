@@ -77,6 +77,7 @@ const CopilotToolbar = memo<CopilotToolbarProps>(({ onTopicChange, topicId }) =>
                       icon={Clock3Icon}
                       loading={isLoadingTopics}
                       size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                      title={t('actions.showTopics')}
                     />
                   </span>
                 }
@@ -111,6 +112,7 @@ const CopilotToolbar = memo<CopilotToolbarProps>(({ onTopicChange, topicId }) =>
             <ActionIcon
               icon={PanelRightCloseIcon}
               size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+              title={t('workingPanel.tabs.closePanel', { ns: 'chat' })}
               onClick={() => togglePageAgentPanel()}
             />
           )}

@@ -43,6 +43,7 @@
   "actions.removeUnstarred": "删除未收藏话题",
   "actions.removeUnstarredOwn": "删除我创建的未收藏话题",
   "actions.removeUnstarredWorkspace": "删除全部未收藏话题",
+  "actions.showTopics": "话题",
   "actions.unfavorite": "取消收藏",
   "actions.unmarkCompleted": "取消归档",
   "defaultTitle": "默认话题",

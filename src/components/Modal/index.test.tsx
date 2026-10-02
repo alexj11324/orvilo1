@@ -76,6 +76,15 @@ describe('createModal', () => {
     await waitFor(() => expect(screen.queryByText('close-me')).not.toBeInTheDocument());
   });
 
+  it('renders a labelled close control', async () => {
+    renderHost();
+    createModal({ content: <div>body</div>, title: 't' });
+    expect(await screen.findByText('body')).toBeInTheDocument();
+
+    const labelled = screen.getAllByRole('button').find((el) => el.getAttribute('aria-label'));
+    expect(labelled?.getAttribute('aria-label')).toBeTruthy();
+  });
+
   it('maskClosable: false ignores outside presses but keeps Escape dismiss', async () => {
     renderHost();
 

@@ -83,6 +83,7 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
                     icon={Clock3Icon}
                     loading={isLoadingTopics}
                     size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                    title={t('actions.showTopics', { ns: 'topic' })}
                   />
                 </span>
               }
@@ -114,6 +115,7 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
           <ActionIcon
             icon={PanelRightCloseIcon}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            title={t('workingPanel.tabs.closePanel')}
             onClick={onCollapse}
           />
         </>

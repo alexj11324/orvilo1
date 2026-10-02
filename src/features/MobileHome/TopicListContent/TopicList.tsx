@@ -18,7 +18,7 @@ import { useMobileTopics } from './useMobileTopics';
 const TopicList = memo(() => {
   const { t } = useTranslation('chat');
 
-  const { error, isInit, reload, topics } = useMobileTopics();
+  const { error, hasMore, isInit, isLoadingMore, loadMore, reload, topics } = useMobileTopics();
 
   if (!isInit) return <SkeletonList />;
 
@@ -37,6 +37,13 @@ const TopicList = memo(() => {
           <TopicRow topic={topic} />
         </LazyLoad>
       ))}
+      {/* Cursor feed tail: scrolling the sentinel into view pulls the next
+          page; a skeleton row keeps the rhythm while it loads. */}
+      {hasMore ? (
+        <LazyLoad key="feed-tail" onContentVisible={() => loadMore()}>
+          {isLoadingMore ? <SkeletonList count={2} /> : <div style={{ height: 1 }} />}
+        </LazyLoad>
+      ) : null}
     </div>
   );
 });

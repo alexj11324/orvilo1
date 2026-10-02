@@ -10,6 +10,7 @@ import ProfileSkeleton from '@/components/Skeleton/Profile';
 import AgentBuilder from '@/features/AgentBuilder';
 import ResourceConfigAccessGate from '@/features/ResourcePermission/ResourceConfigAccessGate';
 import WideScreenContainer from '@/features/WideScreenContainer';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -46,6 +47,7 @@ const ProfileArea = memo(() => {
   const retryAgentConfigFetch = useAgentStore((s) => s.retryAgentConfigFetch);
   const { allowed: canEdit } = usePermission('edit_own_content');
   const handleContentClick = useClickToFocusEditor(editor, canEdit);
+  const isMobile = useIsMobile();
 
   return (
     <>
@@ -65,7 +67,10 @@ const ProfileArea = memo(() => {
           loading={<ProfileSkeleton />}
           onRetry={() => retryAgentConfigFetch()}
         >
-          <Header />
+          {/* The desktop header is nav chrome (breadcrumb, tabs, action menu)
+              that has no room on a narrow viewport — the mobile settings
+              shell already supplies the back affordance and page title. */}
+          {isMobile ? null : <Header />}
           <div
             className="flex"
             style={{
@@ -98,7 +103,10 @@ const AgentBuilderSlot = memo(() => {
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const lockedByOther = useProfileStore(profileSelectors.lockedByOther);
   const lockPending = useProfileStore(profileSelectors.lockPending);
-  if (isHeterogeneous || lockedByOther || lockPending) return null;
+  const isMobile = useIsMobile();
+  // The builder is a desktop side rail — on mobile it widens the page past the
+  // viewport; the same config it edits is reachable through the stacked cards.
+  if (isMobile || isHeterogeneous || lockedByOther || lockPending) return null;
   return <AgentBuilder />;
 });
 

@@ -1,5 +1,7 @@
 import { type ChatTopicStatus, TOPIC_STATUSES } from '@orvilo/types';
 
+import type { TopicListItem, TopicListPage } from '@/services/topic';
+
 /**
  * Statuses the mobile conversation list ships: every state except `archived`.
  * Archived conversations stay reachable from the agent's own topic drawer;
@@ -16,7 +18,8 @@ export interface MobileTopicInput {
   runStartedAt?: Date | null | string;
   status?: ChatTopicStatus | null;
   title: string;
-  updatedAt: number;
+  /** `ChatTopic.updatedAt` deserializes to `Date`; epoch numbers also format fine. */
+  updatedAt: Date | number;
 }
 
 export interface MobileTopicRow {
@@ -25,7 +28,7 @@ export interface MobileTopicRow {
   runStartedAt: Date | null | string | undefined;
   status: ChatTopicStatus | null | undefined;
   title: string;
-  updatedAt: number;
+  updatedAt: Date | number;
 }
 
 /**
@@ -56,4 +59,28 @@ export const toMobileTopicRows = (topics: MobileTopicInput[]): MobileTopicRow[] 
   }
 
   return rows;
+};
+
+/**
+ * Flatten loaded `queryTopics` pages into the feed's item list.
+ *
+ * The cursor is keyed on `(updatedAt, id)`: a topic bumped by a new message
+ * between two page fetches can appear at the tail of the newer page AND the
+ * head of the older page. Dedupe by id keeps exactly one copy — the newest
+ * page's row, which is the freshest snapshot — and preserves feed order.
+ * Empty pages (a cursor that lands past the list end) contribute nothing.
+ */
+export const flattenTopicPages = (pages: (TopicListPage | undefined)[]): TopicListItem[] => {
+  const seen = new Set<string>();
+  const items: TopicListItem[] = [];
+
+  for (const page of pages) {
+    for (const item of page?.items ?? []) {
+      if (seen.has(item.id)) continue;
+      seen.add(item.id);
+      items.push(item);
+    }
+  }
+
+  return items;
 };

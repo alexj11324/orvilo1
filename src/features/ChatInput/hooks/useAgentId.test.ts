@@ -14,14 +14,16 @@ const seed = ({
   activeTopicId,
   composerAgentId,
   lastUsedAgentId,
+  topicDataMap,
 }: {
   activeAgentId?: string;
   activeTopicId?: string;
   composerAgentId?: string;
   lastUsedAgentId?: string;
+  topicDataMap?: ReturnType<typeof useChatStore.getState>['topicDataMap'];
 }) => {
   useAgentStore.setState({ activeAgentId });
-  useChatStore.setState({ activeTopicId, composerAgentId });
+  useChatStore.setState({ activeTopicId, composerAgentId, topicDataMap });
   useGlobalStore.setState((s) => ({
     status: { ...s.status, lastUsedAgentId },
   }));
@@ -72,5 +74,30 @@ describe('useAgentId', () => {
     });
     const { result } = renderWithComposer();
     expect(result.current).toBe('agt_route');
+  });
+
+  it('ignores feed ordering — a background agent topping the list cannot hijack the default', () => {
+    // Regression: Agent C finishing in the background pushes its topic to the
+    // top of the conversation feed. The blank-composer default must stay the
+    // last agent the USER used — inferring it from topics[0] would hand the
+    // next send to whichever agent wrote last.
+    seed({
+      activeAgentId: 'agt_route',
+      lastUsedAgentId: 'agt_last',
+      topicDataMap: {
+        agent_agt_route: {
+          currentPage: 0,
+          hasMore: false,
+          items: [
+            { agentId: 'agt_c', id: 'tpc_c', status: 'unread', title: 'C done' },
+            { agentId: 'agt_last', id: 'tpc_b', status: 'active', title: 'B' },
+          ] as never[],
+          pageSize: 20,
+          total: 2,
+        },
+      },
+    });
+    const { result } = renderWithComposer();
+    expect(result.current).toBe('agt_last');
   });
 });

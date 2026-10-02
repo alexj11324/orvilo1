@@ -15,6 +15,7 @@ import { useAgentStore } from '@/store/agent';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { topicMapKey } from '@/store/chat/utils/topicMapKey';
+import { useGlobalStore } from '@/store/global';
 import { useSessionStore } from '@/store/session';
 import { useUserStore } from '@/store/user';
 import { type ChatTopic, type CreateTopicParams } from '@/types/topic';
@@ -3362,5 +3363,48 @@ describe('Topic execution save failures', () => {
     vi.spyOn(topicService, 'updateTopicMetadata').mockResolvedValueOnce([]);
     await useChatStore.getState().updateTopicMetadata('topic-execution', selected);
     expect(useChatStore.getState().topicDataMap[key].items[0].metadata).toEqual(selected);
+  });
+});
+
+describe('lastUsedAgentId contract', () => {
+  it('never moves the composer default on background topic churn', () => {
+    // `lastUsedAgentId` may only be written by the three user actions (composer
+    // pick, send, handoff). A background agent completing is funnelled through
+    // `internal_dispatchTopic` as an `updateTopic` — the default must stay put.
+    const backgroundAgentId = 'agent-background-runner';
+    const backgroundKey = topicMapKey({ agentId: backgroundAgentId });
+    useChatStore.setState({
+      topicDataMap: {
+        [backgroundKey]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [
+            {
+              agentId: backgroundAgentId,
+              id: 'topic-running',
+              status: 'running',
+              title: 'Background run',
+            } as ChatTopic,
+          ],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+    useGlobalStore.setState((s) => ({
+      status: { ...s.status, lastUsedAgentId: 'agent-user-picked' },
+    }));
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: backgroundAgentId,
+        id: 'topic-running',
+        type: 'updateTopic',
+        value: { status: 'completed' } as Partial<ChatTopic>,
+      });
+    });
+
+    expect(useChatStore.getState().topicDataMap[backgroundKey].items[0].status).toBe('completed');
+    expect(useGlobalStore.getState().status.lastUsedAgentId).toBe('agent-user-picked');
   });
 });

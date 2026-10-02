@@ -601,6 +601,9 @@ export class TopicModel {
           timing,
           'db.topic.query.workspace.items.select',
           () =>
+            // The join makes `.select(fields as any)` infer Drizzle's default
+            // nested `{topics, agents}` selection — cast the awaited result so
+            // `query()`'s return stays the flat slim rows every branch returns.
             this.db
               // See note on the group-branch select below re: `as any` cast.
               .select({
@@ -630,7 +633,7 @@ export class TopicModel {
               .where(workspaceWhere)
               .orderBy(...orderBy)
               .limit(pageSize)
-              .offset(offset),
+              .offset(offset) as Promise<{ [x: string]: any }[]>,
           { current, pageSize },
         ),
         runTimedStage(timing, 'db.topic.query.workspace.count.select', () =>

@@ -13,6 +13,7 @@ export enum SidebarTabKey {
   Automations = 'automations',
   Chat = 'chat',
   Drafts = 'drafts',
+  Group = 'group',
   Home = 'home',
   Inbox = 'inbox',
   Knowledge = 'knowledge',

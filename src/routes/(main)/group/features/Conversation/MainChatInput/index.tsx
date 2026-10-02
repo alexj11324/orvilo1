@@ -18,7 +18,9 @@ const leftActions: ActionKeys[] = [
   ['typo', 'params', 'clear'],
 ];
 
-const rightActions: ActionKeys[] = ['model', 'voiceMessage', 'contextWindow'];
+// The group composer exposes the bound agent (supervisor) like every other
+// chat surface — model selection lives only in per-agent settings.
+const rightActions: ActionKeys[] = ['agent', 'voiceMessage', 'contextWindow'];
 
 /**
  * MainChatInput

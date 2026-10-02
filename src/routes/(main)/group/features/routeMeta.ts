@@ -1,4 +1,4 @@
-import { FileUserIcon, Users, UsersIcon } from 'lucide-react';
+import { FileUserIcon, MessagesSquare, Users, UsersIcon } from 'lucide-react';
 import { lazy } from 'react';
 
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
@@ -17,6 +17,12 @@ const GroupPermissionDynamicMeta = lazy(() =>
     default: module.GroupPermissionDynamicMeta,
   })),
 );
+
+export const groupIndexRouteMeta = routeMeta({
+  icon: MessagesSquare,
+  Skeleton: createSurfaceSkeleton('list'),
+  titleKey: 'navigation.groupChat',
+});
 
 export const groupRouteMeta = routeMeta({
   DynamicMeta: GroupDynamicMeta,

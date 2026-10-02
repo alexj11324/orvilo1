@@ -63,6 +63,7 @@ import {
   agentStatisticsRouteMeta,
 } from '@/routes/(main)/agent/features/routeMeta';
 import {
+  groupIndexRouteMeta,
   groupPermissionRouteMeta,
   groupProfileRouteMeta,
   groupRouteMeta,
@@ -383,7 +384,15 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
-        element: redirectElement('..'),
+        // `/group` is the top-level Groups destination: it resolves to the
+        // most recent group's conversation, or a create entry when the account
+        // has none.
+        element: dynamicElement(
+          () => import('@/routes/(main)/group/features/GroupIndex'),
+          'Desktop > Group > Index',
+          { preloadId: 'group' },
+        ),
+        handle: { meta: groupIndexRouteMeta },
         index: true,
       },
       {

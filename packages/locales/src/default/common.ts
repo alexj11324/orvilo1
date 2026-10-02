@@ -523,6 +523,7 @@ export default {
   'navPanel.create': 'Create',
   'navPanel.customizeSidebar': 'Customize Sidebar',
   'navPanel.displayItems': 'Display Items',
+  'navPanel.groups': 'Groups',
   'navPanel.resetDefault': 'Reset to Default',
   'navPanel.hidden': 'Hidden',
   'navPanel.hideSection': 'Hide Section',

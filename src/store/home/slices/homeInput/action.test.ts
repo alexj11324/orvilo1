@@ -299,13 +299,15 @@ describe('HomeInputActionImpl', () => {
       );
     });
 
-    it('opens the existing group agent builder panel for prompt-based group creation', async () => {
+    it('lands on the group conversation and fires the builder for prompt-based creation', async () => {
       const action = createAction();
 
       await action.sendAsGroup({ message: 'build a research group' });
 
       expect(setChatPanelExpandedMock).toHaveBeenCalledWith(true);
-      expect(navigateMock).toHaveBeenCalledWith('/group/group-new/profile');
+      // Regression: creation must land inside the group conversation, never the
+      // intermediate profile/settings screen.
+      expect(navigateMock).toHaveBeenCalledWith('/group/group-new');
       expect(sendMessageMock).toHaveBeenCalledWith(
         expect.objectContaining({
           context: {
@@ -319,6 +321,17 @@ describe('HomeInputActionImpl', () => {
           message: 'build a research group',
         }),
       );
+    });
+
+    it('creates a blank group without firing the builder or the profile panel', async () => {
+      const action = createAction();
+
+      await action.sendAsGroup({ message: '' });
+
+      expect(navigateMock).toHaveBeenCalledWith('/group/group-new');
+      expect(setChatPanelExpandedMock).not.toHaveBeenCalled();
+      expect(sendMessageMock).not.toHaveBeenCalled();
+      expect(refreshBuiltinAgentMock).not.toHaveBeenCalled();
     });
 
     it('passes the workspace slug to the group builder message context', async () => {

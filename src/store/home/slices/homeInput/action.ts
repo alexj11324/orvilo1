@@ -261,36 +261,40 @@ export class HomeInputActionImpl {
         useGroupProfileStore.getState().setChatPanelExpanded(true);
       }
 
-      // 5. Navigate to Group profile page
-      stableWorkspaceAwareNavigate(`/group/${group.id}/profile`);
+      // 5. Navigate straight into the group conversation — creation always
+      // lands on the topic composer, never the profile/settings screen.
+      stableWorkspaceAwareNavigate(`/group/${group.id}`);
 
-      // 6. Send the initial builder message.
-      // Hydrate first so we don't race with the group profile page's own init.
-      const groupAgentBuilderId = await ensureBuiltinAgentHydrated(
-        BUILTIN_AGENT_SLUGS.groupAgentBuilder,
-      );
+      // 6. Only a written description kicks off the builder; a blank group
+      // creates no AI work.
+      if (message.trim()) {
+        // Hydrate first so we don't race with the group profile page's own init.
+        const groupAgentBuilderId = await ensureBuiltinAgentHydrated(
+          BUILTIN_AGENT_SLUGS.groupAgentBuilder,
+        );
 
-      if (groupAgentBuilderId) {
-        await syncBuiltinAgentModel(groupAgentBuilderId, model, provider);
+        if (groupAgentBuilderId) {
+          await syncBuiltinAgentModel(groupAgentBuilderId, model, provider);
 
-        const { sendMessage } = useChatStore.getState();
-        await sendMessage({
-          context: {
-            agentId: groupAgentBuilderId,
-            // Name the group explicitly rather than letting the transport read
-            // `chatStore.activeGroupId`: the navigation above may not have
-            // mounted the group layout yet, and an unset id here would create
-            // the builder topic without its `editingGroupId` marker — invisible
-            // in every group's topic list afterwards.
-            editingGroupId: group.id,
-            scope: 'group_agent_builder',
-            ...(workspaceSlug ? { workspaceSlug } : {}),
-          },
-          contextSelections,
-          editorData,
-          message,
-          pageSelections,
-        });
+          const { sendMessage } = useChatStore.getState();
+          await sendMessage({
+            context: {
+              agentId: groupAgentBuilderId,
+              // Name the group explicitly rather than letting the transport read
+              // `chatStore.activeGroupId`: the navigation above may not have
+              // mounted the group layout yet, and an unset id here would create
+              // the builder topic without its `editingGroupId` marker — invisible
+              // in every group's topic list afterwards.
+              editingGroupId: group.id,
+              scope: 'group_agent_builder',
+              ...(workspaceSlug ? { workspaceSlug } : {}),
+            },
+            contextSelections,
+            editorData,
+            message,
+            pageSelections,
+          });
+        }
       }
 
       // 7. Clear mode

@@ -28,9 +28,12 @@ describe('canMountBuiltinToolSurface', () => {
     }
   });
 
-  it('resolves the builtin orvilo family through its engine', () => {
-    expect(canMountBuiltinToolSurface({ engine: 'claude-sdk', type: 'orvilo' })).toBe(true);
-    expect(canMountBuiltinToolSurface({ type: 'orvilo' })).toBe(true);
+  it('rejects the builtin orvilo family — Prime mounts no tools', () => {
+    // The embedded Prime harness runs `noTools: 'all'`; a pre-cutover
+    // `engine` stamp is dead data and does not make the row mountable.
+    const preCutoverRow = { engine: 'claude-sdk', type: 'orvilo' };
+    expect(canMountBuiltinToolSurface(preCutoverRow)).toBe(false);
+    expect(canMountBuiltinToolSurface({ type: 'orvilo' })).toBe(false);
   });
 
   it('rejects a binding with no type to resolve', () => {

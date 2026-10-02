@@ -106,12 +106,12 @@ const bindConfig = (
   endpointUrl: string,
   secretReference: string,
   overrides?: {
-    engine?: ProviderBindingConfig['selection']['engine'];
     runtime?: ProviderBindingConfig['selection']['runtime'];
     target?: ProviderBindingConfig['selection']['target'];
   },
 ): ProviderBindingConfig => ({
-  enabled: false,
+  // Armed: `enabled` gates both resolution and claim-time issuance.
+  enabled: true,
   endpoint: endpointUrl,
   model: MODEL_ID,
   name: 'Embedded broker fixture',
@@ -119,7 +119,6 @@ const bindConfig = (
   secretReference,
   selection: {
     effort: 'default',
-    engine: overrides?.engine,
     mode: 'default',
     runtime: overrides?.runtime ?? 'orvilo',
     speed: 'default',

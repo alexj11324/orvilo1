@@ -781,15 +781,14 @@ const runsInSandbox = (
   requestedDeviceId?: string,
 ): boolean => {
   const heteroType = agencyConfig?.heterogeneousProvider?.type;
-  const heteroEngine = agencyConfig?.heterogeneousProvider?.engine;
-  if (!heteroType || !supportsCloudHeterogeneousSandbox(heteroType, heteroEngine)) return false;
+  if (!heteroType || !supportsCloudHeterogeneousSandbox(heteroType)) return false;
   return (
     resolveExecutionPlan({
       agencyConfig,
       clientExecutionAvailable: false,
       isHetero: true,
       requestedDeviceId,
-      sandboxExecutionAvailable: supportsCloudHeterogeneousSandbox(heteroType, heteroEngine),
+      sandboxExecutionAvailable: supportsCloudHeterogeneousSandbox(heteroType),
     }).kind === 'sandbox'
   );
 };

@@ -42,8 +42,6 @@ import {
   HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   normalizeHeterogeneousProviderConfig,
   resolveHeteroAgentSystemContext,
-  resolveOrviloCliAgentType,
-  resolveOrviloEngine,
   ThreadStatus,
   ThreadType,
   unwrapServerDefaultHeterogeneousModel,
@@ -480,16 +478,16 @@ export const executeHeterogeneousAgent = async (
   const heterogeneousProvider = normalizeHeterogeneousProviderConfig(
     persistedHeterogeneousProvider,
   );
-  // The builtin Orvilo harness has no adapter or executable of its own — the
-  // selected engine's CLI family owns adapters, auth/error classification,
-  // quota accounting, command resolution, and the resume binding identity.
-  const orviloEngine =
-    heterogeneousProvider.type === 'orvilo'
-      ? resolveOrviloEngine(heterogeneousProvider.engine)
-      : undefined;
-  const adapterType = orviloEngine
-    ? resolveOrviloCliAgentType(orviloEngine)
-    : heterogeneousProvider.type;
+  if (heterogeneousProvider.type === 'orvilo') {
+    // The builtin Orvilo agent has no local executable — its Prime harness
+    // runs inside the server control plane (embedded-only). A `local`
+    // execution target can never host it; fail loudly rather than resolving
+    // the retired engine→CLI mapping.
+    throw new Error(
+      "The builtin Orvilo agent runs on Orvilo's embedded Prime runtime; local execution is not available.",
+    );
+  }
+  const adapterType = heterogeneousProvider.type;
   const serverDefaultConfiguredModel =
     heterogeneousProvider.authMode === 'api' &&
     heterogeneousProvider.apiConfig?.source === 'server-default'
@@ -1946,7 +1944,6 @@ export const executeHeterogeneousAgent = async (
         heterogeneousProvider.model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION
           ? heterogeneousProvider.model
           : undefined,
-      orviloEngine,
       providerBinding,
       resumeSessionId,
     });

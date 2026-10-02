@@ -22,30 +22,25 @@ const MODEL_ID = 'mock-model-1';
 
 const config = (
   overrides?: Omit<Partial<ProviderBindingConfig>, 'selection'> & {
-    engine?: ProviderBindingConfig['selection']['engine'];
-    runtime?: ProviderBindingConfig['selection']['runtime'];
-    target?: ProviderBindingConfig['selection']['target'];
+    selection?: Partial<ProviderBindingConfig['selection']>;
   },
-): ProviderBindingConfig => {
-  const { engine, runtime, target, ...rest } = overrides ?? {};
-  return {
-    enabled: false,
-    endpoint: 'https://provider.test/v1',
-    model: MODEL_ID,
-    name: 'Execution fixture',
-    provider: 'mock',
-    secretReference: 'credential:cred_missing',
-    ...rest,
-    selection: {
-      effort: 'default',
-      engine,
-      mode: 'default',
-      runtime: runtime ?? 'orvilo',
-      speed: 'default',
-      target: target ?? 'sandbox',
-    },
-  };
-};
+): ProviderBindingConfig => ({
+  enabled: true,
+  endpoint: 'https://provider.test/v1',
+  model: MODEL_ID,
+  name: 'Execution fixture',
+  provider: 'mock',
+  secretReference: 'credential:cred_missing',
+  ...overrides,
+  selection: {
+    effort: 'default',
+    engine: overrides?.selection?.engine,
+    mode: 'default',
+    runtime: overrides?.selection?.runtime ?? 'orvilo',
+    speed: 'default',
+    target: overrides?.selection?.target ?? 'sandbox',
+  },
+});
 
 const insertBinding = (userId: string, cfg: ProviderBindingConfig) =>
   db.insert(providerBindings).values({ config: cfg, userId }).returning();
@@ -79,44 +74,38 @@ afterEach(async () => {
 });
 
 describe('resolveOrviloProviderBinding', () => {
-  it('matches runtime=orvilo with normalized engine and requested target', async () => {
-    const [row] = await insertBinding(OWNER, config({ engine: 'claude-sdk', target: 'sandbox' }));
-    expect(await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', 'sandbox')).toMatchObject({
-      id: row.id,
-    });
-    // engine=null on both sides normalizes to the claude-sdk default.
-    expect(await resolveOrviloProviderBinding(db, OWNER, null, 'sandbox')).toMatchObject({
-      id: row.id,
-    });
+  it('matches an enabled runtime=orvilo row on the requested target', async () => {
+    const [row] = await insertBinding(OWNER, config());
+    expect(await resolveOrviloProviderBinding(db, OWNER, 'sandbox')).toMatchObject({ id: row.id });
   });
 
-  it('rejects a different target, runtime or owner', async () => {
-    await insertBinding(OWNER, config({ target: 'sandbox' }));
-    expect(await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', 'device')).toBeUndefined();
-    expect(await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', 'local')).toBeUndefined();
-    expect(
-      await resolveOrviloProviderBinding(db, OUTSIDER, 'claude-sdk', 'sandbox'),
-    ).toBeUndefined();
-    await insertBinding(OWNER, config({ runtime: 'claude-code', target: 'sandbox' }));
-    const hits = await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', 'device');
+  it('ignores a stale engine value carried by pre-cutover rows', async () => {
+    // `selection.engine` is dead data — a row pinned to 'codex-app-server'
+    // before the Prime cutover still resolves for an embedded run.
+    const [row] = await insertBinding(OWNER, config({ selection: { engine: 'codex-app-server' } }));
+    expect(await resolveOrviloProviderBinding(db, OWNER, 'sandbox')).toMatchObject({ id: row.id });
+  });
+
+  it('rejects a different target, runtime, disabled row, or owner', async () => {
+    await insertBinding(OWNER, config());
+    expect(await resolveOrviloProviderBinding(db, OWNER, 'device')).toBeUndefined();
+    expect(await resolveOrviloProviderBinding(db, OWNER, 'local')).toBeUndefined();
+    expect(await resolveOrviloProviderBinding(db, OUTSIDER, 'sandbox')).toBeUndefined();
+
+    await insertBinding(OWNER, config({ enabled: false }));
+    const hits = await resolveOrviloProviderBinding(db, OWNER, 'device');
     expect(hits).toBeUndefined();
   });
 
-  it('matches the requested engine only', async () => {
-    const [codex] = await insertBinding(
-      OWNER,
-      config({ engine: 'codex-app-server', target: 'sandbox' }),
-    );
-    const [claude] = await insertBinding(
-      OWNER,
-      config({ engine: 'claude-sdk', target: 'sandbox' }),
-    );
+  it('narrows by the requested model route', async () => {
+    const [first] = await insertBinding(OWNER, config());
+    await insertBinding(OWNER, config({ model: 'other-model', name: 'Other' }));
     expect(
-      await resolveOrviloProviderBinding(db, OWNER, 'codex-app-server', 'sandbox'),
-    ).toMatchObject({ id: codex.id });
-    expect(await resolveOrviloProviderBinding(db, OWNER, 'claude-sdk', 'sandbox')).toMatchObject({
-      id: claude.id,
-    });
+      await resolveOrviloProviderBinding(db, OWNER, 'sandbox', { model: MODEL_ID }),
+    ).toMatchObject({ id: first.id });
+    expect(
+      await resolveOrviloProviderBinding(db, OWNER, 'sandbox', { model: 'no-such-model' }),
+    ).toBeUndefined();
   });
 });
 
@@ -149,6 +138,22 @@ describe('issueBindingExecution', () => {
       await issueBindingExecution(db, {
         bindingId: row.id,
         bindingRevision: row.revision + 1,
+        ownerId: OWNER,
+        tenantId: 'ws',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('refuses a disabled binding — enabled is re-checked at claim time', async () => {
+    const cred = await createCredential(OWNER);
+    const [row] = await insertBinding(
+      OWNER,
+      config({ enabled: false, secretReference: `credential:${cred.id}` }),
+    );
+    expect(
+      await issueBindingExecution(db, {
+        bindingId: row.id,
+        bindingRevision: row.revision,
         ownerId: OWNER,
         tenantId: 'ws',
       }),

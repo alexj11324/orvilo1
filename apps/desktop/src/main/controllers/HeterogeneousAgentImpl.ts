@@ -91,9 +91,7 @@ import type {
   HeterogeneousAgentModelCatalog,
   HeteroSessionImportMessage,
   ListHeterogeneousAgentModelsParams,
-  OrviloEngineKind,
 } from '@orvilo/types';
-import { resolveOrviloCliAgentType, resolveOrviloEngine } from '@orvilo/types';
 import { sleep } from '@orvilo/utils/sleep';
 import { app as electronApp, BrowserWindow } from 'electron';
 import { isPlainObject } from 'es-toolkit';
@@ -191,10 +189,9 @@ export const redactPromptArgs = (
 
 interface StartSessionParams {
   /**
-   * Agent type key (e.g., 'claude-code'). Defaults to 'claude-code'. May carry
-   * the builtin harness type `'orvilo'`; the session then resolves the
-   * engine's CLI family (`claude-code` / `codex`) for spawn/preflight while
-   * `orviloEngine` records which engine the harness runs on.
+   * Agent type key (e.g., 'claude-code'). Defaults to 'claude-code'. The
+   * builtin `'orvilo'` type is refused — it has no local executable; the
+   * builtin agent runs on the embedded Prime harness, never on a device.
    */
   agentType?: BuiltinHeterogeneousAgentType | HeterogeneousCliAgentType;
   /** Additional CLI arguments */
@@ -207,12 +204,6 @@ interface StartSessionParams {
   env?: Record<string, string>;
   /** Protocol-native model selected after session setup (ACP sessions). */
   initialModel?: string;
-  /**
-   * Builtin Orvilo engine selection. When set, the session runs the engine's
-   * CLI family (`claude-sdk` → claude-code, `codex-app-server` → codex) over
-   * its ACP transport (`claude-agent-acp` / `codex-acp`).
-   */
-  orviloEngine?: OrviloEngineKind;
   /**
    * BYOK provider binding for api-mode heterogeneous runs. The current driver
    * pipeline does not consume it; it rides along so the renderer can pass the
@@ -317,9 +308,7 @@ export interface SessionInfo {
 interface AgentSession {
   agentSessionId?: string;
   /**
-   * Resolved CLI family this session executes through. For the builtin
-   * `'orvilo'` harness this is the engine's family (`claude-code` / `codex`) —
-   * `orviloEngine` below records which engine it came from.
+   * Resolved CLI family this session executes through.
    */
   agentType: HeterogeneousCliAgentType;
   args: string[];
@@ -340,12 +329,6 @@ interface AgentSession {
   grokAcpSession?: GrokAcpSession;
   model?: string;
   modelSource?: string;
-  /**
-   * Set only for builtin-Orvilo sessions: records which engine family the
-   * harness runs on (`claude-sdk` → claude-code ACP, `codex-app-server` →
-   * codex ACP).
-   */
-  orviloEngine?: OrviloEngineKind;
   /**
    * Absolute CLI path resolved by spawn preflight detection. Used for spawn()
    * when the configured command is bare: detection can find the CLI through
@@ -1158,18 +1141,14 @@ export default class HeterogeneousAgentCtr {
   async startSession(params: StartSessionParams): Promise<StartSessionResult> {
     const sessionId = randomUUID();
     const declaredAgentType = params.agentType || 'claude-code';
-    // The builtin Orvilo harness declares itself as `agentType: 'orvilo'` (or
-    // implicitly via `orviloEngine`); it has no executable of its own. Resolve
-    // the engine's CLI family once so every downstream gate — driver, command
-    // resolution, provider bindings, preflight, error classification — works
-    // in family terms. `orviloEngine` on the session records the engine.
-    const orviloEngine =
-      declaredAgentType === 'orvilo' || params.orviloEngine !== undefined
-        ? resolveOrviloEngine(params.orviloEngine)
-        : undefined;
-    const agentType: HeterogeneousCliAgentType = orviloEngine
-      ? resolveOrviloCliAgentType(orviloEngine)
-      : (declaredAgentType as HeterogeneousCliAgentType);
+    if (declaredAgentType === 'orvilo') {
+      // Embedded-only: the builtin agent's Prime harness lives in the server
+      // control plane; no desktop spawn contract exists for it.
+      throw new Error(
+        "The builtin Orvilo agent runs on Orvilo's embedded Prime runtime and cannot be hosted on a device",
+      );
+    }
+    const agentType = declaredAgentType as HeterogeneousCliAgentType;
     this.sessions.set(sessionId, {
       // If resuming, pre-set the agent session ID so sendPrompt issues ACP session/load
       agentSessionId: params.resumeSessionId,
@@ -1179,7 +1158,6 @@ export default class HeterogeneousAgentCtr {
       cwd: params.cwd,
       env: params.env,
       model: params.initialModel,
-      orviloEngine,
       sessionId,
       resumeSessionId: params.resumeSessionId,
     });

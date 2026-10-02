@@ -3,7 +3,7 @@
  * Phase 6 acceptance — dispatch-chain evidence.
  *
  * The route seam (`resolveEmbeddedDispatchRoute`) admits heteroType 'orvilo'
- * unconditionally — `orvilo` is our own engine — and provably denies
+ * unconditionally — `orvilo` is the fixed builtin agent — and provably denies
  * everything else. The compose seam
  * (`openEmbeddedDispatchHost` + `driveEmbeddedCanonicalRun`) runs against the
  * REAL canonical rows (task/dispatch/taskTopics/operation/admission), the REAL
@@ -193,7 +193,8 @@ const seedBinding = async (userId: string) => {
     type: 'kv-env',
   });
   const config: ProviderBindingConfig = {
-    enabled: false,
+    // Armed — `enabled` gates both binding resolution and issuance.
+    enabled: true,
     endpoint: provider.endpoint,
     model: MODEL_ID,
     name: 'Embedded dispatch acceptance fixture',
@@ -315,7 +316,6 @@ describe.skipIf(!RUNNER_UP)(
             executionGeneration: run.executionGeneration,
             model: MODEL_ID,
             operationId: run.operationId,
-            provider: 'mock',
             taskId: run.taskId,
             topicId: run.topicId,
           },
@@ -332,7 +332,7 @@ describe.skipIf(!RUNNER_UP)(
           { database: db, userId: run.userId, workspaceId: run.workspaceId },
           prepared.value,
           {
-            agentType: 'claude-code',
+            agentType: 'orvilo',
             assistantMessageId: run.assistantMessageId,
             operationId: run.operationId,
             prompt: 'say hello',

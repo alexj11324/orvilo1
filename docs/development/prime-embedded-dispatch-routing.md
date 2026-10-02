@@ -17,8 +17,7 @@ The production run path is
 `dispatch.transition(phase:'dispatched')` → `AiAgentService.execAgent` →
 `setupTurn` → `resolveExecutionBinding` → `dispatchHeteroAgent`. For an
 own-agent run without an explicit hetero provider, `resolveExecutionBinding`
-synthesizes `heterogeneousProvider { engine: DEFAULT_ORVILO_ENGINE,
-type: 'orvilo' }` and `heteroType: 'orvilo'` — that discriminator is what the
+synthesizes `heterogeneousProvider { type: 'orvilo' }` and `heteroType: 'orvilo'` — that discriminator is what the
 seam matches; ACP hetero kinds never satisfy it.
 
 Inside `dispatchHeteroAgent`'s sandbox-plan `else` branch, **before**

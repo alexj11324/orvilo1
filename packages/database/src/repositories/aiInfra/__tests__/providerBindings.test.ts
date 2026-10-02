@@ -1,7 +1,7 @@
 // @vitest-environment node
 import { randomBytes } from 'node:crypto';
 
-import { PROVIDER_CONFIG_ANCHOR_MODEL, resolveOrviloEngine } from '@orvilo/types';
+import { PROVIDER_CONFIG_ANCHOR_MODEL } from '@orvilo/types';
 import { and, eq, inArray, isNull } from 'drizzle-orm';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -289,21 +289,20 @@ describe('ProviderBindingPlane write→read roundtrip', () => {
 
 /**
  * Replicates the canonical `resolveOrviloProviderBinding` predicate from
- * `apps/server/src/services/providerBinding/execution.ts` (the #373 stack —
- * not on this branch): `selection.runtime === 'orvilo'`, target equality,
- * `resolveOrviloEngine(selection.engine)` match, optional provider/model
- * match; `enabled` is ignored.
+ * `apps/server/src/services/providerBinding/execution.ts`: `enabled`,
+ * `selection.runtime === 'orvilo'`, target equality, and optional
+ * provider/model narrowing. A stale `selection.engine` on the row is dead
+ * data — never consulted.
  */
 const resolveLike = async (
   target: 'local' | 'device' | 'sandbox',
   match?: { model?: string; provider?: string },
 ) => {
   const rows = await new ProviderBindingModel(db, owner).list();
-  const wanted = resolveOrviloEngine(undefined);
   return rows.find((row) => {
+    if (row.config?.enabled !== true) return false;
     const selection = row.config?.selection;
     if (!selection || selection.runtime !== 'orvilo' || selection.target !== target) return false;
-    if (resolveOrviloEngine(selection.engine) !== wanted) return false;
     if (match?.provider && row.config?.provider !== match.provider) return false;
     if (match?.model && row.config?.model !== match.model) return false;
     return true;

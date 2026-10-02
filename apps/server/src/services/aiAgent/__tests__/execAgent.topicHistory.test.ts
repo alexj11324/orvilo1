@@ -64,7 +64,12 @@ vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
-        agencyConfig: { executionTarget: 'sandbox' },
+        agencyConfig: {
+          // External-agent binding — the builtin orvilo agent is embedded-
+          // only and its chat runs terminate at EMBEDDED_CHAT_NOT_ADMITTED.
+          executionTarget: 'sandbox',
+          heterogeneousProvider: { type: 'claude-code' },
+        },
         chatConfig: {},
         files: [],
         id: 'agent-1',
@@ -83,7 +88,12 @@ vi.mock('@/server/services/agent', () => ({
   AgentService: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
-        agencyConfig: { executionTarget: 'sandbox' },
+        agencyConfig: {
+          // External-agent binding — the builtin orvilo agent is embedded-
+          // only and its chat runs terminate at EMBEDDED_CHAT_NOT_ADMITTED.
+          executionTarget: 'sandbox',
+          heterogeneousProvider: { type: 'claude-code' },
+        },
         chatConfig: {},
         files: [],
         id: 'agent-1',
@@ -174,7 +184,8 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
 }));
 
 vi.mock('@/server/services/providerBinding/execution', () => ({
-  resolveOrviloProviderBinding: vi.fn().mockResolvedValue({ status: 'none' }),
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/server/services/market', () => ({

@@ -62,7 +62,7 @@ let provider: StubProvider;
 const directories: string[] = [];
 
 const bindConfig = (endpoint: string, secretReference: string): ProviderBindingConfig => ({
-  enabled: false,
+  enabled: true,
   endpoint,
   model: MODEL_ID,
   name: 'Embedded acceptance binding',

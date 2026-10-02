@@ -204,7 +204,8 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
 }));
 
 vi.mock('@/server/services/providerBinding/execution', () => ({
-  resolveOrviloProviderBinding: vi.fn().mockResolvedValue({ status: 'none' }),
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/server/services/file/resolveAttachments', () => ({
@@ -515,7 +516,9 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     );
   });
 
-  it('applies an Orvilo topic pin before resolving the CLI family for sandbox dispatch', async () => {
+  it('fails loudly instead of resolving a CLI family for an orvilo chat run', async () => {
+    // A pre-cutover row may still carry the dead `engine` stamp — nothing
+    // resolves a CLI family from it anymore, and the topic pin still applies.
     heteroAgentConfig.agencyConfig = {
       executionTarget: 'sandbox',
       heterogeneousProvider: {
@@ -531,18 +534,24 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
       provider: 'orvilo',
     });
 
-    await service.execAgent({
+    const result = await service.execAgent({
       agentId: 'agent-1',
       appContext: { topicId: 'topic-existing' },
       prompt: 'Continue with the Orvilo topic model',
     } as any);
 
-    expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
+    // Chat admission to the embedded Prime harness is not yet wired — the
+    // run terminates at the honest boundary rather than spawning the
+    // retired engine→CLI path.
+    expect(result).toEqual(
       expect.objectContaining({
-        agentType: 'claude-code',
-        args: ['--model', 'topic-model'],
+        error: 'EMBEDDED_CHAT_NOT_ADMITTED',
+        status: 'error',
+        success: false,
       }),
     );
+    expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+    expect(mockDispatchAgentRun).not.toHaveBeenCalled();
   });
 
   it('should pin the runtime type of a remote platform agent on a server-created topic', async () => {

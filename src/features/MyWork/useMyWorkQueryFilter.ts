@@ -11,17 +11,22 @@ import { mergeWorkQueryFilters } from './myWorkFilters';
  * merge MUST stay memoized: rebuilt per render it mints a new serialized SWR
  * key every frame, the feed re-fetches in a loop, and `isLoading` never
  * settles (the error branch can never stick because each key starts fresh).
+ *
+ * `now` is quantized to the hour: the serialized key stays stable inside the
+ * bucket, while a render after an hour boundary still slides the window.
  */
 export const useMyWorkQueryFilter = (
   builderFilter: WorkQueryFilter | undefined,
   completed: MyWorkCompletedWindow,
   visibilityFilter: WorkQueryFilter | undefined,
-): WorkQueryFilter | undefined =>
-  useMemo(
+): WorkQueryFilter | undefined => {
+  const now = Math.floor(Date.now() / 3_600_000) * 3_600_000;
+  return useMemo(
     () =>
       mergeWorkQueryFilters(
-        mergeWorkQueryFilters(builderFilter, completedWindowQueryFilter(completed)),
+        mergeWorkQueryFilters(builderFilter, completedWindowQueryFilter(completed, now)),
         visibilityFilter,
       ),
-    [builderFilter, completed, visibilityFilter],
+    [builderFilter, completed, now, visibilityFilter],
   );
+};

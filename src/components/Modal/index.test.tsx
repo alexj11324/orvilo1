@@ -83,6 +83,8 @@ describe('createModal', () => {
 
     const labelled = screen.getAllByRole('button').find((el) => el.getAttribute('aria-label'));
     expect(labelled?.getAttribute('aria-label')).toBeTruthy();
+    // Pin to the close chrome (top-right icon button), not just any labelled control.
+    expect(labelled?.className).toContain('absolute top-2');
   });
 
   it('maskClosable: false ignores outside presses but keeps Escape dismiss', async () => {

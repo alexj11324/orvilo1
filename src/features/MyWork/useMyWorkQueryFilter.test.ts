@@ -1,6 +1,6 @@
 import type { WorkQueryFilter } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { stableStringify } from '@/features/SavedViews/workQueryBuilder';
 
@@ -14,8 +14,11 @@ const VISIBILITY_FILTER: WorkQueryFilter = {
   all: [{ field: 'parentTaskId', op: 'isNull' }],
 };
 
+afterEach(() => vi.restoreAllMocks());
+
 describe('useMyWorkQueryFilter', () => {
   it('keeps the serialized filter stable across rerenders (SWR key safety)', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1_760_000_000_000);
     const { result, rerender } = renderHook(
       ({ completed }) => useMyWorkQueryFilter(BUILDER_FILTER, completed, VISIBILITY_FILTER),
       { initialProps: { completed: 'pastDay' as const } },
@@ -28,6 +31,18 @@ describe('useMyWorkQueryFilter', () => {
     rerender({ completed: 'pastDay' });
     rerender({ completed: 'pastDay' });
     expect(stableStringify(result.current)).toBe(first);
+  });
+
+  it('slides the completed window when a later render crosses an hour boundary', () => {
+    const base = 1_760_000_000_000;
+    const clock = vi.spyOn(Date, 'now').mockReturnValue(base);
+    const { result, rerender } = renderHook(() =>
+      useMyWorkQueryFilter(BUILDER_FILTER, 'pastDay', VISIBILITY_FILTER),
+    );
+    const first = stableStringify(result.current);
+    clock.mockReturnValue(base + 3_600_000);
+    rerender();
+    expect(stableStringify(result.current)).not.toBe(first);
   });
 
   it('recomputes when the completed window changes', () => {

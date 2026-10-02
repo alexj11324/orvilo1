@@ -26,6 +26,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 
 import { formatInboxAge } from './inboxAge';
 import { INBOX_SNOOZE_DAYS, type InboxSnoozeDays, snoozeUntilForDays } from './inboxOrganize';
+import { inboxRowSelectKeyDown } from './inboxRowKeyboard';
 import { inboxCardIcon } from './notificationIcons';
 
 /**
@@ -171,15 +172,7 @@ const InboxListRow = memo((props: InboxListRowProps) => {
       role="button"
       tabIndex={0}
       onClick={() => onSelect(card.notificationId, true)}
-      onKeyDown={(event) => {
-        // Portaled menus stay React descendants of this row — let their
-        // items keep Enter/Space instead of re-selecting the card.
-        if ((event.target as HTMLElement).closest('[role="menu"]')) return;
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onSelect(card.notificationId, true);
-        }
-      }}
+      onKeyDown={(event) => inboxRowSelectKeyDown(event, () => onSelect(card.notificationId, true))}
     >
       {card.read ? null : <span aria-hidden className={styles.unreadDot} />}
       <span className={styles.avatarDisc}>

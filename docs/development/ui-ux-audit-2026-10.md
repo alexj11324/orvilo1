@@ -16,10 +16,11 @@ Network on `/my-issues`). `isLoading` never settled on fresh keys, so the
 board painted permanent skeletons and `AsyncError` could never surface.
 
 Fix: `src/features/MyWork/useMyWorkQueryFilter.ts` memoizes the merged filter
-on `[builderFilter, completed, visibilityFilter]`, making the key stable
-across renders. Regression test:
-`useMyWorkQueryFilter.test.tsx` asserts a stable serialized key across
-rerenders.
+on `[builderFilter, completed, now, visibilityFilter]` — `now` quantized to
+the hour so the key is stable while the rolling window still slides on later
+renders. Regression test:
+`useMyWorkQueryFilter.test.ts` asserts a stable serialized key across
+rerenders and a slid window across an hour boundary.
 
 ### F2 — Inbox row actions unreachable by keyboard
 
@@ -27,9 +28,12 @@ rerenders.
 `hidden group-hover:flex` — hover-only, so keyboard users could never reach
 the buttons. Now `group-focus-within:flex` too: the row is focusable
 (`tabIndex={0}`), so focusing it reveals the cluster and Tab reaches the
-buttons. No regression test: the fix is a CSS-class change and the only
-practical assertion would render the component or match class strings —
-exempt per AGENTS.md.
+buttons. The row `onKeyDown` also needed `event.target !==
+event.currentTarget` bail — the revealed buttons bubble Enter/Space to the
+row, which suppressed their native activation (Enter) or double-fired
+selection (Space). Logic extracted to `inboxRowKeyboard.ts`; tests:
+`inboxRowKeyboard.test.ts`. (Independent light review caught this —
+the reveal made a pre-existing dead path reachable.)
 
 ### F3 — Identifiers not in mono
 

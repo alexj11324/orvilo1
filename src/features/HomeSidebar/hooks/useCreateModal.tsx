@@ -208,7 +208,7 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
             <PencilLineIcon data-icon="inline-start" size={14} />
             {t('createModal.createBlank')}
           </Button>
-          <ActionIcon icon={X} onClick={handleClose} />
+          <ActionIcon icon={X} title={t('close', { ns: 'common' })} onClick={handleClose} />
         </div>
         {/* Title */}
         <div className="flex flex-col items-center">

@@ -1,4 +1,5 @@
 import { cx } from 'antd-style';
+import { t } from 'i18next';
 import { CircleAlert, CircleCheck, Info, TriangleAlert, X } from 'lucide-react';
 import type { CSSProperties, ReactNode } from 'react';
 import { memo, useState } from 'react';
@@ -90,7 +91,14 @@ const ErrorAlert = memo<ErrorAlertProps>(
         {(action || closable) && (
           <AlertAction>
             {action}
-            {closable ? <ActionIcon icon={X} size="small" onClick={handleClose} /> : null}
+            {closable ? (
+              <ActionIcon
+                icon={X}
+                size="small"
+                title={t('close', { ns: 'common' })}
+                onClick={handleClose}
+              />
+            ) : null}
           </AlertAction>
         )}
         {extra != null &&

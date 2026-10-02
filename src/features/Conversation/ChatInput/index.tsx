@@ -462,6 +462,7 @@ const ChatInput = memo<ChatInputProps>(
                   <ActionIcon
                     icon={X}
                     size={'small'}
+                    title={t('close', { ns: 'common' })}
                     onClick={() => {
                       clearSendMessageError?.();
                     }}

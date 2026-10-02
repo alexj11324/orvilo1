@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { stableStringify } from '@/features/SavedViews/workQueryBuilder';
 
+import type { MyWorkCompletedWindow } from './myWorkDisplay';
 import { useMyWorkQueryFilter } from './useMyWorkQueryFilter';
 
 const BUILDER_FILTER: WorkQueryFilter = {
@@ -47,8 +48,9 @@ describe('useMyWorkQueryFilter', () => {
 
   it('recomputes when the completed window changes', () => {
     const { result, rerender } = renderHook(
-      ({ completed }) => useMyWorkQueryFilter(BUILDER_FILTER, completed, VISIBILITY_FILTER),
-      { initialProps: { completed: 'pastDay' as const } },
+      ({ completed }: { completed: MyWorkCompletedWindow }) =>
+        useMyWorkQueryFilter(BUILDER_FILTER, completed, VISIBILITY_FILTER),
+      { initialProps: { completed: 'pastDay' } },
     );
     const first = stableStringify(result.current);
     rerender({ completed: 'none' });

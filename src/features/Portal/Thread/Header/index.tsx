@@ -1,4 +1,5 @@
 import { cssVar } from 'antd-style';
+import { t } from 'i18next';
 import { ArrowLeftRight, XIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -26,6 +27,7 @@ const Header = memo(() => {
             <ActionIcon
               icon={ArrowLeftRight}
               size={'small'}
+              title={t('workingPanel.tabs.swapThreads', { ns: 'chat' })}
               onClick={() => {
                 if (!portalThreadId) return;
 
@@ -34,7 +36,12 @@ const Header = memo(() => {
               }}
             />
           )}
-          <ActionIcon icon={XIcon} size={'small'} onClick={closeThreadPortal} />
+          <ActionIcon
+            icon={XIcon}
+            size={'small'}
+            title={t('close', { ns: 'common' })}
+            onClick={closeThreadPortal}
+          />
         </div>
       }
       style={{

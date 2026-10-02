@@ -100,7 +100,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
       <div className="flex flex-col gap-3">
         {showEntityPicker ? (
           <div className="flex items-center gap-2">
-            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
+            <div className="text-sm text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.entityType')}
             </div>
             <Select
@@ -125,11 +125,11 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
         ) : null}
         {showName ? (
           <div className="flex items-center gap-2">
-            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
+            <div className="text-sm text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.name')}
             </div>
             <Input
-              className="h-7 text-[13px]"
+              className="h-7 text-sm"
               placeholder={t('savedViews.name')}
               style={{ flex: 1 }}
               value={value.name}
@@ -139,10 +139,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
         ) : null}
         {showFilters ? (
           <div className="flex items-start gap-2">
-            <div
-              className="text-[13px] text-muted-foreground"
-              style={{ paddingBlock: 4, width: 72 }}
-            >
+            <div className="text-sm text-muted-foreground" style={{ paddingBlock: 4, width: 72 }}>
               {t('savedViews.filters.label')}
             </div>
             <div className="flex flex-1 flex-col">
@@ -156,7 +153,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
         ) : null}
         {showDisplay ? (
           <div className="flex flex-wrap items-center gap-2">
-            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
+            <div className="text-sm text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.display')}
             </div>
             <Select
@@ -258,7 +255,7 @@ const ViewDefinitionEditor = memo<ViewDefinitionEditorProps>(
         ) : null}
         {showShare ? (
           <div className="flex flex-wrap items-center gap-2">
-            <div className="text-[13px] text-muted-foreground" style={{ width: 72 }}>
+            <div className="text-sm text-muted-foreground" style={{ width: 72 }}>
               {t('savedViews.share')}
             </div>
             <Select

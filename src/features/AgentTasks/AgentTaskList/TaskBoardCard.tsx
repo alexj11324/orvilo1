@@ -99,7 +99,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     -webkit-box-orient: vertical;
     -webkit-line-clamp: 2;
 
-    font-size: 13px;
+    font-size: 14px;
     font-weight: 500;
     line-height: 20px;
     color: ${cssVar.colorText};

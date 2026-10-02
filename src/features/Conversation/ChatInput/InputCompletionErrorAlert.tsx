@@ -49,6 +49,7 @@ export const InputCompletionErrorAlertContent = memo<{
             <ActionIcon
               icon={X}
               size={'small'}
+              title={t('close', { ns: 'common' })}
               onClick={() => {
                 dismissInputCompletionError?.();
               }}

@@ -71,6 +71,7 @@ const Header = memo(() => {
           <ActionIcon
             icon={X}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            title={t('close', { ns: 'common' })}
             onClick={() => {
               if (params.aid && params.topicId && isTopicPageRoute) {
                 navigate(AGENT_CHAT_TOPIC_URL(params.aid, params.topicId));

@@ -204,9 +204,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   count: css`
     flex: none;
-
-    font-size: 13px;
-    font-weight: 450;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
     color: ${cssVar.colorTextDescription};
   `,

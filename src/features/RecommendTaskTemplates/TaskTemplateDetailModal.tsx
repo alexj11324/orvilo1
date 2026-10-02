@@ -3,6 +3,7 @@
 import { Markdown } from '@lobehub/ui';
 import type { TaskTemplate } from '@orvilo/const';
 import { cssVar } from 'antd-style';
+import { t } from 'i18next';
 import { Clock, X } from 'lucide-react';
 import { memo, useEffect, useMemo } from 'react';
 
@@ -73,7 +74,12 @@ const TaskTemplateDetailContent = memo<TaskTemplateDetailContentProps>(
               </div>
             </div>
           </div>
-          <ActionIcon icon={X} size={'small'} onClick={close} />
+          <ActionIcon
+            icon={X}
+            size={'small'}
+            title={t('close', { ns: 'common' })}
+            onClick={close}
+          />
         </div>
 
         {description.trim().length > 0 && (

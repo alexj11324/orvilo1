@@ -86,6 +86,10 @@ labels still `text-[13px]` → `text-sm`.
 
 ## Won't fix
 
+- `TaskInstruction` description `fontSize: 15, fontWeight: 450` — deliberate
+  Linear issue-body parity (15px prose vs the editor's 16/400 default),
+  pinned by `railText.test.ts`. An earlier sweep hunk normalized it and was
+  reverted; the off-ramp value is intentional, not drift.
 - `···` no-priority glyph on task cards — `PRIORITY_ICONS[0]`, intentional
   Linear convention, not a defect.
 - `ui/sheet.tsx` / `ui/dialog.tsx` close buttons already carry sr-only

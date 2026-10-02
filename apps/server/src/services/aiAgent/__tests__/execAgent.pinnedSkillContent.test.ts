@@ -134,6 +134,9 @@ vi.mock('model-bank', async (importOriginal) => {
 });
 
 const baseAgentConfig = (overrides: Record<string, unknown> = {}) => ({
+  // Mount-capable external binding — the builtin 'orvilo' runtime (embedded
+  // Prime) mounts no tool surface, which is not what these tests exercise.
+  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
   chatConfig: {},
   id: 'agent-1',
   model: 'gpt-4',

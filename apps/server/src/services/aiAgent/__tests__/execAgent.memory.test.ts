@@ -115,6 +115,9 @@ vi.mock('model-bank', async (importOriginal) => {
 });
 
 const baseAgentConfig = (overrides: Record<string, unknown> = {}) => ({
+  // Mount-capable external binding — builtin 'orvilo' (embedded Prime) mounts
+  // no tool surface, so mounting semantics are exercised on 'claude-code'.
+  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
   chatConfig: {},
   id: 'agent-1',
   model: 'gpt-4',

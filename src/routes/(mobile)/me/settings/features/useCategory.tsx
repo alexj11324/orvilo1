@@ -54,7 +54,7 @@ export interface CategoryGroup {
 
 export const useCategory = (): CategoryGroup[] => {
   const navigate = useWorkspaceAwareNavigate();
-  const { t } = useTranslation(['setting', 'auth', 'subscription']);
+  const { t } = useTranslation(['setting', 'auth', 'subscription', 'common']);
   const capabilityContext = useSettingsCapabilityContext();
   const { showProvider } = useServerConfigStore(featureFlagsSelectors);
 

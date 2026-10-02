@@ -54,6 +54,33 @@ const useChatTopicListQuery = () => {
 export const useFetchChatTopics = () => useFetchTopics(useChatTopicListQuery());
 
 /**
+ * The conversation-first sidebar feed: one workspace-wide list containing
+ * every visible non-group conversation, whatever agent owns it. Agent
+ * identity degrades to weak row metadata on each item (`topic.agentId`),
+ * never a fetch filter — the topic is the navigation unit.
+ *
+ * Feeds the `topicDataMap.workspace` bucket that the sidebar selectors read
+ * outside a group session. `pageSize` bounds the page for now; cursor
+ * pagination replaces it in a later PR.
+ */
+export const useWorkspaceConversationFeed = () => {
+  const query = useChatTopicListQuery();
+  const pageSize = useGlobalStore(systemStatusSelectors.topicPageSize);
+  const useFetchTopicsHook = useChatStore((s) => s.useFetchTopics);
+
+  const { isValidating, data } = useFetchTopicsHook(true, {
+    ...query,
+    pageSize,
+    scope: 'workspace',
+  });
+
+  return {
+    // isRevalidating: has cached data, updating in background
+    isRevalidating: isValidating && !!data,
+  };
+};
+
+/**
  * Same canonical list, for the secondary conversation panels that carry their
  * own topic picker (goal chat, task manager, page copilot, agent builder).
  *

@@ -100,6 +100,7 @@ export class TopicService {
       includeTriggers: params.includeTriggers,
       isInbox: params.isInbox,
       pageSize: params.pageSize,
+      scope: params.scope,
       sortBy: params.sortBy,
       triggers: params.triggers,
       withDetails: params.withDetails,
@@ -147,11 +148,17 @@ export class TopicService {
     return result.data.hasFiles;
   };
 
-  searchTopics = (keywords: string, agentId?: string, groupId?: string): Promise<ChatTopic[]> => {
+  searchTopics = (
+    keywords: string,
+    agentId?: string,
+    groupId?: string,
+    scope?: 'workspace',
+  ): Promise<ChatTopic[]> => {
     return lambdaClient.topic.searchTopics.query({
       agentId,
       groupId,
       keywords,
+      scope,
     }) as any;
   };
 

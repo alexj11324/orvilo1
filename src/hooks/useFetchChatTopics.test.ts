@@ -3,7 +3,11 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { MAIN_SIDEBAR_EXCLUDE_TRIGGERS } from '@/const/topic';
 
-import { useFetchAgentChatTopics, useFetchChatTopics } from './useFetchChatTopics';
+import {
+  useFetchAgentChatTopics,
+  useFetchChatTopics,
+  useWorkspaceConversationFeed,
+} from './useFetchChatTopics';
 
 const mocks = vi.hoisted(() => ({
   activeAgentId: 'agent-1' as string | undefined,
@@ -95,5 +99,26 @@ describe('chat topic list fetches', () => {
     const [enabled] = mocks.storeFetchTopics.mock.calls.at(-1)!;
 
     expect(enabled).toBe(false);
+  });
+
+  it('feeds the workspace bucket with the canonical list query and no container ids', () => {
+    renderHook(() => useWorkspaceConversationFeed());
+
+    const [enabled, args = {}] = mocks.storeFetchTopics.mock.calls.at(-1)!;
+
+    expect(enabled).toBe(true);
+    expect(args).toMatchObject({
+      excludeTriggers: MAIN_SIDEBAR_EXCLUDE_TRIGGERS,
+      pageSize: mocks.topicPageSize,
+      scope: 'workspace',
+    });
+    // The feed must not bind a container — server-side it lists every visible
+    // non-group topic regardless of owning agent.
+    expect(args.agentId).toBeUndefined();
+    expect(args.groupId).toBeUndefined();
+    // The bounded page is the stopgap until cursor pagination lands — an
+    // unbounded fetch must never reach the server.
+    expect(args.pageSize).toBeGreaterThan(0);
+    expect(args.pageSize).toBeLessThanOrEqual(100);
   });
 });

@@ -14,7 +14,7 @@ import { topicService } from '@/services/topic';
 import { useAgentStore } from '@/store/agent';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
-import { topicMapKey } from '@/store/chat/utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
 import { useSessionStore } from '@/store/session';
 import { useUserStore } from '@/store/user';
 import { type ChatTopic, type CreateTopicParams } from '@/types/topic';
@@ -799,7 +799,8 @@ describe('topic action', () => {
 
     it('does not let a stale load-more page resurrect a deleted topic', async () => {
       const agentId = 'stale-topic-page-delete-agent';
-      const key = topicMapKey({ agentId });
+      // Outside a group session load-more pages the workspace feed bucket.
+      const key = WORKSPACE_TOPIC_MAP_KEY;
       const doomedTopic = { id: 'topic-doomed-page', title: 'Doomed' } as ChatTopic;
       const keptTopic = { id: 'topic-kept-page', title: 'Kept' } as ChatTopic;
       const pageTwoTopic = { id: 'topic-page-two', title: 'Page two' } as ChatTopic;
@@ -1892,12 +1893,13 @@ describe('topic action', () => {
         { id: 'topic-2', favorite: true },
         { id: 'topic-3', favorite: false },
       ] as ChatTopic[];
-      // Set up mock state with unstarred topics
+      // Set up mock state with unstarred topics — outside a group session the
+      // sidebar reads the workspace conversation feed bucket.
       await act(async () => {
         useChatStore.setState({
           activeAgentId: 'abc',
           topicDataMap: {
-            [topicMapKey({ agentId: 'abc' })]: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
               items: topics,
               total: topics.length,
               currentPage: 0,
@@ -1930,7 +1932,7 @@ describe('topic action', () => {
         useChatStore.setState({
           activeAgentId: 'abc',
           topicDataMap: {
-            [topicMapKey({ agentId: 'abc' })]: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
               currentPage: 0,
               hasMore: false,
               items: topics,
@@ -3362,5 +3364,155 @@ describe('Topic execution save failures', () => {
     vi.spyOn(topicService, 'updateTopicMetadata').mockResolvedValueOnce([]);
     await useChatStore.getState().updateTopicMetadata('topic-execution', selected);
     expect(useChatStore.getState().topicDataMap[key].items[0].metadata).toEqual(selected);
+  });
+});
+
+describe('workspace conversation feed', () => {
+  const seedFeedAndAgentBuckets = () => {
+    const agentKey = topicMapKey({ agentId: 'agent-b' });
+    const sharedRow = { id: 'topic-shared', status: 'running', title: 'Shared' } as ChatTopic;
+    const otherAgentRow = { id: 'topic-c', status: 'running', title: 'C' } as ChatTopic;
+    useChatStore.setState({
+      activeAgentId: 'agent-b',
+      topicDataMap: {
+        [WORKSPACE_TOPIC_MAP_KEY]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [sharedRow, otherAgentRow],
+          pageSize: 20,
+          total: 2,
+        },
+        [agentKey]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [sharedRow],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+    return { agentKey, otherAgentRow, sharedRow };
+  };
+
+  it('stores a workspace-scoped fetch in the feed bucket, not the agent bucket', async () => {
+    const topics = [
+      { agentId: 'agent-a', id: 'topic-a', title: 'A' },
+      { agentId: 'agent-b', id: 'topic-b', title: 'B' },
+    ];
+    (topicService.getTopics as Mock).mockResolvedValue({ items: topics, total: topics.length });
+
+    const { result } = renderHook(() =>
+      useChatStore().useFetchTopics(true, { pageSize: 20, scope: 'workspace' }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual({ items: topics, total: topics.length });
+    });
+
+    expect(topicService.getTopics).toHaveBeenCalledWith(
+      expect.objectContaining({ pageSize: 20, scope: 'workspace' }),
+    );
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY]?.items).toEqual(topics);
+    // The fetch must not leak into an agent bucket it never named.
+    expect(
+      useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })],
+    ).toBeUndefined();
+  });
+
+  it('mirrors an agent-bucket update into the workspace feed bucket', () => {
+    const { agentKey } = seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-shared',
+        type: 'updateTopic',
+        value: { status: 'completed' },
+      });
+    });
+
+    const agentRow = useChatStore
+      .getState()
+      .topicDataMap[agentKey].items.find((t) => t.id === 'topic-shared');
+    const feedRow = useChatStore
+      .getState()
+      .topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.find((t) => t.id === 'topic-shared');
+    expect(agentRow?.status).toBe('completed');
+    expect(feedRow?.status).toBe('completed');
+  });
+
+  it('mirrors add and delete into the workspace feed bucket', () => {
+    seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        optimistic: true,
+        type: 'addTopic',
+        value: { id: 'topic-new', title: 'New' } as CreateTopicParams & { id: string },
+      });
+    });
+
+    expect(
+      useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.map((t) => t.id),
+    ).toContain('topic-new');
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].total).toBe(3);
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-shared',
+        type: 'deleteTopic',
+      });
+    });
+
+    expect(
+      useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.map((t) => t.id),
+    ).not.toContain('topic-shared');
+  });
+
+  it('does not mirror a group-scoped write into the feed bucket', () => {
+    seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        id: 'topic-shared',
+        scope: 'group',
+        groupId: 'group-1',
+        type: 'updateTopic',
+        value: { status: 'failed' },
+      });
+    });
+
+    const feedRow = useChatStore
+      .getState()
+      .topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.find((t) => t.id === 'topic-shared');
+    expect(feedRow?.status).toBe('running');
+  });
+
+  it('does not materialize a feed bucket that was never fetched', () => {
+    useChatStore.setState({
+      activeAgentId: 'agent-b',
+      topicDataMap: {
+        [topicMapKey({ agentId: 'agent-b' })]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [{ id: 'topic-only', title: 'Only' } as ChatTopic],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-only',
+        type: 'updateTopic',
+        value: { status: 'completed' },
+      });
+    });
+
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY]).toBeUndefined();
   });
 });

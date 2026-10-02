@@ -21,16 +21,22 @@ import {
 } from '@/utils/client/topic';
 
 import { type ChatStoreState } from '../../initialState';
-import { topicMapKey } from '../../utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '../../utils/topicMapKey';
 import { operationSelectors } from '../operation/selectors';
 import { type TopicData } from './initialState';
 
 // Helper selector: get current topic data based on session context
 const currentTopicData = (s: ChatStoreState): TopicData | undefined => {
-  const key = topicMapKey({
-    agentId: s.activeAgentId,
-    groupId: s.activeGroupId,
-  });
+  // Conversation-first navigation: outside a group session the sidebar reads
+  // the single workspace-wide conversation feed — every visible non-group
+  // topic, whatever agent owns it. Agent identity degrades to weak row
+  // metadata on each row. Group sessions keep their container-scoped bucket.
+  const key = s.activeGroupId
+    ? topicMapKey({
+        agentId: s.activeAgentId,
+        groupId: s.activeGroupId,
+      })
+    : WORKSPACE_TOPIC_MAP_KEY;
   return s.topicDataMap[key];
 };
 

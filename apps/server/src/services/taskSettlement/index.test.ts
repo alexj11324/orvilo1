@@ -2,7 +2,7 @@
 import type { TaskItem } from '@orvilo/types';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { settleTaskExecution } from './index';
+import { settleTaskExecution, type SettleTaskExecutionInput } from './index';
 
 const mocks = vi.hoisted(() => ({
   findById: vi.fn(),
@@ -55,8 +55,8 @@ const runningTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
   }) as unknown as TaskItem;
 
 const db = {} as never;
-const settle = (input: Parameters<typeof settleTaskExecution>[2]) =>
-  settleTaskExecution(db, 'user-1', { taskId: 'task-1', ...input });
+const settle = (input: Omit<SettleTaskExecutionInput, 'taskId'> & { taskId?: string }) =>
+  settleTaskExecution(db, 'user-1', { ...input, taskId: input.taskId ?? 'task-1' });
 
 const noWrites = () => {
   expect(mocks.updateStatus).not.toHaveBeenCalled();

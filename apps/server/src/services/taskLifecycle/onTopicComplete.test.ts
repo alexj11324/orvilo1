@@ -172,7 +172,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     // a superseded/stale reservation.
     updateStatusIfCurrent = vi
       .fn<(...args: unknown[]) => unknown>()
-      .mockImplementation(async (id: string, _from: string, status: string) => ({
+      .mockImplementation(async (id, _from, status) => ({
         id,
         status,
       }));
@@ -230,18 +230,21 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     // `settleTaskExecution` constructs its own model instances — forward the
     // prototype methods to the same shared stubs the service instance uses.
     const taskModelProto = TaskModel.prototype;
-    vi.spyOn(taskModelProto, 'findById').mockImplementation(async (id: string) => findById(id));
+    vi.spyOn(taskModelProto, 'findById').mockImplementation(
+      async (id: string) => findById(id) as Promise<TaskItem | null>,
+    );
     vi.spyOn(taskModelProto, 'resolveTaskReviewRequirement').mockImplementation(
       async (task: TaskItem) =>
         Boolean((service as any).taskModel.getCheckpointConfig(task)?.topic?.after) ||
-        (await reviewRequired()),
+        Boolean(await reviewRequired()),
     );
     vi.spyOn(taskModelProto, 'updateStatus').mockImplementation(
-      async (id: string, status: string, extra?: unknown) => updateStatus(id, status, extra),
+      async (id: string, status: string, extra?: unknown) =>
+        updateStatus(id, status, extra) as Promise<TaskItem | null>,
     );
     vi.spyOn(taskModelProto, 'updateStatusIfCurrent').mockImplementation(
       async (id: string, from: string, to: string, extra?: unknown) =>
-        updateStatusIfCurrent(id, from, to, extra),
+        updateStatusIfCurrent(id, from, to, extra) as Promise<TaskItem | null>,
     );
     vi.spyOn(taskModelProto, 'updateStatusIfReservation').mockImplementation(
       async (...args: unknown[]) => (service as any).taskModel.updateStatusIfReservation(...args),
@@ -249,11 +252,11 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     vi.spyOn(taskModelProto, 'updateStatusForExecutionContract').mockImplementation(
       async (id: string, status: string, _contract: unknown, extra?: unknown) => {
         await updateStatus(id, status, extra);
-        return { id, status };
+        return { id, status } as unknown as TaskItem;
       },
     );
     vi.spyOn(TaskTopicModel.prototype, 'findByTopicId').mockResolvedValue(null);
-    vi.spyOn(TaskTopicModel.prototype, 'findByOperationId').mockResolvedValue(undefined);
+    vi.spyOn(TaskTopicModel.prototype, 'findByOperationId').mockResolvedValue(null);
   });
 
   afterEach(() => {
@@ -679,7 +682,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     it('successful subtask → completes and unlocks downstream tasks instead of pausing', async () => {
       const task = baseTask({ automationMode: null, parentTaskId: 'parent-task' });
       const parentTask = baseTask({ id: 'parent-task', identifier: 'TASK-0' });
-      findById.mockImplementation(async (id: string) => (id === 'parent-task' ? parentTask : task));
+      findById.mockImplementation(async (id) => (id === 'parent-task' ? parentTask : task));
       (service as any).taskModel.shouldPauseAfterComplete = vi.fn().mockReturnValue(false);
 
       await service.onTopicComplete({
@@ -707,7 +710,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     it('successful subtask still honors an explicit parent after-completion checkpoint', async () => {
       const task = baseTask({ automationMode: null, parentTaskId: 'parent-task' });
       const parentTask = baseTask({ id: 'parent-task', identifier: 'TASK-0' });
-      findById.mockImplementation(async (id: string) => (id === 'parent-task' ? parentTask : task));
+      findById.mockImplementation(async (id) => (id === 'parent-task' ? parentTask : task));
       (service as any).taskModel.shouldPauseAfterComplete = vi.fn().mockReturnValue(true);
 
       await service.onTopicComplete({

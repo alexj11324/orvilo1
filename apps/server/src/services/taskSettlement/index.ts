@@ -113,9 +113,11 @@ export const settleTaskExecution = async (
   let workflowAmbiguous = false;
   let workflowPatch: TaskWorkflowPatch = {};
   if (plan.workflowCategory) {
-    const states = task.teamId
-      ? await new TeamModel(db, userId, workspaceId).listWorkflowStates(task.teamId)
-      : [];
+    const stateWorkspaceId = workspaceId ?? task.workspaceId;
+    const states =
+      task.teamId && stateWorkspaceId
+        ? await new TeamModel(db, userId, stateWorkspaceId).listWorkflowStates(task.teamId)
+        : [];
     const transition = resolveWorkflowTransition({ category: plan.workflowCategory, states });
     workflowAmbiguous = transition.ambiguous;
     workflowPatch = transition.patch;
@@ -193,26 +195,30 @@ const applyPlan = async (
     // taskSettlement would be a module cycle if this were static.
     const { TaskService } = await import('../task');
     const service = new TaskService(db, userId, workspaceId);
-    const result = await service.updateStatus(
-      {
-        error: context?.error ?? undefined,
-        expectedContract: context?.expectedContract,
-        id: task.id,
-        status: status as TaskStatus,
-        workflow: workflowPatch,
-      },
-      undefined,
-      context?.reservationId
-        ? {
+    const serviceInput = {
+      error: context?.error ?? undefined,
+      expectedContract: context?.expectedContract,
+      id: task.id,
+      status: status as TaskStatus,
+      workflow: workflowPatch,
+    };
+    const options = {
+      beforeMutation: context?.beforeMutation,
+      onStatusCommitted: context?.onStatusCommitted,
+    };
+    // updateStatus's overloads distinguish a reservation CAS (guard present)
+    // from a plain write — pick the call shape at the reservationId split.
+    const result = context?.reservationId
+      ? await service.updateStatus(
+          serviceInput,
+          undefined,
+          {
             currentStatus: (context.expectedStatus ?? task.status) as TaskStatus,
             reservationId: context.reservationId,
-          }
-        : undefined,
-      {
-        beforeMutation: context?.beforeMutation,
-        onStatusCommitted: context?.onStatusCommitted,
-      },
-    );
+          },
+          options,
+        )
+      : await service.updateStatus(serviceInput, undefined, undefined, options);
     return result?.task ?? null;
   }
 

@@ -336,7 +336,7 @@ describe('driveTaskFromVerify', () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
     await driveTaskFromVerify(db, 'u1', 'op-1');
     expect(serviceUpdateStatus).toHaveBeenCalledWith(
-      {
+      expect.objectContaining({
         expectedContract: {
           assigneeAgentId: 'a1',
           executionGeneration: 1,
@@ -346,7 +346,8 @@ describe('driveTaskFromVerify', () => {
         },
         id: 'task-1',
         status: 'completed',
-      },
+        workflow: expect.objectContaining({ workflowCategory: 'done' }),
+      }),
       undefined,
       {
         currentStatus: 'running',
@@ -434,7 +435,11 @@ describe('driveTaskFromVerify', () => {
       expect.objectContaining({ id: 'task-1', automationMode: 'schedule' }),
     );
     expect(serviceUpdateStatus).toHaveBeenCalledWith(
-      { id: 'task-1', status: 'completed' },
+      expect.objectContaining({
+        id: 'task-1',
+        status: 'completed',
+        workflow: expect.objectContaining({ workflowCategory: 'done' }),
+      }),
       undefined,
       {
         currentStatus: 'scheduled',
@@ -557,6 +562,9 @@ describe('driveTaskFromVerify', () => {
 
     expect(serviceUpdateStatus).toHaveBeenCalledWith(
       expect.objectContaining({ id: 'task-1', status: 'completed' }),
+      undefined,
+      undefined,
+      expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
     );
     expect(deliverMock).toHaveBeenCalledWith(
       expect.objectContaining({

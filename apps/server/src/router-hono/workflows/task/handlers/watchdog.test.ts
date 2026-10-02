@@ -18,7 +18,9 @@ const {
   briefCreate,
   cancelIfRunning,
   cleanupTaskWorktrees,
+  findById,
   findByTaskId,
+  findByTopicId,
   findStuckTasks,
   interruptTask,
   requestStop,
@@ -31,13 +33,16 @@ const {
   sweepPlanningTaskDispatchStarts,
   sweepTaskDispatchRecovery,
   sweepTaskDispatchResume,
+  resolveTaskReviewRequirement,
   sweepTaskOwnershipInvariants,
   sweepMcpEventInbox,
 } = vi.hoisted(() => ({
   briefCreate: vi.fn<(input: unknown) => Promise<unknown>>(),
   cancelIfRunning: vi.fn<(taskId: string, topicId: string) => Promise<boolean>>(),
   cleanupTaskWorktrees: vi.fn<(taskId: string) => Promise<void>>(),
+  findById: vi.fn<(id: string) => Promise<unknown>>(),
   findByTaskId: vi.fn<(taskId: string) => Promise<RunningTopic[]>>(),
+  findByTopicId: vi.fn<(topicId: string) => Promise<unknown>>(),
   findStuckTasks: vi.fn<() => Promise<WatchdogTask[]>>(),
   interruptTask:
     vi.fn<
@@ -46,6 +51,7 @@ const {
       }) => Promise<{ deviceCancellationConfirmed?: boolean; success: boolean }>
     >(),
   requestStop: vi.fn<(params: unknown) => Promise<unknown>>(),
+  resolveTaskReviewRequirement: vi.fn<(task: unknown) => Promise<boolean>>(),
   updateContext: vi.fn<(id: string, partial: unknown) => Promise<unknown>>(),
   updateStatus: vi.fn<(id: string, status: string, extra?: unknown) => Promise<unknown>>(),
   updateStatusIfCurrent:
@@ -81,6 +87,8 @@ vi.mock('@/database/models/task', () => ({
   TaskModel: Object.assign(
     vi.fn(function () {
       return {
+        findById,
+        resolveTaskReviewRequirement,
         updateContext,
         updateStatus,
         updateStatusIfCurrent,
@@ -97,7 +105,7 @@ vi.mock('@/database/models/taskDispatch', () => ({
 }));
 vi.mock('@/database/models/taskTopic', () => ({
   TaskTopicModel: vi.fn(function () {
-    return { cancelIfRunning, findByTaskId };
+    return { cancelIfRunning, findByTaskId, findByTopicId };
   }),
 }));
 vi.mock('@/server/services/aiAgent', () => ({
@@ -150,6 +158,9 @@ describe('task watchdog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     findStuckTasks.mockResolvedValue([stuckTask]);
+    findById.mockResolvedValue({ ...stuckTask, status: 'running' });
+    findByTopicId.mockResolvedValue(null);
+    resolveTaskReviewRequirement.mockResolvedValue(false);
     findByTaskId.mockResolvedValue([]);
     interruptTask.mockResolvedValue({ success: true });
     sweepTaskBacklogIntake.mockResolvedValue([]);
@@ -211,7 +222,7 @@ describe('task watchdog', () => {
     expect(updateStatusIfCurrent).toHaveBeenCalledWith(
       'task-1',
       'running',
-      'failed',
+      'paused',
       expect.objectContaining({ error: 'Heartbeat timeout' }),
     );
     expect(cleanupTaskWorktrees).toHaveBeenCalledWith('task-1');

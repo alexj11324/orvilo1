@@ -91,3 +91,34 @@ every successful root task paused for review.
   through `deriveTaskExecutionState`.
 - Attention: derive from the layers above via the settlement service's
   attention module.
+
+## Settlement call sites
+
+Every writer of task outcome state delegates to `settleTaskExecution` — no
+service picks a status itself:
+
+- `services/taskLifecycle` — run outcomes (complete / pause / cancel /
+  dependency-driven writes) go through the service's `settleOwned` helper,
+  which injects `taskId`, `operationId`, and the generation fence. A
+  stale-generation skip surfaces as `TaskCompletionSupersededError`.
+- `services/verify/settle` — each verdict settles via `verifyOutcome`
+  (`passed` completes or re-parks scheduled tasks; `failed` drives auto
+  repair or parks in review; `errored` / `review_errored` / `unjudgeable` /
+  `integration_blocked` route to a person via `blocked` attention).
+- `services/taskWatchdog` — unconfirmed cancel settles `outcome_unknown`;
+  heartbeat timeout settles `failed`. The legacy projection for a
+  heartbeat timeout is now `paused` (execution-failed keeps the issue open);
+  it no longer writes `failed`.
+- `services/goal` — the lease-expired reclaim inside the reclaim transaction
+  settles `outcome_unknown` on the task.
+- `services/taskRunner` — run start settles `runStarted`, stamping
+  `in_progress` + the resolved state ref; the legacy `running` projection
+  is already on the row from `reserveRun`.
+
+Two semantics changed where old behavior conflicted with the table:
+
+- A successful run on a task with no review gate completes to `done`
+  instead of parking at `paused` (default-pause removed).
+- A verify-bound automation task re-arms `scheduled` while its verdict is
+  pending, so heartbeat cadence survives; non-automation tasks hold for the
+  verdict.

@@ -59,14 +59,12 @@ const currentTopicsWithoutSystemTriggers = (s: ChatStoreState): ChatTopic[] | un
   );
 };
 
-const currentActiveTopic = (s: ChatStoreState): ChatTopic | undefined => {
-  const inList = currentTopics(s)?.find((topic) => topic.id === s.activeTopicId);
-  if (inList) return inList;
+const currentActiveTopic = (s: ChatStoreState): ChatTopic | undefined =>
   // The active topic can be absent from the list bucket — archived (completed)
-  // topics are excluded by the sidebar fetch's `excludeStatuses`. Fall back to
-  // the by-id detail cache so consumers keep real data (title, metadata, …).
-  return s.activeTopicId ? s.topicDetailMap?.[s.activeTopicId] : undefined;
-};
+  // topics are excluded by the sidebar fetch's `excludeStatuses`, and the
+  // workspace feed may simply not have paged it in yet. getTopicById already
+  // falls back through every loaded bucket to the by-id detail cache.
+  s.activeTopicId ? getTopicById(s.activeTopicId)(s) : undefined;
 const searchTopics = (s: ChatStoreState): ChatTopic[] => s.searchTopics;
 
 const displayTopics = (s: ChatStoreState): ChatTopic[] | undefined =>

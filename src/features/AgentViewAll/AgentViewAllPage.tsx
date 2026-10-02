@@ -33,6 +33,7 @@ import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import WideScreenContainer from '@/features/WideScreenContainer';
 import { useFetchAgentLabels } from '@/hooks/useFetchAgentLabels';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
@@ -44,10 +45,15 @@ import AgentCard, { cardStyles } from './AgentCard';
 import AgentRow, { type AgentRowAuthor } from './AgentRow';
 import { flattenAgentBuckets } from './flattenBuckets';
 import ListConfig from './ListConfig';
-import { type AgentListViewOptions, normalizeAgentListViewOptions } from './listViewOptions';
+import {
+  type AgentListViewMode,
+  type AgentListViewOptions,
+  normalizeAgentListViewOptions,
+  resolveAgentViewMode,
+} from './listViewOptions';
 
 type SegmentValue = 'private' | 'workspace';
-type ViewMode = 'card' | 'list';
+type ViewMode = AgentListViewMode;
 
 interface GroupHeaderProps {
   /** Author avatar for author-grouping headers (Linear-style). */
@@ -159,7 +165,12 @@ const AgentViewAllPage = memo(() => {
 
   // Card vs list rendering — persisted in systemStatus so the page reopens
   // in the last chosen mode (same mechanism as imageTopicViewMode & friends).
-  const viewMode = useGlobalStore(systemStatusSelectors.agentListViewMode);
+  // The persisted choice is desktop-only: on a mobile viewport the table
+  // cannot fit, so the page always falls back to the card grid regardless of
+  // the saved preference.
+  const isMobile = useIsMobile();
+  const persistedViewMode = useGlobalStore(systemStatusSelectors.agentListViewMode);
+  const viewMode = resolveAgentViewMode(persistedViewMode, isMobile);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
   const handleViewModeChange = useCallback(
     (mode: ViewMode) => updateSystemStatus({ agentListViewMode: mode }),
@@ -453,7 +464,9 @@ const AgentViewAllPage = memo(() => {
         }
       />
       <WideScreenContainer className="gap-4 py-4" wrapperStyle={{ flex: 1, overflowY: 'auto' }}>
-        <div className="flex items-center gap-3 justify-between">
+        {/* Mobile widths wrap the search/create cluster onto its own line
+            rather than forcing the controls past the viewport. */}
+        <div className="flex items-center gap-3 justify-between flex-wrap">
           {/* The workspace/private split only exists inside a workspace;
               personal mode leads with the search box instead. */}
           {activeWorkspaceId ? (
@@ -469,7 +482,7 @@ const AgentViewAllPage = memo(() => {
               </ToggleGroupItem>
             </ToggleGroup>
           ) : (
-            <div className="relative" style={{ maxWidth: 240 }}>
+            <div className="relative" style={{ flex: '1 1 160px', maxWidth: 240 }}>
               <Search className="absolute left-2 top-1/2 -translate-y-1/2 opacity-60" size={14} />
               <Input
                 className="pl-7"
@@ -479,9 +492,12 @@ const AgentViewAllPage = memo(() => {
               />
             </div>
           )}
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2"
+            style={{ marginInlineStart: 'auto', minWidth: 0 }}
+          >
             {activeWorkspaceId && (
-              <div className="relative" style={{ maxWidth: 240 }}>
+              <div className="relative" style={{ flex: '1 1 160px', maxWidth: 240 }}>
                 <Search className="absolute left-2 top-1/2 -translate-y-1/2 opacity-60" size={14} />
                 <Input
                   className="pl-7"

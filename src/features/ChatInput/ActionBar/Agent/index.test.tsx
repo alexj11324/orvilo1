@@ -18,9 +18,10 @@ const mocks = vi.hoisted(() => ({
   chatState: {
     activeTopicId: undefined as string | undefined,
     clearPortalStack: vi.fn(),
+    forkTopicAgent: vi.fn(async () => 'tpc_forked'),
     rebindTopicAgent: vi.fn(),
   },
-  confirmModal: vi.fn(),
+  createModal: vi.fn(),
   fetchAgentList: vi.fn(),
   listSelect: vi.fn(),
   navigate: vi.fn(),
@@ -52,7 +53,9 @@ vi.mock('@/components/Avatar', () => ({
 }));
 
 vi.mock('@/components/Modal', () => ({
-  confirmModal: (options: unknown) => mocks.confirmModal(options),
+  createModal: (options: unknown) => mocks.createModal(options),
+  ModalFooter: ({ children }: { children: ReactNode }) => <div>{children}</div>,
+  useModalContext: () => ({ close: vi.fn() }),
 }));
 
 vi.mock('@/features/Home/AgentSelect/AgentList', () => ({
@@ -176,25 +179,57 @@ describe('Agent action', () => {
     );
     // An explicit pick on a blank composer is a `lastUsedAgentId` write point.
     expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ lastUsedAgentId: 'agt_other' });
-    expect(mocks.confirmModal).not.toHaveBeenCalled();
+    expect(mocks.createModal).not.toHaveBeenCalled();
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
-  it('confirms, rebinds, and navigates in place when a topic is open', async () => {
+  it('offers Continue and Fork when a topic is open', () => {
     mocks.chatState.activeTopicId = 'tpc_1';
     const { getByText } = render(<Agent />);
 
     fireEvent.click(getByText('Other Agent'));
 
-    expect(mocks.confirmModal).toHaveBeenCalledWith(
-      expect.objectContaining({ title: 'agentSwitchConfirmTitle' }),
-    );
-    const { onOk } = mocks.confirmModal.mock.calls[0][0] as { onOk: () => Promise<void> };
-    await onOk();
+    const options = mocks.createModal.mock.calls[0][0] as {
+      content: { props: { onContinue: () => Promise<void>; onFork: () => Promise<void> } };
+      title: string;
+    };
+    expect(options.title).toBe('agentSwitchChoice.title');
+    expect(typeof options.content.props.onContinue).toBe('function');
+    expect(typeof options.content.props.onFork).toBe('function');
+  });
+
+  it('Continue rebinds the topic in place and navigates to it', async () => {
+    mocks.chatState.activeTopicId = 'tpc_1';
+    const { getByText } = render(<Agent />);
+
+    fireEvent.click(getByText('Other Agent'));
+
+    const { content } = mocks.createModal.mock.calls[0][0] as {
+      content: { props: { onContinue: () => Promise<void> } };
+    };
+    await content.props.onContinue();
 
     expect(mocks.chatState.rebindTopicAgent).toHaveBeenCalledWith('tpc_1', 'agt_other');
+    expect(mocks.chatState.forkTopicAgent).not.toHaveBeenCalled();
     expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ lastUsedAgentId: 'agt_other' });
     expect(mocks.navigate).toHaveBeenCalledWith('/agent/agt_other/tpc_1');
+  });
+
+  it('Fork clones the topic under the new agent and lands on the fork', async () => {
+    mocks.chatState.activeTopicId = 'tpc_1';
+    const { getByText } = render(<Agent />);
+
+    fireEvent.click(getByText('Other Agent'));
+
+    const { content } = mocks.createModal.mock.calls[0][0] as {
+      content: { props: { onFork: () => Promise<void> } };
+    };
+    await content.props.onFork();
+
+    expect(mocks.chatState.forkTopicAgent).toHaveBeenCalledWith('tpc_1', 'agt_other');
+    expect(mocks.chatState.rebindTopicAgent).not.toHaveBeenCalled();
+    expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ lastUsedAgentId: 'agt_other' });
+    expect(mocks.navigate).toHaveBeenCalledWith('/agent/agt_other/tpc_forked');
   });
 
   it('does nothing when the current agent is re-picked', () => {
@@ -203,7 +238,7 @@ describe('Agent action', () => {
     fireEvent.click(getByText('Current Row'));
 
     expect(mocks.setState).not.toHaveBeenCalled();
-    expect(mocks.confirmModal).not.toHaveBeenCalled();
+    expect(mocks.createModal).not.toHaveBeenCalled();
     expect(mocks.navigate).not.toHaveBeenCalled();
   });
 });

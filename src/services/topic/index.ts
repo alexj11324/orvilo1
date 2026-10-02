@@ -67,8 +67,8 @@ export class TopicService {
     );
   };
 
-  cloneTopic = (id: string, newTitle?: string): Promise<string> => {
-    return lambdaClient.topic.cloneTopic.mutate({ id, newTitle });
+  cloneTopic = (id: string, newTitle?: string, targetAgentId?: string): Promise<string> => {
+    return lambdaClient.topic.cloneTopic.mutate({ id, newTitle, targetAgentId });
   };
 
   batchMoveTopics = (topicIds: string[], targetAgentId: string) => {

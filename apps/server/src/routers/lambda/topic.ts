@@ -462,13 +462,26 @@ export const topicRouter = router({
 
   cloneTopic: topicProcedure
     .use(withScopedPermission('topic:create'))
-    .input(z.object({ id: z.string(), newTitle: z.string().optional() }))
+    .input(
+      z.object({
+        id: z.string(),
+        newTitle: z.string().optional(),
+        /**
+         * Fork-to-agent: the duplicate lands under this agent instead of the
+         * source's owner — the explicit fork, leaving the original untouched.
+         */
+        targetAgentId: z.string().optional(),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
       await assertCanUseTopicTargets(guardCtx(ctx), [input.id]);
       // Duplicating a visitor topic would copy its content into creator scope
       // (see `assertCreatorTopicTargets` on `batchMoveTopics` above).
       await assertCreatorTopicTargets(guardCtx(ctx), [input.id]);
-      const data = await ctx.topicModel.duplicate(input.id, input.newTitle);
+      if (input.targetAgentId) {
+        await assertCanUseConversationTargets(guardCtx(ctx), [{ agentId: input.targetAgentId }]);
+      }
+      const data = await ctx.topicModel.duplicate(input.id, input.newTitle, input.targetAgentId);
 
       return data.topic.id;
     }),

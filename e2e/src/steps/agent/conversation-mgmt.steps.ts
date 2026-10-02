@@ -139,7 +139,11 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   // live, so its topic would never be created inside the poll window — wait
   // for this turn to finish before opening the new topic.
   await waitForTurnSettled(this, '测试对话内容', firstSentAt);
-  await this.page.waitForURL((url) => /\/tpc_[^/]+$/.test(url.pathname), { timeout: 30_000 });
+  // `/chat/:topicId` is the canonical conversation route — the legacy
+  // `/agent/:aid/:tid` path auto-redirects, so wait for the settled URL.
+  await this.page.waitForURL((url) => /\/chat\/tpc_[^/]+$/.test(url.pathname), {
+    timeout: 30_000,
+  });
   const firstTopicPath = new URL(this.page.url()).pathname;
   const agentPath = firstTopicPath.slice(0, firstTopicPath.lastIndexOf('/'));
 
@@ -177,7 +181,10 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   };
 
   await addTopicButton.click();
-  await this.page.waitForURL((url) => url.pathname === agentPath, { timeout: 30_000 });
+  // The new-topic button opens the blank composer at `/chat/new`.
+  await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
+    timeout: 30_000,
+  });
   await expect(this.page.locator('.message-wrapper')).toHaveCount(0, { timeout: 30_000 });
   await sendSecondMessage();
 

@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
 import { ProjectModel } from '../../models/project';
+import { TaskModel } from '../../models/task';
 import { applyWorkQueryLayout, myWorkQueryForMode, WorkQueryModel } from '../../models/workQuery';
 import { WorkspaceModel } from '../../models/workspace';
 import { projects } from '../../schemas/project';
@@ -94,7 +95,11 @@ describe('linear parity seed', () => {
     const fixtureTasks = await db.select().from(tasks).where(eq(tasks.projectId, result.projectId));
     expect(fixtureTasks).toHaveLength(16);
     expect(fixtureTasks.every((task) => task.teamId === result.teamId)).toBe(true);
-    expect(fixtureTasks.every((task) => task.status === 'completed')).toBe(true);
+    const derivedStatuses = await new TaskModel(db, userId, result.workspaceId).derivedStatusByIds(
+      fixtureTasks.map((task) => task.id),
+    );
+    // `task.status` is the derived label — the retired column stays 'backlog'.
+    expect(fixtureTasks.every((task) => derivedStatuses[task.id] === 'completed')).toBe(true);
     expect(fixtureTasks.every((task) => task.workflowCategory === 'done')).toBe(true);
     expect(fixtureTasks.every((task) => task.workflowStateRefId)).toBe(true);
 

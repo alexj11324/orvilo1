@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
@@ -72,8 +73,9 @@ export async function runHeartbeatTick(
     log('skip task=%s reason=mode-changed (mode=%s)', taskId, task.automationMode);
     return { ran: false, reason: 'mode-changed' };
   }
-  if (isTerminal(task.status)) {
-    log('skip task=%s reason=terminal (status=%s)', taskId, task.status);
+  const taskStatus = deriveLegacyTaskStatus(task);
+  if (isTerminal(taskStatus)) {
+    log('skip task=%s reason=terminal (status=%s)', taskId, taskStatus);
     return { ran: false, reason: 'terminal' };
   }
   const heartbeatInterval = task.heartbeatInterval;
@@ -82,7 +84,7 @@ export async function runHeartbeatTick(
     return { ran: false, reason: 'no-interval' };
   }
 
-  if (task.status === 'paused') return { ran: false, reason: 'paused' };
+  if (taskStatus === 'paused') return { ran: false, reason: 'paused' };
 
   const wsId = task.workspaceId ?? undefined;
   const briefModel = new BriefModel(db, userId, wsId);
@@ -92,7 +94,7 @@ export async function runHeartbeatTick(
   }
 
   const rearmBlockedHeartbeat = async () => {
-    if (task.status !== 'scheduled') return;
+    if (taskStatus !== 'scheduled') return;
 
     const scheduler = createTaskSchedulerModule();
     const nextToken = randomUUID();

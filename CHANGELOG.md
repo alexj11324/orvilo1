@@ -2,6 +2,219 @@
 
 # Changelog
 
+## [Version 2.6.0](https://github.com/alexj11324/orvilo1/compare/v2.5.0...v2.6.0)
+
+<sup>Released on **2026-10-02**</sup>
+
+#### 🐛 Bug Fixes
+
+- **tasks**: compose IssueStatusPicker search on ReUI Input.
+- **AgentTasks**: replace bare <input> in IssueStatusPicker with design-system Input.
+- **database**: treat removed lobehub avatar assets as absent.
+- **agents**: give the agent settings profile a mobile layout.
+- **selectors**: resolve active topic through every loaded bucket.
+- **topics**: flatten workspace query row type after leftJoin.
+- **ui**: clean up #403 visual/IA fallout + native-controls CI gate.
+- **kanban**: drop stale groupBy arg in status choice call.
+- **workflow-badge**: token-scale text sizes (Linear token gate).
+- **chat**: widen topicId prop for nullable conversation context.
+- **agents**: force card layout and wrapped controls on mobile.
+- **chat**: evict stale topics and fall back to the conversation list.
+- **mobile**: persist last-used agent id and read it for new conversations.
+- **settings**: load common namespace for the Agents row label.
+- **mobile**: load global stylesheet in mobile entry, hide kbd hint on touch.
+- **watchdog-test**: cover settle-path model methods, expect paused projection.
+- **settlement**: satisfy strict updateStatus overloads and test typings.
+- **misc**: pass children inside Provider props in useAgentId test.
+- **misc**: /settings/agents shadowed by workspace slug; topic list agentId projection; task-agent labels.
+- **hetero-agents**: satisfy augmented ProcessEnv in keep-alive tests.
+- **server**: gate goal-mode dispatch on builtin-tool mount capability.
+- **typography**: font-semibold on workflow-state picker rows.
+- **typography**: align type ramp, mono IDs and timestamps to design tokens.
+- **types**: exclude vendored aegis sources from repo typecheck.
+- **server**: converge orphaned dispatches on stale ops and admission deadlocks.
+- **server**: ack duplicate hetero callbacks after operation settles.
+- **server**: unwrap TRPCError in sweeps and defer candidate column projection.
+- **server**: bound dispatch sweeps and add backlog intake.
+- **mywork**: rename workQueryVirtualList.ts to fix case-insensitive collision.
+- **inbox**: keep snooze labels as literal keys for typed t().
+- **inbox**: menu keydown leak + token/skeleton gates.
+- **inbox**: drop preventDefault in row option click guard.
+- **issue-detail**: clear typecheck, e2e, and docs gates for Plane layout.
+- **sidebar**: keep namespaced i18n keys in WorkspaceSwitcher aria labels.
+- **provider**: type ModelList Search variant against SearchBar props.
+- **work-query**: page rows that share a timestamp.
+- **issue-detail**: open the status menu on workflow-linked issues.
+- **work-query**: align issue list types with board and my-work lanes.
+- **provider-binding**: name canonical seam types so overloaded typeof stays substitutable.
+- **issues**: page project groups, previews, and visibility.
+- **work-query**: group lists by milestone and agent.
+- **saved-views**: name group headers and keep list lanes.
+- **issues**: page filtered project lists by their group.
+- **control-plane**: satisfy tsgo ProcessEnv overload in acceptance spawns.
+- **work-query**: keep list group headers stuck to the scroll area.
+- **work-query**: drop load more when a group page is exactly full.
+- **server**: resolve embedded runner artifact lazily so bundlers never trace dist/.
+- **work-query**: reject operators a field does not support.
+- **saved-views**: type the group-by menu against existing copy.
+- **work-query**: order activity pages and list headers.
+- **misc**: categorize experienceMemory, mcpEvents, providerBinding API-key scopes.
+
+#### ✨ Features
+
+- **topics**: cursor-paginate the workspace conversation feed.
+- **work-query**: split Status/Execution axes, saved-view schema v2.
+- **topics**: workspace-wide conversation feed for the sidebar.
+- **chat**: make lastUsedAgentId the only new-topic default source.
+- **mobile**: rebuild 会话 tab as conversation list, fix tab-bar overlay.
+- **misc**: topic-centric agent workspace + Settings→Agents config exile.
+- **group-chat**: purpose-free creation, instant entry, agent pickers, top-level nav.
+- **hetero-agents**: per-engine prompt-cache keep-alive for idle ACP sessions.
+- **hetero**: fuse aegis method pack into verify + artifact pipeline.
+- **server**: tiered intake matching with escalate-on-failure.
+- **database,types**: add agent tier carrier on roster and dispatch rows.
+- **inbox**: row-shaped loading skeleton for the list column.
+- **inbox**: rework inbox as Plane-style All/Mentions feed.
+- **issue-detail**: move relations into sidebar fields like Linear.
+- **settings**: workspace switcher replaces logo header on settings sidebar.
+- **provider-binding**: execution.ts compat superset for #367's execAgent.
+- **issue-detail**: align relations and workflow with Plane.
+- **saved-views**: restore list grouping axes and a second group.
+- **server**: route orvilo dispatches to the embedded Prime host behind prime_embedded_dispatch.
+- **controlPlane**: embedded runtime host composition option + artifact verification.
+- **agent-execution**: embedded harness broker inference bridge.
+- **misc**: restore P30-retired provider settings UI and client-side inference runtime.
+- **prime-harness**: first-party harness runner package.
+- **agent-execution**: embedded-Prime harness wire protocol, transport, runtime.
+- **work-query**: page grouped lists and virtualize them.
+- **providerBinding**: BYOK execution chain — mint fenced credentials into Orvilo agent runs.
+- **work-query**: board axes, swimlanes, and shared filters.
+- **misc**: add durable MCP event consumer with guarded execution.
+
+#### ♻️ Code Refactoring
+
+- **tasks**: Issue kanban shows workflow only, split status picker/execution badge.
+- **server**: restore terminal throw in dispatch admission catch.
+- **controlPlane**: remove prime_embedded_dispatch flag — orvilo tasks always run embedded Prime.
+- **sidebar**: workspace switcher moves to main sidebar header; settings rails go headerless.
+
+#### 💄 Styles
+
+- **issue-detail**: text-xs scale class + mono identifiers for Linear tokens.
+- **issue-detail**: mono font for relation identifiers like Linear's ID tokens.
+- **issue-detail**: match Plane property rows and title.
+
+<br/>
+
+<details>
+<summary><kbd>Improvements and Fixes</kbd></summary>
+
+#### What's fixed
+
+- **tasks**: compose IssueStatusPicker search on ReUI Input ([1111915](https://github.com/alexj11324/orvilo1/commit/1111915))
+- **AgentTasks**: replace bare <input> in IssueStatusPicker with design-system Input ([49a5559](https://github.com/alexj11324/orvilo1/commit/49a5559))
+- **database**: treat removed lobehub avatar assets as absent ([139fe09](https://github.com/alexj11324/orvilo1/commit/139fe09))
+- **agents**: give the agent settings profile a mobile layout ([feccd99](https://github.com/alexj11324/orvilo1/commit/feccd99))
+- **selectors**: resolve active topic through every loaded bucket ([6b4b003](https://github.com/alexj11324/orvilo1/commit/6b4b003))
+- **topics**: flatten workspace query row type after leftJoin ([1bd4e37](https://github.com/alexj11324/orvilo1/commit/1bd4e37))
+- **ui**: clean up #403 visual/IA fallout + native-controls CI gate, closes [#403](https://github.com/alexj11324/orvilo1/issues/403) ([bb5213c](https://github.com/alexj11324/orvilo1/commit/bb5213c))
+- **kanban**: drop stale groupBy arg in status choice call ([46b59f6](https://github.com/alexj11324/orvilo1/commit/46b59f6))
+- **workflow-badge**: token-scale text sizes (Linear token gate) ([d7b8fea](https://github.com/alexj11324/orvilo1/commit/d7b8fea))
+- **chat**: widen topicId prop for nullable conversation context ([40456ea](https://github.com/alexj11324/orvilo1/commit/40456ea))
+- **agents**: force card layout and wrapped controls on mobile ([295248b](https://github.com/alexj11324/orvilo1/commit/295248b))
+- **chat**: evict stale topics and fall back to the conversation list ([16068fd](https://github.com/alexj11324/orvilo1/commit/16068fd))
+- **mobile**: persist last-used agent id and read it for new conversations ([f95ed23](https://github.com/alexj11324/orvilo1/commit/f95ed23))
+- **settings**: load common namespace for the Agents row label ([58bbd03](https://github.com/alexj11324/orvilo1/commit/58bbd03))
+- **mobile**: load global stylesheet in mobile entry, hide kbd hint on touch ([0b8b756](https://github.com/alexj11324/orvilo1/commit/0b8b756))
+- **watchdog-test**: cover settle-path model methods, expect paused projection ([659ca7f](https://github.com/alexj11324/orvilo1/commit/659ca7f))
+- **settlement**: satisfy strict updateStatus overloads and test typings ([15b285a](https://github.com/alexj11324/orvilo1/commit/15b285a))
+- **misc**: pass children inside Provider props in useAgentId test ([d567de7](https://github.com/alexj11324/orvilo1/commit/d567de7))
+- **misc**: /settings/agents shadowed by workspace slug; topic list agentId projection; task-agent labels ([09df8df](https://github.com/alexj11324/orvilo1/commit/09df8df))
+- **hetero-agents**: satisfy augmented ProcessEnv in keep-alive tests ([3e3bd64](https://github.com/alexj11324/orvilo1/commit/3e3bd64))
+- **server**: gate goal-mode dispatch on builtin-tool mount capability ([d81bc78](https://github.com/alexj11324/orvilo1/commit/d81bc78))
+- **typography**: font-semibold on workflow-state picker rows ([b29d058](https://github.com/alexj11324/orvilo1/commit/b29d058))
+- **typography**: align type ramp, mono IDs and timestamps to design tokens ([f1a659f](https://github.com/alexj11324/orvilo1/commit/f1a659f))
+- **types**: exclude vendored aegis sources from repo typecheck ([e37e9f7](https://github.com/alexj11324/orvilo1/commit/e37e9f7))
+- **server**: converge orphaned dispatches on stale ops and admission deadlocks ([5784fd9](https://github.com/alexj11324/orvilo1/commit/5784fd9))
+- **server**: ack duplicate hetero callbacks after operation settles ([ff26dbc](https://github.com/alexj11324/orvilo1/commit/ff26dbc))
+- **server**: unwrap TRPCError in sweeps and defer candidate column projection ([bdbd516](https://github.com/alexj11324/orvilo1/commit/bdbd516))
+- **server**: bound dispatch sweeps and add backlog intake ([2f69c9d](https://github.com/alexj11324/orvilo1/commit/2f69c9d))
+- **mywork**: rename workQueryVirtualList.ts to fix case-insensitive collision ([f51a559](https://github.com/alexj11324/orvilo1/commit/f51a559))
+- **inbox**: keep snooze labels as literal keys for typed t() ([3e0f951](https://github.com/alexj11324/orvilo1/commit/3e0f951))
+- **inbox**: menu keydown leak + token/skeleton gates ([d814dce](https://github.com/alexj11324/orvilo1/commit/d814dce))
+- **inbox**: drop preventDefault in row option click guard ([5a02b5f](https://github.com/alexj11324/orvilo1/commit/5a02b5f))
+- **issue-detail**: clear typecheck, e2e, and docs gates for Plane layout ([a7c2da0](https://github.com/alexj11324/orvilo1/commit/a7c2da0))
+- **sidebar**: keep namespaced i18n keys in WorkspaceSwitcher aria labels ([2b01fca](https://github.com/alexj11324/orvilo1/commit/2b01fca))
+- **provider**: type ModelList Search variant against SearchBar props ([c8ea193](https://github.com/alexj11324/orvilo1/commit/c8ea193))
+- **work-query**: page rows that share a timestamp ([cc4fc73](https://github.com/alexj11324/orvilo1/commit/cc4fc73))
+- **issue-detail**: open the status menu on workflow-linked issues ([39e979b](https://github.com/alexj11324/orvilo1/commit/39e979b))
+- **work-query**: align issue list types with board and my-work lanes ([d56107b](https://github.com/alexj11324/orvilo1/commit/d56107b))
+- **provider-binding**: name canonical seam types so overloaded typeof stays substitutable ([26ea777](https://github.com/alexj11324/orvilo1/commit/26ea777))
+- **issues**: page project groups, previews, and visibility ([8c7aff3](https://github.com/alexj11324/orvilo1/commit/8c7aff3))
+- **work-query**: group lists by milestone and agent ([4fb704b](https://github.com/alexj11324/orvilo1/commit/4fb704b))
+- **saved-views**: name group headers and keep list lanes ([a6de126](https://github.com/alexj11324/orvilo1/commit/a6de126))
+- **issues**: page filtered project lists by their group ([5c46e3c](https://github.com/alexj11324/orvilo1/commit/5c46e3c))
+- **control-plane**: satisfy tsgo ProcessEnv overload in acceptance spawns ([43b6b27](https://github.com/alexj11324/orvilo1/commit/43b6b27))
+- **work-query**: keep list group headers stuck to the scroll area ([ffc7914](https://github.com/alexj11324/orvilo1/commit/ffc7914))
+- **work-query**: drop load more when a group page is exactly full ([f141f70](https://github.com/alexj11324/orvilo1/commit/f141f70))
+- **server**: resolve embedded runner artifact lazily so bundlers never trace dist/ ([c6aad5f](https://github.com/alexj11324/orvilo1/commit/c6aad5f))
+- **work-query**: reject operators a field does not support ([f8c0583](https://github.com/alexj11324/orvilo1/commit/f8c0583))
+- **saved-views**: type the group-by menu against existing copy ([ced58b3](https://github.com/alexj11324/orvilo1/commit/ced58b3))
+- **work-query**: order activity pages and list headers ([5a4712e](https://github.com/alexj11324/orvilo1/commit/5a4712e))
+- **misc**: categorize experienceMemory, mcpEvents, providerBinding API-key scopes ([74b051b](https://github.com/alexj11324/orvilo1/commit/74b051b))
+
+#### What's improved
+
+- **topics**: cursor-paginate the workspace conversation feed ([b98d438](https://github.com/alexj11324/orvilo1/commit/b98d438))
+- **work-query**: split Status/Execution axes, saved-view schema v2 ([70dca8e](https://github.com/alexj11324/orvilo1/commit/70dca8e))
+- **topics**: workspace-wide conversation feed for the sidebar ([74f37f2](https://github.com/alexj11324/orvilo1/commit/74f37f2))
+- **chat**: make lastUsedAgentId the only new-topic default source ([f4d2b80](https://github.com/alexj11324/orvilo1/commit/f4d2b80))
+- **mobile**: rebuild 会话 tab as conversation list, fix tab-bar overlay ([f8ac3b4](https://github.com/alexj11324/orvilo1/commit/f8ac3b4))
+- **misc**: topic-centric agent workspace + Settings→Agents config exile ([a77b6c2](https://github.com/alexj11324/orvilo1/commit/a77b6c2))
+- **group-chat**: purpose-free creation, instant entry, agent pickers, top-level nav ([e75bc0f](https://github.com/alexj11324/orvilo1/commit/e75bc0f))
+- **hetero-agents**: per-engine prompt-cache keep-alive for idle ACP sessions ([a0626ed](https://github.com/alexj11324/orvilo1/commit/a0626ed))
+- **hetero**: fuse aegis method pack into verify + artifact pipeline ([6ff43ff](https://github.com/alexj11324/orvilo1/commit/6ff43ff))
+- **server**: tiered intake matching with escalate-on-failure ([74339da](https://github.com/alexj11324/orvilo1/commit/74339da))
+- **database,types**: add agent tier carrier on roster and dispatch rows ([d4ee26e](https://github.com/alexj11324/orvilo1/commit/d4ee26e))
+- **inbox**: row-shaped loading skeleton for the list column ([38dadd2](https://github.com/alexj11324/orvilo1/commit/38dadd2))
+- **inbox**: rework inbox as Plane-style All/Mentions feed ([b832fce](https://github.com/alexj11324/orvilo1/commit/b832fce))
+- **issue-detail**: move relations into sidebar fields like Linear ([e2d6242](https://github.com/alexj11324/orvilo1/commit/e2d6242))
+- **settings**: workspace switcher replaces logo header on settings sidebar ([8145c87](https://github.com/alexj11324/orvilo1/commit/8145c87))
+- **provider-binding**: execution.ts compat superset for #367's execAgent, closes [#367](https://github.com/alexj11324/orvilo1/issues/367) ([e91b9e1](https://github.com/alexj11324/orvilo1/commit/e91b9e1))
+- **issue-detail**: align relations and workflow with Plane ([89e321b](https://github.com/alexj11324/orvilo1/commit/89e321b))
+- **saved-views**: restore list grouping axes and a second group ([c75f919](https://github.com/alexj11324/orvilo1/commit/c75f919))
+- **server**: route orvilo dispatches to the embedded Prime host behind prime_embedded_dispatch ([5d28b8c](https://github.com/alexj11324/orvilo1/commit/5d28b8c))
+- **controlPlane**: embedded runtime host composition option + artifact verification ([f9a6d78](https://github.com/alexj11324/orvilo1/commit/f9a6d78))
+- **agent-execution**: embedded harness broker inference bridge ([532fce8](https://github.com/alexj11324/orvilo1/commit/532fce8))
+- **misc**: restore P30-retired provider settings UI and client-side inference runtime ([9e9ab63](https://github.com/alexj11324/orvilo1/commit/9e9ab63))
+- **prime-harness**: first-party harness runner package ([fc84547](https://github.com/alexj11324/orvilo1/commit/fc84547))
+- **agent-execution**: embedded-Prime harness wire protocol, transport, runtime ([679736e](https://github.com/alexj11324/orvilo1/commit/679736e))
+- **work-query**: page grouped lists and virtualize them ([e651e59](https://github.com/alexj11324/orvilo1/commit/e651e59))
+- **providerBinding**: BYOK execution chain — mint fenced credentials into Orvilo agent runs ([823c91e](https://github.com/alexj11324/orvilo1/commit/823c91e))
+- **work-query**: board axes, swimlanes, and shared filters ([d3dc1d3](https://github.com/alexj11324/orvilo1/commit/d3dc1d3))
+- **misc**: add durable MCP event consumer with guarded execution ([e2aa719](https://github.com/alexj11324/orvilo1/commit/e2aa719))
+
+#### Code Refactoring
+
+- **tasks**: Issue kanban shows workflow only, split status picker/execution badge ([e991687](https://github.com/alexj11324/orvilo1/commit/e991687))
+- **server**: restore terminal throw in dispatch admission catch ([6628818](https://github.com/alexj11324/orvilo1/commit/6628818))
+- **controlPlane**: remove prime_embedded_dispatch flag — orvilo tasks always run embedded Prime ([b5c967f](https://github.com/alexj11324/orvilo1/commit/b5c967f))
+- **sidebar**: workspace switcher moves to main sidebar header; settings rails go headerless ([d936e68](https://github.com/alexj11324/orvilo1/commit/d936e68))
+
+#### Styles
+
+- **issue-detail**: text-xs scale class + mono identifiers for Linear tokens ([f92bff4](https://github.com/alexj11324/orvilo1/commit/f92bff4))
+- **issue-detail**: mono font for relation identifiers like Linear's ID tokens ([f947203](https://github.com/alexj11324/orvilo1/commit/f947203))
+- **issue-detail**: match Plane property rows and title ([d6f1dfc](https://github.com/alexj11324/orvilo1/commit/d6f1dfc))
+
+</details>
+
+<div align="right">
+
+[![](https://img.shields.io/badge/-BACK_TO_TOP-151515?style=flat-square)](#readme-top)
+
+</div>
+
 ## [Version 2.5.0](https://github.com/alexj11324/orvilo1/compare/v2.4.2-canary.8...v2.5.0)
 
 <sup>Released on **2026-09-30**</sup>

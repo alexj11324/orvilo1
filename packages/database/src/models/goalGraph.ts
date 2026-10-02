@@ -28,6 +28,7 @@ import { tasks } from '../schemas/task';
 import { works, workVersions } from '../schemas/work';
 import type { OrviloDatabase, Transaction } from '../type';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { hasActiveExecution, isAutomationArmed } from './taskExecutionSql';
 import { workOwnership } from './work/context';
 
 interface EventInput {
@@ -335,7 +336,7 @@ export class GoalGraphModel {
         and(
           eq(goalNodes.goalId, goalId),
           eq(goalNodes.kind, 'task'),
-          inArray(tasks.status, ['running', 'scheduled']),
+          or(hasActiveExecution, isAutomationArmed),
         ),
       );
     return row?.count ?? 0;

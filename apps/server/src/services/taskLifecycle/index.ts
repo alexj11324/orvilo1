@@ -74,6 +74,8 @@ const getBriefMode = (task: TaskItem | null): 'agent' | 'auto' => {
 const log = debug('task-lifecycle');
 
 const TERMINAL_STATUSES = new Set(['canceled', 'completed', 'failed']);
+// `tasks.status` is retired — a row's terminal check derives the same label
+// from canonical workflow/execution state instead of reading the column.
 const isTerminal = (status: string) => TERMINAL_STATUSES.has(status);
 
 // Consecutive automation-tick 'error' reasons after which we pause the task /
@@ -1114,7 +1116,7 @@ export class TaskLifecycleService {
   /** Re-arm a Verify-bound heartbeat only after Verify releases its completion lease. */
   async rearmHeartbeatAfterVerify(taskId: string): Promise<void> {
     const task = await this.taskModel.findById(taskId);
-    if (task?.status === 'scheduled') await this.maybeRearmHeartbeat(task, 'done');
+    if (task && task.status === 'scheduled') await this.maybeRearmHeartbeat(task, 'done');
   }
 
   /**

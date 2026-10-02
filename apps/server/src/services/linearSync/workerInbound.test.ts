@@ -916,9 +916,11 @@ describe('LinearSyncWorker inbound ordering', () => {
     const taskModel = new TaskModel(db, userId, workspaceId);
 
     // An execution transition alone must never emit a Linear status update.
+    // 'paused' is the canonical execution transition a status write can
+    // produce (parked marker); 'running' requires a live dispatch row.
     await expect(
-      taskModel.updateStatusIfCurrent(task.id, 'backlog', 'running'),
-    ).resolves.toMatchObject({ status: 'running' });
+      taskModel.updateStatusIfCurrent(task.id, 'backlog', 'paused'),
+    ).resolves.toMatchObject({ status: 'paused' });
     await expect(
       db.select().from(linearSyncOutbox).where(eq(linearSyncOutbox.taskId, task.id)),
     ).resolves.toEqual([]);

@@ -15,3 +15,8 @@ and `counts` entries cap the number of existing violations so additions still
 fail while removals shrink the ledger. To request an exemption, add the file
 (or pattern) to the allowlist with its reason in the same PR — reviewers treat
 each entry as a reviewed exception, not a hole.
+
+Inline search/filter fields inside menus and popovers follow the same rule:
+compose the ReUI `Input` (`@/components/ui/input`) and neutralize its chrome in
+the surface's stylesheet (height/radius/ring) rather than dropping to a literal
+`<input>` — the gate scans JSX tags, not rendered elements.

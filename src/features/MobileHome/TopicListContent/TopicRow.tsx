@@ -54,7 +54,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
 }));
 
-const formatRowTime = (updatedAt: number) => {
+const formatRowTime = (updatedAt: Date | number) => {
   const time = dayjs(updatedAt);
   if (time.isSame(dayjs(), 'day')) return time.format('HH:mm');
   if (time.isSame(dayjs(), 'year')) return time.format('MM-DD');

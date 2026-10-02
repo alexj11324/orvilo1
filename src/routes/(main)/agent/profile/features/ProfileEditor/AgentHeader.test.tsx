@@ -45,9 +45,9 @@ const mocks = vi.hoisted(() => {
       },
     },
     permissionState: { allowed: false },
-    randomAgentName: vi.fn(() => 'Zoe'),
+    numberedAgentName: vi.fn(() => 'Zoe'),
     refreshAgentList: vi.fn(),
-    sidebarAgents: [] as { id: string; name?: string | null }[],
+    sidebarAgents: [] as { id: string; name?: string | null; title?: string | null }[],
     updateAgentMetaById: vi.fn(),
     uploadWithProgress: vi.fn(),
   };
@@ -110,7 +110,7 @@ vi.mock('@/features/AgentIdentityModal', () => ({
 
 vi.mock('@orvilo/const', async (importOriginal) => ({
   ...(await importOriginal<Record<string, unknown>>()),
-  randomAgentName: (...args: unknown[]) => mocks.randomAgentName(...(args as [])),
+  numberedAgentName: (...args: unknown[]) => mocks.numberedAgentName(...(args as [])),
 }));
 
 vi.mock('@/store/home', () => {
@@ -156,7 +156,7 @@ describe('AgentHeader', () => {
     mocks.inputProps.all = [];
     mocks.actionIconProps.all = [];
     mocks.permissionState.allowed = false;
-    mocks.randomAgentName.mockReturnValue('Zoe');
+    mocks.numberedAgentName.mockReturnValue('Zoe');
     mocks.sidebarAgents = [];
   });
 
@@ -330,7 +330,7 @@ describe('AgentHeader', () => {
     mocks.permissionState.allowed = true;
     mocks.agentStoreState.agentMap = { 'agent-a': { title: 'Health Assistant' } };
     mocks.sidebarAgents = [
-      { id: 'agent-a', name: null },
+      { id: 'agent-a', name: null, title: 'Health Assistant' },
       { id: 'agent-b', name: 'Alice' },
       { id: 'agent-c', name: 'Leo' },
       { id: 'agent-d', name: null },
@@ -346,9 +346,12 @@ describe('AgentHeader', () => {
       button?.click();
     });
 
-    // Names already on screen are excluded — a second "Alice" would defeat the
-    // point of having a name at all.
-    expect(mocks.randomAgentName).toHaveBeenCalledExactlyOnceWith('en-US', ['Alice', 'Leo']);
+    // The suggestion is the agent's own type name — its title — numbered
+    // against names already on screen.
+    expect(mocks.numberedAgentName).toHaveBeenCalledExactlyOnceWith('Health Assistant', [
+      'Alice',
+      'Leo',
+    ]);
     expect(mocks.updateAgentMetaById).toHaveBeenCalledExactlyOnceWith('agent-a', { name: 'Zoe' });
     // Otherwise the sidebar keeps showing the unnamed label next to a now-named
     // profile.

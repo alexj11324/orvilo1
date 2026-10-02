@@ -28,18 +28,14 @@ const manifest = async (): Promise<MetadataRoute.Manifest> => {
     };
   }
 
-  const [
-    { BRANDING_LOGO_URL, BRANDING_NAME },
-    { kebabCase },
-    { manifestModule },
-    { default: metadataCopy },
-  ] = await Promise.all([
-    import('@orvilo/business-const'),
-    import('es-toolkit/compat'),
-    import('@/libs/metadata/manifest'),
-    // Same source as the page metadata, so the manifest cannot drift from it.
-    import('@/locales/default/metadata'),
-  ]);
+  const [{ BRANDING_NAME }, { kebabCase }, { manifestModule }, { default: metadataCopy }] =
+    await Promise.all([
+      import('@orvilo/business-const'),
+      import('es-toolkit/compat'),
+      import('@/libs/metadata/manifest'),
+      // Same source as the page metadata, so the manifest cannot drift from it.
+      import('@/locales/default/metadata'),
+    ]);
 
   // @ts-expect-error - manifestModule.generate returns extended manifest with custom properties
   return manifestModule.generate({
@@ -68,50 +64,7 @@ const manifest = async (): Promise<MetadataRoute.Manifest> => {
     ],
     id: kebabCase(BRANDING_NAME),
     name: BRANDING_NAME,
-    screenshots: BRANDING_LOGO_URL
-      ? []
-      : [
-          {
-            form_factor: 'narrow',
-            url: '/screenshots/shot-1.mobile.png',
-          },
-          {
-            form_factor: 'narrow',
-            url: '/screenshots/shot-2.mobile.png',
-          },
-          {
-            form_factor: 'narrow',
-            url: '/screenshots/shot-3.mobile.png',
-          },
-          {
-            form_factor: 'narrow',
-            url: '/screenshots/shot-4.mobile.png',
-          },
-          {
-            form_factor: 'narrow',
-            url: '/screenshots/shot-5.mobile.png',
-          },
-          {
-            form_factor: 'wide',
-            url: '/screenshots/shot-1.desktop.png',
-          },
-          {
-            form_factor: 'wide',
-            url: '/screenshots/shot-2.desktop.png',
-          },
-          {
-            form_factor: 'wide',
-            url: '/screenshots/shot-3.desktop.png',
-          },
-          {
-            form_factor: 'wide',
-            url: '/screenshots/shot-4.desktop.png',
-          },
-          {
-            form_factor: 'wide',
-            url: '/screenshots/shot-5.desktop.png',
-          },
-        ],
+    screenshots: [],
   });
 };
 

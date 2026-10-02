@@ -291,7 +291,6 @@ export const driveTaskFromVerify = async (
       executionGeneration: dispatchTopic.executionGeneration,
       policyRevision: dispatchTopic.policyRevision,
       requirementRevision: dispatchTopic.requirementRevision,
-      status: 'running',
     };
     const dispatchContract = {
       dispatchId: dispatchTopic.dispatchId,

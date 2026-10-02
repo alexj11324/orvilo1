@@ -18,6 +18,7 @@ import { alias } from 'drizzle-orm/pg-core';
 import { documents } from '../../schemas/file';
 import { tasks } from '../../schemas/task';
 import { works, workVersions } from '../../schemas/work';
+import { legacyStatusExpr } from '../taskExecutionSql';
 import { taskOwnership, type WorkContext, workOwnership } from './context';
 
 /**
@@ -207,7 +208,7 @@ export const currentTaskSummaryFields = {
     instruction: sql<string | null>`coalesce(${tasks.instruction}, ${works.description})`,
     name: sql<string | null>`coalesce(${tasks.name}, ${works.title})`,
     priority: sql<number | null>`${tasks.priority}`,
-    status: sql<string | null>`coalesce(${tasks.status}, ${works.status})`,
+    status: sql<string | null>`coalesce(${legacyStatusExpr}, ${works.status})`,
   },
 };
 
@@ -218,7 +219,7 @@ export const eventTaskSummaryFields = {
     instruction: sql<string | null>`coalesce(${tasks.instruction}, ${workVersions.description})`,
     name: sql<string | null>`coalesce(${tasks.name}, ${workVersions.title})`,
     priority: sql<number | null>`${tasks.priority}`,
-    status: sql<string | null>`coalesce(${tasks.status}, ${workVersions.status})`,
+    status: sql<string | null>`coalesce(${legacyStatusExpr}, ${workVersions.status})`,
   },
 };
 

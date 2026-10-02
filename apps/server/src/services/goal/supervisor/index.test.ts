@@ -10,6 +10,7 @@ import { DocumentModel } from '@/database/models/document';
 import { GoalModel } from '@/database/models/goal';
 import { GoalGraphModel } from '@/database/models/goalGraph';
 import { TaskModel } from '@/database/models/task';
+import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
 import { WorkModel } from '@/database/models/work';
 import {
   acceptances,
@@ -49,6 +50,15 @@ const operationModel = new AgentOperationModel(db, userId);
 const taskModel = new TaskModel(db, userId);
 const goalModel = new GoalModel(db, userId);
 const service = () => new GoalService(db, userId);
+
+/**
+ * `tasks.status` is retired — read the derived legacy vocabulary so a fixture
+ * asserts the state the supervisor would actually see.
+ */
+const derivedStatus = async (id: string) => {
+  const [row] = await db.select({ status: legacyStatusExpr }).from(tasks).where(eq(tasks.id, id));
+  return row?.status;
+};
 
 const runResult = (operationId: string, topicId: string, agentId = 'agent'): ExecAgentResult => ({
   agentId,
@@ -358,7 +368,7 @@ describe('Goal Supervisor integration', () => {
     await diagnose(goalId);
     // A new service instance reads and resumes the persisted diagnosis.
     expect((await service().tick(goalId)).outcome).toBe('advanced');
-    expect((await taskModel.findById(taskId))?.status).toBe('backlog');
+    expect(await derivedStatus(taskId)).toBe('backlog');
     expect(AiAgentService.prototype.execAgent).toHaveBeenCalledTimes(1);
     const topicId = `topic-recovery-${++sequence}`;
     const operationId = `op-recovery-${sequence}`;
@@ -413,7 +423,7 @@ describe('Goal Supervisor integration', () => {
     });
     expect((await service().tick(goalId)).outcome).toBe('no_progress');
     expect((await goalModel.findById(goalId))?.status).toBe('paused');
-    expect((await taskModel.findById(taskId))?.status).toBe('failed');
+    expect(await derivedStatus(taskId)).toBe('failed');
     expect((await service().graph(goalId)).decisions).toHaveLength(0);
   });
 
@@ -505,7 +515,7 @@ describe('Goal Supervisor integration', () => {
     expect((await service().tick(goalId)).outcome).toBe('advanced');
     // The Task holds `paused`, so a recovery that only accepted `failed` would
     // silently do nothing here and escalate the incident.
-    expect((await taskModel.findById(taskId))?.status).toBe('backlog');
+    expect(await derivedStatus(taskId)).toBe('backlog');
     const graph = await service().graph(goalId);
     expect(graph.goal.config?.supervisorState?.incidents.at(-1)?.status).not.toBe('escalated');
   });
@@ -517,7 +527,7 @@ describe('Goal Supervisor integration', () => {
     // The person settled the Task while the supervisor was still deciding.
     await taskModel.update(taskId, { status: 'completed', error: null });
     await service().tick(goalId);
-    expect((await taskModel.findById(taskId))?.status).toBe('completed');
+    expect(await derivedStatus(taskId)).toBe('completed');
   });
 
   it('loses the claim when the Task moved to another recoverable state mid-diagnosis', async () => {
@@ -530,7 +540,7 @@ describe('Goal Supervisor integration', () => {
     await diagnose(goalId);
     await taskModel.update(taskId, { status: 'failed' });
     await service().tick(goalId);
-    expect((await taskModel.findById(taskId))?.status).toBe('failed');
+    expect(await derivedStatus(taskId)).toBe('failed');
   });
 
   it('escalates a diagnosis persisted before the opening status was recorded', async () => {
@@ -550,7 +560,7 @@ describe('Goal Supervisor integration', () => {
 
     await service().tick(goalId);
 
-    expect((await taskModel.findById(taskId))?.status).toBe('paused');
+    expect(await derivedStatus(taskId)).toBe('paused');
     const after = (await goalModel.findById(goalId))!.config!.supervisorState!;
     expect(after.incidents.at(-1)?.status).toBe('escalated');
   });
@@ -565,7 +575,7 @@ describe('Goal Supervisor integration', () => {
 
     const move = await service().tick(goalId);
 
-    expect((await taskModel.findById(taskId))?.status).toBe('failed');
+    expect(await derivedStatus(taskId)).toBe('failed');
     expect(move.outcome).not.toBe('waiting_external');
   });
 
@@ -591,7 +601,7 @@ describe('Goal Supervisor integration', () => {
     await service().pause(goalId);
     await diagnose(goalId);
     expect((await service().tick(goalId)).outcome).toBe('no_progress');
-    expect((await taskModel.findById(taskId))?.status).toBe('failed');
+    expect(await derivedStatus(taskId)).toBe('failed');
   });
 
   it('respects a manual Gate opened while diagnosis runs', async () => {
@@ -608,7 +618,7 @@ describe('Goal Supervisor integration', () => {
     });
     await diagnose(goalId);
     expect((await service().tick(goalId)).outcome).toBe('waiting_human');
-    expect((await taskModel.findById(taskId))?.status).toBe('failed');
+    expect(await derivedStatus(taskId)).toBe('failed');
   });
 
   it('excludes budget-blocked interruptions from the eligible recovery denominator', async () => {
@@ -622,7 +632,7 @@ describe('Goal Supervisor integration', () => {
       escalated: 1,
     });
     expect(AiAgentService.prototype.execAgent).not.toHaveBeenCalled();
-    expect((await taskModel.findById(taskId))?.status).toBe('failed');
+    expect(await derivedStatus(taskId)).toBe('failed');
   });
 
   it('checks the budget again after paying for the diagnosis', async () => {
@@ -631,7 +641,7 @@ describe('Goal Supervisor integration', () => {
     await service().tick(goalId);
     await diagnose(goalId);
     expect((await service().tick(goalId)).outcome).toBe('waiting_human');
-    expect((await taskModel.findById(taskId))?.status).toBe('failed');
+    expect(await derivedStatus(taskId)).toBe('failed');
   });
 
   it('adopts an operation after the dispatch response was lost', async () => {

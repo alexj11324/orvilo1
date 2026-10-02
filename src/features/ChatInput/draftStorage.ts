@@ -10,6 +10,34 @@ export const CHAT_INPUT_DRAFTS_STORAGE_KEY = 'orvilo:chat-input-drafts:v1';
  */
 export const topicDraftKey = (topicId: string): string => `topic_${topicId}`;
 
+/**
+ * Draft key for the blank new-topic composer. The draft belongs to the
+ * workspace, not an agent — picking a different agent for the pending send
+ * must never strand typed text, so every blank composer shares one key.
+ */
+export const newTopicDraftKey = 'topic_new';
+
+interface ConversationDraftContext {
+  groupId?: string;
+  threadId?: string;
+  topicId?: string;
+}
+
+/**
+ * Resolve the draft key for a conversation composer. Drafts belong to the
+ * conversation: an open topic keys on its topicId (a Continue handoff never
+ * strands typed text), the blank composer keys on the workspace (an agent
+ * pick keeps the text too). Thread and group contexts keep their caller's
+ * existing key.
+ */
+export const conversationDraftKey = (
+  context: ConversationDraftContext,
+  fallbackKey: string,
+): string => {
+  if (context.threadId || context.groupId) return fallbackKey;
+  return context.topicId ? topicDraftKey(context.topicId) : newTopicDraftKey;
+};
+
 const MAX_DRAFTS = 50;
 
 export interface ChatInputDraftEntry {

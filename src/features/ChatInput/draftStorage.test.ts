@@ -3,11 +3,48 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import {
   CHAT_INPUT_DRAFTS_STORAGE_KEY,
+  conversationDraftKey,
   getDraft,
+  newTopicDraftKey,
   removeDraft,
   saveDraft,
+  topicDraftKey,
   useHasDraft,
 } from './draftStorage';
+
+describe('conversationDraftKey', () => {
+  it('keys an open topic on the topic id — the draft belongs to the conversation', () => {
+    expect(conversationDraftKey({ topicId: 'tpc_1' }, 'main_a_new')).toBe(topicDraftKey('tpc_1'));
+    expect(topicDraftKey('tpc_1')).toBe('topic_tpc_1');
+  });
+
+  it('keys the blank composer on the workspace, not the agent', () => {
+    // Two different agents' blank composers share one draft — a pick must
+    // never strand typed text (no carry step needed).
+    const fallbackA = 'main_agt_a_new';
+    const fallbackB = 'main_agt_b_new';
+    expect(conversationDraftKey({}, fallbackA)).toBe(newTopicDraftKey);
+    expect(conversationDraftKey({}, fallbackB)).toBe(newTopicDraftKey);
+    expect(newTopicDraftKey).toBe('topic_new');
+  });
+
+  it('keeps thread and group contexts on their existing key', () => {
+    expect(conversationDraftKey({ topicId: 'tpc_1', threadId: 'thr_1' }, 'thread_key')).toBe(
+      'thread_key',
+    );
+    expect(conversationDraftKey({ groupId: 'grp_1' }, 'group_key')).toBe('group_key');
+  });
+
+  it('isolates drafts per topic', () => {
+    saveDraft(conversationDraftKey({ topicId: 'tpc_a' }, 'x'), { v: 'a' });
+    saveDraft(conversationDraftKey({ topicId: 'tpc_b' }, 'x'), { v: 'b' });
+    saveDraft(newTopicDraftKey, { v: 'new' });
+
+    expect(getDraft('topic_tpc_a')).toEqual({ v: 'a' });
+    expect(getDraft('topic_tpc_b')).toEqual({ v: 'b' });
+    expect(getDraft(newTopicDraftKey)).toEqual({ v: 'new' });
+  });
+});
 
 describe('draftStorage', () => {
   beforeEach(() => {

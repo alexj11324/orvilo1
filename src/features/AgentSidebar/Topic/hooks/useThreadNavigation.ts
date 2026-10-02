@@ -1,4 +1,4 @@
-import { AGENT_CHAT_TOPIC_URL, AGENT_CHAT_URL } from '@orvilo/const';
+import { AGENT_CHAT_TOPIC_URL, AGENT_CHAT_URL, CHAT_NEW_URL, CHAT_TOPIC_URL } from '@orvilo/const';
 import { useCallback } from 'react';
 
 import { useActiveLocation } from '@/hooks/useActiveLocation';
@@ -34,13 +34,10 @@ export const useThreadNavigation = () => {
 
   const navigateToThread = useCallback(
     (threadId: string) => {
-      // If in agent sub-route, navigate back to agent chat first
+      // If in agent sub-route, navigate back to the conversation first —
+      // `/chat/:topicId` is canonical and resolves the owner itself.
       if (isInAgentSubRoute() && params.aid) {
-        router.push(
-          params.topicId
-            ? AGENT_CHAT_TOPIC_URL(params.aid, params.topicId)
-            : AGENT_CHAT_URL(params.aid),
-        );
+        router.push(params.topicId ? CHAT_TOPIC_URL(params.topicId) : CHAT_NEW_URL);
       }
 
       switchThread(threadId);

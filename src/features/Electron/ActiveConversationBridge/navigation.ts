@@ -18,7 +18,13 @@ export const subscribeActiveConversationNavigation = (
     }
 
     const coordinate = getCoordinate();
-    if (!coordinate.isConversation || (!coordinate.routeAgentId && !coordinate.groupId)) return;
+    // `/chat` conversations carry no route agent or group — the chat base
+    // path alone is enough to keep the store→URL write-back alive there.
+    if (
+      !coordinate.isConversation ||
+      (!coordinate.routeAgentId && !coordinate.groupId && !coordinate.chatBasePath)
+    )
+      return;
 
     if (state.activeTopicId === undefined && coordinate.topicId) {
       useChatStore.setState(

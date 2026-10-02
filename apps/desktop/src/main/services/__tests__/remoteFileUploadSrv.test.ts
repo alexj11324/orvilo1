@@ -66,7 +66,7 @@ describe('RemoteFileUploadService.uploadLocalFile', () => {
     expect(opts.env.ORVILO_SERVER).toBe('https://server.example.com');
   });
 
-  it('still runs without a desktop session — lh falls back to its own login', async () => {
+  it('still runs without a desktop session — orvilo falls back to its own login', async () => {
     mockRemoteServerConfigCtr.getAccessToken.mockResolvedValue(null);
     execFileMock.mockResolvedValue({
       stdout: JSON.stringify({ id: 'file-2', url: 'https://files.example.com/b.png' }),

@@ -2095,7 +2095,7 @@ describe('ClaudeCodeAdapter', () => {
     });
 
     // ── Regression: post-tool text must not coalesce onto the tool-issuing turn ──
-    // Observed on a DEVICE (batch / `lh hetero exec`) Claude Code run — topic
+    // Observed on a DEVICE (batch / `orvilo hetero exec`) Claude Code run — topic
     // tpc_58GZ5d8NGPLx, assistant msg_orSJYzAH9HEL9Gb4k3. That run persisted the
     // final answer text AND the 2 Bash `tool_use` blocks onto a SINGLE assistant
     // message (the tool-issuing seed, no `metadata.mainMessageId`), while a
@@ -2233,7 +2233,7 @@ describe('ClaudeCodeAdapter', () => {
       ).toBeUndefined();
     });
 
-    // BATCH mode (no `--include-partial-messages`, e.g. the `lh hetero exec`
+    // BATCH mode (no `--include-partial-messages`, e.g. the `orvilo hetero exec`
     // CLI used by device + sandbox runs): no `message_delta` arrives, and the
     // `assistant` event's usage is authoritative — not a stale echo. The
     // adapter must emit turn_metadata here so token counts land, carrying the

@@ -137,7 +137,7 @@ const HeterogeneousChatInput = memo(() => {
     [],
   );
 
-  // A run goes to an `lh connect` device when its execution target resolves to a
+  // A run goes to an `orvilo connect` device when its execution target resolves to a
   // bound device (including desktop "local" opened from web). The
   // bound device must be online before we let the user send — guard it here
   // instead of failing at dispatch time.

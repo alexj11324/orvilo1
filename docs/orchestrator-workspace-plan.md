@@ -57,7 +57,7 @@ New device RPC `mergeGitBranch({ path, branch, into?, worktreePath? })`:
 checkout-aware merge of `branch` into `into` inside a given worktree; returns
 `{ merged, sha?, conflicts?: string[], error? }`. Server wrapper next to
 `deviceGateway.addGitWorktree`; device-side handler in `GitCtr` (desktop) and the
-`lh connect` device daemon.
+`orvilo connect` device daemon.
 
 `TaskIntegrationService.integrateRun({ task, taskTopic, topic })`:
 

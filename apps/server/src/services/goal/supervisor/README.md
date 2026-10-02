@@ -1,8 +1,8 @@
 # Goal supervision (experimental)
 
-Enable on a new Goal with `lh goal create <title> --supervise` or
+Enable on a new Goal with `orvilo goal create <title> --supervise` or
 `config.supervision.enabled = true` on `goal.create`. Inspect the independent
-Topic, incidents, operation links and metrics with `lh goal supervision <id>`.
+Topic, incidents, operation links and metrics with `orvilo goal supervision <id>`.
 Existing Goals keep their original behavior unless explicitly enabled at creation.
 
 The first version covers confirmed transport failures of a failed Task's latest

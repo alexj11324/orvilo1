@@ -232,7 +232,7 @@ export class GoalGraphModel {
    * accumulates events for months and an unbounded query made every poll's
    * payload — and the client's rebuild cost — grow linearly with goal age.
    * Newest wins: the audit trail's full history stays queryable in the
-   * database, and the trajectory (`lh trace goal`) already records decisions
+   * database, and the trajectory (`orvilo trace goal`) already records decisions
    * with more fidelity than these events ever carried.
    */
   static readonly GRAPH_EVENT_LIMIT = 200;

@@ -197,7 +197,7 @@ export function registerConnectCommand(program: Command) {
     .action(() => {
       installConnectService();
       log.info(`Installed and started ${CONNECT_SERVICE_NAME}.`);
-      log.info("Run 'lh connect service status' to inspect the service.");
+      log.info("Run 'orvilo connect service status' to inspect the service.");
     });
 
   serviceCmd
@@ -265,8 +265,8 @@ export function registerConnectCommand(program: Command) {
       log.info('──────────────────────────────');
     });
 
-  // Top-level alias for `connect stop`. Users who run `lh connect` naturally
-  // reach for `lh disconnect` to undo it; the nested `connect stop` is not
+  // Top-level alias for `connect stop`. Users who run `orvilo connect` naturally
+  // reach for `orvilo disconnect` to undo it; the nested `connect stop` is not
   // discoverable enough on its own.
   program
     .command('disconnect')
@@ -289,7 +289,7 @@ async function handleDaemonStart(options: ConnectOptions) {
   const existingPid = getRunningDaemonPid();
   if (existingPid !== null) {
     log.error(`Daemon is already running (PID ${existingPid}).`);
-    log.error("Use 'lh connect stop' to stop it, or 'lh connect restart' to restart.");
+    log.error("Use 'orvilo connect stop' to stop it, or 'orvilo connect restart' to restart.");
     process.exit(1);
   }
 
@@ -299,8 +299,8 @@ async function handleDaemonStart(options: ConnectOptions) {
 
   log.info(`Daemon started (PID ${pid}).`);
   log.info(`  Logs: ${getLogPath()}`);
-  log.info("  Run 'lh connect status' to check connection.");
-  log.info("  Run 'lh connect stop' to stop.");
+  log.info("  Run 'orvilo connect status' to check connection.");
+  log.info("  Run 'orvilo connect stop' to stop.");
 }
 
 function buildDaemonArgs(options: ConnectOptions): string[] {
@@ -427,7 +427,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   updateStatus('connecting');
 
   // Housekeeping for the local trace store: partials left behind by killed
-  // agent processes become `interrupted` snapshots (so `lh trace op list` shows
+  // agent processes become `interrupted` snapshots (so `orvilo trace op list` shows
   // the crashed runs), and aged-out snapshots are deleted. Fire-and-forget —
   // it must never delay the gateway connection.
   void sweepLocalTraces().then(({ deleted, reconciled }) => {
@@ -517,7 +517,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
     // Re-enroll replaces the previous share connection instead of stacking one.
     closeWorkspaceConnection(wsId);
 
-    // Same derivation as `lh connect --workspace` so the enroll RPC and a manual
+    // Same derivation as `orvilo connect --workspace` so the enroll RPC and a manual
     // workspace enrollment on this machine resolve to one workspace device.
     const wsIdentity = resolveWorkspaceDeviceIdentity(wsId, undefined, loadOrCreateConnectionId());
 
@@ -594,7 +594,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   };
 
   if (workspaceId) {
-    // Workspace-mode process (`lh connect --workspace <id>`): an unenroll for
+    // Workspace-mode process (`orvilo connect --workspace <id>`): an unenroll for
     // our own workspace means the server revoked this enrollment — ack, then
     // exit gracefully so a daemon stops reconnecting as a ghost device.
     deviceControlDeps.unenrollWorkspace = async (params) => {
@@ -751,7 +751,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
       // refresh failed — fall through
     }
 
-    error("Could not refresh token. Run 'lh login' to re-authenticate.");
+    error("Could not refresh token. Run 'orvilo login' to re-authenticate.");
     cleanup();
     process.exit(1);
   });
@@ -787,7 +787,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   });
 
   // Register this device in the server registry before opening the WS, so the
-  // row exists by the time the gateway reports it online. `lh login` already
+  // row exists by the time the gateway reports it online. `orvilo login` already
   // registers, but re-running here is cheap (idempotent upsert) and covers
   // `--token` sessions that never went through login. Best-effort: a failure
   // must not block the connection.
@@ -921,7 +921,7 @@ function bindGatewayClientHandlers(
   });
 
   // Handle gateway-dispatched agent runs (heterogeneous agents, e.g. Claude
-  // Code). Mirrors the desktop app: spawn `lh hetero exec`, which owns the full
+  // Code). Mirrors the desktop app: spawn `orvilo hetero exec`, which owns the full
   // execution + server-ingest pipeline. Ack with the spawn outcome — `accepted`
   // once the child starts, `rejected` if it fails to spawn (e.g. bad cwd) — so
   // a failed dispatch surfaces as an error instead of a stuck assistant message.

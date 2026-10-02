@@ -123,10 +123,10 @@ export const localSystemRuntime: ServerRuntimeRegistration = {
           }
         }
 
-        // A device shell has its own `lh`, so nothing is rewritten — but the
+        // A device shell has its own `orvilo`, so nothing is rewritten — but the
         // CLI would resolve to the device credentials' PERSONAL scope, which is
         // how a workspace agent ends up unable to find (or edit) itself. Set on
-        // every command, so an `lh` reached indirectly (`bash -lc 'lh …'`, a
+        // every command, so an `orvilo` reached indirectly (`bash -lc 'orvilo …'`, a
         // script, a Makefile) inherits the scope too. The model's own `env`
         // wins: it may be deliberately overriding the scope.
         if (api.name === LocalSystemApiName.runCommand && typeof finalArgs?.command === 'string') {

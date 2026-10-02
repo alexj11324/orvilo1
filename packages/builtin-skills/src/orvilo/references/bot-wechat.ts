@@ -22,7 +22,7 @@ WeChat requires a QR code scan to link your account, which is only supported thr
 4. A QR code is displayed — scan it with WeChat to authenticate
 5. Once scanned, credentials are saved automatically and the bot connects
 
-> WeChat cannot be set up via CLI. The \`lh bot connect\` command only starts an already-configured provider and does not perform the QR authentication flow.
+> WeChat cannot be set up via CLI. The \`orvilo bot connect\` command only starts an already-configured provider and does not perform the QR authentication flow.
 
 ## After Web UI Setup: CLI Operations
 
@@ -30,13 +30,13 @@ Once the bot is configured via Web UI, you can use CLI to manage and monitor it:
 
 \`\`\`bash
 # Check bot status
-lh bot list -a <agentId>
+orvilo bot list -a <agentId>
 
 # Reconnect if disconnected
-lh bot connect <botId>
+orvilo bot connect <botId>
 
 # Send a message
-lh bot message send <botId> --target <conversationId> --message "Hello"
+orvilo bot message send <botId> --target <conversationId> --message "Hello"
 \`\`\`
 
 ## Limitations

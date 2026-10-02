@@ -293,7 +293,7 @@ export const resolveHeteroAgentSystemContext = (
  *   `command`, `args`, `env`, `systemContext`.
  *
  * - **Platform task** (`openclaw` | `hermes`): runs on this desktop when
- *   `executionTarget` is `local`, or on a machine connected via `lh connect`
+ *   `executionTarget` is `local`, or on a machine connected via `orvilo connect`
  *   when it is `device`. `platformAgentId` selects the named platform agent.
  *
  * - **Builtin engine** (`orvilo`): a managed session driven by the local
@@ -330,7 +330,7 @@ export interface HeterogeneousProviderConfig {
   env?: Record<string, string>;
   /**
    * Opt-in method packs installed into the spawned workspace. `aegis: true`
-   * sets `ORVILO_AEGIS_PACK=1` on the spawned `lh hetero exec`, which writes
+   * sets `ORVILO_AEGIS_PACK=1` on the spawned `orvilo hetero exec`, which writes
    * the vendored Aegis skills into the run workspace and opts the agent into
    * the `.aegis/` evidence contract — never default-on; local CLI types only.
    */
@@ -837,13 +837,13 @@ export const buildHeteroSpawnArgs = (
 };
 
 /**
- * Resolve args for the `lh hetero exec` wrapper.
+ * Resolve args for the `orvilo hetero exec` wrapper.
  *
  * Unlike `buildHeteroSpawnArgs`, these args are consumed by the Orvilo CLI
  * wrapper first, not by the native agent binary. Native provider args are
  * encoded with `--agent-arg=<arg>` so wrapper flags such as `-c, --command`
  * never collide with provider flags. Keep selector overrides in the wrapper's
- * structured `--model` / `--effort` form; `lh hetero exec` translates them
+ * structured `--model` / `--effort` form; `orvilo hetero exec` translates them
  * into native provider arguments immediately before `spawnAgent`. Amp mode is
  * encoded as a native argument because older device CLIs predate the wrapper's
  * structured `--mode` option but already support `--agent-arg`.
@@ -852,7 +852,7 @@ export const buildHeteroExecArgs = (
   provider: HeterogeneousProviderConfig | undefined | null,
 ): string[] | undefined => {
   if (!provider) return undefined;
-  // Builtin Orvilo harness: the device/sandbox-side `lh hetero exec` still
+  // Builtin Orvilo harness: the device/sandbox-side `orvilo hetero exec` still
   // needs the resolved engine to pick the engine's CLI family — it travels as
   // the wrapper-level `--engine` option; model/effort/speed use the family's
   // structured encodings.
@@ -1020,7 +1020,7 @@ export const buildHeteroExecArgs = (
  *               remote-device tool. The ONLY mode that touches a device the user
  *               did not explicitly select. Opt-in: never a silent default.
  * - `local`   : run on the user's Electron desktop (desktop only)
- * - `device`  : dispatched to an `lh connect` device identified by `boundDeviceId`
+ * - `device`  : dispatched to an `orvilo connect` device identified by `boundDeviceId`
  * - `sandbox` : server-spawned cloud sandbox
  *
  * Platform task agents (`openclaw` | `hermes`) support `local` and `device` targets.
@@ -1109,7 +1109,7 @@ export type AgentTopicSharePolicy = 'member' | 'restricted';
  */
 export interface OrviloAgentAgencyConfig {
   /**
-   * Device ID of the machine connected via `lh connect`.
+   * Device ID of the machine connected via `orvilo connect`.
    * Required when `executionTarget === 'device'`.
    */
   boundDeviceId?: string;

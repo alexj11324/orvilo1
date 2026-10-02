@@ -157,7 +157,7 @@ export function registerUpdateCommand(program: Command) {
 
       if (options.check) {
         log.info(
-          `Update available: ${current} → ${pc.green(latest)}. Run ${pc.cyan('lh update')} to upgrade.`,
+          `Update available: ${current} → ${pc.green(latest)}. Run ${pc.cyan('orvilo update')} to upgrade.`,
         );
         return;
       }

@@ -1,14 +1,14 @@
-const content = `# lh message - Message Management
+const content = `# orvilo message - Message Management
 
 Manage chat messages.
 
 ## Subcommands
 
-- \`lh message list [--topic-id <id>] [--agent-id <id>] [-L <limit>] [--page <n>]\` - List messages
-- \`lh message search <keywords>\` - Search messages by keywords
-- \`lh message delete <ids...> [--yes]\` - Delete messages
-- \`lh message count [--start <date>] [--end <date>]\` - Count messages
-- \`lh message heatmap\` - Get message activity heatmap
+- \`orvilo message list [--topic-id <id>] [--agent-id <id>] [-L <limit>] [--page <n>]\` - List messages
+- \`orvilo message search <keywords>\` - Search messages by keywords
+- \`orvilo message delete <ids...> [--yes]\` - Delete messages
+- \`orvilo message count [--start <date>] [--end <date>]\` - Count messages
+- \`orvilo message heatmap\` - Get message activity heatmap
 
 ## Tips
 

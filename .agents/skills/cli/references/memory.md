@@ -16,14 +16,14 @@ Manage user memories - the AI's long-term knowledge about users.
 
 ---
 
-## `lh memory list [category]`
+## `orvilo memory list [category]`
 
 List memory entries, optionally filtered by category.
 
 ```bash
-lh memory list            # All categories
-lh memory list identity   # Only identity memories
-lh memory list preference # Only preferences
+orvilo memory list            # All categories
+orvilo memory list identity   # Only identity memories
+orvilo memory list preference # Only preferences
 ```
 
 | Option            | Description |
@@ -34,12 +34,12 @@ lh memory list preference # Only preferences
 
 ---
 
-## `lh memory create`
+## `orvilo memory create`
 
 Create a new identity memory entry.
 
 ```bash
-lh memory create [options]
+orvilo memory create [options]
 ```
 
 | Option                     | Description              |
@@ -52,16 +52,16 @@ lh memory create [options]
 
 ---
 
-## `lh memory edit <category> <id>`
+## `orvilo memory edit <category> <id>`
 
 Edit a memory entry. Options vary by category:
 
 ```bash
-lh memory edit identity < id > [options]
-lh memory edit activity < id > [options]
-lh memory edit context < id > [options]
-lh memory edit experience < id > [options]
-lh memory edit preference < id > [options]
+orvilo memory edit identity < id > [options]
+orvilo memory edit activity < id > [options]
+orvilo memory edit context < id > [options]
+orvilo memory edit experience < id > [options]
+orvilo memory edit preference < id > [options]
 ```
 
 ### Category-specific Options
@@ -88,32 +88,32 @@ lh memory edit preference < id > [options]
 
 ---
 
-## `lh memory delete <category> <id>`
+## `orvilo memory delete <category> <id>`
 
 ```bash
-lh memory delete identity < id > [--yes]
+orvilo memory delete identity < id > [--yes]
 ```
 
 ---
 
-## `lh memory persona`
+## `orvilo memory persona`
 
 Display the compiled memory persona summary.
 
 ```bash
-lh memory persona [--json [fields]]
+orvilo memory persona [--json [fields]]
 ```
 
 **Output**: Summarized user profile built from all memory categories.
 
 ---
 
-## `lh memory extract`
+## `orvilo memory extract`
 
 Trigger async memory extraction from chat history.
 
 ```bash
-lh memory extract [--from [--to < date > ] < date > ]
+orvilo memory extract [--from [--to < date > ] < date > ]
 ```
 
 | Option          | Description             |
@@ -125,12 +125,12 @@ Starts a background task that analyzes chat history and creates new memory entri
 
 ---
 
-## `lh memory extract-status`
+## `orvilo memory extract-status`
 
 Check the status of a memory extraction task.
 
 ```bash
-lh memory extract-status [--task-id [--json [fields]] < id > ]
+orvilo memory extract-status [--task-id [--json [fields]] < id > ]
 ```
 
 | Option           | Description         |

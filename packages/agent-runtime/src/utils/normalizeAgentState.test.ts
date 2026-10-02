@@ -152,7 +152,7 @@ describe('normalizeAgentState', () => {
         queueRetries: 3,
         queueRetryDelay: '10s',
         stream: false,
-        userAgent: 'lh-cli',
+        userAgent: 'orvilo-cli',
         workingDirectory: '/repo',
       },
     };
@@ -165,7 +165,7 @@ describe('normalizeAgentState', () => {
         deviceScope: 'workspace',
         shareVisitor: { shareId: 'share-1', visitorUserId: 'visitor-1' },
       },
-      audit: { clientIp: '10.0.0.1', userAgent: 'lh-cli' },
+      audit: { clientIp: '10.0.0.1', userAgent: 'orvilo-cli' },
       policy: { deviceAccess: { canUseDevice: false, reason: 'external-bot' } },
     });
     expect(normalized.plan).toEqual({

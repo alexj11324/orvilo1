@@ -547,7 +547,7 @@ describe('buildHelperMaps', () => {
     it('should resolve lastMessageId from assistant children tools result', () => {
       // Data provenance:
       // - The nested assistant child with `tools[].result_msg_id` is abstracted from the
-      //   real eval/compression export we inspected through `lh eval message list`.
+      //   real eval/compression export we inspected through `orvilo eval message list`.
       // - In that async eval flow, the compressed history contains assistant/tool chains
       //   instead of only plain lastMessageId markers.
       // - This represents the eval side of the system: long-running async task/search chains.

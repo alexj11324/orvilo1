@@ -31,7 +31,7 @@ describe('AEGIS_ORVILO_CONTRACT', () => {
 });
 
 describe('AEGIS_PACK_ENV', () => {
-  it('is the env bit the dispatch sets on lh hetero exec', () => {
+  it('is the env bit the dispatch sets on orvilo hetero exec', () => {
     expect(AEGIS_PACK_ENV).toBe('ORVILO_AEGIS_PACK');
   });
 });

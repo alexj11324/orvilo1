@@ -36,8 +36,8 @@ export function resolveDeviceIdentity(
 }
 
 /**
- * Register this device in the server registry. Shared by `lh login` (so the
- * device row exists right after auth) and `lh connect` (so the row exists
+ * Register this device in the server registry. Shared by `orvilo login` (so the
+ * device row exists right after auth) and `orvilo connect` (so the row exists
  * before the WS opens). Best-effort by contract: callers should wrap this in a
  * try/catch and treat any failure as non-fatal.
  */
@@ -94,7 +94,7 @@ export async function mintWorkspaceConnectToken(
 /**
  * Register this machine as a device of the given workspace (member+).
  * `visibility: 'public'` enrolls it into the shared pool visible to every
- * member (`lh connect --workspace <id> --public`); omitted → the server
+ * member (`orvilo connect --workspace <id> --public`); omitted → the server
  * default (private, visible only to the enroller).
  */
 export async function registerWorkspaceDevice(

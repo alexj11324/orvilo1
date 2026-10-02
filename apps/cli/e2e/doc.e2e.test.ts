@@ -6,17 +6,17 @@ import path from 'node:path';
 import { describe, expect, it } from 'vitest';
 
 /**
- * E2E tests for `lh doc` document management commands.
+ * E2E tests for `orvilo doc` document management commands.
  *
  * Prerequisites:
- * - `lh` CLI is installed and linked globally
- * - User is authenticated (`lh login` completed)
+ * - `orvilo` CLI is installed and linked globally
+ * - User is authenticated (`orvilo login` completed)
  * - Network access to the Orvilo server
  *
  * These tests create real documents, verify CRUD operations, then clean up.
  */
 
-const CLI = process.env.LH_CLI_PATH || 'lh';
+const CLI = process.env.ORVILO_CLI_PATH || 'orvilo';
 const TIMEOUT = 30_000;
 
 function run(args: string): string {
@@ -38,7 +38,7 @@ function extractDocId(output: string): string {
   return idMatch![1];
 }
 
-describe('lh doc - E2E', () => {
+describe('orvilo doc - E2E', () => {
   const testTitle = `E2E-Doc-${Date.now()}`;
   const testBody = 'Created by E2E test';
   let createdId: string;

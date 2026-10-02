@@ -11,7 +11,7 @@ import { getTrpcClient } from '../../../api/client';
 import { log } from '../../../utils/logger';
 import { localTraceStoreOptions } from '../../../utils/traceStore';
 
-/** Store locations `lh trace op` reads, in the order a tie is broken. */
+/** Store locations `orvilo trace op` reads, in the order a tie is broken. */
 export interface LocalSnapshotStores {
   /** `~/.orvilo/traces` — where locally executed agent runs record. */
   cliHome?: LoadSnapshotOptions;
@@ -26,7 +26,7 @@ export interface LocalSnapshotStores {
  * target (`latest`) they have to be COMPARED rather than tried in order: each
  * store answers `latest` with its own newest entry, so probing one first would
  * inspect a stale run whenever the other store holds something newer — while
- * `lh trace op list`, which merges and sorts both, correctly shows the newer
+ * `orvilo trace op list`, which merges and sorts both, correctly shows the newer
  * one first. An explicit id needs no comparison: at most one store has it.
  */
 export const loadLocalSnapshot = async (
@@ -51,10 +51,10 @@ export const loadLocalSnapshot = async (
 };
 
 /**
- * Resolve the snapshot a `lh trace op` subcommand was pointed at, or exit with
+ * Resolve the snapshot a `orvilo trace op` subcommand was pointed at, or exit with
  * a message that says what to do about it.
  *
- * The download path is what `lh` adds over the standalone `agent-tracing` CLI:
+ * The download path is what `orvilo` adds over the standalone `agent-tracing` CLI:
  * the object key lives on `agent_operations.trace_s3_key` and the server signs
  * it against the caller's own ownership scope, so inspecting a production run
  * needs a Orvilo login and nothing else — no `TRACING_BASE_URL`, no public
@@ -85,7 +85,7 @@ export const resolveSnapshotOrExit = async (target?: string): Promise<ExecutionS
   };
 
   try {
-    // Locally executed runs (`lh hetero exec`) record to the CLI home, so probe
+    // Locally executed runs (`orvilo hetero exec`) record to the CLI home, so probe
     // it before anything that can reach the network — otherwise inspecting a
     // run this machine just performed would round-trip to the server for a
     // snapshot that is already sitting on disk.
@@ -104,7 +104,7 @@ export const resolveSnapshotOrExit = async (target?: string): Promise<ExecutionS
       log.error(
         serverReason
           ? `${serverReason}\n` +
-              'Run `lh trace op list --topic <topicId>` to see which operations still have a trace.'
+              'Run `orvilo trace op list --topic <topicId>` to see which operations still have a trace.'
           : error.message,
       );
     } else if (error instanceof AmbiguousSnapshotIdError) {

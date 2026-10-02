@@ -1903,7 +1903,7 @@ export const executeHeterogeneousAgent = async (
   try {
     const sessionEnv = {
       // Tell the CLI which Orvilo conversation it is running inside. The child
-      // (and every subprocess it spawns, e.g. `lh`) inherits these, so a tool
+      // (and every subprocess it spawns, e.g. `orvilo`) inherits these, so a tool
       // running under the agent can attribute its output back to this topic
       // without the agent having to pass ids it can't see. User-configured env
       // wins — this is provenance, never an override the user can't escape.

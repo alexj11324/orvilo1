@@ -11,7 +11,7 @@ import { defineAction } from '../defineAction';
 
 /**
  * Dev-tool action (visible only with Advanced Tools enabled): copies this
- * message's id — the handle for `lh` queries, eval cases and bug reports.
+ * message's id — the handle for `orvilo` queries, eval cases and bug reports.
  *
  * For a group message the useful id is the underlying assistant message, not
  * the aggregate group, same as `copyOperationId`.

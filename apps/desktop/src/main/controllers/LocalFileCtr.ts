@@ -427,7 +427,7 @@ export default class LocalFileCtr extends ControllerModule {
     // Image files: `local-file-shell` refuses binary, and the agent should be
     // able to actually *see* the image (vision) rather than hit "Unsupported
     // binary file type". Delegate the upload to the embedded CLI
-    // (`lh file upload`) and return a durable { fileId, url } — bytes never
+    // (`orvilo file upload`) and return a durable { fileId, url } — bytes never
     // cross IPC and never reach the DB; the MessageContent processor turns
     // the uploaded URL into an `image_url` part for the LLM.
     const ext = path.extname(params.path).toLowerCase().replace('.', '');

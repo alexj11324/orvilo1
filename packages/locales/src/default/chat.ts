@@ -634,7 +634,7 @@ export default {
   'heteroAgent.executionTarget.localSandboxUnavailable': 'Not available on this device: {{reason}}',
   'heteroAgent.executionTarget.manage': 'Manage',
   'heteroAgent.executionTarget.noDevices':
-    'No remote devices yet. Run `lh connect` on another machine to add one.',
+    'No remote devices yet. Run `orvilo connect` on another machine to add one.',
   'heteroAgent.executionTarget.noWorkspaceDevices':
     'No workspace devices yet. Run `{{cmd}}` on a machine to enroll it for every member.',
   'heteroAgent.executionTarget.none': 'No device',
@@ -1129,7 +1129,7 @@ export default {
   'connectAgent.create.download': 'Download',
   'connectAgent.create.connectCli': 'Connect with CLI',
   'connectAgent.create.noDevicesCliHint': 'Run this command on the computer you want to connect',
-  'connectAgent.create.noDevicesCmd': 'lh connect',
+  'connectAgent.create.noDevicesCmd': 'orvilo connect',
   'connectAgent.create.refresh': 'Refresh',
   'connectAgent.create.scanning': 'Scanning agents on this device…',
   'connectAgent.create.scanFailed': 'Scan failed',
@@ -1176,7 +1176,7 @@ export default {
   // Connect agent device guard banner
   'platformAgent.deviceGuard.deviceOffline.title': 'Device not connected',
   'platformAgent.deviceGuard.deviceOffline.desc':
-    'The bound device is not connected. Run `lh connect` on that machine then refresh.',
+    'The bound device is not connected. Run `orvilo connect` on that machine then refresh.',
   'platformAgent.deviceGuard.platformUnavailable.title': '{{name}} not available',
   'platformAgent.deviceGuard.platformUnavailable.desc':
     '{{name}} is not installed on the connected device.',

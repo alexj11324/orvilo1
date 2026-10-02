@@ -352,7 +352,7 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
   });
 
   // A producer's bounded retry must not turn a settled run into a reported
-  // failure: `lh hetero exec` exits 1 whenever its finish is rejected, so a
+  // failure: `orvilo hetero exec` exits 1 whenever its finish is rejected, so a
   // duplicate terminal callback has to ack instead of returning CONFLICT.
   describe('post-terminal duplicates', () => {
     const operationCaller = () =>

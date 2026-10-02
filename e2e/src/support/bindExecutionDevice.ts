@@ -4,7 +4,7 @@
  * The in-process agent runtime is retired: every web send resolves an
  * execution plan, and a hetero agent without a bound device lands on the
  * "No device bound" pending stub. The fake agent gateway emulates a connected
- * device (`POST /api/device/agent/run` → synthesized `lh hetero exec` turn via
+ * device (`POST /api/device/agent/run` → synthesized `orvilo hetero exec` turn via
  * `aiAgent.heteroIngest`/`heteroFinish`); this module seeds the other half —
  * a `devices` row plus `executionTarget: 'device'` + `boundDeviceId` on the
  * agent's `agency_config` — so dispatch resolves the real device path.

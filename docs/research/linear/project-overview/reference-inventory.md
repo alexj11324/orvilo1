@@ -719,9 +719,9 @@ Close project details 底盘           lch(94.854 0.157 282)
 其它硬编码色        #95a2b3（项目图标，computed rgb(149,162,179)）
 
 字号 / 字重
-  项目标题            24px / 600 / lh 32px / ls -0.16px
+  项目标题            24px / 600 / orvilo 32px / ls -0.16px
   主列里程碑名        15px / 450
-  摘要 / 描述正文     15px / 450 / lh 23–24px / ls -0.1px（摘要）
+  摘要 / 描述正文     15px / 450 / orvilo 23–24px / ls -0.1px（摘要）
   H3 区块标题         13px / 500
   内联属性 chip 文字   13px / 500
   右栏卡头 / 卡内链接  13px / 500 / 450

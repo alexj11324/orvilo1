@@ -81,7 +81,7 @@ export interface RuntimeSelectionContext {
    * switcher. Only meaningful when `heterogeneousProvider` is a local CLI
    * (claude-code / codex). Controls the desktop fork:
    *   - `'device'` / `'sandbox'` → route through Gateway so the server can
-   *     dispatch to an `lh connect` device or spawn a sandbox.
+   *     dispatch to an `orvilo connect` device or spawn a sandbox.
    *   - `'local'` / `undefined`  → keep today's default (desktop → `hetero`
    *     in-process spawn, web → `gateway` sandbox unless a desktop-local
    *     boundDeviceId is available, in which case the server dispatches to it.

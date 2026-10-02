@@ -1130,7 +1130,7 @@ export function registerEvalCommand(program: Command) {
                 deviceId = resolveLocalDeviceId();
                 if (!deviceId) {
                   throw new InvalidArgumentError(
-                    "No local device found. Run 'lh connect' first, then retry with --device local.",
+                    "No local device found. Run 'orvilo connect' first, then retry with --device local.",
                   );
                 }
               } else {
@@ -1143,7 +1143,7 @@ export function registerEvalCommand(program: Command) {
               );
               if (!matched) {
                 throw new InvalidArgumentError(
-                  `Device "${deviceId}" was not found. Check 'lh device list' and try again.`,
+                  `Device "${deviceId}" was not found. Check 'orvilo device list' and try again.`,
                 );
               }
               if (!matched.online) {

@@ -21,7 +21,7 @@ export interface FileStoreCreateFileInput {
 
 /**
  * The three Orvilo file-store procedures the image echo needs, decoupled from
- * how a runtime reaches them: `lh hetero exec` calls them through its typed
+ * how a runtime reaches them: `orvilo hetero exec` calls them through its typed
  * tRPC client, Electron main through a hand-rolled authed fetch. Only the
  * runtime that spawned the CLI holds those credentials.
  */

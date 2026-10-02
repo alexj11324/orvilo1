@@ -268,7 +268,7 @@ export default class GatewayConnectionService extends ServiceModule {
    * from the stable `deviceId`. Reuses the persisted random UUID (historically
    * `gatewayDeviceId`, now used purely as the connectionId) so a reconnect of
    * this install replaces only its own previous socket, while a co-running
-   * `lh connect` on the same machine (same deviceId, different connectionId)
+   * `orvilo connect` on the same machine (same deviceId, different connectionId)
    * stays connected.
    */
   getConnectionId(): string {
@@ -498,7 +498,7 @@ export default class GatewayConnectionService extends ServiceModule {
    * Identity for a WORKSPACE share connection. MUST stay byte-compatible with
    * the CLI's `resolveWorkspaceDeviceIdentity` (apps/cli/src/device/register.ts):
    * both hash the `workspace:<id>` principal, so the same physical machine
-   * enrolled into a workspace — via desktop share or `lh connect --workspace` —
+   * enrolled into a workspace — via desktop share or `orvilo connect --workspace` —
    * resolves to one workspace device.
    */
   private async resolveWorkspaceDeviceIdentity(
@@ -782,7 +782,7 @@ export default class GatewayConnectionService extends ServiceModule {
     // observe the whole dispatch round trip, so without this number a slow tool
     // and slow transport are indistinguishable — and desktop is where most
     // device tool calls actually happen, so leaving it out here would bias the
-    // measurement toward the `lh connect` subset.
+    // measurement toward the `orvilo connect` subset.
     const startedAt = performance.now();
 
     try {

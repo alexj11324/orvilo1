@@ -59,7 +59,7 @@ describe('verify rubric config commands', () => {
     const program = new Command();
     program.exitOverride();
     registerVerifyCommand(program);
-    await program.parseAsync(['node', 'lh', 'verify', ...args]);
+    await program.parseAsync(['node', 'orvilo', 'verify', ...args]);
   };
 
   it('passes maxRepairRounds config when creating a rubric', async () => {
@@ -341,7 +341,7 @@ describe('evidenceTypeForFile — markdown evidence', () => {
   });
 
   it('inlines a small markdown file as content instead of uploading it', () => {
-    const dir = mkdtempSync(path.join(tmpdir(), 'lh-evidence-'));
+    const dir = mkdtempSync(path.join(tmpdir(), 'orvilo-evidence-'));
     const file = path.join(dir, 'root-cause.md');
     writeFileSync(file, '### 根因证据\n\n- `heteroSessionId` 未透传');
 
@@ -587,10 +587,10 @@ describe('scenarioFromResult / genericContextFromResult — non-coding scenarios
       genericContextFromResult({
         context: { testedAt: '2026-07-16T10:00:00Z', wordCount: 82_000, work: '长夜' },
         createdAt: '2026-07-15T00:00:00Z',
-        entry: 'lh doc export',
+        entry: 'orvilo doc export',
       }),
     ).toEqual({
-      entry: 'lh doc export',
+      entry: 'orvilo doc export',
       testedAt: '2026-07-16T10:00:00Z',
       wordCount: 82_000,
       work: '长夜',

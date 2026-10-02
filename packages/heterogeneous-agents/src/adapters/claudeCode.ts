@@ -1080,7 +1080,7 @@ export class ClaudeCompatibleStreamAdapter implements AgentEventAdapter {
   private stepIndex = 0;
   /**
    * True once any `stream_event` wrapper is seen — i.e. CC was spawned with
-   * `--include-partial-messages` (desktop driver and current `lh hetero exec`).
+   * `--include-partial-messages` (desktop driver and current `orvilo hetero exec`).
    * Older producers and explicit batch-mode callers still leave this false,
    * so `handleAssistant` owns per-turn usage instead of `message_delta`.
    */
@@ -1091,7 +1091,7 @@ export class ClaudeCompatibleStreamAdapter implements AgentEventAdapter {
    * Whether the current turn (the in-flight `currentMessageId`) has already
    * emitted a `tool_use`. When CC reuses the SAME `message.id` to stream the
    * model's post-tool answer (it continues after the `tool_result` without
-   * minting a fresh id — seen on device/batch `lh hetero exec` runs), that
+   * minting a fresh id — seen on device/batch `orvilo hetero exec` runs), that
    * trailing text must NOT coalesce onto the tool-issuing assistant. We force a
    * step boundary so the answer anchors to its own assistant, chained after the
    * tool results — otherwise text + `tool_use` share one message and the

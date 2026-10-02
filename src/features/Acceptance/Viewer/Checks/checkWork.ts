@@ -3,7 +3,7 @@
  * reviewer does not have to hand-summarize evidence and feedback.
  *
  * It deliberately names no CLI command. The review-loop CLI
- * (`lh acceptance feedback`, `lh acceptance run …`) was retired with the
+ * (`orvilo acceptance feedback`, `orvilo acceptance run …`) was retired with the
  * standalone platform, and a prompt that tells an agent to run a command that
  * no longer exists is worse than one that says nothing: it sends the agent
  * hunting for a tool that will answer `unknown command`. What survives is the

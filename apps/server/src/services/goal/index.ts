@@ -48,6 +48,7 @@ import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
 import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
 import { taskRequiresBuiltinToolMount } from '../taskRunner/toolMountRequirement';
+import { settleTaskExecution } from '../taskSettlement';
 import { AcceptanceService } from '../verify/acceptanceService';
 import { VerifyPlanGeneratorService } from '../verify/planGenerator';
 import { GoalCriteriaGeneratorService, type GoalDecompositionDraft } from './criteriaGenerator';
@@ -2154,9 +2155,18 @@ export class GoalService {
         topicId,
         'timeout',
       );
-      await new TaskModel(tx, this.userId, this.workspaceId).updateStatus(task.id, 'paused', {
-        error: LEASE_EXPIRED_ERROR,
-      });
+      // The run's lease died without a verdict — settle it inside the reclaim
+      // transaction so the operation/topic/task writes stay atomic.
+      await settleTaskExecution(
+        tx,
+        this.userId,
+        {
+          context: { error: LEASE_EXPIRED_ERROR },
+          outcome: 'outcome_unknown',
+          taskId: task.id,
+        },
+        this.workspaceId,
+      );
       return true;
     });
     if (!reclaimed) return undefined;

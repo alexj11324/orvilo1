@@ -8,6 +8,7 @@ const mocks = vi.hoisted(() => ({
   cancelIfRunning: vi.fn(),
   cleanupTaskWorktrees: vi.fn(),
   drain: vi.fn(),
+  findById: vi.fn(),
   findByTaskId: vi.fn(),
   findRecoverableScopes: vi.fn(),
   findStuckTasks: vi.fn(),
@@ -15,7 +16,10 @@ const mocks = vi.hoisted(() => ({
   requestStop: vi.fn(),
   runTaskDeliveryReviewSweep: vi.fn(),
   sweepPendingIntegrations: vi.fn(),
+  resolveTaskReviewRequirement: vi.fn(),
   updateContext: vi.fn(),
+  updateStatus: vi.fn(),
+  updateStatusForExecutionContract: vi.fn(),
   updateStatusIfCurrent: vi.fn(),
   updateStatusIfReservation: vi.fn(),
 }));
@@ -29,7 +33,11 @@ vi.mock('@/database/models/task', () => ({
   TaskModel: Object.assign(
     vi.fn(function () {
       return {
+        findById: mocks.findById,
+        resolveTaskReviewRequirement: mocks.resolveTaskReviewRequirement,
         updateContext: mocks.updateContext,
+        updateStatus: mocks.updateStatus,
+        updateStatusForExecutionContract: mocks.updateStatusForExecutionContract,
         updateStatusIfCurrent: mocks.updateStatusIfCurrent,
         updateStatusIfReservation: mocks.updateStatusIfReservation,
       };
@@ -123,6 +131,10 @@ describe('runTaskWatchdog cancellation convergence', () => {
       held: [],
     });
     mocks.updateContext.mockResolvedValue({});
+    mocks.findById.mockResolvedValue(stuckTask({ status: 'running' }));
+    mocks.resolveTaskReviewRequirement.mockResolvedValue(false);
+    mocks.updateStatus.mockResolvedValue({ id: 'task-1' });
+    mocks.updateStatusForExecutionContract.mockResolvedValue({ id: 'task-1' });
     mocks.updateStatusIfCurrent.mockResolvedValue({ id: 'task-1' });
     mocks.updateStatusIfReservation.mockResolvedValue({ id: 'task-1' });
   });

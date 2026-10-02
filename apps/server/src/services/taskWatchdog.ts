@@ -10,6 +10,7 @@ import { runTaskDeliveryReviewSweep } from '@/server/services/taskDeliveryReview
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { TaskResultCallbackRedisStore } from '@/server/services/taskResultBridge/redisStore';
+import { settleTaskExecution } from '@/server/services/taskSettlement';
 
 const log = debug('lobe-server:task-watchdog');
 
@@ -157,21 +158,24 @@ export async function runTaskWatchdog(
             watchdogCancel: { unconfirmedAttempts: attempts },
           });
           if (attempts >= MAX_UNCONFIRMED_CANCELS) {
-            const parkExtra = {
-              error: 'Watchdog cancellation unconfirmed',
-              runReservationExpiresAt: null,
-              runReservationId: null,
-            } as const;
-            const parkedTask = task.runReservationId
-              ? await taskModel.updateStatusIfReservation(
-                  task.id,
-                  task.runReservationId,
-                  'running',
-                  'paused',
-                  parkExtra,
-                )
-              : await taskModel.updateStatusIfCurrent(task.id, 'running', 'paused', parkExtra);
-            if (parkedTask) {
+            // The run's fate is unprovable — settle it as outcome_unknown so the
+            // issue stays open with the correct attention reason.
+            const settlement = await settleTaskExecution(
+              db,
+              taskOwnerId,
+              {
+                context: {
+                  clearRunReservation: true,
+                  error: 'Watchdog cancellation unconfirmed',
+                  expectedStatus: 'running',
+                  reservationId: task.runReservationId ?? undefined,
+                },
+                outcome: 'outcome_unknown',
+                taskId: task.id,
+              },
+              wsId,
+            );
+            if (settlement.applied) {
               await new BriefModel(db, taskOwnerId, wsId).create({
                 agentId: task.assigneeAgentId || undefined,
                 priority: 'urgent',
@@ -190,22 +194,25 @@ export async function runTaskWatchdog(
       }
     }
 
-    const failureExtra = {
-      completedAt: new Date(),
-      error: 'Heartbeat timeout',
-      runReservationExpiresAt: null,
-      runReservationId: null,
-    } as const;
-    const failedTask = task.runReservationId
-      ? await taskModel.updateStatusIfReservation(
-          task.id,
-          task.runReservationId,
-          'running',
-          'failed',
-          failureExtra,
-        )
-      : await taskModel.updateStatusIfCurrent(task.id, 'running', 'failed', failureExtra);
-    if (!failedTask) {
+    // The heartbeat-dead run is an execution failure — the issue keeps its
+    // open workflow state with `execution_failed` attention (legacy
+    // projection: 'paused'), not a terminal 'failed' write.
+    const settlement = await settleTaskExecution(
+      db,
+      taskOwnerId,
+      {
+        context: {
+          clearRunReservation: true,
+          error: 'Heartbeat timeout',
+          expectedStatus: 'running',
+          reservationId: task.runReservationId ?? undefined,
+        },
+        outcome: 'failed',
+        taskId: task.id,
+      },
+      wsId,
+    );
+    if (!settlement.applied) {
       log('Watchdog failure ignored superseded task=%s', task.identifier);
       continue;
     }

@@ -47,6 +47,10 @@ import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgme
 import { SystemAgentService } from '@/server/services/systemAgent';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 import { createTaskSchedulerModule } from '@/server/services/taskScheduler';
+import {
+  settleTaskExecution,
+  type SettleTaskExecutionInput,
+} from '@/server/services/taskSettlement';
 
 import {
   isTrivialAssistantContent,
@@ -259,19 +263,29 @@ export class TaskLifecycleService {
     // the CAS aligned with the status that settleIfRunning actually claimed;
     // requiring `running` here would strand that task with no next tick.
     const claimedTaskStatus = currentTask.status === 'scheduled' ? 'scheduled' : 'running';
-    const updateOwnedStatus = async (
-      status: string,
-      extra?: { completedAt?: Date; error?: string | null },
-    ) => {
-      const updated = await this.taskModel.updateStatusIfReservation(
-        taskId,
-        claimed,
-        claimedTaskStatus,
-        status,
-        extra,
+
+    // All state decisions flow through the settlement service — the only
+    // thing this lifecycle still owns is the concurrency guard (the claimed
+    // completion reservation) and the side effects around the write.
+    // A declined apply means the generation was superseded — same semantics
+    // the old reservation CAS enforced by throwing.
+    const settleOwned = async (input: Omit<SettleTaskExecutionInput, 'operationId' | 'taskId'>) => {
+      const result = await settleTaskExecution(
+        this.db,
+        this.userId,
+        {
+          dispatchFence: params.dispatchFence,
+          executionGeneration: params.executionGeneration,
+          ...input,
+          operationId: params.operationId,
+          taskId,
+        },
+        this.workspaceId,
       );
-      if (!updated) throw new TaskCompletionSupersededError();
-      return updated;
+      if (!result.applied && result.skippedReason === 'stale_generation') {
+        throw new TaskCompletionSupersededError();
+      }
+      return result;
     };
 
     let verifyBound = false;
@@ -289,15 +303,29 @@ export class TaskLifecycleService {
       if (reason === 'done') {
         try {
           if (!(await integrationService.captureRemoteIdentityOnComplete(currentTask, topicId))) {
-            await updateOwnedStatus('paused', {
-              error: 'Could not freeze the remote delivery identity',
+            await settleOwned({
+              context: {
+                blocked: true,
+                error: 'Could not freeze the remote delivery identity',
+                expectedStatus: claimedTaskStatus,
+                reservationId: claimed,
+                runTrigger: params.runTrigger,
+              },
+              outcome: 'succeeded',
             });
             return;
           }
         } catch (error) {
           log('remote delivery identity capture failed for task=%s: %O', taskIdentifier, error);
-          await updateOwnedStatus('paused', {
-            error: 'Could not freeze the remote delivery identity',
+          await settleOwned({
+            context: {
+              blocked: true,
+              error: 'Could not freeze the remote delivery identity',
+              expectedStatus: claimedTaskStatus,
+              reservationId: claimed,
+              runTrigger: params.runTrigger,
+            },
+            outcome: 'succeeded',
           });
           return;
         }
@@ -342,8 +370,15 @@ export class TaskLifecycleService {
             verifyRun?.status === 'errored';
         } catch (error) {
           log('verify-bound check failed for op=%s: %O', params.operationId, error);
-          await updateOwnedStatus('paused', {
-            error: 'Could not determine the delivery verification state',
+          await settleOwned({
+            context: {
+              blocked: true,
+              error: 'Could not determine the delivery verification state',
+              expectedStatus: claimedTaskStatus,
+              reservationId: claimed,
+              runTrigger: params.runTrigger,
+            },
+            outcome: 'succeeded',
           });
           return;
         }
@@ -376,8 +411,15 @@ export class TaskLifecycleService {
           }
 
           if (integrationOutcome === 'blocked') {
-            await updateOwnedStatus('paused', {
-              error: 'Workspace merge could not be completed',
+            await settleOwned({
+              context: {
+                blocked: true,
+                error: 'Workspace merge could not be completed',
+                expectedStatus: claimedTaskStatus,
+                reservationId: claimed,
+                runTrigger: params.runTrigger,
+              },
+              outcome: 'succeeded',
             });
             return;
           }
@@ -454,46 +496,47 @@ export class TaskLifecycleService {
               } | null
             )?.completion?.requestedByOperationId === params.operationId;
 
-          if (
-            currentTask.automationMode === 'schedule' &&
-            !verifyBound &&
-            (await this.scheduleCapReached(currentTask))
-          ) {
+          const scheduleCapReached =
+            currentTask.automationMode === 'schedule' && !verifyBound
+              ? await this.scheduleCapReached(currentTask)
+              : false;
+          if (scheduleCapReached) {
             log('cap reached for task=%s — marking completed post-tick', taskIdentifier);
-            await updateOwnedStatus('completed', { completedAt: new Date() });
-          } else if (currentTask.automationMode) {
-            // A successful tick parks the automation task back at its resting
-            // 'scheduled' state and clears the live error column. Before clearing
-            // it, stamp a durable recovery marker + reset the failure fuse so the
-            // recovery is auditable and a later query can still tell the task once
-            // failed — the live `error` alone would silently self-heal.
+          }
+
+          // A successful tick parks the automation task back at its resting
+          // 'scheduled' state and clears the live error column. Before clearing
+          // it, stamp a durable recovery marker + reset the failure fuse so the
+          // recovery is auditable and a later query can still tell the task once
+          // failed — the live `error` alone would silently self-heal.
+          if (currentTask.automationMode && !verifyBound && !scheduleCapReached) {
             await this.recordAutomationRecovery(currentTask, claimed);
-            await updateOwnedStatus('scheduled', { error: null });
-          } else if (!verifyBound && completionRequestedByCurrentOperation) {
-            if (currentTask.parentTaskId) {
-              await this.completeSubtask(currentTask, claimed);
-            } else {
-              await updateOwnedStatus('completed', {
-                completedAt: new Date(),
-                error: null,
-              });
-            }
-          } else if (!verifyBound && params.runTrigger === 'goal' && !currentTask.parentTaskId) {
-            await updateOwnedStatus('completed', {
-              completedAt: new Date(),
+          }
+
+          // The settlement policy owns every 'done' transition now:
+          // verify-bound → hold (verify drives it later), capped schedule →
+          // complete, automation tick → keep_open at 'scheduled', agent /
+          // goal self-complete → complete, explicit review gate → in_review,
+          // otherwise → complete to 'done'. `resolveTaskReviewRequirement`
+          // replaces the retired default-pause.
+          const settlement = await settleOwned({
+            context: {
+              completionRequestedByOperation: completionRequestedByCurrentOperation,
               error: null,
-            });
-          } else if (!verifyBound && currentTask.parentTaskId) {
-            const checkpoint = this.taskModel.getCheckpointConfig(currentTask);
-            if (checkpoint.topic?.after) {
-              await updateOwnedStatus('paused', {
-                error: null,
-              });
-            } else {
-              await this.completeSubtask(currentTask, claimed);
-            }
-          } else if (!verifyBound && this.taskModel.shouldPauseOnTopicComplete(currentTask)) {
-            await updateOwnedStatus('paused', { error: null });
+              expectedStatus: claimedTaskStatus,
+              reservationId: claimed,
+              runTrigger: params.runTrigger,
+              scheduleCapReached,
+              verifyBound,
+            },
+            outcome: 'succeeded',
+          });
+          if (
+            settlement.applied &&
+            settlement.decision.type === 'complete' &&
+            currentTask.parentTaskId
+          ) {
+            await this.cascadeAfterSubtaskComplete(currentTask);
           }
         }
 
@@ -601,7 +644,15 @@ export class TaskLifecycleService {
         } else if (!currentTask.automationMode) {
           // Ad-hoc / dependency task: pause for user attention (legacy behavior).
           await this.recordAutomationError(currentTask, errorText, runTrigger, undefined, claimed);
-          await updateOwnedStatus('paused', { error: errorText });
+          await settleOwned({
+            context: {
+              error: errorText,
+              expectedStatus: claimedTaskStatus,
+              reservationId: claimed,
+              runTrigger,
+            },
+            outcome: 'failed',
+          });
         } else if (!isAutomationTick) {
           // a manual "run now" of an automation task failed. This is
           // an ad-hoc debug/backfill run — its failure is NOT a health signal for
@@ -610,7 +661,16 @@ export class TaskLifecycleService {
           // record the error for visibility — but do NOT pause and do NOT touch
           // the consecutive-failure fuse (only automation ticks count).
           await this.recordAutomationError(currentTask, errorText, runTrigger, undefined, claimed);
-          await updateOwnedStatus('scheduled', { error: errorText });
+          await settleOwned({
+            context: {
+              error: errorText,
+              expectedStatus: claimedTaskStatus,
+              manualAutomationRun: true,
+              reservationId: claimed,
+              runTrigger,
+            },
+            outcome: 'failed',
+          });
         } else if (currentTask.automationMode === 'schedule') {
           // a scheduled tick failed. A single transient error must not
           // permanently pause a recurring task. Count consecutive failures and
@@ -620,8 +680,9 @@ export class TaskLifecycleService {
           const ctx = (currentTask.context as { scheduler?: TaskSchedulerContext } | null) ?? {};
           const consecutiveFailures = (ctx.scheduler?.consecutiveFailures ?? 0) + 1;
           scheduleConsecutiveFailures = consecutiveFailures;
+          const automationFuseBlown = consecutiveFailures >= AUTOMATION_FAILURE_FUSE;
 
-          if (consecutiveFailures >= AUTOMATION_FAILURE_FUSE) {
+          if (automationFuseBlown) {
             pausedByFuse = true;
             log(
               'schedule fuse blown: task=%s consecutiveFailures=%d — pausing',
@@ -638,7 +699,6 @@ export class TaskLifecycleService {
               },
               claimed,
             );
-            await updateOwnedStatus('paused', { error: errorText });
           } else {
             log(
               'schedule error (retryable): task=%s consecutiveFailures=%d/%d',
@@ -655,8 +715,17 @@ export class TaskLifecycleService {
               },
               claimed,
             );
-            await updateOwnedStatus('scheduled', { error: errorText });
           }
+          await settleOwned({
+            context: {
+              automationFuseBlown,
+              error: errorText,
+              expectedStatus: claimedTaskStatus,
+              reservationId: claimed,
+              runTrigger,
+            },
+            outcome: 'failed',
+          });
         } else {
           // Heartbeat tick failed: record the error and keep the resting
           // 'scheduled' state. maybeRearmHeartbeat (below) owns the consecutive-
@@ -667,7 +736,15 @@ export class TaskLifecycleService {
           scheduleConsecutiveFailures = (ctx.scheduler?.consecutiveFailures ?? 0) + 1;
           pausedByFuse = scheduleConsecutiveFailures >= AUTOMATION_FAILURE_FUSE;
           await this.recordAutomationError(currentTask, errorText, runTrigger, undefined, claimed);
-          await updateOwnedStatus('scheduled', { error: errorText });
+          await settleOwned({
+            context: {
+              error: errorText,
+              expectedStatus: claimedTaskStatus,
+              reservationId: claimed,
+              runTrigger,
+            },
+            outcome: 'failed',
+          });
         }
 
         // Tell the user their automation failed: fire-and-forget through the
@@ -741,16 +818,17 @@ export class TaskLifecycleService {
         // The topic is settled, but its delivery cannot complete after an
         // upstream reopen. Park this generation for recovery, not as a ghost run.
         try {
-          await this.taskModel.updateStatusIfReservation(
-            taskId,
-            claimed,
-            claimedTaskStatus,
-            'paused',
-            {
+          await settleOwned({
+            context: {
+              blocked: true,
               error:
                 'A prerequisite changed during this run. Complete the prerequisites before resuming.',
+              expectedStatus: claimedTaskStatus,
+              reservationId: claimed,
+              runTrigger: params.runTrigger,
             },
-          );
+            outcome: 'succeeded',
+          });
           verifyBound = false;
           return;
         } catch (recoveryError) {
@@ -772,30 +850,14 @@ export class TaskLifecycleService {
   }
 
   /**
-   * Settle a successful child task and advance its sibling dependency graph.
-   *
-   * This mirrors the completion side effects of TaskService.updateStatus
-   * without importing TaskService here (TaskRunner already depends on this
-   * lifecycle service). The dynamic import keeps that module cycle out of
-   * initialization while preserving the runner's single cascade implementation.
+   * Advance a completed subtask's sibling dependency graph. The subtask's own
+   * state transition already ran through `settleTaskExecution` — this carries
+   * out the two side effects that were never state decisions: the parent's
+   * `tasks.afterIds` checkpoint pause and the runner's downstream-unlock
+   * cascade. The dynamic import keeps the module cycle out of initialization.
    */
-  private async completeSubtask(task: TaskItem, reservationId: string): Promise<void> {
-    const completedTask = await this.taskModel.updateStatusIfReservation(
-      task.id,
-      reservationId,
-      'running',
-      'completed',
-      {
-        completedAt: new Date(),
-        error: null,
-      },
-    );
-    if (!completedTask) {
-      log('subtask=%s no longer running — skipping completion cascade', task.identifier);
-      return;
-    }
-
-    const parentTask = await this.taskModel.findById(completedTask.parentTaskId!);
+  private async cascadeAfterSubtaskComplete(task: TaskItem): Promise<void> {
+    const parentTask = task.parentTaskId ? await this.taskModel.findById(task.parentTaskId) : null;
     if (parentTask && this.taskModel.shouldPauseAfterComplete(parentTask, task.identifier)) {
       await this.taskModel.updateStatus(parentTask.id, 'paused');
     }

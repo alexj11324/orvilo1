@@ -185,7 +185,7 @@ const validateOrchestrationPolicy = (policy: ProjectOrchestrationPolicy) => {
   }
 };
 
-type ProjectPolicyRow = Pick<
+export type ProjectPolicyRow = Pick<
   typeof projects.$inferSelect,
   | 'coordinatorAgentId'
   | 'orchestrationPolicy'
@@ -194,10 +194,16 @@ type ProjectPolicyRow = Pick<
   | 'completedReviewId'
 >;
 
-const projectRequiresHumanReview = (project: ProjectPolicyRow) =>
+/** A project wrapping up (`reviewing`/`completed`) forces human review on. */
+export const projectRequiresHumanReview = (project: ProjectPolicyRow) =>
   project.status === 'reviewing' ||
   project.status === 'completed' ||
   project.completedReviewId !== null;
+
+/** The effective requireHumanReview flag — policy value or the forced wrap-up rule. */
+export const projectEffectiveRequireHumanReview = (project: ProjectPolicyRow) =>
+  normalizeProjectOrchestrationPolicy(project.orchestrationPolicy).requireHumanReview ||
+  projectRequiresHumanReview(project);
 
 const toOrchestrationPolicyView = (project: ProjectPolicyRow): ProjectOrchestrationPolicyView => ({
   coordinatorAgentId: project.coordinatorAgentId,

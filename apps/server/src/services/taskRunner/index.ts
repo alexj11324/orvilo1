@@ -35,6 +35,7 @@ import {
   TaskDispatchWaitingError,
 } from '@/server/services/taskDispatch';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
+import { settleTaskExecution } from '@/server/services/taskSettlement';
 import { type ProvisionedWorkspace, TaskWorkspaceService } from '@/server/services/taskWorkspace';
 
 import { buildTaskExecutionContract } from './buildTaskExecutionContract';
@@ -638,6 +639,19 @@ export class TaskRunnerService {
         });
       }
       ownsReservation = true;
+      // Run-start settlement stamps the Issue Status layer (in_progress +
+      // exact state ref); the legacy 'running' projection is already on the
+      // row from reserveRun, so a no-op is an acceptable result here.
+      await settleTaskExecution(
+        this.db,
+        this.userId,
+        {
+          context: { reservationId },
+          runStarted: true,
+          taskId: task.id,
+        },
+        this.workspaceId,
+      );
       // Workspace provisioning (CAID isolation): a fresh run on a
       // workspace-bound task gets its own git worktree on the bound device —
       // or, when no device exists and the run resolves to the cloud sandbox,

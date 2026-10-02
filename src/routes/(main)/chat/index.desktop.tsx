@@ -4,6 +4,7 @@ import { CHAT_NEW_URL, CHAT_TOPIC_URL } from '@orvilo/const';
 import { memo } from 'react';
 import { useParams } from 'react-router';
 
+import AgentSidebar from '@/features/AgentSidebar';
 import TopicOwnerSync from '@/features/Conversation/TopicOwnerSync';
 import TopicInPopupGuard from '@/features/TopicPopupGuard';
 import { useTopicInPopup } from '@/features/TopicPopupGuard/useTopicPopupsRegistry';
@@ -43,6 +44,8 @@ const ChatPage = memo(() => {
 
   return (
     <>
+      {/* See `index.tsx` — the page registers the `agent` nav panel portal. */}
+      <AgentSidebar />
       <TopicOwnerSync />
       <ChatHydration getConversationPath={getConversationPath} getTopicPath={getTopicPath} />
       {pageContent}

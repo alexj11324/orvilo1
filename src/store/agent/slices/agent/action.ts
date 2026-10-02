@@ -1,4 +1,4 @@
-import { isDesktop, randomAgentName } from '@orvilo/const';
+import { isDesktop, numberedAgentName } from '@orvilo/const';
 import { type AgentContextDocument } from '@orvilo/context-engine';
 import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import {
@@ -29,8 +29,8 @@ import {
   resolveAgentDocumentsContext,
 } from '@/services/agentDocument';
 import { aiAgentService } from '@/services/aiAgent';
-import { useGlobalStore } from '@/store/global';
-import { globalGeneralSelectors } from '@/store/global/selectors';
+import { useHomeStore } from '@/store/home';
+import { homeAgentListSelectors } from '@/store/home/selectors';
 import type { StoreSetter } from '@/store/types';
 import { getUserStoreState } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/selectors';
@@ -158,27 +158,29 @@ export class AgentSliceActionImpl {
 
   createAgent = async (params: CreateAgentParams): Promise<CreateAgentResult> => {
     // Seed a default name so a new agent has an identity before the Agent
-    // Builder conversation produces one; the builder may replace it later. This
-    // lives here rather than in the create endpoint because the language only
-    // resolves on the client (`auto` follows the browser). A caller that already
-    // carries a name — e.g. a market agent — keeps it.
+    // Builder conversation produces one; the builder may replace it later. A
+    // caller that already carries a name — e.g. a market agent — keeps it.
     //
-    // A heterogeneous agent never draws a random personal name. In personal or
-    // workspace-private scope its name is the product title; a shared workspace
-    // agent adds the creator so members can distinguish identical tools.
+    // The default is deterministic: the agent's own type name (product title
+    // for heterogeneous agents, "Orvilo AI" for builtin agents), numbered when
+    // the sidebar already has one — "Claude Code", "Claude Code 2", ... A
+    // shared workspace agent prefixes the creator so members can distinguish
+    // identical tools.
     const heteroProvider = params.config?.agencyConfig?.heterogeneousProvider;
-    const locale = globalGeneralSelectors.currentLanguage(useGlobalStore.getState());
+    const takenNames = homeAgentListSelectors
+      .allAgents(useHomeStore.getState())
+      .map((agent) => agent.name)
+      .filter((name): name is string => !!name);
+    const baseName = heteroProvider
+      ? heteroAgentDefaultName({
+          productTitle: params.config?.title || getHeterogeneousTypeLabel(heteroProvider.type),
+          visibility: params.visibility,
+          workspaceId: getActiveWorkspaceId(),
+        })
+      : params.config?.title?.trim() || 'Orvilo AI';
     const config = {
       ...params.config,
-      name:
-        params.config?.name ||
-        (heteroProvider
-          ? heteroAgentDefaultName({
-              productTitle: params.config?.title || getHeterogeneousTypeLabel(heteroProvider.type),
-              visibility: params.visibility,
-              workspaceId: getActiveWorkspaceId(),
-            })
-          : randomAgentName(locale)),
+      name: params.config?.name || (baseName ? numberedAgentName(baseName, takenNames) : undefined),
     };
 
     const result = await agentService.createAgent({ ...params, config });

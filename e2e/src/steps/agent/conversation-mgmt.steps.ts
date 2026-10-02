@@ -351,15 +351,20 @@ When('用户右键点击对话', async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击对话...');
 
   const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await sidebarTopics.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
+  let topicCount = 0;
+  await expect
+    .poll(
+      async () => {
+        topicCount = await sidebarTopics.count();
+        console.log(`   📍 Found ${topicCount} topic items`);
+        return topicCount;
+      },
+      { message: 'sidebar never listed a topic', timeout: 30_000 },
+    )
+    .toBeGreaterThanOrEqual(1);
 
-  if (topicCount > 0) {
-    await sidebarTopics.first().click({ button: 'right' });
-    console.log('   ✅ 已右键点击对话');
-  } else {
-    throw new Error('No topics found to right-click');
-  }
+  await sidebarTopics.first().click({ button: 'right' });
+  console.log('   ✅ 已右键点击对话');
 
   await this.page.waitForTimeout(500);
 });
@@ -368,18 +373,23 @@ When('用户右键点击一个对话', async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击一个对话...');
 
   const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await sidebarTopics.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
+  let topicCount = 0;
+  await expect
+    .poll(
+      async () => {
+        topicCount = await sidebarTopics.count();
+        console.log(`   📍 Found ${topicCount} topic items`);
+        return topicCount;
+      },
+      { message: 'sidebar never listed a topic', timeout: 30_000 },
+    )
+    .toBeGreaterThanOrEqual(1);
 
   // Store the topic text for later verification
-  if (topicCount > 0) {
-    const topicText = await sidebarTopics.first().textContent();
-    this.testContext.deletedTopicTitle = topicText?.slice(0, 30);
-    await sidebarTopics.first().click({ button: 'right' });
-    console.log(`   ✅ 已右键点击对话: "${topicText?.slice(0, 30)}..."`);
-  } else {
-    throw new Error('No topics found to right-click');
-  }
+  const topicText = await sidebarTopics.first().textContent();
+  this.testContext.deletedTopicTitle = topicText?.slice(0, 30);
+  await sidebarTopics.first().click({ button: 'right' });
+  console.log(`   ✅ 已右键点击对话: "${topicText?.slice(0, 30)}..."`);
 
   await this.page.waitForTimeout(500);
 });

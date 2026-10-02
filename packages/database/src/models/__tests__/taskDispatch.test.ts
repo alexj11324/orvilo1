@@ -1,4 +1,5 @@
 // @vitest-environment node
+import type { ProjectOrchestrationPolicy } from '@orvilo/types';
 import { eq, sql } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -11,9 +12,12 @@ import {
   mcpEventInbox,
   mcpEventTriggerRuns,
   mcpEventTriggers,
+  projectAgents,
   projects,
   taskDispatches,
   tasks,
+  taskTopics,
+  topics,
   userConnectors,
   users,
   workspaceMembers,
@@ -42,14 +46,17 @@ const cleanup = async () => {
   await db.delete(goalNodes);
   await db.delete(goals).where(eq(goals.workspaceId, workspaceId));
   await db.delete(goals).where(eq(goals.workspaceId, otherWorkspaceId));
+  await db.delete(taskTopics);
   await db.delete(taskDispatches);
   await db.delete(tasks).where(eq(tasks.workspaceId, workspaceId));
   await db.delete(tasks).where(eq(tasks.workspaceId, otherWorkspaceId));
   await db.delete(tasks).where(eq(tasks.createdByUserId, userId));
   await db.delete(tasks).where(eq(tasks.createdByUserId, otherUserId));
+  await db.delete(projectAgents);
   await db.delete(agents).where(eq(agents.userId, userId));
   await db.delete(agents).where(eq(agents.userId, otherUserId));
   await db.delete(projects).where(eq(projects.workspaceId, workspaceId));
+  await db.delete(topics).where(eq(topics.userId, userId));
   await db.delete(workspaces).where(eq(workspaces.id, workspaceId));
   await db.delete(workspaces).where(eq(workspaces.id, otherWorkspaceId));
   await db.delete(users).where(eq(users.id, userId));
@@ -1288,5 +1295,248 @@ describe('persisted dispatch origin + final admission re-check (SA05-B)', () => 
     });
 
     expect(parked?.waitingReason).toBe('caid_dispatch_disabled');
+  });
+});
+
+describe('tiered orchestration', () => {
+  const seedTieredProject = async (
+    suffix: string,
+    policy: Partial<ProjectOrchestrationPolicy> = {},
+  ) => {
+    const [project] = await db
+      .insert(projects)
+      .values({
+        identifier: suffix.slice(0, 6),
+        name: `Tiered ${suffix}`,
+        orchestrationPolicy: {
+          autoDispatch: true,
+          replanMode: 'disabled',
+          requireHumanReview: false,
+          ...policy,
+        },
+        userId,
+        workspaceId,
+      })
+      .returning();
+    return project;
+  };
+
+  it("snapshots the bound agent's roster tier onto the dispatch row", async () => {
+    await db.insert(agents).values({ id: 'tier-agent-low', userId, workspaceId });
+    const project = await seedTieredProject('T1');
+    await db.insert(projectAgents).values({
+      agentId: 'tier-agent-low',
+      projectId: project.id,
+      tier: 'low',
+      workspaceId,
+    });
+    const task = await createTask('TIER-1', 80);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'tier-agent-low', projectId: project.id })
+      .where(eq(tasks.id, task.id));
+
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:TIER-1:request-1',
+      requestedBy: 'backlog_intake',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    expect(requested.dispatch).toMatchObject({
+      agentId: 'tier-agent-low',
+      phase: 'requested',
+      tier: 'low',
+    });
+  });
+
+  it('records a null tier for an agent with no roster band', async () => {
+    await db.insert(agents).values({ id: 'tier-agent-none', userId, workspaceId });
+    const task = await createTask('TIER-0', 79);
+    await db.update(tasks).set({ assigneeAgentId: 'tier-agent-none' }).where(eq(tasks.id, task.id));
+
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'manual:TIER-0:request-1',
+      requestedBy: userId,
+      taskId: task.id,
+      trigger: 'manual',
+    });
+
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    expect(requested.dispatch.tier).toBeNull();
+  });
+
+  it('re-snapshots the tier when the bound agent changes mid-flight', async () => {
+    await db.insert(agents).values([
+      { id: 'tier-agent-a', userId, workspaceId },
+      { id: 'tier-agent-b', userId, workspaceId },
+    ]);
+    const project = await seedTieredProject('T2');
+    await db.insert(projectAgents).values([
+      { agentId: 'tier-agent-a', projectId: project.id, tier: 'low', workspaceId },
+      { agentId: 'tier-agent-b', projectId: project.id, tier: 'high', workspaceId },
+    ]);
+    const task = await createTask('TIER-2', 82);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'tier-agent-a', projectId: project.id })
+      .where(eq(tasks.id, task.id));
+
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:TIER-2:request-1',
+      requestedBy: 'backlog_intake',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    const claim = await model.claimForProvisioning(requested.dispatch.id, 'worker-a', 60_000);
+    if (!claim) throw new Error('dispatch was not claimed');
+
+    await expect(
+      model.transition({
+        agentId: 'tier-agent-b',
+        dispatchId: requested.dispatch.id,
+        expected: ['claimed'],
+        fence: claim.fence,
+        owner: 'worker-a',
+        phase: 'claimed',
+      }),
+    ).resolves.toMatchObject({ agentId: 'tier-agent-b', tier: 'high' });
+  });
+
+  it('returns the newest terminally settled dispatch — the durable escalation signal', async () => {
+    await db.insert(agents).values({ id: 'tier-agent-term', userId, workspaceId });
+    const project = await seedTieredProject('T3');
+    await db.insert(projectAgents).values({
+      agentId: 'tier-agent-term',
+      projectId: project.id,
+      tier: 'low',
+      workspaceId,
+    });
+    const task = await createTask('TIER-3', 83);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'tier-agent-term', projectId: project.id })
+      .where(eq(tasks.id, task.id));
+
+    const model = new TaskDispatchModel(db, workspaceId);
+    const first = await model.request({
+      idempotencyKey: 'orchestrator:TIER-3:request-1',
+      requestedBy: 'backlog_intake',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+    if (first.state === 'busy') throw new Error('unexpected busy');
+    await model.settle({
+      dispatchId: first.dispatch.id,
+      expected: ['requested'],
+      fence: first.dispatch.fence,
+      generation: first.dispatch.generation,
+      phase: 'failed',
+    });
+
+    // A later non-terminal row must not shadow the settled outcome.
+    await db.insert(taskDispatches).values({
+      generation: 2,
+      id: 'tier-3-waiting',
+      idempotencyKey: 'orchestrator:TIER-3:request-2',
+      phase: 'waiting',
+      policyRevision: 1,
+      requestedBy: 'orchestrator:backlog_intake',
+      requirementRevision: 1,
+      taskId: task.id,
+      taskRevision: 1,
+      tier: 'mid',
+      waitingReason: 'project_concurrency_limit',
+      workspaceId,
+    });
+
+    await expect(
+      TaskDispatchModel.findLatestTerminalDispatch(db, {
+        taskId: task.id,
+        workspaceId,
+      }),
+    ).resolves.toMatchObject({
+      agentId: 'tier-agent-term',
+      generation: 1,
+      phase: 'failed',
+      requestedBy: 'orchestrator:backlog_intake',
+      tier: 'low',
+    });
+  });
+
+  it('lists the enabled roster in stable order and skips disabled rows', async () => {
+    await db.insert(agents).values([
+      { id: 'roster-a', userId, workspaceId },
+      { id: 'roster-b', userId, workspaceId },
+      { id: 'roster-c', userId, workspaceId },
+    ]);
+    const project = await seedTieredProject('T4');
+    await db.insert(projectAgents).values([
+      { agentId: 'roster-b', projectId: project.id, sortOrder: 2, tier: 'high', workspaceId },
+      { agentId: 'roster-a', projectId: project.id, sortOrder: 1, tier: 'low', workspaceId },
+      {
+        agentId: 'roster-c',
+        enabled: false,
+        projectId: project.id,
+        sortOrder: 0,
+        tier: 'mid',
+        workspaceId,
+      },
+    ]);
+
+    await expect(
+      TaskDispatchModel.listProjectAgentRoster(db, { projectId: project.id, workspaceId }),
+    ).resolves.toEqual([
+      { agentId: 'roster-a', role: null, sortOrder: 1, tier: 'low' },
+      { agentId: 'roster-b', role: null, sortOrder: 2, tier: 'high' },
+    ]);
+  });
+
+  it('counts orchestrated runs toward executionBudget.maxRuns — escalations included', async () => {
+    const project = await seedTieredProject('T5', { executionBudget: { maxRuns: 1 } });
+    await db.insert(agents).values({ id: 'budget-agent', userId, workspaceId });
+    await db.insert(projectAgents).values({
+      agentId: 'budget-agent',
+      projectId: project.id,
+      tier: 'mid',
+      workspaceId,
+    });
+    const task = await createTask('TIER-5', 85);
+    await db
+      .update(tasks)
+      .set({ assigneeAgentId: 'budget-agent', projectId: project.id })
+      .where(eq(tasks.id, task.id));
+
+    // One historical run on the project already consumed the budget — a
+    // retried (or escalated) orchestrated attempt parks rather than starting.
+    const previousTask = await createTask('TIER-5B', 86);
+    await db.update(tasks).set({ projectId: project.id }).where(eq(tasks.id, previousTask.id));
+    await db.insert(topics).values({ id: 'tier-5-topic', userId });
+    await db.insert(taskTopics).values({
+      seq: 1,
+      taskId: previousTask.id,
+      topicId: 'tier-5-topic',
+      userId,
+      workspaceId,
+    });
+
+    const model = new TaskDispatchModel(db, workspaceId);
+    const requested = await model.request({
+      idempotencyKey: 'orchestrator:TIER-5:request-1',
+      requestedBy: 'backlog_intake',
+      taskId: task.id,
+      trigger: 'orchestrator',
+    });
+
+    if (requested.state === 'busy') throw new Error('unexpected busy');
+    expect(requested.dispatch).toMatchObject({
+      phase: 'waiting',
+      waitingReason: 'project_run_budget_exhausted',
+    });
   });
 });

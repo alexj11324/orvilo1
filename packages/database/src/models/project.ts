@@ -1,5 +1,6 @@
 import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
 import type {
+  AgentTier,
   ProjectDatePrecision,
   ProjectHealth,
   ProjectMilestoneProgress,
@@ -132,6 +133,7 @@ export interface ProjectAgentInput {
   responsibility?: string | null;
   role?: string | null;
   sortOrder?: number;
+  tier?: AgentTier | null;
 }
 
 export interface ProjectKnowledgeBaseInput {
@@ -936,6 +938,7 @@ export class ProjectModel {
           responsibility: input.responsibility,
           role: input.role,
           sortOrder: input.sortOrder,
+          tier: input.tier,
           updatedAt: new Date(),
         },
         target: [projectAgents.projectId, projectAgents.agentId],

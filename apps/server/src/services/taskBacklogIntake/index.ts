@@ -8,6 +8,8 @@ import { TaskDispatchWaitingError } from '@/server/services/taskDispatch';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 import { taskRunIdempotencyKey } from '@/server/services/taskRunner/idempotency';
 
+import { resolveBacklogIntakeAssignment } from './tieredAssignment';
+
 const log = debug('task-backlog-intake');
 
 /**
@@ -35,6 +37,32 @@ const processBacklogIntake = async (input: {
   const taskModel = new TaskModel(db, candidate.userId, candidate.workspaceId);
   if (!(await taskModel.areAllDependenciesCompleted(candidate.taskId))) {
     return { outcome: 'blocked', reason: 'dependencies_incomplete', taskId: candidate.taskId };
+  }
+
+  // Tiered routing: bind the cheapest enabled roster agent whose band meets
+  // the task's required tier (priority baseline, escalated one step after a
+  // terminally failed orchestrated attempt). The assignee write IS the
+  // dispatch binding — `runTask` snapshots `task.assigneeAgentId` into the
+  // dispatch row — so reassigning here is how an escalation actually moves
+  // the work to a stronger agent. `executionTransfer` marks it as an
+  // ownership move rather than a user edit. When nothing satisfies the
+  // requirement (untiered roster, policy gates) the pick is null and the
+  // task keeps its assignee — the pre-tiering failure path, unchanged.
+  const assignment = await resolveBacklogIntakeAssignment({ candidate, db });
+  if (assignment.agentId && assignment.agentId !== candidate.assigneeAgentId) {
+    log(
+      'intake %s routed to %s (required=%s, escalatedFrom=%s)',
+      candidate.taskId,
+      assignment.agentId,
+      assignment.required,
+      assignment.escalatedFrom ?? 'none',
+    );
+    await taskModel.updateWithLog(
+      candidate.taskId,
+      { assigneeAgentId: assignment.agentId },
+      {},
+      { executionTransfer: true },
+    );
   }
 
   try {

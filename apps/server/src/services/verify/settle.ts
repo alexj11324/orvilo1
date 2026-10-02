@@ -1,5 +1,6 @@
 import {
   ACCEPTANCE_REVIEW_ERRORED_ERROR,
+  AEGIS_EVIDENCE_REQUIRED_ERROR,
   VERIFICATION_ERRORED_ERROR,
   VERIFICATION_FAILED_ERROR,
   VERIFICATION_UNJUDGEABLE_ERROR,
@@ -20,6 +21,7 @@ import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
 
+import { evaluateAegisEvidenceRequirement } from './aegisEvidence';
 import { reviewGoalDelivery } from './goalReview';
 import { maybeAutoRepair } from './repairService';
 import { VerifyReporterService } from './reporter';
@@ -325,6 +327,23 @@ export const driveTaskFromVerify = async (
             ? 'unjudgeable'
             : run.status;
 
+    // Aegis advisory gate (opt-in only): the run passed verify, but the agent
+    // was configured for the Aegis method pack and its completion evidence is
+    // missing or low-confidence — withhold auto-accept and route the task to
+    // the human decision gate instead of completing silently. The verify
+    // verdict stays `passed`; only the task's auto-completion is downgraded.
+    // Missing closeout → requires review, never a hard fail or a retry.
+    if (outcome === 'passed') {
+      const aegisVerdict = evaluateAegisEvidenceRequirement(op.metadata);
+      if (aegisVerdict === 'requires-review') {
+        log(
+          'verify passed but aegis evidence insufficient → task %s requires review',
+          taskOperation.taskId,
+        );
+        outcome = 'aegis_evidence_required';
+      }
+    }
+
     const currentTask = await taskModel.findById(taskOperation.taskId);
     if (
       !currentTask ||
@@ -486,11 +505,13 @@ export const driveTaskFromVerify = async (
           ? VERIFICATION_UNJUDGEABLE_ERROR
           : outcome === 'review_errored'
             ? ACCEPTANCE_REVIEW_ERRORED_ERROR
-            : outcome === 'integration_blocked'
-              ? 'Delivery was verified but could not be published.'
-              : isErrored
-                ? VERIFICATION_ERRORED_ERROR
-                : VERIFICATION_FAILED_ERROR;
+            : outcome === 'aegis_evidence_required'
+              ? AEGIS_EVIDENCE_REQUIRED_ERROR
+              : outcome === 'integration_blocked'
+                ? 'Delivery was verified but could not be published.'
+                : isErrored
+                  ? VERIFICATION_ERRORED_ERROR
+                  : VERIFICATION_FAILED_ERROR;
       if (currentTask.automationMode) {
         // Mirror of the pass branch: verify judges THIS tick, not the lifetime
         // schedule. Pausing here would permanently disarm the cron (the
@@ -550,9 +571,11 @@ export const driveTaskFromVerify = async (
             ? 'Delivery passed verification but could not be published. The integration candidate was retained for recovery.'
             : outcome === 'errored' || outcome === 'review_errored'
               ? 'Verification could not be completed due to an internal error; the delivery was not evaluated. Please retry or review it manually.'
-              : outcome === 'unjudgeable'
-                ? 'Acceptance review could not judge this delivery from the captured evidence. Review it manually, or restate the check so evidence can settle it.'
-                : undefined;
+              : outcome === 'aegis_evidence_required'
+                ? 'Delivery passed verification, but the Aegis completion evidence is missing or low-confidence. Review the run, then complete or retry it manually.'
+                : outcome === 'unjudgeable'
+                  ? 'Acceptance review could not judge this delivery from the captured evidence. Review it manually, or restate the check so evidence can settle it.'
+                  : undefined;
       if (!(await renewTaskDrive())) return;
       await new TaskResultBridgeService(db, userId, workspaceId).deliver({
         operationId,

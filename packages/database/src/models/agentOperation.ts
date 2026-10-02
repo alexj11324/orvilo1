@@ -299,6 +299,23 @@ export class AgentOperationModel {
     return Boolean(row);
   }
 
+  /**
+   * Deep-merge into `metadata.aegis` (not the whole `metadata` object): the
+   * dispatch stamps `aegis.enabled` at `recordStart` and `heteroFinish` adds
+   * `aegis.artifacts`/`aegis.collectedAt` at run end — a shallow top-level
+   * `||` merge would drop whichever half arrived first.
+   */
+  async recordAegisMetadata(operationId: string, patch: Record<string, unknown>): Promise<boolean> {
+    const [row] = await this.db
+      .update(agentOperations)
+      .set({
+        metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || jsonb_build_object('aegis', coalesce(${agentOperations.metadata}->'aegis', '{}'::jsonb) || ${JSON.stringify(patch)}::jsonb)`,
+      })
+      .where(and(eq(agentOperations.id, operationId), this.ownership()))
+      .returning({ id: agentOperations.id });
+    return Boolean(row);
+  }
+
   /** Idempotently settle a running operation without rewriting an existing terminal outcome. */
   async settleRunning(
     operationId: string,

@@ -9,6 +9,7 @@ import { VerifyEvidenceModel } from '@/database/models/verifyEvidence';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 
+import { appendAegisDeliverableEvidence } from './aegisEvidence';
 import { createVerifierAgentRunner } from './agentVerifier';
 import {
   recordHeterogeneousDeliverableEvidence,
@@ -103,6 +104,12 @@ const executeVerifyLifecycle = async (
       return;
     }
 
+    // Aegis method-pack runs (metadata.aegis.enabled, opt-in only) carry their
+    // agent-submitted closeout/reports in the operation metadata — appended to
+    // the deliverable as advisory self-report so every downstream consumer
+    // (recorded evidence rows, the LLM judge, the verify report) sees them.
+    const aegisDeliverable = appendAegisDeliverableEvidence(params.deliverable, op.metadata);
+
     if (op.taskId) {
       const taskTopic = await new TaskTopicModel(db, userId, workspaceId).findByOperationId(
         params.operationId,
@@ -189,7 +196,7 @@ const executeVerifyLifecycle = async (
           ) {
             await recordHeterogeneousDeliverableEvidence({
               db,
-              deliverable: params.deliverable,
+              deliverable: aegisDeliverable,
               operation: op,
               plan: run.plan,
               userId,
@@ -199,7 +206,7 @@ const executeVerifyLifecycle = async (
           } else {
             await startEvidenceSubmission({
               db,
-              deliverable: params.deliverable,
+              deliverable: aegisDeliverable,
               goal: params.goal,
               operation: op,
               plan: run.plan,
@@ -252,7 +259,7 @@ const executeVerifyLifecycle = async (
     const resolvedDeliverable = await resolveVerificationDeliverable(
       db,
       userId,
-      params.deliverable,
+      aegisDeliverable,
       op.taskId,
       workspaceId,
     );

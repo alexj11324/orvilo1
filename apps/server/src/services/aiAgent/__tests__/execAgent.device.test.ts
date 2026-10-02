@@ -573,4 +573,67 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       expect(result).toMatchObject({ error: 'DEVICE_NOT_FOUND', success: false });
     });
   });
+
+  describe('aegis method-pack opt-in', () => {
+    it('stamps the env bit + op metadata on an enabled device run', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        heterogeneousProvider: { methodPacks: { aegis: true }, type: 'claude-code' },
+      });
+
+      await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          env: expect.objectContaining({ ORVILO_AEGIS_PACK: '1' }),
+        }),
+      );
+      expect(recordStartSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.objectContaining({ aegis: { enabled: true } }),
+        }),
+      );
+    });
+
+    it('injects the .aegis/ completion contract + env bit on an enabled sandbox run', async () => {
+      await useAgencyConfig({
+        executionTarget: 'sandbox',
+        heterogeneousProvider: { methodPacks: { aegis: true }, type: 'claude-code' },
+      });
+
+      await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(mockSpawnHeteroSandbox).toHaveBeenCalledWith(
+        expect.objectContaining({
+          env: expect.objectContaining({ ORVILO_AEGIS_PACK: '1' }),
+        }),
+      );
+      // The deterministic contract rides the cloud system context verbatim —
+      // the agent gets the exact `.aegis/closeout.json` shape the gate reads.
+      expect(mockSpawnHeteroSandbox.mock.calls[0]?.[0]?.systemContext).toContain(
+        '.aegis/closeout.json',
+      );
+    });
+
+    it('does not set the env bit when the pack is not configured', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'claude-code' },
+      });
+
+      await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
+        expect.objectContaining({ deviceId: 'device-001' }),
+      );
+      expect(mockDispatchAgentRun.mock.calls[0]?.[0]?.env?.ORVILO_AEGIS_PACK).toBeUndefined();
+      expect(recordStartSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: expect.not.objectContaining({ aegis: expect.anything() }),
+        }),
+      );
+    });
+  });
 });

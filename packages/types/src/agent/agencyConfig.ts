@@ -329,9 +329,17 @@ export interface HeterogeneousProviderConfig {
   /** Custom environment variables (local CLI only). */
   env?: Record<string, string>;
   /**
-   * Amp agent mode, surfaced through the chat-input selector and translated
-   * into `--mode <mode>` at spawn time. Omitted or `'default'` values leave
-   * Amp's own account and environment defaults in control.
+   * Opt-in method packs installed into the spawned workspace. `aegis: true`
+   * sets `ORVILO_AEGIS_PACK=1` on the spawned `lh hetero exec`, which writes
+   * the vendored Aegis skills into the run workspace and opts the agent into
+   * the `.aegis/` evidence contract — never default-on; local CLI types only.
+   */
+  methodPacks?: { aegis?: boolean };
+  /**
+   * Amp agent mode, surfaced through the chat-input model selector and
+   * translated into the provider-specific CLI flags/config at spawn time.
+   * Omitted or `'default'` values leave Amp's own account and environment
+   * defaults in control.
    */
   mode?: HeterogeneousAgentMode;
   /**

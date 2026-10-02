@@ -21,6 +21,7 @@ import { FileService } from '@/server/services/file';
 import { MarketService } from '@/server/services/market';
 import { createSandboxService } from '@/server/services/sandbox';
 
+import { registerAegisArtifactWorks } from './aegisWorkRegistration';
 import { UNEXECUTED_INTERVENTION_STATUSES } from './constants';
 import { registerShellWorks } from './shellWorkRegistration';
 
@@ -116,6 +117,48 @@ const mapWithConcurrency = async <T, R>(
   };
   await Promise.all(Array.from({ length: Math.min(limit, items.length) }, () => worker()));
   return results;
+};
+
+/**
+ * Stamp the Work display anchor (`metadata.work.rootOperationId`) onto the
+ * round's final assistant message — without it a registered Work never renders
+ * below the message (heterogeneous runs never pass `callLlmFinalizer`, the
+ * executor that stamps the anchor for in-process runs).
+ *
+ * `assistantMessageId` is the primary anchor. When it is absent — hetero
+ * SINGLE-STEP runs can finish without a final-assistant pointer (`heteroFinish`
+ * finds neither `heteroCurrentMsgId` nor `runningOperation.assistantMessageId`) —
+ * `fallbackToolMessageId` falls back to the assistant that OWNS the last
+ * registered shell tool call (every tool message keeps `parentId` = its owning
+ * assistant).
+ *
+ * `messageModel.update` deep-merges metadata, so re-stamping an anchor the
+ * finalizer already wrote (same rootOperationId) is a no-op. It reports DB
+ * errors / no-matched-row as `{ success: false }` instead of throwing.
+ *
+ * Returns the stamped message id, or `null` when no anchor could be resolved or
+ * the stamp write was rejected — the caller counts `null` as a failure.
+ */
+const stampWorkDisplayAnchor = async (params: {
+  assistantMessageId?: string | null;
+  fallbackToolMessageId?: string | null;
+  messageModel: MessageModel;
+  operationId: string;
+}): Promise<string | null> => {
+  let anchorMessageId = params.assistantMessageId ?? null;
+  if (!anchorMessageId && params.fallbackToolMessageId) {
+    try {
+      const toolMessage = await params.messageModel.findById(params.fallbackToolMessageId);
+      anchorMessageId = toolMessage?.parentId ?? null;
+    } catch (error) {
+      log('[%s] Failed to resolve fallback work anchor (non-fatal): %O', params.operationId, error);
+    }
+  }
+  if (!anchorMessageId) return null;
+  const stamp = await params.messageModel.update(anchorMessageId, {
+    metadata: { work: { rootOperationId: params.operationId } },
+  });
+  return stamp.success ? anchorMessageId : null;
 };
 
 /**
@@ -344,38 +387,6 @@ export const registerWorksForOperation = async (
   const topicId = completingOp.topicId;
 
   const messageModel = new MessageModel(serverDB, userId, workspaceId);
-  const records = await collectOperationRecords(messageModel, scanTree);
-  if (records.length === 0) {
-    log(
-      '[%s] Skipping file Work registration: no plugin records across %d operation(s)',
-      operationId,
-      scanTree.length,
-    );
-    return { attempted: 0, failed: 0 };
-  }
-
-  // Map each tool call to its provenance so a file's version can point at the
-  // message/tool that last edited it.
-  const provenanceByToolCall = new Map<string, FileProvenance>();
-  for (const record of records) {
-    if (!record.toolCallId) continue;
-    provenanceByToolCall.set(record.toolCallId, {
-      apiName: record.apiName,
-      identifier: record.identifier ?? '',
-      messageId: record.id,
-    });
-  }
-
-  const resolveProvenance = (sourceToolCallIds: string[]): FileProvenance | undefined => {
-    // Walk the file's edits newest-first: the last edit that has a persisted
-    // provenance row wins.
-    for (let i = sourceToolCallIds.length - 1; i >= 0; i -= 1) {
-      const found = provenanceByToolCall.get(sourceToolCallIds[i]);
-      if (found) return found;
-    }
-    return undefined;
-  };
-
   const workModel = new WorkModel(serverDB, userId, workspaceId);
 
   // The whole operation's spend/usage is attached to each version registered
@@ -401,6 +412,74 @@ export const registerWorksForOperation = async (
       }
     : null;
 
+  const fileService = new FileService(serverDB, userId, workspaceId);
+
+  // Aegis method-pack artifacts (.aegis/ closeout + drift/retirement reports)
+  // ride back inside `agent_operations.metadata.aegis` — collected by `lh
+  // hetero exec` at finish, so they register even on runs that produced zero
+  // tool-call records (the early return below would otherwise drop them).
+  const aegisOutcome = await registerAegisArtifactWorks({
+    agentId: completingOp.agentId,
+    cumulativeCost,
+    cumulativeUsage,
+    fileService,
+    messageId: params.assistantMessageId,
+    metadata: completingOp.metadata,
+    operationId,
+    threadId: completingOp.threadId,
+    topicId,
+    userId,
+    workModel,
+  });
+
+  const records = await collectOperationRecords(messageModel, scanTree);
+  if (records.length === 0) {
+    log(
+      '[%s] Skipping file Work registration: no plugin records across %d operation(s)',
+      operationId,
+      scanTree.length,
+    );
+    if (aegisOutcome.registered > 0) {
+      const anchorMessageId = await stampWorkDisplayAnchor({
+        assistantMessageId: params.assistantMessageId,
+        messageModel,
+        operationId,
+      });
+      if (anchorMessageId) {
+        return {
+          anchorMessageId,
+          attempted: aegisOutcome.attempted,
+          failed: aegisOutcome.failed,
+        };
+      }
+      aegisOutcome.failed += 1;
+      log('[%s] No anchor message available for registered aegis Works', operationId);
+    }
+    return { attempted: aegisOutcome.attempted, failed: aegisOutcome.failed };
+  }
+
+  // Map each tool call to its provenance so a file's version can point at the
+  // message/tool that last edited it.
+  const provenanceByToolCall = new Map<string, FileProvenance>();
+  for (const record of records) {
+    if (!record.toolCallId) continue;
+    provenanceByToolCall.set(record.toolCallId, {
+      apiName: record.apiName,
+      identifier: record.identifier ?? '',
+      messageId: record.id,
+    });
+  }
+
+  const resolveProvenance = (sourceToolCallIds: string[]): FileProvenance | undefined => {
+    // Walk the file's edits newest-first: the last edit that has a persisted
+    // provenance row wins.
+    for (let i = sourceToolCallIds.length - 1; i >= 0; i -= 1) {
+      const found = provenanceByToolCall.get(sourceToolCallIds[i]);
+      if (found) return found;
+    }
+    return undefined;
+  };
+
   // Recover external Works (github issue/PR today) from hetero / device shell
   // records (codex, claude-code, orvilo-local-system) — these surfaces never pass
   // the skill-tool registration hook. Self-guarded: per-record failures are
@@ -424,43 +503,24 @@ export const registerWorksForOperation = async (
   // `messageModel.update` deep-merges metadata, so re-stamping an anchor the
   // finalizer already wrote (same rootOperationId) is a no-op.
   let stampedAnchorMessageId: string | undefined;
-  if (shellOutcome.registered > 0) {
-    let anchorMessageId = params.assistantMessageId ?? null;
-    if (!anchorMessageId && shellOutcome.anchorCandidateMessageId) {
-      // Hetero SINGLE-STEP runs can finish without a final-assistant pointer
-      // (`heteroFinish` finds neither `heteroCurrentMsgId` nor
-      // `runningOperation.assistantMessageId`). Fall back to the assistant
-      // that OWNS the last registered shell tool call — every tool message
-      // keeps `parentId` = its owning assistant — so the Work still renders
-      // in the round instead of being persisted invisibly.
-      try {
-        const toolMessage = await messageModel.findById(shellOutcome.anchorCandidateMessageId);
-        anchorMessageId = toolMessage?.parentId ?? null;
-      } catch (error) {
-        log('[%s] Failed to resolve fallback work anchor (non-fatal): %O', operationId, error);
-      }
-    }
-
+  if (shellOutcome.registered > 0 || aegisOutcome.registered > 0) {
+    // Aegis artifacts carry no tool-call row, so the shell scan's fallback
+    // candidate is the only tool-message anchor source for them too.
+    const anchorMessageId = await stampWorkDisplayAnchor({
+      assistantMessageId: params.assistantMessageId,
+      fallbackToolMessageId: shellOutcome.anchorCandidateMessageId,
+      messageModel,
+      operationId,
+    });
     if (anchorMessageId) {
-      // `messageModel.update` reports DB errors / no-matched-row as
-      // `{ success: false }` instead of throwing — a failed stamp must count as
-      // a failure so the completion backstop withholds its idempotency marker
-      // and retries the (idempotent) scan + stamp next round.
-      const stamp = await messageModel.update(anchorMessageId, {
-        metadata: { work: { rootOperationId: operationId } },
-      });
-      if (!stamp.success) {
-        shellOutcome.failed += 1;
-        log('[%s] Failed to stamp work anchor on %s', operationId, anchorMessageId);
-      } else {
-        stampedAnchorMessageId = anchorMessageId;
-      }
+      stampedAnchorMessageId = anchorMessageId;
     } else {
-      // No resolvable anchor at all: the Work row exists but nothing would
-      // ever render it. Withhold the completion marker so a later completion
-      // retries the (idempotent) scan + stamp.
+      // No resolvable anchor (or the stamp write was rejected): the Work rows
+      // exist but nothing would ever render them. Count a failure so the
+      // completion backstop withholds the marker and a later call retries the
+      // (idempotent) scan + stamp.
       shellOutcome.failed += 1;
-      log('[%s] No anchor message available for registered shell Works', operationId);
+      log('[%s] No anchor message available or stamp failed for registered Works', operationId);
     }
   }
 
@@ -523,15 +583,14 @@ export const registerWorksForOperation = async (
     log('[%s] Skipping file Work registration: no sandbox-backed entity candidates', operationId);
     return {
       ...(stampedAnchorMessageId ? { anchorMessageId: stampedAnchorMessageId } : {}),
-      attempted: shellOutcome.attempted,
-      failed: shellOutcome.failed,
+      attempted: aegisOutcome.attempted + shellOutcome.attempted,
+      failed: aegisOutcome.failed + shellOutcome.failed,
     };
   }
 
   // The sandbox is derived from userId + topicId and outlives the operation, so
   // it is safe to build once here for every export.
   const marketService = new MarketService({ userInfo: { userId } });
-  const fileService = new FileService(serverDB, userId, workspaceId);
   const sandboxService = createSandboxService({
     fileService,
     marketService,
@@ -670,7 +729,7 @@ export const registerWorksForOperation = async (
   ).length;
   return {
     ...(stampedAnchorMessageId ? { anchorMessageId: stampedAnchorMessageId } : {}),
-    attempted: entities.length + shellOutcome.attempted,
-    failed: failed + shellOutcome.failed,
+    attempted: entities.length + aegisOutcome.attempted + shellOutcome.attempted,
+    failed: failed + aegisOutcome.failed + shellOutcome.failed,
   };
 };

@@ -1,6 +1,6 @@
 import type { HeterogeneousProviderConfig } from '@orvilo/types';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { Children, cloneElement, isValidElement, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -104,69 +104,96 @@ vi.mock('@/components/ActionIcon', () => ({
   ),
 }));
 
-vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  Button: ({ children, onClick }: { children?: ReactNode; onClick?: () => void }) => (
-    <button type="button" onClick={onClick}>
+vi.mock('@/components/ui/button', () => ({
+  Button: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children?: ReactNode;
+    disabled?: boolean;
+    onClick?: () => void;
+  }) => (
+    <button disabled={disabled} type="button" onClick={onClick}>
       {children}
     </button>
   ),
-  Segmented: ({
-    disabled,
-    onChange,
-    options,
-  }: {
-    disabled?: boolean;
-    onChange?: (value: string) => void;
-    options: Array<{ disabled?: boolean; label: ReactNode; value: string }>;
-  }) => (
-    <div>
-      {options.map((option) => (
-        <button
-          disabled={disabled || option.disabled}
-          key={option.value}
-          type="button"
-          onClick={() => onChange?.(option.value)}
-        >
-          {option.label}
-        </button>
-      ))}
-    </div>
-  ),
+}));
+
+vi.mock('@/components/ui/select', () => ({
   Select: ({
-    onChange,
-    options,
+    disabled,
+    items,
+    onValueChange,
     value,
   }: {
-    onChange?: (value: string) => void;
-    options?: Array<{
-      disabled?: boolean;
-      label?: ReactNode;
-      options?: Array<{ disabled?: boolean; label: ReactNode; value: string }>;
-      value?: string;
-    }>;
+    disabled?: boolean;
+    items?: Array<{ label: string; value: string }>;
+    onValueChange?: (value: string) => void;
     value?: string;
   }) => (
-    <select value={value} onChange={(event) => onChange?.(event.target.value)}>
-      {options?.flatMap((option) =>
-        option.options
-          ? option.options.map((child) => (
-              <option disabled={child.disabled} key={child.value} value={child.value}>
-                {child.label}
-              </option>
-            ))
-          : option.value
-            ? [
-                <option disabled={option.disabled} key={option.value} value={option.value}>
-                  {option.label}
-                </option>,
-              ]
-            : [],
-      )}
+    <select
+      disabled={disabled}
+      value={value}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {items?.map((item) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
     </select>
   ),
-  Tag: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
-  Text: ({ children }: { children?: ReactNode }) => <span>{children}</span>,
+  SelectContent: () => null,
+  SelectTrigger: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  SelectValue: ({ placeholder }: { children?: unknown; placeholder?: string }) => (
+    <span>{placeholder}</span>
+  ),
+}));
+
+vi.mock('@/components/ui/toggle-group', () => ({
+  ToggleGroup: ({
+    children,
+    disabled,
+    onValueChange,
+  }: {
+    children?: ReactNode;
+    disabled?: boolean;
+    onValueChange?: (value: string[]) => void;
+    value?: string[];
+  }) => (
+    <div>
+      {Children.map(children, (child) =>
+        isValidElement(child)
+          ? cloneElement(child, {
+              __groupDisabled: disabled,
+              __onSelect: onValueChange,
+            } as Record<string, unknown>)
+          : child,
+      )}
+    </div>
+  ),
+  ToggleGroupItem: ({
+    __groupDisabled,
+    __onSelect,
+    children,
+    disabled,
+    value,
+  }: {
+    __groupDisabled?: boolean;
+    __onSelect?: (value: string[]) => void;
+    children?: ReactNode;
+    disabled?: boolean;
+    value?: string;
+  }) => (
+    <button
+      disabled={__groupDisabled || disabled}
+      type="button"
+      onClick={() => __onSelect?.([value ?? ''])}
+    >
+      {children}
+    </button>
+  ),
 }));
 
 vi.mock('react-i18next', () => ({

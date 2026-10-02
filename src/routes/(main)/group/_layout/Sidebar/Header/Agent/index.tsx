@@ -1,19 +1,19 @@
 'use client';
 
-import { ChevronsUpDownIcon } from 'lucide-react';
 import { type PropsWithChildren } from 'react';
 import React, { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import ActionIcon from '@/components/ActionIcon';
 import { SkeletonItem } from '@/features/NavPanel/components/SkeletonList';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
-import SupervisorAvatar from '@/routes/(main)/group/features/GroupAvatar';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
-import SwitchPanel from './SwitchPanel';
-
+/**
+ * Static context label for the group topic sidebar: the group's title without
+ * the switcher affordance (topic list only — group switching lives in the home
+ * sidebar).
+ */
 const Agent = memo<PropsWithChildren>(() => {
   const { t } = useTranslation(['chat', 'common']);
 
@@ -25,34 +25,9 @@ const Agent = memo<PropsWithChildren>(() => {
 
   const displayTitle = groupMeta?.title || t('untitledGroup', { ns: 'chat' });
 
-  if (isGroupsInit) return <SkeletonItem height={32} padding={0} />;
+  if (isGroupsInit) return <SkeletonItem height={16} padding={0} />;
 
-  return (
-    <SwitchPanel>
-      <div
-        className="flex items-center gap-2 p-0.5"
-        style={{
-          cursor: 'pointer',
-
-          minWidth: 32,
-          overflow: 'hidden',
-        }}
-      >
-        <SupervisorAvatar size={28} />
-        <div className="truncate font-medium">{displayTitle}</div>
-        <ActionIcon
-          icon={ChevronsUpDownIcon}
-          size={{
-            blockSize: 28,
-            size: 16,
-          }}
-          style={{
-            width: 24,
-          }}
-        />
-      </div>
-    </SwitchPanel>
-  );
+  return <span className="truncate">{displayTitle}</span>;
 });
 
 export default Agent;

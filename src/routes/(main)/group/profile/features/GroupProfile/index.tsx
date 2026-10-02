@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from 'antd-style';
-import { MoreHorizontalIcon, PlayIcon, PlusIcon, UsersIcon } from 'lucide-react';
+import { MoreHorizontalIcon, PlusIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -21,7 +21,6 @@ import AccessLevelTag from '@/features/ResourcePermission/AccessLevelTag';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
@@ -49,7 +48,6 @@ const GroupProfile = memo(() => {
   const hasActiveWorkspace = useHasActiveWorkspace();
   const currentGroup = useAgentGroupStore((s) => agentGroupSelectors.getGroupById(gid ?? '')(s));
   const updateGroup = useAgentGroupStore((s) => s.updateGroup);
-  const router = useQueryRoute();
   // The profile page keeps its active tab in `?tab=`; the permission page has no
   // tabs, so navigate without carrying the query over (unlike `router.push`).
   const navigate = useWorkspaceAwareNavigate();
@@ -208,17 +206,7 @@ const GroupProfile = memo(() => {
         </div>
         {/* Header: Group Avatar + Title */}
         <GroupHeader />
-        {/* Start Conversation Button */}
         <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
-          <Button
-            onClick={() => {
-              if (!groupId) return;
-              router.push(urlJoin('/group', groupId));
-            }}
-          >
-            <PlayIcon data-icon="inline-start" />
-            {t('startConversation')}
-          </Button>
           {moreMenuItems.length > 0 && (
             <SidebarDropdownMenu items={moreMenuItems}>
               <ActionIcon

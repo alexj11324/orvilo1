@@ -45,9 +45,14 @@ describe('resolveMount', () => {
 });
 
 describe('pipelineFor', () => {
-  it('maps ts/tsx to the stylelint+eslint+prettier pipeline', () => {
+  it('maps ts/tsx to the stylelint+eslint+prettier+native-controls pipeline', () => {
     const pipeline = pipelineFor(orviloPipelines, 'src/auth.ts');
-    expect(pipeline?.tools.map(([tool]) => tool)).toEqual(['stylelint', 'eslint', 'prettier']);
+    expect(pipeline?.tools.map(([tool]) => tool)).toEqual([
+      'stylelint',
+      'eslint',
+      'prettier',
+      'tsx',
+    ]);
   });
 
   it('maps md to remark+prettier and json to prettier only', () => {
@@ -88,6 +93,9 @@ describe('orviloPipelines drift', () => {
     expect(entries.length).toBeGreaterThan(0);
 
     for (const [glob, commands] of entries) {
+      // String entries are `node scripts/lint-staged-skip-packet.mjs` runner
+      // commands, not tool pipelines — nothing to mirror.
+      if (!Array.isArray(commands)) continue;
       const expected = commands.map((command) => command.split(' ')[0]);
       for (const ext of globExts(glob)) {
         expect(

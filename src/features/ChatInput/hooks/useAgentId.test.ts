@@ -30,7 +30,7 @@ const seed = ({
 const renderWithComposer = (agentId?: string) => {
   const store = createStore({ agentId });
   const wrapper = ({ children }: { children: ReactNode }) =>
-    createElement(Provider, { createStore: () => store }, children);
+    createElement(Provider, { children, createStore: () => store });
   return renderHook(() => useAgentId(), { wrapper });
 };
 

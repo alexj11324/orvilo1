@@ -1,5 +1,6 @@
 import { McpIcon } from '@lobehub/ui/icons';
 import {
+  Bot,
   Brain,
   BrainCircuit,
   ChartColumnBigIcon,
@@ -38,6 +39,11 @@ export enum SettingsGroupKey {
 
 export interface CategoryItem extends Omit<CellProps, 'type'> {
   key: SettingsTabs;
+  /**
+   * Explicit destination for rows that don't map to a `/settings/<tab>` page —
+   * e.g. the Agents row opens the `/agents` management surface.
+   */
+  to?: string;
 }
 
 export interface CategoryGroup {
@@ -48,7 +54,7 @@ export interface CategoryGroup {
 
 export const useCategory = (): CategoryGroup[] => {
   const navigate = useWorkspaceAwareNavigate();
-  const { t } = useTranslation(['setting', 'auth', 'subscription']);
+  const { t } = useTranslation(['setting', 'auth', 'subscription', 'common']);
   const capabilityContext = useSettingsCapabilityContext();
   const { showProvider } = useServerConfigStore(featureFlagsSelectors);
 
@@ -61,9 +67,10 @@ export const useCategory = (): CategoryGroup[] => {
     const navigateTo = (key: SettingsTabs) =>
       navigate(key === SettingsTabs.Provider ? '/settings/provider/all' : `/settings/${key}`);
 
-    const makeItem = (item: Omit<CategoryItem, 'onClick'>): CategoryItem => ({
+    const makeItem = ({ to, ...item }: Omit<CategoryItem, 'onClick'>): CategoryItem => ({
       ...item,
-      onClick: () => navigateTo(item.key),
+      to,
+      onClick: () => (to ? navigate(to) : navigateTo(item.key)),
     });
 
     const account: CategoryItem[] = [
@@ -120,6 +127,14 @@ export const useCategory = (): CategoryGroup[] => {
         label: t('setting:tab.serviceModel'),
       }),
       makeItem({ icon: BrainCircuit, key: SettingsTabs.Memory, label: t('setting:tab.memory') }),
+      // Agent profile/model/tools configuration lives here in settings, never
+      // on the 会话 tab — `/agents` is the management surface.
+      makeItem({
+        icon: Bot,
+        key: SettingsTabs.Agent,
+        label: t('common:agentViewAll.title'),
+        to: '/agents',
+      }),
     ].filter((item): item is CategoryItem => Boolean(item));
 
     const tools: CategoryItem[] = [

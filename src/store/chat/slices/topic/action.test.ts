@@ -654,6 +654,48 @@ describe('topic action', () => {
       renderHook(() => useChatStore().useFetchTopicDetail(undefined));
       expect(topicService.getTopicDetail).not.toHaveBeenCalled();
     });
+
+    it('flags topicNotFoundMap when the detail fetch settles on null (deleted topic)', async () => {
+      // A stale list row / deep link to a deleted conversation: the by-id
+      // fetch resolves null and the route guard swaps in the 404 card.
+      (topicService.getTopicDetail as Mock).mockResolvedValue(null);
+
+      renderHook(() => useChatStore().useFetchTopicDetail('topic-deleted'));
+
+      await waitFor(() => {
+        expect(useChatStore.getState().topicNotFoundMap['topic-deleted']).toBe(true);
+      });
+    });
+
+    it('does not flag a client-minted topic whose server row is still confirming', async () => {
+      // During the first-send window the detail fetch legitimately resolves
+      // null — flagging it would flash the 404 card under a live composer.
+      useChatStore.setState({ creatingTopicIds: ['topic-minted'] });
+      (topicService.getTopicDetail as Mock).mockResolvedValue(null);
+
+      renderHook(() => useChatStore().useFetchTopicDetail('topic-minted'));
+
+      await waitFor(() => {
+        expect(topicService.getTopicDetail).toHaveBeenCalled();
+      });
+      expect(useChatStore.getState().topicNotFoundMap['topic-minted']).toBeUndefined();
+
+      useChatStore.setState({ creatingTopicIds: [] });
+    });
+
+    it('clears the not-found flag once a detail fetch returns the row', async () => {
+      useChatStore.setState({ topicNotFoundMap: { 'topic-restored': true } });
+      const restored = { id: 'topic-restored', status: 'running', title: 'Back' };
+      (topicService.getTopicDetail as Mock).mockResolvedValue(restored);
+
+      const { result } = renderHook(() => useChatStore().useFetchTopicDetail('topic-restored'));
+
+      await waitFor(() => {
+        expect(result.current.data).toEqual(restored);
+      });
+      expect(useChatStore.getState().topicNotFoundMap['topic-restored']).toBeUndefined();
+      expect(useChatStore.getState().topicDetailMap['topic-restored']).toEqual(restored);
+    });
   });
 
   describe('useFetchTopics', () => {
@@ -1803,6 +1845,64 @@ describe('topic action', () => {
       expect(topicData.items).toHaveLength(1);
       expect(topicData.total).toBe(1);
       expect(topicData.hasMore).toBe(false);
+    });
+  });
+
+  describe('evictStaleTopic', () => {
+    it('drops the stale topic from buckets and the detail map without a server call', () => {
+      const topicId = 'stale-topic';
+      const activeAgentId = 'evict-agent';
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId,
+          activeTopicId: topicId,
+          topicDataMap: {
+            [topicMapKey({ agentId: activeAgentId })]: {
+              currentPage: 1,
+              hasMore: false,
+              isInbox: false,
+              items: [
+                { id: topicId, status: 'completed', title: 'Gone' } as ChatTopic,
+                { id: 'live-topic', status: 'completed', title: 'Kept' } as ChatTopic,
+              ],
+              pageSize: 20,
+              total: 2,
+            },
+          },
+          topicDetailMap: {
+            [topicId]: { id: topicId, status: 'completed', title: 'Gone' } as ChatTopic,
+          },
+        });
+      });
+      const switchTopicSpy = vi.spyOn(result.current, 'switchTopic');
+
+      act(() => {
+        result.current.evictStaleTopic(topicId);
+      });
+
+      const bucket = useChatStore.getState().topicDataMap[topicMapKey({ agentId: activeAgentId })];
+
+      expect(topicService.removeTopic).not.toHaveBeenCalled();
+      expect(bucket.items.map((topic) => topic.id)).toEqual(['live-topic']);
+      expect(useChatStore.getState().topicDetailMap[topicId]).toBeUndefined();
+      expect(switchTopicSpy).toHaveBeenCalledWith(null);
+    });
+
+    it('does not switch the active topic when the stale one is not open', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        useChatStore.setState({ activeAgentId: 'evict-agent', activeTopicId: 'live-topic' });
+      });
+      const switchTopicSpy = vi.spyOn(result.current, 'switchTopic');
+
+      act(() => {
+        result.current.evictStaleTopic('stale-topic');
+      });
+
+      expect(switchTopicSpy).not.toHaveBeenCalled();
     });
   });
   describe('persisted topic-list cache write-through', () => {

@@ -13,6 +13,7 @@ import { useAgentStore } from '@/store/agent';
 import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { useGlobalStore } from '@/store/global';
 
 import { resolveTaskHandoffTopic } from './taskHandoff';
 
@@ -71,6 +72,12 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
   useEffect(() => {
     if (!selectedAgentId) return;
 
+    // Completing a handoff (routed or clicked task agent) is an explicit
+    // last-used write; the taskAgent default fallback never counts.
+    if (selectedAgentId !== taskAgentId) {
+      useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: selectedAgentId });
+    }
+
     if (useAgentStore.getState().activeAgentId !== selectedAgentId) {
       setActiveAgentId(selectedAgentId);
     }
@@ -103,7 +110,7 @@ export const TaskAgentProvider = memo<TaskAgentProviderProps>((props) => {
       scope: 'task',
       skipRefreshMessage: !targetTopicId,
     });
-  }, [routedAgentId, routedTopicId, selectedAgentId, setActiveAgentId]);
+  }, [routedAgentId, routedTopicId, selectedAgentId, setActiveAgentId, taskAgentId]);
 
   const context = useMemo<ConversationContext>(
     () => ({

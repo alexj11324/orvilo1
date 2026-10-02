@@ -77,6 +77,13 @@ export interface ChatTopicState {
    */
   topicLoadingIdCounts: Record<string, number>;
   topicLoadingIds: string[];
+  /**
+   * Topics whose by-id detail fetch settled on `null` — the row is gone or
+   * became inaccessible (deleted, or a stale list row pointing at it). Route
+   * guards read this to swap the conversation surface for a 404 card instead
+   * of rendering the raw fetch failure / a phantom empty conversation.
+   */
+  topicNotFoundMap: Record<string, boolean>;
   topicRenamingId?: string;
   topicSearchKeywords: string;
 }
@@ -91,6 +98,7 @@ export const initialTopicState: ChatTopicState = {
   topicDataMap: {},
   topicDetailMap: {},
   topicLoadingIdCounts: {},
+  topicNotFoundMap: {},
   topicLoadingIds: [],
   topicEffortUpdatingIds: [],
   topicSearchKeywords: '',

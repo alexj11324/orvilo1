@@ -3047,7 +3047,16 @@ export const aiAgentRouter = router({
   heteroIngest: heteroAgentProcedure.input(HeteroIngestSchema).mutation(async ({ input, ctx }) => {
     const { agentType, assistantMessageId, events, operationId, runGeneration, topicId } = input;
 
-    await authorizeOperationCallback(ctx, operationId, 'hetero:ingest');
+    try {
+      await authorizeOperationCallback(ctx, operationId, 'hetero:ingest');
+    } catch (error) {
+      // Batches arriving after the operation settled are dropped by the service
+      // anyway; a late duplicate is a no-op ack, not a producer error.
+      if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        return { ack: true as const };
+      }
+      throw error;
+    }
 
     log(
       'heteroIngest: topic=%s op=%s type=%s count=%d',
@@ -3148,7 +3157,17 @@ export const aiAgentRouter = router({
       topicId,
     } = input;
 
-    await authorizeOperationCallback(ctx, operationId, 'hetero:finish');
+    try {
+      await authorizeOperationCallback(ctx, operationId, 'hetero:finish');
+    } catch (error) {
+      // A finish landing after the operation already settled is a no-op, not a
+      // conflict: the durable row holds the first-wins outcome, so the
+      // producer's bounded retry must ack instead of reporting the run failed.
+      if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        return { ack: true as const };
+      }
+      throw error;
+    }
 
     log('heteroFinish: topic=%s op=%s type=%s result=%s', topicId, operationId, agentType, result);
 

@@ -1,6 +1,7 @@
 // @vitest-environment node
 import {
   ACCEPTANCE_REVIEW_ERRORED_ERROR,
+  AEGIS_EVIDENCE_REQUIRED_ERROR,
   VERIFICATION_UNJUDGEABLE_ERROR,
 } from '@orvilo/const/goal';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -370,10 +371,7 @@ describe('driveTaskFromVerify', () => {
 
     await driveTaskFromVerify(db, 'u1', 'op-1');
 
-    expect(taskRenewRunReservation).toHaveBeenCalledWith(
-      'task-1',
-      'completion:op-1:lease-1',
-    );
+    expect(taskRenewRunReservation).toHaveBeenCalledWith('task-1', 'completion:op-1:lease-1');
   });
 
   it('stops treating the completion reservation as external ownership loss after commit', async () => {
@@ -792,6 +790,101 @@ describe('driveTaskFromVerify', () => {
       expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
     );
     expect(briefCreate).not.toHaveBeenCalled();
+  });
+
+  /**
+   * Advisory Aegis gate: the run PASSED verify, but the operation opted into
+   * the Aegis method pack and shipped no usable closeout — auto-accept is
+   * withheld and the task parks on a person instead of completing silently.
+   * The verify verdict itself stays `passed`; only task completion downgrades.
+   */
+  it('passed + aegis enabled but evidence missing → pauses for human review', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    opFindById.mockResolvedValue({
+      id: 'op-1',
+      metadata: { aegis: { artifacts: [], enabled: true } },
+      taskId: 'task-1',
+      topicId: 'topic-done',
+    });
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(serviceUpdateStatus).not.toHaveBeenCalled();
+    expect(taskUpdateStatusForExecutionContract).toHaveBeenCalledWith(
+      'task-1',
+      'paused',
+      expect.objectContaining({ executionGeneration: 1, requirementRevision: 1 }),
+      expect.objectContaining({ error: AEGIS_EVIDENCE_REQUIRED_ERROR }),
+    );
+    expect(deliverMock).toHaveBeenCalledWith(expect.objectContaining({ reason: 'error' }));
+  });
+
+  it('passed + aegis low-confidence closeout → pauses for human review', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    opFindById.mockResolvedValue({
+      id: 'op-1',
+      metadata: {
+        aegis: {
+          artifacts: [
+            {
+              content: JSON.stringify({
+                confidence: 'C',
+                goalClosure: 'done',
+                schema: 'orvilo.aegis-closeout.v0',
+              }),
+              path: '.aegis/closeout.json',
+            },
+          ],
+          enabled: true,
+        },
+      },
+      taskId: 'task-1',
+      topicId: 'topic-done',
+    });
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(serviceUpdateStatus).not.toHaveBeenCalled();
+    expect(taskUpdateStatusForExecutionContract).toHaveBeenCalledWith(
+      'task-1',
+      'paused',
+      expect.any(Object),
+      expect.objectContaining({ error: AEGIS_EVIDENCE_REQUIRED_ERROR }),
+    );
+  });
+
+  it('passed + well-formed aegis closeout → completes normally', async () => {
+    runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
+    opFindById.mockResolvedValue({
+      id: 'op-1',
+      metadata: {
+        aegis: {
+          artifacts: [
+            {
+              content: JSON.stringify({
+                confidence: 'B',
+                evidence: [{ action: 'edits', covered: 'goal', result: 'verified' }],
+                goalClosure: 'done',
+                schema: 'orvilo.aegis-closeout.v0',
+              }),
+              path: '.aegis/closeout.json',
+            },
+          ],
+          enabled: true,
+        },
+      },
+      taskId: 'task-1',
+      topicId: 'topic-done',
+    });
+
+    await driveTaskFromVerify(db, 'u1', 'op-1');
+
+    expect(serviceUpdateStatus).toHaveBeenCalledWith(
+      expect.objectContaining({ id: 'task-1', status: 'completed' }),
+      undefined,
+      expect.objectContaining({ reservationId: 'completion:op-1:lease-1' }),
+      expect.objectContaining({ onStatusCommitted: expect.any(Function) }),
+    );
   });
 });
 

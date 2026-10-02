@@ -149,6 +149,7 @@ export default eslint(
       'node_modules',
       // vendored upstream sources — upstream's own style, not this repo's
       'vendor',
+      'packages/heterogeneous-agents/vendor',
       // ci
       'coverage',
       '.coverage',
@@ -188,6 +189,8 @@ export default eslint(
       'packages/sdk/src/generated/**',
       // generated files (regenerate with `codex app-server generate-ts`)
       'packages/heterogeneous-agents/src/codex/protocol/generated.ts',
+      // generated pack bundle (regenerate with `node scripts/vendor-aegis.mjs`)
+      'packages/heterogeneous-agents/src/aegis/files.generated.ts',
     ],
     next: true,
     react: 'next',

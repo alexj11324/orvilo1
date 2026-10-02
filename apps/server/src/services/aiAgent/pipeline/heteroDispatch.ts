@@ -20,10 +20,13 @@ import type {
   WorkingDirConfig,
 } from '@orvilo/types';
 import {
+  AEGIS_ORVILO_CONTRACT,
+  AEGIS_PACK_ENV,
   applyTopicModelToHeterogeneousProvider,
   buildHeteroExecArgs,
   ChatErrorType,
   getWorkingDirEffectivePath,
+  isAegisMethodPackEnabled,
   resolveHeteroAgentSystemContext,
   resolveOrviloCliAgentType,
   resolveOrviloEngine,
@@ -556,6 +559,14 @@ export const dispatchHeteroAgent = async (
   // family type and family-encoded args.
   const heteroCliAgentType =
     heteroType === 'orvilo' ? resolveOrviloCliAgentType(heterogeneousProvider?.engine) : heteroType;
+  // Aegis method-pack opt-in (provider config `methodPacks.aegis`, local CLI
+  // families only). Env — not a CLI flag — carries the bit to the spawned
+  // `lh hetero exec` so an older device-side CLI ignores it rather than
+  // dying on an unknown option.
+  const aegisEnabled =
+    heterogeneousProvider?.type === heteroType &&
+    isAegisMethodPackEnabled(heterogeneousProvider) &&
+    isLocalHeterogeneousType(heteroCliAgentType);
   // Same structured shape as the built-in path (`op_{ts}_{agentId}_{topicId}_{rand}`)
   // so hetero ops aren't visually distinct bare nanoids in the trace/op tables.
   const operationId = `op_${Date.now()}_${resolvedAgentId}_${topicId}_${nanoid(8)}`;
@@ -622,6 +633,10 @@ export const dispatchHeteroAgent = async (
           }
         : {}),
       heteroAgentType: heteroCliAgentType,
+      // Dispatch-stamped opt-in marker: survives a run that dies before
+      // `heteroFinish`, so "enabled but produced nothing" stays
+      // distinguishable from "not enabled" for the verify gate.
+      ...(aegisEnabled ? { aegis: { enabled: true } } : {}),
       // Per-tool mount contract for this run — mounted/unsupported/
       // unauthorized/failed with reasons, so a degraded surface is
       // inspectable from the operation record instead of a lost debug log.
@@ -762,6 +777,9 @@ export const dispatchHeteroAgent = async (
     [
       resolveHeteroAgentSystemContext(heterogeneousProvider, agentConfig.systemRole),
       extraSystemContext?.trim(),
+      // The deterministic `.aegis/` completion contract — the agent writes
+      // its closeout + reports there, the finish report ships them back.
+      aegisEnabled ? AEGIS_ORVILO_CONTRACT : undefined,
     ]
       .filter(Boolean)
       .join('\n\n') || undefined;
@@ -1448,7 +1466,7 @@ export const dispatchHeteroAgent = async (
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
-            env: byok?.env,
+            env: aegisEnabled ? { ...byok?.env, [AEGIS_PACK_ENV]: '1' } : byok?.env,
             // The device dedupes agent_run_request on this key (= the task id
             // it already tracks for cancelHeteroTask), so a gateway retry can
             // never spawn a duplicate execution of this operation.
@@ -1714,7 +1732,7 @@ export const dispatchHeteroAgent = async (
         ...heteroParams,
         agentType: heteroCliAgentType as 'claude-code' | 'codex',
         args: heteroExecArgs,
-        env: byok?.env,
+        env: aegisEnabled ? { ...byok?.env, [AEGIS_PACK_ENV]: '1' } : byok?.env,
         jwt: sandboxJwt,
         marketService,
         // `heteroParams.jwt` (the operation token) is overridden above for

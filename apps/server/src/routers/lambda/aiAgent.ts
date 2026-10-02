@@ -1444,6 +1444,26 @@ const HeteroIngestSchema = z.object({
  * (CC's per-cwd id), kept here so the server can resume next time.
  */
 const HeteroFinishSchema = z.object({
+  /**
+   * Aegis method-pack report, present iff the run opted in
+   * (`ORVILO_AEGIS_PACK=1` / `--aegis`). Bounded: the CLI collector already
+   * caps count/size; the schema re-caps so a hostile or confused producer
+   * cannot bloat the operation row. `{ enabled: true, files: [] }` is
+   * meaningful — "opted in, produced nothing".
+   */
+  aegis: z
+    .object({
+      enabled: z.literal(true),
+      files: z
+        .array(
+          z.object({
+            content: z.string().max(128 * 1024),
+            path: z.string().min(1).max(512),
+          }),
+        )
+        .max(64),
+    })
+    .optional(),
   agentType: LocalHeterogeneousAgentTypeSchema,
   /** Initial assistant placeholder forwarded by the producer. Unlike the live
    * ingest path, finish may arrive after gateway session completion has already
@@ -3146,6 +3166,7 @@ export const aiAgentRouter = router({
    */
   heteroFinish: heteroAgentProcedure.input(HeteroFinishSchema).mutation(async ({ input, ctx }) => {
     const {
+      aegis,
       agentType,
       assistantMessageId,
       error,
@@ -3188,6 +3209,7 @@ export const aiAgentRouter = router({
       // the same mechanism the normal LLM runtime uses. No bespoke lifecycle call
       // here anymore; this is just the server-to-server ack endpoint.
       await heteroService.heteroFinish({
+        aegis,
         agentType,
         assistantMessageId,
         error,

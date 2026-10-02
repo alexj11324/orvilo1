@@ -447,6 +447,16 @@ const loadMoreTopicsError = (s: ChatStoreState): unknown => currentTopicData(s)?
 const isExpandingPageSize = (s: ChatStoreState): boolean =>
   currentTopicData(s)?.isExpandingPageSize ?? false;
 
+/**
+ * The by-id detail fetch settled on `null` — the topic doesn't exist or the
+ * viewer lost access (a deleted conversation on a stale list row or deep
+ * link). Render a 404 card, not an empty conversation / raw fetch error.
+ */
+const isTopicNotFoundById =
+  (topicId?: string) =>
+  (s: ChatStoreState): boolean =>
+    !!topicId && !!s.topicNotFoundMap[topicId];
+
 export const topicSelectors = {
   activeTopicHeteroPin,
   activeTopicModel,
@@ -480,6 +490,7 @@ export const topicSelectors = {
   isLoadingMoreTopics,
   isNewTopicSendInFlight,
   isSearchingTopic,
+  isTopicNotFoundById,
   isUndefinedTopics,
   loadMoreTopicsError,
   searchTopics,

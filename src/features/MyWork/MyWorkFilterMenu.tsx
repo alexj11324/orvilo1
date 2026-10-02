@@ -5,6 +5,7 @@ import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import type { ParseKeys } from 'i18next';
 import {
+  ActivityIcon,
   CheckIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -26,6 +27,7 @@ import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
 import {
+  EXECUTION_STATE_VISUALS,
   STATUS_PROPERTY_ICON,
   type StatusVisual,
   TASK_STATUS_VISUALS,
@@ -148,6 +150,7 @@ const DIRECTORY_FIELD_ICONS: Partial<Record<WorkQueryField, StatusVisual['icon']
   assigneeUserId: CircleUserRoundIcon,
   createdByUserId: SquarePenIcon,
   cycleId: RepeatIcon,
+  executionState: ActivityIcon,
   labelId: TagIcon,
   priority: SignalIcon,
   projectId: PROJECT_ENTITY_ICON,
@@ -269,6 +272,13 @@ const DirectoryFieldPane = memo<{
             icon = <PriorityIcon priority={Number(value)} size={14} />;
           } else if (field === 'status') {
             const visual = TASK_STATUS_VISUALS[value as keyof typeof TASK_STATUS_VISUALS];
+            if (visual)
+              icon = createElement(visual.icon, {
+                className: 'size-4 shrink-0',
+                color: visual.color,
+              });
+          } else if (field === 'executionState') {
+            const visual = EXECUTION_STATE_VISUALS[value as keyof typeof EXECUTION_STATE_VISUALS];
             if (visual)
               icon = createElement(visual.icon, {
                 className: 'size-4 shrink-0',

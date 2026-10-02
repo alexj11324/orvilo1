@@ -78,7 +78,7 @@ const TeamPage = memo(() => {
         query: {
           entityType: 'project',
           filter: { all: [{ field: 'teamId', op: 'eq', value: teamId! }] },
-          schemaVersion: 1,
+          schemaVersion: 2,
         },
       }),
   );

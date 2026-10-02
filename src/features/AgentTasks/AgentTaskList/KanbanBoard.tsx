@@ -20,12 +20,9 @@ import { useTranslation } from 'react-i18next';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
 import SimpleEmpty from '@/components/SimpleEmpty';
-import { toast } from '@/components/toast';
 import {
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
-  kanbanStatusMoveGroupBy,
-  storeKanbanUsesWorkflowMove,
 } from '@/features/MyWork/workQueryBoardMove';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -39,8 +36,6 @@ import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initi
 
 import { createTaskModal } from '../CreateTaskModal';
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
-import { createTaskStatusCascadeModal } from '../features/TaskStatusCascadeModal';
-import { getOpenSubtasks, useTaskStatusChange } from '../features/useTaskStatusChange';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import {
   boardCellKey,
@@ -70,7 +65,6 @@ import {
   kanbanColumnMoveScope,
   kanbanColumnPagingAction,
   kanbanCreateTaskProjectId,
-  kanbanStatusColumnsExcludedBy,
   makeKanbanCollision,
   normalizeKanbanGroupBy,
   parseBoardCellKey,
@@ -293,37 +287,33 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     [external, isQueryScopeCurrent, storeTaskGroups],
   );
   const updateTask = useTaskStore((s) => s.updateTask);
-  const changeTaskStatus = useTaskStatusChange();
   const loadMoreTaskGroup = useTaskStore((s) => s.loadMoreTaskGroup);
   const boardGroupLimits = useTaskStore((s) => s.boardGroupLimits);
   const refreshTaskGroupList = useTaskStore((s) => s.refreshTaskGroupList);
-  const internalRefreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
-
   const storeHiddenColumns = useGlobalStore(systemStatusSelectors.taskKanbanHiddenColumns);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
-  const hiddenColumns = external?.onHiddenColumnKeysChange
-    ? [...(external.hiddenColumnKeys ?? [])]
-    : storeHiddenColumns;
+  const hiddenColumns = useMemo(
+    () =>
+      external?.onHiddenColumnKeysChange
+        ? [...(external.hiddenColumnKeys ?? [])]
+        : storeHiddenColumns,
+    [external, storeHiddenColumns],
+  );
 
   const [activeTask, setActiveTask] = useState<TaskListItem | null>(null);
   /**
    * Optimistic field patches keyed by task identifier. The mirror (below)
    * only moves identifiers between columns; a status/assignee/priority drop
    * also needs the rendered card to show its TARGET values for the settle
-   * window — `TaskStatusTag`/`TaskPriorityTag`/assignee read the task object.
+   * window — `IssueStatusPicker`/`TaskPriorityTag`/assignee read the task object.
    * Cleared when the post-settle resync lands the server's truth.
    */
   const [cardOverrides, setCardOverrides] = useState<Record<string, Partial<TaskListItem>>>({});
 
   const allColumns = useMemo(() => {
     if (external) return externalBoardColumns(externalGroupBy, currentTaskGroups);
-    const filteredOut = kanbanStatusColumnsExcludedBy(
-      groupBy === 'status' ? excludeStatuses : undefined,
-    );
-    return buildKanbanColumns(currentTaskGroups, groupBy).filter(
-      (column) => !filteredOut.has(column.key),
-    );
-  }, [currentTaskGroups, excludeStatuses, external, externalGroupBy, groupBy]);
+    return buildKanbanColumns(currentTaskGroups, groupBy);
+  }, [currentTaskGroups, external, externalGroupBy, groupBy]);
   const lanes = useMemo(
     () => (external?.laneAxis ? externalBoardLanes(external.laneAxis, currentTaskGroups) : []),
     [currentTaskGroups, external?.laneAxis],
@@ -514,9 +504,12 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         return true;
       }
 
-      if (storeKanbanUsesWorkflowMove(groupBy, task)) {
-        // Same-column reorder still writes position through the store.
-        // Cross-column Linear drops need VIEW08's exact-state picker.
+      if (groupBy === 'status') {
+        // The Issue board writes the canonical Issue Status only: same-column
+        // drops stay position reorders; every cross-column drop — linked or
+        // not — commits through the shared workflow move (`moveBoard` CAS,
+        // ambiguity picker and cascade modal included). Execution statuses
+        // never appear as a column.
         if (memberAlready) {
           await updateTask(task.identifier, anchors);
           return true;
@@ -526,48 +519,6 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           groupBy: 'workflowCategory',
           task,
         });
-      }
-
-      if (groupBy === 'status') {
-        const targetStatus = column.targetStatus;
-        // The column writes no status (running), or the task already buckets
-        // inside it (a `failed` card in `needsInput`) → pure reorder.
-        if (!targetStatus || memberAlready) {
-          await updateTask(task.identifier, anchors);
-          return true;
-        }
-        if (targetStatus === 'completed' || targetStatus === 'canceled') {
-          // Same contract as the detail header: completing/canceling a parent
-          // with open subtasks asks whether to cascade first.
-          let openSubtasks;
-          try {
-            const result = await taskService.getSubtasks(task.identifier);
-            openSubtasks = getOpenSubtasks(result.data);
-          } catch (loadError) {
-            console.error('[KanbanBoard] Failed to inspect subtasks:', loadError);
-            toast.error(t('taskDetail.statusCascade.loadFailed'));
-            throw loadError;
-          }
-          if (openSubtasks.length > 0) {
-            return createTaskStatusCascadeModal({
-              subtasks: openSubtasks,
-              targetStatus,
-              onApply: async (includeSubtasks) => {
-                if (includeSubtasks) {
-                  // The cascade endpoint owns the subtree transition AND stamps
-                  // the drop position in the same transaction — the move can
-                  // never persist its status without its slot.
-                  await taskService.updateStatusCascade(task.identifier, targetStatus, anchors);
-                  await internalRefreshTaskDetail(task.identifier).catch(() => {});
-                  return;
-                }
-                await updateTask(task.identifier, { ...anchors, status: targetStatus });
-              },
-            });
-          }
-        }
-        await updateTask(task.identifier, { ...anchors, status: targetStatus });
-        return true;
       }
 
       if (groupBy === 'assignee' || groupBy === 'member') {
@@ -583,16 +534,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       await updateTask(task.identifier, { ...anchors, priority: patch?.priority ?? 0 });
       return true;
     },
-    [
-      canMoveAcrossGroups,
-      canReorderWithinGroup,
-      external,
-      externalGroupBy,
-      groupBy,
-      internalRefreshTaskDetail,
-      t,
-      updateTask,
-    ],
+    [canMoveAcrossGroups, canReorderWithinGroup, external, externalGroupBy, groupBy, updateTask],
   );
 
   // ── Drag handlers ──────────────────────────────────────────────
@@ -717,7 +659,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
       const patch = external
         ? externalKanbanCellPatch(finalDef.key)
-        : (getKanbanTaskPatch(groupBy, finalDef, frozenTask) ?? {});
+        : (getKanbanTaskPatch(groupBy, finalDef) ?? {});
       const assigneeUpdate =
         groupBy === 'assignee' || groupBy === 'member'
           ? getKanbanAssigneeUpdate(frozenTask, patch)
@@ -802,14 +744,9 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
   const handleCardStatusChange = useCallback(
     async (task: TaskListItem, choice: TaskStatusChoice) => {
-      const applied = await applyWorkQueryStatusChoice({
-        changeLocal: changeTaskStatus,
-        choice,
-        groupBy: kanbanStatusMoveGroupBy(
-          external?.queryGroupBy === 'workflowCategory' ? 'workflowCategory' : 'status',
-        ),
-        task,
-      });
+      // Issue-status choices are always a workflow move — the picker's rows
+      // never carry a raw execution status.
+      const applied = await applyWorkQueryStatusChoice({ choice, task });
       if (!applied) return;
       try {
         await refreshGroups();
@@ -817,7 +754,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         console.error('[KanbanBoard] Failed to refresh after status change:', error);
       }
     },
-    [changeTaskStatus, external?.queryGroupBy, refreshGroups],
+    [refreshGroups],
   );
 
   const handleCreateTask = useCallback(
@@ -868,7 +805,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     return groupBy === 'status' || external
       ? populated.filter((column) => !hiddenColumnSet.has(column.key))
       : populated;
-  }, [allColumns, columnTotals, external, external?.hideEmptyColumns, groupBy, hiddenColumnSet]);
+  }, [allColumns, columnTotals, external, groupBy, hiddenColumnSet]);
 
   const hiddenColumnEntries = useMemo(
     () =>

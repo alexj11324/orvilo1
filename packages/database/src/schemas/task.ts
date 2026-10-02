@@ -90,9 +90,10 @@ export const tasks = pgTable(
     assigneeAgentId: text('assignee_agent_id').references(() => agents.id, {
       onDelete: 'set null',
     }),
-    // Reviewer — the human accountable while the task sits in 'paused'
-    // ("pending review"). Stamped when a run finishes and hands off for
-    // review; the assignees above stay the executors.
+    // Reviewer — the human accountable while the issue is in review
+    // (`workflowCategory === 'in_review'` / a review-gate workflow state).
+    // Settlement stamps it when a run finishes and hands off for review;
+    // the assignees above stay the executors.
     reviewerUserId: text('reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
     /**
      * Team intake state. NULL means the task is not in triage (legacy and

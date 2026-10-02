@@ -3,7 +3,7 @@
  */
 import { cleanup, fireEvent, render, screen } from '@testing-library/react';
 import type { LucideIcon } from 'lucide-react';
-import type { ReactNode } from 'react';
+import type { ComponentType, ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import KanbanColumn, { CollapsedKanbanColumn } from './KanbanColumn';
@@ -22,6 +22,8 @@ const mocks = vi.hoisted(() => ({
   taskContextMenu: vi.fn(),
   taskDetailMap: {} as Record<string, unknown>,
   updateTask: vi.fn(),
+  workflowGlyph: undefined as
+    { color: string; icon: ComponentType<{ color?: string; size?: number }> } | undefined,
 }));
 
 vi.mock('react-i18next', () => ({
@@ -105,8 +107,13 @@ vi.mock('../features/AssigneeUserAvatar', () => ({
   default: ({ userId }: { userId?: string | null }) => <span data-user-avatar={userId ?? ''} />,
 }));
 
-vi.mock('../features/TaskStatusIcon', () => ({
-  default: ({ status }: { status: string }) => <span data-status-icon={status} />,
+vi.mock('../features/TaskExecutionBadge', () => ({
+  default: () => <span data-testid="execution-badge" />,
+}));
+
+vi.mock('../shared/TaskWorkflowBadge', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  useTaskWorkflowGlyph: () => mocks.workflowGlyph,
 }));
 
 vi.mock('../features/TaskPriorityTag', () => ({
@@ -216,7 +223,10 @@ describe('TaskBoardCard', () => {
 
     expect(screen.getByText('T-22')).toBeInTheDocument();
     expect(screen.getByText('Hourly trend update')).toBeInTheDocument();
-    expect(document.querySelector('[data-status-icon="backlog"]')).toBeInTheDocument();
+    // One status mark — the workflow-category glyph slot — plus the read-only
+    // execution badge.
+    expect(document.querySelector('[data-collab-id$=":status"]')).toBeInTheDocument();
+    expect(screen.getByTestId('execution-badge')).toBeInTheDocument();
     expect(screen.getByTestId('priority')).toBeInTheDocument();
     // Linear cards stamp the creation date — "Created <date>".
     expect(screen.getByText('Created Sep 15')).toBeInTheDocument();
@@ -238,9 +248,11 @@ describe('TaskBoardCard', () => {
     expect(screen.getByText('Roll up the weekly numbers')).toBeInTheDocument();
   });
 
-  it('shows the reviewer — not the assignee — in the owner slot while paused', () => {
+  it('shows the reviewer — not the assignee — in the owner slot while in review', () => {
     render(
-      <TaskBoardCard task={createTask({ reviewerUserId: 'user-reviewer', status: 'paused' })} />,
+      <TaskBoardCard
+        task={createTask({ reviewerUserId: 'user-reviewer', workflowCategory: 'in_review' })}
+      />,
     );
 
     expect(document.querySelector('[data-user-avatar="user-reviewer"]')).toBeInTheDocument();

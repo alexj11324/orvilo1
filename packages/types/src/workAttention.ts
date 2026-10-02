@@ -6,6 +6,7 @@
  */
 
 import type { NotificationActor, NotificationAgent } from './notification';
+import { TASK_EXECUTION_STATES } from './task/stateModel';
 
 export const WORK_ATTENTION_CONTRACT_VERSION = 'nav-attention-v4.1';
 
@@ -230,6 +231,7 @@ export type WorkQueryField =
   | 'createdByUserId'
   | 'cycleId'
   | 'delegatedByUserId'
+  | 'executionState'
   | 'hasActivity'
   | 'id'
   | 'labelId'
@@ -399,9 +401,10 @@ export const WORK_QUERY_WORKFLOW_COLUMNS = [
 ] as const;
 
 /**
- * Legacy `tasks.status` values accepted as board columns.
+ * Legacy `tasks.status` values accepted as board columns — the execution
+ * projection axis, used by execution-state "Runs view" boards only.
  * @deprecated `tasks.status` is the legacy compatibility projection — not the
- * Issue Status. Boards should group by `workflowCategory`
+ * Issue Status. Issue boards group by `workflowCategory`
  * ({@link WORK_QUERY_WORKFLOW_COLUMNS}).
  */
 export const WORK_QUERY_STATUS_COLUMNS = [
@@ -419,7 +422,13 @@ export interface WorkQuery {
   filter?: WorkQueryFilter;
   groupBy?: WorkQueryGroupBy;
   layout?: WorkQueryLayout;
-  schemaVersion: 1;
+  /**
+   * Query schema epoch. `1` reads `status` predicates as the legacy
+   * compatibility projection; {@link normalizeWorkQuery} migrates them onto
+   * `workflowCategory` / `executionState`. `2` is the current write epoch —
+   * newly saved views never write a `status` predicate.
+   */
+  schemaVersion: 1 | 2;
   sort?: WorkQuerySort[];
   sortMode?: WorkQuerySortMode;
   /**
@@ -447,6 +456,13 @@ export interface WorkQueryFieldSpec {
    * hides the member picker and the row means "involving me".
    */
   currentUserOnly?: boolean;
+  /**
+   * Deprecated field — kept in the table so stored predicates still resolve
+   * their spec (read-only compatibility for old saved views), but authoring
+   * surfaces must not offer it and the builder must not render editable rows
+   * for it.
+   */
+  deprecated?: boolean;
   /** Allowed values for `valueKind === 'enum'`. Numbers for `priority`. */
   enumValues?: readonly (number | string)[];
   field: WorkQueryField;
@@ -501,14 +517,21 @@ export const PROJECT_VISIBILITY_VALUES = ['private', 'public'] as const;
 
 export const WORK_QUERY_TASK_FIELD_SPECS: readonly WorkQueryFieldSpec[] = [
   {
-    enumValues: TASK_STATUS_VALUES,
-    field: 'status',
+    enumValues: TASK_WORKFLOW_CATEGORY_VALUES,
+    field: 'workflowCategory',
     ops: ['eq', 'neq', 'in', 'notIn'],
     valueKind: 'enum',
   },
   {
-    enumValues: TASK_WORKFLOW_CATEGORY_VALUES,
-    field: 'workflowCategory',
+    enumValues: TASK_EXECUTION_STATES,
+    field: 'executionState',
+    ops: ['eq', 'neq', 'in', 'notIn', 'isNull', 'isNotNull'],
+    valueKind: 'enum',
+  },
+  {
+    deprecated: true,
+    enumValues: TASK_STATUS_VALUES,
+    field: 'status',
     ops: ['eq', 'neq', 'in', 'notIn'],
     valueKind: 'enum',
   },
@@ -634,6 +657,127 @@ export const workQueryFieldSpec = (
   field: string,
 ): WorkQueryFieldSpec | undefined =>
   workQueryFieldSpecs(entityType).find((spec) => spec.field === field);
+
+/* --------------- schema v1 → v2 migration --------------- */
+
+/**
+ * v1 `status` values that only ever meant the Issue Workflow axis — the
+ * mapping onto `workflowCategory` is unambiguous.
+ */
+const LEGACY_STATUS_TO_WORKFLOW: Readonly<Record<string, string>> = {
+  backlog: 'backlog',
+  canceled: 'canceled',
+  completed: 'done',
+};
+
+/**
+ * v1 `status` values that only ever described an execution — they migrate
+ * onto `executionState` (the PR-A projection of `task_dispatches.phase` /
+ * `task_topics.run_state`, which the legacy column itself projected).
+ */
+const LEGACY_STATUS_TO_EXECUTION: Readonly<Record<string, string>> = {
+  failed: 'failed',
+  paused: 'outcome_unknown',
+  running: 'running',
+  scheduled: 'queued',
+};
+
+const isWorkQueryPredicate = (
+  node: WorkQueryFilter | WorkQueryPredicate,
+): node is WorkQueryPredicate => 'field' in node && 'op' in node;
+
+/**
+ * One v1 `status` predicate rewritten onto the two-layer model, or `null`
+ * when a member is not migratable (unknown value — the caller keeps the
+ * legacy predicate, which still compiles against `tasks.status`).
+ */
+const migrateStatusPredicate = (
+  predicate: WorkQueryPredicate,
+): WorkQueryFilter | WorkQueryPredicate | null => {
+  const toParts = (values: readonly string[]) => {
+    const workflow: string[] = [];
+    const execution: string[] = [];
+    for (const value of values) {
+      const wf = LEGACY_STATUS_TO_WORKFLOW[value];
+      const ex = LEGACY_STATUS_TO_EXECUTION[value];
+      if (wf) workflow.push(wf);
+      else if (ex) execution.push(ex);
+      else return null;
+    }
+    return { execution, workflow };
+  };
+
+  if (predicate.op === 'eq' || predicate.op === 'neq') {
+    if (typeof predicate.value !== 'string') return predicate;
+    const parts = toParts([predicate.value]);
+    if (!parts) return null;
+    if (parts.workflow.length) {
+      return { field: 'workflowCategory', op: predicate.op, value: parts.workflow[0] };
+    }
+    return { field: 'executionState', op: predicate.op, value: parts.execution[0] };
+  }
+
+  if (predicate.op === 'in' || predicate.op === 'notIn') {
+    const values = Array.isArray(predicate.value)
+      ? predicate.value.filter((item): item is string => typeof item === 'string')
+      : [];
+    if (
+      values.length === 0 ||
+      values.length !== (Array.isArray(predicate.value) ? predicate.value.length : 0)
+    ) {
+      return null;
+    }
+    const parts = toParts(values);
+    if (!parts) return null;
+    const workflowPredicate: WorkQueryPredicate | undefined = parts.workflow.length
+      ? { field: 'workflowCategory', op: predicate.op, value: parts.workflow }
+      : undefined;
+    const executionPredicate: WorkQueryPredicate | undefined = parts.execution.length
+      ? { field: 'executionState', op: predicate.op, value: parts.execution }
+      : undefined;
+    if (workflowPredicate && executionPredicate) {
+      // `in` splits into an OR (either layer may match); `notIn` stays an AND
+      // (the task must match neither layer's list).
+      return predicate.op === 'in'
+        ? { any: [workflowPredicate, executionPredicate] }
+        : { all: [workflowPredicate, executionPredicate] };
+    }
+    return workflowPredicate ?? executionPredicate ?? null;
+  }
+
+  return predicate;
+};
+
+const migrateWorkQueryFilter = (node: WorkQueryFilter | undefined): WorkQueryFilter | undefined => {
+  if (!node) return node;
+  const migrateNodes = (
+    nodes: Array<WorkQueryFilter | WorkQueryPredicate> | undefined,
+  ): Array<WorkQueryFilter | WorkQueryPredicate> | undefined => {
+    if (!nodes) return nodes;
+    return nodes.map((child) => {
+      if (!isWorkQueryPredicate(child)) return migrateWorkQueryFilter(child)!;
+      if (child.field !== 'status') return child;
+      const migrated = migrateStatusPredicate(child);
+      return migrated ?? child;
+    });
+  };
+  return { all: migrateNodes(node.all), any: migrateNodes(node.any) };
+};
+
+/**
+ * Normalize a stored or incoming query to schema v2 semantics: on task
+ * queries, `status` predicates migrate to `workflowCategory` where the mapping
+ * is unambiguous, otherwise to `executionState`; unmigratable members keep the
+ * legacy predicate (read-only compatibility — `tasks.status` still compiles).
+ * Project queries are untouched — `projects.status` is a real field, not the
+ * legacy projection. The stored row is never rewritten by this — callers
+ * decide what to persist.
+ */
+export const normalizeWorkQuery = (query: WorkQuery): WorkQuery => ({
+  ...query,
+  filter: query.entityType === 'task' ? migrateWorkQueryFilter(query.filter) : query.filter,
+  schemaVersion: 2,
+});
 
 export const NO_PROJECT_PREDICATE = {
   field: 'projectId',

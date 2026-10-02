@@ -141,6 +141,18 @@ describe('useIssueStatusMove', () => {
     expect(mocks.refreshDetail).not.toHaveBeenCalled();
   });
 
+  it('never spawns a builder when the issue moves into review', async () => {
+    mocks.find.mockResolvedValue(
+      teamTask({ automationMode: null, status: 'backlog', workflowCategory: 'in_progress' }),
+    );
+    const { result } = renderHook(() => useIssueStatusMove());
+    await result.current({
+      taskIdentifier: 'T-9',
+      target: target({ category: 'in_review' }),
+    });
+    expect(mocks.runTask).not.toHaveBeenCalled();
+  });
+
   it('starts the agent when the issue enters in progress', async () => {
     mocks.find.mockResolvedValue(
       teamTask({ automationMode: null, status: 'backlog', workflowCategory: 'todo' }),

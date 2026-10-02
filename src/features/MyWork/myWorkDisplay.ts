@@ -148,7 +148,6 @@ const MY_WORK_ORDERINGS: readonly MyWorkOrdering[] = [
 ];
 export const MY_WORK_SUB_GROUPING_OPTIONS: readonly MyWorkSubGrouping[] = [
   'none',
-  'status',
   'priority',
   'assignee',
   'project',
@@ -237,16 +236,18 @@ export const normalizeMyWorkDisplay = (
 /**
  * Grouping choices offered per tab — the tab's Linear default comes first,
  * then the status dimensions, then the row-field groupings Linear's menu
- * lists (Priority / Project / Assignee) which bucket client-side.
+ * lists (Priority / Project / Assignee) which bucket client-side. Only the
+ * workflow axis is offered: `status` is the deprecated execution projection
+ * (filter on `executionState` instead); persisted prefs that still carry it
+ * keep working through the wider type.
  */
 export const myWorkListGroupingOptions = (mode: MyWorkMode): MyWorkListGrouping[] => {
   if (mode === 'assigned') {
-    return ['attention', 'status', 'workflowCategory', 'priority', 'project', 'assignee', 'none'];
+    return ['attention', 'workflowCategory', 'priority', 'project', 'assignee', 'none'];
   }
   if (mode === 'activity') {
     return [
       'activityDate',
-      'status',
       'workflowCategory',
       'priority',
       'project',
@@ -255,12 +256,11 @@ export const myWorkListGroupingOptions = (mode: MyWorkMode): MyWorkListGrouping[
       'none',
     ];
   }
-  return ['none', 'status', 'workflowCategory', 'priority', 'project', 'assignee', 'attention'];
+  return ['none', 'workflowCategory', 'priority', 'project', 'assignee', 'attention'];
 };
 
 export const MY_WORK_BOARD_GROUPING_OPTIONS: MyWorkBoardGrouping[] = [
   'workflowCategory',
-  'status',
   'priority',
   'assignee',
 ];
@@ -272,9 +272,6 @@ export const myWorkBoardSubGroupingOptions = (
   MY_WORK_SUB_GROUPING_OPTIONS.filter((option) => {
     if (option === 'none') return true;
     if (option === boardGrouping) return false;
-    // Status and workflow are one state machine. Swimlanes don't offer
-    // workflowCategory, so only the status lane under a workflow column is dropped.
-    if (boardGrouping === 'workflowCategory' && option === 'status') return false;
     return true;
   });
 
@@ -373,11 +370,11 @@ export const completedWindowQueryFilter = (
 ): WorkQueryFilter | undefined => {
   if (completed === 'all') return undefined;
   if (completed === 'none') {
-    return { all: [{ field: 'status', op: 'notIn', value: ['completed', 'canceled'] }] };
+    return { all: [{ field: 'workflowCategory', op: 'notIn', value: ['done', 'canceled'] }] };
   }
   return {
     any: [
-      { field: 'status', op: 'notIn', value: ['completed', 'canceled'] },
+      { field: 'workflowCategory', op: 'notIn', value: ['done', 'canceled'] },
       { field: 'closedAt', op: 'gte', value: new Date(now - DAY_MS).toISOString() },
     ],
   };
@@ -391,9 +388,7 @@ export const myWorkVisibilityQueryFilter = (
   display: Pick<MyWorkDisplay, 'showSubIssues' | 'showTriage'>,
 ): WorkQueryFilter | undefined => {
   const all: WorkQueryPredicate[] = [
-    ...(!display.showSubIssues
-      ? [{ field: 'parentTaskId' as const, op: 'isNull' as const }]
-      : []),
+    ...(!display.showSubIssues ? [{ field: 'parentTaskId' as const, op: 'isNull' as const }] : []),
     ...(!display.showTriage
       ? [{ field: 'workflowCategory' as const, op: 'neq' as const, value: 'triage' }]
       : []),

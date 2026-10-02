@@ -31,7 +31,7 @@ const withTeamScope = (
       filter: {
         all: [{ field: 'teamId', op: 'eq', value: teamId }, ...extra, ...(cycle ? [cycle] : [])],
       },
-      schemaVersion: 1,
+      schemaVersion: 2,
     },
     noProject,
   );

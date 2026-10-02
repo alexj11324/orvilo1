@@ -1,20 +1,20 @@
 'use client';
-import type { TaskStatus } from '@orvilo/types';
+import type { TaskWorkflowCategory } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { BarChart3Icon, Trash2Icon, UserRoundIcon, XIcon } from 'lucide-react';
 import { createElement, memo, useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { STATUS_PROPERTY_ICON } from '@/components/ExecutionStatus';
+import { STATUS_PROPERTY_ICON, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { getPriorityIconColor, PRIORITY_LEVELS } from '@/components/PriorityIcon';
 import { Button } from '@/components/ui/button';
+import {
+  COLUMN_I18N_KEYS,
+  issueStatusChoices,
+} from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { useAssigneeMenuItems } from '@/features/AgentTasks/features/assigneeMenuItems';
 import { PRIORITY_META } from '@/features/AgentTasks/features/TaskPriorityTag';
-import {
-  STATUS_META,
-  USER_SELECTABLE_STATUSES,
-} from '@/features/AgentTasks/features/taskStatusMeta';
 import DropdownMenu, {
   type SidebarMenuInfo,
   type SidebarMenuItemData,
@@ -68,7 +68,7 @@ interface BulkActionsBarProps {
   onClear: () => void;
   onDelete: () => void;
   onSetPriority: (priority: number) => void;
-  onSetStatus: (status: TaskStatus) => void;
+  onSetStatus: (category: TaskWorkflowCategory) => void;
 }
 
 /**
@@ -99,19 +99,20 @@ const BulkActionsBar = memo<BulkActionsBarProps>(
       disabled: busy,
     });
 
+    // The Issue board's columns — workflow categories only; execution
+    // statuses are never a user pick.
     const statusItems = useMemo<SidebarMenuItemData[]>(
       () =>
-        USER_SELECTABLE_STATUSES.map((status) => {
-          const meta = STATUS_META[status];
+        issueStatusChoices().map((choice) => {
+          const category = choice.workflowCategory ?? 'backlog';
+          const visual = WORKFLOW_CATEGORY_VISUALS[category];
           return {
-            icon: createElement(meta.icon, { className: 'size-4 shrink-0', color: meta.color }),
-            key: status,
-            label: t(`chat:taskDetail.${meta.labelKey}` as never, {
-              defaultValue: meta.label,
-            }),
+            icon: createElement(visual.icon, { className: 'size-4 shrink-0', color: visual.color }),
+            key: category,
+            label: t(COLUMN_I18N_KEYS[choice.column.key] as never),
             onClick: ({ domEvent }: SidebarMenuInfo) => {
               domEvent.stopPropagation();
-              onSetStatus(status);
+              onSetStatus(category);
             },
           };
         }),

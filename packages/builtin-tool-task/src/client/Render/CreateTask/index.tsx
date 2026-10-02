@@ -7,8 +7,8 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
+import IssueStatusPicker from '@/features/AgentTasks/features/IssueStatusPicker';
 import TaskPriorityTag from '@/features/AgentTasks/features/TaskPriorityTag';
-import TaskStatusTag from '@/features/AgentTasks/features/TaskStatusTag';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 
@@ -124,7 +124,14 @@ export const CreateTaskRender = memo<BuiltinRenderProps<CreateTaskParams, Create
           <div className={styles.row}>
             {identifier && <span className={styles.identifier}>{identifier}</span>}
             {name && <div className={styles.title}>{name}</div>}
-            {status && <TaskStatusTag disableDropdown size={14} status={status} />}
+            {/* The Issue Status mark — read-only on a tool card. */}
+            {status && (
+              <IssueStatusPicker
+                disableDropdown
+                size={14}
+                workflowCategory={pluginState?.workflowCategory}
+              />
+            )}
             {!!priority && <TaskPriorityTag disableDropdown priority={priority} size={14} />}
             {identifier && (
               <ActionIcon

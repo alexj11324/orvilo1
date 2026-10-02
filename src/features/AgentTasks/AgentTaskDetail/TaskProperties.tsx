@@ -1,4 +1,4 @@
-import type { TaskPriority, TaskStatus } from '@orvilo/types';
+import type { TaskPriority, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 import { format, parseISO } from 'date-fns';
 import {
   CalendarIcon,
@@ -21,10 +21,11 @@ import { taskDetailSelectors } from '@/store/task/selectors';
 
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
+import IssueStatusPicker from '../features/IssueStatusPicker';
+import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskLabelSelector from '../features/TaskLabelSelector';
 import TaskPriorityTag from '../features/TaskPriorityTag';
 import { openTaskScheduleDialog } from '../features/TaskScheduleDialog';
-import TaskStatusTag from '../features/TaskStatusTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { useTeamWorkflowStates } from '../features/useTeamWorkflowStates';
 import { shouldShowMemberAssignee } from '../shared/memberAssigneeMode';
@@ -34,21 +35,6 @@ import { taskDetailLayoutStyles as styles } from './taskDetailLayoutStyles';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
 import TaskPrerequisites from './TaskPrerequisites';
 import TaskScheduleConfig from './TaskScheduleConfig';
-import { resolveTaskStatusRow } from './taskStatusRow';
-
-interface StatusMeta {
-  labelKey: string;
-}
-
-const STATUS_META: Record<TaskStatus, StatusMeta> = {
-  backlog: { labelKey: 'status.backlog' },
-  canceled: { labelKey: 'status.canceled' },
-  completed: { labelKey: 'status.completed' },
-  failed: { labelKey: 'status.failed' },
-  paused: { labelKey: 'status.paused' },
-  running: { labelKey: 'status.running' },
-  scheduled: { labelKey: 'status.scheduled' },
-};
 
 interface PriorityMeta {
   labelKey: string;
@@ -110,22 +96,20 @@ const TaskProperties = memo(() => {
 
   if (!taskId) return null;
 
-  const statusMeta = status ? STATUS_META[status] : STATUS_META.backlog;
-  const statusRow = resolveTaskStatusRow(status, workflowCategory, workflowStateId);
   const workflowStateName = teamStates?.find(
     (state) => state.id === workflowStateRefId || state.remoteStateId === workflowStateId,
   )?.name;
   const priorityMeta = PRIORITY_META[priority as TaskPriority] ?? PRIORITY_META[0];
 
-  const workflowMark =
-    statusRow.kind === 'workflow'
-      ? {
-          category: statusRow.category,
-          color: WORKFLOW_CATEGORY_VISUALS[statusRow.category].color,
-          Icon: WORKFLOW_CATEGORY_VISUALS[statusRow.category].icon,
-        }
-      : null;
-  const WorkflowIcon = workflowMark?.Icon;
+  // The rail's Status row is the canonical Issue Status — the workflow
+  // category — for every task; execution run state is a separate badge.
+  const issueCategory: TaskWorkflowCategory = workflowCategory ?? 'backlog';
+  const workflowMark = {
+    category: issueCategory,
+    color: WORKFLOW_CATEGORY_VISUALS[issueCategory].color,
+    Icon: WORKFLOW_CATEGORY_VISUALS[issueCategory].icon,
+  };
+  const WorkflowIcon = workflowMark.Icon;
 
   const dueDateOverdue =
     !!dueDate &&
@@ -140,34 +124,9 @@ const TaskProperties = memo(() => {
       className="flex min-w-0 cursor-pointer items-center gap-1.5"
       data-task-workflow-state={workflowMark?.category}
     >
-      {WorkflowIcon && workflowMark ? (
-        status ? (
-          // The value is the status menu trigger. Wrapping it in a tooltip
-          // swallows the trigger props, so the menu never opens. The
-          // execution-status hint stays on the glyph only.
-          <Tooltip>
-            <TooltipTrigger
-              render={
-                <span className="inline-flex">
-                  <WorkflowIcon color={workflowMark.color} size={16} />
-                </span>
-              }
-            />
-            <TooltipContent>
-              {`${t('taskDetail.executionStatus')} · ${t(`taskDetail.status.${status}` as never)}`}
-            </TooltipContent>
-          </Tooltip>
-        ) : (
-          <WorkflowIcon color={workflowMark.color} size={16} />
-        )
-      ) : (
-        <TaskStatusTag disableDropdown size={16} status={status} taskIdentifier={taskId} />
-      )}
+      <WorkflowIcon color={workflowMark.color} size={16} />
       <span className="truncate">
-        {workflowMark
-          ? (workflowStateName ??
-            t(`taskDetail.workflow.category.${workflowMark.category}` as never))
-          : t(`taskDetail.${statusMeta.labelKey}` as never)}
+        {workflowStateName ?? t(`taskDetail.workflow.category.${workflowMark.category}` as never)}
       </span>
     </div>
   );
@@ -182,8 +141,7 @@ const TaskProperties = memo(() => {
           label={t('taskDetail.property.state')}
           mark={<span className={styles.propertyStateMark} />}
         >
-          <TaskStatusTag
-            status={status}
+          <IssueStatusPicker
             taskIdentifier={taskId}
             teamId={taskTeamId}
             workflowCategory={workflowCategory}
@@ -191,7 +149,11 @@ const TaskProperties = memo(() => {
             workflowStateRefId={workflowStateRefId}
           >
             {statusValue}
-          </TaskStatusTag>
+          </IssueStatusPicker>
+        </PropertyRow>
+
+        <PropertyRow label={t('taskDetail.executionStatus')} mark={<ClockIcon size={16} />}>
+          <TaskExecutionBadge showLabel size={16} status={status} />
         </PropertyRow>
 
         {shouldShowMemberAssignee(activeWorkspaceId, assigneeUserId) && (
@@ -274,7 +236,7 @@ const TaskProperties = memo(() => {
           </TaskLabelSelector>
         </PropertyRow>
 
-        {(status === 'paused' || reviewerUserId) &&
+        {(workflowCategory === 'in_review' || reviewerUserId) &&
           shouldShowMemberAssignee(activeWorkspaceId, reviewerUserId) && (
             <PropertyRow label={t('taskDetail.reviewer')} mark={<UserRoundIcon size={16} />}>
               <AssigneeMemberSelector

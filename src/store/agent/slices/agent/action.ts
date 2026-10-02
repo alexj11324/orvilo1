@@ -18,6 +18,7 @@ import { MESSAGE_CANCEL_FLAT } from '@/const/message';
 import { analyticsClient } from '@/libs/analytics/client';
 import { mutate, useClientDataSWR, useClientDataSWRWithSync } from '@/libs/swr';
 import { agentConfigKeys, builtinAgentKeys } from '@/libs/swr/keys';
+import { normalizeAsyncError } from '@/libs/swr/normalizeError';
 import { getCacheScope } from '@/libs/swr/useCacheScope';
 import type { AvailableAgentItem, CreateAgentParams, CreateAgentResult } from '@/services/agent';
 import { agentService, AVAILABLE_AGENTS_CONTEXT_QUERY_LIMIT } from '@/services/agent';
@@ -456,6 +457,16 @@ export class AgentSliceActionImpl {
           this.#clearAgentConfigError(agentId);
         },
         onError: (error) => {
+          const { code, status } = normalizeAsyncError(error);
+          // A NOT_FOUND is the same terminal state as a `null` payload — the
+          // agent is gone or outside the caller's workspace scope (e.g. a
+          // workspace agent opened on a personal-scope route). Route it to the
+          // 404 guard instead of letting `agentConfigErrorMap` surface the raw
+          // TRPCClientError line above the composer.
+          if (code === 'NOT_FOUND' || status === 404) {
+            this.#markAgentNotFound(agentId);
+            return;
+          }
           this.#set(
             (state) => ({
               agentConfigErrorMap: {

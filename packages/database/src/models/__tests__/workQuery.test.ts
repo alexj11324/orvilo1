@@ -26,7 +26,12 @@ import {
 import { actionApprovals } from '../../schemas/actionApproval';
 import { executionGrants } from '../../schemas/executionGrant';
 import { notifications } from '../../schemas/notification';
-import { taskDependencies, tasks as tasksTable } from '../../schemas/task';
+import {
+  taskDependencies,
+  taskDispatches,
+  tasks as tasksTable,
+  taskTopics,
+} from '../../schemas/task';
 import type { OrviloDatabase } from '../../type';
 import { TaskModel } from '../task';
 import { TaskLabelModel } from '../taskLabel';
@@ -858,9 +863,9 @@ describe('WorkQueryModel', () => {
       },
     });
     expect(listed.groupBy).toBe('agent');
-    expect(listed.groups?.find((group) => group.key === 'agt_axis')?.tasks.map((row) => row.id)).toEqual([
-      owned.id,
-    ]);
+    expect(
+      listed.groups?.find((group) => group.key === 'agt_axis')?.tasks.map((row) => row.id),
+    ).toEqual([owned.id]);
     expect(listed.groups?.find((group) => group.key === 'none')?.total).toBe(1);
 
     const board = await model.queryTasks({
@@ -984,9 +989,9 @@ describe('WorkQueryModel', () => {
       query,
       queryHash: first.queryHash,
     });
-    expect(second.groups?.find((group) => group.key === today!.key)?.tasks.map((row) => row.id)).toEqual([
-      edited.id,
-    ]);
+    expect(
+      second.groups?.find((group) => group.key === today!.key)?.tasks.map((row) => row.id),
+    ).toEqual([edited.id]);
   });
 
   it('groups a list in the database so status sections are not a page rearrange', async () => {
@@ -2127,5 +2132,122 @@ describe('labelId predicates', () => {
       query: labelQuery({ op: 'eq', value: foreign.id }),
     });
     expect(result.tasks).toHaveLength(0);
+  });
+});
+
+describe('executionState projection', () => {
+  it('derives canonical execution from dispatch then run then legacy status', async () => {
+    // Dispatch phase wins over the legacy status projection.
+    const dispatchFailed = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Dispatch failed',
+      status: 'running',
+    });
+    await serverDB.insert(taskDispatches).values({
+      generation: 1,
+      id: 'wq-dispatch-failed',
+      idempotencyKey: 'wq:dispatch-failed',
+      phase: 'failed',
+      policyRevision: 1,
+      requestedBy: `user:${userId}`,
+      requirementRevision: 1,
+      taskId: dispatchFailed.id,
+      taskRevision: 1,
+      workspaceId,
+    });
+    // No dispatch — the latest run's state projects.
+    const runWaiting = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Run waiting',
+      status: 'running',
+    });
+    await serverDB.insert(taskTopics).values({
+      runState: 'waiting',
+      seq: 1,
+      taskId: runWaiting.id,
+      userId,
+    });
+    // No execution rows — legacy `status` is the fallback projection.
+    const legacyRunning = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Legacy running',
+      status: 'running',
+    });
+    // Never ran — the projection is NULL.
+    const neverRan = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Backlog',
+      status: 'backlog',
+    });
+
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const idsOf = async (predicate: WorkQueryPredicate) =>
+      (
+        await model.queryTasks({
+          limit: 50,
+          query: {
+            entityType: 'task',
+            filter: {
+              all: [
+                { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
+                predicate,
+              ],
+            },
+            schemaVersion: 2,
+          },
+        })
+      ).tasks
+        .map((row) => row.id)
+        .sort();
+
+    await expect(idsOf({ field: 'executionState', op: 'eq', value: 'failed' })).resolves.toEqual([
+      dispatchFailed.id,
+    ]);
+    await expect(idsOf({ field: 'executionState', op: 'eq', value: 'waiting' })).resolves.toEqual([
+      runWaiting.id,
+    ]);
+    await expect(idsOf({ field: 'executionState', op: 'eq', value: 'running' })).resolves.toEqual([
+      legacyRunning.id,
+    ]);
+    await expect(
+      idsOf({ field: 'executionState', op: 'isNull', value: undefined }),
+    ).resolves.toEqual([neverRan.id]);
+    // notIn is NULL-inclusive: a never-ran task is "not running".
+    await expect(
+      idsOf({ field: 'executionState', op: 'notIn', value: ['running'] }),
+    ).resolves.toEqual([dispatchFailed.id, neverRan.id, runWaiting.id].sort());
+  });
+
+  it('normalizes a stored v1 status query onto workflow/execution before compiling', async () => {
+    // The workflow axis decides "completed" now, not the legacy column.
+    const doneViaWorkflow = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Done',
+      status: 'running',
+      workflowCategory: 'done',
+    });
+    const legacyRunning = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Running',
+      status: 'running',
+      workflowCategory: 'in_progress',
+    });
+    const model = new WorkQueryModel(serverDB, userId, workspaceId);
+    const result = await model.queryTasks({
+      limit: 50,
+      query: {
+        entityType: 'task',
+        filter: {
+          all: [
+            { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
+            { field: 'status', op: 'in', value: ['completed', 'running'] },
+          ],
+        },
+        schemaVersion: 1,
+      },
+    });
+    expect(result.tasks.map((row) => row.id).sort()).toEqual(
+      [doneViaWorkflow.id, legacyRunning.id].sort(),
+    );
   });
 });

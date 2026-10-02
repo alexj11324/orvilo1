@@ -3,12 +3,17 @@ import { describe, expect, it } from 'vitest';
 import { shouldAutoRunForWorkflowMove } from './shouldAutoRunForWorkflowMove';
 
 describe('shouldAutoRunForWorkflowMove', () => {
-  it('starts a run when a task enters in progress or review', () => {
+  it('starts a run when a task enters in progress only', () => {
     expect(
       shouldAutoRunForWorkflowMove({ nextCategory: 'in_progress', previousCategory: 'todo' }),
     ).toBe(true);
+    // Moving INTO review never spawns a builder — verification is Verify's job.
     expect(
       shouldAutoRunForWorkflowMove({ nextCategory: 'in_review', previousCategory: 'in_progress' }),
+    ).toBe(false);
+    // Moving OUT of review back to work may re-run.
+    expect(
+      shouldAutoRunForWorkflowMove({ nextCategory: 'in_progress', previousCategory: 'in_review' }),
     ).toBe(true);
   });
 
@@ -49,7 +54,7 @@ describe('shouldAutoRunForWorkflowMove', () => {
     expect(
       shouldAutoRunForWorkflowMove({
         automationMode: 'schedule',
-        nextCategory: 'in_review',
+        nextCategory: 'in_progress',
         previousCategory: 'todo',
       }),
     ).toBe(false);

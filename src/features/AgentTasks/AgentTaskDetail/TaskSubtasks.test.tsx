@@ -142,10 +142,14 @@ vi.mock('../features/TaskPriorityTag', () => ({
   default: () => <span>priority</span>,
 }));
 
-vi.mock('../features/TaskStatusTag', () => ({
+vi.mock('../features/IssueStatusPicker', () => ({
   default: ({ children }: { children?: ReactNode }) => (
-    <span data-testid="task-status-tag">{children ?? 'status'}</span>
+    <span data-testid="issue-status-picker">{children ?? 'status'}</span>
   ),
+}));
+
+vi.mock('../features/TaskExecutionBadge', () => ({
+  default: () => <span data-testid="execution-badge">execution running</span>,
 }));
 
 vi.mock('../features/TaskSubtaskProgressTag', () => ({
@@ -173,10 +177,6 @@ vi.mock('../shared/style', () => ({
 
 vi.mock('./RunSubtasksPreview', () => ({
   default: () => <div>preview</div>,
-}));
-
-vi.mock('./TopicStatusIcon', () => ({
-  default: () => <span data-testid="topic-status-icon">topic running</span>,
 }));
 
 describe('TaskSubtasks', () => {
@@ -288,7 +288,7 @@ describe('TaskSubtasks', () => {
     expect(mocks.navigate).toHaveBeenCalledWith('/task/T-child/child-task');
   });
 
-  it('uses the running topic status icon when a subtask has an active topic run', () => {
+  it('renders the read-only execution badge when a subtask has an active topic run', () => {
     mocks.taskState.taskDetailMap['T-parent'].subtasks = [
       {
         assignee: { avatar: null, backgroundColor: null, id: 'agt_child', title: 'Child' },
@@ -301,6 +301,6 @@ describe('TaskSubtasks', () => {
 
     render(<TaskSubtasks />);
 
-    expect(screen.getByTestId('topic-status-icon')).toBeTruthy();
+    expect(screen.getByTestId('execution-badge')).toBeTruthy();
   });
 });

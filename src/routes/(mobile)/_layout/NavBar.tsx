@@ -76,6 +76,7 @@ const NavBar = memo(() => {
 
   return (
     <TabBar
+      safeArea
       activeKey={activeKey}
       className={styles.container}
       height={MOBILE_TABBAR_HEIGHT}

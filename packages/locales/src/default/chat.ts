@@ -93,6 +93,9 @@ export default {
   'permission.configAccess.groupRoleRestricted':
     'Your workspace role cannot configure Agent Groups. You were returned to chat.',
   'agentNotFound.title': 'Agent Unavailable',
+  'topicNotFound.desc':
+    'This conversation does not exist or is no longer accessible — it may have been deleted or the link is out of date.',
+  'topicNotFound.title': 'Conversation Unavailable',
   'groupNotFound.desc':
     'This group does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'groupNotFound.title': 'Group Unavailable',
@@ -1298,6 +1301,7 @@ export default {
   'search.title': 'Web Search',
   'searchAgentPlaceholder': 'Search agents...',
   'searchAgents': 'Search agents...',
+  'searchTopicPlaceholder': 'Search conversations...',
   'selectedAgents': 'Selected agents',
   'floatingChatPanel.collapse': 'Collapse chat',
   'floatingChatPanel.expand': 'Expand chat',
@@ -1709,6 +1713,14 @@ export default {
   'taskDetail.property.addDueDate': 'Add due date',
   'taskDetail.property.addLabels': 'Add labels',
   'taskDetail.dueDate': 'Due date',
+  'taskDetail.execution.canceled': 'Canceled',
+  'taskDetail.execution.failed': 'Failed',
+  'taskDetail.execution.outcome_unknown': 'Outcome unknown',
+  'taskDetail.execution.provisioning': 'Provisioning',
+  'taskDetail.execution.queued': 'Queued',
+  'taskDetail.execution.running': 'Running',
+  'taskDetail.execution.succeeded': 'Succeeded',
+  'taskDetail.execution.waiting': 'Waiting',
   'taskDetail.executionStatus': 'Execution',
   'taskDetail.project': 'Project',
   'taskDetail.noProject': 'No project',

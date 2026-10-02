@@ -1,6 +1,7 @@
 import type {
   ChatTopicStatus,
   ProjectStatus,
+  TaskExecutionState,
   TaskStatus,
   TaskWorkflowCategory,
 } from '@orvilo/types';
@@ -12,6 +13,7 @@ import {
   Circle,
   CircleCheck,
   CircleDot,
+  CircleHelpIcon,
   CirclePause,
   CircleX,
   Clock,
@@ -156,3 +158,21 @@ export const TOPIC_GROUP_VISUALS = {
 } satisfies Record<string, ExecutionStatusVisual>;
 
 export const EXECUTION_STATUS_VISUALS = VISUALS;
+
+/**
+ * One glyph + color per canonical execution state (the PR-A `TaskExecutionState`
+ * projection — queued/provisioning/running/waiting/succeeded/failed/canceled/
+ * outcome_unknown), used by filter rows and the Execution field's enum
+ * options. Distinct axis from `WORKFLOW_CATEGORY_VISUALS`: a task whose issue
+ * status is In Review can simultaneously show `succeeded` here.
+ */
+export const EXECUTION_STATE_VISUALS: Record<TaskExecutionState, StatusVisual> = {
+  canceled: VISUALS.canceled,
+  failed: VISUALS.failed,
+  outcome_unknown: { color: cssVar.colorTextSecondary, icon: CircleHelpIcon },
+  provisioning: { color: cssVar.colorWarning, icon: Clock },
+  queued: VISUALS.scheduled,
+  running: VISUALS.running,
+  succeeded: VISUALS.completed,
+  waiting: VISUALS.waitingForHuman,
+};

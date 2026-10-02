@@ -1,5 +1,7 @@
 import { type HTMLAttributes, type ReactNode } from 'react';
 
+import { MOBILE_TABBAR_HEIGHT } from '@/const/layoutTokens';
+
 interface MobileContentLayoutProps extends HTMLAttributes<HTMLDivElement> {
   header?: ReactNode;
   withNav?: boolean;
@@ -24,8 +26,11 @@ const MobileContentLayout = ({
         position: 'relative',
         width: '100%',
         ...style,
-        // TabNav Height
-        paddingBottom: withNav ? 48 : style?.paddingBottom,
+        // Clear the fixed tab bar: its 48px plus the iOS home-indicator inset
+        // (`safeArea` on TabBar) would otherwise sit over the last rows.
+        paddingBottom: withNav
+          ? `calc(${MOBILE_TABBAR_HEIGHT}px + env(safe-area-inset-bottom))`
+          : style?.paddingBottom,
       }}
       {...rest}
     >
@@ -51,8 +56,11 @@ const MobileContentLayout = ({
           position: 'relative',
           width: '100%',
           ...style,
-          // TabNav Height
-          paddingBottom: withNav ? 48 : style?.paddingBottom,
+          // Clear the fixed tab bar: its 48px plus the iOS home-indicator inset
+          // (`safeArea` on TabBar) would otherwise sit over the last rows.
+          paddingBottom: withNav
+            ? `calc(${MOBILE_TABBAR_HEIGHT}px + env(safe-area-inset-bottom))`
+            : style?.paddingBottom,
         }}
         {...rest}
       >

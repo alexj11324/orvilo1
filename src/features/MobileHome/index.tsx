@@ -1,12 +1,12 @@
 import { Suspense } from 'react';
 
-import SessionListContent from './SessionListContent';
 import SkeletonList from './SkeletonList';
+import TopicListContent from './TopicListContent';
 
 const Home = () => {
   return (
     <Suspense fallback={<SkeletonList />}>
-      <SessionListContent />
+      <TopicListContent />
     </Suspense>
   );
 };

@@ -4,11 +4,15 @@ import type { TaskStatus, TaskWorkflowCategory, TeamWorkflowStateItem } from '@o
  * The Issue-workflow category a legacy `status` vocabulary value implies on
  * the task, when one exists. 'paused'/'failed' are park operations (the
  * parked marker handles them — the Issue stays where it is); 'running' and
- * 'scheduled' are execution outcomes that no status write can synthesize;
- * 'backlog' means "open and un-armed" on the legacy axis and intentionally
- * maps to no category — a backlog drop parks-clears only.
+ * 'scheduled' are execution outcomes that no status write can synthesize.
+ * 'backlog' renders the Backlog column unconditionally: writing it onto a
+ * completed issue is a reopen, and a write that leaves the category alone
+ * would read back 'completed'/'canceled' instead of what was written.
  */
 const LEGACY_STATUS_WORKFLOW_CATEGORY: Partial<Record<TaskStatus, TaskWorkflowCategory>> = {
+  // 'backlog' always displayed in the Backlog column — reopening a done task
+  // via the retired vocabulary lands it there too.
+  backlog: 'backlog',
   canceled: 'canceled',
   completed: 'done',
 };

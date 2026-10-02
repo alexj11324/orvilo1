@@ -69,7 +69,7 @@ export const hasUnresolvedExecution = sql`coalesce(${latestDispatchPhase}, '') I
  * transition away clears it. Presence of the key is the flag (cleared by
  * removal, never by writing JSON null).
  */
-export const isParked = sql`(${tasks.context} -> 'execution' -> 'parked') IS NOT NULL`;
+export const isParked = sql`coalesce(jsonb_exists(${tasks.context} -> 'execution', 'parked'), false)`;
 
 /**
  * Parked — canonical form of `status = 'paused'`: either an explicit park
@@ -92,7 +92,7 @@ export const parkedIsFailed = sql`coalesce(${tasks.context} #>> '{execution,park
  */
 export const isAutomationArmed = sql`(
   ${tasks.automationMode} IS NOT NULL
-  AND ${tasks.context} #>> '{scheduler,tickToken}' IS NOT NULL
+  AND coalesce(${tasks.context} #>> '{scheduler,tickToken}', '') <> ''
   AND NOT ${hasActiveExecution}
   AND NOT ${isParked}
 )`;

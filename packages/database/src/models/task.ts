@@ -84,6 +84,17 @@ import {
 } from './taskExecutionSql';
 import { workflowCategoryForLegacyStatus } from './workflowMove';
 
+/**
+ * Full task row for reads and `.returning()` — `status` projects the derived
+ * legacy label (canonical workflow/execution/parked fields), never the retired
+ * column, so every task object the model hands out speaks the same vocabulary
+ * as the deprecated wire field.
+ */
+const taskRowColumns = {
+  ...getTableColumns(tasks),
+  status: sql<TaskStatus>`${legacyStatusExpr}`,
+};
+
 /** Columns whose change is worth a line in the task activity feed. */
 const TRACKED_TASK_COLUMNS = [
   'assigneeAgentId',
@@ -763,7 +774,7 @@ export class TaskModel {
           triageStatus: rest.triageStatus ?? (rest.teamId ? 'untriaged' : rest.triageStatus),
           workspaceId: this.workspaceId ?? null,
         } as NewTask)
-        .returning();
+        .returning(taskRowColumns);
 
       if (this.workspaceId && !options.mutation?.suppressDomainEvent) {
         await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
@@ -805,7 +816,7 @@ export class TaskModel {
 
   async findById(id: string): Promise<TaskItem | null> {
     const result = await this.db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(and(eq(tasks.id, id), this.ownership()))
       .limit(1);
@@ -816,7 +827,7 @@ export class TaskModel {
   async findByIds(ids: string[]): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
     return this.db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(and(inArray(tasks.id, ids), this.ownership()));
   }
@@ -839,7 +850,7 @@ export class TaskModel {
     if (idsOrIdentifiers.length === 0) return [];
     const identifiers = idsOrIdentifiers.map((value) => value.toUpperCase());
     return this.db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(
         and(
@@ -857,7 +868,7 @@ export class TaskModel {
 
   async findByIdentifier(identifier: string): Promise<TaskItem | null> {
     const result = await this.db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(and(eq(tasks.identifier, identifier), this.ownership()))
       // Filed rows resolve ahead of unfiled duplicates sharing an identifier.
@@ -1013,7 +1024,7 @@ export class TaskModel {
           updatedAt: new Date(),
         })
         .where(and(...updateWhere))
-        .returning();
+        .returning(taskRowColumns);
       return resolveUpdate(this.db, updated[0]);
     }
 
@@ -1038,7 +1049,7 @@ export class TaskModel {
           updatedAt: new Date(),
         })
         .where(and(...updateWhere))
-        .returning();
+        .returning(taskRowColumns);
       const task = await resolveUpdate(runner, updated);
       if (!task) return null;
 
@@ -1091,7 +1102,7 @@ export class TaskModel {
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       const [before] = await runner
-        .select()
+        .select(taskRowColumns)
         .from(tasks)
         .where(and(eq(tasks.id, id), this.ownership()))
         .limit(1);
@@ -1110,7 +1121,7 @@ export class TaskModel {
           updatedAt: new Date(),
         })
         .where(and(...moveWhere))
-        .returning();
+        .returning(taskRowColumns);
       if (!task) {
         if (mutation.expectedDomainRevision !== undefined) {
           const [current] = await runner
@@ -1317,7 +1328,7 @@ export class TaskModel {
           visibility,
         })
         .where(and(eq(tasks.id, root.id), this.ownership()))
-        .returning();
+        .returning(taskRowColumns);
 
       const descendantIds = descendants.map((d) => d.id);
       let updatedDescendants: TaskItem[] = [];
@@ -1331,7 +1342,7 @@ export class TaskModel {
             visibility,
           })
           .where(and(inArray(tasks.id, descendantIds), this.ownership()))
-          .returning();
+          .returning(taskRowColumns);
       }
 
       await tx
@@ -1482,7 +1493,7 @@ export class TaskModel {
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
       const doomed = await runner
-        .select()
+        .select(taskRowColumns)
         .from(tasks)
         .where(and(inArray(tasks.id, taskIds), this.ownership()))
         .for('update');
@@ -1594,6 +1605,7 @@ export class TaskModel {
       const rankedTasks = this.db
         .select({
           ...getTableColumns(tasks),
+          status: sql<TaskStatus>`${legacyStatusExpr}`.as('status'),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
             sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
@@ -1679,6 +1691,7 @@ export class TaskModel {
       const rankedTasks = this.db
         .select({
           ...getTableColumns(tasks),
+          status: sql<TaskStatus>`${legacyStatusExpr}`.as('status'),
           assigneeGroupKey: assigneeGroupKey.as('assignee_group_key'),
           groupRank:
             sql<number>`row_number() over (partition by ${assigneeGroupKey} order by ${taskEffectivePosition} asc, ${tasks.createdAt} desc, ${tasks.seq} desc)`.as(
@@ -1759,7 +1772,7 @@ export class TaskModel {
         const limit = groupLimitFor(key);
         const offset = 0;
         const prefetchedTasks = await this.db
-          .select()
+          .select(taskRowColumns)
           .from(tasks)
           .where(and(...baseConditions, ...conditions))
           .orderBy(...TASK_BOARD_ORDER)
@@ -1823,7 +1836,7 @@ export class TaskModel {
             .from(tasks)
             .where(and(...baseConditions, ...conditions)),
           this.db
-            .select()
+            .select(taskRowColumns)
             .from(tasks)
             .where(and(...baseConditions, ...conditions))
             .orderBy(...TASK_BOARD_ORDER)
@@ -1848,7 +1861,7 @@ export class TaskModel {
         const groupTasks =
           group.prefetchedTasks ??
           (await this.db
-            .select()
+            .select(taskRowColumns)
             .from(tasks)
             .where(and(...baseConditions, ...group.conditions))
             .orderBy(...TASK_BOARD_ORDER)
@@ -1992,7 +2005,7 @@ export class TaskModel {
       .where(where);
 
     const taskListQuery = this.db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(where)
       // `seq` breaks timestamp ties so the order is total — required for the
@@ -2167,7 +2180,7 @@ export class TaskModel {
       or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} > ${boundaryCreatedAt})
       or (${taskEffectivePosition} = ${bound} and ${tasks.createdAt} = ${boundaryCreatedAt} and ${tasks.seq} > ${boundarySeq}))`;
     const rows = await this.db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(
         and(
@@ -2221,7 +2234,7 @@ export class TaskModel {
 
   async findSubtasks(parentTaskId: string): Promise<TaskItem[]> {
     return this.db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(and(eq(tasks.parentTaskId, parentTaskId), this.ownership()))
       .orderBy(tasks.sortOrder, tasks.seq);
@@ -2237,7 +2250,7 @@ export class TaskModel {
 
     while (parentIds.length > 0) {
       const children = await this.db
-        .select()
+        .select(taskRowColumns)
         .from(tasks)
         .where(and(inArray(tasks.parentTaskId, parentIds), this.ownership()))
         .orderBy(tasks.sortOrder, tasks.seq);
@@ -2369,7 +2382,7 @@ export class TaskModel {
         domainRevision: sql`${tasks.domainRevision} + 1`,
       })
       .where(and(eq(tasks.id, id), expectedGuard, this.ownership()))
-      .returning();
+      .returning(taskRowColumns);
     if (!task) return null;
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       const changedFields = ['status'];
@@ -2431,7 +2444,7 @@ export class TaskModel {
           this.ownership(),
         ),
       )
-      .returning();
+      .returning(taskRowColumns);
 
     return task ?? null;
   }
@@ -2640,7 +2653,7 @@ export class TaskModel {
             this.ownership(),
           ),
         )
-        .returning();
+        .returning(taskRowColumns);
       if (!task) return null;
       if (this.workspaceId && !mutation.suppressDomainEvent) {
         const changedFields = ['status'];
@@ -2701,7 +2714,7 @@ export class TaskModel {
         domainRevision: sql`${tasks.domainRevision} + 1`,
       })
       .where(and(inArray(tasks.id, ids), this.ownership()))
-      .returning();
+      .returning(taskRowColumns);
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       const model = new LinearSyncModel(this.db, this.workspaceId);
       for (const task of updated) {
@@ -2824,6 +2837,9 @@ export class TaskModel {
           eq(tasks.automationMode, 'heartbeat'),
           eq(tasks.heartbeatInterval, interval),
           sql`${tasks.context} #>> '{scheduler,tickToken}' IS NOT DISTINCT FROM ${tickToken ?? null}`,
+          // Armed-for-tick is the canonical 'scheduled': no live run, not parked.
+          sql`NOT ${hasActiveExecution}`,
+          sql`NOT ${isParked}`,
         ),
       )
       .returning({ id: tasks.id });
@@ -3015,7 +3031,7 @@ export class TaskModel {
   // `running` is already in flight (and `runTask` would CONFLICT anyway).
   static async getScheduledTasks(db: OrviloDatabase): Promise<TaskItem[]> {
     return db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(
         and(
@@ -3040,7 +3056,7 @@ export class TaskModel {
     options: { createdByUserId?: string; workspaceId?: string } = {},
   ): Promise<TaskItem[]> {
     return db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(
         and(
@@ -3165,11 +3181,13 @@ export class TaskModel {
       `);
       if (cycle.rows.length > 0)
         throw new TaskDependencyError('This dependency would create a cycle.');
-      // A task mid-flight or already done cannot take a new open prerequisite —
-      // canonical check: live execution or terminal workflow on the row itself.
+      // A task mid-flight or already done cannot take a new open prerequisite.
+      // `task.status` / `dependsOn.status` are the derived labels — live
+      // execution and terminal workflow, never the retired column. A held run
+      // reservation is the pre-dispatch half of 'running'.
       if (
-        (task.workflowCategory === 'in_progress' || task.workflowCategory === 'done') &&
-        dependsOn.workflowCategory !== 'done'
+        (['running', 'completed'].includes(task.status) || task.runReservationId !== null) &&
+        dependsOn.status !== 'completed'
       ) {
         throw new TaskDependencyError(
           'Pause or reopen this task before adding an unfinished prerequisite.',
@@ -3205,7 +3223,7 @@ export class TaskModel {
         updatedAt: new Date(),
       })
       .where(and(eq(tasks.id, taskId), this.ownership()))
-      .returning();
+      .returning(taskRowColumns);
     if (!updated) throw new TaskDependencyError('Task not found or unavailable.');
     if (this.workspaceId && !mutation.suppressDomainEvent) {
       await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
@@ -3331,7 +3349,7 @@ export class TaskModel {
         updatedAt: new Date(),
       })
       .where(and(eq(tasks.id, eventTaskId), this.ownership()))
-      .returning();
+      .returning(taskRowColumns);
     if (!updated) throw new TaskDependencyError('Task not found.');
     if (syncModel && !mutation.suppressDomainEvent) {
       await syncModel.recordTaskChangeInTransaction(this.db, {
@@ -3534,7 +3552,7 @@ export class TaskModel {
     // Discovery remains caller-visible. Evaluate each candidate in its owner's
     // scope: the last completing member need not see every private prerequisite.
     const candidates = await this.db
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(
         and(
@@ -3814,7 +3832,7 @@ export class TaskModel {
         updatedAt: new Date(),
       })
       .where(and(eq(tasks.id, input.taskId), this.ownership()))
-      .returning();
+      .returning(taskRowColumns);
     if (!task) throw new Error('Task not found');
     if (!this.workspaceId || input.mutation?.suppressDomainEvent) return task;
 
@@ -4254,7 +4272,7 @@ export class TaskModel {
    */
   private async collectTaskSubtree(rootId: string, runner: OrviloDatabase): Promise<TaskItem[]> {
     const [root] = await runner
-      .select()
+      .select(taskRowColumns)
       .from(tasks)
       .where(and(eq(tasks.id, rootId), this.ownership()))
       .limit(1);
@@ -4265,7 +4283,7 @@ export class TaskModel {
 
     while (frontier.length > 0) {
       const children = await runner
-        .select()
+        .select(taskRowColumns)
         .from(tasks)
         .where(and(inArray(tasks.parentTaskId, frontier), this.ownership()));
       if (children.length === 0) break;

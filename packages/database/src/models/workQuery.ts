@@ -18,6 +18,7 @@ import type {
 } from '@orvilo/types';
 import {
   isWorkAttentionAllowedHttpsHost,
+  normalizeWorkQuery,
   normalizeWorkQuerySubGroupBy,
   PROJECT_STATUS_VALUES,
   WORK_QUERY_BOARD_KEY_SEP,
@@ -52,7 +53,7 @@ import { actionApprovals } from '../schemas/actionApproval';
 import { executionGrants } from '../schemas/executionGrant';
 import { notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
-import { taskDependencies, tasks } from '../schemas/task';
+import { taskDependencies, taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { taskLabelBindings } from '../schemas/taskLabel';
 import { projectTeams, teamCycles, teams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
@@ -84,6 +85,7 @@ const TASK_FIELDS = new Set<WorkQueryField>([
   'createdByUserId',
   'cycleId',
   'delegatedByUserId',
+  'executionState',
   'hasActivity',
   'id',
   'labelId',
@@ -422,6 +424,14 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
     );
   }
 
+  if (predicate.field === 'executionState') {
+    return compileExecutionStatePredicate(
+      predicate.op,
+      resolveValue(predicate.value, ctx.currentUserId),
+      ctx.currentUserId,
+    );
+  }
+
   if (predicate.field === 'labelId') {
     // Labels are many-to-many: match through an EXISTS on the join table so a
     // multi-labeled task is returned once, never duplicated per binding. The
@@ -580,7 +590,7 @@ const compileFilter = (
 };
 
 export const validateWorkQuery = (query: WorkQuery) => {
-  if (query.schemaVersion !== 1) {
+  if (query.schemaVersion !== 1 && query.schemaVersion !== 2) {
     throw new WorkQueryError('INVALID_QUERY', 'Unsupported schemaVersion');
   }
   if (query.entityType !== 'task' && query.entityType !== 'project') {
@@ -610,7 +620,7 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'assigneeUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'updatedAt' },
           { direction: 'asc', field: 'id' },
@@ -621,7 +631,7 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'createdByUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'createdAt' },
           { direction: 'asc', field: 'id' },
@@ -632,21 +642,21 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'delegatedByUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
       };
     }
     case 'review': {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'reviewerUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
       };
     }
     case 'subscribed': {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'subscribed', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
       };
     }
     case 'activity': {
@@ -657,7 +667,7 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'hasActivity', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'updatedAt' },
           { direction: 'asc', field: 'id' },
@@ -668,6 +678,131 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
 };
 
 export const hashQuery = (query: WorkQuery) => JSON.stringify(query);
+
+/**
+ * SQL projection of the canonical execution state — mirrors
+ * `deriveTaskExecutionState` (packages/types): the latest dispatch's phase and
+ * the latest run's `run_state` are each mapped onto the execution enum, the
+ * furthest-advanced rank wins (tie → dispatch, the contract fence), and
+ * `tasks.status` is only the legacy fallback when no execution rows exist.
+ * Yields NULL for tasks that never executed (backlog/scheduled statuses
+ * project nothing) — `isNull` on `executionState` is "never ran".
+ */
+const taskExecutionStateExpr = sql`
+  (select case
+    when d.exec_state is not null and r.exec_state is not null then
+      case when d.exec_rank >= r.exec_rank then d.exec_state else r.exec_state end
+    else coalesce(
+      d.exec_state,
+      r.exec_state,
+      case ${tasks.status}
+        when 'canceled' then 'canceled'
+        when 'completed' then 'succeeded'
+        when 'failed' then 'failed'
+        when 'paused' then 'outcome_unknown'
+        when 'running' then 'running'
+      end
+    )
+  end
+  from (values (1)) as seed(x)
+  left join lateral (
+    select
+      case ${taskDispatches.phase}
+        when 'requested' then 'queued'
+        when 'claimed' then 'queued'
+        when 'provisioning' then 'provisioning'
+        when 'dispatched' then 'running'
+        when 'running' then 'running'
+        when 'cancel_requested' then 'running'
+        when 'waiting' then 'waiting'
+        when 'succeeded' then 'succeeded'
+        when 'failed' then 'failed'
+        when 'canceled' then 'canceled'
+        when 'abandoned' then 'outcome_unknown'
+        when 'outcome_unknown' then 'outcome_unknown'
+      end as exec_state,
+      case ${taskDispatches.phase}
+        when 'requested' then 0
+        when 'claimed' then 0
+        when 'provisioning' then 1
+        when 'dispatched' then 2
+        when 'running' then 2
+        when 'cancel_requested' then 2
+        when 'waiting' then 3
+        else 4
+      end as exec_rank
+    from ${taskDispatches}
+    where ${taskDispatches.taskId} = ${tasks.id}
+    order by ${taskDispatches.generation} desc
+    limit 1
+  ) as d on true
+  left join lateral (
+    select
+      case ${taskTopics.runState}
+        when 'queued' then 'queued'
+        when 'provisioning' then 'provisioning'
+        when 'running' then 'running'
+        when 'cancel_requested' then 'running'
+        when 'waiting' then 'waiting'
+        when 'succeeded' then 'succeeded'
+        when 'failed' then 'failed'
+        when 'canceled' then 'canceled'
+        when 'outcome_unknown' then 'outcome_unknown'
+      end as exec_state,
+      case ${taskTopics.runState}
+        when 'queued' then 0
+        when 'provisioning' then 1
+        when 'running' then 2
+        when 'cancel_requested' then 2
+        when 'waiting' then 3
+        else 4
+      end as exec_rank
+    from ${taskTopics}
+    where ${taskTopics.taskId} = ${tasks.id}
+    order by ${taskTopics.createdAt} desc
+    limit 1
+  ) as r on true)`;
+
+/** `executionState` is a projected expression, not a column — same enum ops. */
+const compileExecutionStatePredicate = (
+  op: WorkQueryOp,
+  resolved: ReturnType<typeof resolveValue>,
+  currentUserId: string,
+): SQL => {
+  switch (op) {
+    case 'isNull': {
+      return sql`${taskExecutionStateExpr} is null`;
+    }
+    case 'isNotNull': {
+      return sql`${taskExecutionStateExpr} is not null`;
+    }
+    case 'eq': {
+      if (typeof resolved !== 'string' && typeof resolved !== 'number') {
+        throw new WorkQueryError('INVALID_QUERY', 'eq requires a scalar value');
+      }
+      return sql`${taskExecutionStateExpr} = ${resolved}`;
+    }
+    case 'neq': {
+      if (typeof resolved !== 'string' && typeof resolved !== 'number') {
+        throw new WorkQueryError('INVALID_QUERY', 'neq requires a scalar value');
+      }
+      return sql`${taskExecutionStateExpr} is distinct from ${resolved}`;
+    }
+    case 'in': {
+      return inArray(taskExecutionStateExpr, assertInValues(resolved, 'in', currentUserId));
+    }
+    case 'notIn': {
+      // NULL-safe complement: never-ran tasks (NULL projection) are "not in".
+      return or(
+        sql`${taskExecutionStateExpr} is null`,
+        notInArray(taskExecutionStateExpr, assertInValues(resolved, 'notIn', currentUserId)),
+      )!;
+    }
+    default: {
+      throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
+    }
+  }
+};
 
 /** One extra row tells a full page from the last page. The extra row is not returned. */
 const limitPage = <T>(rows: T[], limit: number): { hasMore: boolean; rows: T[] } => {
@@ -1242,7 +1377,7 @@ export class WorkQueryModel {
     query: WorkQuery;
     queryHash?: string;
   }) => {
-    const query = params.query;
+    const query = normalizeWorkQuery(params.query);
     validateWorkQuery(query);
     if (query.entityType !== 'task') {
       throw new WorkQueryError('INVALID_QUERY', 'This kernel currently runs task queries');
@@ -1580,11 +1715,12 @@ export class WorkQueryModel {
     query: WorkQuery;
     queryHash?: string;
   }) => {
-    validateWorkQuery(params.query);
-    if (params.query.entityType !== 'project') {
+    const query = normalizeWorkQuery(params.query);
+    validateWorkQuery(query);
+    if (query.entityType !== 'project') {
       throw new WorkQueryError('INVALID_QUERY', 'entityType must be project');
     }
-    if (params.query.groupBy === 'workflowCategory') {
+    if (query.groupBy === 'workflowCategory') {
       throw new WorkQueryError('INVALID_QUERY', 'Projects group by status only');
     }
     const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
@@ -1595,28 +1731,25 @@ export class WorkQueryModel {
       }),
     ];
 
-    const readableTeamIds = filterHasTeamId(params.query.filter)
+    const readableTeamIds = filterHasTeamId(query.filter)
       ? await this.listReadableTeamIds()
       : new Set<string>();
-    const filterSql = compileFilter(
-      params.query.filter,
-      this.compileCtx('project', readableTeamIds),
-    );
+    const filterSql = compileFilter(query.filter, this.compileCtx('project', readableTeamIds));
     if (filterSql) conditions.push(filterSql);
 
-    const queryHash = hashQuery(params.query);
-    const sort = normalizeProjectSort(params.query.sort);
+    const queryHash = hashQuery(query);
+    const sort = normalizeProjectSort(query.sort);
     const orderBy = sort.map((item) =>
       item.direction === 'desc'
         ? desc(projectSortColumn(item.field))
         : asc(projectSortColumn(item.field)),
     );
-    const isBoard = params.query.layout === 'board' || params.query.groupBy === 'status';
+    const isBoard = query.layout === 'board' || query.groupBy === 'status';
     if (isBoard) {
       if (params.afterId && !params.groupKey) {
         throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
       }
-      if (params.afterId && (!params.queryHash || params.queryHash !== queryHash)) {
+      if (params.afterId && (!queryHash || queryHash !== queryHash)) {
         throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
       }
       const countRows = await this.db
@@ -1670,7 +1803,7 @@ export class WorkQueryModel {
       );
       return {
         groupBy: 'status' as const,
-        layout: params.query.layout === 'board' ? ('board' as const) : ('list' as const),
+        layout: query.layout === 'board' ? ('board' as const) : ('list' as const),
         projectGroups,
         projects: projectGroups.flatMap((group) => group.projects),
         queryHash,
@@ -1715,7 +1848,7 @@ export class WorkQueryModel {
     mode?: MyWorkMode;
     query: WorkQuery;
   }): Promise<WorkQueryCountResult> => {
-    const query = params.query;
+    const query = normalizeWorkQuery(params.query);
     validateWorkQuery(query);
     if (query.entityType !== 'task') {
       throw new WorkQueryError('INVALID_QUERY', 'This kernel currently counts task queries');
@@ -1740,7 +1873,7 @@ export class WorkQueryModel {
     mode?: MyWorkMode;
     query: WorkQuery;
   }): Promise<WorkQueryFacetResult> => {
-    const query = params.query;
+    const query = normalizeWorkQuery(params.query);
     validateWorkQuery(query);
     if (query.entityType !== 'task') {
       throw new WorkQueryError('INVALID_QUERY', 'This kernel currently facets task queries');

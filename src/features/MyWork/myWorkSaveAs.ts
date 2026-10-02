@@ -26,7 +26,7 @@ export const myWorkSaveAsQuery = (
       return {
         entityType: 'task',
         filter: { all: [{ field: 'assigneeUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'updatedAt' },
           { direction: 'asc', field: 'id' },
@@ -38,7 +38,7 @@ export const myWorkSaveAsQuery = (
       return {
         entityType: 'task',
         filter: { all: [{ field: 'createdByUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'createdAt' },
           { direction: 'asc', field: 'id' },
@@ -50,7 +50,7 @@ export const myWorkSaveAsQuery = (
       return {
         entityType: 'task',
         filter: { all: [{ field: 'subscribed', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         ...board,
       };
     }
@@ -58,7 +58,7 @@ export const myWorkSaveAsQuery = (
       return {
         entityType: 'task',
         filter: { all: [{ field: 'hasActivity', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'updatedAt' },
           { direction: 'asc', field: 'id' },

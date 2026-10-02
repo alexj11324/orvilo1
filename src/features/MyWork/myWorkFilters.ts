@@ -140,21 +140,24 @@ export const myWorkComposedQuery = ({
 /**
  * First-level field list for the "Add filter" popover, ordered after Linear's
  * directory (Team → Status → Assignee → Creator → Priority → Labels →
- * Project → …). Only fields the builder spec (`WORK_QUERY_TASK_FIELD_SPECS`)
- * covers AND the picker can resolve real values for appear here — `cycleId`
+ * Project → …). "Status" is the issue-workflow axis (`workflowCategory`);
+ * `executionState` is the advanced "Execution" field. The deprecated legacy
+ * `status` projection never appears here. Only fields the builder spec
+ * (`WORK_QUERY_TASK_FIELD_SPECS`) covers AND the picker can resolve real
+ * values for appear here — `cycleId`
  * exposes its nullary options only (a cycle picker would need a team
  * selector first), and project-entity fields never applied to tasks.
  */
 export const MY_WORK_FILTER_DIRECTORY_FIELDS: readonly WorkQueryField[] = [
   'teamId',
-  'status',
+  'workflowCategory',
+  'executionState',
   'assigneeUserId',
   'assigneeAgentId',
   'createdByUserId',
   'priority',
   'labelId',
   'projectId',
-  'workflowCategory',
   'triageStatus',
   'reviewerUserId',
   'cycleId',

@@ -103,7 +103,15 @@ export const filterToBuilder = (
   const slots: BuilderSlot[] = [];
   for (const node of filter?.all ?? []) {
     const spec = isPredicate(node) ? workQueryFieldSpec(entityType, node.field) : undefined;
-    if (spec && isPredicate(node) && spec.ops.includes(node.op) && isRenderableValue(spec, node)) {
+    // Deprecated fields (legacy `status`) stay verbatim node slots — an old
+    // saved view keeps its read-only predicate instead of an editable row.
+    if (
+      spec &&
+      !spec.deprecated &&
+      isPredicate(node) &&
+      spec.ops.includes(node.op) &&
+      isRenderableValue(spec, node)
+    ) {
       const row: FilterRow = {
         field: node.field,
         id: nextRowId(),
@@ -125,7 +133,7 @@ const rowToPredicate = (
   row: FilterRow,
 ): WorkQueryPredicate | undefined => {
   const spec = workQueryFieldSpec(entityType, row.field);
-  if (!spec || !spec.ops.includes(row.op)) return undefined;
+  if (!spec || spec.deprecated || !spec.ops.includes(row.op)) return undefined;
   if (isNullary(row.op)) return { field: row.field as WorkQueryPredicate['field'], op: row.op };
   if (row.value === undefined) return undefined;
   if (row.op === 'in' || row.op === 'notIn') {
@@ -167,9 +175,13 @@ export const builderToFilter = (
 };
 
 export const newFilterRow = (entityType: WorkQueryEntityType): FilterRow => {
-  const specs = workQueryFieldSpecs(entityType);
-  const firstSpec = specs[0];
-  return { field: firstSpec?.field ?? 'status', id: nextRowId(), op: firstSpec?.ops[0] ?? 'eq' };
+  // First non-deprecated spec — `workflowCategory` ("Status") on tasks.
+  const firstSpec = workQueryFieldSpecs(entityType).find((spec) => !spec.deprecated);
+  return {
+    field: firstSpec?.field ?? 'workflowCategory',
+    id: nextRowId(),
+    op: firstSpec?.ops[0] ?? 'eq',
+  };
 };
 
 export const isRowComplete = (row: FilterRow): boolean => {

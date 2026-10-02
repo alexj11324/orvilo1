@@ -44,7 +44,7 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   filter: builderToFilter(state.entityType, state.builder),
   groupBy: state.groupBy === 'none' ? undefined : state.groupBy,
   layout: state.layout,
-  schemaVersion: 1,
+  schemaVersion: 2,
   sort: state.sort,
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
   subGroupBy:

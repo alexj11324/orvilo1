@@ -21,7 +21,7 @@ import type { ProjectListItem } from '@/store/project/store';
 export const teamProjectsWorkQuery = (teamId: string): WorkQuery => ({
   entityType: 'project',
   filter: { all: [{ field: 'teamId', op: 'eq', value: teamId }] },
-  schemaVersion: 1,
+  schemaVersion: 2,
 });
 
 /**

@@ -19,7 +19,7 @@ export const PROJECT_ISSUE_PAGE_SIZE = 50;
 
 export const projectIssueMilestonePredicate = (milestoneId: string | undefined) =>
   milestoneId
-    ? ({ field: 'projectMilestoneId' as const, op: 'eq' as const, value: milestoneId })
+    ? { field: 'projectMilestoneId' as const, op: 'eq' as const, value: milestoneId }
     : undefined;
 
 export const projectIssueQueryFilter = (
@@ -128,9 +128,9 @@ export const projectIssueWorkQuery = (input: {
   const filter = projectIssueQueryFilter(input.projectId, input.filters, input.milestoneId);
   const hidden = input.hideCompleted
     ? {
-        field: 'status' as const,
+        field: 'workflowCategory' as const,
         op: 'notIn' as const,
-        value: ['completed', 'canceled'],
+        value: ['done', 'canceled'],
       }
     : undefined;
   const roots =
@@ -143,7 +143,7 @@ export const projectIssueWorkQuery = (input: {
     filter: visibility.length > 0 ? { all: [...(filter.all ?? []), ...visibility] } : filter,
     groupBy: input.layout === 'board' ? (input.groupBy ?? 'status') : (input.groupBy ?? 'none'),
     layout: input.layout,
-    schemaVersion: 1,
+    schemaVersion: 2,
     ...(input.sort ? { sort: input.sort } : {}),
     ...(input.subGroupBy ? { subGroupBy: input.subGroupBy } : {}),
   };

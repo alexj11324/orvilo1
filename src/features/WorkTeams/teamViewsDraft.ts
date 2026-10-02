@@ -29,7 +29,7 @@ export const teamViewDraftQuery = (draft: ViewEditorState, teamId: string): Work
     },
     groupBy: draft.groupBy === 'none' ? undefined : draft.groupBy,
     layout: draft.layout,
-    schemaVersion: 1,
+    schemaVersion: 2,
     sort: draft.sort,
     sortMode: draft.layout === 'board' ? draft.sortMode : undefined,
     subGroupBy:

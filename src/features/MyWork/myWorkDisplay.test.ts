@@ -340,9 +340,9 @@ describe('normalizeMyWorkDisplay', () => {
   it('normalizes sub-grouping and booleans independently', () => {
     const display = normalizeMyWorkDisplay('subscribed', {
       nestedSubIssues: false,
-      subGrouping: 'status',
+      subGrouping: 'priority',
     });
-    expect(display.subGrouping).toBe('status');
+    expect(display.subGrouping).toBe('priority');
     expect(display.nestedSubIssues).toBe(false);
     const bad = normalizeMyWorkDisplay('subscribed', {
       subGrouping: 'bogus' as never,
@@ -371,14 +371,8 @@ describe('normalizeMyWorkDisplay', () => {
 describe('myWorkSubGroupingOptions', () => {
   it('always offers none and drops the active primary dimension', () => {
     expect(myWorkSubGroupingOptions('status')).toEqual(['none', 'priority', 'assignee', 'project']);
-    expect(myWorkSubGroupingOptions('priority')).toEqual(['none', 'status', 'assignee', 'project']);
-    expect(myWorkSubGroupingOptions('none')).toEqual([
-      'none',
-      'status',
-      'priority',
-      'assignee',
-      'project',
-    ]);
+    expect(myWorkSubGroupingOptions('priority')).toEqual(['none', 'assignee', 'project']);
+    expect(myWorkSubGroupingOptions('none')).toEqual(['none', 'priority', 'assignee', 'project']);
   });
 });
 

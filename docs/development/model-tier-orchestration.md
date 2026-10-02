@@ -64,6 +64,66 @@ eligible candidate before calling `runTask`:
    gates. An all-untiered roster therefore keeps today's behavior exactly —
    tiering is opt-in by data, not by flag.
 
+## Engine capability gating
+
+Tiering picks _which_ agent is cheap enough; capability gating picks _which
+kinds of work an agent may run at all_. The two layers compose: the tier
+matcher only ever sees agents that pass the capability gate first.
+
+An engine is **mount-capable** when its runtime actually delivers the
+`session/new` `mcpServers` payload to the agent — the `orvilo_cc` MCP surface
+that carries builtin _tools_ (acceptance evidence, the supervisor's
+diagnostic tool, legacy agent-mode Brief). The capability model is split:
+
+- `ACP_RUNTIME_AGENT_TYPES` — transport-capable: the runtime hosts ACP
+  sessions. This set alone decides whether builtin tools can _try_ to mount.
+- `ACP_MCP_MOUNT_AGENT_TYPES` — mount-capable: a strict subset of the
+  transport set minus bridges that accept `mcpServers` and silently drop
+  them. `pi` is the known silent-drop case: `pi-acp@0.0.33` stores the
+  payload on the session object and never forwards it (pi has no built-in
+  MCP support; the upstream wiring PR was closed unmerged), so builtin tools
+  would vanish without error. `amp`/`claude-code`/`codex` bridges were
+  audited to deliver the payload (CLI flag, SDK option, session config
+  respectively); the `acpArgs` entries run the vendor's own ACP
+  implementation, which owns `mcpServers` handling end to end.
+
+The shared predicate is `canMountBuiltinToolSurface(binding)` in
+`@orvilo/heterogeneous-agents`, lifted to agent records by
+`agentCanMountBuiltinToolSurface(agentConfig, model)` in
+`aiAgent/pipeline/resolveExecutionBinding` — the same helper that feeds
+`resolveRunToolSurface`'s `supportsBuiltinToolMount` flag (which is what
+drops builtin specs at dispatch admission). Gates at three loci, all
+upstream of dispatch minting:
+
+1. **Intake selection** — when the task's contract requires the surface
+   (`taskRequiresBuiltinToolMount`: goal-bound tasks, acceptance-enabled
+   tasks, legacy agent-mode briefs), `pickTieredAgent` treats
+   mount-incapable roster rows as ineligible for _that_ task. Non-capable
+   agents stay fully pickable for normal tasks — they are skipped per task,
+   never excluded wholesale. When nothing satisfies, a kept assignee that is
+   unusable or mount-incapable yields `blockedReason`
+   (`assignee_agent_unusable` /
+   `assignee_engine_cannot_mount_builtin_tool_surface`) instead of minting a
+   dispatch that can only throw at admission.
+2. **Goal binding** — `GoalService.create`/`setAgent`/`restart` reject a
+   mount-incapable bound agent with `BAD_REQUEST` (the bound agent executes
+   every Task the coordinator creates, and goal work always requires the
+   surface). A goal bound _before_ the gate existed is caught at
+   `dispatchWork`: the task is parked `paused` with the reason recorded and
+   handed to the same manager-or-human gate every unresolvable failure uses
+   — no dispatch minted, no admission throw.
+3. **Goal supervisor** — its virtual agent is the builtin `orvilo` binding
+   (mount-capable by construction), but a heterogeneous goal-model override
+   retypes it, so the diagnostic dispatch checks the effective binding and
+   escalates the incident immediately instead of parking on the diagnosis
+   timeout.
+
+Defense-in-depth stays: `requiredToolIds` still throws at dispatch
+admission if a required builtin tool cannot mount. There is no UI picker
+that binds a goal to an agent (the create modal forwards a page-context
+`agentId`, and `goal.setAgent` is service/TRPC-only), so nothing is grayed
+out yet — gating lives entirely at the service layer.
+
 ## Escalate-on-failure
 
 `TaskDispatchModel.request` snapshots `task_dispatches.tier` from the bound

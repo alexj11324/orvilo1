@@ -1,5 +1,6 @@
 import type {
   AgentTier,
+  OrviloAgentAgencyConfig,
   ProjectOrchestrationPolicy,
   TaskDispatchOrigin,
   TaskDispatchPhase,
@@ -24,6 +25,7 @@ import {
   sql,
 } from 'drizzle-orm';
 
+import { agents } from '../schemas/agent';
 import { goals } from '../schemas/goal';
 import { goalNodes } from '../schemas/goalGraph';
 import { projectAgents, projects } from '../schemas/project';
@@ -281,7 +283,9 @@ export interface TaskTerminalDispatchOutcome {
 
 /** A tiered roster row the intake matcher may route a task onto. */
 export interface ProjectAgentRosterEntry {
+  agencyConfig: OrviloAgentAgencyConfig | null;
   agentId: string;
+  model: string | null;
   role: string | null;
   sortOrder: number;
   tier: AgentTier | null;
@@ -680,12 +684,15 @@ export class TaskDispatchModel {
   ): Promise<ProjectAgentRosterEntry[]> {
     return db
       .select({
+        agencyConfig: agents.agencyConfig,
         agentId: projectAgents.agentId,
+        model: agents.model,
         role: projectAgents.role,
         sortOrder: projectAgents.sortOrder,
         tier: projectAgents.tier,
       })
       .from(projectAgents)
+      .innerJoin(agents, eq(agents.id, projectAgents.agentId))
       .where(
         and(
           eq(projectAgents.projectId, input.projectId),

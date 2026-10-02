@@ -14,7 +14,10 @@ import {
 
 const mocks = vi.hoisted(() => ({
   findLatestTerminalDispatch: vi.fn(),
+  findUsableAgentExecutionBinding: vi.fn(),
   listProjectAgentRoster: vi.fn(),
+  taskFindById: vi.fn(),
+  taskRequiresBuiltinToolMount: vi.fn(),
 }));
 
 vi.mock('@/database/models/taskDispatch', () => ({
@@ -23,14 +26,27 @@ vi.mock('@/database/models/taskDispatch', () => ({
     listProjectAgentRoster: mocks.listProjectAgentRoster,
   }),
 }));
+vi.mock('@/database/models/task', () => ({
+  TaskModel: vi.fn(function () {
+    return { findById: mocks.taskFindById };
+  }),
+}));
 vi.mock('@/database/models/project', () => ({
   normalizeProjectOrchestrationPolicy: (policy: unknown) => policy,
+}));
+vi.mock('@/database/utils/agent-access', () => ({
+  findUsableAgentExecutionBinding: mocks.findUsableAgentExecutionBinding,
+}));
+vi.mock('@/server/services/taskRunner/toolMountRequirement', () => ({
+  taskRequiresBuiltinToolMount: mocks.taskRequiresBuiltinToolMount,
 }));
 
 const rosterEntry = (
   overrides: Partial<ProjectAgentRosterEntry> = {},
 ): ProjectAgentRosterEntry => ({
+  agencyConfig: null,
   agentId: 'agent-1',
+  model: null,
   role: null,
   sortOrder: 0,
   tier: 'mid',
@@ -200,13 +216,77 @@ describe('pickTieredAgent', () => {
       }),
     ).toBe('second');
   });
+
+  describe('when the task needs the builtin tool surface', () => {
+    const mountRoster = [
+      rosterEntry({
+        agencyConfig: { heterogeneousProvider: { type: 'pi' } },
+        agentId: 'pi-agent',
+        tier: 'low',
+      }),
+      rosterEntry({
+        agencyConfig: { heterogeneousProvider: { type: 'devin' } },
+        agentId: 'devin-agent',
+        sortOrder: 1,
+        tier: 'low',
+      }),
+      rosterEntry({ agentId: 'capable', sortOrder: 2, tier: 'low' }),
+    ];
+
+    it('skips mount-incapable agents — including pi, transport-capable but silent-dropping mcpServers', () => {
+      expect(
+        pickTieredAgent({
+          currentAssigneeAgentId: null,
+          policy,
+          required: 'low',
+          requiresToolSurfaceMount: true,
+          roster: mountRoster,
+        }),
+      ).toBe('capable');
+    });
+
+    it('returns null when only mount-incapable agents satisfy', () => {
+      expect(
+        pickTieredAgent({
+          currentAssigneeAgentId: 'devin-agent',
+          policy,
+          required: 'low',
+          requiresToolSurfaceMount: true,
+          roster: mountRoster.slice(0, 2),
+        }),
+      ).toBeNull();
+    });
+
+    it('keeps those same agents fully pickable for normal tasks', () => {
+      expect(
+        pickTieredAgent({
+          currentAssigneeAgentId: null,
+          policy,
+          required: 'low',
+          roster: mountRoster,
+        }),
+      ).toBe('pi-agent');
+      expect(
+        pickTieredAgent({
+          currentAssigneeAgentId: null,
+          policy,
+          required: 'low',
+          requiresToolSurfaceMount: false,
+          roster: mountRoster,
+        }),
+      ).toBe('pi-agent');
+    });
+  });
 });
 
 describe('resolveBacklogIntakeAssignment', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.findLatestTerminalDispatch.mockResolvedValue(undefined);
+    mocks.findUsableAgentExecutionBinding.mockResolvedValue({ agencyConfig: null, model: null });
     mocks.listProjectAgentRoster.mockResolvedValue([]);
+    mocks.taskFindById.mockResolvedValue({});
+    mocks.taskRequiresBuiltinToolMount.mockResolvedValue(false);
   });
 
   const candidate = (
@@ -259,5 +339,80 @@ describe('resolveBacklogIntakeAssignment', () => {
     await expect(
       resolveBacklogIntakeAssignment({ candidate: candidate({ priority: 1 }), db: {} as never }),
     ).resolves.toEqual({ agentId: null, escalatedFrom: null, required: 'high' });
+  });
+
+  it('picks a mount-capable roster agent when the task needs the builtin surface', async () => {
+    mocks.taskRequiresBuiltinToolMount.mockResolvedValue(true);
+    mocks.listProjectAgentRoster.mockResolvedValue([
+      rosterEntry({
+        agencyConfig: { heterogeneousProvider: { type: 'devin' } },
+        agentId: 'agent-devin',
+        tier: 'low',
+      }),
+      rosterEntry({ agentId: 'agent-claude', sortOrder: 1, tier: 'low' }),
+    ]);
+
+    await expect(
+      resolveBacklogIntakeAssignment({ candidate: candidate(), db: {} as never }),
+    ).resolves.toEqual({ agentId: 'agent-claude', escalatedFrom: null, required: 'low' });
+    // The pick succeeded — the kept-assignee capability probe never ran.
+    expect(mocks.findUsableAgentExecutionBinding).not.toHaveBeenCalled();
+  });
+
+  it('blocks when the kept assignee cannot mount the builtin surface and nothing can replace it', async () => {
+    mocks.taskRequiresBuiltinToolMount.mockResolvedValue(true);
+    mocks.findUsableAgentExecutionBinding.mockResolvedValue({
+      agencyConfig: { heterogeneousProvider: { type: 'pi' } },
+      model: null,
+    });
+
+    await expect(
+      resolveBacklogIntakeAssignment({ candidate: candidate(), db: {} as never }),
+    ).resolves.toEqual({
+      agentId: null,
+      blockedReason: 'assignee_engine_cannot_mount_builtin_tool_surface',
+      escalatedFrom: null,
+      required: 'low',
+    });
+  });
+
+  it('blocks with its own reason when the kept assignee is no longer usable', async () => {
+    mocks.taskRequiresBuiltinToolMount.mockResolvedValue(true);
+    mocks.findUsableAgentExecutionBinding.mockResolvedValue(null);
+
+    await expect(
+      resolveBacklogIntakeAssignment({ candidate: candidate(), db: {} as never }),
+    ).resolves.toEqual({
+      agentId: null,
+      blockedReason: 'assignee_agent_unusable',
+      escalatedFrom: null,
+      required: 'low',
+    });
+  });
+
+  it('leaves a mount-capable kept assignee unblocked — the pre-tiering path', async () => {
+    mocks.taskRequiresBuiltinToolMount.mockResolvedValue(true);
+
+    const result = await resolveBacklogIntakeAssignment({
+      candidate: candidate(),
+      db: {} as never,
+    });
+    expect(result).toEqual({ agentId: null, escalatedFrom: null, required: 'low' });
+    expect(result.blockedReason).toBeUndefined();
+  });
+
+  it('never blocks a normal task, whatever the kept assignee runs on', async () => {
+    // taskRequiresBuiltinToolMount stays false — a devin assignee stays usable.
+    mocks.findUsableAgentExecutionBinding.mockResolvedValue({
+      agencyConfig: { heterogeneousProvider: { type: 'devin' } },
+      model: null,
+    });
+
+    const result = await resolveBacklogIntakeAssignment({
+      candidate: candidate(),
+      db: {} as never,
+    });
+    expect(result.blockedReason).toBeUndefined();
+    expect(mocks.findUsableAgentExecutionBinding).not.toHaveBeenCalled();
   });
 });

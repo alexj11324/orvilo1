@@ -2,6 +2,7 @@ import type { AgentTier, ProjectOrchestrationPolicy } from '@orvilo/types';
 import { agentTierRank, nextAgentTier, requiredAgentTierForPriority } from '@orvilo/types';
 
 import { normalizeProjectOrchestrationPolicy } from '@/database/models/project';
+import { TaskModel } from '@/database/models/task';
 import {
   type ProjectAgentRosterEntry,
   type TaskBacklogIntakeCandidate,
@@ -9,6 +10,9 @@ import {
   type TaskTerminalDispatchOutcome,
 } from '@/database/models/taskDispatch';
 import { type OrviloDatabase } from '@/database/type';
+import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
+import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipeline/resolveExecutionBinding';
+import { taskRequiresBuiltinToolMount } from '@/server/services/taskRunner/toolMountRequirement';
 
 /**
  * Outcome of the terminal dispatch that drives escalation: only an
@@ -60,11 +64,25 @@ export const pickTieredAgent = (input: {
   currentAssigneeAgentId: string | null;
   policy: Pick<ProjectOrchestrationPolicy, 'allowedAgentIds' | 'allowedRoles'>;
   required: AgentTier;
+  /**
+   * When the task's contract requires the builtin/MCP tool surface (goal-mode
+   * work, acceptance evidence), only agents whose engine can mount it are
+   * eligible — the same predicate dispatch admission enforces later. Normal
+   * tasks leave this unset: a mount-incapable agent stays fully pickable for
+   * them, never excluded wholesale.
+   */
+  requiresToolSurfaceMount?: boolean;
   roster: ProjectAgentRosterEntry[];
 }): string | null => {
   const requiredRank = agentTierRank(input.required);
   const satisfying = input.roster.flatMap((entry) => {
     if (entry.tier === null || agentTierRank(entry.tier) < requiredRank) return [];
+    if (
+      input.requiresToolSurfaceMount &&
+      !agentCanMountBuiltinToolSurface({ agencyConfig: entry.agencyConfig }, entry.model)
+    ) {
+      return [];
+    }
     if (
       input.policy.allowedAgentIds?.length &&
       !input.policy.allowedAgentIds.includes(entry.agentId)
@@ -91,6 +109,14 @@ export const pickTieredAgent = (input: {
 export interface BacklogIntakeAssignment {
   /** The agent the task should run under; `null` keeps the current assignee. */
   agentId: string | null;
+  /**
+   * Set when the task requires the builtin tool surface but the agent it
+   * would run under cannot mount it — no roster pick satisfied the mount
+   * gate and the kept assignee is mount-incapable (or gone). The caller
+   * reports `blocked` with this reason instead of minting a dispatch that
+   * can only throw at admission.
+   */
+  blockedReason?: string;
   /** The failed band the required tier was escalated from, if any. */
   escalatedFrom: AgentTier | null;
   required: AgentTier;
@@ -122,11 +148,38 @@ export const resolveBacklogIntakeAssignment = async (input: {
     projectId: candidate.projectId,
     workspaceId: candidate.workspaceId,
   });
+  const userId = candidate.userId;
+  const task =
+    userId && (await new TaskModel(db, userId, candidate.workspaceId).findById(candidate.taskId));
+  const requiresToolSurfaceMount =
+    userId && task
+      ? await taskRequiresBuiltinToolMount(db, task, {
+          userId,
+          workspaceId: candidate.workspaceId,
+        })
+      : false;
   const agentId = pickTieredAgent({
     currentAssigneeAgentId: candidate.assigneeAgentId,
     policy: normalizeProjectOrchestrationPolicy(candidate.orchestrationPolicy),
     required,
+    requiresToolSurfaceMount,
     roster,
   });
-  return { agentId, escalatedFrom, required };
+  let blockedReason: string | undefined;
+  if (requiresToolSurfaceMount && !agentId && candidate.assigneeAgentId && userId) {
+    // No roster pick satisfied the mount gate — the kept assignee is what
+    // `runTask` would execute under. An assignee that is gone or
+    // mount-incapable can only throw at admission, so the caller parks the
+    // task instead of minting that dispatch.
+    const binding = await findUsableAgentExecutionBinding(db, candidate.assigneeAgentId, {
+      userId,
+      workspaceId: candidate.workspaceId,
+    });
+    blockedReason = !binding
+      ? 'assignee_agent_unusable'
+      : agentCanMountBuiltinToolSurface({ agencyConfig: binding.agencyConfig }, binding.model)
+        ? undefined
+        : 'assignee_engine_cannot_mount_builtin_tool_surface';
+  }
+  return { agentId, blockedReason, escalatedFrom, required };
 };

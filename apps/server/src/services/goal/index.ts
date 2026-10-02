@@ -35,14 +35,19 @@ import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
 import type { OrviloDatabase } from '@/database/type';
-import { assertAgentUsableBy } from '@/database/utils/agent-access';
+import {
+  assertAgentUsableBy,
+  findUsableAgentExecutionBinding,
+} from '@/database/utils/agent-access';
 import { isCaidDispatchAllowed } from '@/server/featureFlags/caidAdmission';
 import { createAgentStateManager } from '@/server/modules/AgentExecution/factory';
+import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipeline/resolveExecutionBinding';
 import { isAcpJudgmentBindingError } from '@/server/services/aiGeneration/judgment';
 
 import { TaskService } from '../task';
 import { TaskRunnerService } from '../taskRunner';
 import { taskRunIdempotencyKey } from '../taskRunner/idempotency';
+import { taskRequiresBuiltinToolMount } from '../taskRunner/toolMountRequirement';
 import { AcceptanceService } from '../verify/acceptanceService';
 import { VerifyPlanGeneratorService } from '../verify/planGenerator';
 import { GoalCriteriaGeneratorService, type GoalDecompositionDraft } from './criteriaGenerator';
@@ -187,13 +192,31 @@ export class GoalService {
       ? new GoalGraphModel(this.db, this.userId, this.workspaceId, { id: agentId, type: 'agent' })
       : this.graphModel;
 
-  create = async (input: CreateGoalGraphInput): Promise<GoalGraphSnapshot> => {
-    if (input.agentId) {
-      await assertAgentUsableBy(this.db, input.agentId, {
-        userId: this.userId,
-        workspaceId: this.workspaceId,
+  /**
+   * The agent a goal binds to executes every Task the coordinator creates —
+   * goal-mode work whose contract always requires the builtin/MCP tool
+   * surface. Binding a mount-incapable engine would mint dispatches that can
+   * only throw at admission, so binding refuses it up front (visibility is
+   * checked by the same lookup; a missing agent is still NOT_FOUND).
+   */
+  private assertGoalAgentMountCapable = async (agentId: string) => {
+    const binding = await findUsableAgentExecutionBinding(this.db, agentId, {
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    if (!binding) throw new TRPCError({ code: 'NOT_FOUND', message: 'Agent not found' });
+    if (!agentCanMountBuiltinToolSurface({ agencyConfig: binding.agencyConfig }, binding.model)) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message:
+          'The selected agent cannot run goal tasks: its engine cannot mount the builtin tool ' +
+          'surface goal work requires (acceptance evidence). Choose an agent on an ' +
+          'MCP-mount-capable runtime.',
       });
     }
+  };
+
+  create = async (input: CreateGoalGraphInput): Promise<GoalGraphSnapshot> => {
     if (input.projectId) {
       const project = await new ProjectModel(
         this.db,
@@ -206,6 +229,12 @@ export class GoalService {
     // goal config so the page can edit them and the terminal acceptance Task
     // is gated on exactly these checks (not an AI re-derivation of the prose).
     const creatorAgentId = input.createdByAgentId ?? input.agentId;
+    // The goal-bound agent executes every Task this goal mints — goal-mode
+    // work whose contract always requires the builtin tool surface. The gate
+    // covers the *resolved* binding (`input.agentId ?? creatorAgentId`), and
+    // subsumes the visibility assert for `input.agentId`.
+    const boundAgentId = input.agentId ?? creatorAgentId;
+    if (boundAgentId) await this.assertGoalAgentMountCapable(boundAgentId);
     const { manager: managerOptions, ...options } = input.config ?? {};
     const managed = managerOptions !== undefined;
     let config: GoalConfig | undefined = input.config ? options : undefined;
@@ -1021,6 +1050,7 @@ export class GoalService {
       userId: this.userId,
       workspaceId: this.workspaceId,
     });
+    await this.assertGoalAgentMountCapable(agentId);
     const goal = await this.goalModel.update(goalId, { agentId });
     if (!goal) throw new TRPCError({ code: 'NOT_FOUND', message: 'Goal not found' });
 
@@ -1077,6 +1107,7 @@ export class GoalService {
         userId: this.userId,
         workspaceId: this.workspaceId,
       });
+      await this.assertGoalAgentMountCapable(options.agentId);
     }
     const graph = await this.requireGraph(goalId);
 
@@ -1833,6 +1864,46 @@ export class GoalService {
         outcome: 'waiting_external',
         taskId: task.id,
       };
+    }
+
+    // A task bound before the mount gate existed can still carry a
+    // mount-incapable assignee. Minting its dispatch is a guaranteed
+    // admission throw (the contract's builtin tools cannot mount), so park
+    // the Task with the reason recorded and hand the stop to the same
+    // manager-or-human gate every other unresolvable failure uses.
+    if (
+      task.assigneeAgentId &&
+      (await taskRequiresBuiltinToolMount(this.db, task, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      }))
+    ) {
+      const binding = await findUsableAgentExecutionBinding(this.db, task.assigneeAgentId, {
+        userId: this.userId,
+        workspaceId: this.workspaceId,
+      });
+      if (
+        !binding ||
+        !agentCanMountBuiltinToolSurface({ agencyConfig: binding.agencyConfig }, binding.model)
+      ) {
+        const reason = !binding
+          ? 'The assigned agent is no longer usable — reassign the goal or this task'
+          : 'The assigned agent cannot mount the builtin tools this goal task requires ' +
+            '(its runtime cannot host the MCP tool surface) — reassign it to a capable agent';
+        const parked = await this.taskModel.updateStatusIfCurrent(task.id, task.status, 'paused', {
+          error: reason,
+        });
+        if (!parked) {
+          return {
+            goalId,
+            message: `Task ${task.identifier} moved while its dispatch was being gated`,
+            nodeId,
+            outcome: 'waiting_external',
+            taskId: task.id,
+          };
+        }
+        return this.gateOrTakeOver(graph, nodeId, task.id, reason, effects);
+      }
     }
 
     // Advances arrive from independent sources — an event hook, a manual nudge,

@@ -49,6 +49,17 @@ const processBacklogIntake = async (input: {
   // requirement (untiered roster, policy gates) the pick is null and the
   // task keeps its assignee — the pre-tiering failure path, unchanged.
   const assignment = await resolveBacklogIntakeAssignment({ candidate, db });
+  // The task needs a builtin-tool mount its would-be executant cannot make
+  // (mount-incapable engine). Minting the dispatch is a guaranteed admission
+  // throw, so the task parks here with the recorded reason — the existing
+  // channel other unstartable intents report through.
+  if (assignment.blockedReason) {
+    return {
+      outcome: 'blocked',
+      reason: assignment.blockedReason,
+      taskId: candidate.taskId,
+    };
+  }
   if (assignment.agentId && assignment.agentId !== candidate.assigneeAgentId) {
     log(
       'intake %s routed to %s (required=%s, escalatedFrom=%s)',

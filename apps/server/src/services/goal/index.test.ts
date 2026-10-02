@@ -888,6 +888,56 @@ describe('GoalService', () => {
     await expect(service.setAgent(graph.goal.id, 'agt_missing')).rejects.toThrow();
   });
 
+  it('refuses to bind a goal to an agent whose engine cannot mount the builtin tool surface', async () => {
+    await serverDB.insert(agents).values([
+      {
+        agencyConfig: { heterogeneousProvider: { type: 'devin' } },
+        id: 'agt_devin',
+        slug: 'agt-devin',
+        userId,
+      },
+      {
+        agencyConfig: { heterogeneousProvider: { type: 'pi' } },
+        id: 'agt_pi',
+        slug: 'agt-pi',
+        userId,
+      },
+    ]);
+    const service = new GoalService(serverDB, userId);
+
+    // Every Task a goal mints needs the MCP tool surface — both a bridge that
+    // silently drops mcpServers (pi) and an engine with no ACP transport
+    // (devin) are refused at bind time instead of failing every dispatch.
+    for (const agentId of ['agt_devin', 'agt_pi']) {
+      await expect(service.create({ agentId, title: 'Refused' })).rejects.toMatchObject({
+        code: 'BAD_REQUEST',
+      });
+    }
+
+    const graph = await service.create({ title: 'Bindable' });
+    await expect(service.setAgent(graph.goal.id, 'agt_devin')).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    await expect(service.restart(graph.goal.id, { agentId: 'agt_pi' })).rejects.toMatchObject({
+      code: 'BAD_REQUEST',
+    });
+    expect((await service.graph(graph.goal.id)).goal.agentId).toBeFalsy();
+  });
+
+  it('still binds a mount-capable heterogeneous agent', async () => {
+    await serverDB.insert(agents).values({
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      id: 'agt_claude',
+      slug: 'agt-claude',
+      userId,
+    });
+    const service = new GoalService(serverDB, userId);
+
+    const graph = await service.create({ agentId: 'agt_claude', title: 'Capable' });
+
+    expect(graph.goal.agentId).toBe('agt_claude');
+  });
+
   it('restarts unfinished tasks under a new agent and cancels the stale runs they hold', async () => {
     const cancelSpy = vi.spyOn(TaskService.prototype, 'cancelTopic').mockResolvedValue();
     await serverDB.insert(agents).values({ id: 'agt_restart', slug: 'agt-restart', userId });

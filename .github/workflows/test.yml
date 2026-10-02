@@ -214,6 +214,37 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
 
+  # Product-surface controls gate — fails when product .tsx files use raw HTML
+  # form controls or ad-hoc control-kit imports instead of the repo design
+  # system (ReUI). Exemptions live in scripts/ci/nativeControlsAllowlist.json.
+  # Pure Node script: no dependency install needed.
+  native-controls:
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    name: Native Controls
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        env:
+          REF_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "${REF_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Scan product surfaces for native/ad-hoc controls
+        run: |
+          node scripts/ci/checkNativeControls.mjs
+          node --test scripts/ci/checkNativeControls.test.mjs
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   # Package tests - all packages in single job to save runner resources
 
       - name: Fail fast — cancel sibling jobs
@@ -707,6 +738,7 @@ jobs:
       - changes
       - typecheck
       - slimming-boundary
+      - native-controls
       - test-packages
       - test-app
       - test-windows-shell
@@ -805,6 +837,7 @@ jobs:
           required=(
             typecheck
             slimming-boundary
+            native-controls
             test-packages
             test-app
             test-windows-shell
@@ -817,7 +850,7 @@ jobs:
           # A job skipped because its area filter did not match is a pass —
           # any other non-success keeps the gate red.
           declare -A area_of=(
-            [typecheck]=code [slimming-boundary]=code [test-packages]=packages [test-app]=app
+            [typecheck]=code [slimming-boundary]=code [native-controls]=code [test-packages]=packages [test-app]=app
             [merge-app-coverage]=app [test-windows-shell]=windows_shell
             [test-desktop]=desktop [test-server]=server
             [merge-server-coverage]=server [test-database]=database

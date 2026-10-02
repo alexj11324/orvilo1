@@ -7,6 +7,7 @@ import { CheckCircle2, KeyRound, X, XIcon } from 'lucide-react';
 import { memo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import ActionIcon from '@/components/ActionIcon';
 import Avatar from '@/components/Avatar';
 import { Badge } from '@/components/reui/badge';
 import { selectItems, SelectOptionItems } from '@/components/SelectOptions';
@@ -227,7 +228,7 @@ interface RepoListSectionProps {
 }
 
 const RepoListSection = memo<RepoListSectionProps>(({ repos, onReposChange }) => {
-  const { t } = useTranslation('setting');
+  const { t } = useTranslation(['setting', 'common']);
   const { allowed: canEdit } = usePermission('edit_own_content');
   const [input, setInput] = useState('');
 
@@ -259,13 +260,14 @@ const RepoListSection = memo<RepoListSectionProps>(({ repos, onReposChange }) =>
               <div className="truncate" style={{ flex: 1, fontSize: 13 }}>
                 {repo}
               </div>
-              <button
+              <ActionIcon
+                aria-label={t('delete', { ns: 'common' })}
                 className={`${styles.repoDeleteBtn} repo-delete-btn`}
                 disabled={!canEdit}
+                icon={X}
+                size="small"
                 onClick={(e) => removeRepo(repo, e)}
-              >
-                <X size={12} />
-              </button>
+              />
             </div>
           ))}
         </div>

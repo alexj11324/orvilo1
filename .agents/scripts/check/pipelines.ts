@@ -38,12 +38,15 @@ export const orviloPipelines: PipelineEntry[] = [
     ],
   },
   {
-    // .mts/.cts are outside lint-staged's globs but belong to the same pipeline
+    // .mts/.cts are outside lint-staged's globs but belong to the same pipeline.
+    // The tsx step is the native-controls product-surface gate (it self-skips
+    // files outside src/features/** and src/routes/**).
     exts: ['.ts', '.tsx', '.mts', '.cts'],
     tools: [
       ['stylelint', '--fix'],
       ['eslint', '--fix'],
       ['prettier', '--write'],
+      ['tsx', 'scripts/ci/checkNativeControls.mjs'],
     ],
   },
   { exts: ['.yml', '.yaml'], tools: [['eslint', '--fix']] },

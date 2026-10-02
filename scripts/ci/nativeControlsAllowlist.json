@@ -1,0 +1,899 @@
+{
+  "$comment": "Reviewable exemptions for scripts/ci/checkNativeControls.mjs. Every entry states why the file legitimately owns a raw control. `rules` = full exemption for those rules (semantic cases); `counts` = shrinking cap — the file may carry at most that many violations of each listed rule, so additions still fail and removals shrink the debt. Hidden <input type=\"hidden\"> plumbing never needs an entry.",
+  "files": {
+    "src/features/Automations/McpEventTriggerSettings.tsx": {
+      "reason": "Automation config form on the lobehub control kit — pre-existing; migrate to ReUI when the automation settings surface is rebuilt.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/Conversation/Error/ChatInvalidApiKey.tsx": {
+      "reason": "Error-screen action button on the lobehub kit — pre-existing; migrate to ReUI Button.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/Memory/prime/index.tsx": {
+      "reason": "Pre-existing lobehub Button in the memory surface — migrate to ReUI Button.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/routes/(main)/memory/preferences/index.tsx": {
+      "reason": "Pre-existing lobehub Button in the memory-preferences surface — migrate to ReUI Button.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/Acceptance/Report/MarkdownEvidence.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Report/ReportViewer.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Comments/CommentCard.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Comments/CommentThread.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Conversation/AcceptanceOriginTopic.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Evidence/Annotation.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Evidence/DesktopEvidenceReview.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Evidence/EvidenceList.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Evidence/RegionNotes.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Evidence/ScreenshotTiles.tsx": {
+      "counts": {
+        "native-control": 3
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Acceptance/Viewer/Evidence/attachments.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/AgentGoals/CreateGoalModal/CreateGoalContent.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/AgentTaskManager/AgentSelectorAction.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/AgentTasks/AgentTaskDetail/TaskActivities.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/AgentTasks/AgentTaskDetail/TaskPrerequisites.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/AgentTasks/AgentTaskList/KanbanBoard.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/AgentTasks/AgentTaskList/KanbanColumn.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/AgentTasks/AgentTaskList/TaskIntentReview.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/AgentTasks/CreateTaskModal/CreateTaskContent.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/AgentTasks/features/AssigneeAgentSelector.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/AgentTasks/features/AssigneeMemberSelector.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/AgentTasks/features/TaskLabelSelector.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/AgentTasks/features/TaskPriorityTag.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/AgentTasks/features/TaskScheduleDialog.tsx": {
+      "counts": {
+        "native-control": 4
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/AgentTasks/features/TaskStatusTag.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/AudioPlayer/index.tsx": {
+      "counts": {
+        "native-control": 5
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Automations/AutomationRunsPage.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Automations/AutomationScheduleList.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ChatInput/ActionBar/Knowledge/useControls.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ChatInput/ActionBar/Params/Controls.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ChatInput/ActionBar/Tools/PopoverContent.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ChatInput/ActionBar/Tools/useControls.tsx": {
+      "counts": {
+        "native-control": 5
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ChatInput/ControlBar/HeteroControlBar/QuotaMenu/QuotaMenu.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ChatInput/ControlBar/HeteroDeviceSwitcher.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ChatInput/VoiceMessage/index.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Collaboration/ActivityDock.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/CommandMenu/SearchResults.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/CommandMenu/components/CommandInput.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Conversation/FollowUp/FollowUpChips.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Conversation/MessageForward/ForwardModal.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Conversation/MessageForward/TopicForwardModal/Content.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Conversation/Messages/AssistantGroup/Tool/Detail/Intervention/ApprovalActions.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/Conversation/WorkingSidebar/WorkspaceTab.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Conversation/components/PortalResourceCard/index.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/DevDock/Bar.tsx": {
+      "counts": {
+        "native-control": 3
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/DevDock/OverflowMenu.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/DevDock/widgets/BarButton.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/DevDock/widgets/MemoryWidget.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/DevPanel/RenderGallery/Sidebar.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Electron/updater/UpdateNotification.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/FloatingChatPanel/HoverExpandBar.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/GlobalSearch/GlobalSearchResults.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Home/Recents/AllRecentsDrawer.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Home/components/RailCard/index.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/HomeSidebar/Body/Agent/Modals/ConfigGroupModal/GroupItem.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/HomeSidebar/Body/TeamsSection.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/HomeSidebar/Body/WorkFavorites.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/HomeSidebar/Body/WorkspaceSection.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/LibraryModal/AssignKnowledgeBase/VisibilityTabs.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/LocalFile/LocalFile.tsx": {
+      "counts": {
+        "native-control": 3
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/MobileHome/Layout/SessionSearchBar.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/MobileHome/SessionListContent/Modals/ConfigGroupModal/GroupItem.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/BenchmarkModal/index.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ContextCachingSwitch.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ControlsForm.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ImageAspectRatio2Select.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ImageAspectRatioSelect.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/LevelSlider.tsx": {
+      "counts": {
+        "native-control": 1,
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ReasoningModeSegmented.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ReasoningTokenSlider.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ReasoningTokenSlider32k.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ReasoningTokenSlider80k.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/ModelSwitchPanel/components/ControlsForm/ThinkingBudgetSlider.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/MoveTopicsModal/Content.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/MyWork/MyWorkFilterMenu.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/PageEditor/DocumentLikes/index.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Portal/LocalFile/PreviewToolbar.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Portal/LocalFile/TabStrip.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Portal/LocalFile/xlsx/XlsxPane.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Portal/Mobile.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ProfileEditor/PluginTag.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/Issues/IssueFilterChips.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/Issues/IssueFilterPopover.tsx": {
+      "counts": {
+        "native-control": 6
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/Layout/ProjectSidePanel.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/List/AddFilterPopover.tsx": {
+      "counts": {
+        "native-control": 6
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/List/DisplayOptionsPopover.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/List/FilterChips.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/List/index.tsx": {
+      "counts": {
+        "native-control": 4
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/Milestones/ProjectMilestonesPage.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/Updates/index.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/Workspace/ProjectDescription.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/Workspace/ProjectMilestones.tsx": {
+      "counts": {
+        "native-control": 4
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Projects/Workspace/index.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ProtocolUrlHandler/InstallPlugin/CustomPluginInstallModal.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ResourceHome/Home/Libraries.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ResourceHome/Home/RecentFiles.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ResourceHome/Home/SectionTitle.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ResourceManager/components/Explorer/EmptyPlaceholder.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/ResourceManager/components/Explorer/MasonryView/MasonryItem/WebpageFileItem.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/ResourceManager/components/Header/AddButton.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/ResourceManager/components/LibraryHierarchy/FolderAddButton.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/Reviews/ReviewOverview.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Reviews/ReviewPullRequestPage.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Reviews/ReviewsPage.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/SavedViews/SavedViewDetailsPanel.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/SavedViews/WorkQueryFilterBuilder.tsx": {
+      "counts": {
+        "native-control": 4
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/SelfLearning/CreateDomainPage.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing ad-hoc inline input (search/name field inside a popover or panel) — the cap freezes the count; migrate to the ReUI Input on touch."
+    },
+    "src/features/SelfLearning/LessonDetail/index.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/SelfLearning/Portrait/DomainList.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/SelfLearning/Portrait/LessonPreview.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/ProviderMenu/SortProviderModal/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/detail/bedrock/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/detail/comfyui/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/detail/vertexai/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/CreateNewProvider/Content.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ModelList/CreateNewModelModal/ExtendParamsSelect.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ModelList/CreateNewModelModal/Footer.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ModelList/CreateNewModelModal/Form.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ModelList/EmptyModels.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ModelList/ModelConfigModal/Footer.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ModelList/ModelItem.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ModelList/ModelTitle/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ModelList/SortModelModal/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ProviderConfig/Checker.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ProviderConfig/OAuthDeviceFlowAuth/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ProviderConfig/UpdateProviderInfo/SettingModal.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ProviderConfig/UpdateProviderInfo/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/provider/features/ProviderConfig/index.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/Settings/tts/features/OpenAI.tsx": {
+      "counts": {
+        "lobehub-form-control": 1
+      },
+      "reason": "Pre-existing lobehub control-kit usage outside a sanctioned admin surface — the cap freezes the count; migrate to ReUI on touch."
+    },
+    "src/features/TaskDrafts/TaskDraftsPage.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/WorkGallery/index.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/WorkInbox/InboxListRow.tsx": {
+      "counts": {
+        "native-control": 3
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/WorkInbox/WorkInboxPage.tsx": {
+      "counts": {
+        "native-control": 3
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/WorkTeams/TeamProjectsSurface.tsx": {
+      "counts": {
+        "native-control": 3
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/WorkTeams/home/TeamResourceDialogs.tsx": {
+      "counts": {
+        "native-control": 4
+      },
+      "reason": "Pre-existing native chrome + ad-hoc input — the cap freezes both counts; migrate to ReUI on touch."
+    },
+    "src/features/WorkTeams/home/TeamResources.tsx": {
+      "counts": {
+        "native-control": 6
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/features/WorkspaceSetting/Linear/index.tsx": {
+      "counts": {
+        "native-control": 3
+      },
+      "reason": "Pre-existing native chrome + ad-hoc input — the cap freezes both counts; migrate to ReUI on touch."
+    },
+    "src/routes/(main)/agent/features/Conversation/ChatHistory/Content.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/routes/(main)/agent/features/Conversation/ExamplePrompts.tsx": {
+      "counts": {
+        "native-control": 1
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    },
+    "src/routes/(popup)/agent/[aid]/QuickChatAgentSwitcher.tsx": {
+      "counts": {
+        "native-control": 2
+      },
+      "reason": "Pre-existing custom-styled chrome micro-controls (chips/toggles/rows), not assembled form controls — the cap freezes the count so new instances fail; migrate to ReUI on touch."
+    }
+  },
+  "patterns": {
+    "src/features/Memory/legacy/**": {
+      "reason": "Legacy memory UI still on the lobehub control kit — retired surface kept for fallback; migration to ReUI is out of scope.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/ModelSelect/**": {
+      "reason": "The shared model-picker feature itself — the sanctioned design-system component for model selection; owns its controls internally.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/ModelSwitchPanel/**": {
+      "reason": "The model-parameter controls feature — a sanctioned model-config surface whose sliders/selects are its design-system internals.",
+      "rules": ["lobehub-form-control"],
+      "counts": {
+        "native-control": 1
+      }
+    },
+    "src/features/OllamaModelDownloader/**": {
+      "reason": "Ollama provider downloader UI — provider-admin surface on the lobehub kit like the sibling provider pages.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/ServiceModel/**": {
+      "reason": "Service-model admin forms — an admin configuration surface explicitly allowed to host model/provider controls; on the lobehub kit.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/Settings/ProviderBindings/**": {
+      "reason": "Provider-binding admin form — configuration surface on the lobehub kit like the sibling provider pages.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/Settings/provider/**": {
+      "reason": "Provider admin pages — the dedicated provider/model configuration surface (explicitly allowed to own model controls); on the lobehub control kit, ReUI migration tracked separately.",
+      "rules": ["lobehub-form-control"]
+    },
+    "src/features/Settings/tts/**": {
+      "reason": "TTS provider configuration — same provider-admin surface family on the lobehub control kit.",
+      "rules": ["lobehub-form-control"]
+    }
+  }
+}

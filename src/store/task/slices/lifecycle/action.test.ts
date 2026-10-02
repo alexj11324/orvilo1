@@ -131,7 +131,7 @@ describe('TaskLifecycleSliceAction', () => {
       await useTaskStore.getState().updateTaskStatus('T-1', 'paused');
     });
 
-    it('should immediately synchronize list and kanban collections', async () => {
+    it('should immediately synchronize list and kanban collections in place', async () => {
       useTaskStore.setState({
         taskGroups: [
           { key: 'backlog', tasks: [{ identifier: 'T-1', status: 'backlog' }], total: 1 },
@@ -142,14 +142,16 @@ describe('TaskLifecycleSliceAction', () => {
       vi.mocked(taskService.updateStatus).mockImplementation(async () => {
         const state = useTaskStore.getState();
 
+        // `status` is the execution projection — the row is patched in place
+        // and group membership (an Issue-status dimension) does not move.
         expect(state.tasks.find((task) => task.identifier === 'T-1')?.status).toBe('completed');
         expect(state.taskGroups.find((group) => group.key === 'backlog')).toMatchObject({
-          tasks: [],
-          total: 0,
-        });
-        expect(state.taskGroups.find((group) => group.key === 'done')).toMatchObject({
           tasks: [expect.objectContaining({ identifier: 'T-1', status: 'completed' })],
           total: 1,
+        });
+        expect(state.taskGroups.find((group) => group.key === 'done')).toMatchObject({
+          tasks: [],
+          total: 0,
         });
 
         return { success: true } as any;
@@ -230,7 +232,7 @@ describe('TaskLifecycleSliceAction', () => {
 
       const state = useTaskStore.getState();
       expect(state.tasks.find((task) => task.identifier === 'T-1')?.status).toBe('completed');
-      expect(state.taskGroups.find((group) => group.key === 'done')).toMatchObject({
+      expect(state.taskGroups.find((group) => group.key === 'backlog')).toMatchObject({
         tasks: [expect.objectContaining({ identifier: 'T-1', status: 'completed' })],
         total: 1,
       });
@@ -264,7 +266,7 @@ describe('TaskLifecycleSliceAction', () => {
 
       const state = useTaskStore.getState();
       expect(state.tasks.find((task) => task.identifier === 'T-1')?.status).toBe('canceled');
-      expect(state.taskGroups.find((group) => group.key === 'canceled')).toMatchObject({
+      expect(state.taskGroups.find((group) => group.key === 'backlog')).toMatchObject({
         tasks: [expect.objectContaining({ identifier: 'T-1', status: 'canceled' })],
         total: 1,
       });

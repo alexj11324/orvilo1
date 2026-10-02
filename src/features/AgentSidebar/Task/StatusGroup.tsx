@@ -4,20 +4,20 @@ import { cssVar } from 'antd-style';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import { EXECUTION_STATUS_VISUALS, type ExecutionStatusVisual } from '@/components/ExecutionStatus';
+import { type StatusVisual, WORKFLOW_CATEGORY_VISUALS } from '@/components/ExecutionStatus';
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import type { TaskGroupItem } from '@/store/task/slices/list/initialState';
 
 import TaskItem from './TaskItem';
 
-const STATUS_META: Record<string, ExecutionStatusVisual & { titleKey: string }> = {
-  backlog: { ...EXECUTION_STATUS_VISUALS.backlog, titleKey: 'taskList.kanban.backlog' },
-  needsInput: {
-    ...EXECUTION_STATUS_VISUALS.waitingForHuman,
-    titleKey: 'taskList.kanban.needsInput',
+const STATUS_META: Record<string, StatusVisual & { titleKey: string }> = {
+  backlog: { ...WORKFLOW_CATEGORY_VISUALS.backlog, titleKey: 'taskList.kanban.backlog' },
+  in_progress: {
+    ...WORKFLOW_CATEGORY_VISUALS.in_progress,
+    titleKey: 'taskList.kanban.inProgress',
   },
-  running: { ...EXECUTION_STATUS_VISUALS.running, titleKey: 'taskList.kanban.running' },
+  in_review: { ...WORKFLOW_CATEGORY_VISUALS.in_review, titleKey: 'taskList.kanban.inReview' },
 };
 
 interface StatusGroupProps {

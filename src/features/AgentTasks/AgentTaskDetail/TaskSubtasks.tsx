@@ -26,8 +26,9 @@ import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
+import IssueStatusPicker from '../features/IssueStatusPicker';
+import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskPriorityTag from '../features/TaskPriorityTag';
-import TaskStatusTag from '../features/TaskStatusTag';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
@@ -38,7 +39,6 @@ import { styles } from '../shared/style';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import RunSubtasksPreview from './RunSubtasksPreview';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
-import TopicStatusIcon from './TopicStatusIcon';
 
 type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running';
 
@@ -85,15 +85,13 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <TaskStatusTag
+        <IssueStatusPicker
           size={14}
-          status={status}
           taskIdentifier={task.identifier}
           workflowCategory={task.workflowCategory}
           workflowStateId={task.workflowStateId}
-        >
-          {hasRunningTopic ? <TopicStatusIcon size={14} status="running" /> : undefined}
-        </TaskStatusTag>
+        />
+        {hasRunningTopic ? <TaskExecutionBadge size={14} status="running" /> : undefined}
       </span>
       {hasName && (
         <div className="font-mono text-xs text-muted-foreground" style={{ flex: 'none' }}>

@@ -1,4 +1,4 @@
-import type { TaskAutomationMode, TaskStatus } from '@orvilo/types';
+import type { TaskAutomationMode, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 
 export const TaskApiName = {
   /** Add a comment to a task */
@@ -78,6 +78,8 @@ export interface CreateTaskState {
   /** Lifecycle status the task was created in (usually `backlog`). */
   status?: TaskStatus;
   success: boolean;
+  /** The canonical Issue Status — buckets the mark the tool card draws. */
+  workflowCategory?: TaskWorkflowCategory | null;
 }
 
 // ==================== createGoal ====================

@@ -218,7 +218,7 @@ describe('useTaskItemContextMenu', () => {
     expect(mocks.closeContextMenu).toHaveBeenCalledTimes(1);
   });
 
-  it('offers the board columns in order — triage shown but unreachable for an unlinked task', () => {
+  it('offers the seven workflow columns in order — execution states are never picks', () => {
     const { result } = renderHook(() =>
       useTaskItemContextMenu({
         identifier: 'T-1',
@@ -232,28 +232,21 @@ describe('useTaskItemContextMenu', () => {
     ) as { children: Array<{ disabled?: boolean; key: string; label?: string }> };
     const children = statusItem.children;
 
-    // The Kanban board's columns, 1:1 — triage leads, never dropped.
+    // The Issue board's columns, 1:1 — triage leads; no running/needsInput
+    // execution folds and no `st:` keys remain in the Issue status menu.
     expect(children.map((child) => child.key)).toEqual([
       'status-triage',
       'status-backlog',
       'status-todo',
-      'status-running',
-      'status-needsInput',
+      'status-in_progress',
+      'status-in_review',
       'status-done',
       'status-canceled',
     ]);
     expect(children[0].label).toBe('taskList.kanban.triage');
-    // The workflow-only columns stay visible but disabled, matching the
-    // reachability a board drop obeys for a task without workflow state.
-    expect(children.map((child) => Boolean(child.disabled))).toEqual([
-      true,
-      false,
-      true,
-      true,
-      false,
-      false,
-      false,
-    ]);
+    // Every row is a workflow move — a category write goes through the same
+    // CAS command a board drop commits, linked or not.
+    expect(children.every((child) => !child.disabled)).toBe(true);
   });
 
   it('lets a workflow-linked task pick triage — written as workflowCategory', async () => {

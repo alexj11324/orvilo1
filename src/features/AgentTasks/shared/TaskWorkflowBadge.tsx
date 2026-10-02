@@ -17,10 +17,11 @@ interface TaskWorkflowBadgeProps {
 }
 
 /**
- * The workflow state as a bare status glyph — what a task row or board card
+ * The Issue Status as a bare workflow glyph — what a task row or board card
  * draws in its one status slot (Linear shows a single status mark per row).
- * `undefined` when the task carries no provider workflow state, so the caller
- * falls back to the execution-status glyph.
+ * `workflowCategory` is the canonical Issue Status: every categorized task
+ * renders its category mark, linked or not. `undefined` only when the task
+ * has no category at all.
  */
 export const useTaskWorkflowGlyph = ({
   executionStatus,
@@ -28,7 +29,7 @@ export const useTaskWorkflowGlyph = ({
   workflowStateId,
 }: TaskWorkflowBadgeProps): (StatusVisual & { label: ReactNode }) | undefined => {
   const { t } = useTranslation('chat');
-  if (!workflowStateId || !workflowCategory) return undefined;
+  if (!workflowCategory) return undefined;
 
   const categoryLabel = t(`taskDetail.workflow.category.${workflowCategory}` as never);
   const deliveryPending = workflowCategory === 'done' && executionStatus !== 'completed';
@@ -37,19 +38,19 @@ export const useTaskWorkflowGlyph = ({
     ...WORKFLOW_CATEGORY_VISUALS[workflowCategory],
     label: (
       <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {t('taskDetail.workflow.businessStatus')}: {categoryLabel}
         </div>
-        <div
-          className="text-[12px] text-muted-foreground"
-          style={{ fontFamily: cssVar.fontFamilyCode }}
-        >
-          {workflowStateId}
-        </div>
-        {deliveryPending && (
-          <div className="text-[12px] text-warning">
-            {t('taskDetail.workflow.deliveryPendingHelp')}
+        {workflowStateId && (
+          <div
+            className="text-xs text-muted-foreground"
+            style={{ fontFamily: cssVar.fontFamilyCode }}
+          >
+            {workflowStateId}
           </div>
+        )}
+        {deliveryPending && (
+          <div className="text-xs text-warning">{t('taskDetail.workflow.deliveryPendingHelp')}</div>
         )}
       </div>
     ),

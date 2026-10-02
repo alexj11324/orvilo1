@@ -73,25 +73,17 @@ const effectiveGroupVisibility = (
   visibility: TaskListVisibilityFilter,
 ): TaskListVisibilityFilter => (isMineListKey(listKey) ? 'all' : visibility);
 
-// Shared business-workflow board. Linked tasks use the normalized Linear
-// category; legacy tasks without an exact workflow state retain the execution
-// projection they used before the workflow split.
+// The Issue board groups by the canonical Issue Status only — one column per
+// workflow category; execution run states (`statuses` membership) never
+// appear on this board.
 const DEFAULT_KANBAN_GROUPS = [
   { key: 'triage', workflowCategories: ['triage'] },
-  { key: 'backlog', statuses: ['backlog'], workflowCategories: ['backlog'] },
+  { key: 'backlog', workflowCategories: ['backlog'] },
   { key: 'todo', workflowCategories: ['todo'] },
-  {
-    key: 'running',
-    statuses: ['running', 'scheduled'],
-    workflowCategories: ['in_progress'],
-  },
-  {
-    key: 'needsInput',
-    statuses: ['paused', 'failed'],
-    workflowCategories: ['in_review'],
-  },
-  { key: 'done', statuses: ['completed'], workflowCategories: ['done'] },
-  { key: 'canceled', statuses: ['canceled'], workflowCategories: ['canceled'] },
+  { key: 'in_progress', workflowCategories: ['in_progress'] },
+  { key: 'in_review', workflowCategories: ['in_review'] },
+  { key: 'done', workflowCategories: ['done'] },
+  { key: 'canceled', workflowCategories: ['canceled'] },
 ] as const;
 
 /**
@@ -428,7 +420,6 @@ export class TaskListSliceActionImpl {
                 groups: DEFAULT_KANBAN_GROUPS.map((group) => ({
                   ...group,
                   limit: groupLimits[group.key] ?? KANBAN_GROUP_PAGE_SIZE,
-                  statuses: 'statuses' in group ? [...group.statuses] : undefined,
                   workflowCategories: [...group.workflowCategories],
                 })),
               }

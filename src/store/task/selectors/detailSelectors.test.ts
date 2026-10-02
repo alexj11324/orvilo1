@@ -154,6 +154,23 @@ describe('taskDetailSelectors', () => {
       },
     );
 
+    it('does not treat issues this task blocks as prerequisites', () => {
+      const state = createState({
+        activeTaskId: 'T-1',
+        taskDetailMap: {
+          'T-1': {
+            ...mockDetail,
+            status: 'backlog',
+            dependencies: [
+              { dependsOn: 'T-9', direction: 'blocking', status: 'backlog', type: 'blocks' },
+            ],
+          },
+        },
+      });
+      expect(taskDetailSelectors.isActiveTaskBlocked(state)).toBe(false);
+      expect(taskDetailSelectors.canRunActiveTask(state)).toBe(true);
+    });
+
     it('ignores relates edges and unlocks only completed blocking edges', () => {
       const state = createState({
         activeTaskId: 'T-1',

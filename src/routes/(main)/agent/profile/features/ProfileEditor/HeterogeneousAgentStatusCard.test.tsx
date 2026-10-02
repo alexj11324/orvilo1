@@ -1,6 +1,6 @@
 import type { HeterogeneousProviderConfig } from '@orvilo/types';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { Children, cloneElement, isValidElement, type ReactNode } from 'react';
 import { MemoryRouter } from 'react-router';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -104,18 +104,117 @@ vi.mock('@/components/ActionIcon', () => ({
   ),
 }));
 
+vi.mock('@/components/ui/button', () => ({
+  Button: ({
+    children,
+    disabled,
+    onClick,
+  }: {
+    children?: ReactNode;
+    disabled?: boolean;
+    onClick?: () => void;
+  }) => (
+    <button disabled={disabled} type="button" onClick={onClick}>
+      {children}
+    </button>
+  ),
+}));
+
+vi.mock('@/components/ui/select', () => ({
+  Select: ({
+    disabled,
+    items,
+    onValueChange,
+    value,
+  }: {
+    disabled?: boolean;
+    items?: Array<{ label: string; value: string }>;
+    onValueChange?: (value: string) => void;
+    value?: string;
+  }) => (
+    <select
+      disabled={disabled}
+      value={value}
+      onChange={(event) => onValueChange?.(event.target.value)}
+    >
+      {items?.map((item) => (
+        <option key={item.value} value={item.value}>
+          {item.label}
+        </option>
+      ))}
+    </select>
+  ),
+  SelectContent: () => null,
+  SelectTrigger: ({ children }: { children?: ReactNode }) => <div>{children}</div>,
+  SelectValue: ({ placeholder }: { children?: unknown; placeholder?: string }) => (
+    <span>{placeholder}</span>
+  ),
+}));
+
+vi.mock('@/components/ui/toggle-group', () => ({
+  ToggleGroup: ({
+    children,
+    disabled,
+    onValueChange,
+  }: {
+    children?: ReactNode;
+    disabled?: boolean;
+    onValueChange?: (value: string[]) => void;
+    value?: string[];
+  }) => (
+    <div>
+      {Children.map(children, (child) =>
+        isValidElement(child)
+          ? cloneElement(child, {
+              __groupDisabled: disabled,
+              __onSelect: onValueChange,
+            } as Record<string, unknown>)
+          : child,
+      )}
+    </div>
+  ),
+  ToggleGroupItem: ({
+    __groupDisabled,
+    __onSelect,
+    children,
+    disabled,
+    value,
+  }: {
+    __groupDisabled?: boolean;
+    __onSelect?: (value: string[]) => void;
+    children?: ReactNode;
+    disabled?: boolean;
+    value?: string;
+  }) => (
+    <button
+      disabled={__groupDisabled || disabled}
+      type="button"
+      onClick={() => __onSelect?.([value ?? ''])}
+    >
+      {children}
+    </button>
+  ),
+}));
+
 vi.mock('react-i18next', () => ({
   useTranslation: () => ({
     t: (key: string, options?: { name?: string }) =>
       (
         ({
           'heterogeneousStatus.account.label': 'Account',
+          'heterogeneousStatus.apiMode.defaultProvider': 'Orvilo',
+          'heterogeneousStatus.apiMode.provider': 'Provider',
+          'heterogeneousStatus.apiMode.providerPlaceholder': 'Select a provider',
+          'heterogeneousStatus.auth.api': 'API',
+          'heterogeneousStatus.auth.label': 'Auth Method',
+          'heterogeneousStatus.auth.subscription': 'Subscription',
           'heterogeneousStatus.command.edit': 'Edit command',
           'heterogeneousStatus.command.label': 'Command',
           'heterogeneousStatus.command.placeholder': 'Command name or absolute path',
           'heterogeneousStatus.detecting': `Detecting ${options?.name ?? ''} CLI`,
           'heterogeneousStatus.plan.label': 'Plan',
           'heterogeneousStatus.redetect': 'Re-detect',
+          'heterogeneousStatus.apiMode.serverDefault.retry': 'Retry',
           'heterogeneousStatus.unavailable': `${options?.name ?? ''} CLI is unavailable`,
         }) as Record<string, string>
       )[key] || key,
@@ -128,12 +227,51 @@ vi.mock('@/features/Electron/HeterogeneousAgent/StatusGuide', () => ({
   ),
 }));
 
+vi.mock('@/features/HeterogeneousAgent/hooks/useProviderBinding', () => ({
+  useProviderBindingCompatibleProviders: () => ({
+    modelsByProvider: {
+      anthropic: [{ id: 'claude-primary', providerId: 'anthropic' }],
+    },
+    providers: [{ id: 'anthropic', name: 'Anthropic' }],
+  }),
+}));
+
+vi.mock('@/features/ModelSelect', () => ({
+  default: ({ allowClear, onClear }: { allowClear?: boolean; onClear?: () => void }) => (
+    <div>
+      Model Select
+      {allowClear && (
+        <button type="button" onClick={onClear}>
+          Clear model
+        </button>
+      )}
+    </div>
+  ),
+}));
+
+vi.mock('@/components/ModelSelect', () => ({
+  ModelItemRender: ({ displayName, id }: { displayName?: string; id: string }) => (
+    <span>{displayName || id}</span>
+  ),
+  ProviderItemRender: ({ name }: { name: string }) => <span>{name}</span>,
+  TAG_CLASSNAME: 'orvilo-model-info-tags',
+}));
+
+vi.mock('@/store/aiInfra', () => ({
+  useAiInfraStore: (selector: (state: { builtinAiModelList: never[] }) => unknown) =>
+    selector({ builtinAiModelList: [] }),
+}));
+
 vi.mock('@/services/electron/binary', () => ({
   binaryService: {
     detectHeterogeneousAgentCommand,
     getClaudeAuthStatus,
   },
 }));
+
+const claudeServerModels = [{ model: 'claude-sonnet-4-6' }, { model: 'claude-haiku-4-5' }];
+
+const codexServerModels = [{ model: 'gpt-5.4' }];
 
 describe('HeterogeneousAgentStatusCard', () => {
   it('shows the embedded Codex install guide when the CLI is unavailable', async () => {
@@ -409,5 +547,232 @@ describe('HeterogeneousAgentStatusCard', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Edit command' }));
 
     expect(await screen.findByDisplayValue('claude')).toBeInTheDocument();
+  });
+
+  it('offers the deployment default when switching to API mode', async () => {
+    detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
+    getClaudeAuthStatus.mockResolvedValue(null);
+    const onAuthModeChange = vi.fn();
+    const provider = {
+      command: 'claude',
+      type: 'claude-code',
+    } satisfies HeterogeneousProviderConfig;
+
+    const { rerender } = render(
+      <MemoryRouter>
+        <HeterogeneousAgentStatusCard
+          apiModeAvailable
+          serverDefaultAvailable
+          provider={provider}
+          serverDefaultModels={claudeServerModels}
+          onAuthModeChange={onAuthModeChange}
+        />
+      </MemoryRouter>,
+    );
+
+    await waitFor(() => {
+      expect(screen.getByText('claude')).toBeInTheDocument();
+    });
+    expect(screen.getByText('Auth Method')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'API' })).toBeEnabled();
+    expect(screen.queryByRole('button', { name: 'Orvilo Server' })).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'API' }));
+    expect(onAuthModeChange).toHaveBeenCalledWith('api', {
+      model: 'claude-sonnet-4-6',
+      source: 'server-default',
+    });
+
+    const apiProvider = {
+      ...provider,
+      apiConfig: { model: 'claude-sonnet-4-6', source: 'server-default' as const },
+      authMode: 'api' as const,
+    } satisfies HeterogeneousProviderConfig;
+
+    rerender(
+      <MemoryRouter>
+        <HeterogeneousAgentStatusCard
+          apiModeAvailable
+          serverDefaultAvailable
+          provider={apiProvider}
+          serverDefaultModels={claudeServerModels}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Auth Method')).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Orvilo' })).toBeEnabled();
+  });
+
+  it('lists the deployment default alongside configured providers in API mode', async () => {
+    detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
+    getClaudeAuthStatus.mockResolvedValue(null);
+    const onApiConfigChange = vi.fn();
+    const provider = {
+      apiConfig: { model: 'claude-sonnet-4-6', source: 'server-default' },
+      authMode: 'api',
+      command: 'claude',
+      type: 'claude-code',
+    } satisfies HeterogeneousProviderConfig;
+
+    render(
+      <MemoryRouter>
+        <HeterogeneousAgentStatusCard
+          apiModeAvailable
+          serverDefaultAvailable
+          provider={provider}
+          serverDefaultModels={claudeServerModels}
+          onApiConfigChange={onApiConfigChange}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('option', { name: 'Orvilo' })).toBeInTheDocument();
+    expect(screen.getByRole('option', { name: 'Anthropic' })).toBeInTheDocument();
+
+    fireEvent.change(screen.getByRole('option', { name: 'Orvilo' }).closest('select')!, {
+      target: { value: 'provider:anthropic' },
+    });
+    expect(onApiConfigChange).toHaveBeenCalledWith({
+      model: 'claude-primary',
+      providerId: 'anthropic',
+      source: 'provider',
+    });
+  });
+
+  it('explains an unavailable server capability and offers retry', async () => {
+    detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
+    const onServerDefaultRetry = vi.fn();
+    const provider = {
+      command: 'codex',
+      type: 'codex',
+    } satisfies HeterogeneousProviderConfig;
+
+    render(
+      <MemoryRouter>
+        <HeterogeneousAgentStatusCard
+          provider={provider}
+          serverDefaultUnavailableReason="Deployment default model is unavailable"
+          onServerDefaultRetry={onServerDefaultRetry}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Deployment default model is unavailable')).toBeInTheDocument();
+    fireEvent.click(screen.getByText('Retry'));
+    expect(onServerDefaultRetry).toHaveBeenCalledOnce();
+  });
+
+  it('selects a deployment-provided model from the default API provider', async () => {
+    detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
+    const onApiConfigChange = vi.fn();
+    const provider = {
+      apiConfig: { model: 'claude-sonnet-4-6', source: 'server-default' },
+      authMode: 'api',
+      command: 'claude',
+      type: 'claude-code',
+    } satisfies HeterogeneousProviderConfig;
+
+    render(
+      <MemoryRouter>
+        <HeterogeneousAgentStatusCard
+          serverDefaultAvailable
+          provider={provider}
+          serverDefaultModels={claudeServerModels}
+          onApiConfigChange={onApiConfigChange}
+        />
+      </MemoryRouter>,
+    );
+
+    const modelOption = await screen.findByRole('option', { name: 'claude-sonnet-4-6' });
+    expect(screen.queryByText('gpt-5.4')).not.toBeInTheDocument();
+    fireEvent.change(modelOption.closest('select')!, { target: { value: 'claude-haiku-4-5' } });
+    expect(onApiConfigChange).toHaveBeenCalledWith({
+      model: 'claude-haiku-4-5',
+      source: 'server-default',
+    });
+  });
+
+  it('falls back when the saved server model is not in the agent capability', async () => {
+    detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
+    const onApiConfigChange = vi.fn();
+    const provider = {
+      apiConfig: { model: 'claude-server', source: 'server-default' },
+      authMode: 'api',
+      command: 'codex',
+      type: 'codex',
+    } satisfies HeterogeneousProviderConfig;
+
+    render(
+      <MemoryRouter>
+        <HeterogeneousAgentStatusCard
+          serverDefaultAvailable
+          provider={provider}
+          serverDefaultModels={codexServerModels}
+          onApiConfigChange={onApiConfigChange}
+        />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByRole('option', { name: 'gpt-5.4' })).toBeInTheDocument();
+    expect(screen.queryByText('claude-server')).not.toBeInTheDocument();
+    await waitFor(() => {
+      expect(onApiConfigChange).toHaveBeenCalledWith({
+        model: 'gpt-5.4',
+        source: 'server-default',
+      });
+    });
+  });
+
+  it('shows provider configuration for an existing API-mode agent', async () => {
+    detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
+    const provider = {
+      apiConfig: { model: 'claude-primary', providerId: 'anthropic' },
+      authMode: 'api',
+      command: 'claude',
+      type: 'claude-code',
+    } satisfies HeterogeneousProviderConfig;
+
+    render(
+      <MemoryRouter>
+        <HeterogeneousAgentStatusCard apiModeAvailable provider={provider} />
+      </MemoryRouter>,
+    );
+
+    expect(await screen.findByText('Auth Method')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'API' })).toBeEnabled();
+    expect(screen.getByRole('option', { name: 'Anthropic' })).toBeInTheDocument();
+  });
+
+  it('persists null when clearing the small-fast model', async () => {
+    detectHeterogeneousAgentCommand.mockResolvedValue({ available: true });
+    const onApiConfigChange = vi.fn();
+    const provider = {
+      apiConfig: {
+        model: 'claude-primary',
+        providerId: 'anthropic',
+        smallFastModel: 'claude-fast',
+      },
+      authMode: 'api',
+      command: 'claude',
+      type: 'claude-code',
+    } satisfies HeterogeneousProviderConfig;
+
+    render(
+      <MemoryRouter>
+        <HeterogeneousAgentStatusCard
+          apiModeAvailable
+          provider={provider}
+          onApiConfigChange={onApiConfigChange}
+        />
+      </MemoryRouter>,
+    );
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Clear model' }));
+
+    expect(onApiConfigChange).toHaveBeenCalledWith({
+      model: 'claude-primary',
+      providerId: 'anthropic',
+      smallFastModel: null,
+    });
   });
 });

@@ -81,6 +81,7 @@ export default {
   'agentDocument.emptyTitle': 'No document open',
   'agentDocument.linkCopied': 'Link copied',
   'agentDocument.openAsPage': 'Open as full page',
+  'agentHandoffMarker': '── Agent changed to {{name}} ──',
   'agentNotFound.desc':
     'This agent does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'permission.configAccess.agentChatOnly':
@@ -92,6 +93,9 @@ export default {
   'permission.configAccess.groupRoleRestricted':
     'Your workspace role cannot configure Agent Groups. You were returned to chat.',
   'agentNotFound.title': 'Agent Unavailable',
+  'topicNotFound.desc':
+    'This conversation does not exist or is no longer accessible — it may have been deleted or the link is out of date.',
+  'topicNotFound.title': 'Conversation Unavailable',
   'groupNotFound.desc':
     'This group does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'groupNotFound.title': 'Group Unavailable',
@@ -120,6 +124,9 @@ export default {
   'agentSignal.receipts.skill.detail': 'Self-refined how this agent handles similar requests',
   'agentSignal.receipts.skill.title': 'Auto-learned a new skill',
   'agents': 'Agents',
+  'agentSwitchConfirm': '{{name}} will continue this conversation with the existing context.',
+  'agentSwitchConfirmAction': 'Switch to {{name}}',
+  'agentSwitchConfirmTitle': 'Switch agent?',
   'artifact.generating': 'Generating',
   'artifact.inThread':
     'Cannot view in subtopic, please switch to the main conversation area to open',
@@ -354,8 +361,11 @@ export default {
     'When enabled, web links will be automatically parsed to retrieve the actual webpage context content',
   'extendParams.urlContext.title': 'Extract Webpage Link Content',
   'group.desc': 'Move a task forward with multiple Agents in one shared space.',
+  'group.emptyDescription': 'A room where agents and people work together.',
+  'group.emptyTitle': 'Start a group chat',
   'group.memberTooltip': 'There are {{count}} members in the group',
   'group.orchestratorThinking': 'Orchestrator is thinking...',
+  'group.profile.addInstructions': 'Add instructions',
   'group.profile.addMember.addExisting': 'Add existing agent',
   'group.profile.addMember.createNew': 'New member',
   'group.profile.addMember.newMemberTitle': 'New member',
@@ -406,6 +416,32 @@ export default {
   'heteroAgent.fullAccess.label': 'Full access',
   'heteroAgent.fullAccess.tooltip':
     'The local coding agent runs with full read/write access to the working directory. Switching permission modes is not available yet.',
+  'heteroAgent.apiMode.agentUnsupported': '{{name}} does not support Orvilo Provider binding.',
+  'heteroAgent.apiMode.configMissing':
+    'Provider binding requires a provider and model. Open the agent profile to configure it.',
+  'heteroAgent.apiMode.defaultProviderConfigMissing':
+    'Orvilo requires a compatible model. Open the agent profile to select one.',
+  'heteroAgent.apiMode.credentialUnsupported':
+    'The provider "{{providerId}}" uses an authentication method this agent does not support.',
+  'heteroAgent.apiMode.credentialsMissing':
+    'The provider "{{providerId}}" has no API key configured.',
+  'heteroAgent.apiMode.endpointMissing':
+    'The provider "{{providerId}}" requires a base URL for this agent.',
+  'heteroAgent.apiMode.endpointUnsupported':
+    'The provider "{{providerId}}" has an unsupported base URL.',
+  'heteroAgent.apiMode.labDisabled.action': 'Enable in Labs',
+  'heteroAgent.apiMode.labDisabled.desc':
+    'Turn it on in Settings → Labs, or switch this agent to Subscription authentication.',
+  'heteroAgent.apiMode.labDisabled.title': 'Provider binding is a Labs experiment',
+  'heteroAgent.apiMode.localOnly.desc':
+    'Switch the execution environment to Local device, or use Subscription authentication.',
+  'heteroAgent.apiMode.localOnly.title': 'API mode requires Desktop local execution',
+  'heteroAgent.apiMode.modelUnavailable':
+    'The model "{{providerId}}/{{model}}" is disabled or no longer available.',
+  'heteroAgent.apiMode.protocolMismatch':
+    'The provider "{{providerId}}" does not expose a protocol supported by {{agentType}}.',
+  'heteroAgent.apiMode.providerUnavailable':
+    'The provider "{{providerId}}" is disabled or no longer available.',
   'heteroAgent.claudeQuota.accounts': 'Accounts',
   'heteroAgent.claudeQuota.calendar.burnout.exhausted': 'Exhausted — resets {{time}}',
   'heteroAgent.claudeQuota.calendar.burnout.safe':
@@ -608,7 +644,7 @@ export default {
   'heteroAgent.executionTarget.localSandboxUnavailable': 'Not available on this device: {{reason}}',
   'heteroAgent.executionTarget.manage': 'Manage',
   'heteroAgent.executionTarget.noDevices':
-    'No remote devices yet. Run `lh connect` on another machine to add one.',
+    'No remote devices yet. Run `orvilo connect` on another machine to add one.',
   'heteroAgent.executionTarget.noWorkspaceDevices':
     'No workspace devices yet. Run `{{cmd}}` on a machine to enroll it for every member.',
   'heteroAgent.executionTarget.none': 'No device',
@@ -1053,6 +1089,7 @@ export default {
   'newPlatformAgent': 'Connect External Agents',
   'newPlatformAgentDesc': 'Connect Claude Code, OpenClaw, and other agents',
   'newGroupChat': 'Create Group',
+  'newGroupChatFromDescription': 'Generate from a description',
   'agent.publishToWorkspace': 'Publish to Workspace',
   'agent.publishToWorkspaceErrorFixedPrivateDevice':
     'Publish the fixed device to the workspace, or let members choose a device, before publishing this Agent.',
@@ -1103,7 +1140,7 @@ export default {
   'connectAgent.create.download': 'Download',
   'connectAgent.create.connectCli': 'Connect with CLI',
   'connectAgent.create.noDevicesCliHint': 'Run this command on the computer you want to connect',
-  'connectAgent.create.noDevicesCmd': 'lh connect',
+  'connectAgent.create.noDevicesCmd': 'orvilo connect',
   'connectAgent.create.refresh': 'Refresh',
   'connectAgent.create.scanning': 'Scanning agents on this device…',
   'connectAgent.create.scanFailed': 'Scan failed',
@@ -1150,7 +1187,7 @@ export default {
   // Connect agent device guard banner
   'platformAgent.deviceGuard.deviceOffline.title': 'Device not connected',
   'platformAgent.deviceGuard.deviceOffline.desc':
-    'The bound device is not connected. Run `lh connect` on that machine then refresh.',
+    'The bound device is not connected. Run `orvilo connect` on that machine then refresh.',
   'platformAgent.deviceGuard.platformUnavailable.title': '{{name}} not available',
   'platformAgent.deviceGuard.platformUnavailable.desc':
     '{{name}} is not installed on the connected device.',
@@ -1264,6 +1301,7 @@ export default {
   'search.title': 'Web Search',
   'searchAgentPlaceholder': 'Search agents...',
   'searchAgents': 'Search agents...',
+  'searchTopicPlaceholder': 'Search conversations...',
   'selectedAgents': 'Selected agents',
   'floatingChatPanel.collapse': 'Collapse chat',
   'floatingChatPanel.expand': 'Expand chat',
@@ -1488,6 +1526,21 @@ export default {
   'taskSchedule.weekdays.thu': 'Thu',
   'taskSchedule.weekdays.tue': 'Tue',
   'taskSchedule.weekdays.wed': 'Wed',
+  'taskDetail.relations.add': 'Add relation',
+  'taskDetail.relations.addFailed': 'Could not add that relation. Try again.',
+  'taskDetail.relations.blocking': 'Blocks',
+  'taskDetail.relations.blockedBy': 'Blocked by',
+  'taskDetail.relations.relates': 'Related',
+  'taskDetail.relations.none': 'None',
+  'taskDetail.relations.search': 'Search issues',
+  'taskDetail.relations.searching': 'Searching…',
+  'taskDetail.relations.noMatches': 'No matching issues',
+  'taskDetail.relations.remove': 'Remove relation',
+  'taskDetail.relations.actions': 'Relation actions',
+  'taskDetail.autoRunFailed': 'Could not start the run for this status.',
+  'taskDetail.activities.filter.all': 'All',
+  'taskDetail.activities.filter.comments': 'Comments',
+  'taskDetail.activities.filter.updates': 'Updates',
   'taskDetail.prerequisites.title': 'Prerequisite tasks',
   'taskDetail.prerequisites.blocked': 'Blocked until every prerequisite is completed.',
   'taskDetail.prerequisites.blockedBy': 'Blocked by',
@@ -1652,7 +1705,22 @@ export default {
   'taskDetail.priority.normal': 'Medium',
   'taskDetail.priority.urgent': 'Urgent',
   'taskDetail.properties': 'Properties',
+  'taskDetail.property.state': 'State',
+  'taskDetail.property.priority': 'Priority',
+  'taskDetail.property.schedule': 'Schedule',
+  'taskDetail.property.addAssignee': 'Add assignee',
+  'taskDetail.property.addReviewer': 'Add reviewer',
+  'taskDetail.property.addDueDate': 'Add due date',
+  'taskDetail.property.addLabels': 'Add labels',
   'taskDetail.dueDate': 'Due date',
+  'taskDetail.execution.canceled': 'Canceled',
+  'taskDetail.execution.failed': 'Failed',
+  'taskDetail.execution.outcome_unknown': 'Outcome unknown',
+  'taskDetail.execution.provisioning': 'Provisioning',
+  'taskDetail.execution.queued': 'Queued',
+  'taskDetail.execution.running': 'Running',
+  'taskDetail.execution.succeeded': 'Succeeded',
+  'taskDetail.execution.waiting': 'Waiting',
   'taskDetail.executionStatus': 'Execution',
   'taskDetail.project': 'Project',
   'taskDetail.noProject': 'No project',
@@ -1721,6 +1789,7 @@ export default {
   'taskDetail.topicMenu.stopConfirm.content':
     'The current run will be canceled. Generated messages are kept and you can re-run the task later.',
   'taskDetail.topicMenu.stopConfirm.title': 'Stop Run?',
+  'taskDetail.runTrigger.event': 'Event',
   'taskDetail.runTrigger.goal': 'Goal loop',
   'taskDetail.runTrigger.heartbeat': 'Heartbeat',
   'taskDetail.runTrigger.orchestrator': 'Orchestrator',
@@ -3058,6 +3127,7 @@ export default {
   'workingPanel.tabs.closeRight': 'Close tabs to the right',
   'workingPanel.tabs.pin': 'Pin tab',
   'workingPanel.tabs.pinned': 'Pinned tab',
+  'workingPanel.tabs.swapThreads': 'Swap threads',
   'workingPanel.tabs.unpin': 'Unpin tab',
   'workingPanel.documents.close': 'Close',
   'workingPanel.documents.error': 'Failed to load document',

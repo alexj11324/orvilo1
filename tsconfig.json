@@ -43,6 +43,8 @@
     "apps/mobile/**",
     "apps/share/**",
     "apps/workbench/**",
+    // vendored upstream sources — upstream's own code, not typechecked here
+    "packages/heterogeneous-agents/vendor/**",
     "tmp",
     "temp",
     ".temp",

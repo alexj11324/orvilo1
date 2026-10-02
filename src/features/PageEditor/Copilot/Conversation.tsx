@@ -20,7 +20,6 @@ import { agentByIdSelectors } from '@/store/agent/selectors';
 
 import { usePageLockedByOther } from '../usePageLockedByOther';
 import AgentSelectorAction from './AgentSelector/AgentSelectorAction';
-import CopilotModelSelect from './CopilotModelSelect';
 import CopilotToolbar from './Toolbar';
 import Welcome from './Welcome';
 
@@ -63,8 +62,6 @@ const Conversation = memo(() => {
     [handleAgentChange],
   );
 
-  const modelSelector = useMemo(() => <CopilotModelSelect />, []);
-
   // Another member holds the page edit lock → the agent's edits can't be saved,
   // so block sending until the lock clears. The body LockedAlert explains why.
   const lockedByOther = usePageLockedByOther();
@@ -85,7 +82,6 @@ const Conversation = memo(() => {
           disableSend={lockedByOther}
           leftActions={EMPTY_LEFT_ACTIONS}
           leftContent={leftContent}
-          sendAreaPrefix={modelSelector}
           sendButtonProps={COMPACT_SEND_BUTTON_PROPS}
           showControlBar={false}
         />

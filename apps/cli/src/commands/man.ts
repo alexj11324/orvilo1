@@ -1,6 +1,6 @@
 import type { Argument, Command } from 'commander';
 
-import { CLI_BIN_ALIASES as ROOT_ALIASES } from '../constants/identity';
+import { CLI_BIN_ALIASES as ROOT_ALIASES, CLI_PRIMARY_BIN } from '../constants/identity';
 
 const HELP_COMMAND_NAME = 'help';
 
@@ -142,11 +142,11 @@ function formatSeeAlsoSection(root: Command, command: Command) {
   const parent = command.parent;
   if (parent) {
     const parentPath = buildCommandPath(parent).slice(1).join(' ');
-    items.add(parentPath ? `lh man ${parentPath}` : 'lh man');
+    items.add(parentPath ? `${CLI_PRIMARY_BIN} man ${parentPath}` : `${CLI_PRIMARY_BIN} man`);
   }
 
   for (const subcommand of getVisibleCommands(command).slice(0, 5)) {
-    items.add(`lh man ${buildCommandPath(subcommand).slice(1).join(' ')}`);
+    items.add(`${CLI_PRIMARY_BIN} man ${buildCommandPath(subcommand).slice(1).join(' ')}`);
   }
 
   return ['SEE ALSO', ...Array.from(items).map((item) => `  ${item}`)].join('\n');

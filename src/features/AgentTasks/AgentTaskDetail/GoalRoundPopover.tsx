@@ -91,7 +91,7 @@ const GoalRoundPopover = memo<GoalRoundPopoverProps>(
               className={`${POPUP_Z_CLASS} flex flex-col rounded-lg bg-popover p-2.5 text-sm text-popover-foreground shadow-md ring-1 ring-foreground/10`}
             >
               <div className="flex flex-col gap-1.5" style={{ minWidth: 140 }}>
-                <div className="text-[13px] font-medium">
+                <div className="text-sm font-medium">
                   {t('taskDetail.goalTimeline.round', { index })}
                 </div>
                 {rows.map((row) => (

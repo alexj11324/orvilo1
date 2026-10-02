@@ -538,7 +538,7 @@ const TaskVerifyConfig = memo(() => {
         ) : (
           <Plus color={cssVar.colorTextDescription} size={16} />
         )}
-        <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
+        <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('verifyConfig.empty.title')}
         </div>
         {savedCount > 0 ? (

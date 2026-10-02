@@ -190,7 +190,9 @@ const Bar = memo(() => {
       >
         <ChevronDown size={12} />
       </button>
-      <div className="flex items-center gap-0.5">
+      {/* Tabs don't shrink below their label width — clip the row on narrow
+          viewports instead of letting it push the page into horizontal scroll. */}
+      <div className="flex items-center gap-0.5" style={{ minWidth: 0, overflow: 'hidden' }}>
         {tabs.map((item) => (
           <PanelTab item={item} key={item.id} />
         ))}

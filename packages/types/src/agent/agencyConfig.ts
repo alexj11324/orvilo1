@@ -87,6 +87,99 @@ export interface HeterogeneousAgentModelCatalogFailure {
 export type HeterogeneousAgentModelCatalog =
   HeterogeneousAgentModelCatalogFailure | HeterogeneousAgentModelCatalogSuccess;
 
+/** Authentication source used by a heterogeneous agent CLI. */
+export type HeterogeneousAuthMode = 'api' | 'subscription';
+
+/**
+ * Reference-only user-provider API binding for a heterogeneous agent.
+ * Provider credentials are resolved at launch and are never persisted here.
+ */
+export interface HeterogeneousProviderApiConfig {
+  /** Primary model used by the CLI. */
+  model: string;
+  /** User provider whose runtime credentials are resolved locally. */
+  providerId: string;
+  /** Optional model used for fast/background work. Defaults to the primary model. */
+  smallFastModel?: string | null;
+  /** Omitted by existing records; any omitted source is a user-provider binding. */
+  source?: 'provider';
+}
+
+/** Legacy Claude Code request alias. Current CLIs send `aspectlylabs/${catalogId}`. */
+export const SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS = 'orvilo-default';
+
+const SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE = 'aspectlylabs/';
+
+export const formatServerDefaultHeterogeneousModel = (model: string): string =>
+  `${SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE}${model}`;
+
+export const isServerDefaultHeterogeneousModel = (
+  requestModel: unknown,
+  operationModel: string,
+): boolean => requestModel === formatServerDefaultHeterogeneousModel(operationModel);
+
+export interface ServerDefaultHeterogeneousRelayInvocation {
+  acceptedAt: string;
+  agentType: string;
+  ingress: 'anthropic-messages' | 'openai-responses';
+  model: string;
+  operationId: string;
+  provider: string;
+}
+
+/** Durable proof written only after the official relay accepts a model invocation. */
+export const isServerDefaultHeterogeneousRelayInvocation = (
+  value: unknown,
+): value is ServerDefaultHeterogeneousRelayInvocation => {
+  if (!value || typeof value !== 'object') return false;
+  const invocation = value as Partial<ServerDefaultHeterogeneousRelayInvocation>;
+  return (
+    typeof invocation.acceptedAt === 'string' &&
+    typeof invocation.agentType === 'string' &&
+    ['anthropic-messages', 'openai-responses'].includes(invocation.ingress ?? '') &&
+    typeof invocation.model === 'string' &&
+    typeof invocation.operationId === 'string' &&
+    typeof invocation.provider === 'string'
+  );
+};
+
+/**
+ * Map a CLI-reported server-default model back to the catalog id.
+ *
+ * Supported CLIs request `aspectlylabs/${catalogId}`. Older Claude Code sessions used
+ * {@link SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS}. Neither is the catalog id
+ * the user picked.
+ */
+export const unwrapServerDefaultHeterogeneousModel = (
+  reportedModel: string | undefined,
+  configuredModel?: string,
+): string | undefined => {
+  const configured = configuredModel?.trim() || undefined;
+
+  if (!reportedModel) return configured;
+
+  if (reportedModel === SERVER_DEFAULT_HETEROGENEOUS_MODEL_ALIAS) {
+    return configured ?? reportedModel;
+  }
+
+  if (reportedModel.startsWith(SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE)) {
+    const unwrapped = reportedModel.slice(SERVER_DEFAULT_HETEROGENEOUS_MODEL_NAMESPACE.length);
+    return unwrapped || reportedModel;
+  }
+
+  return reportedModel;
+};
+
+/** Deployment-owned API binding whose provider and credentials stay on the server. */
+export interface HeterogeneousServerDefaultApiConfig {
+  /** Model id from the deployment's enabled model catalog. */
+  model: string;
+  source: 'server-default';
+}
+
+export type HeterogeneousApiConfig =
+  HeterogeneousProviderApiConfig | HeterogeneousServerDefaultApiConfig;
+
 /**
  * Inner engine driving a builtin Orvilo harness session
  * (`HeterogeneousProviderConfig.type === 'orvilo'`).
@@ -200,15 +293,19 @@ export const resolveHeteroAgentSystemContext = (
  *   `command`, `args`, `env`, `systemContext`.
  *
  * - **Platform task** (`openclaw` | `hermes`): runs on this desktop when
- *   `executionTarget` is `local`, or on a machine connected via `lh connect`
+ *   `executionTarget` is `local`, or on a machine connected via `orvilo connect`
  *   when it is `device`. `platformAgentId` selects the named platform agent.
  *
  * - **Builtin engine** (`orvilo`): a managed session driven by the local
  *   engine selected by `engine`; `command` overrides the engine binary path.
  */
 export interface HeterogeneousProviderConfig {
+  /** Credential-free API binding used when `authMode` is `api`. */
+  apiConfig?: HeterogeneousApiConfig;
   /** Additional CLI arguments for the agent command (local CLI only). */
   args?: string[];
+  /** Defaults to `subscription` for backwards compatibility. */
+  authMode?: HeterogeneousAuthMode;
   /**
    * Command to spawn the agent (e.g. 'claude') (local CLI only). For the
    * builtin Orvilo engine this overrides the binary resolved from `engine`.
@@ -232,9 +329,17 @@ export interface HeterogeneousProviderConfig {
   /** Custom environment variables (local CLI only). */
   env?: Record<string, string>;
   /**
-   * Amp agent mode, surfaced through the chat-input selector and translated
-   * into `--mode <mode>` at spawn time. Omitted or `'default'` values leave
-   * Amp's own account and environment defaults in control.
+   * Opt-in method packs installed into the spawned workspace. `aegis: true`
+   * sets `ORVILO_AEGIS_PACK=1` on the spawned `orvilo hetero exec`, which writes
+   * the vendored Aegis skills into the run workspace and opts the agent into
+   * the `.aegis/` evidence contract — never default-on; local CLI types only.
+   */
+  methodPacks?: { aegis?: boolean };
+  /**
+   * Amp agent mode, surfaced through the chat-input model selector and
+   * translated into the provider-specific CLI flags/config at spawn time.
+   * Omitted or `'default'` values leave Amp's own account and environment
+   * defaults in control.
    */
   mode?: HeterogeneousAgentMode;
   /**
@@ -290,10 +395,22 @@ export interface HeterogeneousTopicPin extends Partial<HeterogeneousTopicModel> 
   effort?: HeterogeneousReasoningEffort;
 }
 
-/** Resolve the topic-level model snapshot for a heterogeneous provider. */
+/**
+ * Resolve the topic-level model snapshot for a heterogeneous provider.
+ *
+ * Server-default API models intentionally remain Agent-scoped: unlike a user-provider
+ * binding, their deployment-owned provider identity cannot be represented by the topic's
+ * model/provider pair. Their topic execution therefore ignores any stale pin from another
+ * auth mode and follows the current Agent config.
+ */
 export const resolveHeterogeneousProviderTopicModel = (
   config: HeterogeneousProviderConfig,
 ): HeterogeneousTopicModel | undefined => {
+  if (config.authMode === 'api') {
+    if (!config.apiConfig || config.apiConfig.source === 'server-default') return undefined;
+    return { model: config.apiConfig.model, provider: config.apiConfig.providerId };
+  }
+
   // Selector capabilities are keyed by CLI family. Persist that family as the
   // Orvilo topic identity so a Claude pin cannot be replayed by Codex later.
   const family = resolveHeteroCliAgentType(config);
@@ -329,6 +446,24 @@ const applyTopicModelPin = (
 ): HeterogeneousProviderConfig => {
   if (!topicModel?.model) return config;
 
+  if (config.authMode === 'api') {
+    const apiConfig = config.apiConfig;
+    // Server-default is Agent-scoped. In particular, do not turn it back into a
+    // user-provider binding when this topic retains a pin from an earlier auth mode.
+    if (apiConfig?.source === 'server-default') return config;
+    if (!topicModel.provider || topicModel.provider === config.type) return config;
+    return {
+      ...config,
+      apiConfig: {
+        model: topicModel.model,
+        providerId: topicModel.provider,
+        ...(apiConfig?.providerId === topicModel.provider
+          ? { smallFastModel: apiConfig.smallFastModel }
+          : {}),
+      },
+    };
+  }
+
   if (!isCompatibleHeterogeneousTopicModelPin(config, topicModel)) return config;
 
   const family = resolveHeteroCliAgentType(config);
@@ -350,7 +485,11 @@ export const applyTopicModelToHeterogeneousProvider = (
   config: HeterogeneousProviderConfig,
   topicModel: HeterogeneousTopicPin | undefined,
 ): HeterogeneousProviderConfig => {
-  if (topicModel?.model && !isCompatibleHeterogeneousTopicModelPin(config, topicModel)) {
+  if (
+    config.authMode !== 'api' &&
+    topicModel?.model &&
+    !isCompatibleHeterogeneousTopicModelPin(config, topicModel)
+  ) {
     return config;
   }
 
@@ -359,8 +498,11 @@ export const applyTopicModelToHeterogeneousProvider = (
   if (effort === undefined) return withModel;
   const capability = getHeteroSelectorCapability(resolveHeteroCliAgentType(withModel));
   if (!capability?.effort) return withModel;
-  const model = capability.model?.resolve(withModel);
-  /** A rejected topic model pin can leave its old effort behind. */
+  const model =
+    withModel.authMode === 'api'
+      ? withModel.apiConfig?.model
+      : capability.model?.resolve(withModel);
+  /** Auth-mode changes can reject the topic model while leaving its old effort behind. */
   if (effort !== 'default' && !capability.effort.levels(model ?? 'default').includes(effort)) {
     effort = 'default';
   }
@@ -695,13 +837,13 @@ export const buildHeteroSpawnArgs = (
 };
 
 /**
- * Resolve args for the `lh hetero exec` wrapper.
+ * Resolve args for the `orvilo hetero exec` wrapper.
  *
  * Unlike `buildHeteroSpawnArgs`, these args are consumed by the Orvilo CLI
  * wrapper first, not by the native agent binary. Native provider args are
  * encoded with `--agent-arg=<arg>` so wrapper flags such as `-c, --command`
  * never collide with provider flags. Keep selector overrides in the wrapper's
- * structured `--model` / `--effort` form; `lh hetero exec` translates them
+ * structured `--model` / `--effort` form; `orvilo hetero exec` translates them
  * into native provider arguments immediately before `spawnAgent`. Amp mode is
  * encoded as a native argument because older device CLIs predate the wrapper's
  * structured `--mode` option but already support `--agent-arg`.
@@ -710,7 +852,7 @@ export const buildHeteroExecArgs = (
   provider: HeterogeneousProviderConfig | undefined | null,
 ): string[] | undefined => {
   if (!provider) return undefined;
-  // Builtin Orvilo harness: the device/sandbox-side `lh hetero exec` still
+  // Builtin Orvilo harness: the device/sandbox-side `orvilo hetero exec` still
   // needs the resolved engine to pick the engine's CLI family — it travels as
   // the wrapper-level `--engine` option; model/effort/speed use the family's
   // structured encodings.
@@ -878,7 +1020,7 @@ export const buildHeteroExecArgs = (
  *               remote-device tool. The ONLY mode that touches a device the user
  *               did not explicitly select. Opt-in: never a silent default.
  * - `local`   : run on the user's Electron desktop (desktop only)
- * - `device`  : dispatched to an `lh connect` device identified by `boundDeviceId`
+ * - `device`  : dispatched to an `orvilo connect` device identified by `boundDeviceId`
  * - `sandbox` : server-spawned cloud sandbox
  *
  * Platform task agents (`openclaw` | `hermes`) support `local` and `device` targets.
@@ -967,7 +1109,7 @@ export type AgentTopicSharePolicy = 'member' | 'restricted';
  */
 export interface OrviloAgentAgencyConfig {
   /**
-   * Device ID of the machine connected via `lh connect`.
+   * Device ID of the machine connected via `orvilo connect`.
    * Required when `executionTarget === 'device'`.
    */
   boundDeviceId?: string;

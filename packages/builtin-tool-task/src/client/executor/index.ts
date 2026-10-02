@@ -257,6 +257,7 @@ class TaskExecutor extends BaseExecutor<typeof TaskApiName> {
           status: task.status as TaskStatus,
           success: true,
           taskId: task.id,
+          workflowCategory: task.workflowCategory,
         },
         success: true,
       };

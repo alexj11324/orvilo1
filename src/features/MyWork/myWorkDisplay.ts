@@ -1,5 +1,12 @@
-import type { MyWorkMode, WorkQuerySort } from '@orvilo/types';
-import { WORK_QUERY_STATUS_COLUMNS } from '@orvilo/types';
+import {
+  type MyWorkMode,
+  normalizeWorkQuerySubGroupBy,
+  WORK_QUERY_STATUS_COLUMNS,
+  type WorkQueryFilter,
+  type WorkQueryGroupBy,
+  type WorkQueryPredicate,
+  type WorkQuerySort,
+} from '@orvilo/types';
 
 import { isMyWorkSaveableMode } from './myWorkSaveAs';
 import type { WorkQueryResultTask } from './workQueryPaging';
@@ -8,12 +15,9 @@ import type { WorkQueryResultTask } from './workQueryPaging';
  * Display-options model for My issues (audit D2/D8–D13). Kept pure so the
  * grouping/ordering/filter decisions are testable without rendering.
  *
- * `activityDate` is a client-side presentation grouping: the work-query API
- * has no activity-date dimension (`groupBy` covers attention/status/
- * workflowCategory/none only), so the page fetches the flat activity-ordered
- * list and buckets rows by their day locally. `priority`/`project`/`assignee`
- * group the same way — real row fields the wire enum cannot express, bucketed
- * over the loaded flat page (`workQueryFieldSections`).
+ * List groupings, including activity date, project, cycle, priority and
+ * assignee, are server dimensions. The page sends them as `groupBy` and
+ * pages each group. Activity buckets use the viewer's IANA time zone.
  */
 
 export type MyWorkListGrouping =
@@ -25,11 +29,10 @@ export type MyWorkListGrouping =
   | 'project'
   | 'status'
   | 'workflowCategory';
-export type MyWorkBoardGrouping = 'status' | 'workflowCategory';
+export type MyWorkBoardGrouping = 'assignee' | 'priority' | 'status' | 'workflowCategory';
 /**
- * Second-level list grouping — the row fields Linear's "Sub-grouping" menu
- * offers on My issues. Always bucketed client-side over the loaded rows, so
- * it composes with any primary grouping (`none` disables it).
+ * Second-level list grouping — Linear's "Sub-grouping". Sent as `subGroupBy`
+ * so each cell pages on the server. `none` disables it.
  */
 export type MyWorkSubGrouping = 'assignee' | 'none' | 'priority' | 'project' | 'status';
 export type MyWorkOrdering =
@@ -73,9 +76,15 @@ export const MY_WORK_DEFAULT_ROW_PROPERTIES: MyWorkRowProperties = {
 export interface MyWorkDisplay {
   /** Column dimension when the board layout is active. */
   boardGrouping: MyWorkBoardGrouping;
-  /** Completed-issues window — client-side display filter (audit D12). */
+  /** Board swimlane. `none` is a single row of columns. */
+  boardLane: MyWorkSubGrouping;
+  /** Board columns the user collapsed. Empty keeps every column open. */
+  collapsedColumns: string[];
+  /** List groups the user collapsed. Empty keeps every group open. */
+  collapsedGroups: string[];
+  /** Completed-issues window — compiled into the work query when it hides rows. */
   completed: MyWorkCompletedWindow;
-  /** List grouping; `activityDate` buckets client-side by activity day. */
+  /** List grouping. Every value is a server `groupBy`, including activity date. */
   grouping: MyWorkListGrouping;
   /**
    * Indent children under parents already in the list — Linear's "nested
@@ -107,6 +116,9 @@ export const defaultMyWorkGrouping = (mode: MyWorkMode): MyWorkListGrouping => {
 
 export const defaultMyWorkDisplay = (mode: MyWorkMode): MyWorkDisplay => ({
   boardGrouping: 'workflowCategory',
+  boardLane: 'none',
+  collapsedColumns: [],
+  collapsedGroups: [],
   // Assigned defaults to "Completed issues: Past day"; the other tabs show all.
   completed: mode === 'assigned' ? 'pastDay' : 'all',
   grouping: defaultMyWorkGrouping(mode),
@@ -120,7 +132,12 @@ export const defaultMyWorkDisplay = (mode: MyWorkMode): MyWorkDisplay => ({
   subGrouping: 'none',
 });
 
-const MY_WORK_BOARD_GROUPINGS: readonly MyWorkBoardGrouping[] = ['status', 'workflowCategory'];
+const MY_WORK_BOARD_GROUPINGS: readonly MyWorkBoardGrouping[] = [
+  'assignee',
+  'priority',
+  'status',
+  'workflowCategory',
+];
 const MY_WORK_COMPLETED_WINDOWS: readonly MyWorkCompletedWindow[] = ['all', 'none', 'pastDay'];
 const MY_WORK_ORDERINGS: readonly MyWorkOrdering[] = [
   'createdAsc',
@@ -131,7 +148,6 @@ const MY_WORK_ORDERINGS: readonly MyWorkOrdering[] = [
 ];
 export const MY_WORK_SUB_GROUPING_OPTIONS: readonly MyWorkSubGrouping[] = [
   'none',
-  'status',
   'priority',
   'assignee',
   'project',
@@ -170,6 +186,13 @@ export const normalizeMyWorkDisplay = (
   )
     ? (source.boardGrouping as MyWorkBoardGrouping)
     : defaults.boardGrouping;
+  const requestedLane = MY_WORK_SUB_GROUPING_OPTIONS.includes(source.boardLane as MyWorkSubGrouping)
+    ? (source.boardLane as MyWorkSubGrouping)
+    : defaults.boardLane;
+  const boardLane =
+    requestedLane !== 'none' && normalizeWorkQuerySubGroupBy(boardGrouping, requestedLane)
+      ? requestedLane
+      : 'none';
   const completed = MY_WORK_COMPLETED_WINDOWS.includes(source.completed as MyWorkCompletedWindow)
     ? (source.completed as MyWorkCompletedWindow)
     : defaults.completed;
@@ -188,6 +211,13 @@ export const normalizeMyWorkDisplay = (
   }
   return {
     boardGrouping,
+    boardLane,
+    collapsedColumns: Array.isArray(source.collapsedColumns)
+      ? source.collapsedColumns.filter((key) => typeof key === 'string' && key.length > 0)
+      : defaults.collapsedColumns,
+    collapsedGroups: Array.isArray(source.collapsedGroups)
+      ? source.collapsedGroups.filter((key) => typeof key === 'string' && key.length > 0)
+      : defaults.collapsedGroups,
     completed,
     grouping,
     nestedSubIssues:
@@ -206,16 +236,18 @@ export const normalizeMyWorkDisplay = (
 /**
  * Grouping choices offered per tab — the tab's Linear default comes first,
  * then the status dimensions, then the row-field groupings Linear's menu
- * lists (Priority / Project / Assignee) which bucket client-side.
+ * lists (Priority / Project / Assignee) which bucket client-side. Only the
+ * workflow axis is offered: `status` is the deprecated execution projection
+ * (filter on `executionState` instead); persisted prefs that still carry it
+ * keep working through the wider type.
  */
 export const myWorkListGroupingOptions = (mode: MyWorkMode): MyWorkListGrouping[] => {
   if (mode === 'assigned') {
-    return ['attention', 'status', 'workflowCategory', 'priority', 'project', 'assignee', 'none'];
+    return ['attention', 'workflowCategory', 'priority', 'project', 'assignee', 'none'];
   }
   if (mode === 'activity') {
     return [
       'activityDate',
-      'status',
       'workflowCategory',
       'priority',
       'project',
@@ -224,10 +256,24 @@ export const myWorkListGroupingOptions = (mode: MyWorkMode): MyWorkListGrouping[
       'none',
     ];
   }
-  return ['none', 'status', 'workflowCategory', 'priority', 'project', 'assignee', 'attention'];
+  return ['none', 'workflowCategory', 'priority', 'project', 'assignee', 'attention'];
 };
 
-export const MY_WORK_BOARD_GROUPING_OPTIONS: MyWorkBoardGrouping[] = ['workflowCategory', 'status'];
+export const MY_WORK_BOARD_GROUPING_OPTIONS: MyWorkBoardGrouping[] = [
+  'workflowCategory',
+  'priority',
+  'assignee',
+];
+
+/** Swimlanes offered for a board column axis. Status and workflow stay apart. */
+export const myWorkBoardSubGroupingOptions = (
+  boardGrouping: MyWorkBoardGrouping,
+): MyWorkSubGrouping[] =>
+  MY_WORK_SUB_GROUPING_OPTIONS.filter((option) => {
+    if (option === 'none') return true;
+    if (option === boardGrouping) return false;
+    return true;
+  });
 
 /**
  * Sub-grouping choices for the display-options menu. The option matching the
@@ -239,31 +285,22 @@ export const myWorkSubGroupingOptions = (grouping: MyWorkListGrouping): MyWorkSu
 
 /**
  * Non-default orderings need the generic work-query endpoint (the `myWork`
- * endpoint keeps the mode's server sort). `subscribed`/`activity` semantics
- * live in mode-injected SQL the generic query cannot express, so those tabs
- * only expose `default`.
+ * endpoint keeps the mode's server sort, including activity's notification
+ * clock). Saveable tabs — including subscribed and activity — can pick a
+ * field order. Delegated and review stay on the mode feed.
  */
 export const myWorkOrderingOptions = (mode: MyWorkMode): MyWorkOrdering[] =>
   isMyWorkSaveableMode(mode)
     ? ['default', 'updatedDesc', 'updatedAsc', 'createdDesc', 'createdAsc']
     : ['default'];
 
-/** Groupings bucketed client-side over the flat feed — they never reach the wire. */
-export const isMyWorkClientGrouping = (
-  grouping: MyWorkListGrouping,
-): grouping is 'activityDate' | 'assignee' | 'priority' | 'project' =>
-  grouping === 'activityDate' ||
-  grouping === 'assignee' ||
-  grouping === 'priority' ||
-  grouping === 'project';
-
-/** The `groupBy` actually sent to `myWork` — client-side groupings fetch the flat list. */
+/** The `groupBy` sent on the wire. Board columns stay on `boardGrouping`. */
 export const myWorkServerGroupBy = (
   display: Pick<MyWorkDisplay, 'boardGrouping' | 'grouping'>,
   layout: 'board' | 'list',
-): 'attention' | 'none' | 'status' | 'workflowCategory' => {
+): WorkQueryGroupBy => {
   if (layout === 'board') return display.boardGrouping;
-  return isMyWorkClientGrouping(display.grouping) ? 'none' : display.grouping;
+  return display.grouping;
 };
 
 export const MY_WORK_ORDERING_SORTS: Record<Exclude<MyWorkOrdering, 'default'>, WorkQuerySort[]> = {
@@ -321,6 +358,43 @@ export const sortTasksByImportance = <
 ): T[] => [...tasks].sort(compareTasksByImportance);
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Completed-window as work-query predicates. `all` adds nothing. `none` drops
+ * closed rows. `pastDay` keeps open rows plus closed rows whose close time
+ * (completedAt, else updatedAt) is inside the last day.
+ */
+export const completedWindowQueryFilter = (
+  completed: MyWorkCompletedWindow,
+  now: number = Date.now(),
+): WorkQueryFilter | undefined => {
+  if (completed === 'all') return undefined;
+  if (completed === 'none') {
+    return { all: [{ field: 'workflowCategory', op: 'notIn', value: ['done', 'canceled'] }] };
+  }
+  return {
+    any: [
+      { field: 'workflowCategory', op: 'notIn', value: ['done', 'canceled'] },
+      { field: 'closedAt', op: 'gte', value: new Date(now - DAY_MS).toISOString() },
+    ],
+  };
+};
+
+/**
+ * Show-sub-issues and show-triage as query predicates, so the server total
+ * matches the rows the list is allowed to draw.
+ */
+export const myWorkVisibilityQueryFilter = (
+  display: Pick<MyWorkDisplay, 'showSubIssues' | 'showTriage'>,
+): WorkQueryFilter | undefined => {
+  const all: WorkQueryPredicate[] = [
+    ...(!display.showSubIssues ? [{ field: 'parentTaskId' as const, op: 'isNull' as const }] : []),
+    ...(!display.showTriage
+      ? [{ field: 'workflowCategory' as const, op: 'neq' as const, value: 'triage' }]
+      : []),
+  ];
+  return all.length > 0 ? { all } : undefined;
+};
 
 /**
  * Completed-issues window: 'all' keeps everything, 'pastDay' keeps the last
@@ -383,6 +457,18 @@ type RecencyUnit = 'day' | 'month' | 'week' | 'year';
  * years — so an older feed collapses into a few headers instead of a date
  * per row. `null` input lands in `unknown`.
  */
+/** Sort key for activity headers: today first, unknown last. */
+export const activityBucketRank = (key: string): number => {
+  const [unit, raw] = key.split(':');
+  const count = Number(raw);
+  if (unit === 'unknown' || !Number.isFinite(count)) return Number.MAX_SAFE_INTEGER;
+  if (unit === 'day') return count;
+  if (unit === 'week') return count * 7;
+  if (unit === 'month') return count * 30;
+  if (unit === 'year') return count * 365;
+  return Number.MAX_SAFE_INTEGER;
+};
+
 export const activityBucketKey = (
   value: Date | number | string | null | undefined,
   now: Date = new Date(),

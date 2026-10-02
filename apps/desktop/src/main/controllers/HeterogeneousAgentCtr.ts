@@ -1,7 +1,7 @@
 import type { RemoteServerAuth } from '@/modules/heterogeneousAgent/fileStorePort';
 
 import type HeterogeneousAgentImplementation from './HeterogeneousAgentImpl';
-import type { LhHeteroExecCancellationResult } from './HeterogeneousAgentImpl';
+import type { OrviloHeteroExecCancellationResult } from './HeterogeneousAgentImpl';
 import { ControllerModule, IpcMethod } from './index';
 import RemoteServerConfigCtr from './RemoteServerConfigCtr';
 
@@ -111,9 +111,9 @@ export default class HeterogeneousAgentCtr extends ControllerModule {
     return (await this.getImplementation()).submitIntervention(...args);
   }
 
-  spawnLhHeteroExec(...args: Parameters<Implementation['spawnLhHeteroExec']>) {
+  spawnOrviloHeteroExec(...args: Parameters<Implementation['spawnOrviloHeteroExec']>) {
     return this.getImplementation().then((implementation) =>
-      implementation.spawnLhHeteroExec(...args),
+      implementation.spawnOrviloHeteroExec(...args),
     );
   }
 
@@ -129,11 +129,11 @@ export default class HeterogeneousAgentCtr extends ControllerModule {
    * Returns:
    * - The wrapper cancellation result, or `undefined` when no wrapper is registered.
    */
-  cancelLhHeteroExec(
-    ...args: Parameters<Implementation['cancelLhHeteroExec']>
-  ): Promise<LhHeteroExecCancellationResult | undefined> {
+  cancelOrviloHeteroExec(
+    ...args: Parameters<Implementation['cancelOrviloHeteroExec']>
+  ): Promise<OrviloHeteroExecCancellationResult | undefined> {
     return this.getImplementation().then((implementation) =>
-      implementation.cancelLhHeteroExec(...args),
+      implementation.cancelOrviloHeteroExec(...args),
     );
   }
 }

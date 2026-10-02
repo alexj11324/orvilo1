@@ -531,8 +531,8 @@ describe('connect command', () => {
     // The daemon registry may record a run's cwd through a symlink spelling —
     // the writer check must compare canonical identities so a cleanup request
     // for the real path still sees the writer.
-    const home = await mkdtemp(path.join(tmpdir(), 'lh-home-'));
-    const realWorktree = await mkdtemp(path.join(tmpdir(), 'lh-wt-'));
+    const home = await mkdtemp(path.join(tmpdir(), 'orvilo-home-'));
+    const realWorktree = await mkdtemp(path.join(tmpdir(), 'orvilo-wt-'));
     const aliasCwd = `${realWorktree}-link`;
     await symlink(realWorktree, aliasCwd);
     try {

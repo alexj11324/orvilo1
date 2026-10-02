@@ -134,6 +134,13 @@ export const notificationRouter = router({
         includeSnoozed: z.boolean().optional(),
         kind: z.enum(['action', 'other', 'priority', 'update']).optional(),
         limit: z.number().min(1).max(50).default(20),
+        // Plane-style view params: `mentioned` drives the All/Mentions tab
+        // (false excludes mention rows from All), `types` is the OR'd
+        // assigned/created/subscribed funnel, `unreadOnly` layers on top of
+        // an archived/snoozed base.
+        mentioned: z.boolean().optional(),
+        types: z.array(z.enum(['assigned', 'created', 'subscribed'])).optional(),
+        unreadOnly: z.boolean().optional(),
       }),
     )
     .query(async ({ ctx, input }) => {
@@ -256,6 +263,18 @@ export const notificationRouter = router({
     )
     .mutation(async ({ ctx, input }) => {
       return ctx.notificationModel.snooze(input.id, new Date(input.until), input.expectedVersion);
+    }),
+
+  unarchive: notificationWriteProcedure
+    .input(z.object({ expectedVersion: z.number().int().min(0), id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.notificationModel.unarchiveObserved(input.id, input.expectedVersion);
+    }),
+
+  unsnooze: notificationWriteProcedure
+    .input(z.object({ expectedVersion: z.number().int().min(0), id: z.string() }))
+    .mutation(async ({ ctx, input }) => {
+      return ctx.notificationModel.unsnoozeObserved(input.id, input.expectedVersion);
     }),
 
   unreadCount: notificationReadProcedure.query(async ({ ctx }) => {

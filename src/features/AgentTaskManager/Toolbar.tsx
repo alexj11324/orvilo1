@@ -23,7 +23,9 @@ const Toolbar = memo(() => {
   const [activeTopicId, switchTopic, topics] = useChatStore((s) => [
     s.activeTopicId,
     s.switchTopic,
-    topicSelectors.currentTopics(s),
+    // The panel names its own agent — `currentTopics` resolves the workspace
+    // conversation feed now, which is not this panel's list.
+    topicSelectors.getTopicsByAgentId(agentId)(s),
   ]);
   const currentTopic = useChatStore(topicSelectors.currentActiveTopic);
 
@@ -43,7 +45,7 @@ const Toolbar = memo(() => {
       left={
         <div
           className="text-muted-foreground truncate block"
-          style={{ fontSize: 13, fontWeight: 500, marginLeft: 8 }}
+          style={{ fontSize: 14, fontWeight: 500, marginLeft: 8 }}
           title={topicTitle}
         >
           {topicTitle}
@@ -68,6 +70,7 @@ const Toolbar = memo(() => {
                   icon={Clock3Icon}
                   loading={isLoadingTopics}
                   size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                  title={t('actions.showTopics')}
                 />
               }
             />
@@ -102,6 +105,7 @@ const Toolbar = memo(() => {
           <ActionIcon
             icon={PanelRightCloseIcon}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            title={t('workingPanel.tabs.closePanel', { ns: 'chat' })}
             onClick={() => toggleTaskAgentPanel()}
           />
         </>

@@ -11,7 +11,7 @@ import { shallow } from 'zustand/shallow';
 import { Input } from '@/components/ui/input';
 import { useTopicNavigation } from '@/features/AgentSidebar/Topic/hooks/useTopicNavigation';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
-import { useFetchChatTopics } from '@/hooks/useFetchChatTopics';
+import { useWorkspaceConversationFeed } from '@/hooks/useFetchChatTopics';
 import { topicService } from '@/services/topic';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -95,7 +95,7 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
 
   // Keep the menu's rows on the same canonical fetch as the sidebar — the SWR
   // key dedupes against it, so this only covers the sidebar-collapsed case.
-  useFetchChatTopics();
+  useWorkspaceConversationFeed();
 
   const topics = useChatStore(topicSelectors.displayTopics, isEqual);
   const isTopicsLoading = useChatStore(topicSelectors.isUndefinedTopics);

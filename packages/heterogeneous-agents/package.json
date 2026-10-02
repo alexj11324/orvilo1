@@ -4,6 +4,7 @@
   "private": true,
   "sideEffects": false,
   "exports": {
+    "./aegis": "./src/aegis/index.ts",
     ".": "./src/index.ts",
     "./askUser": "./src/askUser/index.ts",
     "./builtinMcp": "./src/builtinMcp/index.ts",

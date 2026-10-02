@@ -32,10 +32,11 @@ const cardStyles = createStaticStyles(({ css }) => ({
 }));
 
 const SortableTaskCard = memo<{
+  hiddenProperties?: ReadonlySet<string>;
   onStatusChange?: (task: TaskListItem, choice: TaskStatusChoice) => void | Promise<void>;
   routeScope?: TaskItemRouteScope;
   task: TaskListItem;
-}>(({ onStatusChange, routeScope, task }) => {
+}>(({ hiddenProperties, onStatusChange, routeScope, task }) => {
   const { attributes, isDragging, listeners, setNodeRef, transform, transition } = useSortable({
     data: { task },
     id: task.identifier,
@@ -58,6 +59,7 @@ const SortableTaskCard = memo<{
       {...attributes}
     >
       <TaskBoardCard
+        hiddenProperties={hiddenProperties}
         routeScope={routeScope}
         task={task}
         onStatusChange={onStatusChange ? handleStatusChange : undefined}
@@ -202,9 +204,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   count: css`
     flex: none;
-
-    font-size: 13px;
-    font-weight: 450;
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
     color: ${cssVar.colorTextDescription};
   `,
@@ -299,6 +299,7 @@ interface KanbanColumnProps {
   footer?: ReactNode;
   groupBy: TaskKanbanGroupBy;
   groupMeta?: TaskGroupMeta;
+  hiddenProperties?: ReadonlySet<string>;
   loading?: boolean;
   onCreate?: () => void;
   onHide?: () => void;
@@ -314,6 +315,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
     droppable,
     footer,
     groupBy,
+    hiddenProperties,
     groupMeta,
     loading,
     onCreate,
@@ -371,7 +373,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
               <>
                 {statusIcon &&
                   createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
-                <div className="text-[13px] font-medium">{label}</div>
+                <div className="text-sm font-medium">{label}</div>
               </>
             )}
             {headerVariant !== 'loading' && <span className={styles.count}>{total}</span>}
@@ -407,6 +409,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
             >
               {tasks.map((task) => (
                 <SortableTaskCard
+                  hiddenProperties={hiddenProperties}
                   key={task.identifier}
                   routeScope={routeScope}
                   task={task}

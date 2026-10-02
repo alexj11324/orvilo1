@@ -197,6 +197,7 @@ describe('TaskService', () => {
     getComments: vi.fn(),
     getCommentFileIdsMap: vi.fn().mockResolvedValue({}),
     getDependencies: vi.fn(),
+    getDependents: vi.fn().mockResolvedValue([]),
     getIssueRelations: vi.fn(),
     getDependenciesByTaskIds: vi.fn().mockResolvedValue([]),
     getReviewConfig: vi.fn(),
@@ -249,6 +250,7 @@ describe('TaskService', () => {
     taskWorktreeCleanupMock.mockResolvedValue(true);
     mockTaskTopicModel.findRunningByTaskIds.mockResolvedValue([]);
     mockTaskModel.getActivities.mockResolvedValue([]);
+    mockTaskModel.getDependents.mockResolvedValue([]);
     mockTaskModel.getIssueRelations.mockImplementation((id: string) =>
       mockTaskModel.getDependencies(id),
     );
@@ -806,6 +808,7 @@ describe('TaskService', () => {
       expect(result?.dependencies).toEqual([
         {
           dependsOn: 'TASK-2',
+          direction: 'blockedBy',
           id: 'task_002',
           name: 'Task 2',
           status: 'completed',
@@ -855,6 +858,47 @@ describe('TaskService', () => {
       expect(mockTaskModel.getIssueRelations).toHaveBeenCalledWith('task_b');
     });
 
+    it('projects issues blocked by this one as blocking rows', async () => {
+      mockTaskModel.resolve.mockResolvedValue({
+        createdAt: null,
+        heartbeatInterval: null,
+        heartbeatTimeout: null,
+        id: 'task_a',
+        identifier: 'TASK-A',
+        instruction: null,
+        lastHeartbeatAt: null,
+        parentTaskId: null,
+        priority: 'normal',
+        status: 'backlog',
+      });
+      mockTaskModel.findAllDescendants.mockResolvedValue([]);
+      mockTaskModel.getIssueRelations.mockResolvedValue([]);
+      mockTaskModel.getDependents.mockResolvedValue([
+        { dependsOnId: 'task_a', id: 'edge-1', taskId: 'task_b', type: 'blocks' },
+      ]);
+      mockTaskTopicModel.findWithHandoff.mockResolvedValue([]);
+      mockTaskModel.getComments.mockResolvedValue([]);
+      mockTaskModel.getTreePinnedDocuments.mockResolvedValue({ nodeMap: {}, tree: [] });
+      mockTaskModel.findByIds.mockResolvedValue([
+        { id: 'task_b', identifier: 'TASK-B', name: 'Blocked issue', status: 'backlog' },
+      ]);
+      mockTaskModel.getCheckpointConfig.mockReturnValue({});
+      mockTaskModel.getVerifyConfig.mockReturnValue(undefined);
+
+      const result = await new TaskService(db, userId).getTaskDetail('TASK-A');
+      expect(result?.dependencies).toEqual([
+        {
+          dependsOn: 'TASK-B',
+          direction: 'blocking',
+          id: 'task_b',
+          name: 'Blocked issue',
+          relationId: 'edge-1',
+          status: 'backlog',
+          type: 'blocks',
+        },
+      ]);
+    });
+
     it('should redact an unavailable dependency instead of exposing its id', async () => {
       const task = {
         assigneeAgentId: null,
@@ -894,6 +938,7 @@ describe('TaskService', () => {
       expect(result?.dependencies).toEqual([
         {
           dependsOn: 'Unavailable prerequisite',
+          direction: 'blockedBy',
           name: undefined,
           status: null,
           type: 'blocks',
@@ -2045,6 +2090,8 @@ describe('TaskService', () => {
           runReservationExpiresAt: null,
           runReservationId: null,
         }),
+        {},
+        undefined,
       );
       expect(cascadeMock).not.toHaveBeenCalled();
     });

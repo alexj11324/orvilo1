@@ -15,7 +15,7 @@ export interface DeviceConnection {
  * A device as surfaced by the gateway `/api/device/devices` endpoint. Keyed by
  * the stable `deviceId` (one entry per physical machine); the live WS sessions
  * are nested under `channels` so a single device can hold several at once
- * (e.g. desktop app + `lh connect` both connected).
+ * (e.g. desktop app + `orvilo connect` both connected).
  */
 export interface GatewayDevice {
   channels: DeviceConnection[];
@@ -210,11 +210,11 @@ export interface RpcResponseMessage {
   type: 'rpc_response';
 }
 
-/** Server → Client: request the desktop to spawn `lh hetero exec`. */
+/** Server → Client: request the desktop to spawn `orvilo hetero exec`. */
 export interface AgentRunRequestMessage {
   agentType: string;
   /**
-   * Resolved `lh hetero exec` wrapper args, e.g. `--model` / `--effort`.
+   * Resolved `orvilo hetero exec` wrapper args, e.g. `--model` / `--effort`.
    * Optional for protocol
    * compatibility with older servers.
    */
@@ -228,6 +228,14 @@ export interface AgentRunRequestMessage {
    */
   builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
+  /**
+   * Server-minted spawn env (e.g. BYOK provider credentials) merged into the
+   * `orvilo hetero exec` process environment ahead of the fixed `ORVILO_*` keys.
+   * Values travel verbatim — they are decrypted server-side and the device
+   * stores nothing. Optional for compatibility with older servers; absent
+   * means no extra env.
+   */
+  env?: Record<string, string>;
   /**
    * Server-side idempotency key for admission. Always equals `operationId`
    * (the device-side task id): a gateway or device retry carrying the same key
@@ -267,7 +275,7 @@ export interface AgentRunRequestMessage {
   runGeneration?: number;
   /**
    * Static context injected before the user prompt (workspace conventions,
-   * selected context). The desktop sends it to `lh hetero exec` as the first
+   * selected context). The desktop sends it to `orvilo hetero exec` as the first
    * text block of a content-block array. Optional — omitted for older servers
    * that don't build a device-specific context.
    */
@@ -275,7 +283,7 @@ export interface AgentRunRequestMessage {
   topicId: string;
   type: 'agent_run_request';
   /**
-   * Workspace that owns the topic. `lh hetero exec` must send this as
+   * Workspace that owns the topic. `orvilo hetero exec` must send this as
    * `X-Workspace-Id` on heteroIngest/heteroFinish; without it the write lands
    * in personal scope and the workspace topic stays `running` with an empty
    * assistant. Optional for older gateways — a workspace-enrolled connection

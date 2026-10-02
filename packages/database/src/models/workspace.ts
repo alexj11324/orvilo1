@@ -1,5 +1,5 @@
 import type { WorkspaceApiKeyMemberCreation } from '@orvilo/types';
-import { and, count, desc, eq, isNull, sql } from 'drizzle-orm';
+import { and, count, desc, eq, inArray, isNull, sql } from 'drizzle-orm';
 
 import {
   type NewWorkspace,
@@ -208,13 +208,29 @@ export class WorkspaceModel {
 
     const workspaceIds = memberships.map((m) => m.workspaceId);
 
-    const results = await this.db.query.workspaces.findMany({
-      orderBy: [desc(workspaces.updatedAt)],
-      where: (ws, { inArray }) => inArray(ws.id, workspaceIds),
-    });
+    const [results, memberCounts] = await Promise.all([
+      this.db.query.workspaces.findMany({
+        orderBy: [desc(workspaces.updatedAt)],
+        where: (ws, { inArray: inArrayOp }) => inArrayOp(ws.id, workspaceIds),
+      }),
+      this.db
+        .select({ count: count(), workspaceId: workspaceMembers.workspaceId })
+        .from(workspaceMembers)
+        .where(
+          and(
+            inArray(workspaceMembers.workspaceId, workspaceIds),
+            isNull(workspaceMembers.deletedAt),
+            isNull(workspaceMembers.suspendedAt),
+          ),
+        )
+        .groupBy(workspaceMembers.workspaceId),
+    ]);
+
+    const memberCountByWorkspace = new Map(memberCounts.map((row) => [row.workspaceId, row.count]));
 
     return results.map((ws) => ({
       ...ws,
+      memberCount: memberCountByWorkspace.get(ws.id) ?? 0,
       role: memberships.find((m) => m.workspaceId === ws.id)?.role ?? 'viewer',
     }));
   };

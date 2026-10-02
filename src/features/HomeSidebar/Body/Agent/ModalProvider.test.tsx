@@ -148,7 +148,7 @@ describe('AgentModalProvider', () => {
     await waitFor(() => {
       expect(mocks.createAgent).toHaveBeenCalledWith({ groupId: undefined });
       expect(mocks.toggleAgentBuilderPanel).toHaveBeenCalledWith(true);
-      expect(mocks.navigate).toHaveBeenCalledWith('/agent/agent-new/profile');
+      expect(mocks.navigate).toHaveBeenCalledWith('/settings/agents/agent-new');
       expect(mocks.refreshAgentList).toHaveBeenCalled();
     });
   });

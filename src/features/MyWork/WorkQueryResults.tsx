@@ -1,11 +1,13 @@
 'use client';
 
-import type {
-  TaskWorkflowCategory,
-  WorkQueryExternalReview,
-  WorkQueryGroupBy,
-  WorkQueryLayout,
-  WorkQuerySortMode,
+import {
+  normalizeWorkQuerySubGroupBy,
+  type TaskWorkflowCategory,
+  type WorkQuery,
+  type WorkQueryExternalReview,
+  type WorkQueryGroupBy,
+  type WorkQueryLayout,
+  type WorkQuerySortMode,
 } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
@@ -31,13 +33,11 @@ import KanbanBoard from '@/features/AgentTasks/AgentTaskList/KanbanBoard';
 import {
   COLUMN_I18N_KEYS,
   type TaskStatusChoice,
-  workQueryKeyForKanbanColumn,
 } from '@/features/AgentTasks/AgentTaskList/kanbanBoardModel';
 import { COLUMN_STATUS_VISUAL } from '@/features/AgentTasks/AgentTaskList/KanbanColumn';
 import { DEFAULT_TASK_LIST_VIEW_OPTIONS } from '@/features/AgentTasks/AgentTaskList/listViewOptions';
 import TaskRowIndent from '@/features/AgentTasks/AgentTaskList/TaskRowIndent';
 import AgentTaskItem from '@/features/AgentTasks/features/AgentTaskItem';
-import { useTaskStatusChange } from '@/features/AgentTasks/features/useTaskStatusChange';
 import { issueIdColumnStyle } from '@/features/AgentTasks/shared/issueIdColumn';
 import type { TaskMilestoneRef } from '@/features/Projects/milestoneFilter';
 
@@ -47,11 +47,15 @@ import {
   type BulkSelectGesture,
 } from './bulkSelection';
 import { externalReviewIdentifier, externalReviewOpenHref } from './externalReviewOpen';
-import { isInteractiveRowClick, type MyWorkRowProperty } from './myWorkDisplay';
+import {
+  activityBucketRank,
+  isInteractiveRowClick,
+  myWorkPriorityGroupRank,
+  type MyWorkRowProperty,
+} from './myWorkDisplay';
 import {
   workQueryBoardGroups,
   workQueryListGroupBy,
-  workQueryListSections,
   workQuerySourceKeysForKanbanColumn,
 } from './workQueryBoard';
 import { applyWorkQueryStatusChoice } from './workQueryBoardMove';
@@ -61,6 +65,7 @@ import {
   workQueryHasMore,
   type WorkQueryResultTask,
 } from './workQueryPaging';
+import WorkQueryVirtualList from './WorkQueryVirtualList';
 
 export type { WorkQueryResultTask } from './workQueryPaging';
 
@@ -125,10 +130,22 @@ export interface WorkQuerySubSection {
 
 interface WorkQueryResultsProps {
   /**
+   * Override the default rank for one axis. Milestone lists pass catalog
+   * order; other axes keep their built-in rank.
+   */
+  axisKeyRank?: (axis: string, key: string) => number | undefined;
+  /**
    * Multi-selected task ids — rows paint checked + highlight and reveal
    * their checkbox without waiting for hover. Absent = no bulk affordance.
    */
   bulkSelectedIds?: ReadonlySet<string>;
+  /** Work-query board columns the user collapsed. Persisted by the caller. */
+  collapsedColumns?: readonly string[];
+  /**
+   * List groups the user collapsed. When `onCollapsedGroupsChange` is set the
+   * list is controlled; otherwise collapse lasts for the session.
+   */
+  collapsedGroups?: readonly string[];
   /**
    * Where the board's create entry should file a new card. `teamId` files it
    * directly; `teamOptions` makes the create modal ask the one ambiguous
@@ -138,8 +155,9 @@ interface WorkQueryResultsProps {
   emptyLabel: string;
   externalReviews?: WorkQueryExternalReview[];
   /**
-   * Flat lists nest children under parents already in the set — Linear's
-   * "nested sub-issues: Show matching" for Created/Subscribed/Activity.
+   * Nest children under parents already in the set. On My Work this is the
+   * flat list and the attention groups. `nestInGroups` also nests inside a
+   * server group, which the project issue list does.
    */
   flatNested?: boolean;
   /**
@@ -150,7 +168,13 @@ interface WorkQueryResultsProps {
    */
   flatSections?: { icon?: ReactNode; key: string; tasks: WorkQueryResultTask[]; title: string }[];
   groupBy?: WorkQueryGroupBy;
+  /** Optional header glyph for a server group (assignee avatar, priority icon). */
+  groupIcon?: (axis: string, key: string) => ReactNode;
+  /** Primary-group order. Activity date uses its own recency rank. */
+  groupRank?: (key: string) => number;
   groups?: WorkQueryGroupPage<WorkQueryResultTask>[];
+  /** Header label for a server group. Status and workflow fall back to their marks. */
+  groupTitle?: (axis: string, key: string) => string | undefined;
   /**
    * Display-property toggles — the set of row chips to hide. Project and
    * milestone chips are caller-supplied (`rowExtras`/`milestoneFor`), so the
@@ -185,6 +209,7 @@ interface WorkQueryResultsProps {
    */
   milestoneFor?: (task: WorkQueryResultTask) => TaskMilestoneRef | undefined;
   movable?: boolean;
+  nestInGroups?: boolean;
   /**
    * Multi-select row gesture: cmd/ctrl-click `toggle`, shift-click `range`.
    * The row passes the rendered `data-bulk-row-id` order so ranges follow
@@ -195,6 +220,8 @@ interface WorkQueryResultsProps {
     gesture: BulkSelectGesture,
     orderedRowIds: string[],
   ) => void;
+  onCollapsedColumnsChange?: (keys: string[]) => void;
+  onCollapsedGroupsChange?: (keys: string[]) => void;
   /**
    * Hover `+` on caller-computed (`flatSections`) headers. Only supplied when
    * the bucket key is a real create preset (e.g. a project id) — day/priority
@@ -226,6 +253,8 @@ interface WorkQueryResultsProps {
   selectedTaskId?: string;
   /** Saved-view sort mode — `field` boards refuse same-column position writes. */
   sortMode?: WorkQuerySortMode;
+  /** Second axis. A board draws it as swimlanes; a list draws it as nested headers. */
+  subGroupBy?: WorkQuery['subGroupBy'];
   /**
    * Second-level grouping inside each list section — Linear's "Sub-grouping"
    * nested headers. Called with a section's tasks; `undefined` renders the
@@ -236,11 +265,10 @@ interface WorkQueryResultsProps {
   total?: number;
 }
 
-const WorkQueryTaskRow = memo(
+export const WorkQueryTaskRow = memo(
   ({
     followed,
     depth = 0,
-    groupBy,
     bulkSelected,
     bulkSelectionActive,
     hiddenProperties,
@@ -251,6 +279,7 @@ const WorkQueryTaskRow = memo(
     onSelectTask,
     onToggleFollow,
     peekOnSelect,
+    rangeIds,
     rowExtras,
     selected,
     task,
@@ -258,7 +287,6 @@ const WorkQueryTaskRow = memo(
   }: {
     followed?: boolean;
     depth?: number;
-    groupBy: 'status' | 'workflowCategory';
     bulkSelected?: boolean;
     /** Any selection — every row's checkbox stays revealed (Linear). */
     bulkSelectionActive?: boolean;
@@ -276,24 +304,20 @@ const WorkQueryTaskRow = memo(
     onSelectTask?: (task: WorkQueryResultTask) => void;
     onToggleFollow?: (taskId: string, followed: boolean) => void;
     peekOnSelect?: boolean;
+    /** In-memory row order for shift-range. Windowed lists pass this because off-screen rows are not in the DOM. */
+    rangeIds?: readonly string[];
     rowExtras?: (task: WorkQueryResultTask) => ReactNode;
     selected?: boolean;
     task: WorkQueryResultTask;
     muted?: boolean;
   }) => {
     const { t } = useTranslation('common');
-    const changeTaskStatus = useTaskStatusChange();
     const handleStatusChange = useCallback(
       async (choice: TaskStatusChoice) => {
-        const applied = await applyWorkQueryStatusChoice({
-          changeLocal: changeTaskStatus,
-          choice,
-          groupBy,
-          task,
-        });
+        const applied = await applyWorkQueryStatusChoice({ choice, task });
         if (applied) onMoved?.();
       },
-      [changeTaskStatus, groupBy, onMoved, task],
+      [onMoved, task],
     );
 
     /**
@@ -316,7 +340,9 @@ const WorkQueryTaskRow = memo(
           onBulkSelectTask(
             task,
             gesture,
-            gesture === 'range' && list ? bulkOrderedRowIds(list) : [task.id],
+            gesture === 'range'
+              ? [...(rangeIds ?? (list ? bulkOrderedRowIds(list) : [task.id]))]
+              : [task.id],
           );
           return;
         }
@@ -325,7 +351,7 @@ const WorkQueryTaskRow = memo(
         event.stopPropagation();
         onSelectTask(task);
       },
-      [onBulkSelectTask, onSelectTask, peekOnSelect, task],
+      [onBulkSelectTask, onSelectTask, peekOnSelect, rangeIds, task],
     );
 
     const handleDoubleClick = useCallback(
@@ -636,7 +662,6 @@ const WorkQueryStatusGroup = memo<{
                     bulkSelectionActive={bulkSelectionActive}
                     depth={row.depth}
                     followed={isFollowed?.(row.task.id)}
-                    groupBy={groupBy}
                     hiddenProperties={hiddenProperties}
                     key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
                     milestoneFor={milestoneFor}
@@ -727,10 +752,17 @@ const WORK_QUERY_BOARD_OPTIONS = {
 const WorkQueryResults = memo<WorkQueryResultsProps>(
   ({
     emptyLabel,
+    collapsedColumns,
+    collapsedGroups,
+    axisKeyRank,
+    groupIcon,
+    groupRank,
+    groupTitle,
     externalReviews,
     bulkSelectedIds,
     createContext,
     flatNested,
+    nestInGroups,
     flatSections,
     groupBy,
     groups,
@@ -751,6 +783,8 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     onLoadMore,
     onLoadMoreGroup,
     onMoved,
+    onCollapsedColumnsChange,
+    onCollapsedGroupsChange,
     onRetryLoadMore,
     onRetryLoadMoreGroup,
     onOpenTask,
@@ -760,22 +794,45 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
     rowExtras,
     selectedTaskId,
     sortMode,
+    subGroupBy,
     subSectionsFor,
     tasks,
     total,
   }) => {
     const { t } = useTranslation(['common', 'chat']);
-    const boardGroupBy = groupBy === 'status' ? 'status' : 'workflowCategory';
+    const boardGroupBy =
+      groupBy === 'status' || groupBy === 'priority' || groupBy === 'assignee'
+        ? groupBy
+        : 'workflowCategory';
+    const requestedLane =
+      layout === 'board' ? normalizeWorkQuerySubGroupBy(boardGroupBy, subGroupBy) : undefined;
+    // Milestone groups a list. A board lane has no milestone columns.
+    const laneAxis = requestedLane === 'milestone' ? undefined : requestedLane;
     const listGroupBy = workQueryListGroupBy(groupBy);
-    const listSections =
-      listGroupBy === 'none' ? [] : workQueryListSections(groups, tasks, listGroupBy);
-    const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup);
+    const listLane =
+      layout === 'list' ? normalizeWorkQuerySubGroupBy(listGroupBy, subGroupBy) : undefined;
+    const pageGroupPaging = Boolean(groups?.length && onLoadMoreGroup && listGroupBy !== 'none');
     const allTasks = groups?.flatMap((group) => group.tasks) ?? tasks;
-    // Flat lists nest children under in-list parents only when the caller opts
-    // in — Linear's "nested sub-issues: Show matching" vs "Hide" per tab.
-    const flatRows = flatNested
-      ? workQueryHierarchyRows(tasks, tasks)
-      : tasks.map((task) => ({ depth: 0, isParentContext: false, task }));
+    const nestRows =
+      Boolean(flatNested) &&
+      (Boolean(nestInGroups) || listGroupBy === 'none' || listGroupBy === 'attention');
+    const axisRank = (axis: string | undefined): ((key: string) => number) | undefined => {
+      if (!axis) return undefined;
+      const builtin = (): ((key: string) => number) | undefined => {
+        if (axis === 'activityDate') return activityBucketRank;
+        if (axis === 'priority') return (key) => myWorkPriorityGroupRank(key);
+        if (axis === 'agent' || axis === 'assignee' || axis === 'milestone' || axis === 'project') {
+          return (key) => (key === 'none' ? Number.MAX_SAFE_INTEGER : 0);
+        }
+        if (axis === 'cycle' && groupRank) return groupRank;
+        return undefined;
+      };
+      const base = builtin();
+      if (!axisKeyRank) return base;
+      return (key) => axisKeyRank(axis, key) ?? base?.(key) ?? 0;
+    };
+    const serverGroupKey = (columnKey: string) =>
+      workQuerySourceKeysForKanbanColumn(boardGroupBy, columnKey)[0];
 
     // While any selection exists every row keeps its checkbox revealed —
     // Linear's signal that multi-select is armed.
@@ -837,12 +894,18 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
             options={WORK_QUERY_BOARD_OPTIONS}
             routeScope={'global'}
             external={{
-              groups: workQueryBoardGroups(groups, boardGroupBy),
+              groups: workQueryBoardGroups(groups, boardGroupBy, laneAxis),
+              hiddenColumnKeys: collapsedColumns,
+              hiddenProperties: hiddenRowProperties,
               hideEmptyColumns,
+              laneAxis,
               movable,
               sortMode,
               loadMoreGroupError: loadMoreGroupErrors
-                ? (columnKey) => loadMoreGroupErrors[workQueryKeyForKanbanColumn(columnKey)]
+                ? (columnKey) => {
+                    const key = serverGroupKey(columnKey);
+                    return key ? loadMoreGroupErrors[key] : undefined;
+                  }
                 : undefined,
               onLoadMoreGroup: onLoadMoreGroup
                 ? (columnKey) => {
@@ -851,9 +914,13 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
                     }
                   }
                 : undefined,
+              onHiddenColumnKeysChange: onCollapsedColumnsChange,
               onRefresh: onMoved,
               onRetryLoadMoreGroup: onRetryLoadMoreGroup
-                ? (columnKey) => onRetryLoadMoreGroup(workQueryKeyForKanbanColumn(columnKey))
+                ? (columnKey) => {
+                    const key = serverGroupKey(columnKey);
+                    if (key) onRetryLoadMoreGroup(key);
+                  }
                 : undefined,
               queryGroupBy: boardGroupBy,
               settled: true,
@@ -876,107 +943,70 @@ const WorkQueryResults = memo<WorkQueryResultsProps>(
           style={issueIdColumnStyle(allTasks.map((task) => task.identifier))}
         >
           {reviewBlock}
-          {listGroupBy === 'none' ? (
-            /* `none` grouping stays a flat list in the query's own sort order —
-             no status headers are re-imposed. `flatSections` overlays caller-
-             computed groupings (activity day buckets) without re-bucketing. */
-            tasks.length === 0 ? (
-              <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-muted-foreground">
-                <ListTodoIcon aria-hidden className="size-8" />
-                <p>{emptyLabel}</p>
-              </div>
-            ) : flatSections && flatSections.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {flatSections.map((section) => (
-                  /* Client-bucketed sections borrow the banner header
-                   (`attention`) — the filled status pill would be wrong chrome
-                   for a field label. `+` only appears when the caller's
-                   `onCreateInFlatSection` says the key presets a real field
-                   (a day or a priority rank presets nothing). */
-                  <WorkQueryStatusGroup
-                    attention
-                    allTasks={allTasks}
-                    bulkSelectedIds={bulkSelectedIds}
-                    columnKey={section.key}
-                    groupBy={'status'}
-                    icon={section.icon}
-                    isFollowed={isFollowed}
-                    key={section.key}
-                    label={section.title}
-                    nested={flatNested}
-                    selectedTaskId={selectedTaskId}
-                    subSections={subSectionsFor?.(section.tasks)}
-                    tasks={section.tasks}
-                    total={section.tasks.length}
-                    onCreateInGroup={onCreateInFlatSection}
-                    {...rowProps}
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col gap-0.5">
-                {flatRows.map((row) => (
-                  <WorkQueryTaskRow
-                    bulkSelected={bulkSelectedIds?.has(row.task.id)}
-                    depth={row.depth}
-                    followed={isFollowed?.(row.task.id)}
-                    groupBy={'status'}
-                    key={`${row.isParentContext ? 'context:' : ''}${row.task.id}`}
-                    muted={row.isParentContext}
-                    selected={rowSelected(row.task)}
-                    task={row.task}
-                    {...rowProps}
-                  />
-                ))}
-              </div>
-            )
-          ) : listSections.length === 0 ? (
+          {flatSections && flatSections.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {flatSections.map((section) => (
+                <WorkQueryStatusGroup
+                  attention
+                  allTasks={allTasks}
+                  bulkSelectedIds={bulkSelectedIds}
+                  columnKey={section.key}
+                  groupBy={'status'}
+                  icon={section.icon}
+                  isFollowed={isFollowed}
+                  key={section.key}
+                  label={section.title}
+                  nested={flatNested}
+                  selectedTaskId={selectedTaskId}
+                  subSections={subSectionsFor?.(section.tasks)}
+                  tasks={section.tasks}
+                  total={section.tasks.length}
+                  onCreateInGroup={onCreateInFlatSection}
+                  {...rowProps}
+                />
+              ))}
+            </div>
+          ) : tasks.length === 0 ? (
             <div className="flex flex-1 flex-col items-center justify-center gap-3 p-12 text-center text-sm text-muted-foreground">
               <ListTodoIcon aria-hidden className="size-8" />
               <p>{emptyLabel}</p>
             </div>
           ) : (
-            <div className="flex flex-col gap-2">
-              {listSections.map((group) => (
-                // `nested` honours the caller's sub-issues toggle — `flatNested`
-                // === false disables attention nesting too (Linear's option is
-                // list-wide).
-                <WorkQueryStatusGroup
-                  allTasks={allTasks}
-                  bulkSelectedIds={bulkSelectedIds}
-                  columnKey={group.key}
-                  groupBy={listGroupBy === 'attention' ? 'status' : listGroupBy}
-                  // Attention buckets aren't a writable status dimension — a
-                  // status change inside them still writes `status` — but the
-                  // tail keys are workflow states and take that axis's marks.
-                  hasMore={pageGroupPaging ? group.hasMore : false}
-                  isFollowed={isFollowed}
-                  key={group.key}
-                  keyAxis={listGroupBy === 'attention' ? 'workflowCategory' : undefined}
-                  loadMoreError={loadMoreGroupErrors?.[group.key]}
-                  loadMoreLabel={loadMoreLabel}
-                  nested={listGroupBy === 'attention' && flatNested !== false}
-                  selectedTaskId={selectedTaskId}
-                  subSections={subSectionsFor?.(group.tasks)}
-                  tasks={group.tasks}
-                  total={group.total}
-                  attention={
-                    listGroupBy === 'attention' &&
-                    (group.key === 'urgent' || group.key === 'blocking')
-                  }
-                  onCreateInGroup={onCreateInGroup}
-                  onLoadMore={
-                    pageGroupPaging && onLoadMoreGroup
-                      ? () => onLoadMoreGroup(group.key)
-                      : undefined
-                  }
-                  onRetryLoadMore={
-                    onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined
-                  }
+            <WorkQueryVirtualList
+              allTasks={allTasks}
+              collapsedGroups={collapsedGroups}
+              createLabel={t('chat:taskList.kanban.addTask')}
+              groupIcon={groupIcon}
+              groupTitle={groupTitle}
+              groups={groups}
+              laneAxis={listLane}
+              laneRankOf={axisRank(listLane)}
+              listGroupBy={listGroupBy}
+              loadMoreGroupErrors={loadMoreGroupErrors}
+              loadMoreLabel={loadMoreLabel}
+              nestRows={nestRows}
+              primaryAxis={listGroupBy}
+              rankOf={axisRank(listGroupBy)}
+              tasks={tasks}
+              renderRow={(task, item, orderedIds) => (
+                <WorkQueryTaskRow
+                  bulkSelected={bulkSelectedIds?.has(task.id)}
+                  depth={item.rowDepth}
+                  followed={isFollowed?.(task.id)}
+                  muted={item.parentContext}
+                  rangeIds={orderedIds}
+                  selected={rowSelected(task)}
+                  task={task}
                   {...rowProps}
                 />
-              ))}
-            </div>
+              )}
+              onCollapsedGroupsChange={onCollapsedGroupsChange}
+              onCreateInGroup={onCreateInGroup}
+              onRetryLoadMoreGroup={onRetryLoadMoreGroup}
+              onLoadMoreGroup={
+                pageGroupPaging && onLoadMoreGroup ? (key) => onLoadMoreGroup(key) : undefined
+              }
+            />
           )}
           {/* A failed tail page keeps the loaded rows — the retry sits under
             the list where the load-more footer lives (flat or grouped). */}

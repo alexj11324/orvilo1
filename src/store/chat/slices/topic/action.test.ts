@@ -14,7 +14,8 @@ import { topicService } from '@/services/topic';
 import { useAgentStore } from '@/store/agent';
 import { PortalViewType } from '@/store/chat/slices/portal/initialState';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
-import { topicMapKey } from '@/store/chat/utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
+import { useGlobalStore } from '@/store/global';
 import { useSessionStore } from '@/store/session';
 import { useUserStore } from '@/store/user';
 import { type ChatTopic, type CreateTopicParams } from '@/types/topic';
@@ -59,6 +60,7 @@ vi.mock('@/services/topic', () => ({
     updateTopicTitle: vi.fn(),
     updateTopic: vi.fn(),
     batchRemoveTopics: vi.fn(),
+    batchMoveTopics: vi.fn(),
     getTopicDetail: vi.fn(),
     getTopics: vi.fn(),
     queryTopics: vi.fn(),
@@ -653,6 +655,48 @@ describe('topic action', () => {
       renderHook(() => useChatStore().useFetchTopicDetail(undefined));
       expect(topicService.getTopicDetail).not.toHaveBeenCalled();
     });
+
+    it('flags topicNotFoundMap when the detail fetch settles on null (deleted topic)', async () => {
+      // A stale list row / deep link to a deleted conversation: the by-id
+      // fetch resolves null and the route guard swaps in the 404 card.
+      (topicService.getTopicDetail as Mock).mockResolvedValue(null);
+
+      renderHook(() => useChatStore().useFetchTopicDetail('topic-deleted'));
+
+      await waitFor(() => {
+        expect(useChatStore.getState().topicNotFoundMap['topic-deleted']).toBe(true);
+      });
+    });
+
+    it('does not flag a client-minted topic whose server row is still confirming', async () => {
+      // During the first-send window the detail fetch legitimately resolves
+      // null — flagging it would flash the 404 card under a live composer.
+      useChatStore.setState({ creatingTopicIds: ['topic-minted'] });
+      (topicService.getTopicDetail as Mock).mockResolvedValue(null);
+
+      renderHook(() => useChatStore().useFetchTopicDetail('topic-minted'));
+
+      await waitFor(() => {
+        expect(topicService.getTopicDetail).toHaveBeenCalled();
+      });
+      expect(useChatStore.getState().topicNotFoundMap['topic-minted']).toBeUndefined();
+
+      useChatStore.setState({ creatingTopicIds: [] });
+    });
+
+    it('clears the not-found flag once a detail fetch returns the row', async () => {
+      useChatStore.setState({ topicNotFoundMap: { 'topic-restored': true } });
+      const restored = { id: 'topic-restored', status: 'running', title: 'Back' };
+      (topicService.getTopicDetail as Mock).mockResolvedValue(restored);
+
+      const { result } = renderHook(() => useChatStore().useFetchTopicDetail('topic-restored'));
+
+      await waitFor(() => {
+        expect(result.current.data).toEqual(restored);
+      });
+      expect(useChatStore.getState().topicNotFoundMap['topic-restored']).toBeUndefined();
+      expect(useChatStore.getState().topicDetailMap['topic-restored']).toEqual(restored);
+    });
   });
 
   describe('useFetchTopics', () => {
@@ -798,7 +842,8 @@ describe('topic action', () => {
 
     it('does not let a stale load-more page resurrect a deleted topic', async () => {
       const agentId = 'stale-topic-page-delete-agent';
-      const key = topicMapKey({ agentId });
+      // Outside a group session load-more pages the workspace feed bucket.
+      const key = WORKSPACE_TOPIC_MAP_KEY;
       const doomedTopic = { id: 'topic-doomed-page', title: 'Doomed' } as ChatTopic;
       const keptTopic = { id: 'topic-kept-page', title: 'Kept' } as ChatTopic;
       const pageTwoTopic = { id: 'topic-page-two', title: 'Page two' } as ChatTopic;
@@ -1804,6 +1849,64 @@ describe('topic action', () => {
       expect(topicData.hasMore).toBe(false);
     });
   });
+
+  describe('evictStaleTopic', () => {
+    it('drops the stale topic from buckets and the detail map without a server call', () => {
+      const topicId = 'stale-topic';
+      const activeAgentId = 'evict-agent';
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId,
+          activeTopicId: topicId,
+          topicDataMap: {
+            [topicMapKey({ agentId: activeAgentId })]: {
+              currentPage: 1,
+              hasMore: false,
+              isInbox: false,
+              items: [
+                { id: topicId, status: 'completed', title: 'Gone' } as ChatTopic,
+                { id: 'live-topic', status: 'completed', title: 'Kept' } as ChatTopic,
+              ],
+              pageSize: 20,
+              total: 2,
+            },
+          },
+          topicDetailMap: {
+            [topicId]: { id: topicId, status: 'completed', title: 'Gone' } as ChatTopic,
+          },
+        });
+      });
+      const switchTopicSpy = vi.spyOn(result.current, 'switchTopic');
+
+      act(() => {
+        result.current.evictStaleTopic(topicId);
+      });
+
+      const bucket = useChatStore.getState().topicDataMap[topicMapKey({ agentId: activeAgentId })];
+
+      expect(topicService.removeTopic).not.toHaveBeenCalled();
+      expect(bucket.items.map((topic) => topic.id)).toEqual(['live-topic']);
+      expect(useChatStore.getState().topicDetailMap[topicId]).toBeUndefined();
+      expect(switchTopicSpy).toHaveBeenCalledWith(null);
+    });
+
+    it('does not switch the active topic when the stale one is not open', () => {
+      const { result } = renderHook(() => useChatStore());
+
+      act(() => {
+        useChatStore.setState({ activeAgentId: 'evict-agent', activeTopicId: 'live-topic' });
+      });
+      const switchTopicSpy = vi.spyOn(result.current, 'switchTopic');
+
+      act(() => {
+        result.current.evictStaleTopic('stale-topic');
+      });
+
+      expect(switchTopicSpy).not.toHaveBeenCalled();
+    });
+  });
   describe('persisted topic-list cache write-through', () => {
     const setupBucket = (agentId: string) => {
       const containerKey = topicMapKey({ agentId });
@@ -1891,12 +1994,13 @@ describe('topic action', () => {
         { id: 'topic-2', favorite: true },
         { id: 'topic-3', favorite: false },
       ] as ChatTopic[];
-      // Set up mock state with unstarred topics
+      // Set up mock state with unstarred topics — outside a group session the
+      // sidebar reads the workspace conversation feed bucket.
       await act(async () => {
         useChatStore.setState({
           activeAgentId: 'abc',
           topicDataMap: {
-            [topicMapKey({ agentId: 'abc' })]: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
               items: topics,
               total: topics.length,
               currentPage: 0,
@@ -1929,7 +2033,7 @@ describe('topic action', () => {
         useChatStore.setState({
           activeAgentId: 'abc',
           topicDataMap: {
-            [topicMapKey({ agentId: 'abc' })]: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
               currentPage: 0,
               hasMore: false,
               items: topics,
@@ -1986,6 +2090,98 @@ describe('topic action', () => {
           result.current.internal_updateTopic(topicId, { title: 'New' }),
         ).rejects.toThrow('rename failed');
       });
+    });
+  });
+  describe('rebindTopicAgent', () => {
+    const setupBoundTopic = (overrides: Partial<ChatTopic> = {}) => {
+      const agentId = 'agent-a';
+      const topicId = 'topic-1';
+      const key = topicMapKey({ agentId });
+      const topic: ChatTopic = {
+        agentId,
+        createdAt: Date.now(),
+        favorite: false,
+        id: topicId,
+        sessionId: agentId,
+        title: 'Topic',
+        updatedAt: Date.now(),
+        ...overrides,
+      };
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [key]: {
+              currentPage: 0,
+              hasMore: false,
+              isExpandingPageSize: false,
+              isLoadingMore: false,
+              items: [topic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+
+      return { topicId };
+    };
+
+    it('is a no-op when the topic already runs under the target agent', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      const batchMoveMock = vi.spyOn(topicService, 'batchMoveTopics');
+      const updateTopicMetadataMock = vi.spyOn(topicService, 'updateTopicMetadata');
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-a');
+      });
+
+      expect(batchMoveMock).not.toHaveBeenCalled();
+      expect(updateTopicMetadataMock).not.toHaveBeenCalled();
+    });
+
+    it('rebinds the topic via the move mutation and appends a handoff entry', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      vi.spyOn(topicService, 'batchMoveTopics').mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      const updateTopicMetadataMock = vi
+        .spyOn(topicService, 'updateTopicMetadata')
+        .mockResolvedValue([]);
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-b');
+      });
+
+      // Only the move mutation writes `topics.agent_id` and re-parents the
+      // topic's messages — plain updateTopic cannot persist the rebind.
+      expect(topicService.batchMoveTopics).toHaveBeenCalledWith([topicId], 'agent-b');
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0],
+      ).toMatchObject({ agentId: 'agent-b' });
+      expect(updateTopicMetadataMock).toHaveBeenCalledWith(topicId, {
+        agentHandoffs: [expect.objectContaining({ fromAgentId: 'agent-a', toAgentId: 'agent-b' })],
+      });
+    });
+
+    it('still completes the switch when the handoff metadata write fails', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      vi.spyOn(topicService, 'batchMoveTopics').mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      vi.spyOn(topicService, 'updateTopicMetadata').mockRejectedValue(
+        new Error('metadata write failed'),
+      );
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-b');
+      });
+
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0],
+      ).toMatchObject({ agentId: 'agent-b' });
     });
   });
   describe('cleanupStaleRunningTopics', () => {
@@ -3269,5 +3465,198 @@ describe('Topic execution save failures', () => {
     vi.spyOn(topicService, 'updateTopicMetadata').mockResolvedValueOnce([]);
     await useChatStore.getState().updateTopicMetadata('topic-execution', selected);
     expect(useChatStore.getState().topicDataMap[key].items[0].metadata).toEqual(selected);
+  });
+});
+
+describe('workspace conversation feed', () => {
+  const seedFeedAndAgentBuckets = () => {
+    const agentKey = topicMapKey({ agentId: 'agent-b' });
+    const sharedRow = { id: 'topic-shared', status: 'running', title: 'Shared' } as ChatTopic;
+    const otherAgentRow = { id: 'topic-c', status: 'running', title: 'C' } as ChatTopic;
+    useChatStore.setState({
+      activeAgentId: 'agent-b',
+      topicDataMap: {
+        [WORKSPACE_TOPIC_MAP_KEY]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [sharedRow, otherAgentRow],
+          pageSize: 20,
+          total: 2,
+        },
+        [agentKey]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [sharedRow],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+    return { agentKey, otherAgentRow, sharedRow };
+  };
+
+  it('stores a workspace-scoped fetch in the feed bucket, not the agent bucket', async () => {
+    const topics = [
+      { agentId: 'agent-a', id: 'topic-a', title: 'A' },
+      { agentId: 'agent-b', id: 'topic-b', title: 'B' },
+    ];
+    (topicService.getTopics as Mock).mockResolvedValue({ items: topics, total: topics.length });
+
+    const { result } = renderHook(() =>
+      useChatStore().useFetchTopics(true, { pageSize: 20, scope: 'workspace' }),
+    );
+
+    await waitFor(() => {
+      expect(result.current.data).toEqual({ items: topics, total: topics.length });
+    });
+
+    expect(topicService.getTopics).toHaveBeenCalledWith(
+      expect.objectContaining({ pageSize: 20, scope: 'workspace' }),
+    );
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY]?.items).toEqual(topics);
+    // The fetch must not leak into an agent bucket it never named.
+    expect(
+      useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })],
+    ).toBeUndefined();
+  });
+
+  it('mirrors an agent-bucket update into the workspace feed bucket', () => {
+    const { agentKey } = seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-shared',
+        type: 'updateTopic',
+        value: { status: 'completed' },
+      });
+    });
+
+    const agentRow = useChatStore
+      .getState()
+      .topicDataMap[agentKey].items.find((t) => t.id === 'topic-shared');
+    const feedRow = useChatStore
+      .getState()
+      .topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.find((t) => t.id === 'topic-shared');
+    expect(agentRow?.status).toBe('completed');
+    expect(feedRow?.status).toBe('completed');
+  });
+
+  it('mirrors add and delete into the workspace feed bucket', () => {
+    seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        optimistic: true,
+        type: 'addTopic',
+        value: { id: 'topic-new', title: 'New' } as CreateTopicParams & { id: string },
+      });
+    });
+
+    expect(
+      useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.map((t) => t.id),
+    ).toContain('topic-new');
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].total).toBe(3);
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-shared',
+        type: 'deleteTopic',
+      });
+    });
+
+    expect(
+      useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.map((t) => t.id),
+    ).not.toContain('topic-shared');
+  });
+
+  it('does not mirror a group-scoped write into the feed bucket', () => {
+    seedFeedAndAgentBuckets();
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        id: 'topic-shared',
+        scope: 'group',
+        groupId: 'group-1',
+        type: 'updateTopic',
+        value: { status: 'failed' },
+      });
+    });
+
+    const feedRow = useChatStore
+      .getState()
+      .topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.find((t) => t.id === 'topic-shared');
+    expect(feedRow?.status).toBe('running');
+  });
+
+  it('does not materialize a feed bucket that was never fetched', () => {
+    useChatStore.setState({
+      activeAgentId: 'agent-b',
+      topicDataMap: {
+        [topicMapKey({ agentId: 'agent-b' })]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [{ id: 'topic-only', title: 'Only' } as ChatTopic],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: 'agent-b',
+        id: 'topic-only',
+        type: 'updateTopic',
+        value: { status: 'completed' },
+      });
+    });
+
+    expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY]).toBeUndefined();
+  });
+});
+
+describe('lastUsedAgentId contract', () => {
+  it('never moves the composer default on background topic churn', () => {
+    // `lastUsedAgentId` may only be written by the three user actions (composer
+    // pick, send, handoff). A background agent completing is funnelled through
+    // `internal_dispatchTopic` as an `updateTopic` — the default must stay put.
+    const backgroundAgentId = 'agent-background-runner';
+    const backgroundKey = topicMapKey({ agentId: backgroundAgentId });
+    useChatStore.setState({
+      topicDataMap: {
+        [backgroundKey]: {
+          currentPage: 0,
+          hasMore: false,
+          items: [
+            {
+              agentId: backgroundAgentId,
+              id: 'topic-running',
+              status: 'running',
+              title: 'Background run',
+            } as ChatTopic,
+          ],
+          pageSize: 20,
+          total: 1,
+        },
+      },
+    });
+    useGlobalStore.setState((s) => ({
+      status: { ...s.status, lastUsedAgentId: 'agent-user-picked' },
+    }));
+
+    act(() => {
+      useChatStore.getState().internal_dispatchTopic({
+        agentId: backgroundAgentId,
+        id: 'topic-running',
+        type: 'updateTopic',
+        value: { status: 'completed' } as Partial<ChatTopic>,
+      });
+    });
+
+    expect(useChatStore.getState().topicDataMap[backgroundKey].items[0].status).toBe('completed');
+    expect(useGlobalStore.getState().status.lastUsedAgentId).toBe('agent-user-picked');
   });
 });

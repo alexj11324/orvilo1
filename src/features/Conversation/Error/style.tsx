@@ -81,7 +81,7 @@ export const FormAction = memo<
         <div className="flex flex-col gap-2" style={{ width: '100%' }}>
           <div
             className="flex flex-col"
-            style={{ fontSize: 18, fontWeight: 'bold', textAlign: 'center' }}
+            style={{ fontSize: 18, fontWeight: 600, textAlign: 'center' }}
           >
             {title}
           </div>

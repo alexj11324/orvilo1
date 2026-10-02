@@ -1,5 +1,6 @@
 import { createProjectCoordinatorAgentConfig } from '@orvilo/builtin-agents';
 import type {
+  AgentTier,
   ProjectDatePrecision,
   ProjectHealth,
   ProjectMilestoneProgress,
@@ -132,6 +133,7 @@ export interface ProjectAgentInput {
   responsibility?: string | null;
   role?: string | null;
   sortOrder?: number;
+  tier?: AgentTier | null;
 }
 
 export interface ProjectKnowledgeBaseInput {
@@ -183,7 +185,7 @@ const validateOrchestrationPolicy = (policy: ProjectOrchestrationPolicy) => {
   }
 };
 
-type ProjectPolicyRow = Pick<
+export type ProjectPolicyRow = Pick<
   typeof projects.$inferSelect,
   | 'coordinatorAgentId'
   | 'orchestrationPolicy'
@@ -192,10 +194,16 @@ type ProjectPolicyRow = Pick<
   | 'completedReviewId'
 >;
 
-const projectRequiresHumanReview = (project: ProjectPolicyRow) =>
+/** A project wrapping up (`reviewing`/`completed`) forces human review on. */
+export const projectRequiresHumanReview = (project: ProjectPolicyRow) =>
   project.status === 'reviewing' ||
   project.status === 'completed' ||
   project.completedReviewId !== null;
+
+/** The effective requireHumanReview flag — policy value or the forced wrap-up rule. */
+export const projectEffectiveRequireHumanReview = (project: ProjectPolicyRow) =>
+  normalizeProjectOrchestrationPolicy(project.orchestrationPolicy).requireHumanReview ||
+  projectRequiresHumanReview(project);
 
 const toOrchestrationPolicyView = (project: ProjectPolicyRow): ProjectOrchestrationPolicyView => ({
   coordinatorAgentId: project.coordinatorAgentId,
@@ -936,6 +944,7 @@ export class ProjectModel {
           responsibility: input.responsibility,
           role: input.role,
           sortOrder: input.sortOrder,
+          tier: input.tier,
           updatedAt: new Date(),
         },
         target: [projectAgents.projectId, projectAgents.agentId],

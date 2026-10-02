@@ -244,7 +244,7 @@ describe('createGatewayEventHandler', () => {
       const store = createMockStore();
       const handler = createHandler(store);
 
-      // `lh hetero exec` sends full-text snapshots: each carries the WHOLE
+      // `orvilo hetero exec` sends full-text snapshots: each carries the WHOLE
       // message so far and must replace, not append.
       handler(
         makeEvent('stream_chunk', {

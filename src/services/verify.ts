@@ -244,7 +244,7 @@ export class VerifyService {
   /**
    * Dispatch the repair prompt straight into the acceptance's origin
    * conversation — a user message that triggers the agent, the same callback
-   * channel remote hetero runs (`lh notify`) use.
+   * channel remote hetero runs (`orvilo notify`) use.
    */
   dispatchAcceptanceRepair = (input: { agentId?: string; content: string; topicId: string }) =>
     lambdaClient.agentNotify.notify.mutate({

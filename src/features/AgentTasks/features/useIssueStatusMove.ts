@@ -5,6 +5,7 @@ import { t } from 'i18next';
 import { useCallback } from 'react';
 
 import { toast } from '@/components/toast';
+import { shouldAutoRunForWorkflowMove } from '@/features/AgentTasks/features/shouldAutoRunForWorkflowMove';
 import {
   moveBoardMaybePickingState,
   workQueryBoardMoveToastKey,
@@ -13,6 +14,8 @@ import { mutate } from '@/libs/swr';
 import { isTaskListKey, isWorkQueryTaskRowsKey } from '@/libs/swr/keys';
 import { taskService } from '@/services/task';
 import { useTaskStore } from '@/store/task';
+import type { TaskStoreState } from '@/store/task/initialState';
+import { taskDetailSelectors } from '@/store/task/selectors';
 
 /**
  * The shared Issue status target — what every status surface commits: the
@@ -35,13 +38,36 @@ export interface IssueStatusMoveTarget {
  */
 export const useIssueStatusMove = () => {
   const refreshDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
+  const runTask = useTaskStore((s) => s.runTask);
   const updateTask = useTaskStore((s) => s.updateTask);
+  const taskDetailMap = useTaskStore((s) => s.taskDetailMap);
 
   return useCallback(
     async (input: { taskIdentifier: string; target: IssueStatusMoveTarget }): Promise<boolean> => {
       const { data: task } = await taskService.find(input.taskIdentifier);
+      const previousCategory = task.workflowCategory;
+      const commit = async () => {
+        if (
+          shouldAutoRunForWorkflowMove({
+            automationMode: task.automationMode,
+            blocked: taskDetailMap
+              ? taskDetailSelectors.isTaskBlocked(
+                  { taskDetailMap } as TaskStoreState,
+                  input.taskIdentifier,
+                )
+              : false,
+            nextCategory: input.target.category,
+            previousCategory,
+            status: task.status,
+          })
+        ) {
+          const started = await runTask(input.taskIdentifier);
+          if (!started) toast.error(t('taskDetail.autoRunFailed', { ns: 'chat' }));
+        }
+      };
       if (!task.teamId) {
         await updateTask(input.taskIdentifier, { workflowCategory: input.target.category });
+        await commit();
         return true;
       }
       try {
@@ -65,8 +91,9 @@ export const useIssueStatusMove = () => {
         mutate(isWorkQueryTaskRowsKey),
         mutate(isTaskListKey),
       ]).catch(() => {});
+      await commit();
       return true;
     },
-    [refreshDetail, updateTask],
+    [refreshDetail, runTask, taskDetailMap, updateTask],
   );
 };

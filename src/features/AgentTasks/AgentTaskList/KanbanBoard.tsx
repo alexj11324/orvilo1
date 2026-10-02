@@ -11,6 +11,7 @@ import {
 } from '@dnd-kit/core';
 import { sortableKeyboardCoordinates } from '@dnd-kit/sortable';
 import type { WorkQuerySortMode } from '@orvilo/types';
+import { workQueryBoardAxisOfKey } from '@orvilo/types';
 import { createStaticStyles } from 'antd-style';
 import { ClipboardCheckIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -19,12 +20,9 @@ import { useTranslation } from 'react-i18next';
 import AsyncBoundary from '@/components/AsyncBoundary';
 import AsyncError from '@/components/AsyncError';
 import SimpleEmpty from '@/components/SimpleEmpty';
-import { toast } from '@/components/toast';
 import {
   applyWorkQueryStatusChoice,
   commitWorkQueryBoardMove,
-  kanbanStatusMoveGroupBy,
-  storeKanbanUsesWorkflowMove,
 } from '@/features/MyWork/workQueryBoardMove';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
@@ -38,20 +36,22 @@ import type { TaskGroupItem, TaskListItem } from '@/store/task/slices/list/initi
 
 import { createTaskModal } from '../CreateTaskModal';
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
-import { createTaskStatusCascadeModal } from '../features/TaskStatusCascadeModal';
-import { getOpenSubtasks, useTaskStatusChange } from '../features/useTaskStatusChange';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import {
+  boardCellKey,
   buildKanbanColumnMap,
   buildKanbanColumns,
   buildKanbanGroupQuery,
   canDropTaskIntoExternalColumn,
   canDropTaskIntoKanbanColumn,
   COLUMN_I18N_KEYS,
+  columnDefForBoardKey,
   computeKanbanPosition,
   effectiveTaskPosition,
+  externalBoardColumns,
+  externalBoardLanes,
+  externalKanbanCellPatch,
   externalKanbanColumnMoveScope,
-  externalKanbanColumns,
   externalKanbanTaskPatch,
   externalVisibleKanbanColumns,
   findKanbanColumn,
@@ -65,9 +65,9 @@ import {
   kanbanColumnMoveScope,
   kanbanColumnPagingAction,
   kanbanCreateTaskProjectId,
-  kanbanStatusColumnsExcludedBy,
   makeKanbanCollision,
   normalizeKanbanGroupBy,
+  parseBoardCellKey,
   placeKanbanCardInColumn,
   preserveKanbanColumnOrder,
   resolveKanbanDragTask,
@@ -151,12 +151,24 @@ export interface KanbanExternalGroups {
   error?: unknown;
   groups: TaskGroupItem[];
   /**
+   * Work-query boards persist collapsed columns with the view. When set, the
+   * global task-kanban store is left alone.
+   */
+  hiddenColumnKeys?: readonly string[];
+  /** Display properties hidden on every card. Omitted shows the full card. */
+  hiddenProperties?: ReadonlySet<string>;
+  /**
    * Linear parity: hide a column whose group is empty instead of rendering
    * an empty drop area. Team-issues boards opt in; other callers keep every
    * column visible.
    */
   hideEmptyColumns?: boolean;
   isLoading?: boolean;
+  /**
+   * Swimlane axis. Group keys are `columnKey + separator + laneKey`. Absent
+   * keeps the single row of columns.
+   */
+  laneAxis?: WorkQueryBoardGroupBy;
   /**
    * Tail-page rejection for one column (work-query group key resolved by the
    * caller) — the failed column's footer swaps its load-more button for an
@@ -165,6 +177,7 @@ export interface KanbanExternalGroups {
   loadMoreGroupError?: (columnKey: string) => unknown;
   /** Whether cards may be dragged (default true, still gated by permission). */
   movable?: boolean;
+  onHiddenColumnKeysChange?: (keys: string[]) => void;
   onLoadMoreGroup?: (columnKey: string) => void;
   onRefresh?: () => Promise<unknown> | void;
   /** Re-issues the failed page request shown by `loadMoreGroupError`. */
@@ -173,7 +186,7 @@ export interface KanbanExternalGroups {
    * Work-query grouping the supplied `groups` were fetched with. Selects
    * both the column set (`wf:` / `st:`) and the `moveBoard` `targetKey`.
    */
-  queryGroupBy?: 'status' | 'workflowCategory';
+  queryGroupBy?: WorkQueryBoardGroupBy;
   /** AsyncBoundary settle flag — defaults to `groups` being defined. */
   settled?: boolean;
   /**
@@ -237,8 +250,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   const excludeStatuses = options.hideCompleted ? HIDDEN_WHEN_COMPLETED_STATUSES : undefined;
   /** External (work-query) boards render the query's own dimension —
    * `wf:` business categories or `st:` raw execution statuses. */
-  const externalGroupBy: WorkQueryBoardGroupBy =
-    external?.queryGroupBy === 'status' ? 'status' : 'workflowCategory';
+  const externalGroupBy: WorkQueryBoardGroupBy = external?.queryGroupBy ?? 'workflowCategory';
 
   const useFetchTaskGroupList = useTaskStore((s) => s.useFetchTaskGroupList);
   // Keep the SWR handle only for `error` + `mutate` (the error/Retry state).
@@ -275,51 +287,51 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
     [external, isQueryScopeCurrent, storeTaskGroups],
   );
   const updateTask = useTaskStore((s) => s.updateTask);
-  const changeTaskStatus = useTaskStatusChange();
   const loadMoreTaskGroup = useTaskStore((s) => s.loadMoreTaskGroup);
   const boardGroupLimits = useTaskStore((s) => s.boardGroupLimits);
   const refreshTaskGroupList = useTaskStore((s) => s.refreshTaskGroupList);
-  const internalRefreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
-
-  const hiddenColumns = useGlobalStore(systemStatusSelectors.taskKanbanHiddenColumns);
+  const storeHiddenColumns = useGlobalStore(systemStatusSelectors.taskKanbanHiddenColumns);
   const updateSystemStatus = useGlobalStore((s) => s.updateSystemStatus);
+  const hiddenColumns = useMemo(
+    () =>
+      external?.onHiddenColumnKeysChange
+        ? [...(external.hiddenColumnKeys ?? [])]
+        : storeHiddenColumns,
+    [external, storeHiddenColumns],
+  );
 
   const [activeTask, setActiveTask] = useState<TaskListItem | null>(null);
   /**
    * Optimistic field patches keyed by task identifier. The mirror (below)
    * only moves identifiers between columns; a status/assignee/priority drop
    * also needs the rendered card to show its TARGET values for the settle
-   * window — `TaskStatusTag`/`TaskPriorityTag`/assignee read the task object.
+   * window — `IssueStatusPicker`/`TaskPriorityTag`/assignee read the task object.
    * Cleared when the post-settle resync lands the server's truth.
    */
   const [cardOverrides, setCardOverrides] = useState<Record<string, Partial<TaskListItem>>>({});
 
   const allColumns = useMemo(() => {
-    if (external) {
-      const fixed = externalKanbanColumns(externalGroupBy);
-      const covered = new Set(fixed.map((column) => column.key));
-      const extras = currentTaskGroups
-        .filter((group) => !covered.has(group.key))
-        .map((group) => ({
-          droppable: false,
-          groupMeta: undefined,
-          key: group.key,
-          targetStatus: null,
-        }));
-      return [...fixed, ...extras];
-    }
-    const filteredOut = kanbanStatusColumnsExcludedBy(
-      groupBy === 'status' ? excludeStatuses : undefined,
-    );
-    return buildKanbanColumns(currentTaskGroups, groupBy).filter(
-      (column) => !filteredOut.has(column.key),
-    );
-  }, [currentTaskGroups, excludeStatuses, external, externalGroupBy, groupBy]);
-  const columnDefMap = useMemo(
-    () => new Map(allColumns.map((column) => [column.key, column])),
-    [allColumns],
+    if (external) return externalBoardColumns(externalGroupBy, currentTaskGroups);
+    return buildKanbanColumns(currentTaskGroups, groupBy);
+  }, [currentTaskGroups, external, externalGroupBy, groupBy]);
+  const lanes = useMemo(
+    () => (external?.laneAxis ? externalBoardLanes(external.laneAxis, currentTaskGroups) : []),
+    [currentTaskGroups, external?.laneAxis],
   );
-  const columnKeys = useMemo(() => allColumns.map((column) => column.key), [allColumns]);
+  const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
+  const dragColumns = useMemo(() => {
+    if (lanes.length === 0) return allColumns;
+    return lanes.flatMap((lane) =>
+      allColumns
+        .filter((column) => !hiddenColumnSet.has(column.key))
+        .map((column) => ({ ...column, key: boardCellKey(column.key, lane.key) })),
+    );
+  }, [allColumns, hiddenColumnSet, lanes]);
+  const columnDefMap = useMemo(
+    () => new Map(dragColumns.map((column) => [column.key, column])),
+    [dragColumns],
+  );
+  const columnKeys = useMemo(() => dragColumns.map((column) => column.key), [dragColumns]);
   const columnKeySet = useMemo(() => new Set(columnKeys), [columnKeys]);
   const collisionDetection = useMemo(() => makeKanbanCollision(columnKeySet), [columnKeySet]);
 
@@ -389,17 +401,25 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
   const handleHideColumn = useCallback(
     (columnKey: string) => {
       const next = Array.from(new Set([...hiddenColumns, columnKey]));
+      if (external?.onHiddenColumnKeysChange) {
+        external.onHiddenColumnKeysChange(next);
+        return;
+      }
       updateSystemStatus({ taskKanbanHiddenColumns: next }, 'hideKanbanColumn');
     },
-    [hiddenColumns, updateSystemStatus],
+    [external, hiddenColumns, updateSystemStatus],
   );
 
   const handleRestoreColumn = useCallback(
     (columnKey: string) => {
       const next = hiddenColumns.filter((key) => key !== columnKey);
+      if (external?.onHiddenColumnKeysChange) {
+        external.onHiddenColumnKeysChange(next);
+        return;
+      }
       updateSystemStatus({ taskKanbanHiddenColumns: next }, 'restoreKanbanColumn');
     },
-    [hiddenColumns, updateSystemStatus],
+    [external, hiddenColumns, updateSystemStatus],
   );
 
   // ── Drop commit ────────────────────────────────────────────────
@@ -443,16 +463,53 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           return true;
         }
         if (!canMoveAcrossGroups) return false;
-        return commitWorkQueryBoardMove({
-          column,
-          groupBy: external.queryGroupBy ?? 'workflowCategory',
-          task,
-        });
+        const parsed = parseBoardCellKey(column.key);
+        const columnAxis = workQueryBoardAxisOfKey(parsed.columnKey) ?? externalGroupBy;
+        const laneAxis = parsed.laneKey ? workQueryBoardAxisOfKey(parsed.laneKey) : undefined;
+        const stateAxis = (axis: string | undefined): axis is 'status' | 'workflowCategory' =>
+          axis === 'status' || axis === 'workflowCategory';
+        const fieldPatch = {
+          ...(stateAxis(columnAxis)
+            ? {}
+            : externalKanbanTaskPatch(columnAxis, columnDefForBoardKey(parsed.columnKey))),
+          ...(laneAxis && !stateAxis(laneAxis) && parsed.laneKey
+            ? externalKanbanTaskPatch(laneAxis, columnDefForBoardKey(parsed.laneKey))
+            : {}),
+        };
+        const stateGroupBy = stateAxis(columnAxis)
+          ? columnAxis
+          : stateAxis(laneAxis)
+            ? laneAxis
+            : undefined;
+        const stateKey = stateAxis(columnAxis)
+          ? parsed.columnKey
+          : stateAxis(laneAxis)
+            ? parsed.laneKey
+            : undefined;
+        if (stateKey && stateGroupBy) {
+          const moved = await commitWorkQueryBoardMove({
+            column: columnDefForBoardKey(stateKey),
+            groupBy: stateGroupBy,
+            task,
+          });
+          if (!moved) return false;
+          if (Object.keys(fieldPatch).length > 0) {
+            await taskService.update(task.identifier, { ...fieldPatch, ...anchors });
+          } else if (canReorderWithinGroup) {
+            await taskService.update(task.identifier, anchors);
+          }
+          return true;
+        }
+        await taskService.update(task.identifier, { ...fieldPatch, ...anchors });
+        return true;
       }
 
-      if (storeKanbanUsesWorkflowMove(groupBy, task)) {
-        // Same-column reorder still writes position through the store.
-        // Cross-column Linear drops need VIEW08's exact-state picker.
+      if (groupBy === 'status') {
+        // The Issue board writes the canonical Issue Status only: same-column
+        // drops stay position reorders; every cross-column drop — linked or
+        // not — commits through the shared workflow move (`moveBoard` CAS,
+        // ambiguity picker and cascade modal included). Execution statuses
+        // never appear as a column.
         if (memberAlready) {
           await updateTask(task.identifier, anchors);
           return true;
@@ -462,48 +519,6 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           groupBy: 'workflowCategory',
           task,
         });
-      }
-
-      if (groupBy === 'status') {
-        const targetStatus = column.targetStatus;
-        // The column writes no status (running), or the task already buckets
-        // inside it (a `failed` card in `needsInput`) → pure reorder.
-        if (!targetStatus || memberAlready) {
-          await updateTask(task.identifier, anchors);
-          return true;
-        }
-        if (targetStatus === 'completed' || targetStatus === 'canceled') {
-          // Same contract as the detail header: completing/canceling a parent
-          // with open subtasks asks whether to cascade first.
-          let openSubtasks;
-          try {
-            const result = await taskService.getSubtasks(task.identifier);
-            openSubtasks = getOpenSubtasks(result.data);
-          } catch (loadError) {
-            console.error('[KanbanBoard] Failed to inspect subtasks:', loadError);
-            toast.error(t('taskDetail.statusCascade.loadFailed'));
-            throw loadError;
-          }
-          if (openSubtasks.length > 0) {
-            return createTaskStatusCascadeModal({
-              subtasks: openSubtasks,
-              targetStatus,
-              onApply: async (includeSubtasks) => {
-                if (includeSubtasks) {
-                  // The cascade endpoint owns the subtree transition AND stamps
-                  // the drop position in the same transaction — the move can
-                  // never persist its status without its slot.
-                  await taskService.updateStatusCascade(task.identifier, targetStatus, anchors);
-                  await internalRefreshTaskDetail(task.identifier).catch(() => {});
-                  return;
-                }
-                await updateTask(task.identifier, { ...anchors, status: targetStatus });
-              },
-            });
-          }
-        }
-        await updateTask(task.identifier, { ...anchors, status: targetStatus });
-        return true;
       }
 
       if (groupBy === 'assignee' || groupBy === 'member') {
@@ -519,16 +534,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       await updateTask(task.identifier, { ...anchors, priority: patch?.priority ?? 0 });
       return true;
     },
-    [
-      canMoveAcrossGroups,
-      canReorderWithinGroup,
-      external,
-      externalGroupBy,
-      groupBy,
-      internalRefreshTaskDetail,
-      t,
-      updateTask,
-    ],
+    [canMoveAcrossGroups, canReorderWithinGroup, external, externalGroupBy, groupBy, updateTask],
   );
 
   // ── Drag handlers ──────────────────────────────────────────────
@@ -652,8 +658,8 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       }
 
       const patch = external
-        ? (externalKanbanTaskPatch(externalGroupBy, finalDef) ?? {})
-        : (getKanbanTaskPatch(groupBy, finalDef, frozenTask) ?? {});
+        ? externalKanbanCellPatch(finalDef.key)
+        : (getKanbanTaskPatch(groupBy, finalDef) ?? {});
       const assigneeUpdate =
         groupBy === 'assignee' || groupBy === 'member'
           ? getKanbanAssigneeUpdate(frozenTask, patch)
@@ -738,12 +744,9 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
   const handleCardStatusChange = useCallback(
     async (task: TaskListItem, choice: TaskStatusChoice) => {
-      const applied = await applyWorkQueryStatusChoice({
-        changeLocal: changeTaskStatus,
-        choice,
-        groupBy: kanbanStatusMoveGroupBy(external?.queryGroupBy),
-        task,
-      });
+      // Issue-status choices are always a workflow move — the picker's rows
+      // never carry a raw execution status.
+      const applied = await applyWorkQueryStatusChoice({ choice, task });
       if (!applied) return;
       try {
         await refreshGroups();
@@ -751,19 +754,26 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         console.error('[KanbanBoard] Failed to refresh after status change:', error);
       }
     },
-    [changeTaskStatus, external?.queryGroupBy, refreshGroups],
+    [refreshGroups],
   );
 
   const handleCreateTask = useCallback(
     (columnKey: string) => {
       if (!canEditTask) return;
+      const preset = kanbanColumnCreatePreset(columnKey);
       createTaskModal({
         agentId,
+        assigneeUserId: preset.assigneeUserId,
         lockAssignee: !!agentId,
-        projectId: kanbanCreateTaskProjectId(projectId),
+        priority: preset.priority,
+        projectId:
+          preset.projectId === null
+            ? undefined
+            : kanbanCreateTaskProjectId(preset.projectId ?? projectId),
+        status: preset.status,
         teamId: createContext?.teamId,
         teamOptions: createContext?.teamOptions,
-        ...kanbanColumnCreatePreset(columnKey),
+        workflowCategory: preset.workflowCategory,
         onCreated: (task) => {
           navigate(taskDetailPath(task.identifier, agentId ? task.agentId : undefined, task.name));
         },
@@ -775,16 +785,27 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
 
   // ── Derived layout ─────────────────────────────────────────────
 
-  const hiddenColumnSet = useMemo(() => new Set(hiddenColumns), [hiddenColumns]);
+  const columnTotals = useMemo(
+    () =>
+      lanes.length === 0
+        ? currentTaskGroups
+        : allColumns.map((column) => ({
+            key: column.key,
+            total: currentTaskGroups
+              .filter((group) => parseBoardCellKey(group.key).columnKey === column.key)
+              .reduce((sum, group) => sum + group.total, 0),
+          })),
+    [allColumns, currentTaskGroups, lanes.length],
+  );
 
   const visibleColumns = useMemo(() => {
-    if (external?.hideEmptyColumns) {
-      return externalVisibleKanbanColumns(allColumns, currentTaskGroups);
-    }
-    return groupBy === 'status'
-      ? allColumns.filter((column) => !hiddenColumnSet.has(column.key))
+    const populated = external?.hideEmptyColumns
+      ? externalVisibleKanbanColumns(allColumns, columnTotals)
       : allColumns;
-  }, [allColumns, currentTaskGroups, external?.hideEmptyColumns, groupBy, hiddenColumnSet]);
+    return groupBy === 'status' || external
+      ? populated.filter((column) => !hiddenColumnSet.has(column.key))
+      : populated;
+  }, [allColumns, columnTotals, external, groupBy, hiddenColumnSet]);
 
   const hiddenColumnEntries = useMemo(
     () =>
@@ -795,9 +816,12 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
           droppable: canEditTask && col.droppable,
           label: t(COLUMN_I18N_KEYS[col.key] as any),
           statusIcon: COLUMN_STATUS_VISUAL[col.key],
-          total: currentTaskGroups.find((group) => group.key === col.key)?.total ?? 0,
+          total:
+            columnTotals.find((group) => group.key === col.key)?.total ??
+            currentTaskGroups.find((group) => group.key === col.key)?.total ??
+            0,
         })),
-    [allColumns, canEditTask, currentTaskGroups, hiddenColumnSet, t],
+    [allColumns, canEditTask, columnTotals, currentTaskGroups, hiddenColumnSet, t],
   );
 
   const resolveColumnTasks = useCallback(
@@ -862,7 +886,7 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
       onDragStart={handleDragStart}
     >
       <div
-        className={styles.board}
+        className={lanes.length > 0 ? 'flex min-h-0 flex-1 flex-col overflow-auto' : styles.board}
         ref={boardPan.ref}
         onLostPointerCapture={boardPan.onLostPointerCapture}
         onPointerCancel={boardPan.onPointerCancel}
@@ -870,87 +894,106 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
         onPointerMove={boardPan.onPointerMove}
         onPointerUp={boardPan.onPointerUp}
       >
-        {visibleColumns.map((col) => {
-          const group = currentTaskGroups.find((item) => item.key === col.key);
-          const columnTasks = resolveColumnTasks(col.key);
-          const droppable =
-            canEditTask &&
-            col.droppable &&
-            (!activeTask || canDropTaskIntoKanbanColumn(activeTask, groupBy, col));
-          // A failed column page keeps its cards — the retry lives in that
-          // column's footer where the load-more button would sit.
-          const columnLoadError = external?.loadMoreGroupError?.(col.key);
-          const pagingAction = kanbanColumnPagingAction({
-            atLimit:
-              (boardGroupLimits[col.key] ?? KANBAN_GROUP_PAGE_SIZE) >= kanbanGroupLimitCap(groupBy),
-            external: Boolean(external),
-          });
-          return (
-            <KanbanColumn
-              columnKey={col.key}
-              droppable={droppable}
-              groupBy={groupBy}
-              groupMeta={col.groupMeta}
-              key={col.key}
-              routeScope={routeScope}
-              tasks={columnTasks}
-              total={group?.total ?? 0}
-              footer={
-                columnLoadError ? (
-                  <AsyncError
-                    error={columnLoadError}
-                    variant={'inline'}
-                    onRetry={
-                      external?.onRetryLoadMoreGroup
-                        ? () => external.onRetryLoadMoreGroup?.(col.key)
+        {(lanes.length > 0 ? lanes : [undefined]).map((lane) => (
+          <div className={lane ? 'flex min-w-0 flex-col' : 'contents'} key={lane?.key ?? 'columns'}>
+            {lane ? (
+              <div className="px-3 pt-2 text-xs font-medium text-muted-foreground">
+                {lane.groupMeta?.label || lane.key}
+              </div>
+            ) : null}
+            <div className={lane ? styles.board : 'contents'}>
+              {visibleColumns.map((col) => {
+                const cellKey = lane ? boardCellKey(col.key, lane.key) : col.key;
+                const group = currentTaskGroups.find((item) => item.key === cellKey);
+                const columnTasks = resolveColumnTasks(cellKey);
+                const droppable =
+                  canEditTask &&
+                  col.droppable &&
+                  (!activeTask ||
+                    (external
+                      ? canDropTaskIntoExternalColumn(activeTask, col)
+                      : canDropTaskIntoKanbanColumn(activeTask, groupBy, col)));
+                const columnLoadError = external?.loadMoreGroupError?.(cellKey);
+                const pagingAction = kanbanColumnPagingAction({
+                  atLimit:
+                    (boardGroupLimits[cellKey] ?? KANBAN_GROUP_PAGE_SIZE) >=
+                    kanbanGroupLimitCap(groupBy),
+                  external: Boolean(external),
+                });
+                return (
+                  <KanbanColumn
+                    columnKey={cellKey}
+                    droppable={droppable}
+                    groupBy={groupBy}
+                    groupMeta={col.groupMeta}
+                    hiddenProperties={external?.hiddenProperties}
+                    key={cellKey}
+                    routeScope={routeScope}
+                    tasks={columnTasks}
+                    total={group?.total ?? 0}
+                    footer={
+                      columnLoadError ? (
+                        <AsyncError
+                          error={columnLoadError}
+                          variant={'inline'}
+                          onRetry={
+                            external?.onRetryLoadMoreGroup
+                              ? () => external.onRetryLoadMoreGroup?.(cellKey)
+                              : undefined
+                          }
+                        />
+                      ) : group?.hasMore && (!external || external.onLoadMoreGroup) ? (
+                        <button
+                          data-no-board-pan
+                          className={styles.loadMore}
+                          disabled={pagingAction === 'viewAll' && !onViewAll}
+                          type="button"
+                          onClick={
+                            pagingAction === 'viewAll' ? onViewAll : () => loadMoreGroup(cellKey)
+                          }
+                        >
+                          {t(
+                            pagingAction === 'viewAll'
+                              ? 'taskList.kanban.viewAllInList'
+                              : 'taskList.kanban.loadMore',
+                            {
+                              shown: columnTasks.length,
+                              total: group.total,
+                            },
+                          )}
+                        </button>
+                      ) : undefined
+                    }
+                    onStatusChange={handleCardStatusChange}
+                    onCreate={
+                      kanbanColumnAllowsCreate({
+                        columnKey: col.key,
+                        createContext,
+                        external: Boolean(external),
+                        groupBy,
+                        myTaskScope: Boolean(myTaskScope),
+                      })
+                        ? () => handleCreateTask(cellKey)
+                        : undefined
+                    }
+                    onHide={
+                      groupBy === 'status' || external
+                        ? () => handleHideColumn(parseBoardCellKey(col.key).columnKey)
                         : undefined
                     }
                   />
-                ) : group?.hasMore && (!external || external.onLoadMoreGroup) ? (
-                  <button
-                    data-no-board-pan
-                    className={styles.loadMore}
-                    disabled={pagingAction === 'viewAll' && !onViewAll}
-                    type="button"
-                    onClick={pagingAction === 'viewAll' ? onViewAll : () => loadMoreGroup(col.key)}
-                  >
-                    {t(
-                      pagingAction === 'viewAll'
-                        ? 'taskList.kanban.viewAllInList'
-                        : 'taskList.kanban.loadMore',
-                      {
-                        shown: columnTasks.length,
-                        total: group.total,
-                      },
-                    )}
-                  </button>
-                ) : undefined
-              }
-              onHide={groupBy === 'status' ? () => handleHideColumn(col.key) : undefined}
-              onStatusChange={handleCardStatusChange}
-              onCreate={
-                kanbanColumnAllowsCreate({
-                  columnKey: col.key,
-                  createContext,
-                  external: Boolean(external),
-                  groupBy,
-                  myTaskScope: Boolean(myTaskScope),
-                })
-                  ? () => handleCreateTask(col.key)
-                  : undefined
-              }
-            />
-          );
-        })}
-        {/* Hidden columns fold into Cordy's in-flow rails at the board's end:
-            always mounted, each stays a live drop target, click restores. */}
-        {groupBy === 'status' &&
+                );
+              })}
+            </div>
+          </div>
+        ))}
+        {(groupBy === 'status' || external) &&
           hiddenColumnEntries.map((entry) => (
             <CollapsedKanbanColumn
               columnKey={entry.columnKey}
-              droppable={entry.droppable}
+              droppable={lanes.length === 0 && entry.droppable}
               key={entry.columnKey}
-              label={entry.label}
+              label={entry.label || entry.columnKey}
               statusIcon={entry.statusIcon}
               total={entry.total}
               onExpand={() => handleRestoreColumn(entry.columnKey)}
@@ -966,7 +1009,12 @@ const KanbanBoard = memo<KanbanBoardProps>((props) => {
               width: COLUMN_WIDTH - 16,
             }}
           >
-            <TaskBoardCard overlay routeScope={routeScope} task={activeTask} />
+            <TaskBoardCard
+              overlay
+              hiddenProperties={external?.hiddenProperties}
+              routeScope={routeScope}
+              task={activeTask}
+            />
           </div>
         ) : null}
       </DragOverlay>

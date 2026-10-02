@@ -1,0 +1,5 @@
+{"imageId":"sha256:d2c7e387be5c372b52c675327d33ca351065e5b9a8fd5f76109da700c69f9c36","launch":{"ok":true,"value":{"supervisorId":"prime-resume-probe","treeId":"7f690cbeeb7ccd255691cf50a5a3ff19390a1872161e3e61b81cd4fc5beb9656","enforced":true,"filesystem":true,"network":true,"processes":true,"sanitizedEnvironment":true,"credentialsExcluded":true}}}
+{"phase":"saved","sessionId":"01a0f341-1b3e-76a8-bc1f-12a9dcb4ec8a","sessionFile":"/tmp/.prime/agent/sessions/01a0f341-1b3e-76a8-bc1f-12a9dcb4ec8a.jsonl","bytes":671,"messageCount":0}
+{"phase":"rpc-switch","restored":true,"sessionId":"01a0f341-1b3e-76a8-bc1f-12a9dcb4ec8a"}
+{"phase":"independent-daemon-file-resume","restored":true,"sessionId":"01a0f341-1b3e-76a8-bc1f-12a9dcb4ec8a","sessionFile":"/tmp/cold/recovered.jsonl","messageCount":0,"caveat":"new HOME and copied named empty-session file; source daemon not killed","providerCalls":0}
+{"quiescence":{"ok":true,"value":{"supervisorId":"prime-resume-probe","treeId":"7f690cbeeb7ccd255691cf50a5a3ff19390a1872161e3e61b81cd4fc5beb9656","observedAt":1790787527275,"remainingProcesses":0,"pendingActions":0}}}

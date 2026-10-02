@@ -28,6 +28,7 @@ const SearchResult = memo(() => {
     <>
       {topics.map((topic) => (
         <TopicItem
+          agentId={topic.agentId}
           fav={topic.favorite}
           id={topic.id}
           key={topic.id}

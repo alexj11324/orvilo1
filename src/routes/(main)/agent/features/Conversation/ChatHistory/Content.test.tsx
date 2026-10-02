@@ -25,6 +25,7 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('@/hooks/useFetchChatTopics', () => ({
   useFetchChatTopics: vi.fn(),
+  useWorkspaceConversationFeed: vi.fn(),
 }));
 
 vi.mock('@/features/AgentSidebar/Topic/hooks/useTopicNavigation', () => ({

@@ -439,7 +439,7 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
               isDesktop
                 ? '/settings/system-tools'
                 : activeAgentId
-                  ? `/agent/${activeAgentId}/profile`
+                  ? `/settings/agents/${activeAgentId}`
                   : '/settings/credential',
             )
           }

@@ -9,7 +9,7 @@ export interface TaskEntry {
   /**
    * Heterogeneous agent type. Covers remote platform agents (`hermes`,
    * `openclaw`) and local CLI agents (`devin`, `claude-code`, `codex`, …)
-   * dispatched through `lh connect` device gateway.
+   * dispatched through `orvilo connect` device gateway.
    */
   agentType: string;
   /**

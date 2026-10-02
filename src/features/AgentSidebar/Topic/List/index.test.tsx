@@ -57,6 +57,7 @@ vi.mock('@/features/NavPanel/components/SkeletonList', () => ({
 
 vi.mock('@/hooks/useFetchChatTopics', () => ({
   useFetchChatTopics: vi.fn(),
+  useWorkspaceConversationFeed: vi.fn(),
 }));
 
 vi.mock('@/hooks/useFetchActiveTopicDetail', () => ({

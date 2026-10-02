@@ -1,4 +1,5 @@
 import { cssVar } from 'antd-style';
+import { t } from 'i18next';
 import { XIcon } from 'lucide-react';
 import { memo } from 'react';
 
@@ -14,8 +15,15 @@ const Header = memo(() => {
   return (
     <NavHeader
       left={<Title />}
-      right={<ActionIcon icon={XIcon} size={'small'} onClick={closeTopicPortal} />}
       showTogglePanelButton={false}
+      right={
+        <ActionIcon
+          icon={XIcon}
+          size={'small'}
+          title={t('close', { ns: 'common' })}
+          onClick={closeTopicPortal}
+        />
+      }
       style={{
         paddingBlock: 6,
         paddingInline: 8,

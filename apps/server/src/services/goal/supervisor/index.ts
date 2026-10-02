@@ -17,7 +17,9 @@ import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
 import type { OrviloDatabase } from '@/database/type';
+import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
 import { AiAgentService } from '@/server/services/aiAgent';
+import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipeline/resolveExecutionBinding';
 
 import { resolveGoalModelConfig } from '../modelConfig';
 import { scheduleGoalAdvance } from '../scheduler';
@@ -213,6 +215,28 @@ export class GoalSupervisorService {
           return null;
         }
         const modelConfig = await resolveGoalModelConfig(this.db, this.userId);
+        // The supervisor's own agent is always the builtin 'orvilo' binding —
+        // mount-capable by construction — but a heterogeneous goal-model
+        // override retypes its execution binding. When that binding cannot
+        // mount the diagnostic tool surface, the run below can only throw at
+        // admission; escalate now rather than parking the incident on the
+        // diagnosis timeout.
+        const supervisorBinding = await findUsableAgentExecutionBinding(this.db, state.agentId, {
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        });
+        if (
+          !agentCanMountBuiltinToolSurface(
+            { agencyConfig: supervisorBinding?.agencyConfig },
+            modelConfig.model ?? supervisorBinding?.model,
+          )
+        ) {
+          await this.updateIncident(goalId, incident.id, {
+            reason: 'Supervisor agent runtime cannot mount its diagnostic tool surface',
+            status: 'escalated',
+          });
+          return null;
+        }
         const result = await new AiAgentService(this.db, this.userId, {
           workspaceId: this.workspaceId,
         }).execAgent({

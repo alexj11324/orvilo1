@@ -932,6 +932,66 @@ table agent_skills {
   }
 }
 
+table ai_models {
+  id varchar(150) [not null]
+  "_id" uuid [pk, not null, default: `gen_random_uuid()`]
+  display_name varchar(200)
+  description text
+  organization varchar(100)
+  enabled boolean
+  provider_id varchar(64) [not null]
+  type varchar(20) [not null, default: 'chat']
+  sort integer
+  user_id text [not null]
+  pricing jsonb
+  parameters jsonb [default: `{}`]
+  config jsonb
+  abilities jsonb [default: `{}`]
+  context_window_tokens integer
+  source varchar(20)
+  released_at varchar(10)
+  settings jsonb [default: `{}`]
+  workspace_id text
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (id, provider_id, user_id) [name: 'ai_models_id_provider_id_user_id_unique', unique]
+    (id, provider_id, user_id, workspace_id) [name: 'ai_models_id_provider_id_user_id_workspace_id_unique', unique]
+    user_id [name: 'ai_models_user_id_idx']
+    workspace_id [name: 'ai_models_workspace_id_idx']
+  }
+}
+
+table ai_providers {
+  id varchar(64) [not null]
+  name text
+  "_id" uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id text [not null]
+  sort integer
+  enabled boolean
+  fetch_on_client boolean
+  check_model text
+  logo text
+  description text
+  key_vaults text
+  source varchar(20)
+  settings jsonb
+  config jsonb
+  workspace_id text
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (id, user_id) [name: 'ai_providers_id_user_id_unique', unique]
+    (id, user_id, workspace_id) [name: 'ai_providers_id_user_id_workspace_id_unique', unique]
+    user_id [name: 'ai_providers_user_id_idx']
+    workspace_id [name: 'ai_providers_workspace_id_idx']
+  }
+}
+
 table api_keys {
   id text [pk, not null]
   name varchar(256) [not null]
@@ -1382,6 +1442,25 @@ table execution_grants {
     task_topic_id [name: 'execution_grants_task_topic_id_idx']
     agent_id [name: 'execution_grants_agent_id_idx']
     (initiated_by, status) [name: 'execution_grants_initiated_by_idx']
+  }
+}
+
+table user_experience_memories {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id text [not null]
+  legacy_id text
+  content text [not null]
+  revision integer [not null, default: 1]
+  lifecycle text [not null, default: 'active']
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (user_id, legacy_id) [name: 'experience_memories_owner_legacy', unique]
+    user_id [name: 'experience_memories_owner']
+    
+    
+    
   }
 }
 
@@ -2546,6 +2625,93 @@ table llm_generation_tracing {
   }
 }
 
+table mcp_event_bindings {
+  id text [pk, not null]
+  tenant_id text [not null]
+  connector_id text [not null]
+  callback_token text [not null]
+  state text [not null]
+  remote_subscription_id text
+  binding jsonb [not null]
+
+  indexes {
+    callback_token [name: 'mcp_event_bindings_callback_token_unique', unique]
+  }
+}
+
+table mcp_event_challenges {
+  id text [pk, not null]
+  binding_id text [not null]
+  webhook_id text [not null]
+  challenge_hash text [not null]
+  received_at bigint [not null]
+
+  indexes {
+    (binding_id, webhook_id) [name: 'mcp_event_challenges_delivery_unique', unique]
+    (binding_id, challenge_hash) [name: 'mcp_event_challenges_value_unique', unique]
+  }
+}
+
+table mcp_event_inbox {
+  id text [pk, not null]
+  tenant_id text [not null]
+  subscription_id text [not null]
+  event_id text [not null]
+  connector_id text [not null]
+  schema_id text [not null]
+  payload_hash text [not null]
+  delivery jsonb [not null]
+  received_at bigint [not null]
+  status text [not null, default: 'pending']
+  attempts integer [not null, default: 0]
+  available_at bigint [not null]
+  lease_token text
+  lease_until bigint
+  last_error text
+
+  indexes {
+    (tenant_id, subscription_id, event_id) [name: 'mcp_event_inbox_delivery_unique', unique]
+    (status, available_at, lease_until) [name: 'mcp_event_inbox_ready']
+    
+  }
+}
+
+table mcp_event_trigger_runs {
+  id text [pk, not null]
+  tenant_id text [not null]
+  inbox_id text [not null]
+  trigger_id text [not null]
+  trigger_revision integer [not null]
+  idempotency_key text [not null]
+  status text [not null, default: 'pending']
+  dispatch_id text
+  reason text
+
+  indexes {
+    idempotency_key [name: 'mcp_event_trigger_runs_key_unique', unique]
+    (tenant_id, inbox_id, trigger_id) [name: 'mcp_event_trigger_runs_occurrence_unique', unique]
+    
+  }
+}
+
+table mcp_event_triggers {
+  id text [pk, not null]
+  tenant_id text [not null]
+  workspace_id text [not null]
+  user_id text [not null]
+  task_id text [not null]
+  subscription_id text [not null]
+  source_id text [not null]
+  revision integer [not null, default: 0]
+  enabled boolean [not null, default: false]
+  filters jsonb [not null]
+
+  indexes {
+    (tenant_id, task_id) [name: 'mcp_event_triggers_task_unique', unique]
+    (tenant_id, subscription_id) [name: 'mcp_event_triggers_subscription']
+  }
+}
+
 table message_chunks {
   message_id text
   chunk_id uuid
@@ -3078,6 +3244,7 @@ table project_agents {
   added_by_user_id text
   workspace_id text
   role text
+  tier text
   responsibility text
   enabled boolean [not null, default: true]
   sort_order integer [not null, default: 0]
@@ -3364,6 +3531,19 @@ table project_works {
     (project_id, sort_order) [name: 'project_works_project_id_sort_order_idx']
     work_id [name: 'project_works_work_id_idx']
     workspace_id [name: 'project_works_workspace_id_idx']
+  }
+}
+
+table provider_bindings {
+  id uuid [pk, not null, default: `gen_random_uuid()`]
+  user_id text [not null]
+  config jsonb [not null]
+  revision integer [not null, default: 1]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    user_id [name: 'provider_bindings_user_id_idx']
   }
 }
 
@@ -4026,6 +4206,7 @@ table task_dispatches {
   workspace_id text
   project_id text
   agent_id text
+  tier text
   phase text [not null, default: 'requested']
   generation integer [not null]
   task_revision integer [not null]
@@ -4046,6 +4227,7 @@ table task_dispatches {
   cancel_attempts integer [not null, default: 0]
   cancel_requested_at "timestamp with time zone"
   last_cancel_error text
+  recovery_attempts integer [not null, default: 0]
   environment_snapshot jsonb
   accessed_at "timestamp with time zone" [not null, default: `now()`]
   created_at "timestamp with time zone" [not null, default: `now()`]
@@ -4101,6 +4283,8 @@ table task_topics {
   execution_generation integer
   dispatch_fence integer
   execution_epoch integer [not null, default: 0]
+  execution_control jsonb
+  execution_control_revision integer [not null, default: 0]
   execution_grant_id text
   environment_snapshot jsonb
   contract jsonb
@@ -4241,6 +4425,22 @@ table task_comment_drafts {
   indexes {
     (task_id, user_id) [name: 'task_comment_drafts_task_user_unique', unique]
     (user_id, workspace_id) [name: 'task_comment_drafts_user_workspace_idx']
+  }
+}
+
+table task_execution_handoffs {
+  id text [pk, not null]
+  task_id text [not null]
+  task_topic_id uuid [not null]
+  workspace_id text [not null]
+  user_id text [not null]
+  phase text [not null]
+  revision integer [not null, default: 0]
+  record jsonb [not null]
+
+  indexes {
+    task_id [name: 'task_execution_handoffs_active', unique]
+    
   }
 }
 

@@ -4,7 +4,7 @@ Exploration is opt-in. An ordinary Goal still completes its existing task graph;
 an exploration Goal evaluates completed experiments and grows that same graph.
 
 ```sh
-lh goal create 'Compare three candidate explanations' \
+orvilo goal create 'Compare three candidate explanations' \
   --requirement 'Deliver three independently evaluated explanations and justify the best one.' \
   --explore 'Start with a baseline. Try one alternative, then derive a third candidate from the baseline. Compare the recorded results before requesting final acceptance.' \
   --max-experiments 3 --agent <agent-id>
@@ -68,7 +68,7 @@ Goal acceptance. At the cap, insufficient evidence pauses the Goal rather than
 marking it achieved. Increase the cap with:
 
 ```sh
-lh goal set-budget goal_id --max-experiments 6
+orvilo goal set-budget goal_id --max-experiments 6
 ```
 
 A cap-stopped Goal resumes when the limit is raised; an explicitly user-paused
@@ -121,4 +121,4 @@ internal work yet; clients supply that work through scoped add-node calls.
 
 实验图支持两种显式操作：卡片点击原地展开 group，group 的 “下钻” 按钮进入该实验的内部图。内部图可继续展开嵌套实验及下钻，并通过面包屑返回父实验或全局。展开状态在返回时保留，新到达的实验默认收起；当前图的批量收起 / 展开只影响该范围内的实验。空实验下钻保留空态和返回入口。
 
-Navigation breadcrumbs live in the ReactFlow Panel inside the canvas in both embedded and fullscreen views. Historical derived\_from edges are stored child-to-baseline but displayed baseline-to-child as continued exploration. Orthogonal paths use measured card bounds and group headers as obstacles; containment frame interiors remain traversable. Experiment status glyphs use the canonical completed/waiting/backlog visuals rather than defaulting every aggregate state to a live running ring.
+Navigation breadcrumbs live in the ReactFlow Panel inside the canvas in both embedded and fullscreen views. Historical derived_from edges are stored child-to-baseline but displayed baseline-to-child as continued exploration. Orthogonal paths use measured card bounds and group headers as obstacles; containment frame interiors remain traversable. Experiment status glyphs use the canonical completed/waiting/backlog visuals rather than defaulting every aggregate state to a live running ring.

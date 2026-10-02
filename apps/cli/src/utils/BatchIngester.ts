@@ -1,7 +1,15 @@
 import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
+import type { AegisFinishReport } from '@orvilo/types';
 
 export interface IngestSink {
   finish: (params: {
+    /**
+     * Aegis method-pack report, present iff the run opted in
+     * (`ORVILO_AEGIS_PACK=1` / `--aegis`). `{ enabled: true, files: [] }` is
+     * meaningful — the server distinguishes "enabled, no artifacts" from
+     * "not enabled".
+     */
+    aegis?: AegisFinishReport;
     error?: {
       /**
        * Structured status-guide error (`classifyHeteroProcessFailure` output:

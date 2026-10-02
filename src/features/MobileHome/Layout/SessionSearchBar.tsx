@@ -8,7 +8,7 @@ import { useTranslation } from 'react-i18next';
 
 import { Input } from '@/components/ui/input';
 import { Kbd } from '@/components/ui/kbd';
-import { useHomeStore } from '@/store/home';
+import { useSearchTopics } from '@/features/MobileHome/TopicListContent/useMobileTopics';
 import { useSessionStore } from '@/store/session';
 import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
@@ -22,9 +22,8 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
     s.sessionSearchKeywords,
     s.updateSearchKeywords,
   ]);
-  const useSearchAgents = useHomeStore((s) => s.useSearchAgents);
 
-  const { isValidating } = useSearchAgents(keywords?.trim() || undefined);
+  const { isValidating } = useSearchTopics(keywords?.trim() || undefined);
 
   const handleChange = useCallback(
     (e: ChangeEvent<HTMLInputElement>) => {
@@ -70,7 +69,7 @@ const SessionSearchBar = memo<{ mobile?: boolean }>(({ mobile }) => {
       />
       <Input
         className="w-full px-9"
-        placeholder={t('searchAgentPlaceholder')}
+        placeholder={t('searchTopicPlaceholder')}
         ref={inputRef}
         value={keywords ?? ''}
         onChange={handleChange}

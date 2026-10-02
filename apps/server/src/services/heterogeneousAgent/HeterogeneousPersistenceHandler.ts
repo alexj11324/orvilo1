@@ -316,7 +316,7 @@ const INTERVENTION_PROVIDERS = new Set<AgentInterventionProvider>([
 ]);
 
 /**
- * Server-side persistence for `lh hetero exec` event streams. Mirrors the
+ * Server-side persistence for `orvilo hetero exec` event streams. Mirrors the
  * desktop renderer's `executeHeterogeneousAgent` (1.8k lines) for the DB
  * concerns only — IPC, store dispatch, notifications, refresh hooks all
  * live host-side and are intentionally absent here.

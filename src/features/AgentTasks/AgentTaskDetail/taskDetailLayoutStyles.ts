@@ -6,8 +6,8 @@ const SIDEBAR_WIDTH = 232;
 
 // One header, two forms, chosen by the column width rather than the viewport:
 // the same sections mount in the full page, the chat-side Portal and beside
-// the task-agent panel. Wide columns get a Linear-style properties sidebar;
-// narrow ones fold the same triggers into a pill row under the title.
+// the task-agent panel. The properties list is Plane's label/value rows at
+// every width.
 export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
   root: css`
     container-name: task-detail;
@@ -24,6 +24,19 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
       column-gap: 40px;
     }
   `,
+  /**
+   * Description sits under the title on every width. On a narrow pane the
+   * properties rail follows it, so the issue text is not buried under the
+   * property stack.
+   */
+  description: css`
+    grid-column: 1;
+    min-width: 0;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      grid-row: 2;
+    }
+  `,
   main: css`
     min-width: 0;
   `,
@@ -38,6 +51,10 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     grid-column: 1;
     min-width: 0;
     padding-block-end: 120px;
+
+    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
+      grid-row: 3;
+    }
   `,
   side: css`
     display: flex;
@@ -47,12 +64,7 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
 
     @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
       grid-column: 2;
-
-      /* Span both rows: the rail is a persistent column, so the prose body in
-         row 2 starts directly under the controls instead of waiting for the
-         rail's height to end. (1 / -1 can't resolve — the rows are
-         implicit; the grid always has exactly two by construction.) */
-      grid-row: 1 / 3;
+      grid-row: 1 / 4;
       padding-block-start: 0;
     }
   `,
@@ -68,29 +80,22 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
     justify-content: flex-end;
   `,
   /**
-   * One labeled rail group ("Properties", "Project", "Related"). In the wide
-   * sidebar the label reads as the group heading; in the narrow pill layout it
-   * hides, matching Linear, where pill rows carry no section titles.
+   * One labeled rail group ("Properties", "Project"). The heading stays
+   * visible at every width — Plane's properties block always titles itself.
    */
   railSection: css`
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 16px;
     min-width: 0;
   `,
   railSectionLabel: css`
-    display: none;
-
-    padding-block: 4px;
-    padding-inline: 8px 10px;
+    display: block;
 
     font-size: 13px;
     font-weight: 500;
-    color: ${cssVar.colorTextSecondary};
-
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      display: block;
-    }
+    line-height: 1.4;
+    color: ${cssVar.colorText};
   `,
   /** A stacked row inside a rail section — same hit area as a property cell. */
   railRow: css`
@@ -104,17 +109,72 @@ export const taskDetailLayoutStyles = createStaticStyles(({ css }) => ({
   `,
   properties: css`
     display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+    align-items: stretch;
 
     max-width: 100%;
+  `,
+  /** Plane's property row: 120px tertiary label, then the value control. */
+  propertyRow: css`
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
+    min-width: 0;
+  `,
+  propertyLabel: css`
+    display: flex;
+    flex: none;
+    gap: 6px;
+    align-items: center;
 
-    @container task-detail (width >= ${TASK_DETAIL_SIDEBAR_MIN_WIDTH}px) {
-      flex-direction: column;
-      gap: 2px;
-      align-items: stretch;
-    }
+    width: 120px;
+    height: 30px;
+
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: ${cssVar.colorTextTertiary};
+    letter-spacing: 0.13px;
+  `,
+  propertyMark: css`
+    display: inline-flex;
+    flex: none;
+    align-items: center;
+    justify-content: center;
+
+    width: 16px;
+    height: 16px;
+
+    color: currentcolor;
+  `,
+  propertyStateMark: css`
+    width: 14px;
+    height: 14px;
+    border: 1.5px solid currentcolor;
+    border-radius: 50%;
+  `,
+  propertyValue: css`
+    display: flex;
+    flex: 1;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+
+    min-width: 0;
+    min-height: 30px;
+
+    font-size: 13px;
+    font-weight: 400;
+    line-height: 1.4;
+    color: ${cssVar.colorText};
+    letter-spacing: 0.13px;
+  `,
+  propertyPlaceholder: css`
+    color: ${cssVar.colorTextPlaceholder};
+  `,
+  propertyDanger: css`
+    color: ${cssVar.colorError};
   `,
   propertyItem: css`
     max-width: 100%;

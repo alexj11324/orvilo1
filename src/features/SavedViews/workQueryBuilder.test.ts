@@ -19,7 +19,7 @@ describe('workQueryBuilder', () => {
   it('round-trips registry predicates through rows', () => {
     const filter = {
       all: [
-        { field: 'status', op: 'in', value: ['backlog', 'running'] },
+        { field: 'workflowCategory', op: 'in', value: ['backlog', 'in_progress'] },
         { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
         { field: 'projectId', op: 'isNull' },
       ],
@@ -57,7 +57,7 @@ describe('workQueryBuilder', () => {
     // "priority=Urgent OR assignee=me" — a rename-only save must not mutate
     // the boolean tree, and an unrelated row edit must not touch the `any`.
     const filter = {
-      all: [{ field: 'status', op: 'eq', value: 'running' }],
+      all: [{ field: 'workflowCategory', op: 'eq', value: 'in_progress' }],
       any: [
         { field: 'priority', op: 'eq', value: 3 },
         { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
@@ -68,10 +68,10 @@ describe('workQueryBuilder', () => {
 
     const edited = {
       ...state,
-      rows: state.rows.map((row) => ({ ...row, value: 'paused' })),
+      rows: state.rows.map((row) => ({ ...row, value: 'in_review' })),
     };
     expect(builderToFilter('task', edited)).toEqual({
-      all: [{ field: 'status', op: 'eq', value: 'paused' }],
+      all: [{ field: 'workflowCategory', op: 'eq', value: 'in_review' }],
       any: [...filter.any],
     });
   });
@@ -99,11 +99,13 @@ describe('workQueryBuilder', () => {
     const next = builderToFilter('task', {
       ...state,
       rows: [
-        { field: 'status', id: 'a', op: 'eq', value: undefined },
-        { field: 'status', id: 'b', op: 'eq', value: 'running' },
+        { field: 'workflowCategory', id: 'a', op: 'eq', value: undefined },
+        { field: 'workflowCategory', id: 'b', op: 'eq', value: 'in_progress' },
       ],
     });
-    expect(next).toEqual({ all: [retainedNode, { field: 'status', op: 'eq', value: 'running' }] });
+    expect(next).toEqual({
+      all: [retainedNode, { field: 'workflowCategory', op: 'eq', value: 'in_progress' }],
+    });
   });
 
   it('project entity renders only project-registry fields', () => {
@@ -194,11 +196,38 @@ describe('workQueryBuilder', () => {
     });
   });
 
-  it('keeps an in/notIn predicate with non-string members as a locked node', () => {
-    const mixedIn = { field: 'priority', op: 'in', value: ['a', 2] };
+  it('round-trips a numeric in and locks a member the builder cannot edit', () => {
+    const numeric = { field: 'priority' as const, op: 'in' as const, value: [1, 2] };
+    const numericState = filterToBuilder('task', { all: [numeric] });
+    expect(numericState.rows).toHaveLength(1);
+    expect(builderToFilter('task', numericState)).toEqual({ all: [numeric] });
+
+    const mixedIn = { field: 'priority', op: 'in', value: [2, { nope: true }] };
     const state = filterToBuilder('task', { all: [mixedIn] } as never);
     expect(state.rows).toHaveLength(0);
     expect(state.slots).toEqual([{ node: mixedIn, type: 'node' }]);
     expect(builderToFilter('task', state)).toEqual({ all: [mixedIn] });
+  });
+});
+
+describe('deprecated legacy status field', () => {
+  it('keeps a stored status predicate as a read-only node, never an editable row', () => {
+    const statusPredicate = { field: 'status', op: 'eq', value: 'paused' } as const;
+    const state = filterToBuilder('task', { all: [statusPredicate] } as never);
+    // Read-only compatibility: the predicate survives a save verbatim but is
+    // not editable in the builder — authoring surfaces offer
+    // workflowCategory/executionState instead.
+    expect(state.rows).toHaveLength(0);
+    expect(state.slots).toEqual([{ node: statusPredicate, type: 'node' }]);
+    expect(builderToFilter('task', state)).toEqual({ all: [statusPredicate] });
+  });
+
+  it('drops a crafted status row instead of writing the deprecated field', () => {
+    const next = builderToFilter('task', {
+      any: [],
+      rows: [{ field: 'status', id: 'legacy', op: 'eq', value: 'running' }],
+      slots: [],
+    });
+    expect(next).toBeUndefined();
   });
 });

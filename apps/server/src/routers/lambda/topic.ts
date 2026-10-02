@@ -587,6 +587,14 @@ export const topicRouter = router({
     .input(
       z
         .object({
+          /**
+           * Opaque `updatedAt|id` cursor from a previous page's `nextCursor`.
+           * Passing `cursor`/`limit` switches the response to the paged
+           * envelope `{items, nextCursor}`; callers that pass neither keep the
+           * legacy flat-array response.
+           */
+          cursor: z.string().min(1).optional(),
+          limit: z.number().int().min(1).max(50).optional(),
           pageSize: z.number().max(500).optional(),
           statuses: z.array(z.string()).optional(),
           withLastMessage: z.boolean().optional(),
@@ -594,6 +602,15 @@ export const topicRouter = router({
         .optional(),
     )
     .query(async ({ input, ctx }) => {
+      if (input?.limit !== undefined || input?.cursor !== undefined) {
+        return ctx.topicModel.queryTopicsPage({
+          cursor: input.cursor,
+          limit: input.limit,
+          statuses: input.statuses,
+          withLastMessage: input.withLastMessage,
+        });
+      }
+
       return ctx.topicModel.queryTopics({
         pageSize: input?.pageSize,
         statuses: input?.statuses,
@@ -625,6 +642,12 @@ export const topicRouter = router({
         includeTriggers: z.array(z.string()).optional(),
         isInbox: z.boolean().optional(),
         pageSize: z.number().max(100).optional(),
+        /**
+         * `'workspace'` lists the workspace-wide conversation feed: every
+         * non-group topic the caller can see, whatever agent owns it.
+         * `agentId`/`sessionId` are ignored in this scope.
+         */
+        scope: z.literal('workspace').optional(),
         sessionId: z.string().nullish(),
         /**
          * Server-side ordering. Defaults to `updatedAt`; `status` orders by
@@ -651,6 +674,20 @@ export const topicRouter = router({
         triggers,
         ...rest
       } = input;
+
+      // Workspace feed: no container resolution — the model lists every
+      // visible non-group topic. Skips the agentId lookup and the legacy
+      // agentId backfill migration below (there is no owning agent to backfill).
+      if (rest.scope === 'workspace') {
+        const result = await ctx.topicModel.query({
+          ...rest,
+          excludeStatuses,
+          excludeTriggers,
+          includeTriggers,
+          triggers,
+        });
+        return { items: result.items, total: result.total };
+      }
 
       // If groupId is provided, query by groupId directly
       if (groupId) {
@@ -974,16 +1011,21 @@ export const topicRouter = router({
         agentId: z.string().optional(),
         groupId: z.string().nullish(),
         keywords: z.string(),
+        /** `'workspace'` searches the workspace-wide conversation feed. */
+        scope: z.literal('workspace').optional(),
         sessionId: z.string().nullish(),
       }),
     )
     .query(async ({ input, ctx }) => {
-      const resolved = await resolveContext(
-        { agentId: input.agentId, sessionId: input.sessionId },
-        ctx.serverDB,
-        ctx.userId,
-        ctx.workspaceId ?? undefined,
-      );
+      const isWorkspace = input.scope === 'workspace';
+      const resolved = isWorkspace
+        ? { sessionId: undefined }
+        : await resolveContext(
+            { agentId: input.agentId, sessionId: input.sessionId },
+            ctx.serverDB,
+            ctx.userId,
+            ctx.workspaceId ?? undefined,
+          );
 
       // Scope the search exactly like the topics list (`query`): by agentId
       // directly (the new agent system stamps every topic with an agentId).
@@ -995,6 +1037,7 @@ export const topicRouter = router({
         agentId: input.agentId,
         containerId: resolved.sessionId,
         groupId: input.groupId,
+        workspace: isWorkspace,
       });
     }),
 

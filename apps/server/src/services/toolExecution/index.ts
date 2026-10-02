@@ -354,7 +354,7 @@ export class ToolExecutionService {
       // Already sorted online-first / most-recently-active; drop offline rows.
       // Only the desktop app handles `mcp` tool calls — the CLI's
       // tool_call_request handler ignores `toolCall.type`/`params`, so a
-      // device whose only live connection is `lh connect` would fail the call.
+      // device whose only live connection is `orvilo connect` would fail the call.
       const newest = devices.find(
         (d) =>
           d.online &&

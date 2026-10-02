@@ -800,7 +800,7 @@ export const createGatewayEventHandler = (
           if (!data) return;
 
           if (data.chunkType === 'text' && data.content) {
-            // `lh hetero exec` coalesces main-agent text into full-text
+            // `orvilo hetero exec` coalesces main-agent text into full-text
             // `replace` snapshots; native gateway runs stream plain deltas.
             const snapshotSeq =
               data.snapshotMode === 'replace' && typeof data.snapshotSeq === 'number'
@@ -833,7 +833,7 @@ export const createGatewayEventHandler = (
           }
 
           if (data.chunkType === 'reasoning' && data.reasoning) {
-            // Same snapshot semantics as text above: `lh hetero exec`
+            // Same snapshot semantics as text above: `orvilo hetero exec`
             // coalesces reasoning into `replace` snapshots; redelivered seqs
             // are dropped instead of appended (which would duplicate the
             // thinking text on a server-side batch retry).
@@ -1357,7 +1357,7 @@ export const createGatewayEventHandler = (
 
       case 'notify_update': {
         // Remote hetero agent (openclaw / hermes) wrote a message to DB via
-        // `lh notify`. DB is the source of truth — just refresh the message list.
+        // `orvilo notify`. DB is the source of truth — just refresh the message list.
         enqueue(async () => {
           await refreshMessagesFromDb().catch(console.error);
         });

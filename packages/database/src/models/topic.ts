@@ -27,6 +27,7 @@ import {
   inArray,
   isNotNull,
   isNull,
+  lt,
   lte,
   ne,
   not,
@@ -119,6 +120,39 @@ export interface TopicListItem extends TopicItem {
    */
   runStartedAt?: Date | null;
 }
+
+/** One page of the workspace-wide topic feed (`queryTopics` paged form). */
+export interface TopicListPage {
+  items: TopicListItem[];
+  /** Opaque `updatedAt|id` cursor for the next page; null at the end of the list. */
+  nextCursor: string | null;
+}
+
+/**
+ * Deletion-stable keyset cursor over the `(updatedAt, id)` ordering of the
+ * workspace topic feed — the same convention `topicComment` uses: the
+ * timestamp is selected as text so PostgreSQL microseconds survive the
+ * round-trip instead of being truncated by a JavaScript `Date`, and `id`
+ * breaks same-timestamp ties so a row can't be skipped or repeated at a page
+ * boundary.
+ */
+export const encodeTopicListCursor = (updatedAt: string, id: string): string =>
+  `${updatedAt}|${id}`;
+
+export const decodeTopicListCursor = (
+  cursor?: string,
+): { id: string; updatedAt: string } | null => {
+  if (!cursor) return null;
+
+  const separator = cursor.lastIndexOf('|');
+  if (separator <= 0) return null;
+
+  const updatedAt = cursor.slice(0, separator);
+  const id = cursor.slice(separator + 1);
+  if (!id || Number.isNaN(Date.parse(updatedAt))) return null;
+
+  return { id, updatedAt };
+};
 
 /**
  * Sanitized projection of `topics.metadata.runningOperation` for a visitor DTO
@@ -260,6 +294,12 @@ interface QueryTopicParams {
   isInbox?: boolean;
   pageSize?: number;
   /**
+   * `'workspace'` lists every non-group topic the caller can see across the
+   * workspace — agent-bound rows whose owning agent is visible, plus legacy
+   * rows with no parent — instead of a single container's list.
+   */
+  scope?: 'workspace';
+  /**
    * Server-side ordering. Defaults to `updatedAt`. `status` orders by status
    * priority (see `STATUS_SORT_RANK`) so the sidebar "group by status" mode
    * keeps high-priority topics on the first page.
@@ -296,6 +336,12 @@ export interface TopicKeywordScope {
    */
   containerId?: string | null;
   groupId?: string | null;
+  /**
+   * `true` searches the workspace conversation feed — every non-group topic
+   * whose owning agent is visible to the caller, plus unowned rows. Wins over
+   * the container scopes.
+   */
+  workspace?: boolean;
 }
 
 export interface ListTopicsForMemoryExtractorCursor {
@@ -474,6 +520,7 @@ export class TopicModel {
     pageSize = 9999,
     groupId,
     isInbox,
+    scope,
     sortBy,
     timing,
     triggers,
@@ -564,6 +611,82 @@ export class TopicModel {
       editingGroupId ? sql`${topics.metadata}->>'editingGroupId' = ${editingGroupId}` : undefined,
     );
 
+    // Workspace conversation feed: every non-group topic the caller can see —
+    // rows whose owning agent exists and is visible to them (mirroring the
+    // parent-visibility gate `queryTopics` uses), plus legacy rows with no
+    // parent at all. `ownership()` alone is not enough: in workspace mode it
+    // matches every member's rows, including topics under other members'
+    // private agents — the parent gate drops those.
+    if (scope === 'workspace') {
+      const feedScope = { userId: this.userId, workspaceId: this.workspaceId };
+      const workspaceWhere = and(
+        this.ownership(),
+        this.notShareVisitor(),
+        isNull(topics.groupId),
+        or(isNull(topics.agentId), buildWorkspaceWhere(feedScope, agents)),
+        includeTriggerCondition,
+        excludeTriggerCondition,
+        triggerCondition,
+        excludeStatusCondition,
+      );
+
+      const [items, totalResult] = await Promise.all([
+        runTimedStage(
+          timing,
+          'db.topic.query.workspace.items.select',
+          () =>
+            // The join makes `.select(fields as any)` infer Drizzle's default
+            // nested `{topics, agents}` selection — cast the awaited result so
+            // `query()`'s return stays the flat slim rows every branch returns.
+            this.db
+              // See note on the group-branch select below re: `as any` cast.
+              .select({
+                agentId: topics.agentId,
+                completedAt: topics.completedAt,
+                createdAt: topics.createdAt,
+                favorite: topics.favorite,
+                historySummary: topics.historySummary,
+                id: topics.id,
+                metadata: topics.metadata,
+                model: topics.model,
+                provider: topics.provider,
+                status: topics.status,
+                title: topics.title,
+                updatedAt: topics.updatedAt,
+                // `sortUpdatedAt` keeps the client-side sort key identical to
+                // the server's `topicActivityAt` ORDER BY — see the group
+                // branch below for the full rationale.
+                sortUpdatedAt: topicActivityAt,
+                // Workspace sidebars filter maintenance actions client-side by
+                // ownership — the filter needs the row owner in the slim shape.
+                userId: topics.userId,
+                ...detailColumns,
+              } as any)
+              .from(topics)
+              .leftJoin(agents, eq(topics.agentId, agents.id))
+              .where(workspaceWhere)
+              .orderBy(...orderBy)
+              .limit(pageSize)
+              .offset(offset) as Promise<{ [x: string]: any }[]>,
+          { current, pageSize },
+        ),
+        runTimedStage(timing, 'db.topic.query.workspace.count.select', () =>
+          this.db
+            .select({ count: count(topics.id) })
+            .from(topics)
+            .leftJoin(agents, eq(topics.agentId, agents.id))
+            .where(workspaceWhere),
+        ),
+      ]);
+
+      logTiming(timing, 'db.topic.query:done', {
+        itemCount: items.length,
+        stageMs: getDurationMs(queryStartedAt),
+        total: totalResult[0].count,
+      });
+      return { items, total: totalResult[0].count };
+    }
+
     // If groupId is provided, query topics by groupId directly
     if (groupId) {
       const whereCondition = and(
@@ -587,6 +710,7 @@ export class TopicModel {
               // to a union; the runtime shape is correct and the client casts
               // back to `ChatTopic[]` after TRPC serialization.
               .select({
+                agentId: topics.agentId,
                 completedAt: topics.completedAt,
                 createdAt: topics.createdAt,
                 favorite: topics.favorite,
@@ -665,6 +789,7 @@ export class TopicModel {
             this.db
               // See note on the group-branch select above re: `as any` cast.
               .select({
+                agentId: topics.agentId,
                 completedAt: topics.completedAt,
                 createdAt: topics.createdAt,
                 favorite: topics.favorite,
@@ -912,6 +1037,33 @@ export class TopicModel {
     statuses?: string[];
     withLastMessage?: boolean;
   } = {}): Promise<TopicListItem[]> => {
+    // Legacy contract — a flat array capped at `pageSize`. Routed through the
+    // same paged query as `queryTopicsPage` so both share one SQL path (the
+    // `id` tiebreaker only makes the ordering deterministic; it changes nothing
+    // the legacy callers can observe).
+    const page = await this.queryTopicsPage({ limit: pageSize, statuses, withLastMessage });
+    return page.items;
+  };
+
+  /**
+   * Cursor-paginated form of `queryTopics` for feeds that load more on scroll.
+   * `cursor` is the opaque `updatedAt|id` value a previous page handed back in
+   * `nextCursor`; `limit` is the page size (one extra row is fetched internally
+   * to detect the end of the list). Rows strictly older than the cursor's
+   * `(updatedAt, id)` key are returned — a topic bumped between pages lands
+   * ahead of the cursor instead of inside it, so clients dedupe by id.
+   */
+  queryTopicsPage = async ({
+    statuses,
+    withLastMessage,
+    cursor,
+    limit = 30,
+  }: {
+    cursor?: string;
+    limit?: number;
+    statuses?: string[];
+    withLastMessage?: boolean;
+  } = {}): Promise<TopicListPage> => {
     const scope = { userId: this.userId, workspaceId: this.workspaceId };
 
     // Unlike the per-agent topic list, this feed is not scoped by agent at all:
@@ -927,6 +1079,17 @@ export class TopicModel {
       and(isNull(topics.groupId), isNotNull(topics.agentId), buildWorkspaceWhere(scope, agents)),
     );
 
+    const decodedCursor = decodeTopicListCursor(cursor);
+    const cursorWhere = decodedCursor
+      ? or(
+          lt(topics.updatedAt, sql`${decodedCursor.updatedAt}::timestamptz`),
+          and(
+            eq(topics.updatedAt, sql`${decodedCursor.updatedAt}::timestamptz`),
+            lt(topics.id, decodedCursor.id),
+          ),
+        )
+      : undefined;
+
     const where = and(
       this.ownership(),
       this.notShareVisitor(),
@@ -934,6 +1097,7 @@ export class TopicModel {
       statuses && statuses.length > 0
         ? inArray(topics.status, statuses as ChatTopicStatus[])
         : undefined,
+      cursorWhere,
     );
 
     // `buildWorkspaceWhere` keeps a member's OWN private rows visible, which is
@@ -972,21 +1136,6 @@ export class TopicModel {
         .mapWith(agentOperations.startedAt)
         .as('run_started_at');
 
-    if (!withLastMessage) {
-      return this.db
-        .select({
-          ...getTableColumns(topics),
-          parentVisibility: parentVisibilityColumn,
-          runStartedAt: runStartedAtColumn,
-        })
-        .from(topics)
-        .leftJoin(agents, eq(topics.agentId, agents.id))
-        .leftJoin(chatGroups, eq(topics.groupId, chatGroups.id))
-        .where(where)
-        .orderBy(desc(topics.updatedAt))
-        .limit(pageSize);
-    }
-
     // Built with the query builder rather than a raw `sql` template so the inner
     // `eq(messages.topicId, topics.id)` renders both sides fully qualified —
     // see the note on `firstUserMessageSubquery` in `query()`.
@@ -995,28 +1144,37 @@ export class TopicModel {
     // skipping them lands on the last thing the agent actually *said*.
     // One char past the limit, so the caller can tell "exactly this long" from
     // "cut short" and mark the cut instead of ending mid-sentence.
-    const lastAssistantMessageSubquery = this.db
-      .select({
-        value: sql<string>`left(${messages.content}, ${LAST_MESSAGE_PREVIEW_LENGTH + 1})`,
-      })
-      .from(messages)
-      .where(
-        and(
-          eq(messages.topicId, topics.id),
-          eq(messages.role, 'assistant'),
-          this.messageOwnership(),
-          ne(messages.content, ''),
-        ),
-      )
-      .orderBy(desc(messages.createdAt))
-      .limit(1);
+    const lastAssistantMessageSubquery = withLastMessage
+      ? this.db
+          .select({
+            value: sql<string>`left(${messages.content}, ${LAST_MESSAGE_PREVIEW_LENGTH + 1})`,
+          })
+          .from(messages)
+          .where(
+            and(
+              eq(messages.topicId, topics.id),
+              eq(messages.role, 'assistant'),
+              this.messageOwnership(),
+              ne(messages.content, ''),
+            ),
+          )
+          .orderBy(desc(messages.createdAt))
+          .limit(1)
+      : undefined;
 
-    const rows = await this.db
+    // `lastAssistantMessage` is optional on the row — it's only selected when
+    // the caller asked for the preview.
+    const rows: (TopicListItem & { cursorUpdatedAt: string })[] = await this.db
       .select({
         ...getTableColumns(topics),
-        lastAssistantMessage: sql<string | null>`(${lastAssistantMessageSubquery})`.as(
-          'last_assistant_message',
-        ),
+        cursorUpdatedAt: sql<string>`${topics.updatedAt}::text`.as('cursor_updated_at'),
+        ...(lastAssistantMessageSubquery
+          ? {
+              lastAssistantMessage: sql<string | null>`(${lastAssistantMessageSubquery})`.as(
+                'last_assistant_message',
+              ),
+            }
+          : {}),
         parentVisibility: parentVisibilityColumn,
         runStartedAt: runStartedAtColumn,
       })
@@ -1024,16 +1182,31 @@ export class TopicModel {
       .leftJoin(agents, eq(topics.agentId, agents.id))
       .leftJoin(chatGroups, eq(topics.groupId, chatGroups.id))
       .where(where)
-      .orderBy(desc(topics.updatedAt))
-      .limit(pageSize);
+      .orderBy(desc(topics.updatedAt), desc(topics.id))
+      .limit(limit + 1);
 
-    return rows.map((row) => ({
-      ...row,
-      lastAssistantMessage:
-        row.lastAssistantMessage && row.lastAssistantMessage.length > LAST_MESSAGE_PREVIEW_LENGTH
-          ? `${row.lastAssistantMessage.slice(0, LAST_MESSAGE_PREVIEW_LENGTH)}…`
-          : row.lastAssistantMessage,
-    }));
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+    const lastRow = pageRows.at(-1);
+
+    return {
+      // `lastAssistantMessage` only exists on the row when the preview was
+      // selected — the conditional spread above keeps it optional here.
+      items: pageRows.map(({ cursorUpdatedAt: _cursorUpdatedAt, ...row }): TopicListItem => ({
+        ...row,
+        ...(withLastMessage
+          ? {
+              lastAssistantMessage:
+                row.lastAssistantMessage &&
+                row.lastAssistantMessage.length > LAST_MESSAGE_PREVIEW_LENGTH
+                  ? `${row.lastAssistantMessage.slice(0, LAST_MESSAGE_PREVIEW_LENGTH)}…`
+                  : row.lastAssistantMessage,
+            }
+          : {}),
+      })),
+      nextCursor:
+        hasMore && lastRow ? encodeTopicListCursor(lastRow.cursorUpdatedAt, lastRow.id) : null,
+    };
   };
 
   queryByKeyword = async (
@@ -2542,7 +2715,19 @@ export class TopicModel {
     agentId,
     containerId,
     groupId,
+    workspace,
   }: TopicKeywordScope): SQL | undefined => {
+    if (workspace) {
+      // Same contract as the feed list in `query(scope: 'workspace')` —
+      // `exists` keeps the keyword queries join-free.
+      return and(
+        isNull(topics.groupId),
+        or(
+          isNull(topics.agentId),
+          sql`exists (select 1 from ${agents} where ${agents.id} = ${topics.agentId} and ${buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, agents)})`,
+        ),
+      );
+    }
     if (groupId) return eq(topics.groupId, groupId);
     if (agentId) return eq(topics.agentId, agentId);
     return this.matchContainer(containerId);

@@ -34,7 +34,7 @@ const formatTriggers = (counts: Record<string, number> | null): string => {
 /**
  * Server-side listing for `--server`: goals live on the server, so this is the
  * only way to see a run recorded anywhere but this machine. Local-first
- * otherwise, matching `lh trace op list`, so a dev with no session still gets
+ * otherwise, matching `orvilo trace op list`, so a dev with no session still gets
  * the goals they just ran.
  */
 const listFromServer = async (limit: number, json?: boolean) => {

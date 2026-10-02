@@ -2,6 +2,8 @@ import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
+  BotMessageSquareIcon,
+  Brain,
   BrainCircuit,
   ChartColumnBigIcon,
   Coins,
@@ -17,6 +19,7 @@ import {
   Map,
   MonitorSmartphoneIcon,
   PaletteIcon,
+  Sparkles,
   TagIcon,
   TerminalSquare,
   User,
@@ -29,6 +32,7 @@ import { isSettingsTabOffered } from '@/config/routes/settings';
 import { useElectronStore } from '@/store/electron';
 import { electronSyncSelectors } from '@/store/electron/selectors';
 import { SettingsTabs } from '@/store/global/initialState';
+import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { userProfileSelectors } from '@/store/user/slices/auth/selectors';
 
@@ -64,6 +68,7 @@ export const useCategory = () => {
   const { t: tAuth } = useTranslation('auth');
   const { t: tLabs } = useTranslation('labs');
   const { t: tSubscription } = useTranslation('subscription');
+  const { showProvider } = useServerConfigStore(featureFlagsSelectors);
   const [avatar, username] = useUserStore((s) => [
     userProfileSelectors.userAvatar(s),
     userProfileSelectors.nickName(s),
@@ -133,6 +138,26 @@ export const useCategory = () => {
       // 执行环境与 Agent — the agent plus the runtime it executes in.
       {
         items: [
+          // Per-agent configuration home (General / Runtime / Model / Tools &
+          // Permissions / Environment / Advanced) — exiled from the work
+          // surface so the agent page stays an instant workbench.
+          offered(SettingsTabs.Agents) && {
+            icon: BotMessageSquareIcon,
+            key: SettingsTabs.Agents,
+            label: t('tab.agents'),
+          },
+          // Provider settings should not depend on Advanced tools: new users may need
+          // non-LobeHub providers, and desktop users often bring their own API keys.
+          showProvider && {
+            icon: Brain,
+            key: SettingsTabs.Provider,
+            label: t('tab.provider'),
+          },
+          {
+            icon: Sparkles,
+            key: SettingsTabs.ServiceModel,
+            label: t('tab.serviceModel'),
+          },
           {
             icon: BrainCircuit,
             key: SettingsTabs.Memory,
@@ -270,7 +295,7 @@ export const useCategory = () => {
         title: t('group.developer'),
       },
     ].filter((group) => group.items.length > 0);
-  }, [t, tAuth, tLabs, tSubscription, capabilityContext, avatarUrl, username]);
+  }, [t, tAuth, tLabs, tSubscription, capabilityContext, avatarUrl, username, showProvider]);
 
   return categoryGroups;
 };

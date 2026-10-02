@@ -60,12 +60,14 @@ const ALL_CATEGORIES: TaskWorkflowCategory[] = [
 ];
 
 describe('TaskWorkflowBadge', () => {
-  it('does not invent a business state for a local-only task', () => {
+  it('draws the category mark for a local-only task — no provider link needed', () => {
+    // `workflowCategory` IS the Issue Status; a task without a linked
+    // `workflowStateId` still renders its canonical category mark.
     const { container } = render(
       <TaskWorkflowBadge executionStatus={'running'} workflowCategory={'in_progress'} />,
     );
 
-    expect(container).toBeEmptyDOMElement();
+    expect(container.querySelector('[data-task-workflow-state="in_progress"]')).toBeInTheDocument();
   });
 
   it('keeps external Done separate from an unverified delivery', () => {

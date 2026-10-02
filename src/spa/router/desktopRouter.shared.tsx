@@ -9,6 +9,7 @@ import {
   LayoutPanelTopIcon,
   LibraryBigIcon,
   Mic2,
+  Settings,
   SquarePlay,
 } from 'lucide-react';
 import {
@@ -20,6 +21,7 @@ import {
   Suspense,
 } from 'react';
 import type { RouteObject } from 'react-router';
+import { Navigate, useParams } from 'react-router';
 
 import {
   BusinessDesktopRoutesWithMainLayout,
@@ -62,6 +64,7 @@ import {
   agentStatisticsRouteMeta,
 } from '@/routes/(main)/agent/features/routeMeta';
 import {
+  groupIndexRouteMeta,
   groupPermissionRouteMeta,
   groupProfileRouteMeta,
   groupRouteMeta,
@@ -87,6 +90,17 @@ import { SettingsTabs } from '@/store/global/initialState';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
 
 const LazyResourceCategorySkeleton = lazy(() => import('@/features/ResourceHome/Skeleton'));
+
+/**
+ * `/agent/:aid/profile` → `/settings/agents/:aid`. The profile surface moved
+ * under Settings → Agents (config exile); deep links and the sidebar agent
+ * switcher keep landing on it. `redirectElement` can't interpolate the `:aid`
+ * param, so this reads it explicitly.
+ */
+const AgentProfileRedirect = () => {
+  const { aid } = useParams();
+  return <Navigate replace to={`/settings/agents/${aid ?? ''}`} />;
+};
 
 export const ResourceCategorySkeleton = (props: RouteSkeletonProps) => (
   <Suspense fallback={null}>
@@ -236,10 +250,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
             path: 'goal/:goalId',
           },
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/profile'),
-              'Desktop > Chat > Profile',
-            ),
+            element: <AgentProfileRedirect />,
             handle: { meta: agentProfileRouteMeta },
             path: 'profile',
           },
@@ -382,7 +393,15 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
-        element: redirectElement('..'),
+        // `/group` is the top-level Groups destination: it resolves to the
+        // most recent group's conversation, or a create entry when the account
+        // has none.
+        element: dynamicElement(
+          () => import('@/routes/(main)/group/features/GroupIndex'),
+          'Desktop > Group > Index',
+          { preloadId: 'group' },
+        ),
+        handle: { meta: groupIndexRouteMeta },
         index: true,
       },
       {
@@ -526,15 +545,68 @@ export const sharedMainAreaChildren: RouteObject[] = [
 
   // Memory routes
   //
-  // The browsing layers — home, identities, contexts, experiences, activities —
-  // are retired. What survives is the manager the user needs in order to read,
-  // correct and delete what was remembered about them, so the index keeps that
-  // reachable instead of falling through to the catch-all.
+  // Legacy browsing stays available during the Prime experience shadow rollout.
   {
     children: [
       {
-        element: redirectElement('preferences'),
+        element: redirectElement('home'),
         index: true,
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/home'),
+          'Desktop > Memory > Home',
+          { preloadId: 'memory' },
+        ),
+        path: 'home',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/identities'),
+          'Desktop > Memory > Identities',
+          { preloadId: 'memory' },
+        ),
+        path: 'identities',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/contexts'),
+          'Desktop > Memory > Contexts',
+          { preloadId: 'memory' },
+        ),
+        path: 'contexts',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/experiences'),
+          'Desktop > Memory > Experiences',
+          { preloadId: 'memory' },
+        ),
+        path: 'experiences',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/activities'),
+          'Desktop > Memory > Activities',
+          { preloadId: 'memory' },
+        ),
+        path: 'activities',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/search'),
+          'Desktop > Memory > Search',
+          { preloadId: 'memory' },
+        ),
+        path: 'search',
+      },
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/memory/prime'),
+          'Desktop > Memory > Prime',
+          { preloadId: 'memory' },
+        ),
+        path: 'prime',
       },
       {
         element: dynamicElement(
@@ -554,9 +626,13 @@ export const sharedMainAreaChildren: RouteObject[] = [
       { preloadId: 'memory' },
     ),
     errorElement: <ErrorBoundary />,
-    // On the parent rather than the index child: the index only redirects, so
-    // this is the deepest meta `/memory` and `/memory/preferences` resolve to.
-    handle: { meta: routeMeta({ Skeleton: MemorySkeleton }) },
+    handle: {
+      meta: routeMeta({
+        icon: BrainCircuit,
+        titleKey: 'navigation.memory',
+        Skeleton: MemorySkeleton,
+      }),
+    },
     path: 'memory',
   },
 
@@ -772,13 +848,35 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
         element: redirectElement('/settings/profile'),
         index: true,
       },
-      // Retired LLM Provider surface — legacy deep-links land on the settings root.
+      // Provider routes with nested structure
       {
-        element: redirectElement('/settings'),
+        children: [
+          {
+            element: redirectElement('/settings/provider/all'),
+            index: true,
+          },
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderDetailPage),
+              'Desktop > Settings > Provider > Detail',
+            ),
+            handle: {
+              meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
+            },
+            path: ':providerId',
+          },
+        ],
+        element: dynamicElement(
+          () => import('@/routes/(main)/settings/provider').then((m) => m.ProviderLayout),
+          'Desktop > Settings > Provider > Layout',
+        ),
+        handle: {
+          meta: routeMeta({ icon: Settings, titleKey: 'navigation.provider' }),
+        },
         path: 'provider',
       },
       {
-        element: redirectElement('/settings'),
+        element: redirectElement('/settings/provider'),
         path: 'provider/:providerId',
       },
       {
@@ -792,6 +890,17 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
       {
         element: redirectElement('/settings/credential'),
         path: 'creds',
+      },
+      // Literal `agents` index — required because `/:workspaceSlug/agents`
+      // (plus its index-route bonus) out-scores `settings/:tab`, which would
+      // otherwise parse "settings" as a workspace slug and 404 the section.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/settings'),
+          'Desktop > Settings > Agents',
+        ),
+        handle: { meta: settingsRouteMeta, settingsTab: SettingsTabs.Agents },
+        path: 'agents',
       },
       // Other settings tabs
       {

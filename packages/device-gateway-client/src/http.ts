@@ -236,12 +236,14 @@ export class GatewayHttpClient {
   async dispatchAgentRun(params: {
     agentType: string;
     assistantMessageId: string;
-    /** Resolved `lh hetero exec` wrapper args. */
+    /** Resolved `orvilo hetero exec` wrapper args. */
     args?: string[];
     /** Server-backed builtin tool surface the device mounts on its per-run MCP server. */
     builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
     deviceId?: string;
+    /** Server-minted spawn env (e.g. BYOK credentials) merged into the run's process env. */
+    env?: Record<string, string>;
     /**
      * Server-side admission idempotency key (always the operationId). Relayed
      * to the device so a retried `agent_run_request` cannot spawn a duplicate
@@ -266,7 +268,7 @@ export class GatewayHttpClient {
      * Topic/run workspace for device-side ingest. Distinct from
      * {@link workspaceId}, which routes the request to a device pool. A
      * workspace topic dispatched to a personal device still needs this so
-     * `lh hetero exec` can write back under the topic's scope.
+     * `orvilo hetero exec` can write back under the topic's scope.
      */
     ingestWorkspaceId?: string;
   }): Promise<{

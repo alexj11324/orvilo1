@@ -10,6 +10,7 @@ import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { processTaskDispatchRecovery, sweepTaskDispatchRecovery } from './index';
 
 const mocks = vi.hoisted(() => ({
+  abandonRecovery: vi.fn(),
   claimForRecovery: vi.fn(),
   findById: vi.fn(),
   findLatestAssistantByOperationId: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock('@/database/models/taskDispatch', () => ({
   TaskDispatchModel: Object.assign(
     vi.fn(function () {
       return {
+        abandonRecovery: mocks.abandonRecovery,
         claimForRecovery: mocks.claimForRecovery,
         releaseRecovery: mocks.releaseRecovery,
       };
@@ -57,6 +59,7 @@ const claim = () => ({
     generation: 3,
     id: 'dispatch-1',
     operationId: 'operation-1',
+    recoveryAttempts: 0,
     taskId: 'task-1',
   },
   fence: 4,
@@ -73,7 +76,7 @@ const claim = () => ({
   },
 });
 
-const operation = (status: string) => ({
+const operation = (status: string, overrides: Record<string, unknown> = {}) => ({
   appContext: {
     dispatchFence: 4,
     dispatchId: 'dispatch-1',
@@ -83,11 +86,14 @@ const operation = (status: string) => ({
   status,
   taskId: 'task-1',
   topicId: 'topic-1',
+  updatedAt: new Date(),
+  ...overrides,
 });
 
 describe('task dispatch recovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.abandonRecovery.mockResolvedValue({ dispatch: { id: 'dispatch-1' }, topicId: 'topic-1' });
     mocks.claimForRecovery.mockResolvedValue(claim());
     mocks.findLatestAssistantByOperationId.mockResolvedValue({ content: 'Recovered result' });
     mocks.onTopicComplete.mockResolvedValue(undefined);
@@ -155,6 +161,51 @@ describe('task dispatch recovery', () => {
     expect(mocks.onTopicComplete).not.toHaveBeenCalled();
   });
 
+  it('counts a stale running operation toward the bound instead of re-arming it', async () => {
+    mocks.findById.mockResolvedValue(
+      operation('running', { updatedAt: new Date(Date.now() - 10 * 60 * 1000) }),
+    );
+
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        retryMs: 1500,
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({
+      outcome: 'retry',
+      reason: 'operation_stale:running',
+    });
+
+    expect(mocks.releaseRecovery).toHaveBeenCalledWith(
+      expect.objectContaining({
+        phase: 'outcome_unknown',
+        reason: 'operation_stale:running',
+        retryAfterMs: 1500,
+      }),
+    );
+    expect(mocks.updateHeartbeat).not.toHaveBeenCalled();
+    expect(mocks.onTopicComplete).not.toHaveBeenCalled();
+  });
+
+  it('keeps re-arming a running operation whose lease is still being touched', async () => {
+    mocks.findById.mockResolvedValue(operation('running'));
+
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toMatchObject({ outcome: 'active', operationId: 'operation-1' });
+
+    expect(mocks.releaseRecovery).toHaveBeenCalledWith(
+      expect.objectContaining({ phase: 'running', reason: 'runtime_running' }),
+    );
+    expect(mocks.updateHeartbeat).toHaveBeenCalledWith('task-1');
+  });
+
   it('keeps an unknown outcome visible when the operation row is missing', async () => {
     mocks.findById.mockResolvedValue(null);
 
@@ -194,6 +245,30 @@ describe('task dispatch recovery', () => {
       reason: 'operation_identity_mismatch:operation-1',
     });
     expect(mocks.onTopicComplete).not.toHaveBeenCalled();
+  });
+
+  it('abandons a dispatch whose reconcile retries hit the bound', async () => {
+    const exhausted = claim();
+    exhausted.dispatch.recoveryAttempts = 60;
+    mocks.claimForRecovery.mockResolvedValue(exhausted);
+
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toEqual({ dispatchId: 'dispatch-1', outcome: 'abandoned' });
+
+    expect(mocks.abandonRecovery).toHaveBeenCalledWith({
+      dispatchId: 'dispatch-1',
+      fence: 4,
+      generation: 3,
+      owner: expect.stringMatching(/^task-recovery:/),
+      reason: 'recovery_attempts_exhausted:60',
+    });
+    expect(mocks.findById).not.toHaveBeenCalled();
+    expect(mocks.releaseRecovery).not.toHaveBeenCalled();
   });
 
   it('sweeps each expired candidate in its own workspace scope', async () => {

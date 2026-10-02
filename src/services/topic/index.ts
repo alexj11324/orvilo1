@@ -37,6 +37,13 @@ export interface TopicListItem extends ChatTopic {
   runStartedAt?: Date | null;
 }
 
+/** One page of the workspace conversation feed (`queryTopics` paged form). */
+export interface TopicListPage {
+  items: TopicListItem[];
+  /** Opaque `updatedAt|id` cursor for the next page; null at the end of the list. */
+  nextCursor: string | null;
+}
+
 export type TopicBatchDeleteScope = 'own' | 'workspace';
 
 type OnboardingSessionMetadataPatch = Partial<NonNullable<ChatTopicMetadata['onboardingSession']>>;
@@ -55,7 +62,9 @@ export class TopicService {
   };
 
   batchCreateTopics = (importTopics: ChatTopic[]): Promise<BatchTaskResult> => {
-    return lambdaClient.topic.batchCreateTopics.mutate(importTopics);
+    return lambdaClient.topic.batchCreateTopics.mutate(
+      importTopics.map((topic) => ({ ...topic, agentId: topic.agentId ?? undefined })),
+    );
   };
 
   cloneTopic = (id: string, newTitle?: string): Promise<string> => {
@@ -98,6 +107,7 @@ export class TopicService {
       includeTriggers: params.includeTriggers,
       isInbox: params.isInbox,
       pageSize: params.pageSize,
+      scope: params.scope,
       sortBy: params.sortBy,
       triggers: params.triggers,
       withDetails: params.withDetails,
@@ -111,6 +121,27 @@ export class TopicService {
     withLastMessage?: boolean;
   }): Promise<TopicListItem[]> => {
     return lambdaClient.topic.queryTopics.query(params) as any;
+  };
+
+  /**
+   * Cursor-paginated form of `queryTopics` — one page of the workspace
+   * conversation feed plus the opaque cursor to continue from. Feeds that load
+   * more on scroll consume this; `nextCursor: null` marks the end of the list.
+   */
+  queryTopicsPage = (params: {
+    /** Opaque `updatedAt|id` cursor from a previous page's `nextCursor`. */
+    cursor?: string;
+    limit?: number;
+    statuses?: string[];
+    /** Pull each topic's last assistant reply (truncated) alongside the row. */
+    withLastMessage?: boolean;
+  }): Promise<TopicListPage> => {
+    return lambdaClient.topic.queryTopics.query(params).then((result: unknown) =>
+      // A server that predates the paged contract answers the legacy flat
+      // array instead of the envelope — normalize it to one complete page so
+      // deploy order can never empty the feed.
+      Array.isArray(result) ? { items: result, nextCursor: null } : result,
+    ) as Promise<TopicListPage>;
   };
 
   countTopics = async (params?: {
@@ -145,16 +176,25 @@ export class TopicService {
     return result.data.hasFiles;
   };
 
-  searchTopics = (keywords: string, agentId?: string, groupId?: string): Promise<ChatTopic[]> => {
+  searchTopics = (
+    keywords: string,
+    agentId?: string,
+    groupId?: string,
+    scope?: 'workspace',
+  ): Promise<ChatTopic[]> => {
     return lambdaClient.topic.searchTopics.query({
       agentId,
       groupId,
       keywords,
+      scope,
     }) as any;
   };
 
   updateTopic = (id: string, data: Partial<ChatTopic>) => {
-    return lambdaClient.topic.updateTopic.mutate({ id, value: data });
+    return lambdaClient.topic.updateTopic.mutate({
+      id,
+      value: { ...data, agentId: data.agentId ?? undefined },
+    });
   };
 
   updateTopicModel = (

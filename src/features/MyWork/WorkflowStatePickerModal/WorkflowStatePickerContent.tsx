@@ -94,7 +94,7 @@ export const WorkflowStatePickerContent = ({
   return (
     <div className="flex flex-col">
       <div className={cn('flex flex-col', styles.content)} style={{ gap: 8 }}>
-        <h3 className="text-sm font-bold">{t('myWork.pickWorkflowState')}</h3>
+        <h3 className="text-sm font-semibold">{t('myWork.pickWorkflowState')}</h3>
         <span className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
           {t('myWork.pickWorkflowStateDescription')}
         </span>

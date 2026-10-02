@@ -4,8 +4,8 @@ import { registerOpInspectCommand } from './inspect';
 import { registerOpListCommand } from './list';
 
 /**
- * `lh trace op` — traces of a single agent operation. Sibling scopes (goal,
- * task) get their own group under `lh trace` rather than more flags here.
+ * `orvilo trace op` — traces of a single agent operation. Sibling scopes (goal,
+ * task) get their own group under `orvilo trace` rather than more flags here.
  */
 export function registerOpCommand(parent: Command) {
   const op = parent.command('op').description('Traces of a single agent operation');

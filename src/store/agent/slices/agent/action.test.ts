@@ -1342,6 +1342,41 @@ describe('AgentSlice Actions', () => {
       expect(useAgentStore.getState().agentMap['agent-private']).toBeUndefined();
     });
 
+    it('should mark agentNotFoundMap on a NOT_FOUND fetch error instead of recording it', async () => {
+      // Workspace-scoped queries on an out-of-scope agent reject (rather than
+      // resolve null) — e.g. a workspace agent opened on a personal-scope
+      // route. That's the same terminal state as the null path and must reach
+      // the 404 guard, not the raw TRPCClientError line above the composer.
+      const notFoundError = Object.assign(new Error('Resource not found'), {
+        data: { code: 'NOT_FOUND', httpStatus: 404 },
+      });
+      vi.mocked(agentService.getAgentConfigById).mockRejectedValueOnce(notFoundError);
+
+      renderHook(() => useAgentStore().useFetchAgentConfig(true, 'agent-ws'), {
+        wrapper: withSWR,
+      });
+
+      await waitFor(() => expect(useAgentStore.getState().agentNotFoundMap['agent-ws']).toBe(true));
+      expect(useAgentStore.getState().agentConfigErrorMap['agent-ws']).toBeUndefined();
+      expect(useAgentStore.getState().agentMap['agent-ws']).toBeUndefined();
+    });
+
+    it('should keep recording non-404 fetch errors in agentConfigErrorMap', async () => {
+      const error = Object.assign(new Error('server exploded'), {
+        data: { code: 'INTERNAL_SERVER_ERROR', httpStatus: 500 },
+      });
+      vi.mocked(agentService.getAgentConfigById).mockRejectedValueOnce(error);
+
+      renderHook(() => useAgentStore().useFetchAgentConfig(true, 'agent-500'), {
+        wrapper: withSWR,
+      });
+
+      await waitFor(() =>
+        expect(useAgentStore.getState().agentConfigErrorMap['agent-500']).toBe('server exploded'),
+      );
+      expect(useAgentStore.getState().agentNotFoundMap['agent-500']).toBeUndefined();
+    });
+
     it('should drop the cached config when a previously loaded agent turns not-found', async () => {
       // Loaded once, then the owner flips it back to private: the stale
       // title/avatar in agentMap must not outlive the 404 state.

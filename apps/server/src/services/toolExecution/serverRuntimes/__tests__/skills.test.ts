@@ -316,7 +316,7 @@ describe('skillsRuntime', () => {
     expect(result.state).toMatchObject({ executionEnv: 'sandbox' });
   });
 
-  it('passes workspace scope when preprocessing sandbox lh commands', async () => {
+  it('passes workspace scope when preprocessing sandbox orvilo commands', async () => {
     mocks.preprocessLhCommand.mockResolvedValueOnce({
       command: 'ORVILO_WORKSPACE_ID=workspace-1 npx -y @orvilo/cli agent edit agt_123',
       isLhCommand: true,
@@ -332,10 +332,10 @@ describe('skillsRuntime', () => {
       workspaceId: 'workspace-1',
     });
 
-    await runtime.runCommand({ command: 'lh agent edit agt_123 -s "new prompt"' });
+    await runtime.runCommand({ command: 'orvilo agent edit agt_123 -s "new prompt"' });
 
     expect(mocks.preprocessLhCommand).toHaveBeenCalledWith(
-      'lh agent edit agt_123 -s "new prompt"',
+      'orvilo agent edit agt_123 -s "new prompt"',
       'user-1',
       'workspace-1',
     );
@@ -344,7 +344,7 @@ describe('skillsRuntime', () => {
     });
   });
 
-  it('recovers workspace scope for sandbox lh commands when context lost it', async () => {
+  it('recovers workspace scope for sandbox orvilo commands when context lost it', async () => {
     mocks.preprocessLhCommand.mockResolvedValueOnce({
       command: 'ORVILO_WORKSPACE_ID=workspace-1 npx -y @orvilo/cli agent edit agt_123',
       isLhCommand: true,
@@ -362,13 +362,13 @@ describe('skillsRuntime', () => {
       userId: 'user-1',
     });
 
-    await runtime.runCommand({ command: 'lh agent edit agt_123 -s "new prompt"' });
+    await runtime.runCommand({ command: 'orvilo agent edit agt_123 -s "new prompt"' });
 
     expect(mocks.resolveContentWorkspaceId).toHaveBeenCalledWith(
       expect.objectContaining({ agentId: 'agent-1' }),
     );
     expect(mocks.preprocessLhCommand).toHaveBeenCalledWith(
-      'lh agent edit agt_123 -s "new prompt"',
+      'orvilo agent edit agt_123 -s "new prompt"',
       'user-1',
       'workspace-1',
     );
@@ -376,12 +376,12 @@ describe('skillsRuntime', () => {
 
   // The client-side executor (routers/tools/market.ts) has always preprocessed
   // execScript too; on Cloud, where gateway mode routes through this runtime
-  // instead, `lh` inside execScript reached the sandbox raw — no CLI, no
+  // instead, `orvilo` inside execScript reached the sandbox raw — no CLI, no
   // credentials, no workspace scope.
-  it('preprocesses lh commands passed to execScript, not just runCommand', async () => {
+  it('preprocesses orvilo commands passed to execScript, not just runCommand', async () => {
     mocks.preprocessLhCommand.mockResolvedValueOnce({
       command:
-        'lh() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent edit agt_123 -t x',
+        'orvilo() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent edit agt_123 -t x',
       isLhCommand: true,
       skipSkillLookup: true,
     });
@@ -397,12 +397,12 @@ describe('skillsRuntime', () => {
 
     await runtime.execScript({
       activatedSkills: [],
-      command: 'lh agent edit agt_123 -t x',
+      command: 'orvilo agent edit agt_123 -t x',
       description: 'Edit myself',
     });
 
     expect(mocks.preprocessLhCommand).toHaveBeenCalledWith(
-      'lh agent edit agt_123 -t x',
+      'orvilo agent edit agt_123 -t x',
       'user-1',
       'workspace-1',
     );
@@ -410,14 +410,14 @@ describe('skillsRuntime', () => {
       'execScript',
       expect.objectContaining({
         command:
-          'lh() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent edit agt_123 -t x',
+          'orvilo() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent edit agt_123 -t x',
       }),
     );
   });
 
   it('surfaces a preprocessing auth failure from execScript instead of running raw', async () => {
     mocks.preprocessLhCommand.mockResolvedValueOnce({
-      command: 'lh agent list',
+      command: 'orvilo agent list',
       error: 'Failed to authenticate for CLI execution',
       isLhCommand: true,
       skipSkillLookup: true,
@@ -433,7 +433,7 @@ describe('skillsRuntime', () => {
 
     const result = await runtime.execScript({
       activatedSkills: [],
-      command: 'lh agent list',
+      command: 'orvilo agent list',
       description: 'List agents',
     });
 
@@ -441,7 +441,7 @@ describe('skillsRuntime', () => {
     expect(result.state).toMatchObject({ success: false });
   });
 
-  it('scopes device-routed execScript lh commands to the run workspace', async () => {
+  it('scopes device-routed execScript orvilo commands to the run workspace', async () => {
     mocks.buildDeviceLhEnv.mockReturnValue({ ORVILO_WORKSPACE_ID: 'workspace-1' });
     mocks.resolveContentWorkspaceId.mockResolvedValue('workspace-1');
     mocks.executeToolCall.mockResolvedValue({
@@ -463,7 +463,7 @@ describe('skillsRuntime', () => {
 
     await runtime.execScript({
       activatedSkills: [],
-      command: 'lh agent edit agt_123 -t x',
+      command: 'orvilo agent edit agt_123 -t x',
       description: 'Edit myself',
     });
 

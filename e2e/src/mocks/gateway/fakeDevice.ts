@@ -1,9 +1,9 @@
 /**
- * Synthetic `lh hetero exec` device turn for E2E.
+ * Synthetic `orvilo hetero exec` device turn for E2E.
  *
  * Real flow: the Orvilo server POSTs `/api/device/agent/run` (an
  * `agent_run_request`) to the agent gateway, which relays it to a connected
- * device; the device's `lh hetero exec` process streams `AgentStreamEvent`s
+ * device; the device's `orvilo hetero exec` process streams `AgentStreamEvent`s
  * back through tRPC `aiAgent.heteroIngest` and terminates with
  * `aiAgent.heteroFinish`. There is no in-process engine anymore, so a web E2E
  * run without a device lands on the "No device bound" stub.
@@ -287,7 +287,7 @@ export const runSyntheticHeteroTurn = async (params: {
     );
   } catch (error) {
     // Surface the failure on the assistant message instead of stranding the
-    // operation — mirrors `lh` reporting a process-level abort.
+    // operation — mirrors `orvilo` reporting a process-level abort.
     console.error('[e2e-gateway] synthetic hetero turn failed:', error);
     try {
       await trpcWithRetry(

@@ -172,7 +172,7 @@ describe('useTaskItemContextMenu', () => {
     expect(mocks.copyToClipboard).toHaveBeenCalledWith('https://example.com/task/T-1');
   });
 
-  it('runs a member-assigned task without replacing its assignee with the inbox agent', async () => {
+  it('does not offer a manual run that would skip the workflow status', async () => {
     const { result } = renderHook(() =>
       useTaskItemContextMenu({
         assigneeUserId: 'user-1',
@@ -186,12 +186,8 @@ describe('useTaskItemContextMenu', () => {
       (item) => item && typeof item === 'object' && 'key' in item && item.key === 'runNow',
     );
 
-    await (runNowItem as { onClick: (info: unknown) => Promise<void> }).onClick({
-      domEvent: { stopPropagation: vi.fn() },
-    });
-
-    expect(mocks.updateTask).not.toHaveBeenCalled();
-    expect(mocks.runTask).toHaveBeenCalledWith('T-1');
+    expect(runNowItem).toBeUndefined();
+    expect(mocks.runTask).not.toHaveBeenCalled();
   });
 
   it('routes the keyboard-shortcut submenu selection through @/libs/contextMenu', () => {
@@ -222,7 +218,7 @@ describe('useTaskItemContextMenu', () => {
     expect(mocks.closeContextMenu).toHaveBeenCalledTimes(1);
   });
 
-  it('offers the board columns in order — triage shown but unreachable for an unlinked task', () => {
+  it('offers the seven workflow columns in order — execution states are never picks', () => {
     const { result } = renderHook(() =>
       useTaskItemContextMenu({
         identifier: 'T-1',
@@ -236,28 +232,21 @@ describe('useTaskItemContextMenu', () => {
     ) as { children: Array<{ disabled?: boolean; key: string; label?: string }> };
     const children = statusItem.children;
 
-    // The Kanban board's columns, 1:1 — triage leads, never dropped.
+    // The Issue board's columns, 1:1 — triage leads; no running/needsInput
+    // execution folds and no `st:` keys remain in the Issue status menu.
     expect(children.map((child) => child.key)).toEqual([
       'status-triage',
       'status-backlog',
       'status-todo',
-      'status-running',
-      'status-needsInput',
+      'status-in_progress',
+      'status-in_review',
       'status-done',
       'status-canceled',
     ]);
     expect(children[0].label).toBe('taskList.kanban.triage');
-    // The workflow-only columns stay visible but disabled, matching the
-    // reachability a board drop obeys for a task without workflow state.
-    expect(children.map((child) => Boolean(child.disabled))).toEqual([
-      true,
-      false,
-      true,
-      true,
-      false,
-      false,
-      false,
-    ]);
+    // Every row is a workflow move — a category write goes through the same
+    // CAS command a board drop commits, linked or not.
+    expect(children.every((child) => !child.disabled)).toBe(true);
   });
 
   it('lets a workflow-linked task pick triage — written as workflowCategory', async () => {

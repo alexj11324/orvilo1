@@ -1,15 +1,15 @@
 # Skill & Plugin Commands
 
-## Skill Management (`lh skill`)
+## Skill Management (`orvilo skill`)
 
 Manage agent skills (custom instructions and capabilities).
 
 **Source**: `apps/cli/src/commands/skill.ts`
 
-### `lh skill list`
+### `orvilo skill list`
 
 ```bash
-lh skill list [--source [--json [fields]] < source > ]
+orvilo skill list [--source [--json [fields]] < source > ]
 ```
 
 | Option              | Description                         |
@@ -18,18 +18,18 @@ lh skill list [--source [--json [fields]] < source > ]
 
 **Table columns**: ID, NAME, DESCRIPTION, SOURCE, IDENTIFIER
 
-### `lh skill view <id>`
+### `orvilo skill view <id>`
 
 ```bash
-lh skill view [fields]] < id > [--json
+orvilo skill view [fields]] < id > [--json
 ```
 
 **Displays**: Name, description, source, identifier, content.
 
-### `lh skill create`
+### `orvilo skill create`
 
 ```bash
-lh skill create -n < name > -d < desc > -c < content > [-i < identifier > ]
+orvilo skill create -n < name > -d < desc > -c < content > [-i < identifier > ]
 ```
 
 | Option                     | Description                         | Required |
@@ -39,40 +39,40 @@ lh skill create -n < name > -d < desc > -c < content > [-i < identifier > ]
 | `-c, --content <content>`  | Skill content (prompt/instructions) | Yes      |
 | `-i, --identifier <id>`    | Custom identifier                   | No       |
 
-### `lh skill edit <id>`
+### `orvilo skill edit <id>`
 
 ```bash
-lh skill edit [-n [-d < id > [-c < content > ] < name > ] < desc > ]
+orvilo skill edit [-n [-d < id > [-c < content > ] < name > ] < desc > ]
 ```
 
-### `lh skill delete <id>`
+### `orvilo skill delete <id>`
 
 ```bash
-lh skill delete < id > [--yes]
+orvilo skill delete < id > [--yes]
 ```
 
-### `lh skill search <query>`
+### `orvilo skill search <query>`
 
 ```bash
-lh skill search [fields]] < query > [--json
+orvilo skill search [fields]] < query > [--json
 ```
 
-### `lh skill install <source>` (alias: `lh skill i`)
+### `orvilo skill install <source>` (alias: `orvilo skill i`)
 
 Install a skill. Auto-detects source type from the input:
 
 ```bash
 # GitHub (URL or owner/repo shorthand)
-lh skill install aspectlylabs/skill-repo
-lh skill install https://github.com/aspectlylabs/skill-repo
-lh skill install aspectlylabs/skill-repo --branch dev
+orvilo skill install aspectlylabs/skill-repo
+orvilo skill install https://github.com/aspectlylabs/skill-repo
+orvilo skill install aspectlylabs/skill-repo --branch dev
 
 # ZIP URL
-lh skill install https://example.com/skill.zip
+orvilo skill install https://example.com/skill.zip
 
 # Marketplace identifier
-lh skill install my-cool-skill
-lh skill i my-cool-skill
+orvilo skill install my-cool-skill
+orvilo skill i my-cool-skill
 ```
 
 | Option              | Description               | Notes    |
@@ -87,46 +87,46 @@ lh skill i my-cool-skill
 
 ### Resource Commands
 
-#### `lh skill resources <id>`
+#### `orvilo skill resources <id>`
 
 List files/resources within a skill.
 
 ```bash
-lh skill resources [fields]] < id > [--json
+orvilo skill resources [fields]] < id > [--json
 ```
 
 **Displays**: Path, type, size.
 
-#### `lh skill read-resource <id> <path>`
+#### `orvilo skill read-resource <id> <path>`
 
 Read a specific resource file from a skill.
 
 ```bash
-lh skill read-resource <skillId> <path>
+orvilo skill read-resource <skillId> <path>
 ```
 
 **Output**: File content or JSON metadata.
 
 ---
 
-## Plugin Management (`lh plugin`)
+## Plugin Management (`orvilo plugin`)
 
 Install and manage plugins (external tool integrations).
 
 **Source**: `apps/cli/src/commands/plugin.ts`
 
-### `lh plugin list`
+### `orvilo plugin list`
 
 ```bash
-lh plugin list [--json [fields]]
+orvilo plugin list [--json [fields]]
 ```
 
 **Table columns**: ID, IDENTIFIER, TYPE, TITLE
 
-### `lh plugin install`
+### `orvilo plugin install`
 
 ```bash
-lh plugin install -i [--settings < identifier > --manifest < json > [--type < type > ] < json > ]
+orvilo plugin install -i [--settings < identifier > --manifest < json > [--type < type > ] < json > ]
 ```
 
 | Option                  | Description                | Required               |
@@ -136,14 +136,14 @@ lh plugin install -i [--settings < identifier > --manifest < json > [--type < ty
 | `--type <type>`         | `plugin` or `customPlugin` | No (default: `plugin`) |
 | `--settings <json>`     | Plugin settings JSON       | No                     |
 
-### `lh plugin uninstall <id>`
+### `orvilo plugin uninstall <id>`
 
 ```bash
-lh plugin uninstall < id > [--yes]
+orvilo plugin uninstall < id > [--yes]
 ```
 
-### `lh plugin update <id>`
+### `orvilo plugin update <id>`
 
 ```bash
-lh plugin update [--settings < id > [--manifest < json > ] < json > ]
+orvilo plugin update [--settings < id > [--manifest < json > ] < json > ]
 ```

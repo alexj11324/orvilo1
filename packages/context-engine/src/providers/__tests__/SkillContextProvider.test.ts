@@ -120,7 +120,7 @@ describe('SkillContextProvider', () => {
     const skills: SkillMeta[] = [
       {
         activated: true,
-        content: '<task_guides>\nUse `lh task` to manage tasks.\n</task_guides>',
+        content: '<task_guides>\nUse `orvilo task` to manage tasks.\n</task_guides>',
         description: 'Task management via CLI',
         identifier: 'task',
         name: 'Task',

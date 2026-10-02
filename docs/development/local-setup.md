@@ -44,7 +44,7 @@ SPA ports are auto-allocated and persisted in
 `.records/env/agent-testing-ports.env` — read that file for the actual ports.
 
 A hand-rolled `.env` is the alternative: copy `.env.example.development` — same
-contract (APP\_URL 3010, `orvilo` DB, Redis 6379, S3 mock) — and the bootstrap
+contract (APP_URL 3010, `orvilo` DB, Redis 6379, S3 mock) — and the bootstrap
 steps aside because a root `.env` exists.
 
 ## Run modes
@@ -90,9 +90,9 @@ The Docker e2e path uses different ports on purpose — app `:3006`, Postgres
 
 ## Troubleshooting
 
-- **Migrations fail creating bm25 / pg\_search indexes** — brew `postgresql@17`
+- **Migrations fail creating bm25 / pg_search indexes** — brew `postgresql@17`
   does not ship `pg_search`, so those migrations error out. Apply the
-  non-pg\_search migrations, then insert marker rows into
+  non-pg_search migrations, then insert marker rows into
   `drizzle.__drizzle_migrations` (`hash` = sha256 of the `.sql` file contents,
   `created_at` = the journal entry's `when`). The full procedure — including
   the marker-ordering trap that permanently skips sandwiched migrations — is in
@@ -106,3 +106,12 @@ The Docker e2e path uses different ports on purpose — app `:3006`, Postgres
   by design.
 - **Docker path only**: `Cannot connect to the Docker daemon` → start Docker
   Desktop, or switch to the brew path.
+- **MyWork routes crash on fresh load (macOS/Windows)** — a route that renders
+  the "Oops" error page only on fresh loads but works after client-side
+  navigation is usually a case-insensitive filesystem import collision: two
+  modules whose paths differ only in case + extension (e.g. `foo.ts` vs
+  `Foo.tsx`) make an extensionless specifier resolve to the wrong file, and
+  vite's preload then throws a `SyntaxError`. Give colliding helpers a
+  distinct basename (see `workQueryVirtualListModel.ts`, renamed from
+  `workQueryVirtualList.ts` for exactly this). Audit for other collisions
+  with `find src -type f \( -name '*.ts' -o -name '*.tsx' \) | sed 's/\.[^.]*$//' | tr 'A-Z' 'a-z' | sort | uniq -d`.

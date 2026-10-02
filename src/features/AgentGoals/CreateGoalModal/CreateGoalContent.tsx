@@ -509,7 +509,12 @@ const CreateGoalContent = memo<CreateGoalContentProps>((props) => {
             </>
           )}
         </div>
-        <ActionIcon className={styles.close} icon={X} onClick={close} />
+        <ActionIcon
+          className={styles.close}
+          icon={X}
+          title={t('close', { ns: 'common' })}
+          onClick={close}
+        />
       </div>
 
       {step === 'review' && (

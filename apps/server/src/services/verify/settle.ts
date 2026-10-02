@@ -1,10 +1,10 @@
 import {
   ACCEPTANCE_REVIEW_ERRORED_ERROR,
+  AEGIS_EVIDENCE_REQUIRED_ERROR,
   VERIFICATION_ERRORED_ERROR,
   VERIFICATION_FAILED_ERROR,
   VERIFICATION_UNJUDGEABLE_ERROR,
 } from '@orvilo/const/goal';
-import type { TaskStatus } from '@orvilo/types';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
@@ -15,11 +15,15 @@ import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { OrviloDatabase } from '@/database/type';
 import { scheduleGoalAdvance } from '@/server/services/goal/scheduler';
-import { TaskService } from '@/server/services/task';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { TaskResultBridgeService } from '@/server/services/taskResultBridge';
+import {
+  settleTaskExecution,
+  type VerifySettlementOutcome,
+} from '@/server/services/taskSettlement';
 
+import { evaluateAegisEvidenceRequirement } from './aegisEvidence';
 import { reviewGoalDelivery } from './goalReview';
 import { maybeAutoRepair } from './repairService';
 import { VerifyReporterService } from './reporter';
@@ -93,6 +97,7 @@ export const driveTaskFromVerify = async (
   userId: string,
   operationId: string,
   workspaceId?: string,
+  options?: { beforeCompletion?: (tx: OrviloDatabase) => Promise<boolean> },
 ): Promise<void> => {
   let leaseTimer: ReturnType<typeof setInterval> | undefined;
   let renewal = Promise.resolve();
@@ -324,6 +329,23 @@ export const driveTaskFromVerify = async (
             ? 'unjudgeable'
             : run.status;
 
+    // Aegis advisory gate (opt-in only): the run passed verify, but the agent
+    // was configured for the Aegis method pack and its completion evidence is
+    // missing or low-confidence — withhold auto-accept and route the task to
+    // the human decision gate instead of completing silently. The verify
+    // verdict stays `passed`; only the task's auto-completion is downgraded.
+    // Missing closeout → requires review, never a hard fail or a retry.
+    if (outcome === 'passed') {
+      const aegisVerdict = evaluateAegisEvidenceRequirement(op.metadata);
+      if (aegisVerdict === 'requires-review') {
+        log(
+          'verify passed but aegis evidence insufficient → task %s requires review',
+          taskOperation.taskId,
+        );
+        outcome = 'aegis_evidence_required';
+      }
+    }
+
     const currentTask = await taskModel.findById(taskOperation.taskId);
     if (
       !currentTask ||
@@ -336,10 +358,6 @@ export const driveTaskFromVerify = async (
     if (outcome === 'passed') {
       if (!op.topicId) {
         outcome = 'integration_blocked';
-        if (!(await renewTaskDrive())) return;
-        await taskModel.updateStatus(taskOperation.taskId, 'paused', {
-          error: 'Verified run is missing its delivery topic',
-        });
       } else {
         if (
           taskTopic?.operationId &&
@@ -347,10 +365,6 @@ export const driveTaskFromVerify = async (
           taskTopic.operationId !== taskOperation.id
         ) {
           outcome = 'integration_blocked';
-          if (!(await renewTaskDrive())) return;
-          await taskModel.updateStatus(taskOperation.taskId, 'paused', {
-            error: 'Verified run is no longer the active delivery generation',
-          });
         } else {
           if (!(await renewTaskDrive())) return;
           const integration = await new TaskIntegrationService(
@@ -371,10 +385,6 @@ export const driveTaskFromVerify = async (
           }
           if (integration === 'blocked') {
             outcome = 'integration_blocked';
-            if (!(await renewTaskDrive())) return;
-            await taskModel.updateStatus(taskOperation.taskId, 'paused', {
-              error: 'Verified delivery could not be published',
-            });
           }
         }
       }
@@ -386,70 +396,57 @@ export const driveTaskFromVerify = async (
       // rollup / downstream unlock). A Goal Graph Task is an ordinary task
       // here — the coordinator reads its completed status on the next tick and
       // synthesizes the finding from it.
-      if (currentTask.automationMode) {
-        // Recurring tasks are parked back at `scheduled` and re-armed by the
-        // task lifecycle. Verify accepts this run, not the lifetime schedule.
-        if (
-          currentTask.automationMode === 'schedule' &&
-          (await new TaskLifecycleService(db, userId, workspaceId).scheduleCapReached(currentTask))
-        ) {
-          if (!(await renewTaskDrive())) return;
-          const completion = completionReservationId
-            ? await new TaskService(db, userId, workspaceId).updateStatus(
-                { id: taskOperation.taskId, status: 'completed' },
-                undefined,
-                {
-                  currentStatus: currentTask.status as TaskStatus,
-                  reservationId: completionReservationId,
-                },
-                {
-                  onStatusCommitted: () => {
-                    completionReservationActive = false;
-                    completionLeaseFailure = undefined;
-                  },
-                },
-              )
-            : null;
-          if (!completion) {
-            await retireSupersededDrive();
-            return;
-          }
-          log('verify passed → capped schedule task %s completed', taskOperation.taskId);
-        } else {
-          log('verify passed → recurring task %s remains scheduled', taskOperation.taskId);
-        }
-      } else {
-        // The verify → TaskService → aiAgent → agentRuntime completion → verify
-        // cycle is safe statically since every use is call-time (inside this fn).
-        if (!(await renewTaskDrive())) return;
-        const taskService = new TaskService(db, userId, workspaceId);
-        const completionInput = {
-          expectedContract,
-          id: taskOperation.taskId,
-          status: 'completed' as const,
-        };
-        const completion = completionReservationId
-          ? await taskService.updateStatus(
-              completionInput,
-              undefined,
-              {
-                currentStatus: currentTask.status as TaskStatus,
-                reservationId: completionReservationId,
-              },
-              {
-                onStatusCommitted: () => {
-                  completionReservationActive = false;
-                  completionLeaseFailure = undefined;
-                },
-              },
-            )
-          : await taskService.updateStatus(completionInput);
-        if (!completion) {
-          await retireSupersededDrive();
-          return;
-        }
-        log('verify passed → task %s completed', taskOperation.taskId);
+      //
+      // The settle applies the policy row: 'passed' on a recurring task parks
+      // it back at `scheduled` (verify accepts the run, not the lifetime
+      // schedule) and heartbeat re-arm handles the next tick; a capped
+      // schedule run or a one-off completes to `done`.
+      const scheduleCapReached =
+        currentTask.automationMode === 'schedule'
+          ? await new TaskLifecycleService(db, userId, workspaceId).scheduleCapReached(currentTask)
+          : false;
+      if (!(await renewTaskDrive())) return;
+      const settlement = await settleTaskExecution(
+        db,
+        userId,
+        {
+          context: {
+            beforeMutation: options?.beforeCompletion,
+            // The capped-schedule branch historically carried the contract only
+            // alongside beforeCompletion — preserve that exact guard shape.
+            expectedContract:
+              currentTask.automationMode && !scheduleCapReached
+                ? options?.beforeCompletion
+                  ? expectedContract
+                  : undefined
+                : expectedContract,
+            expectedStatus: currentTask.status,
+            onStatusCommitted: () => {
+              completionReservationActive = false;
+              completionLeaseFailure = undefined;
+            },
+            reservationId: completionReservationId ?? undefined,
+            scheduleCapReached,
+            throughTaskService: !(currentTask.automationMode && !scheduleCapReached),
+          },
+          operationId,
+          taskId: taskOperation.taskId,
+          verifyOutcome: 'passed',
+        },
+        workspaceId,
+      );
+      if (!settlement.applied && settlement.skippedReason !== 'unchanged') {
+        await retireSupersededDrive();
+        return;
       }
+      log(
+        currentTask.automationMode
+          ? scheduleCapReached
+            ? 'verify passed → capped schedule task %s completed'
+            : 'verify passed → recurring task %s remains scheduled'
+          : 'verify passed → task %s completed',
+        taskOperation.taskId,
+      );
     } else {
       // Four non-pass outcomes, kept distinct so an infra error never reads as a
       // rejected delivery:
@@ -475,16 +472,37 @@ export const driveTaskFromVerify = async (
           ? VERIFICATION_UNJUDGEABLE_ERROR
           : outcome === 'review_errored'
             ? ACCEPTANCE_REVIEW_ERRORED_ERROR
-            : outcome === 'integration_blocked'
-              ? 'Delivery was verified but could not be published.'
-              : isErrored
-                ? VERIFICATION_ERRORED_ERROR
-                : VERIFICATION_FAILED_ERROR;
+            : outcome === 'aegis_evidence_required'
+              ? AEGIS_EVIDENCE_REQUIRED_ERROR
+              : outcome === 'integration_blocked'
+                ? 'Delivery was verified but could not be published.'
+                : isErrored
+                  ? VERIFICATION_ERRORED_ERROR
+                  : VERIFICATION_FAILED_ERROR;
       if (currentTask.automationMode) {
         // Mirror of the pass branch: verify judges THIS tick, not the lifetime
         // schedule. Pausing here would permanently disarm the cron (the
         // schedule query never picks `paused` tasks up again), so a recurring
-        // task keeps its schedule and the verdict stays on the run.
+        // task keeps its schedule and the verdict stays on the run — the
+        // settle restores the resting `scheduled` projection and records the
+        // attention reason.
+        if (!(await renewTaskDrive())) return;
+        await settleTaskExecution(
+          db,
+          userId,
+          {
+            context: {
+              error: pauseSummary,
+              expectedContract,
+              expectedStatus: currentTask.status,
+              reservationId: completionReservationId ?? undefined,
+            },
+            operationId,
+            taskId: taskOperation.taskId,
+            verifyOutcome: outcome as VerifySettlementOutcome,
+          },
+          workspaceId,
+        );
         log(
           isErrored
             ? 'verify errored → recurring task %s remains scheduled'
@@ -495,17 +513,22 @@ export const driveTaskFromVerify = async (
         // Verification outcomes belong to the task itself. Do not create an inbox
         // brief here: a verifier rejection/error is not a separate user todo.
         if (!(await renewTaskDrive())) return;
-        const paused = await taskModel.updateStatusForExecutionContract(
-          taskOperation.taskId,
-          'paused',
-          expectedContract,
+        const settlement = await settleTaskExecution(
+          db,
+          userId,
           {
-            error: pauseSummary,
-            runReservationExpiresAt: null,
-            runReservationId: null,
+            context: {
+              clearRunReservation: true,
+              error: pauseSummary,
+              expectedContract,
+            },
+            operationId,
+            taskId: taskOperation.taskId,
+            verifyOutcome: outcome as VerifySettlementOutcome,
           },
+          workspaceId,
         );
-        if (!paused) {
+        if (!settlement.applied) {
           await retireSupersededDrive();
           return;
         }
@@ -539,9 +562,11 @@ export const driveTaskFromVerify = async (
             ? 'Delivery passed verification but could not be published. The integration candidate was retained for recovery.'
             : outcome === 'errored' || outcome === 'review_errored'
               ? 'Verification could not be completed due to an internal error; the delivery was not evaluated. Please retry or review it manually.'
-              : outcome === 'unjudgeable'
-                ? 'Acceptance review could not judge this delivery from the captured evidence. Review it manually, or restate the check so evidence can settle it.'
-                : undefined;
+              : outcome === 'aegis_evidence_required'
+                ? 'Delivery passed verification, but the Aegis completion evidence is missing or low-confidence. Review the run, then complete or retry it manually.'
+                : outcome === 'unjudgeable'
+                  ? 'Acceptance review could not judge this delivery from the captured evidence. Review it manually, or restate the check so evidence can settle it.'
+                  : undefined;
       if (!(await renewTaskDrive())) return;
       await new TaskResultBridgeService(db, userId, workspaceId).deliver({
         operationId,

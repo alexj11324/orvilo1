@@ -8,7 +8,7 @@ import { installConnectService, readConnectServiceStatus, startConnectService } 
 
 const tmpDir = path.join(os.tmpdir(), `orvilo-connect-service-test-${process.pid}`);
 const unitDir = path.join(tmpDir, 'systemd-user');
-const entryPath = path.join(tmpDir, 'lh.js');
+const entryPath = path.join(tmpDir, 'orvilo.js');
 
 const execFileSyncMock = vi.hoisted(() => vi.fn());
 const getRunningDaemonPidMock = vi.hoisted(() => vi.fn());
@@ -128,7 +128,9 @@ describe('connect service', () => {
   it('does not install when no auth is available', () => {
     loadCredentialsMock.mockReturnValue(null);
 
-    expect(() => installConnectService()).toThrow("No authentication found. Run 'lh login' first");
+    expect(() => installConnectService()).toThrow(
+      "No authentication found. Run 'orvilo login' first",
+    );
     expect(fs.existsSync(path.join(unitDir, 'orvilo-connect.service'))).toBe(false);
     expect(systemctlCalls).not.toContainEqual([
       '--user',

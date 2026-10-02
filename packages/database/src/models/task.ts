@@ -65,6 +65,7 @@ import type { OrviloDatabase } from '../type';
 import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { LinearSyncModel } from './linearSync';
+import { projectEffectiveRequireHumanReview, ProjectModel } from './project';
 import { TaskDependencyError } from './taskDependency';
 
 /** Columns whose change is worth a line in the task activity feed. */
@@ -185,6 +186,22 @@ export interface TaskMutationContext {
   suppressDomainEvent?: boolean;
   /** Prevent a provider-originated reconciliation from echoing back out. */
   suppressLinearOutbox?: boolean;
+}
+
+/**
+ * Extra columns a status transition may write atomically with `status`.
+ * The workflow fields let a settlement write update the legacy projection
+ * and the canonical Issue Status in the same statement.
+ */
+export interface TaskStatusTransitionExtra {
+  completedAt?: Date;
+  error?: string | null;
+  runReservationExpiresAt?: Date | null;
+  runReservationId?: string | null;
+  startedAt?: Date;
+  workflowCategory?: TaskWorkflowCategory;
+  workflowStateId?: string | null;
+  workflowStateRefId?: string | null;
 }
 
 export class TaskRevisionConflictError extends Error {
@@ -2210,13 +2227,7 @@ export class TaskModel {
   async updateStatus(
     id: string,
     status: string,
-    extra?: {
-      completedAt?: Date;
-      error?: string | null;
-      runReservationExpiresAt?: Date | null;
-      runReservationId?: string | null;
-      startedAt?: Date;
-    },
+    extra?: TaskStatusTransitionExtra,
   ): Promise<TaskItem | null> {
     return this.update(id, { status, ...extra });
   }
@@ -2226,13 +2237,7 @@ export class TaskModel {
     id: string,
     currentStatus: string,
     status: string,
-    extra?: {
-      completedAt?: Date;
-      error?: string | null;
-      runReservationExpiresAt?: Date | null;
-      runReservationId?: string | null;
-      startedAt?: Date;
-    },
+    extra?: TaskStatusTransitionExtra,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem | null> {
     if (!this.dependencyLockHeld) {
@@ -2256,8 +2261,12 @@ export class TaskModel {
       .returning();
     if (!task) return null;
     if (this.workspaceId && !mutation.suppressDomainEvent) {
+      const changedFields = ['status'];
+      if (extra?.workflowCategory !== undefined || extra?.workflowStateId !== undefined) {
+        changedFields.push('workflowCategory', 'workflowStateId');
+      }
       await new LinearSyncModel(this.db, this.workspaceId).recordTaskChangeInTransaction(this.db, {
-        changedFields: ['status'],
+        changedFields,
         eventId: mutation.eventId,
         eventType: 'task.status.changed',
         idempotencyKey:
@@ -2281,13 +2290,7 @@ export class TaskModel {
     reservationId: string,
     currentStatus: string,
     status: string,
-    extra?: {
-      completedAt?: Date;
-      error?: string | null;
-      runReservationExpiresAt?: Date | null;
-      runReservationId?: string | null;
-      startedAt?: Date;
-    },
+    extra?: TaskStatusTransitionExtra,
   ): Promise<TaskItem | null> {
     if (!this.dependencyLockHeld) {
       return this.withDependencyLock((model) =>
@@ -2491,17 +2494,13 @@ export class TaskModel {
       runReservationId?: string;
       status?: string;
     },
-    extra?: {
-      completedAt?: Date;
-      error?: string | null;
-      runReservationExpiresAt?: Date | null;
-      runReservationId?: string | null;
-      startedAt?: Date;
-    },
+    extra?: TaskStatusTransitionExtra,
     mutation: TaskMutationContext = {},
+    beforeMutation?: (tx: OrviloDatabase) => Promise<boolean>,
   ): Promise<TaskItem | null> {
     return this.db.transaction(async (tx) => {
       const runner = tx as OrviloDatabase;
+      if (beforeMutation && !(await beforeMutation(runner))) return null;
       const [task] = await runner
         .update(tasks)
         .set({
@@ -2530,8 +2529,12 @@ export class TaskModel {
         .returning();
       if (!task) return null;
       if (this.workspaceId && !mutation.suppressDomainEvent) {
+        const changedFields = ['status'];
+        if (extra?.workflowCategory !== undefined || extra?.workflowStateId !== undefined) {
+          changedFields.push('workflowCategory', 'workflowStateId');
+        }
         await new LinearSyncModel(runner, this.workspaceId).recordTaskChangeInTransaction(runner, {
-          changedFields: ['status'],
+          changedFields,
           eventId: mutation.eventId,
           eventType: 'task.status.changed',
           idempotencyKey:
@@ -2563,13 +2566,7 @@ export class TaskModel {
   async updateStatusForIds(
     ids: string[],
     status: string,
-    extra?: {
-      completedAt?: Date;
-      error?: string | null;
-      runReservationExpiresAt?: Date | null;
-      runReservationId?: string | null;
-      startedAt?: Date;
-    },
+    extra?: TaskStatusTransitionExtra,
     mutation: TaskMutationContext = {},
   ): Promise<TaskItem[]> {
     if (ids.length === 0) return [];
@@ -2819,13 +2816,42 @@ export class TaskModel {
     return this.update(id, { config: { ...config, verify: next } });
   }
 
-  // Check if a task should pause after a topic completes
-  // Default: pause (when no checkpoint config is set)
-  // Explicit: pause only if topic.after is true
+  /**
+   * @deprecated The execution lifecycle should not pause by default — it
+   * settles through `settleTaskExecution` instead, which applies
+   * {@link resolveTaskReviewRequirement}: only an explicit checkpoint, the
+   * project's `requireHumanReview` policy, or an enabled verify gate parks a
+   * successful run for review. Kept for compatibility with callers that have
+   * not migrated; the legacy default-pause behavior it encodes is retired.
+   */
   shouldPauseOnTopicComplete(task: TaskItem): boolean {
     const checkpoint = this.getCheckpointConfig(task);
     const hasAnyConfig = Object.keys(checkpoint).length > 0;
     return hasAnyConfig ? !!checkpoint.topic?.after : true;
+  }
+
+  /**
+   * Whether a successfully finished run must park the task for human review
+   * (`in_review`) rather than settle straight to `done` — explicit gates only:
+   *
+   * - the task's checkpoint requires review (`checkpoint.topic.after`),
+   * - the owning project's `orchestrationPolicy.requireHumanReview` is `true`,
+   * - an explicit verify gate is enabled on the resolved verify config.
+   *
+   * Resolved asynchronously so the project's effective policy
+   * (`projectRequiresHumanReview` included) and the ancestor-inherited verify
+   * config come from their real sources.
+   */
+  async resolveTaskReviewRequirement(task: TaskItem): Promise<boolean> {
+    const checkpoint = this.getCheckpointConfig(task);
+    if (checkpoint.topic?.after) return true;
+    if (task.projectId) {
+      const project = await new ProjectModel(this.db, this.userId, this.workspaceId).findById(
+        task.projectId,
+      );
+      if (project && projectEffectiveRequireHumanReview(project)) return true;
+    }
+    return (await this.resolveVerifyConfig(task.id))?.enabled === true;
   }
 
   // Check if a task should be paused before starting (parent's tasks.beforeIds)
@@ -3230,14 +3256,16 @@ export class TaskModel {
       .from(taskDependencies)
       .where(and(eq(taskDependencies.id, relationId), this.issueRelationOwnership()))
       .limit(1);
-    if (
-      !relation ||
-      (relation.taskId !== taskId &&
-        !(relation.type === 'relates' && relation.dependsOnId === taskId))
-    ) {
+    if (!relation || (relation.taskId !== taskId && relation.dependsOnId !== taskId)) {
       throw new TaskDependencyError('Relation not found.');
     }
     const peerId = relation.taskId === taskId ? relation.dependsOnId : relation.taskId;
+    // A "blocking" row is stored on the other issue. Remove it from that
+    // owner so the blocker can unlink it from its own detail page.
+    if (relation.type === 'blocks' && relation.taskId !== taskId) {
+      await this.removeDependency(relation.taskId, relation.dependsOnId, mutation, 'blocks');
+      return;
+    }
     await this.removeDependency(
       taskId,
       peerId,

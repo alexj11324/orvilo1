@@ -127,7 +127,7 @@ const CreateModalRenderer = memo<CreateModalRendererProps>(
       if (type === 'agent') {
         const result = await storeCreateAgent({ groupId, visibility });
         useGlobalStore.getState().toggleAgentBuilderPanel(true);
-        navigate(`/agent/${result.agentId}/profile`);
+        navigate(`/settings/agents/${result.agentId}`);
         await refreshAgentList();
       } else {
         await sendAsGroup({ groupId, message: '', visibility });

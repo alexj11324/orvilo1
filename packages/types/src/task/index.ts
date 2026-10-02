@@ -1,15 +1,32 @@
 import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
 
+export * from './stateModel';
+
 // ── Task type aliases ──
 
+/**
+ * @deprecated Legacy compatibility projection maintained for old readers —
+ * do not read as Issue Status. The canonical Issue Status is
+ * `workflowCategory` + `workflowStateRefId` ({@link TaskWorkflowCategory});
+ * execution state lives on `task_dispatches.phase` + `task_topics.run_state`
+ * (projected by {@link deriveTaskExecutionState}); transitions between those
+ * layers happen only through the centralized settlement policy.
+ */
 export type TaskStatus =
   'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running' | 'scheduled';
 
 /**
- * Business workflow is independent from execution. `workflowStateId` keeps the
- * exact provider/team state while this category gives the shared board a
- * stable local grouping.
+ * The canonical user-facing Issue Status. `workflowCategory` +
+ * `workflowStateRefId` are the sole source of truth for where an issue sits;
+ * `workflowStateId`/`workflowStateRefId` keep the exact provider/team state
+ * while the category gives the shared board a stable local grouping.
+ *
+ * Execution state is a separate layer on `task_dispatches.phase` +
+ * `task_topics.run_state` (see {@link TaskExecutionState}), and attention is
+ * derived from both (see {@link TaskAttentionReason}). Transitions between the
+ * layers happen exclusively through the centralized settlement policy —
+ * nothing else writes a workflow category from an execution outcome.
  */
 export type TaskWorkflowCategory =
   'triage' | 'backlog' | 'todo' | 'in_progress' | 'in_review' | 'done' | 'canceled';
@@ -349,8 +366,11 @@ export type TaskAutomationMode = 'heartbeat' | 'schedule';
  *                 Like `manual`, it never counts against automation quotas.
  * - `orchestrator` — the dependency/project planner started this run. Project
  *                    dispatch policy and execution budgets apply.
+ * - `event` — a persisted external occurrence matched a scoped trigger; requires
+ *             authoritative event admission before the existing runner may start.
  */
-export type TaskRunTrigger = 'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator';
+export type TaskRunTrigger =
+  'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator' | 'event';
 
 /**
  * A clarifying question the intent reader wants answered before an agent
@@ -887,6 +907,12 @@ export interface TaskItem {
   seq: number;
   sortOrder: number | null;
   startedAt: Date | null;
+  /**
+   * @deprecated Legacy compatibility projection — do not read as Issue
+   * Status. The canonical Issue Status is `workflowCategory` +
+   * `workflowStateRefId`; execution state projects from
+   * `task_dispatches.phase` + `task_topics.run_state`.
+   */
   status: string;
   /** Lightweight recursive descendant progress attached by task list reads. */
   subtaskProgress?: TaskSubtaskProgress;
@@ -1052,10 +1078,11 @@ export interface TaskDetailSubtask {
   reviewerUserId?: string | null;
   runningTopic?: TaskDetailSubtaskRunningTopic | null;
   schedule?: { pattern?: string | null; timezone?: string | null };
+  /** @deprecated Legacy status projection — see {@link TaskItem.status}. */
   status: string;
   updatedAt?: string;
   visibility?: 'private' | 'public';
-  /** Provider business state, independent from execution progress. */
+  /** Canonical Issue Status category (see {@link TaskWorkflowCategory}). */
   workflowCategory?: TaskWorkflowCategory;
   workflowStateId?: string | null;
 }
@@ -1243,6 +1270,12 @@ export interface TaskDetailData {
   createdByUserId?: string | null;
   dependencies?: Array<{
     dependsOn: string;
+    /**
+     * Which side of a `blocks` edge this row is. `blocking` means this issue
+     * blocks `dependsOn`; omitted or `blockedBy` means this issue is blocked
+     * by it. `relates` rows leave it unset.
+     */
+    direction?: 'blockedBy' | 'blocking';
     /** Raw target ID is exposed only when the issue is readable. */
     id?: string;
     /** Opaque relation row ID; allows unlinking without exposing an unreadable target ID. */
@@ -1291,6 +1324,7 @@ export interface TaskDetailData {
   };
   /** When the current task execution started; drives live elapsed-time displays. */
   startedAt?: string;
+  /** @deprecated Legacy status projection — see {@link TaskItem.status}. */
   status: string;
   subtasks?: TaskDetailSubtask[];
   /** Owning team (shared mode); null for personal tasks and legacy rows. */

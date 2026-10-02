@@ -291,7 +291,7 @@ const TaskList = memo<TaskListProps>((props) => {
   // The page scrolls in an ancestor (`WideScreenContainer`'s wrapper), with the
   // inline composer above this list. Windowing against that ancestor keeps the
   // page layout intact instead of nesting a second scroller.
-  const { ref: anchorRef, scrollParent } = useClosestScrollParent();
+  const { ref: anchorRef, scrollParent, unresolved } = useClosestScrollParent();
 
   const peekArmed = Boolean(peekOnSelect && onSelectTask);
 
@@ -386,7 +386,7 @@ const TaskList = memo<TaskListProps>((props) => {
   );
 
   const hiddenFooter = hiddenCount > 0 && (
-    <div className="flex items-center justify-center gap-4 py-4" style={{ fontSize: 13 }}>
+    <div className="flex items-center justify-center gap-4 py-4" style={{ fontSize: 12 }}>
       <div className="flex items-center gap-1.5">
         <div className="font-medium">
           {t('taskList.hiddenCompleted.count', { count: hiddenCount })}
@@ -403,7 +403,7 @@ const TaskList = memo<TaskListProps>((props) => {
 
   const truncatedFooter = isTruncated && (
     <div className="flex items-center justify-center py-4">
-      <div className="text-[13px] text-muted-foreground">
+      <div className="text-xs text-muted-foreground">
         {t('taskList.truncated', { loaded: tasks.length, total: storeTasksTotal })}
       </div>
     </div>
@@ -427,7 +427,7 @@ const TaskList = memo<TaskListProps>((props) => {
         ref={anchorRef}
         style={{ width: '100%', ...issueIdColumnStyle(tasks.map((task) => task.identifier)) }}
       >
-        {scrollParent && (
+        {scrollParent ? (
           <Virtuoso
             // Footer belongs to the window so it follows the last rendered row
             // rather than sitting under an unrendered tail.
@@ -447,6 +447,14 @@ const TaskList = memo<TaskListProps>((props) => {
               ),
             }}
           />
+        ) : unresolved ? null : (
+          <div className="flex flex-col">
+            {virtualItems.map((item, index) => (
+              <div key={item.key}>{renderItem(index, item)}</div>
+            ))}
+            {hiddenFooter}
+            {truncatedFooter}
+          </div>
         )}
       </div>
     </AsyncBoundary>

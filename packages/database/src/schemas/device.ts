@@ -54,7 +54,7 @@ export const devices = pgTable(
     // were shared from. deviceIds are one-way hashes of (machine, principal),
     // so without this link the server cannot correlate a personal row with its
     // workspace twins. NULL for personal rows and for devices enrolled directly
-    // on the machine (`lh connect --workspace`).
+    // on the machine (`orvilo connect --workspace`).
     sharedFromDeviceId: varchar('shared_from_device_id', { length: 64 }),
 
     /** Machine-derived id (sha256 truncated to 32 chars; 64 leaves room for fallback randomUUID) */

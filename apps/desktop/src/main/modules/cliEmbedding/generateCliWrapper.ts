@@ -1,4 +1,4 @@
-import { chmod, mkdir, rename, symlink, unlink, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, rename, unlink, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
 import { app } from 'electron';
@@ -60,11 +60,6 @@ export async function generateCliWrapper(): Promise<void> {
     const cmdPath = path.join(wrapperDir, 'orvilo.cmd');
     await atomicWrite(cmdPath, content);
 
-    // Create short aliases: lh.cmd, orvilo.cmd (copies on Windows, symlinks unreliable)
-    for (const alias of ['lh.cmd', 'orvilo.cmd']) {
-      await atomicWrite(path.join(wrapperDir, alias), content);
-    }
-
     logger.info(`CLI wrapper generated: ${cmdPath}`);
   } else {
     const content = [
@@ -76,12 +71,8 @@ export async function generateCliWrapper(): Promise<void> {
     await atomicWrite(wrapperPath, content);
     await chmod(wrapperPath, 0o755);
 
-    // Create short aliases: lh, orvilo → orvilo
-    for (const alias of ['lh', 'orvilo']) {
-      const linkPath = path.join(wrapperDir, alias);
-      await unlink(linkPath).catch(() => {});
-      await symlink('orvilo', linkPath);
-    }
+    // Remove a pre-rename `lh` alias the desktop may have left behind.
+    await unlink(path.join(wrapperDir, 'lh')).catch(() => {});
 
     logger.info(`CLI wrapper generated: ${wrapperPath}`);
   }

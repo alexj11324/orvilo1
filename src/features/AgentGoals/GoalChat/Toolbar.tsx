@@ -35,7 +35,9 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
   const [activeTopicId, switchTopic, topics] = useChatStore((s) => [
     s.activeTopicId,
     s.switchTopic,
-    topicSelectors.currentTopics(s),
+    // The panel names its own agent — `currentTopics` resolves the workspace
+    // conversation feed now, which is not this panel's list.
+    topicSelectors.getTopicsByAgentId(agentId)(s),
   ]);
   const currentTopic = useChatStore(topicSelectors.currentActiveTopic);
 
@@ -83,6 +85,7 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
                     icon={Clock3Icon}
                     loading={isLoadingTopics}
                     size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+                    title={t('actions.showTopics', { ns: 'topic' })}
                   />
                 </span>
               }
@@ -114,6 +117,7 @@ const Toolbar = memo<ToolbarProps>(({ onCollapse }) => {
           <ActionIcon
             icon={PanelRightCloseIcon}
             size={DESKTOP_HEADER_ICON_SMALL_SIZE}
+            title={t('workingPanel.tabs.closePanel')}
             onClick={onCollapse}
           />
         </>

@@ -1,5 +1,4 @@
 import { cssVar } from 'antd-style';
-import { cn } from 'cn';
 import { ClockIcon } from 'lucide-react';
 import type { CSSProperties } from 'react';
 import { memo, useMemo } from 'react';
@@ -73,25 +72,22 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
     }, [automationMode, heartbeatInterval, schedulePattern, scheduleTimezone, t, i18n.language]);
 
     if (mode === 'inline') {
-      // Single-line row regardless of mode/content length — long primaries
-      // (e.g. "Every Mon/Tue/Wed/Thu/Fri/Sat at HH:MM") used to wrap to two
-      // lines and shift the rows below. Tooltip still surfaces the full text
-      // plus timezone on hover, so no information is lost.
+      // The property row already draws the clock in its label column. This is
+      // only the value: 13px regular, placeholder when empty. Long primaries
+      // stay on one line; the tooltip still has the full text and timezone.
       return (
         <SimpleTooltip title={data?.tooltip}>
-          <div className="flex items-center gap-2.5" style={FLEX_MIN_WIDTH_0}>
-            <ClockIcon size={16} style={{ color: cssVar.colorTextDescription }} />
-            <div
-              style={FLEX_MIN_WIDTH_0}
-              className={cn(
-                'truncate',
-                'block',
-                data ? undefined : 'text-muted-foreground',
-                data ? 500 : undefined,
-              )}
-            >
-              {data?.primary ?? t('taskSchedule.tag.add')}
-            </div>
+          <div
+            className="block truncate"
+            style={{
+              ...FLEX_MIN_WIDTH_0,
+              color: data ? undefined : cssVar.colorTextPlaceholder,
+              fontSize: 12,
+              fontWeight: 400,
+              lineHeight: 1.4,
+            }}
+          >
+            {data?.primary ?? t('taskSchedule.tag.add')}
           </div>
         </SimpleTooltip>
       );

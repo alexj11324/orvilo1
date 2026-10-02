@@ -170,7 +170,7 @@ const ClientTaskItem = memo<ClientTaskItemProps>(({ item }) => {
             >
               {instruction && (
                 <div className="flex flex-col p-3">
-                  <div className="text-[13px] text-muted-foreground">{instruction}</div>
+                  <div className="text-sm text-muted-foreground">{instruction}</div>
                 </div>
               )}
 

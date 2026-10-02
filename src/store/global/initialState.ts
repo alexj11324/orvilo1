@@ -13,6 +13,7 @@ export enum SidebarTabKey {
   Automations = 'automations',
   Chat = 'chat',
   Drafts = 'drafts',
+  Group = 'group',
   Home = 'home',
   Inbox = 'inbox',
   Knowledge = 'knowledge',
@@ -68,6 +69,12 @@ export enum SettingsTabs {
   Advanced = 'advanced',
   /** @deprecated Use ServiceModel instead */
   Agent = 'agent',
+  /**
+   * Per-agent configuration home (General / Runtime / Model / Tools &
+   * Permissions / Environment / Advanced) — the topic-centric workspace keeps
+   * config out of the work surface; it lives here under Settings → Agents.
+   */
+  Agents = 'agents',
   APIKey = 'apikey',
   Appearance = 'appearance',
   Billing = 'billing',
@@ -86,6 +93,7 @@ export enum SettingsTabs {
   Labs = 'labs',
   LLM = 'llm',
   Memory = 'memory',
+  Messenger = 'messenger',
   Notification = 'notification',
   OAuthApps = 'oauth-apps',
   // business
@@ -117,6 +125,31 @@ export enum ProfileTabs {
   Stats = 'stats',
   Usage = 'usage',
 }
+
+export const MODEL_DETAIL_PANEL_EXPANDED_KEYS = [
+  'rating',
+  'context',
+  'abilities',
+  'pricing',
+  'config',
+] as const;
+
+export type ModelDetailPanelExpandedKey = (typeof MODEL_DETAIL_PANEL_EXPANDED_KEYS)[number];
+
+/**
+ * Expandable sections of the ModelDetailPanel Accordion, all expanded by default.
+ *
+ * Persistence stores the COLLAPSED keys (`modelDetailPanelCollapsedKeys`) instead of the
+ * expanded ones: an expanded-keys array persisted before a section shipped would keep that
+ * section collapsed forever (this happened to `rating`), while a collapsed-keys array lets
+ * newly added sections default to expanded automatically.
+ */
+export const MODEL_DETAIL_PANEL_EXPANDABLE_KEYS = [
+  'rating',
+  'abilities',
+  'pricing',
+  'config',
+] as const satisfies readonly ModelDetailPanelExpandedKey[];
 
 export type TaskViewMode = 'kanban' | 'list';
 
@@ -152,7 +185,13 @@ export interface TaskListViewOptionsState {
  * lockstep. `properties` keys are the `MyWorkRowProperty` ids.
  */
 export interface MyWorkViewOptionsState {
-  boardGrouping?: 'status' | 'workflowCategory';
+  boardGrouping?: 'assignee' | 'priority' | 'status' | 'workflowCategory';
+  /** Board swimlane. Mirrors `MyWorkDisplay.boardLane`. */
+  boardLane?: 'assignee' | 'none' | 'priority' | 'project' | 'status';
+  /** User-collapsed board column keys. Mirrors `MyWorkDisplay.collapsedColumns`. */
+  collapsedColumns?: string[];
+  /** User-collapsed list group keys. Mirrors `MyWorkDisplay.collapsedGroups`. */
+  collapsedGroups?: string[];
   completed?: 'all' | 'none' | 'pastDay';
   grouping?:
     | 'activityDate'
@@ -302,10 +341,33 @@ export interface SystemStatus {
   lastSelectedImageProvider?: string;
   lastSelectedVideoModel?: string;
   lastSelectedVideoProvider?: string;
+  /**
+   * Agent the user's most recent send ran under — the blank composer's default
+   * agent (a new topic binds on first message, so the composer offers the
+   * last-used agent rather than always the route agent). Updated whenever a
+   * conversation send completes against an agent context, and when the user
+   * explicitly re-binds a topic to another agent.
+   */
+  lastUsedAgentId?: string;
   latestChangelogId?: string;
   leftPanelWidth: number;
   mobileShowPortal?: boolean;
   mobileShowTopic?: boolean;
+  /**
+   * (Rating / Abilities / Pricing / Model Config). Single shared preference
+   * across all entries (model picker submenu, ChatInput extend-params popover).
+   * Collapsed (not expanded) keys are stored so new sections default to expanded
+   * — see MODEL_DETAIL_PANEL_EXPANDABLE_KEYS.
+   */
+  modelDetailPanelCollapsedKeys?: ModelDetailPanelExpandedKey[];
+  /**
+   * ModelSwitchPanel grouping mode
+   */
+  modelSwitchPanelGroupMode?: 'byModel' | 'byProvider';
+  /**
+   * ModelSwitchPanel width
+   */
+  modelSwitchPanelWidth?: number;
   /**
    * Per (user, workspace) My issues display options, keyed by the same
    * `userId:workspaceId` scope key as `inboxPriorityMode`, then by tab
@@ -673,6 +735,9 @@ export const INITIAL_STATUS = {
   // why the persisted `leftPanelWidth` in localStorage wins over this value.
   leftPanelWidth: 244,
   mobileShowTopic: false,
+  modelDetailPanelCollapsedKeys: [],
+  modelSwitchPanelGroupMode: 'byProvider',
+  modelSwitchPanelWidth: 460,
   noWideScreen: true,
   pageAgentPanelWidth: 360,
   pagePageSize: 20,

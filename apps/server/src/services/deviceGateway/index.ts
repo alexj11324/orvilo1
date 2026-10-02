@@ -1706,7 +1706,7 @@ export class DeviceGateway {
   async dispatchAgentRun(params: {
     agentType: HeterogeneousAgentType;
     assistantMessageId: string;
-    /** Resolved `lh hetero exec` wrapper args. */
+    /** Resolved `orvilo hetero exec` wrapper args. */
     args?: string[];
     /**
      * Server-backed builtin tools resolved for this run. The device mounts
@@ -1716,6 +1716,8 @@ export class DeviceGateway {
     builtinTools?: AcpBuiltinToolSpec[];
     cwd?: string;
     deviceId?: string;
+    /** Server-minted spawn env (e.g. BYOK credentials) merged into the run's process env. */
+    env?: Record<string, string>;
     /** Admission idempotency key (always the operationId), relayed to the device. */
     idempotencyKey?: string;
     /** Image attachments forwarded to the device as fetchable (signed) URLs. */

@@ -32,16 +32,17 @@ import AssigneeAvatar from './AssigneeAvatar';
 import AssigneeMemberSelector from './AssigneeMemberSelector';
 import AssigneeUserAvatar from './AssigneeUserAvatar';
 import { formatTaskItemDate } from './formatTaskItemDate';
+import IssueStatusPicker from './IssueStatusPicker';
 import { SimpleTooltip } from './SimpleTooltip';
+import TaskExecutionBadge from './TaskExecutionBadge';
 import TaskPriorityTag from './TaskPriorityTag';
-import TaskStatusTag from './TaskStatusTag';
 import TaskSubtaskProgressTag from './TaskSubtaskProgressTag';
 import TaskTriggerTag from './TaskTriggerTag';
 import { TASK_VISIBILITY_ICONS } from './taskVisibilityLabel';
 import { UnassignedAssigneeIcon } from './UnassignedAssigneeIcon';
 import { useTaskItemContextMenu } from './useTaskItemContextMenu';
 
-// Linear's issue-row type ramp: 13px identifier (450) and title (500) on a
+// Issue-row type ramp: mono 12px identifier (400) and 14px title (500) on a
 // 44px row. The identifier column's width comes from the list
 // (`issueIdColumnStyle`), so every status mark lines up.
 const styles = createStaticStyles(({ css, cssVar }) => ({
@@ -50,19 +51,19 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     min-width: var(${ISSUE_ID_WIDTH_VAR}, auto);
 
-    font-size: 13px;
-    font-weight: 450;
+    font-family: ${cssVar.fontFamilyCode};
+    font-size: 12px;
     font-variant-numeric: tabular-nums;
   `,
   parent: css`
     min-width: 68px;
     max-width: 240px;
-    font-size: 13px;
+    font-size: 12px;
   `,
   parentSeparator: css`
     flex: none;
     width: 17px;
-    font-size: 13px;
+    font-size: 12px;
     text-align: center;
   `,
   row: css`
@@ -76,7 +77,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
   `,
   title: css`
     min-width: 0;
-    font-size: 13px;
+    font-size: 14px;
   `,
 }));
 
@@ -244,10 +245,9 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
         data-collab-id-alt={`task:${task.identifier}:status`}
         style={{ display: 'inline-flex', flex: 'none' }}
       >
-        <TaskStatusTag
+        <IssueStatusPicker
           glyph={workflowGlyph}
           size={14}
-          status={status}
           taskIdentifier={task.identifier}
           teamId={task.teamId}
           workflowCategory={task.workflowCategory}
@@ -256,6 +256,7 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
           onChange={onStatusChange}
         />
       </span>
+      <TaskExecutionBadge size={13} status={status} />
       <LinearTaskSyncStatus taskId={task.id} />
       {privacyBadge}
       <div className={cn('truncate', 'block', 'font-medium', styles.title)}>
@@ -297,8 +298,8 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
       data-collab-id={`task:${task.id}:assignee`}
       data-collab-id-alt={`task:${task.identifier}:assignee`}
     >
-      {status === 'paused'
-        ? // Pending review: the member slot shows who owns the review — the
+      {task.workflowCategory === 'in_review'
+        ? // In review: the member slot shows who owns the review — the
           // reviewer (auto-stamped as assignee → creator), not the executor.
           shouldShowMemberAssignee(activeWorkspaceId, task.reviewerUserId) && (
             <AssigneeMemberSelector
@@ -386,8 +387,8 @@ const AgentTaskItem = memo<TaskItemProps>((props) => {
 
   const timeNode = time ? (
     <div
-      className="text-right text-[12px] text-muted-foreground"
-      style={{ fontWeight: 450, whiteSpace: 'nowrap', width: 48 }}
+      className="text-right font-mono text-xs text-muted-foreground"
+      style={{ whiteSpace: 'nowrap', width: 48 }}
     >
       {time}
     </div>

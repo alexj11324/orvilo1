@@ -1,21 +1,19 @@
 import { memo } from 'react';
 
 import DragUploadZone, { useUploadFiles } from '@/components/DragUploadZone';
-import { type ActionKeys } from '@/features/ChatInput';
 import { ChatInput, ChatList } from '@/features/Conversation';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
 import AgentBuilderWelcome from './AgentBuilderWelcome';
+import { builderLeftActions, builderRightActions } from './composerActions';
 import { useResolveFeedbackOnSend } from './SuggestionChips/useResolveFeedbackOnSend';
 import TopicSelector from './TopicSelector';
 
 interface AgentBuilderConversationProps {
   agentId: string;
 }
-const actions: ActionKeys[] = [];
-const rightActions: ActionKeys[] = ['model'];
 
 /**
  * Agent Builder Conversation Component
@@ -43,7 +41,11 @@ const AgentBuilderConversation = memo<AgentBuilderConversationProps>(({ agentId 
         <div className="flex flex-col flex-1" style={{ overflow: 'hidden' }}>
           <ChatList welcome={<AgentBuilderWelcome disabled={!canCreate} />} />
         </div>
-        <ChatInput leftActions={actions} rightActions={rightActions} showControlBar={false} />
+        <ChatInput
+          leftActions={builderLeftActions}
+          rightActions={builderRightActions}
+          showControlBar={false}
+        />
       </div>
     </DragUploadZone>
   );

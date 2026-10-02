@@ -17,7 +17,9 @@ import { useRandomQuestions } from '@/features/Home/SuggestQuestions/useRandomQu
 import type { CreateAgentModalSubmitSource } from './createAgentModalAnalytics';
 import { trackCreateAgentModalCreationSucceeded } from './createAgentModalAnalytics';
 
-const RIGHT_ACTIONS: ActionKeys[] = ['model'];
+// Model selection is agent-scoped configuration — outside agent settings the
+// creation surfaces offer no model picker.
+const RIGHT_ACTIONS: ActionKeys[] = [];
 const CREATE_MODAL_WIDTH = 'min(90vw, 760px)';
 
 interface ExampleItemProps {
@@ -208,7 +210,7 @@ export const CreateAgentModal = memo<CreateAgentModalProps>(
             <PencilLineIcon data-icon="inline-start" size={14} />
             {t('createModal.createBlank')}
           </Button>
-          <ActionIcon icon={X} onClick={handleClose} />
+          <ActionIcon icon={X} title={t('close', { ns: 'common' })} onClick={handleClose} />
         </div>
         {/* Title */}
         <div className="flex flex-col items-center">

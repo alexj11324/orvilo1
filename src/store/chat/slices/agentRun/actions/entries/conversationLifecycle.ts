@@ -1,4 +1,5 @@
 // Disable the auto sort key eslint rule to make the code more logic and readable
+import { createCallAgentManifest } from '@orvilo/builtin-tool-agent-management';
 import { GoalIdentifier, isGoalPrompt } from '@orvilo/builtin-tool-goal';
 import {
   isDesktop,
@@ -73,7 +74,6 @@ import {
   topicSelectors,
 } from '@/store/chat/selectors';
 import {
-  AGENT_BINDING_REQUIRED_ERROR,
   type AgentRuntimeType,
   GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR,
   selectRuntimeType,
@@ -97,6 +97,10 @@ import { chatPortalSelectors } from '@/store/chat/slices/portal/selectors';
 import { resolveTopicHeteroPin } from '@/store/chat/slices/topic/selectors';
 import { type ChatStore } from '@/store/chat/store';
 import {
+  mergeAgentRuntimeInitialContexts,
+  resolveActiveTopicDocumentInitialContext,
+} from '@/store/chat/utils/activeTopicDocumentContext';
+import {
   createPendingCompressedGroup,
   getCompressionCandidateMessageIds,
   hasRunningCompressionOperation,
@@ -104,7 +108,7 @@ import {
 import { isLocalOnlyMessage } from '@/store/chat/utils/localMessages';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { snapshotAgentModel, snapshotAgentReasoning } from '@/store/chat/utils/snapshotAgentModel';
-import { topicMapKey } from '@/store/chat/utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
 import { deviceSelectors, getDeviceStoreState } from '@/store/device';
 import { getElectronStoreState } from '@/store/electron';
 import { getFileStoreState } from '@/store/file/store';
@@ -278,7 +282,12 @@ export class ConversationLifecycleActionImpl {
     | { excludeStatuses?: string[]; excludeTriggers?: string[]; includeTriggers?: string[] }
     | undefined => {
     if (!agentId && !groupId) return undefined;
-    const data = this.#get().topicDataMap[topicMapKey({ agentId, groupId })];
+    // Outside a group session the sidebar reads the workspace conversation
+    // feed — its bucket carries the filter (excludeTriggers etc.).
+    const data =
+      this.#get().topicDataMap[
+        groupId ? topicMapKey({ agentId, groupId }) : WORKSPACE_TOPIC_MAP_KEY
+      ];
     if (!data) return undefined;
     const { excludeStatuses, excludeTriggers } = data;
     if (!excludeStatuses?.length && !excludeTriggers?.length) return undefined;
@@ -373,7 +382,7 @@ export class ConversationLifecycleActionImpl {
     };
 
     let editorData = inputEditorData;
-    const { mainInputEditor } = this.#get();
+    const { executeClientAgent, mainInputEditor } = this.#get();
     const targetInputEditor = inputEditor ?? mainInputEditor;
     const ownerAgentId = context.agentId;
     const selectedSkills = parseSelectedSkillsFromEditorData(editorData);
@@ -475,7 +484,6 @@ export class ConversationLifecycleActionImpl {
       (isDesktop && !isGatewayMode && isHeterogeneousAgentModelId(agentConfig?.model)
         ? { type: agentConfig.model }
         : undefined);
-
     // ── Command Bus: extract and process built-in commands from editorData ──
     const commandOverrides: CommandSendOverrides = processCommands({
       message,
@@ -2176,10 +2184,7 @@ export class ConversationLifecycleActionImpl {
       }
     }
 
-    // ── AI execution ──
-    // Only a gateway-bound direct @Agent mention reaches this tail: hetero runs
-    // return in their own branch above, gateway non-mention sends return inside
-    // the gateway branch, and unbound agents threw at `selectRuntimeType`.
+    // ── AI execution (client mode) ──
     {
       let sendOperationHandedOff = false;
       const handoffSendOperation = () => {
@@ -2199,6 +2204,7 @@ export class ConversationLifecycleActionImpl {
               context: execContext,
               instruction: message,
               parentOperationId: operationId,
+              runtimeType: runtimeType === 'gateway' ? 'gateway' : 'client',
               sourceMessageId: data.assistantMessageId,
               targetAgentId: agentId,
             },
@@ -2207,7 +2213,51 @@ export class ConversationLifecycleActionImpl {
           handoffSendOperation();
           await directMentionRun;
         } else {
-          throw new Error(AGENT_BINDING_REQUIRED_ERROR);
+          const displayMessages = displayMessageSelectors
+            .getDisplayMessagesByKey(messageMapKey(execContext))(this.#get())
+            .filter((item) => !isLocalOnlyMessage(item));
+
+          // When agents are @mentioned, inject a slim callAgent-only manifest
+          // so the AI can delegate directly without activating the full agent-management tool
+          const injectedManifests = hasMentionedAgents ? [createCallAgentManifest()] : undefined;
+          const activeTopicDocumentInitialContext =
+            await resolveActiveTopicDocumentInitialContext(execContext);
+
+          const hasInitialContext = hasMentionedAgents || !!injectedManifests;
+
+          // Note: selectedSkills and selectedTools are NOT passed here — they are
+          // persisted into the user message content above so they survive across
+          // turns without re-injection.
+          const agentRuntimeInitialContext = hasInitialContext
+            ? {
+                initialContext: {
+                  // Only inject mentionedAgents in non-group context to avoid
+                  // group @member mentions (including ALL_MEMBERS) leaking into agent-management
+                  ...(hasMentionedAgents ? { mentionedAgents } : undefined),
+                  ...(injectedManifests ? { injectedManifests } : undefined),
+                },
+                phase: 'init' as const,
+              }
+            : undefined;
+          const mergedAgentRuntimeInitialContext = mergeAgentRuntimeInitialContexts(
+            activeTopicDocumentInitialContext,
+            agentRuntimeInitialContext,
+          );
+
+          const clientRun = executeClientAgent({
+            context: execContext,
+            initialContext: mergedAgentRuntimeInitialContext,
+            metadata: requestMetadata,
+            messages: displayMessages,
+            parentMessageId: data.assistantMessageId,
+            parentMessageType: 'assistant',
+            parentOperationId: operationId,
+            inPortalThread: !!data.createdThreadId,
+            skipCreateFirstMessage: true,
+            userMessageId: data.userMessageId,
+          });
+          handoffSendOperation();
+          await clientRun;
         }
 
         const userFiles = dbMessageSelectors

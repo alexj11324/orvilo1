@@ -8,7 +8,12 @@ import type {
   WorkQueryLayout,
   WorkQueryPredicate,
 } from '@orvilo/types';
-import { builtinSavedViewKey, isBuiltinSavedViewId, notificationScopeKey } from '@orvilo/types';
+import {
+  builtinSavedViewKey,
+  isBuiltinSavedViewId,
+  normalizeWorkQuery,
+  notificationScopeKey,
+} from '@orvilo/types';
 import { and, desc, eq, inArray, or, type SQL, sql } from 'drizzle-orm';
 
 import { teamCycles, teamMembers, teams } from '../schemas/team';
@@ -237,11 +242,15 @@ export class SavedViewModel {
 
   /**
    * Visitors see the query shape without identifiers they cannot read.
-   * Owners keep the stored AST so CAS updates still round-trip.
+   * Everyone sees the normalized AST: a stored v1 view presents its migrated
+   * workflow/execution fields while the stored row stays untouched until the
+   * owner saves.
    */
   present = async (view: SavedViewItem): Promise<SavedViewItem> => {
-    if (isBuiltinSavedViewId(view.id) || view.ownerUserId === this.userId) return view;
-    return { ...view, queryAst: await this.redactQuery(view.queryAst) };
+    if (isBuiltinSavedViewId(view.id)) return view;
+    const queryAst = normalizeWorkQuery(view.queryAst);
+    if (view.ownerUserId === this.userId) return { ...view, queryAst };
+    return { ...view, queryAst: await this.redactQuery(queryAst) };
   };
 
   private redactQuery = async (query: WorkQuery): Promise<WorkQuery> => {
@@ -267,7 +276,7 @@ export class SavedViewModel {
         query: {
           entityType: 'task',
           filter: { all: [{ field: 'id', op: 'in', value: chunk }] },
-          schemaVersion: 1,
+          schemaVersion: 2,
         },
       });
       for (const task of result.tasks) readable.id.add(task.id);
@@ -278,7 +287,7 @@ export class SavedViewModel {
         query: {
           entityType: 'project',
           filter: { all: [{ field: 'id', op: 'in', value: chunk }] },
-          schemaVersion: 1,
+          schemaVersion: 2,
         },
       });
       for (const project of result.projects) {
@@ -321,8 +330,12 @@ export class SavedViewModel {
     teamId?: string | null;
     visibility?: SavedViewVisibility;
   }): Promise<SavedViewItem> => {
-    validateWorkQuery(params.query);
-    if (params.query.entityType !== params.entityType) {
+    // Authoring epoch: normalize then validate — the stored AST is v2 (a
+    // `status` predicate only survives where no workflow/execution mapping
+    // exists, read-only compatibility for old views).
+    const query = normalizeWorkQuery(params.query);
+    validateWorkQuery(query);
+    if (query.entityType !== params.entityType) {
       throw new WorkQueryError('INVALID_QUERY', 'entityType must match the query');
     }
     const visibility = params.visibility ?? 'private';
@@ -333,10 +346,10 @@ export class SavedViewModel {
       .values({
         displayOptions: params.displayOptions ?? {},
         entityType: params.entityType,
-        layout: params.layout ?? params.query.layout ?? 'list',
+        layout: params.layout ?? query.layout ?? 'list',
         name: params.name,
         ownerUserId: this.userId,
-        queryAst: params.query,
+        queryAst: query,
         teamId,
         visibility,
         workspaceId: this.workspaceId ?? null,
@@ -358,7 +371,8 @@ export class SavedViewModel {
     },
   ): Promise<SavedViewItem | undefined> => {
     if (isBuiltinSavedViewId(id)) throw new SavedViewBuiltinError();
-    if (patch.query) validateWorkQuery(patch.query);
+    const query = patch.query !== undefined ? normalizeWorkQuery(patch.query) : undefined;
+    if (query) validateWorkQuery(query);
     const current = await this.findById(id);
     if (!current || current.ownerUserId !== this.userId) return undefined;
     const visibility = patch.visibility ?? current.visibility;
@@ -373,7 +387,7 @@ export class SavedViewModel {
         ...(patch.displayOptions !== undefined ? { displayOptions: patch.displayOptions } : {}),
         ...(patch.visibility !== undefined ? { visibility: patch.visibility } : {}),
         teamId,
-        ...(patch.query !== undefined ? { queryAst: patch.query } : {}),
+        ...(patch.query !== undefined ? { queryAst: query } : {}),
         definitionVersion: sql`${savedViews.definitionVersion} + 1`,
         updatedAt: new Date(),
       })
@@ -407,9 +421,23 @@ export class SavedViewModel {
 
   evaluate = async (
     view: SavedViewItem,
-    params: { afterId?: string; groupKey?: string; limit?: number; queryHash?: string } = {},
+    params: {
+      afterId?: string;
+      groupKey?: string;
+      limit?: number;
+      queryHash?: string;
+      timeZone?: string;
+    } = {},
   ): Promise<SavedViewEvaluation> => {
-    const query = applyWorkQueryLayout(view.queryAst, view.layout, view.queryAst.groupBy);
+    const laidOut = applyWorkQueryLayout(
+      normalizeWorkQuery(view.queryAst),
+      view.layout,
+      view.queryAst.groupBy,
+    );
+    const query =
+      laidOut.groupBy === 'activityDate' && params.timeZone
+        ? { ...laidOut, timeZone: params.timeZone }
+        : laidOut;
     const kernel = new WorkQueryModel(this.db, this.userId, this.workspaceId);
     try {
       validateWorkQuery(query);

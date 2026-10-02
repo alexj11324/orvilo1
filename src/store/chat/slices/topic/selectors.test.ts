@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 
 import { type ChatStore } from '@/store/chat';
 import { initialState } from '@/store/chat/initialState';
-import { topicMapKey } from '@/store/chat/utils/topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
 import { merge } from '@/utils/merge';
 
 import { topicSelectors } from './selectors';
@@ -20,9 +20,11 @@ const topicItems = [
   { id: 'topic2', name: 'Topic 2' },
 ];
 
-// Helper to create topicDataMap with correct key format
+// Helper to create topicDataMap with correct key format. Outside a group
+// session the visible list lives in the workspace feed bucket; group sessions
+// keep their container-scoped key.
 const createTopicDataMap = (agentId: string, groupId?: string) => ({
-  [topicMapKey({ agentId, groupId })]: {
+  [groupId ? topicMapKey({ agentId, groupId }) : WORKSPACE_TOPIC_MAP_KEY]: {
     items: topicItems,
     total: topicItems.length,
     currentPage: 0,
@@ -35,12 +37,12 @@ const topicDataMap = createTopicDataMap('test');
 
 describe('topicSelectors', () => {
   describe('currentTopics', () => {
-    it('should return undefined if there are no topics with activeAgentId', () => {
+    it('should return undefined if the workspace feed bucket is empty', () => {
       const topics = topicSelectors.currentTopics(initialStore);
       expect(topics).toBeUndefined();
     });
 
-    it('should return all current topics from the store', () => {
+    it('should resolve the workspace feed outside a group session', () => {
       const state = merge(initialStore, { topicDataMap, activeAgentId: 'test' });
 
       const topics = topicSelectors.currentTopics(state);
@@ -50,7 +52,7 @@ describe('topicSelectors', () => {
 
   describe('reasoning + hetero pins', () => {
     const pinTopicDataMap = createTopicDataMap('test');
-    pinTopicDataMap[topicMapKey({ agentId: 'test' })].items = [
+    pinTopicDataMap[WORKSPACE_TOPIC_MAP_KEY].items = [
       {
         id: 'pinned',
         metadata: { reasoningConfig: { reasoningEffort: 'high' } },
@@ -125,7 +127,7 @@ describe('topicSelectors', () => {
 
   describe('getTopicModelById / activeTopicModel', () => {
     const modelTopicDataMap = createTopicDataMap('test');
-    modelTopicDataMap[topicMapKey({ agentId: 'test' })].items = [
+    modelTopicDataMap[WORKSPACE_TOPIC_MAP_KEY].items = [
       // Pinned model lives in the top-level `model`/`provider` columns, not metadata.
       { id: 'withModel', name: 'With Model', model: 'gpt-5', provider: 'openai' },
       { id: 'noModel', name: 'No Model' },
@@ -183,7 +185,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'test',
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: false,
             items: Array.from({ length: 20 }, (_, index) => ({ id: `topic-${index}` })),
@@ -201,7 +203,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'test',
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 1,
             hasMore: false,
             items: Array.from({ length: 21 }, (_, index) => ({ id: `topic-${index}` })),
@@ -219,7 +221,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'test',
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 1,
             hasMore: false,
             items: Array.from({ length: 21 }, (_, index) => ({ id: `topic-${index}` })),
@@ -327,7 +329,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'test',
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: false,
             items: polluted,
@@ -394,7 +396,7 @@ describe('topicSelectors', () => {
       activeAgentId: 'test',
       activeTopicId: 'topicA',
       topicDataMap: {
-        [topicMapKey({ agentId: 'test' })]: {
+        [WORKSPACE_TOPIC_MAP_KEY]: {
           currentPage: 0,
           hasMore: false,
           items: wdTopics,
@@ -440,7 +442,7 @@ describe('topicSelectors', () => {
 
       const state = merge(initialStore, {
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             items: topics,
             total: topics.length,
             currentPage: 0,
@@ -465,7 +467,7 @@ describe('topicSelectors', () => {
 
       const state = merge(initialStore, {
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             items: topics,
             total: topics.length,
             currentPage: 0,
@@ -499,7 +501,7 @@ describe('topicSelectors', () => {
 
       const state = merge(initialStore, {
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             items: topics,
             total: topics.length,
             currentPage: 0,
@@ -636,7 +638,7 @@ describe('topicSelectors', () => {
       const state = merge(initialStore, {
         activeAgentId: 'agent-1',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: false,
             items: [
@@ -660,7 +662,7 @@ describe('topicSelectors', () => {
         activeAgentId: 'agent-1',
         activeTopicId: 'older-active',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: true,
             items: [
@@ -690,7 +692,7 @@ describe('topicSelectors', () => {
         activeAgentId: 'agent-1',
         activeTopicId: 'archived-active',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: true,
             items: [{ id: 'visible', status: 'active', updatedAt: 2 }],
@@ -719,7 +721,7 @@ describe('topicSelectors', () => {
         activeAgentId: 'agent-1',
         activeTopicId: 'archived-favorite',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: true,
             items: [
@@ -756,7 +758,7 @@ describe('topicSelectors', () => {
         activeAgentId: 'agent-1',
         activeTopicId: 'active',
         topicDataMap: {
-          [topicMapKey({ agentId: 'agent-1' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             currentPage: 0,
             hasMore: false,
             items: [{ id: 'active', updatedAt: 1 }],
@@ -794,7 +796,7 @@ describe('topicSelectors', () => {
     const createStateWithTopics = (topics: any[]) =>
       merge(initialStore, {
         topicDataMap: {
-          [topicMapKey({ agentId: 'test' })]: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
             items: topics,
             total: topics.length,
             currentPage: 0,

@@ -8,7 +8,6 @@ import {
   LinkIcon,
   MessageSquareTextIcon,
   PencilIcon,
-  PlayIcon,
   StarIcon,
   TagsIcon,
   Trash2Icon,
@@ -38,8 +37,6 @@ import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { useClientDataSWR } from '@/libs/swr';
 import { taskLabelKeys } from '@/libs/swr/keys';
 import { taskLabelService } from '@/services/taskLabel';
-import { useAgentStore } from '@/store/agent';
-import { builtinAgentSelectors } from '@/store/agent/selectors';
 import { useCurrentProjectList } from '@/store/project';
 import { useTaskStore } from '@/store/task';
 import { useUserStore } from '@/store/user';
@@ -47,9 +44,9 @@ import { authSelectors } from '@/store/user/slices/auth/selectors';
 
 import {
   COLUMN_I18N_KEYS,
+  issueStatusChoices,
   taskStatusBoardColumnKey,
   type TaskStatusChoice,
-  taskStatusChoices,
 } from '../AgentTaskList/kanbanBoardModel';
 import { hasWorkspaceMemberDirectory } from '../shared/memberAssigneeMode';
 import { taskDetailPath } from '../shared/taskDetailPath';
@@ -58,7 +55,6 @@ import { renderMenuCheck, renderMenuExtra } from './menuExtra';
 import { PRIORITY_META } from './TaskPriorityTag';
 import { openTaskScheduleDialog } from './TaskScheduleDialog';
 import { useIssueStatusMove } from './useIssueStatusMove';
-import { useTaskStatusChange } from './useTaskStatusChange';
 
 const copyToClipboard = async (text: string) => {
   try {
@@ -119,8 +115,6 @@ export interface TaskContextMenuTarget {
   workflowStateId?: string | null;
 }
 
-const RUN_NOW_STATUSES = new Set<TaskStatus>(['backlog', 'completed']);
-
 export interface TaskContextMenuActions {
   buildItems: (task: TaskContextMenuTarget) => NativeContextMenuItem[];
   installKeyboardHandlers: (task: TaskContextMenuTarget, closeMenu?: () => void) => void;
@@ -142,15 +136,12 @@ export const useTaskContextMenuActions = (
   const activeWorkspaceSlug = useActiveWorkspaceSlug();
   const { allowed: canEditTask } = usePermission('create_content');
 
-  const changeTaskStatus = useTaskStatusChange();
   const moveWorkflow = useIssueStatusMove();
   const updateTask = useTaskStore((s) => s.updateTask);
   const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
   const deleteTask = useTaskStore((s) => s.deleteTask);
-  const runTask = useTaskStore((s) => s.runTask);
   const toggleTaskLabel = useTaskStore((s) => s.toggleTaskLabel);
   const openTopicDrawer = useTaskStore((s) => s.openTopicDrawer);
-  const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const projects = useCurrentProjectList();
   const isLogin = useUserStore(authSelectors.isLogin);
   const activeWorkspaceId = useActiveWorkspaceId();
@@ -182,9 +173,7 @@ export const useTaskContextMenuActions = (
       const currentStatus = task.status as TaskStatus;
       const currentPriority = task.priority ?? 0;
       const currentColumnKey = taskStatusBoardColumnKey({
-        status: currentStatus,
         workflowCategory: task.workflowCategory,
-        workflowStateId: task.workflowStateId,
       });
 
       const applyStatusChoice = (choice: TaskStatusChoice) => {
@@ -193,7 +182,7 @@ export const useTaskContextMenuActions = (
           return;
         }
         // The shared Issue status command — same CAS move the boards and the
-        // detail/list tags commit, with the picker fallback inside it.
+        // IssueStatusPicker commit, with the picker fallback inside it.
         if (choice.state || choice.workflowCategory) {
           void moveWorkflow({
             taskIdentifier: task.identifier,
@@ -202,17 +191,15 @@ export const useTaskContextMenuActions = (
               workflowStateRefId: choice.state?.id,
             },
           });
-        } else if (choice.status) {
-          void changeTaskStatus(task.identifier, choice.status);
         }
       };
 
       let pickIndex = 0;
-      const statusChildren = taskStatusChoices(task).map((choice) => {
-        // The Kanban board's columns are the options, order and glyphs, triage
-        // included; a column the board could not take (workflow-only columns
-        // for an unlinked task) renders disabled, like a blocked drop.
-        const pickable = Boolean(choice.status || choice.workflowCategory);
+      const statusChildren = issueStatusChoices().map((choice) => {
+        // The Issue board's columns are the options, order and glyphs, triage
+        // included — workflow categories only; execution statuses are never
+        // pickable.
+        const pickable = Boolean(choice.state || choice.workflowCategory);
         const isCurrent = choice.column.key === currentColumnKey;
         const visual = WORKFLOW_CATEGORY_VISUALS[choice.column.targetWorkflowCategory ?? 'backlog'];
         const VisualIcon = visual.icon;
@@ -260,7 +247,6 @@ export const useTaskContextMenuActions = (
         ),
         activeWorkspaceSlug,
       )}`;
-      const canRunNow = RUN_NOW_STATUSES.has(currentStatus);
       const canOpenRun = currentStatus === 'running' && !!task.currentTopicId;
 
       // Linear's Labels submenu toggles rows in place — the menu stays open
@@ -349,26 +335,6 @@ export const useTaskContextMenuActions = (
                     title: task.name ?? undefined,
                   });
                 },
-              },
-              { type: 'divider' },
-            ] satisfies NativeContextMenuItem[])
-          : []),
-        ...(canRunNow
-          ? ([
-              {
-                icon: <PlayIcon size="1em" />,
-                key: 'runNow',
-                label: t('taskList.contextMenu.runNow'),
-                disabled: !canEditTask,
-                onClick: async ({ domEvent }: MenuInfo) => {
-                  domEvent.stopPropagation();
-                  if (!canEditTask) return;
-                  if (!task.assigneeAgentId && !task.assigneeUserId && inboxAgentId) {
-                    await updateTask(task.identifier, { assigneeAgentId: inboxAgentId });
-                  }
-                  await runTask(task.identifier);
-                },
-                sfSymbol: 'play.fill',
               },
               { type: 'divider' },
             ] satisfies NativeContextMenuItem[])
@@ -566,13 +532,9 @@ export const useTaskContextMenuActions = (
 
         if (openSubmenu === 'status') {
           const currentColumnKey = taskStatusBoardColumnKey({
-            status: task.status as TaskStatus,
             workflowCategory: task.workflowCategory,
-            workflowStateId: task.workflowStateId,
           });
-          const pickable = taskStatusChoices(task).filter(
-            (choice) => choice.status || choice.workflowCategory,
-          );
+          const pickable = issueStatusChoices();
           if (idx < 0 || idx >= pickable.length) return;
           event.preventDefault();
           event.stopPropagation();
@@ -587,8 +549,6 @@ export const useTaskContextMenuActions = (
                   workflowStateRefId: choice.state?.id,
                 },
               });
-            } else if (choice.status) {
-              void changeTaskStatus(task.identifier, choice.status);
             }
           }
           close();
@@ -621,15 +581,12 @@ export const useTaskContextMenuActions = (
     t,
     appOrigin,
     activeWorkspaceSlug,
-    changeTaskStatus,
     moveWorkflow,
     updateTask,
     refreshTaskList,
     deleteTask,
-    runTask,
     toggleTaskLabel,
     openTopicDrawer,
-    inboxAgentId,
     projects,
     labelRegistryData,
     onStatusChange,

@@ -43,9 +43,17 @@ const baseTask = (overrides: Partial<TaskItem> = {}): TaskItem =>
  */
 const setupHappyPath = (task: TaskItem, execResult: unknown) => {
   vi.spyOn(TaskModel.prototype, 'resolve').mockResolvedValue(task);
+  // Run-start settlement reads and stamps the task through its own model
+  // instance — point it at the same fixture row.
+  vi.spyOn(TaskModel.prototype, 'findById').mockResolvedValue(task);
+  vi.spyOn(TaskModel.prototype, 'updateStatusIfReservation').mockResolvedValue(task);
+  vi.spyOn(TaskModel.prototype, 'updateStatusIfCurrent').mockResolvedValue(task);
+  vi.spyOn(TaskModel.prototype, 'updateStatus').mockResolvedValue(task);
+  vi.spyOn(TaskModel.prototype, 'resolveTaskReviewRequirement').mockResolvedValue(false);
   vi.spyOn(TaskModel.prototype, 'areAllDependenciesCompleted').mockResolvedValue(true);
   vi.spyOn(TaskModel.prototype, 'claimRunKickoff').mockResolvedValue(true);
   vi.spyOn(TaskTopicModel.prototype, 'findByTaskId').mockResolvedValue([]);
+  vi.spyOn(TaskTopicModel.prototype, 'findByTopicId').mockResolvedValue(null);
   vi.spyOn(TaskModel.prototype, 'reserveRun').mockResolvedValue(true);
   vi.spyOn(TaskModel.prototype, 'renewRunReservation').mockResolvedValue(true);
   vi.spyOn(TaskModel.prototype, 'updateTaskConfig').mockResolvedValue(null as never);

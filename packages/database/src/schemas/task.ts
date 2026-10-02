@@ -1,4 +1,5 @@
 import type {
+  AgentTier,
   BriefArtifacts,
   BriefMetadata,
   TaskActivityLogPayload,
@@ -15,6 +16,7 @@ import type {
   TaskLockField,
   TaskOrchestrationOwner,
   TaskRunState,
+  TaskRunTrigger,
   TaskTopicIntegration,
   TaskTriageStatus,
   TaskWorkflowCategory,
@@ -41,6 +43,7 @@ import { agents } from './agent';
 import { agentCronJobs } from './agentCronJob';
 import { documents } from './file';
 import { projectMilestones, projects } from './project';
+import type { TaskExecutionControl } from './taskExecutionControl';
 import { teamCycles, teams, teamWorkflowStates } from './team';
 import { topics } from './topic';
 import { users } from './user';
@@ -87,9 +90,10 @@ export const tasks = pgTable(
     assigneeAgentId: text('assignee_agent_id').references(() => agents.id, {
       onDelete: 'set null',
     }),
-    // Reviewer — the human accountable while the task sits in 'paused'
-    // ("pending review"). Stamped when a run finishes and hands off for
-    // review; the assignees above stay the executors.
+    // Reviewer — the human accountable while the issue is in review
+    // (`workflowCategory === 'in_review'` / a review-gate workflow state).
+    // Settlement stamps it when a run finishes and hands off for review;
+    // the assignees above stay the executors.
     reviewerUserId: text('reviewer_user_id').references(() => users.id, { onDelete: 'set null' }),
     /**
      * Team intake state. NULL means the task is not in triage (legacy and
@@ -115,8 +119,12 @@ export const tasks = pgTable(
     // Optional: when null, callers fall back to parsing `instruction` markdown.
     editorData: jsonb('editor_data'),
 
-    // Lifecycle (same state machine for user and agent)
-    // 'backlog' | 'running' | 'paused' | 'completed' | 'failed' | 'canceled'
+    // Legacy compatibility projection — maintained for old readers, NOT the
+    // Issue Status. The canonical Issue Status is `workflowCategory` +
+    // `workflowStateRefId`; execution state lives on `task_dispatches.phase` +
+    // `task_topics.run_state`. Do not read this column to decide business
+    // state; transitions between the layers run through the settlement policy.
+    // 'backlog' | 'scheduled' | 'running' | 'paused' | 'failed' | 'completed' | 'canceled'
     status: text('status').notNull().default('backlog'),
     /**
      * External workflow-state projection (provider state UUID as received).
@@ -149,6 +157,7 @@ export const tasks = pgTable(
     projectMilestoneId: uuid('project_milestone_id').references(() => projectMilestones.id, {
       onDelete: 'set null',
     }),
+    // Canonical Issue Status, together with `workflowStateRefId`.
     workflowCategory: text('workflow_category')
       .$type<TaskWorkflowCategory>()
       .notNull()
@@ -290,6 +299,13 @@ export const taskDispatches = pgTable(
     workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
     projectId: text('project_id').references(() => projects.id, { onDelete: 'set null' }),
     agentId: text('agent_id').references(() => agents.id, { onDelete: 'set null' }),
+    /**
+     * Capability band the bound agent ran under — snapshotted from
+     * `project_agents.tier` whenever the dispatch binds an agent, so a later
+     * roster edit cannot rewrite history. The tiered orchestrator escalates
+     * the next attempt off the tier recorded on a terminally failed row.
+     */
+    tier: text('tier').$type<AgentTier>(),
     phase: text('phase').$type<TaskDispatchPhase>().notNull().default('requested'),
     generation: integer('generation').notNull(),
     taskRevision: integer('task_revision').notNull(),
@@ -325,6 +341,12 @@ export const taskDispatches = pgTable(
     cancelAttempts: integer('cancel_attempts').notNull().default(0),
     cancelRequestedAt: timestamptz('cancel_requested_at'),
     lastCancelError: text('last_cancel_error'),
+    // Bounded sweep bookkeeping (resume + recovery): incremented each time a
+    // sweep-claimed row is re-driven or its `outcome_unknown` reconcile is
+    // rescheduled; reset to 0 when a waiting row resumes or a reconcile finds
+    // a stable live identity. Sweeps stop the dispatch once attempts pass the
+    // ceiling so a permanently stuck intent cannot pin the execution slot.
+    recoveryAttempts: integer('recovery_attempts').notNull().default(0),
     environmentSnapshot: jsonb('environment_snapshot').$type<TaskExecutionEnvironmentSnapshot>(),
     ...timestamps,
   },
@@ -474,6 +496,9 @@ export const taskTopics = pgTable(
     // runner asserts it via `assertMayCommit` before the registration
     // commits, so a superseded delegation cannot land its dispatch.
     executionEpoch: integer('execution_epoch').notNull().default(0),
+    /** Core process registration; absent on legacy runtimes. */
+    executionControl: jsonb('execution_control').$type<TaskExecutionControl>(),
+    executionControlRevision: integer('execution_control_revision').notNull().default(0),
     // Soft reference to `execution_grants.id` (the grant table points back at
     // this run — a direct FK would make the two schemas mutually recursive).
     executionGrantId: text('execution_grant_id'),
@@ -490,7 +515,7 @@ export const taskTopics = pgTable(
     // 'schedule' (cron tick) or 'heartbeat' (interval tick). Null for legacy
     // rows created before this column existed. Used so the maxExecutions quota
     // counts only automation ticks, not manual runs.
-    trigger: text('trigger').$type<'manual' | 'schedule' | 'heartbeat' | 'goal' | 'orchestrator'>(),
+    trigger: text('trigger').$type<TaskRunTrigger>(),
 
     // Handoff (populated after topic completes via LLM summarization)
     // { title, summary, keyFindings: string[], nextAction }

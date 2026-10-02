@@ -43,7 +43,7 @@ describe('api/client workspace scoping', () => {
 
   /**
    * Regression: the env JWT was copied into the link once, when the client was
-   * built. `lh hetero exec` holds its client for the whole run, so a renewed
+   * built. `orvilo hetero exec` holds its client for the whole run, so a renewed
    * operation token never reached it and every request after the original
    * token's four hours was rejected.
    */
@@ -57,7 +57,7 @@ describe('api/client workspace scoping', () => {
   });
 
   // The tools router is workspace aware like lambda; without the header every
-  // `lh search` ran against personal scope and billed the personal budget.
+  // `orvilo search` ran against personal scope and billed the personal budget.
   it('scopes the tools client to the run workspace', async () => {
     process.env.ORVILO_WORKSPACE_ID = 'workspace-1';
 

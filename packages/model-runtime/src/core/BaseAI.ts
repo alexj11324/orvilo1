@@ -7,6 +7,12 @@ import type {
   ASRResponse,
   ChatMethodOptions,
   ChatStreamPayload,
+  CreateImageMethodOptions,
+  CreateImagePayload,
+  CreateImageResponse,
+  CreateVideoMethodOptions,
+  CreateVideoPayload,
+  CreateVideoResponse,
   Embeddings,
   EmbeddingsOptions,
   EmbeddingsPayload,
@@ -21,6 +27,16 @@ import type {
 export interface OrviloRuntimeAI {
   baseURL?: string;
   chat?: (payload: ChatStreamPayload, options?: ChatMethodOptions) => Promise<Response>;
+  createImage?: (
+    payload: CreateImagePayload,
+    options?: CreateImageMethodOptions,
+  ) => Promise<CreateImageResponse>;
+
+  createVideo?: (
+    payload: CreateVideoPayload,
+    options?: CreateVideoMethodOptions,
+  ) => Promise<CreateVideoResponse>;
+
   embeddings?: (payload: EmbeddingsPayload, options?: EmbeddingsOptions) => Promise<Embeddings[]>;
 
   generateObject?: (

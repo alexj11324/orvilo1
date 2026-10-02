@@ -51,7 +51,21 @@ Then(
       exact: true,
     });
     const ready = this.page.getByText('All prerequisites completed.', { exact: true });
-    const empty = this.page.getByText('No prerequisite tasks.', { exact: true });
+    const sidebar = this.page.locator('[data-task-detail-side]');
+    const relationActions = sidebar.getByRole('button', { name: 'Relation actions' });
+    const rowFor = (identifier: string) => sidebar.locator('div.group', { hasText: identifier });
+    const removeRelation = async (identifier: string) => {
+      await rowFor(identifier).getByRole('button', { name: 'Relation actions' }).click();
+      await this.page
+        .getByRole('menuitem', { name: `Remove blocking dependency on ${identifier}` })
+        .click();
+    };
+    const expectEmpty = async () => {
+      for (const label of ['Blocked by', 'Blocks', 'Related']) {
+        await expect(sidebar.getByText(label, { exact: true })).toBeVisible({ timeout: 25_000 });
+      }
+      await expect(relationActions).toHaveCount(0);
+    };
 
     try {
       for (const role of ['first', 'second', 'dependent']) {
@@ -65,27 +79,16 @@ Then(
       const [first, second, target] = created;
       dependent = target;
       await this.page.goto(`/task/${target.identifier}`);
-      await expect(empty).toBeVisible({ timeout: 25_000 });
+      await expectEmpty();
       await screenshot('empty');
 
       // Mutate behind an idle mounted page to exercise first-link invalidation.
       await rpc('addDependency', { dependsOnId: first.id, taskId: target.id });
-      await expect(
-        this.page.getByRole('button', {
-          exact: true,
-          name: `Remove blocking dependency on ${first.identifier}`,
-        }),
-      ).toBeVisible({ timeout: 25_000 });
+      await expect(rowFor(first.identifier)).toBeVisible({ timeout: 25_000 });
 
-      // The rail has no add UI; a second blocking prerequisite arrives through
-      // the API.
+      // A second blocking prerequisite still arrives through the API.
       await rpc('addDependency', { dependsOnId: second.id, taskId: target.id });
-      await expect(
-        this.page.getByRole('button', {
-          exact: true,
-          name: `Remove blocking dependency on ${second.identifier}`,
-        }),
-      ).toBeVisible({ timeout: 25_000 });
+      await expect(rowFor(second.identifier)).toBeVisible({ timeout: 25_000 });
       await expect(blocked).toBeVisible({ timeout: 25_000 });
       await rejected('run', { id: target.id });
       await rejected('updateStatus', { id: target.id, status: 'completed' });
@@ -96,13 +99,13 @@ Then(
       await rpc('updateStatus', { id: target.id, status: 'paused' });
       await rpc('updateStatus', { id: first.id, status: 'completed' });
       await rejected('run', { id: target.id });
-      await expect(blocked).toBeVisible();
+      await expect(blocked).toBeVisible({ timeout: 25_000 });
       await screenshot('one-blocker');
 
       await rpc('updateStatus', { id: second.id, status: 'canceled' });
       await rejected('run', { id: target.id });
       await rejected('updateStatus', { id: target.id, status: 'completed' });
-      await expect(blocked).toBeVisible();
+      await expect(blocked).toBeVisible({ timeout: 25_000 });
 
       await rpc('updateStatus', { id: second.id, status: 'completed' });
       await expect(ready).toBeVisible({ timeout: 25_000 });
@@ -113,20 +116,10 @@ Then(
       await expect(blocked).toBeVisible({ timeout: 25_000 });
       await rejected('run', { id: target.id });
       await screenshot('reopened');
-      await this.page
-        .getByRole('button', {
-          exact: true,
-          name: `Remove blocking dependency on ${first.identifier}`,
-        })
-        .click();
-      await expect(ready).toBeVisible();
-      await this.page
-        .getByRole('button', {
-          exact: true,
-          name: `Remove blocking dependency on ${second.identifier}`,
-        })
-        .click();
-      await expect(empty).toBeVisible();
+      await removeRelation(first.identifier);
+      await expect(ready).toBeVisible({ timeout: 25_000 });
+      await removeRelation(second.identifier);
+      await expectEmpty();
     } catch (error) {
       primaryFailure = { error };
     }

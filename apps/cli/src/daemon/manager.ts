@@ -81,7 +81,7 @@ export function isProcessAlive(pid: number): boolean {
  *
  * A bare `isProcessAlive` check is not enough: if a daemon dies without cleaning
  * up `daemon.pid` (crash, `kill -9`, reboot), the OS can later reuse that PID
- * for an unrelated process. Acting on the stale PID would let `lh logout` /
+ * for an unrelated process. Acting on the stale PID would let `orvilo logout` /
  * `connect stop` SIGTERM a stranger. The daemon is always spawned as
  * `<node> … connect … --daemon-child`, so we confirm that signature in the
  * process command line before trusting the PID.

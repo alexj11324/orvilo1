@@ -220,6 +220,9 @@ const createSessionOptions = (
   overrides: Partial<DevinAcpSessionOptions> = {},
 ): DevinAcpSessionOptions => ({
   args: ['--model', 'sonnet'],
+  // These tests assert the pre-keepalive lifecycle (closed at turn end);
+  // keep-alive itself is covered by cacheKeepaliveSession.test.ts.
+  cacheKeepalive: { enabled: false },
   clientVersion: '1.2.3',
   commandPath: 'devin',
   cwd: '/workspace',

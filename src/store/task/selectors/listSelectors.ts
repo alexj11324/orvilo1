@@ -9,11 +9,17 @@ const isTaskListInit = (s: TaskStoreState) => s.isTaskListInit;
 
 const listVisibility = (s: TaskStoreState) => s.listVisibility;
 
+/**
+ * Legacy execution-status → human label for the one surface still rendering
+ * raw `tasks.status` (`TaskStatusIcon`); Issue Status labels come from the
+ * workflow category elsewhere. This is the execution projection, not the
+ * Issue board's columns.
+ */
 const statusDisplayMap: Record<string, string> = {
   backlog: 'Backlog',
   canceled: 'Canceled',
   completed: 'Done',
-  failed: 'Needs input',
+  failed: 'Failed',
   paused: 'Needs input',
   running: 'In progress',
   scheduled: 'Scheduled',
@@ -32,9 +38,9 @@ const taskGroupByKey = (key: string) => (s: TaskStoreState) =>
 
 const backlogTasks = (s: TaskStoreState) => taskGroupByKey('backlog')(s)?.tasks ?? [];
 
-const runningTasks = (s: TaskStoreState) => taskGroupByKey('running')(s)?.tasks ?? [];
+const runningTasks = (s: TaskStoreState) => taskGroupByKey('in_progress')(s)?.tasks ?? [];
 
-const needsInputTasks = (s: TaskStoreState) => taskGroupByKey('needsInput')(s)?.tasks ?? [];
+const needsInputTasks = (s: TaskStoreState) => taskGroupByKey('in_review')(s)?.tasks ?? [];
 
 const doneTasks = (s: TaskStoreState) => taskGroupByKey('done')(s)?.tasks ?? [];
 

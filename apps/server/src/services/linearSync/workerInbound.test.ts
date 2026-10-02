@@ -5,10 +5,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getTestDB } from '@/database/core/getTestDB';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
+import { TaskModel } from '@/database/models/task';
 import {
   agents,
   linearInstallations,
   linearSyncOutbox,
+  taskDispatches,
   tasks,
   users,
   workspaces,
@@ -587,8 +589,10 @@ describe('LinearSyncWorker inbound ordering', () => {
       linearIssueId: 'linear-issue-workflow',
       organizationId: installation.organizationId,
       remoteSnapshot: {
+        description: 'Keep execution separate',
         id: 'linear-issue-workflow',
         identifier: 'WFN-1',
+        priority: 0,
         projectId: binding.linearProjectId,
         stateId: 'linear-state-todo',
         teamId: 'linear-team-workflow',
@@ -628,6 +632,312 @@ describe('LinearSyncWorker inbound ordering', () => {
       status: 'running',
       workflowCategory: 'done',
       workflowStateId: 'linear-state-done',
+    });
+    // Inbound sync touches no execution truth: no dispatch run materializes
+    // and the workflow write echoes nothing back out to Linear.
+    await expect(
+      db.select().from(taskDispatches).where(eq(taskDispatches.taskId, task.id)),
+    ).resolves.toEqual([]);
+    await expect(
+      db.select().from(linearSyncOutbox).where(eq(linearSyncOutbox.taskId, task.id)),
+    ).resolves.toEqual([]);
+  });
+
+  it('defers a live reassign on a running task to an assignee conflict instead of fencing the run', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'DFR',
+      name: 'Defer Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-defer', workspaceId })
+      .returning();
+    await db.insert(agents).values([
+      { id: 'linear-defer-agent-a', userId, workspaceId },
+      { id: 'linear-defer-agent-b', userId, workspaceId },
+    ]);
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-defer',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-defer',
+      projectId: project.id,
+      settings: {
+        assignmentMappings: [
+          { linearUserId: 'linear-user-a', orviloAgentId: 'linear-defer-agent-a' },
+          { linearUserId: 'linear-user-b', orviloAgentId: 'linear-defer-agent-b' },
+        ],
+      },
+      teamIds: ['linear-team-defer'],
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        assigneeAgentId: 'linear-defer-agent-a',
+        createdByUserId: userId,
+        identifier: 'DFR-1',
+        instruction: 'Running work must not be fenced',
+        name: 'Running task',
+        projectId: project.id,
+        seq: 1,
+        status: 'running',
+        visibility: 'public',
+        workspaceId,
+      })
+      .returning();
+    await db.insert(taskDispatches).values({
+      agentId: 'linear-defer-agent-a',
+      generation: 1,
+      id: 'linear-defer-dispatch',
+      idempotencyKey: 'linear-defer-dispatch',
+      phase: 'running',
+      policyRevision: 0,
+      requestedBy: 'linear-defer-test',
+      requirementRevision: 0,
+      taskId: task.id,
+      taskRevision: 0,
+      workspaceId,
+    });
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: 'DFR-1',
+      linearIssueId: 'linear-issue-defer',
+      organizationId: installation.organizationId,
+      remoteSnapshot: {
+        assigneeId: 'linear-user-a',
+        description: 'Running work must not be fenced',
+        id: 'linear-issue-defer',
+        identifier: 'DFR-1',
+        priority: 0,
+        projectId: binding.linearProjectId,
+        teamId: 'linear-team-defer',
+        title: 'Running task',
+        updatedAt: '2026-09-16T12:00:00.000Z',
+      },
+      taskId: task.id,
+    });
+    await model.captureDelivery({
+      action: 'update',
+      deliveryId: 'defer-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: { id: 'linear-issue-defer' },
+      subjectId: 'linear-issue-defer',
+    });
+    const provider = {
+      getIssue: vi.fn().mockResolvedValue({
+        assigneeId: 'linear-user-b',
+        id: 'linear-issue-defer',
+        identifier: 'DFR-1',
+        projectId: binding.linearProjectId,
+        teamId: 'linear-team-defer',
+        title: 'Running task',
+        updatedAt: '2026-09-16T12:01:00.000Z',
+      }),
+      listRelations: vi.fn().mockResolvedValue([]),
+    };
+
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+
+    const [updated] = await db.select().from(tasks).where(eq(tasks.id, task.id));
+    expect(updated).toMatchObject({
+      assigneeAgentId: 'linear-defer-agent-a',
+      status: 'running',
+    });
+    const [dispatch] = await db
+      .select()
+      .from(taskDispatches)
+      .where(eq(taskDispatches.taskId, task.id));
+    expect(dispatch.phase).toBe('running');
+    const link = await model.findIssueLinkByExternalId('linear-issue-defer');
+    expect(link).toMatchObject({
+      conflict: expect.objectContaining({
+        fields: ['assigneeId'],
+        local: { assigneeId: 'linear-user-a' },
+        remote: { assigneeId: 'linear-user-b' },
+      }),
+      lastConfirmedSnapshot: expect.objectContaining({ assigneeId: 'linear-user-a' }),
+      syncState: 'conflict',
+    });
+    await expect(
+      db.select().from(linearSyncOutbox).where(eq(linearSyncOutbox.taskId, task.id)),
+    ).resolves.toEqual([]);
+  });
+
+  it('reads a legacy localStatus mapping without touching execution status', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'LGC',
+      name: 'Legacy Mapping Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-legacy', workspaceId })
+      .returning();
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-legacy',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-legacy',
+      projectId: project.id,
+      settings: {
+        statusMappings: [{ linearStateId: 'linear-state-legacy-done', localStatus: 'completed' }],
+      },
+      teamIds: ['linear-team-legacy'],
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'LGC-1',
+        instruction: 'Legacy binding stays readable',
+        name: 'Legacy task',
+        projectId: project.id,
+        seq: 1,
+        status: 'backlog',
+        visibility: 'public',
+        workflowCategory: 'todo',
+        workflowStateId: 'linear-state-legacy-todo',
+        workspaceId,
+      })
+      .returning();
+    await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: 'LGC-1',
+      linearIssueId: 'linear-issue-legacy',
+      organizationId: installation.organizationId,
+      remoteSnapshot: {
+        description: 'Legacy binding stays readable',
+        id: 'linear-issue-legacy',
+        identifier: 'LGC-1',
+        priority: 0,
+        projectId: binding.linearProjectId,
+        stateId: 'linear-state-legacy-todo',
+        teamId: 'linear-team-legacy',
+        title: 'Legacy task',
+        updatedAt: '2026-09-16T12:00:00.000Z',
+      },
+      taskId: task.id,
+    });
+    await model.captureDelivery({
+      action: 'update',
+      deliveryId: 'legacy-delivery',
+      eventType: 'Issue',
+      installationId: installation.id,
+      organizationId: installation.organizationId,
+      payload: { id: 'linear-issue-legacy' },
+      subjectId: 'linear-issue-legacy',
+    });
+    const provider = {
+      getIssue: vi.fn().mockResolvedValue({
+        id: 'linear-issue-legacy',
+        identifier: 'LGC-1',
+        projectId: binding.linearProjectId,
+        stateId: 'linear-state-legacy-done',
+        teamId: 'linear-team-legacy',
+        title: 'Legacy task',
+        updatedAt: '2026-09-16T12:01:00.000Z',
+      }),
+      listRelations: vi.fn().mockResolvedValue([]),
+    };
+
+    await expect(
+      new LinearSyncWorker(db, workspaceId).processPending(provider as never, 20, installation.id),
+    ).resolves.toMatchObject({ failed: 0, processed: 1 });
+
+    const [updated] = await db.select().from(tasks).where(eq(tasks.id, task.id));
+    expect(updated).toMatchObject({
+      status: 'backlog',
+      workflowCategory: 'todo',
+      workflowStateId: 'linear-state-legacy-done',
+    });
+    await expect(
+      db.select().from(linearSyncOutbox).where(eq(linearSyncOutbox.taskId, task.id)),
+    ).resolves.toEqual([]);
+  });
+
+  it('queues a Linear state update for a workflow move but never for an execution transition', async () => {
+    const model = new LinearSyncModel(db, workspaceId);
+    const project = await new ProjectModel(db, userId, workspaceId).create({
+      identifier: 'OUT',
+      name: 'Outbound Project',
+    });
+    const [installation] = await db
+      .insert(linearInstallations)
+      .values({ organizationId: 'linear-org-outbound', workspaceId })
+      .returning();
+    const binding = await model.upsertBinding({
+      defaultTeamId: 'linear-team-outbound',
+      installationId: installation.id,
+      linearProjectId: 'linear-project-outbound',
+      projectId: project.id,
+      settings: {
+        statusMappings: [{ linearStateId: 'linear-state-done', workflowCategory: 'done' }],
+        writeEnabled: true,
+      },
+      teamIds: ['linear-team-outbound'],
+    });
+    const [task] = await db
+      .insert(tasks)
+      .values({
+        createdByUserId: userId,
+        identifier: 'OUT-1',
+        instruction: 'Outbound sync',
+        name: 'Outbound task',
+        projectId: project.id,
+        seq: 1,
+        status: 'backlog',
+        visibility: 'public',
+        workflowCategory: 'in_progress',
+        workflowStateId: 'linear-state-doing',
+        workspaceId,
+      })
+      .returning();
+    const link = await model.createIssueLink({
+      bindingId: binding.id,
+      installationId: installation.id,
+      linearIdentifier: 'OUT-1',
+      linearIssueId: 'linear-issue-outbound',
+      organizationId: installation.organizationId,
+      remoteSnapshot: {
+        id: 'linear-issue-outbound',
+        identifier: 'OUT-1',
+        projectId: binding.linearProjectId,
+        stateId: 'linear-state-doing',
+        teamId: 'linear-team-outbound',
+        title: 'Outbound task',
+      },
+      taskId: task.id,
+    });
+    const taskModel = new TaskModel(db, userId, workspaceId);
+
+    // An execution transition alone must never emit a Linear status update.
+    await expect(
+      taskModel.updateStatusIfCurrent(task.id, 'backlog', 'running'),
+    ).resolves.toMatchObject({ status: 'running' });
+    await expect(
+      db.select().from(linearSyncOutbox).where(eq(linearSyncOutbox.taskId, task.id)),
+    ).resolves.toEqual([]);
+
+    // A workflow move queues the mapped Linear state through the outbox.
+    await expect(
+      taskModel.update(task.id, {
+        workflowCategory: 'done',
+        workflowStateId: 'linear-state-done',
+      }),
+    ).resolves.toMatchObject({ workflowCategory: 'done' });
+    const [outbox] = await db
+      .select()
+      .from(linearSyncOutbox)
+      .where(eq(linearSyncOutbox.taskId, task.id));
+    expect(outbox).toMatchObject({
+      linkId: link.id,
+      operation: 'update_issue',
+      payload: { stateId: 'linear-state-done' },
     });
   });
 });

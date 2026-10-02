@@ -2,6 +2,7 @@ export default {
   'actions.addNewTopic': 'Start New Topic',
   'actions.addNewTopicInProject': 'Start new topic in {{directory}}',
   'actions.autoRename': 'Smart Rename',
+  'actions.showTopics': 'Topics',
   'actions.diagnose': 'Check Message Chain',
   'actions.archiveMergedPullRequests': 'Archive Topics with Merged PRs',
   'actions.archiveMergedPullRequestsOwn': 'Archive My Topics with Merged PRs',

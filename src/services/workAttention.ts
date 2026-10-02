@@ -1,4 +1,11 @@
-import type { MyWorkMode, VersionedDecision, WorkQuery } from '@orvilo/types';
+import type {
+  MyWorkMode,
+  VersionedDecision,
+  WorkQuery,
+  WorkQueryFilter,
+  WorkQueryGroupBy,
+  WorkQuerySubGroupBy,
+} from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 
@@ -30,14 +37,23 @@ class WorkAttentionService {
   myWork = (input: {
     afterId?: string;
     delegated?: boolean;
-    groupBy?: 'attention' | 'none' | 'status' | 'workflowCategory';
+    filter?: WorkQueryFilter;
+    groupBy?: WorkQueryGroupBy;
     groupKey?: string;
     layout?: 'board' | 'list';
     limit?: number;
     mode: MyWorkMode;
     noProject?: boolean;
     queryHash?: string;
-  }) => lambdaClient.workAttention.myWork.query(input);
+    subGroupBy?: WorkQuerySubGroupBy;
+    timeZone?: string;
+  }) => {
+    const { subGroupBy, ...rest } = input;
+    // myWork lanes are member, priority, project, status, and workflow.
+    // Agent and milestone axes belong on the generic work query.
+    const lane = subGroupBy === 'agent' || subGroupBy === 'milestone' ? undefined : subGroupBy;
+    return lambdaClient.workAttention.myWork.query(lane ? { ...rest, subGroupBy: lane } : rest);
+  };
 
   reviews = (input: {
     afterId?: string;
@@ -59,6 +75,7 @@ class WorkAttentionService {
     afterId?: string;
     groupKey?: string;
     limit?: number;
+    mode?: MyWorkMode;
     query: WorkQuery;
     queryHash?: string;
   }) => lambdaClient.workAttention.query.query(input);
@@ -75,6 +92,7 @@ class WorkAttentionService {
     id: string;
     limit?: number;
     queryHash?: string;
+    timeZone?: string;
   }) => lambdaClient.workAttention.savedViewEvaluate.query(input);
 
   savedViewGet = (id: string) => lambdaClient.workAttention.savedViewGet.query({ id });

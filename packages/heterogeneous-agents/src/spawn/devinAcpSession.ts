@@ -6,6 +6,10 @@ import type { AcpAgentSessionOptions } from './acpAgentSession';
 import { ACP_PROTOCOL_VERSION, AcpAgentSession } from './acpAgentSession';
 import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpRpcResponseError, AcpServerRequestError } from './acpStdioClient';
+import {
+  resolveCacheKeepalive as resolveAgentCacheKeepalive,
+  type ResolvedCacheKeepalive,
+} from './cachePolicy';
 import type { BuildAgentInputOptions } from './input';
 import type {
   TraeAcpImagePromptBlock,
@@ -119,6 +123,7 @@ export class DevinAcpSession extends AcpAgentSession<
   DevinAcpSessionOptions
 > {
   private acceptUpdates = false;
+  private resolvedCacheKeepalive?: ResolvedCacheKeepalive;
   private readonly resolvedPermissionMode?: string;
 
   constructor(options: DevinAcpSessionOptions) {
@@ -209,6 +214,15 @@ export class DevinAcpSession extends AcpAgentSession<
     return { prompt: this.options.prompt, sessionId };
   }
 
+  protected override resolveCacheKeepalive(): ResolvedCacheKeepalive | undefined {
+    this.resolvedCacheKeepalive ??= resolveAgentCacheKeepalive(
+      'devin',
+      this.options.env,
+      this.options.cacheKeepalive,
+    );
+    return this.resolvedCacheKeepalive;
+  }
+
   protected override async settlePrompt(result: unknown): Promise<void> {
     await this.client.drain();
     const promptResult = isRecord(result) ? result : undefined;
@@ -225,6 +239,8 @@ export class DevinAcpSession extends AcpAgentSession<
   }
 
   protected async handleAgentMessage(message: AcpRpcMessage): Promise<void> {
+    // Inert keep-alive turns must not leak updates into the run's event stream.
+    if (this.inInertTurn) return;
     if (!this.acceptUpdates || message.method !== 'session/update') return;
     const params = isRecord(message.params) ? message.params : undefined;
     if (!isRecord(params?.update)) return;
@@ -245,6 +261,9 @@ export class DevinAcpSession extends AcpAgentSession<
       throw new AcpServerRequestError(-32_601, `Unsupported ACP client request: ${message.method}`);
     }
 
+    // Fail closed during an inert turn: a keep-alive ping never invokes
+    // tools, so a permission ask means the agent misbehaved — cancel it.
+    if (this.inInertTurn) return { outcome: { outcome: 'cancelled' } };
     const request = this.parsePermissionRequest(message.params);
     const selected = await this.selectPermissionOption(message, request);
     return {

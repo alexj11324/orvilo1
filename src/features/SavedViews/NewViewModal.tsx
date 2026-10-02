@@ -1,6 +1,11 @@
 'use client';
 
-import type { WorkQuery, WorkQueryEntityType, WorkQueryFilter } from '@orvilo/types';
+import {
+  normalizeWorkQuerySubGroupBy,
+  type WorkQuery,
+  type WorkQueryEntityType,
+  type WorkQueryFilter,
+} from '@orvilo/types';
 import { memo, useCallback, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -13,6 +18,7 @@ import { mutate } from '@/libs/swr';
 import { workAttentionKeys } from '@/libs/swr/keys';
 import { workAttentionService } from '@/services/workAttention';
 
+import { workQueryWithViewerTimeZone } from './savedViewDisplay';
 import ViewDefinitionEditor, { type ViewEditorState } from './ViewDefinitionEditor';
 import { builderToFilter, filterToBuilder } from './workQueryBuilder';
 
@@ -38,9 +44,13 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   filter: builderToFilter(state.entityType, state.builder),
   groupBy: state.groupBy === 'none' ? undefined : state.groupBy,
   layout: state.layout,
-  schemaVersion: 1,
+  schemaVersion: 2,
   sort: state.sort,
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
+  subGroupBy:
+    state.entityType === 'task' && state.groupBy !== 'none'
+      ? normalizeWorkQuerySubGroupBy(state.groupBy, state.subGroupBy)
+      : undefined,
 });
 
 /**
@@ -85,12 +95,20 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
   }, [defaultEntityType, defaultTeamId, open, seedBuilder]);
 
   const query = useMemo(() => draftQuery(state), [state]);
+  const viewerTimeZone = useMemo(
+    () => Intl.DateTimeFormat().resolvedOptions().timeZone || undefined,
+    [],
+  );
+  const previewQuery = useMemo(
+    () => workQueryWithViewerTimeZone(query, viewerTimeZone),
+    [query, viewerTimeZone],
+  );
 
   useEffect(() => {
     if (!open) return;
     const timer = setTimeout(() => {
       void workAttentionService
-        .query({ limit: 5, query })
+        .query({ limit: 5, query: previewQuery })
         .then((result) => {
           const data = result?.data;
           if (!data) {
@@ -109,7 +127,7 @@ const NewViewModal = memo<NewViewModalProps>((props) => {
         .catch(() => setPreview(null));
     }, 300);
     return () => clearTimeout(timer);
-  }, [open, query]);
+  }, [open, previewQuery]);
 
   const ready =
     state.name.trim().length > 0 && (state.visibility !== 'team' || Boolean(state.teamId));

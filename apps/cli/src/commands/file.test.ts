@@ -211,7 +211,7 @@ describe('file command', () => {
     });
 
     it('should upload a local file passed as a positional argument', async () => {
-      const tmpFile = path.join(os.tmpdir(), `lh-upload-${process.pid}.txt`);
+      const tmpFile = path.join(os.tmpdir(), `orvilo-upload-${process.pid}.txt`);
       fs.writeFileSync(tmpFile, 'hello world');
 
       const fetchSpy = vi
@@ -248,7 +248,7 @@ describe('file command', () => {
     });
 
     it('should upload a local file passed via --file', async () => {
-      const tmpFile = path.join(os.tmpdir(), `lh-upload-f-${process.pid}.json`);
+      const tmpFile = path.join(os.tmpdir(), `orvilo-upload-f-${process.pid}.json`);
       fs.writeFileSync(tmpFile, '{}');
 
       const fetchSpy = vi
@@ -272,7 +272,7 @@ describe('file command', () => {
     });
 
     it('should skip the S3 upload when the local file hash already exists', async () => {
-      const tmpFile = path.join(os.tmpdir(), `lh-upload-dedup-${process.pid}.txt`);
+      const tmpFile = path.join(os.tmpdir(), `orvilo-upload-dedup-${process.pid}.txt`);
       fs.writeFileSync(tmpFile, 'dedup me');
 
       const fetchSpy = vi.spyOn(globalThis, 'fetch');

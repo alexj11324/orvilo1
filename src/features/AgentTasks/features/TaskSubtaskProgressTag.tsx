@@ -148,7 +148,7 @@ const TaskSubtaskProgressTag = memo<TaskSubtaskProgressTagProps>(
             ) : (
               <TaskStatusIcon size={16} status={itemStatus} />
             )}
-            <div className={cn('truncate', 'block', isActive ? 'font-bold' : undefined)}>
+            <div className={cn('truncate', 'block', isActive ? 'font-semibold' : undefined)}>
               {subtask.task.name || subtask.task.identifier}
             </div>
           </div>

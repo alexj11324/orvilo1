@@ -7,6 +7,9 @@ import { LOCAL_HETEROGENEOUS_AGENT_TYPES } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as OperationPrincipalModule from '@/server/services/heterogeneousAgent/operationPrincipal';
+import { HeteroOperationPrincipalError } from '@/server/services/heterogeneousAgent/operationPrincipal';
+
 import { aiAgentRouter } from '../aiAgent';
 import { cleanupTestUser, createTestUser } from './integration/setup';
 
@@ -20,6 +23,16 @@ vi.mock('@/database/core/db-adaptor', () => ({
 
 const mockHeteroIngest = vi.fn();
 const mockHeteroFinish = vi.fn();
+const mockResolvePrincipal = vi.fn();
+
+vi.mock('@/server/services/heterogeneousAgent/operationPrincipal', async (importOriginal) => ({
+  ...(await importOriginal<typeof OperationPrincipalModule>()),
+  // Evaluated lazily so the factory can run before the const below initializes.
+  resolveActiveHeteroOperationPrincipal: (...args: unknown[]) =>
+    mockResolvePrincipal(...args) as ReturnType<
+      typeof OperationPrincipalModule.resolveActiveHeteroOperationPrincipal
+    >,
+}));
 
 // Stub the service so we can assert on procedure → service wiring without
 // pulling in the real Redis-backed StreamEventManager.
@@ -69,6 +82,8 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
     mockHeteroFinish.mockReset();
     mockHeteroIngest.mockResolvedValue(undefined);
     mockHeteroFinish.mockResolvedValue(undefined);
+    mockResolvePrincipal.mockReset();
+    mockResolvePrincipal.mockResolvedValue({ operationId: 'op-1', userId });
   });
 
   afterEach(async () => {
@@ -333,6 +348,76 @@ describe('aiAgentRouter.heteroIngest / heteroFinish', () => {
           topicId: 'topic-1',
         }),
       ).rejects.toThrow();
+    });
+  });
+
+  // A producer's bounded retry must not turn a settled run into a reported
+  // failure: `orvilo hetero exec` exits 1 whenever its finish is rejected, so a
+  // duplicate terminal callback has to ack instead of returning CONFLICT.
+  describe('post-terminal duplicates', () => {
+    const operationCaller = () =>
+      aiAgentRouter.createCaller({
+        jwtPayload: { userId },
+        oidcAuth: {
+          aud: 'urn:orvilo:hetero-operation',
+          capabilities: ['hetero:ingest', 'hetero:finish'],
+          exp: Math.floor(Date.now() / 1000) + 3600,
+          iat: Math.floor(Date.now() / 1000),
+          iss: 'urn:orvilo:internal',
+          jti: 'jti-dup',
+          operation_id: 'op-1',
+          purpose: 'hetero-operation',
+          sub: userId,
+        },
+        userId,
+      } as any);
+
+    it('acks a duplicate heteroFinish on an already-settled operation', async () => {
+      mockResolvePrincipal.mockRejectedValue(
+        new HeteroOperationPrincipalError('Operation has already ended', 409),
+      );
+
+      await expect(
+        operationCaller().heteroFinish({
+          agentType: 'claude-code',
+          operationId: 'op-1',
+          result: 'success',
+          topicId: 'topic-1',
+        }),
+      ).resolves.toEqual({ ack: true });
+      expect(mockHeteroFinish).not.toHaveBeenCalled();
+    });
+
+    it('acks a late heteroIngest batch on an already-settled operation', async () => {
+      mockResolvePrincipal.mockRejectedValue(
+        new HeteroOperationPrincipalError('Operation has already ended', 409),
+      );
+
+      await expect(
+        operationCaller().heteroIngest({
+          agentType: 'claude-code',
+          events: [buildEvent('stream_chunk', 0)],
+          operationId: 'op-1',
+          topicId: 'topic-1',
+        }),
+      ).resolves.toEqual({ ack: true });
+      expect(mockHeteroIngest).not.toHaveBeenCalled();
+    });
+
+    it('still rejects a principal failure that is not settlement', async () => {
+      mockResolvePrincipal.mockRejectedValue(
+        new HeteroOperationPrincipalError('Operation is outside the token scope', 403),
+      );
+
+      await expect(
+        operationCaller().heteroFinish({
+          agentType: 'claude-code',
+          operationId: 'op-1',
+          result: 'success',
+          topicId: 'topic-1',
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(mockHeteroFinish).not.toHaveBeenCalled();
     });
   });
 });

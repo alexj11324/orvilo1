@@ -23,7 +23,7 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
 
   return (
     <div className="flex flex-col gap-3" style={{ paddingBlock: 8 }}>
-      <div className="text-[13px]" style={{ color: cssVar.colorTextSecondary }}>
+      <div className="text-sm" style={{ color: cssVar.colorTextSecondary }}>
         {t('taskDetail.runAll.description')}
       </div>
 
@@ -40,10 +40,10 @@ const RunSubtasksPreview = memo<Props>(({ plan }) => {
               style={{ paddingBlock: 8, paddingInline: 12 }}
             >
               <div className="flex items-center justify-between gap-2">
-                <div className="text-[13px] font-semibold">
+                <div className="text-sm font-semibold">
                   {t('taskDetail.runAll.layer', { index: index + 1 })}
                 </div>
-                <div className="text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+                <div className="text-xs" style={{ color: cssVar.colorTextDescription }}>
                   {hint}
                 </div>
               </div>

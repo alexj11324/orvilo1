@@ -1,5 +1,6 @@
 'use client';
 
+import { UNFINISHED_TASK_STATUSES } from '@orvilo/builtin-tool-task';
 import type { TaskStatus } from '@orvilo/types';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { useEffect, useState } from 'react';
@@ -49,6 +50,12 @@ export interface TaskStatusCascadeItem {
   name?: string | null;
   status?: string;
 }
+
+const UNFINISHED_SUBTASK_STATUSES = new Set<TaskStatus>(UNFINISHED_TASK_STATUSES);
+
+/** Subtasks still open — the only ones a done/cancel cascade can touch. */
+export const getOpenSubtasks = (subtasks: TaskStatusCascadeItem[]): TaskStatusCascadeItem[] =>
+  subtasks.filter((task) => UNFINISHED_SUBTASK_STATUSES.has(task.status as TaskStatus));
 
 /**
  * Apply-and-close flow shared by the modal buttons: on failure the modal stays
@@ -109,7 +116,7 @@ const TaskStatusCascadeModalContent = ({
   return (
     <div className="flex flex-col">
       <div className={`flex flex-col gap-2 ${styles.content}`}>
-        <h3 className="font-bold">{t('taskDetail.statusCascade.title')}</h3>
+        <h3 className="font-semibold">{t('taskDetail.statusCascade.title')}</h3>
         <div style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.statusCascade.description', {
             count: subtasks.length,

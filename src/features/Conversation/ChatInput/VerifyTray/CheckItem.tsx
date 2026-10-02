@@ -68,7 +68,7 @@ const CheckItem = memo<CheckItemProps>(({ check, onRemove, onUpdate }) => {
         <div className="flex items-center flex-1 gap-2" style={{ minWidth: 0 }}>
           {/* Draft item has no verdict yet — a neutral glyph, not a false pass/fail. */}
           <CircleDashed color={cssVar.colorTextQuaternary} size={14} />
-          <div className="truncate text-[13px]">{check.name}</div>
+          <div className="truncate text-sm">{check.name}</div>
         </div>
         <div className="flex items-center gap-1" style={{ flexShrink: 0 }}>
           <TooltipProvider>

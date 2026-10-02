@@ -40,7 +40,9 @@ const processManager = new ShellProcessManager();
  */
 const safeSegment = (value: string): string => value.replaceAll(/[^\w-]/g, '') || 'default';
 
-/** Prefix for a simple `lh`/`orvilo` invocation (keyword + boundary, args via slice). */
+/** Prefix for a simple `orvilo`/`lh` invocation (keyword + boundary, args via slice).
+ * `lh` keeps matching although the binary is gone — a stale user script calling
+ * `lh` still deserves the in-app route rather than a sandbox command-not-found. */
 const SIMPLE_LH_PREFIX = /^\s*(?:lh|orvilo)(?=\s|$)/;
 
 export default class ShellCommandCtr extends ControllerModule {
@@ -245,15 +247,15 @@ export default class ShellCommandCtr extends ControllerModule {
     if (prefixMatch) {
       const cliCtr = this.app.getController(CliCtr);
       if (cliCtr) {
-        // Deliberate carve-out: `lh` keeps its in-app route even for a
-        // sandboxed run. It is Orvilo's own control-plane CLI — it needs the
+        // Deliberate carve-out: `orvilo` (and legacy `lh`) keeps its in-app
+        // route even for a sandboxed run. It is Orvilo's own control-plane CLI — it needs the
         // injected `ORVILO_JWT` and the server it talks to, both of which the
         // sandbox strips (env allowlist) and blocks (no network). Sandboxing it
         // would not harden anything the model can reach through it; it would
         // just break agent self-management. The sandbox's promise is about
         // model-authored shell commands, and this is not one.
         const args = params.command.slice(prefixMatch[0].length).trim();
-        logger.debug('Routing lh command to CliCtr.runCliCommand:', args);
+        logger.debug('Routing lh/orvilo command to CliCtr.runCliCommand:', args);
         const result = await cliCtr.runCliCommand(args);
         return {
           exit_code: result.exitCode,

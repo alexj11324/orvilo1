@@ -1,33 +1,33 @@
 # Knowledge Base, File & Document Commands
 
-## Knowledge Base (`lh kb`)
+## Knowledge Base (`orvilo kb`)
 
 Manage knowledge bases for RAG (Retrieval-Augmented Generation). Supports directory tree structure with folders, documents, and file uploads.
 
 **Source**: `apps/cli/src/commands/kb.ts`
 
-### `lh kb list`
+### `orvilo kb list`
 
 ```bash
-lh kb list [--json [fields]]
+orvilo kb list [--json [fields]]
 ```
 
 **Table columns**: ID, NAME, DESCRIPTION, UPDATED
 
-### `lh kb view <id>`
+### `orvilo kb view <id>`
 
 ```bash
-lh kb view [fields]] < id > [--json
+orvilo kb view [fields]] < id > [--json
 ```
 
 **Displays**: Name, description, full directory tree with all files and documents (recursively fetched). Shows indented tree structure with item type (File/Doc), file type, and size.
 
 **API**: Uses `file.getKnowledgeItems` to recursively fetch items. Folders (`custom/folder` fileType) are traversed in parallel via `Promise.all` for performance.
 
-### `lh kb create`
+### `orvilo kb create`
 
 ```bash
-lh kb create -n [--avatar < name > [-d < desc > ] < url > ]
+orvilo kb create -n [--avatar < name > [-d < desc > ] < url > ]
 ```
 
 | Option                     | Description         | Required |
@@ -38,18 +38,18 @@ lh kb create -n [--avatar < name > [-d < desc > ] < url > ]
 
 **Output**: Created KB ID. Note: backend returns ID as a string directly (not an object).
 
-### `lh kb edit <id>`
+### `orvilo kb edit <id>`
 
 ```bash
-lh kb edit [-d [--avatar < id > [-n < name > ] < desc > ] < url > ]
+orvilo kb edit [-d [--avatar < id > [-n < name > ] < desc > ] < url > ]
 ```
 
 Requires at least one change flag. Errors if none specified.
 
-### `lh kb delete <id>`
+### `orvilo kb delete <id>`
 
 ```bash
-lh kb delete [--yes] < id > [--remove-files]
+orvilo kb delete [--yes] < id > [--remove-files]
 ```
 
 | Option           | Description                  |
@@ -57,26 +57,26 @@ lh kb delete [--yes] < id > [--remove-files]
 | `--remove-files` | Also delete associated files |
 | `--yes`          | Skip confirmation            |
 
-### `lh kb add-files <knowledgeBaseId>`
+### `orvilo kb add-files <knowledgeBaseId>`
 
 ```bash
-lh kb add-files <kbId> --ids <fileId1> <fileId2> ...
+orvilo kb add-files <kbId> --ids <fileId1> <fileId2> ...
 ```
 
 Link existing files to a knowledge base.
 
-### `lh kb remove-files <knowledgeBaseId>`
+### `orvilo kb remove-files <knowledgeBaseId>`
 
 ```bash
-lh kb remove-files <kbId> --ids <fileId1> <fileId2> ... [--yes]
+orvilo kb remove-files <kbId> --ids <fileId1> <fileId2> ... [--yes]
 ```
 
 Unlink files from a knowledge base.
 
-### `lh kb mkdir <knowledgeBaseId>`
+### `orvilo kb mkdir <knowledgeBaseId>`
 
 ```bash
-lh kb mkdir < kbId > -n < name > [--parent < folderId > ]
+orvilo kb mkdir < kbId > -n < name > [--parent < folderId > ]
 ```
 
 Create a folder in a knowledge base. Uses `document.createDocument` with `fileType: 'custom/folder'`.
@@ -86,10 +86,10 @@ Create a folder in a knowledge base. Uses `document.createDocument` with `fileTy
 | `-n, --name <name>`   | Folder name      | Yes      |
 | `--parent <parentId>` | Parent folder ID | No       |
 
-### `lh kb create-doc <knowledgeBaseId>`
+### `orvilo kb create-doc <knowledgeBaseId>`
 
 ```bash
-lh kb create-doc [--parent < kbId > -t < title > [-c < content > ] < folderId > ]
+orvilo kb create-doc [--parent < kbId > -t < title > [-c < content > ] < folderId > ]
 ```
 
 Create a document in a knowledge base. Uses `document.createDocument` with `fileType: 'custom/document'`.
@@ -100,10 +100,10 @@ Create a document in a knowledge base. Uses `document.createDocument` with `file
 | `-c, --content <text>` | Document content | No       |
 | `--parent <parentId>`  | Parent folder ID | No       |
 
-### `lh kb move <id>`
+### `orvilo kb move <id>`
 
 ```bash
-lh kb move < id > --type < file | doc > [--parent < folderId > ]
+orvilo kb move < id > --type < file | doc > [--parent < folderId > ]
 ```
 
 Move a file or document to a different folder (or to root if `--parent` is omitted).
@@ -115,10 +115,10 @@ Move a file or document to a different folder (or to root if `--parent` is omitt
 
 Uses `document.updateDocument` for docs, `file.updateFile` for files.
 
-### `lh kb upload <knowledgeBaseId> <filePath>`
+### `orvilo kb upload <knowledgeBaseId> <filePath>`
 
 ```bash
-lh kb upload <kbId> <filePath> [--parent <folderId>]
+orvilo kb upload <kbId> <filePath> [--parent <folderId>]
 ```
 
 Upload a local file to a knowledge base via S3 presigned URL.
@@ -131,16 +131,16 @@ Upload a local file to a knowledge base via S3 presigned URL.
 
 ---
 
-## File Management (`lh file`)
+## File Management (`orvilo file`)
 
 Manage uploaded files.
 
 **Source**: `apps/cli/src/commands/file.ts`
 
-### `lh file list`
+### `orvilo file list`
 
 ```bash
-lh file list [--kb-id [-L [--json [fields]] < id > ] < n > ]
+orvilo file list [--kb-id [-L [--json [fields]] < id > ] < n > ]
 ```
 
 | Option            | Description              | Default |
@@ -150,26 +150,26 @@ lh file list [--kb-id [-L [--json [fields]] < id > ] < n > ]
 
 **Table columns**: ID, NAME, TYPE, SIZE, UPDATED
 
-### `lh file view <id>`
+### `orvilo file view <id>`
 
 ```bash
-lh file view [fields]] < id > [--json
+orvilo file view [fields]] < id > [--json
 ```
 
 **Displays**: Name, type, size, chunking status, embedding status.
 
-### `lh file delete <ids...>`
+### `orvilo file delete <ids...>`
 
 ```bash
-lh file delete [--yes] < id1 > [id2...]
+orvilo file delete [--yes] < id1 > [id2...]
 ```
 
 Supports deleting multiple files at once.
 
-### `lh file recent`
+### `orvilo file recent`
 
 ```bash
-lh file recent [-L [--json [fields]] < n > ]
+orvilo file recent [-L [--json [fields]] < n > ]
 ```
 
 | Option            | Description     | Default |
@@ -178,16 +178,16 @@ lh file recent [-L [--json [fields]] < n > ]
 
 ---
 
-## Document Management (`lh doc`)
+## Document Management (`orvilo doc`)
 
 Manage text documents (notes, wiki pages).
 
 **Source**: `apps/cli/src/commands/doc.ts`
 
-### `lh doc list`
+### `orvilo doc list`
 
 ```bash
-lh doc list [-L [--file-type [--source-type [--json [fields]] < n > ] < type > ] < type > ]
+orvilo doc list [-L [--file-type [--source-type [--json [fields]] < n > ] < type > ] < type > ]
 ```
 
 | Option                 | Description                                   | Default |
@@ -198,18 +198,18 @@ lh doc list [-L [--file-type [--source-type [--json [fields]] < n > ] < type > ]
 
 **Table columns**: ID, TITLE, TYPE, UPDATED
 
-### `lh doc view <id>`
+### `orvilo doc view <id>`
 
 ```bash
-lh doc view [fields]] < id > [--json
+orvilo doc view [fields]] < id > [--json
 ```
 
 **Displays**: Title, type, KB association, updated time, full content.
 
-### `lh doc create`
+### `orvilo doc create`
 
 ```bash
-lh doc create -t [-F [--parent [--slug [--kb [--file-type < title > [-b < body > ] < path > ] < id > ] < slug > ] < id > ] < type > ]
+orvilo doc create -t [-F [--parent [--slug [--kb [--file-type < title > [-b < body > ] < path > ] < id > ] < slug > ] < id > ] < type > ]
 ```
 
 | Option                   | Description                                     | Required |
@@ -224,34 +224,34 @@ lh doc create -t [-F [--parent [--slug [--kb [--file-type < title > [-b < body >
 
 `-b` and `-F` are mutually exclusive; `-F` reads the file content as the body.
 
-### `lh doc batch-create <file>`
+### `orvilo doc batch-create <file>`
 
 Batch create documents from a JSON file. The file must contain a non-empty array of document objects.
 
 ```bash
-lh doc batch-create documents.json
+orvilo doc batch-create documents.json
 ```
 
 Each object in the array can have: `title`, `content`, `fileType`, `knowledgeBaseId`, `parentId`, `slug`.
 
-### `lh doc edit <id>`
+### `orvilo doc edit <id>`
 
 ```bash
-lh doc edit [-b [-F [--parent [--file-type < id > [-t < title > ] < body > ] < path > ] < id > ] < type > ]
+orvilo doc edit [-b [-F [--parent [--file-type < id > [-t < title > ] < body > ] < path > ] < id > ] < type > ]
 ```
 
-### `lh doc delete <ids...>`
+### `orvilo doc delete <ids...>`
 
 ```bash
-lh doc delete [--yes] < id1 > [id2...]
+orvilo doc delete [--yes] < id1 > [id2...]
 ```
 
-### `lh doc parse <fileId>`
+### `orvilo doc parse <fileId>`
 
 Parse an uploaded file into a document.
 
 ```bash
-lh doc parse [--json [fields]] < fileId > [--with-pages]
+orvilo doc parse [--json [fields]] < fileId > [--with-pages]
 ```
 
 | Option         | Description             |
@@ -260,20 +260,20 @@ lh doc parse [--json [fields]] < fileId > [--with-pages]
 
 **Output**: Parsed title and content preview.
 
-### `lh doc link-topic <docId> <topicId>`
+### `orvilo doc link-topic <docId> <topicId>`
 
 Associate a document with a topic. Creates a linked copy via the notebook router.
 
 ```bash
-lh doc link-topic <docId> <topicId>
+orvilo doc link-topic <docId> <topicId>
 ```
 
-### `lh doc topic-docs <topicId>`
+### `orvilo doc topic-docs <topicId>`
 
 List documents associated with a topic.
 
 ```bash
-lh doc topic-docs [--json [fields]] < topicId > [--type < type > ]
+orvilo doc topic-docs [--json [fields]] < topicId > [--type < type > ]
 ```
 
 | Option          | Description                                      |

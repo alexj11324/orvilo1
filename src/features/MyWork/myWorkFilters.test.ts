@@ -14,6 +14,7 @@ import {
   myWorkDirectoryNullaryActive,
   myWorkDirectorySelectedValues,
   toggleMyWorkDirectoryEnum,
+  toggleMyWorkDirectoryMulti,
   toggleMyWorkDirectoryNullary,
   toggleMyWorkDirectoryValue,
   workQueryFilterHasPredicates,
@@ -22,19 +23,81 @@ import {
 const builderWith = (rows: FilterRow[]): BuilderState => ({ any: [], rows, slots: [] });
 
 describe('myWorkComposedQuery', () => {
-  it('returns null for modes the generic query endpoint cannot express', () => {
-    for (const mode of ['subscribed', 'activity'] as const) {
-      expect(
-        myWorkComposedQuery({
-          delegated: false,
-          groupBy: 'none',
-          layout: 'list',
-          mode,
-          noProject: false,
-          ordering: 'default',
-        }),
-      ).toBeNull();
-    }
+  it('expresses subscribed and activity as predicates the generic query can compile', () => {
+    const subscribed = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'none',
+      layout: 'list',
+      mode: 'subscribed',
+      noProject: false,
+      ordering: 'default',
+    });
+    expect(subscribed?.filter?.all).toEqual([
+      { field: 'subscribed', op: 'eq', value: { ref: 'currentUser' } },
+    ]);
+    const activity = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'none',
+      layout: 'list',
+      mode: 'activity',
+      noProject: false,
+      ordering: 'default',
+    });
+    expect(activity?.filter?.all).toEqual([
+      { field: 'hasActivity', op: 'eq', value: { ref: 'currentUser' } },
+    ]);
+    expect(
+      myWorkComposedQuery({
+        delegated: false,
+        groupBy: 'none',
+        layout: 'list',
+        mode: 'delegated',
+        noProject: false,
+        ordering: 'default',
+      }),
+    ).toBeNull();
+  });
+
+  it('puts a board lane and the completed window on the query', () => {
+    const query = myWorkComposedQuery({
+      completed: 'none',
+      delegated: false,
+      groupBy: 'workflowCategory',
+      layout: 'board',
+      mode: 'assigned',
+      noProject: false,
+      ordering: 'default',
+      subGroupBy: 'priority',
+    });
+    expect(query?.groupBy).toBe('workflowCategory');
+    expect(query?.subGroupBy).toBe('priority');
+    expect(query?.filter?.all).toEqual([
+      { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
+      { field: 'workflowCategory', op: 'notIn', value: ['done', 'canceled'] },
+    ]);
+    const conflict = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'workflowCategory',
+      layout: 'board',
+      mode: 'assigned',
+      noProject: false,
+      ordering: 'default',
+      subGroupBy: 'status',
+    });
+    expect(conflict?.subGroupBy).toBeUndefined();
+    const listed = myWorkComposedQuery({
+      delegated: false,
+      groupBy: 'activityDate',
+      layout: 'list',
+      mode: 'activity',
+      noProject: false,
+      ordering: 'default',
+      subGroupBy: 'priority',
+      timeZone: 'UTC',
+    });
+    expect(listed?.groupBy).toBe('activityDate');
+    expect(listed?.subGroupBy).toBe('priority');
+    expect(listed?.timeZone).toBe('UTC');
   });
 
   it('keeps the mode predicate and AND-merges builder predicates', () => {
@@ -123,8 +186,15 @@ describe('myWorkActiveFilterCount', () => {
 describe('filter directory', () => {
   it('offers only fields the task field spec covers', () => {
     for (const field of MY_WORK_FILTER_DIRECTORY_FIELDS) {
-      expect(WORK_QUERY_TASK_FIELD_SPECS.some((spec) => spec.field === field)).toBe(true);
+      const spec = WORK_QUERY_TASK_FIELD_SPECS.find((item) => item.field === field);
+      expect(spec).toBeDefined();
+      // Deprecated fields (legacy `status`) are read-only — never authored.
+      expect(spec?.deprecated).toBeUndefined();
     }
+    expect(MY_WORK_FILTER_DIRECTORY_FIELDS).not.toContain('status');
+    expect(MY_WORK_FILTER_DIRECTORY_FIELDS).toEqual(
+      expect.arrayContaining(['workflowCategory', 'executionState']),
+    );
   });
 
   it('single-selects a scalar value through one eq row', () => {
@@ -152,27 +222,41 @@ describe('filter directory', () => {
     expect(myWorkDirectoryFieldActive(cleared, 'assigneeUserId')).toBe(false);
   });
 
+  it('collects priority picks into one numeric in predicate', () => {
+    const picked = toggleMyWorkDirectoryMulti(
+      toggleMyWorkDirectoryMulti(builderWith([]), 'priority', 1),
+      'priority',
+      4,
+    );
+    expect(builderToFilter('task', picked)).toEqual({
+      all: [{ field: 'priority', op: 'in', value: [1, 4] }],
+    });
+  });
+
   it('collects enum picks into a single in predicate', () => {
     const picked = toggleMyWorkDirectoryEnum(
-      toggleMyWorkDirectoryEnum(builderWith([]), 'status', 'backlog'),
-      'status',
-      'running',
+      toggleMyWorkDirectoryEnum(builderWith([]), 'workflowCategory', 'backlog'),
+      'workflowCategory',
+      'in_progress',
     );
-    expect(myWorkDirectorySelectedValues(picked, 'status')).toEqual(['backlog', 'running']);
+    expect(myWorkDirectorySelectedValues(picked, 'workflowCategory')).toEqual([
+      'backlog',
+      'in_progress',
+    ]);
     expect(picked.rows).toHaveLength(1);
     // Removing both values drops the row entirely.
     const off = toggleMyWorkDirectoryEnum(
-      toggleMyWorkDirectoryEnum(picked, 'status', 'backlog'),
-      'status',
-      'running',
+      toggleMyWorkDirectoryEnum(picked, 'workflowCategory', 'backlog'),
+      'workflowCategory',
+      'in_progress',
     );
-    expect(myWorkDirectoryFieldActive(off, 'status')).toBe(false);
+    expect(myWorkDirectoryFieldActive(off, 'workflowCategory')).toBe(false);
   });
 
   it('compiles directory picks through builderToFilter', () => {
-    const picked = toggleMyWorkDirectoryEnum(builderWith([]), 'status', 'backlog');
+    const picked = toggleMyWorkDirectoryEnum(builderWith([]), 'workflowCategory', 'backlog');
     expect(builderToFilter('task', picked)).toEqual({
-      all: [{ field: 'status', op: 'in', value: ['backlog'] }],
+      all: [{ field: 'workflowCategory', op: 'in', value: ['backlog'] }],
     });
     const scalar = toggleMyWorkDirectoryValue(builderWith([]), 'priority', 1);
     expect(builderToFilter('task', scalar)).toEqual({

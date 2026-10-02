@@ -1,6 +1,7 @@
 import { isHeterogeneousAgentModelId } from '@orvilo/const';
-import { DEFAULT_ORVILO_ENGINE } from '@orvilo/types';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
+import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
+import { DEFAULT_ORVILO_ENGINE, type OrviloAgentAgencyConfig } from '@orvilo/types';
 
 import type { AgentConfigWithId } from '@/server/services/agent';
 
@@ -35,7 +36,8 @@ export const resolveExecutionBinding = (
   synthesized: boolean;
 } => {
   const explicit = agentConfig.agencyConfig?.heterogeneousProvider;
-  if (explicit) return { heteroType: explicit.type, heterogeneousProvider: explicit, synthesized: false };
+  if (explicit)
+    return { heteroType: explicit.type, heterogeneousProvider: explicit, synthesized: false };
   if (isHeterogeneousAgentModelId(model))
     return { heteroType: model, heterogeneousProvider: undefined, synthesized: false };
   return {
@@ -43,4 +45,29 @@ export const resolveExecutionBinding = (
     heterogeneousProvider: { engine: DEFAULT_ORVILO_ENGINE, type: 'orvilo' },
     synthesized: true,
   };
+};
+
+/**
+ * Whether the agent's resolved execution binding can mount the per-run
+ * builtin/MCP tool surface — the pre-dispatch form of the
+ * `supportsBuiltinToolMount` input `resolveRunToolSurface` gets from the
+ * execution turn. Selection and binding gates call this so a task that
+ * requires the surface is never routed onto an agent that cannot mount it.
+ */
+export const agentCanMountBuiltinToolSurface = (
+  agentConfig:
+    | { agencyConfig?: OrviloAgentAgencyConfig | null }
+    | Pick<AgentConfigWithId, 'agencyConfig'>
+    | null
+    | undefined,
+  model?: string | null,
+): boolean => {
+  const { heteroType, heterogeneousProvider } = resolveExecutionBinding(
+    agentConfig?.agencyConfig ? { agencyConfig: agentConfig.agencyConfig } : {},
+    model,
+  );
+  return canMountBuiltinToolSurface({
+    engine: heterogeneousProvider?.engine,
+    type: heteroType,
+  });
 };

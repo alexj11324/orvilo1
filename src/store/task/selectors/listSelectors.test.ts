@@ -15,7 +15,8 @@ describe('taskListSelectors', () => {
       expect(taskListSelectors.getDisplayStatus('backlog')).toBe('Backlog');
       expect(taskListSelectors.getDisplayStatus('running')).toBe('In progress');
       expect(taskListSelectors.getDisplayStatus('paused')).toBe('Needs input');
-      expect(taskListSelectors.getDisplayStatus('failed')).toBe('Needs input');
+      // `failed` is an execution state — it is never folded into Needs input.
+      expect(taskListSelectors.getDisplayStatus('failed')).toBe('Failed');
       expect(taskListSelectors.getDisplayStatus('completed')).toBe('Done');
       expect(taskListSelectors.getDisplayStatus('canceled')).toBe('Canceled');
     });
@@ -37,7 +38,7 @@ describe('taskListSelectors', () => {
       },
       {
         hasMore: false,
-        key: 'running',
+        key: 'in_progress',
         limit: 50,
         offset: 0,
         tasks: [
@@ -48,12 +49,12 @@ describe('taskListSelectors', () => {
       },
       {
         hasMore: false,
-        key: 'needsInput',
+        key: 'in_review',
         limit: 50,
         offset: 0,
         tasks: [
           { identifier: 'T-3', status: 'paused' },
-          { identifier: 'T-4', status: 'failed' },
+          { identifier: 'T-4', status: 'paused' },
         ],
         total: 2,
       },
@@ -75,12 +76,12 @@ describe('taskListSelectors', () => {
       expect(result[0].identifier).toBe('T-1');
     });
 
-    it('should return running tasks from group', () => {
+    it('should return in-progress tasks from group', () => {
       const result = taskListSelectors.runningTasks(state);
       expect(result).toHaveLength(2);
     });
 
-    it('should return needsInput tasks from group', () => {
+    it('should return in-review tasks from group', () => {
       const result = taskListSelectors.needsInputTasks(state);
       expect(result).toHaveLength(2);
       expect(result.map((t: any) => t.identifier)).toEqual(['T-3', 'T-4']);
@@ -99,7 +100,7 @@ describe('taskListSelectors', () => {
     });
 
     it('should return group by key', () => {
-      const group = taskListSelectors.taskGroupByKey('running')(state);
+      const group = taskListSelectors.taskGroupByKey('in_progress')(state);
       expect(group?.total).toBe(2);
       expect(group?.hasMore).toBe(false);
     });

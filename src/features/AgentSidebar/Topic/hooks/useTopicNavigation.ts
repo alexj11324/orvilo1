@@ -3,10 +3,12 @@ import { useCallback, useMemo } from 'react';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import { useFocusTopicPopup } from '@/features/TopicPopupGuard/useTopicPopupsRegistry';
+import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { useChatStore } from '@/store/chat';
+import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
 
 import { buildPrefixedAgentRoutePath, parseAgentPathname } from '../../utils/agentPathname';
@@ -60,6 +62,21 @@ export const useTopicNavigation = () => {
     async (topicId?: string, options?: NavigateToTopicOptions) => {
       if (!options?.skipPopupFocus) {
         await focusTopicPopup(topicId);
+      }
+
+      // The workspace feed mixes topics from many agents. A topic owned by a
+      // different agent can't be opened under the current `/agent/:aid` URL —
+      // deep-link straight into its owner's route so the conversation, its
+      // message bucket and the composer all bind the owning agent.
+      const ownerAgentId = topicId
+        ? topicSelectors.getTopicById(topicId)(useChatStore.getState())?.agentId
+        : undefined;
+      if (topicId && ownerAgentId && ownerAgentId !== routeAgentId) {
+        router.push(
+          buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(ownerAgentId, topicId), activeWorkspaceSlug),
+        );
+        toggleConfig(false);
+        return;
       }
 
       // If in agent sub-route, navigate back to agent chat first

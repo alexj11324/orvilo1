@@ -14,6 +14,31 @@ describe('team view draft query', () => {
     expect(projects.filter).toEqual({ all: [{ field: 'teamId', op: 'eq', value: 'team-1' }] });
   });
 
+  it('keeps a second axis on a task list and on a board', () => {
+    const list = teamViewDraftQuery(
+      { ...newTeamViewDraft('task', 'team-1'), subGroupBy: 'priority' },
+      'team-1',
+    );
+    const board = teamViewDraftQuery(
+      {
+        ...newTeamViewDraft('task', 'team-1'),
+        groupBy: 'status',
+        layout: 'board',
+        subGroupBy: 'assignee',
+      },
+      'team-1',
+    );
+    const flat = teamViewDraftQuery(
+      { ...newTeamViewDraft('task', 'team-1'), groupBy: 'none', subGroupBy: 'priority' },
+      'team-1',
+    );
+
+    expect(list.subGroupBy).toBe('priority');
+    expect(board.subGroupBy).toBe('assignee');
+    expect(flat.groupBy).toBeUndefined();
+    expect(flat.subGroupBy).toBeUndefined();
+  });
+
   it('intersects an added filter with the fixed team scope', () => {
     const draft = newTeamViewDraft('task', 'team-1');
     draft.builder = {

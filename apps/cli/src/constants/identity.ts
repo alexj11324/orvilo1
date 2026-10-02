@@ -23,10 +23,10 @@ export const CLI_DISPLAY_NAME = 'Orvilo CLI';
  * The command users type. Also the man page's title (uppercased) and the name
  * shown in "run `<bin> login`" hints.
  */
-export const CLI_PRIMARY_BIN = 'lh';
+export const CLI_PRIMARY_BIN = 'orvilo';
 
 /** Additional command names installed alongside the primary one. */
-export const CLI_BIN_ALIASES: readonly string[] = ['orvilo'];
+export const CLI_BIN_ALIASES: readonly string[] = [];
 
 /** Every installed command name — what shell completion has to bind to. */
 export const CLI_BIN_NAMES: readonly string[] = [CLI_PRIMARY_BIN, ...CLI_BIN_ALIASES];

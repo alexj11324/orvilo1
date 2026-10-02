@@ -28,6 +28,7 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
     isMutatingAgent,
     openCreateModal,
   } = useCreateMenuItems();
@@ -47,12 +48,15 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
 
   const dropdownItems = useMemo(() => {
     const connectItem = createConnectAgentMenuItem(menuOptions);
+    const groupFromDescription = createGroupFromDescriptionMenuItem(menuOptions);
     // The list entry stays available for the private bucket too; the bucket
     // decides which tab the agent-list page opens on.
     const showDiscoveryItems = !isCustomGroup;
     return [
       createAgentMenuItem(menuOptions),
       createGroupChatMenuItem(menuOptions),
+      // Optional secondary: description-template generation — never a gate.
+      ...(groupFromDescription ? [groupFromDescription] : []),
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
       ...(showDiscoveryItems
         ? [
@@ -66,6 +70,7 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
     isCustomGroup,
     menuOptions,
     visibility,

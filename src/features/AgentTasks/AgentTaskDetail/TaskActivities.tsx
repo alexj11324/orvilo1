@@ -36,6 +36,7 @@ import { taskActivitySelectors, taskDetailSelectors } from '@/store/task/selecto
 import { PRIORITY_META } from '../features/TaskPriorityTag';
 import AccordionArrowIcon from '../shared/AccordionArrowIcon';
 import { styles } from '../shared/style';
+import { type ActivityFeedFilter, matchesActivityFilter } from './activityFeedFilter';
 import { resolveAssignmentActivityCopy } from './assignmentActivityCopy';
 import CommentCard from './CommentCard';
 import { commentComposerKey } from './commentComposerKey';
@@ -397,6 +398,7 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const activeTaskDatabaseId = useTaskDetailSelector(taskDetailSelectors.taskDatabaseId);
   const refreshTaskDetail = useTaskStore((s) => s.internal_refreshTaskDetail);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [feedFilter, setFeedFilter] = useState<ActivityFeedFilter>('all');
 
   const refreshActiveTask = useCallback(async () => {
     if (activeTaskId) await refreshTaskDetail(activeTaskId);
@@ -405,13 +407,14 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
   const items = useMemo(
     () =>
       activities
+        .filter((act) => matchesActivityFilter(act.type, feedFilter))
         .map((act, i) => ({
           activity: act,
           brief: act.type === 'brief' ? toBriefItem(act) : null,
           key: act.id ?? `activity-${i}`,
         }))
         .reverse(),
-    [activities],
+    [activities, feedFilter],
   );
 
   const commentInput = activeTaskId ? (
@@ -523,18 +526,34 @@ const TaskActivities = memo<TaskActivitiesProps>(({ variant = 'activity' }) => {
         onClick={() => setIsExpanded((prev) => !prev)}
       >
         <BotMessageSquare color={cssVar.colorTextDescription} size={16} />
-        <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
+        <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.activities')}
         </div>
         <LinearTaskSyncStatus taskId={activeTaskDatabaseId} />
         <AccordionArrowIcon isOpen={isExpanded} style={{ color: cssVar.colorTextDescription }} />
+        {(['all', 'comments', 'updates'] as const).map((filter) => (
+          <button
+            aria-pressed={feedFilter === filter}
+            className="text-xs"
+            key={filter}
+            type="button"
+            style={{
+              color: feedFilter === filter ? cssVar.colorText : cssVar.colorTextDescription,
+              fontWeight: feedFilter === filter ? 600 : 400,
+            }}
+            onClick={(event) => {
+              event.stopPropagation();
+              setFeedFilter(filter);
+            }}
+          >
+            {t(`taskDetail.activities.filter.${filter}`)}
+          </button>
+        ))}
       </div>
+      {commentInput}
       <Collapsible open={isExpanded}>
         <CollapsibleContent>
-          <div className="flex flex-col gap-3 px-3 py-1">
-            {commentInput}
-            {rows}
-          </div>
+          <div className="flex flex-col gap-3 px-3 py-1">{rows}</div>
         </CollapsibleContent>
       </Collapsible>
     </div>

@@ -9,6 +9,7 @@ import { useUserStore } from '@/store/user';
 import { preferenceSelectors } from '@/store/user/selectors';
 
 import { useEffectiveAgentMode } from '../hooks/useEffectiveAgentMode';
+import { useComposerHotkeyHint } from './useComposerHotkeyHint';
 
 export type PlaceholderVariant = 'default' | 'followUp';
 
@@ -18,12 +19,17 @@ interface PlaceholderProps {
   variant?: PlaceholderVariant;
 }
 
+// Trans forwards i18n bookkeeping props to slot elements, which React.Fragment
+// rejects — a component that ignores props renders nothing without warnings.
+const HiddenHotkey = () => null;
+
 const Placeholder = memo<PlaceholderProps>(
   ({ heterogeneousName, showAgentAssignmentHint = false, variant = 'default' }) => {
     const useCmdEnterToSend = useUserStore(preferenceSelectors.useCmdEnterToSend);
     const wrapperShortcut = useCmdEnterToSend
       ? KeyEnum.Enter
       : combineKeys([KeyEnum.Mod, KeyEnum.Enter]);
+    const showHotkeyHint = useComposerHotkeyHint();
     const { t } = useTranslation('chat');
 
     const agentId = useAgentId();
@@ -56,7 +62,7 @@ const Placeholder = memo<PlaceholderProps>(
           ns={'chat'}
           values={isHeterogeneous ? { name: heterogeneousName } : undefined}
           components={{
-            hotkey: (
+            hotkey: showHotkeyHint ? (
               <Trans
                 i18nKey={'input.warpWithKey'}
                 ns={'chat'}
@@ -72,6 +78,8 @@ const Placeholder = memo<PlaceholderProps>(
                   ),
                 }}
               />
+            ) : (
+              <HiddenHotkey />
             ),
           }}
         />

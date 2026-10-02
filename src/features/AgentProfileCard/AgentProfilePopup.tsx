@@ -10,7 +10,6 @@ import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 
 import ActionIcon from '@/components/ActionIcon';
-import { ModelIcon } from '@/components/OrviloIcons';
 import { ArticleSkeleton } from '@/components/Skeleton';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -43,7 +42,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
 type AgentPreview = Pick<
   AgentItem,
-  'avatar' | 'backgroundColor' | 'description' | 'model' | 'name' | 'provider' | 'title'
+  'avatar' | 'backgroundColor' | 'description' | 'name' | 'provider' | 'title'
 >;
 
 interface FetchedAgent extends Partial<AgentPreview> {
@@ -88,7 +87,6 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
       avatar: fetched?.avatar ?? agent?.avatar,
       backgroundColor: fetched?.backgroundColor ?? agent?.backgroundColor,
       description: fetched?.description ?? agent?.description,
-      model: fetched?.model ?? agent?.model,
       name: fetched?.name ?? agent?.name,
       provider: fetched?.provider ?? agent?.provider,
       title: fetched?.title ?? agent?.title,
@@ -103,7 +101,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
 
     const handleHeaderClick = () => {
       setOpen(false);
-      navigate(`/agent/${agentId}/profile`);
+      navigate(`/settings/agents/${agentId}`);
     };
 
     const hasDisplay = Boolean(agentDisplayName(merged) || merged.avatar || merged.description);
@@ -116,19 +114,13 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
 
     const footerLoading = canConfigure && !groupId && isLoading && !fetched;
 
-    const modelSection = footerLoading ? (
+    const statsSection = footerLoading ? (
       <div className={`flex items-center gap-3.5 ${styles.footer}`}>
         <Skeleton style={{ height: 16, width: 90 }} />
         <Skeleton style={{ height: 16, width: 60 }} />
       </div>
-    ) : canConfigure && (merged.model || hasStats) ? (
+    ) : canConfigure && hasStats ? (
       <div className={`flex items-center gap-3.5 flex-wrap ${styles.footer}`}>
-        {merged.model && (
-          <div className={`flex items-center gap-1.5 ${styles.statItem}`}>
-            <ModelIcon model={merged.model} size={14} />
-            <div className="text-[12px] text-muted-foreground">{merged.model}</div>
-          </div>
-        )}
         {pluginCount > 0 && (
           <div className={`flex items-center gap-1 ${styles.statItem}`}>
             <SkillsIcon size={13} />
@@ -181,7 +173,7 @@ const AgentProfilePopup = memo<AgentProfilePopupProps>(
         }
         onHeaderClick={canConfigure ? handleHeaderClick : undefined}
       >
-        {modelSection}
+        {statsSection}
       </AgentProfileCard>
     );
 

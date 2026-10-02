@@ -53,7 +53,9 @@ export const useHeteroAgentCloudConfig = (agentId: string): HeteroAgentCloudConf
 
   const goToConfig = () => {
     if (agentId) {
-      router.push(urlJoin('/agent', agentId, 'profile'));
+      // Per-agent config lives under Settings → Agents; the agent profile
+      // route now redirects there.
+      router.push(urlJoin('/settings/agents', agentId));
     }
   };
 

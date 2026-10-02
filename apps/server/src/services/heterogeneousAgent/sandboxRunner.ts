@@ -20,7 +20,7 @@ const shellQuote = (value: string): string => `'${value.replaceAll("'", "'\\''")
 
 export interface SandboxRunParams {
   agentType: 'claude-code' | 'codex';
-  /** Resolved `lh hetero exec` wrapper args. */
+  /** Resolved `orvilo hetero exec` wrapper args. */
   args?: string[];
   /** Initial assistant placeholder message id — injected as ORVILO_ASSISTANT_MESSAGE_ID so
    * the CLI can pass it through the heteroIngest payload, removing the need for the server
@@ -28,11 +28,13 @@ export interface SandboxRunParams {
   assistantMessageId: string;
   /**
    * Server-backed builtin tools resolved for this run — injected as
-   * `ORVILO_BUILTIN_TOOLS` (base64 JSON) so `lh hetero exec` mounts them on
+   * `ORVILO_BUILTIN_TOOLS` (base64 JSON) so `orvilo hetero exec` mounts them on
    * the per-run `orvilo_cc` MCP server.
    */
   builtinTools?: AcpBuiltinToolSpec[];
   cwd?: string;
+  /** Server-minted spawn env (e.g. BYOK credentials) appended to the run's env. */
+  env?: Record<string, string>;
   /** GitHub OAuth token for cloning private repos. */
   githubToken?: string;
   /**
@@ -66,7 +68,7 @@ export interface SandboxRunParams {
   /**
    * Optional context injected as a text block BEFORE the user's prompt.
    * Useful for priming CC with workspace state (cloned repos, env info, etc.).
-   * Passed via --input-json as a JSON content-block array — lh already supports this.
+   * Passed via --input-json as a JSON content-block array — orvilo already supports this.
    */
   systemContext?: string;
   topicId: string;
@@ -131,12 +133,12 @@ function buildRepoSetupScript(repos: string[], githubToken?: string): string | n
 }
 
 /**
- * Launches `lh hetero exec` inside the cloud sandbox via `runCommand`.
+ * Launches `orvilo hetero exec` inside the cloud sandbox via `runCommand`.
  *
  * Uses the configured sandbox provider so cloud, third-party, and self-hosted
  * sandboxes share the same launch path.
  *
- * The sandbox container already has `lh` (the Orvilo CLI) installed.
+ * The sandbox container already has `orvilo` (the Orvilo CLI) installed.
  * The operation-scoped JWT is injected as `ORVILO_JWT` so the CLI can
  * authenticate against `heteroIngest` / `heteroFinish` without user creds.
  *
@@ -168,11 +170,11 @@ export async function spawnHeteroSandbox(params: SandboxRunParams): Promise<void
   // in topic.metadata.heteroSessionId can't be resolved on --resume after a page reload.
   const cwd = params.cwd ?? '/workspace';
 
-  // Build the `lh hetero exec` command string.
+  // Build the `orvilo hetero exec` command string.
   // Prompt is passed via --input-json stdin ('-') to avoid shell quoting issues
   // with arbitrary user text in --prompt.
   const args = [
-    'lh',
+    'orvilo',
     'hetero',
     'exec',
     '--type',
@@ -195,7 +197,7 @@ export async function spawnHeteroSandbox(params: SandboxRunParams): Promise<void
   // Encode the prompt as base64 to avoid all shell quoting issues.
   // echo + shell quoting mangled inner JSON quotes; base64 is quote-safe.
   // systemContext / image attachments turn the payload into a content-block
-  // array. lh already handles both shapes via coerceJsonPrompt — no lh
+  // array. orvilo already handles both shapes via coerceJsonPrompt — no orvilo
   // changes required.
   const stdinPayload = buildHeteroExecStdinPayload({
     imageList: params.imageList,
@@ -228,6 +230,7 @@ export async function spawnHeteroSandbox(params: SandboxRunParams): Promise<void
     // Inject GitHub token so CC can authenticate git operations and GitHub API
     // calls inside the sandbox (e.g. gh CLI, git push, API requests).
     ...(githubToken ? [`GITHUB_TOKEN=${shellQuote(githubToken)}`] : []),
+    ...Object.entries(params.env ?? {}).map(([name, value]) => `${name}=${shellQuote(value)}`),
   ].join(' ');
   const shellArgs = args.map(shellQuote).join(' ');
   const mainCommand = `echo ${shellQuote(base64Payload)} | base64 -d | ${envVars} ${shellArgs}`;

@@ -4,7 +4,7 @@
  *
  * Used by:
  *   - Electron main (`HeterogeneousAgentCtr`) — local app
- *   - Sandbox CLI (`lh hetero exec`) — phase 2; for now the CLI doesn't
+ *   - Sandbox CLI (`orvilo hetero exec`) — phase 2; for now the CLI doesn't
  *     register a server and CC falls back to text questions
  *
  * Consumer (renderer / web client) talks to the producer via the existing

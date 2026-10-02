@@ -20,12 +20,16 @@ import type {
   WorkingDirConfig,
 } from '@orvilo/types';
 import {
+  AEGIS_ORVILO_CONTRACT,
+  AEGIS_PACK_ENV,
   applyTopicModelToHeterogeneousProvider,
   buildHeteroExecArgs,
   ChatErrorType,
   getWorkingDirEffectivePath,
+  isAegisMethodPackEnabled,
   resolveHeteroAgentSystemContext,
   resolveOrviloCliAgentType,
+  resolveOrviloEngine,
 } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
 import debug from 'debug';
@@ -45,6 +49,11 @@ import {
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
+import {
+  driveEmbeddedCanonicalRun,
+  openEmbeddedDispatchHost,
+  resolveEmbeddedDispatchRoute,
+} from '@/server/services/controlPlane/embeddedDispatch';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 import { resolveGithubAccessToken } from '@/server/services/githubRepo';
@@ -62,6 +71,7 @@ import {
   writeRemoteRunAdmission,
 } from '@/server/services/heterogeneousAgent/runAdmission';
 import type { MarketService } from '@/server/services/market';
+import { resolveOrviloProviderBinding } from '@/server/services/providerBinding/execution';
 
 import {
   getHeterogeneousAgentTitle,
@@ -542,13 +552,21 @@ export const dispatchHeteroAgent = async (
 
   const isRemoteHetero = isRemoteHeterogeneousType(heteroType);
   // Builtin Orvilo harness: `heteroType` keeps the declared identity for
-  // metadata and hooks, but every CLI-family concern — `lh hetero exec --type`,
+  // metadata and hooks, but every CLI-family concern — `orvilo hetero exec --type`,
   // adapter/error classification, sandbox support, resume binding — resolves to
   // the selected engine's family. There is no `orvilo` executable or ingest
   // schema entry, so anything reaching a device or sandbox must carry the
   // family type and family-encoded args.
   const heteroCliAgentType =
     heteroType === 'orvilo' ? resolveOrviloCliAgentType(heterogeneousProvider?.engine) : heteroType;
+  // Aegis method-pack opt-in (provider config `methodPacks.aegis`, local CLI
+  // families only). Env — not a CLI flag — carries the bit to the spawned
+  // `orvilo hetero exec` so an older device-side CLI ignores it rather than
+  // dying on an unknown option.
+  const aegisEnabled =
+    heterogeneousProvider?.type === heteroType &&
+    isAegisMethodPackEnabled(heterogeneousProvider) &&
+    isLocalHeterogeneousType(heteroCliAgentType);
   // Same structured shape as the built-in path (`op_{ts}_{agentId}_{topicId}_{rand}`)
   // so hetero ops aren't visually distinct bare nanoids in the trace/op tables.
   const operationId = `op_${Date.now()}_${resolvedAgentId}_${topicId}_${nanoid(8)}`;
@@ -615,6 +633,10 @@ export const dispatchHeteroAgent = async (
           }
         : {}),
       heteroAgentType: heteroCliAgentType,
+      // Dispatch-stamped opt-in marker: survives a run that dies before
+      // `heteroFinish`, so "enabled but produced nothing" stays
+      // distinguishable from "not enabled" for the verify gate.
+      ...(aegisEnabled ? { aegis: { enabled: true } } : {}),
       // Per-tool mount contract for this run — mounted/unsupported/
       // unauthorized/failed with reasons, so a degraded surface is
       // inspectable from the operation record instead of a lost debug log.
@@ -755,6 +777,9 @@ export const dispatchHeteroAgent = async (
     [
       resolveHeteroAgentSystemContext(heterogeneousProvider, agentConfig.systemRole),
       extraSystemContext?.trim(),
+      // The deterministic `.aegis/` completion contract — the agent writes
+      // its closeout + reports there, the finish report ships them back.
+      aegisEnabled ? AEGIS_ORVILO_CONTRACT : undefined,
     ]
       .filter(Boolean)
       .join('\n\n') || undefined;
@@ -782,20 +807,8 @@ export const dispatchHeteroAgent = async (
     runAttachments.imageList && runAttachments.imageList.length > 0
       ? runAttachments.imageList.map((image) => ({ id: image.id, url: image.url }))
       : undefined;
-  const effectiveHeterogeneousProvider =
-    heterogeneousProvider?.type === heteroType
-      ? applyTopicModelToHeterogeneousProvider(heterogeneousProvider, pinnedHeterogeneousTopicModel)
-      : undefined;
-  const heteroExecArgs = isLocalHeterogeneousType(heteroCliAgentType)
-    ? buildHeteroExecArgs(
-        effectiveHeterogeneousProvider
-          ? { ...effectiveHeterogeneousProvider, type: heteroCliAgentType }
-          : { type: heteroCliAgentType },
-      )
-    : undefined;
-
   const heteroParams = {
-    // Devices and sandboxes receive the CLI family — their `lh hetero exec`
+    // Devices and sandboxes receive the CLI family — their `orvilo hetero exec`
     // may predate `--type orvilo` support.
     agentType: heteroCliAgentType,
     assistantMessageId,
@@ -864,6 +877,94 @@ export const dispatchHeteroAgent = async (
   const cliDeviceId = deviceHeteroPlan?.kind === 'device' ? deviceHeteroPlan.deviceId : undefined;
   const cliDeviceWorkspaceId = cliDeviceId
     ? await deps.resolveDeviceWorkspaceId(cliDeviceId)
+    : undefined;
+
+  // BYOK: an enabled provider binding whose `selection` matches this run's
+  // engine + dispatch target supplies {provider, endpoint, credentials} for
+  // Orvilo-owned runtimes only (`heteroType === 'orvilo'` — ACP/external
+  // agents never reach this branch). Issuing is revision-fenced at mint time:
+  // a binding edited, disabled, or deleted between check and dispatch must
+  // not silently issue credentials, so the run fails loudly here instead of
+  // billing another account.
+  const byokTarget =
+    !isRemoteHetero && heteroType === 'orvilo'
+      ? deviceHeteroPlan?.kind === 'device'
+        ? { deviceId: deviceHeteroPlan.deviceId, kind: 'device' as const }
+        : deviceHeteroPlan?.kind === 'sandbox'
+          ? { kind: 'sandbox' as const }
+          : undefined
+      : undefined;
+  const byokResolution = byokTarget
+    ? await resolveOrviloProviderBinding(
+        deps.db,
+        deps.userId,
+        resolveOrviloEngine(heterogeneousProvider?.engine),
+        byokTarget,
+      )
+    : undefined;
+  if (byokResolution?.status === 'unavailable') {
+    const message =
+      'The selected provider binding changed or became unavailable; verify it again in Settings and retry.';
+    await finalizeHeteroDispatchError(deps, {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      detail: 'Provider binding unavailable or stale',
+      message,
+      operationId,
+      topicId,
+    });
+    return {
+      agentId: resolvedAgentId,
+      assistantMessageId,
+      autoStarted: false,
+      createdAt: new Date().toISOString(),
+      error: 'PROVIDER_BINDING_UNAVAILABLE',
+      message,
+      operationId,
+      status: 'error',
+      success: false,
+      timestamp: new Date().toISOString(),
+      topicId,
+      userMessageId: userMessageId ?? parentMessageId ?? '',
+    };
+  }
+  const byok = byokResolution?.status === 'applied' ? byokResolution.execution : undefined;
+  if (byok) {
+    try {
+      await deps.db
+        .update(agentOperations)
+        .set({
+          metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
+            byok: { bindingId: byok.bindingId, revision: byok.revision },
+          })}::jsonb`,
+        })
+        .where(eq(agentOperations.id, operationId));
+    } catch (err) {
+      log('execAgent: failed to persist byok binding pin: %O', err);
+    }
+  }
+
+  // Built after the binding resolves: the binding's configured model is the
+  // route its credential was verified for, so it wins over the provider's
+  // selection; credentials travel as spawn env + wrapper args, never client
+  // payloads.
+  const effectiveHeterogeneousProvider =
+    heterogeneousProvider?.type === heteroType
+      ? applyTopicModelToHeterogeneousProvider(heterogeneousProvider, pinnedHeterogeneousTopicModel)
+      : undefined;
+  const heteroExecArgs = isLocalHeterogeneousType(heteroCliAgentType)
+    ? [
+        ...(buildHeteroExecArgs(
+          effectiveHeterogeneousProvider
+            ? {
+                ...effectiveHeterogeneousProvider,
+                model: byok?.model ?? effectiveHeterogeneousProvider.model,
+                type: heteroCliAgentType,
+              }
+            : { model: byok?.model, type: heteroCliAgentType },
+        ) ?? []),
+        ...(byok?.execArgs ?? []),
+      ]
     : undefined;
 
   // Register the run's lifecycle hooks so the hetero terminal path fires
@@ -1059,7 +1160,7 @@ export const dispatchHeteroAgent = async (
       })
       .catch((err) => log('execAgent: failed to init stream for remote hetero: %O', err));
 
-    // lh connect only handles tool_call_request (not agent_run_request),
+    // orvilo connect only handles tool_call_request (not agent_run_request),
     // so we use executeToolCall with the runHeteroTask tool instead of dispatchAgentRun.
     const authorizationError = await resolveDeviceDispatchAuthorizationFailure(
       deps.db,
@@ -1365,6 +1466,7 @@ export const dispatchHeteroAgent = async (
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,
+            env: aegisEnabled ? { ...byok?.env, [AEGIS_PACK_ENV]: '1' } : byok?.env,
             // The device dedupes agent_run_request on this key (= the task id
             // it already tracks for cancelHeteroTask), so a gateway retry can
             // never spawn a duplicate execution of this operation.
@@ -1466,6 +1568,101 @@ export const dispatchHeteroAgent = async (
         log('execAgent: failed to patch runningOperation with device info: %O', err);
       }
     } else {
+      // Prime embedded harness (phase 5a): own-agent task dispatches on the
+      // sandbox plan always route to the canonical embedded host — `orvilo`
+      // is our own engine. Everything else — ACP/hetero kinds, chat runs,
+      // runs without canonical dispatch context — falls through to the
+      // unchanged sandbox path below.
+      const embeddedRoute = await resolveEmbeddedDispatchRoute(deps, {
+        appContext,
+        heteroType,
+        operationTaskId,
+      });
+      if (embeddedRoute) {
+        const prepared = await openEmbeddedDispatchHost(
+          { database: deps.db, userId: deps.userId },
+          {
+            ...embeddedRoute,
+            engine: heterogeneousProvider?.engine,
+            model: ctx.model,
+            operationId,
+            provider: ctx.provider,
+            topicId,
+          },
+        );
+        if (!prepared.ok) {
+          // Pre-launch denial (unavailable binding, bad manifest, stale
+          // contract): finalize through the same terminal funnel as every
+          // other dispatch rejection so the run and its task settle `error`.
+          await finalizeHeteroDispatchError(deps, {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            detail: prepared.error.message,
+            message: 'Embedded dispatch is unavailable',
+            operationId,
+            topicId,
+          });
+          return {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            autoStarted: false,
+            createdAt: new Date().toISOString(),
+            error: prepared.error.message,
+            message: 'Embedded dispatch is unavailable',
+            operationId,
+            status: 'error',
+            success: false,
+            timestamp: new Date().toISOString(),
+            topicId,
+            userMessageId: userMessageId ?? parentMessageId ?? '',
+          };
+        }
+        // Server-hosted admission — the run executes in-process, so the
+        // ledger records `embedded` (no device fields) for status/cancel.
+        await writeDispatchAdmission(deps, { channel: 'embedded', operationId });
+        // Fire-and-forget — same posture as the sandbox spawn: the driver
+        // finishes the run through heteroIngest/heteroFinish itself; the
+        // catch is the last-resort funnel if it throws before doing so.
+        void driveEmbeddedCanonicalRun(
+          { database: deps.db, userId: deps.userId, workspaceId: deps.workspaceId },
+          prepared.value,
+          {
+            agentType: resolveOrviloCliAgentType(heterogeneousProvider?.engine),
+            assistantMessageId,
+            operationId,
+            prompt: [systemContext, prompt].filter(Boolean).join('\n\n'),
+            topicId,
+          },
+        ).catch(async (err) => {
+          log('execAgent: embedded dispatch driver failed: %O', err);
+          if (await hasHeteroRunStarted(deps, { operationId, topicId })) return;
+          await finalizeHeteroDispatchError(deps, {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            detail: err instanceof Error ? err.message : String(err),
+            message: 'Embedded dispatch failed',
+            operationId,
+            topicId,
+          }).catch((finalizeErr) =>
+            log('execAgent: embedded-failure finalize failed: %O', finalizeErr),
+          );
+        });
+        return {
+          agentId: resolvedAgentId,
+          assistantMessageId,
+          autoStarted: true,
+          createdAt: new Date().toISOString(),
+          heteroType,
+          message: 'Hetero agent dispatched successfully',
+          operationId,
+          status: 'created',
+          success: true,
+          timestamp: new Date().toISOString(),
+          topicId,
+          userMessageId: userMessageId ?? parentMessageId ?? '',
+        };
+      }
+
       if (!supportsCloudHeterogeneousSandbox(heteroType, heterogeneousProvider?.engine)) {
         const message = `${getHeterogeneousAgentTitle(heteroType)} requires a local or connected device; cloud sandbox execution is not supported.`;
         await finalizeHeteroDispatchError(deps, {
@@ -1501,7 +1698,7 @@ export const dispatchHeteroAgent = async (
       const { spawnHeteroSandbox } =
         await import('@/server/services/heterogeneousAgent/sandboxRunner');
       const marketService = await deps.getMarketService();
-      // The sandbox authenticates its nested `lh` calls with this JWT. The
+      // The sandbox authenticates its nested `orvilo` calls with this JWT. The
       // narrow `hetero-operation` token (used for the device-dispatch path
       // above) is rejected by `oidcAuth`, so CC capabilities that hit
       // user-scoped endpoints — e.g. uploading a `Read`-on-image result to
@@ -1535,6 +1732,7 @@ export const dispatchHeteroAgent = async (
         ...heteroParams,
         agentType: heteroCliAgentType as 'claude-code' | 'codex',
         args: heteroExecArgs,
+        env: aegisEnabled ? { ...byok?.env, [AEGIS_PACK_ENV]: '1' } : byok?.env,
         jwt: sandboxJwt,
         marketService,
         // `heteroParams.jwt` (the operation token) is overridden above for

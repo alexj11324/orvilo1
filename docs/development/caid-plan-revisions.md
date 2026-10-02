@@ -5,7 +5,7 @@
 
 ## 入口与校验链
 
-`lh goal plan` / `goal.submitPlan`（及 operation-authenticated
+`orvilo goal plan` / `goal.submitPlan`（及 operation-authenticated
 `submitOperationPlan`）的同一个 `GoalManagerService.submit` 现接受第五个 action：
 
 ```json
@@ -37,7 +37,7 @@
 
 ## 维持不变的语义
 
-- Task 仍是唯一工作项 —— 不新建平行 workflow\_tasks；新节点照旧经
+- Task 仍是唯一工作项 —— 不新建平行 workflow_tasks；新节点照旧经
   `proposed` → 既有 dispatch 仲裁。
 - 旧 `tasks`/`verify`/`retry`/`escalate` 策略及其 unfinished guard 原样保留。
 - Manager 文本不直接成为数据库权威：所有补丁落在同一事务校验后生效。

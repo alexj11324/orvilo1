@@ -17,6 +17,7 @@ import Select from '@/components/Select';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
+import { useIsMobile } from '@/hooks/useIsMobile';
 
 import type { AgentGroupBy, AgentListViewOptions, AgentOrderBy } from './listViewOptions';
 
@@ -46,6 +47,7 @@ const ListConfig = memo<ListConfigProps>(
   ({ options, setOptions, setViewMode, showAuthor, viewMode }) => {
     const [open, setOpen] = useState(false);
     const { t } = useTranslation('common');
+    const isMobile = useIsMobile();
 
     const groupingOptions = useMemo<Array<{ label: string; value: AgentGroupBy }>>(
       () => [
@@ -115,23 +117,27 @@ const ListConfig = memo<ListConfigProps>(
 
     const panelContent = (
       <div className="flex flex-col gap-3" style={{ width: 280 }}>
-        <Tabs
-          value={viewMode}
-          onValueChange={(key) => {
-            if (typeof key === 'string') setViewMode(key as ViewMode);
-          }}
-        >
-          <TabsList style={{ display: 'flex', width: '100%' }}>
-            <TabsTrigger style={{ flex: 1 }} value="list">
-              <LayoutList />
-              {t('agentViewAll.view.list')}
-            </TabsTrigger>
-            <TabsTrigger style={{ flex: 1 }} value="card">
-              <LayoutGrid />
-              {t('agentViewAll.view.card')}
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
+        {/* The list table cannot fit a mobile viewport — the page forces the
+            card grid there, so the picker stays desktop-only. */}
+        {!isMobile && (
+          <Tabs
+            value={viewMode}
+            onValueChange={(key) => {
+              if (typeof key === 'string') setViewMode(key as ViewMode);
+            }}
+          >
+            <TabsList style={{ display: 'flex', width: '100%' }}>
+              <TabsTrigger style={{ flex: 1 }} value="list">
+                <LayoutList />
+                {t('agentViewAll.view.list')}
+              </TabsTrigger>
+              <TabsTrigger style={{ flex: 1 }} value="card">
+                <LayoutGrid />
+                {t('agentViewAll.view.card')}
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        )}
         <Form
           className={styles.form}
           items={formItems}

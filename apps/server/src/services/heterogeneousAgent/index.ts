@@ -7,7 +7,7 @@ import {
   isHeteroStatusGuideErrorData,
   type LocalHeterogeneousAgentType,
 } from '@orvilo/heterogeneous-agents';
-import { ThreadStatus } from '@orvilo/types';
+import { type AegisFinishReport, ThreadStatus } from '@orvilo/types';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
@@ -56,6 +56,12 @@ export interface HeterogeneousIngestParams {
 }
 
 export interface HeterogeneousFinishParams {
+  /**
+   * Aegis method-pack report, present iff the run opted in. `{ enabled: true,
+   * files: [] }` is meaningful — "opted in, produced nothing" downgrades the
+   * task to requires-review instead of reading as "not enabled".
+   */
+  aegis?: AegisFinishReport;
   agentType: HeterogeneousAgentType;
   /** Initial assistant placeholder supplied by the producer. This remains
    * usable when gateway completion wins the race and clears runningOperation
@@ -78,7 +84,7 @@ export interface HeterogeneousFinishParams {
   runGeneration?: number;
   /**
    * Native CLI session id (e.g. CC's per-cwd session). Used in phase 2c to
-   * persist on `topic.metadata` so a subsequent `lh hetero exec` run can
+   * persist on `topic.metadata` so a subsequent `orvilo hetero exec` run can
    * resume context.
    */
   sessionId?: string;
@@ -88,7 +94,7 @@ export interface HeterogeneousFinishParams {
 type HeterogeneousFinishError = NonNullable<HeterogeneousFinishParams['error']>;
 
 /**
- * Older or partially upgraded `lh hetero exec` producers can flatten an
+ * Older or partially upgraded `orvilo hetero exec` producers can flatten an
  * adapter-classified terminal error before calling `heteroFinish`. Reclassify
  * the final payload at the server boundary so a recognizable authentication
  * failure always reaches the message row as the structured status-guide shape
@@ -137,7 +143,7 @@ export interface HeterogeneousAgentServiceOptions {
 }
 
 /**
- * Server-side ingest handler for heterogeneous agent CLIs (`lh hetero exec`
+ * Server-side ingest handler for heterogeneous agent CLIs (`orvilo hetero exec`
  * for Amp / Claude Code / CodeBuddy / Codex / OpenCode / Pi / Qoder / TRAE). Receives
  * `AgentStreamEvent` batches from the
  * producer and republishes them through the existing `StreamEventManager`
@@ -285,6 +291,7 @@ export class HeterogeneousAgentService {
 
   async heteroFinish(params: HeterogeneousFinishParams): Promise<void> {
     const {
+      aegis,
       agentType,
       assistantMessageId: seedAssistantMessageId,
       operationId,
@@ -357,6 +364,24 @@ export class HeterogeneousAgentService {
       result,
       topicId,
     });
+
+    // Aegis report → `agent_operations.metadata.aegis`. Written BEFORE
+    // `completeOperation` fans out to the verify lifecycle / work
+    // registration / task settle, so every downstream consumer reads the
+    // same durable record. The write deep-merges: `aegis.enabled` stamped at
+    // dispatch survives. Best-effort — a metadata failure must not strand
+    // the terminal transition; the gate then simply sees no artifacts.
+    if (aegis) {
+      try {
+        await this.agentOperationModel.recordAegisMetadata(operationId, {
+          artifacts: aegis.files,
+          collectedAt: new Date().toISOString(),
+          enabled: aegis.enabled,
+        });
+      } catch (err) {
+        log('heteroFinish: aegis metadata write failed op=%s (non-fatal): %O', operationId, err);
+      }
+    }
 
     let serializedHooks: SerializedHook[] | undefined;
     let assistantMessageId = seedAssistantMessageId;
@@ -436,7 +461,7 @@ export class HeterogeneousAgentService {
     const resumeBindingUpdate = sessionId
       ? {
           // Bind the saved native session to the CLI family that produced it
-          // (`agentType` is already engine-normalized by `lh hetero exec`) so a
+          // (`agentType` is already engine-normalized by `orvilo hetero exec`) so a
           // later turn running under a different family/engine can't silently
           // resume it — mirrors the renderer's binding-key tracking.
           heteroSessionBindingKey: getNativeHeteroSessionBindingKey(agentType),
@@ -648,7 +673,7 @@ export class HeterogeneousAgentService {
   /**
    * Look up the persisted CLI session id for a topic so the orchestrator
    * (phase 3 cloud sandbox) can pass `--resume <sessionId>` to the next
-   * `lh hetero exec` spawn. Returns undefined when no prior run completed
+   * `orvilo hetero exec` spawn. Returns undefined when no prior run completed
    * on this topic — caller should spawn fresh.
    *
    * Reads the same `topic.metadata.heteroSessionId` the desktop renderer

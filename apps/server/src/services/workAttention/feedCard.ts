@@ -110,10 +110,17 @@ export const mapFeedWithLiveActions = (
 
 export const overlayLiveTitles = (
   cards: NotificationFeedCard[],
-  titles: Map<string, string>,
+  titles: Map<string, { identifier?: string | null; title: string }>,
 ): NotificationFeedCard[] =>
   cards.map((card) => {
     if (!card.resourceType || !card.resourceId) return card;
     const live = titles.get(`${card.resourceType}:${card.resourceId}`);
-    return live ? { ...card, title: live } : card;
+    if (!live) return card;
+    return {
+      ...card,
+      // The second row line renders `T-501 <name>` — only task resources
+      // carry a display identifier; projects overlay the title alone.
+      ...(live.identifier ? { resourceIdentifier: live.identifier } : {}),
+      title: live.title,
+    };
   });

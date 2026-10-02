@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from 'antd-style';
-import { MoreHorizontalIcon, PlayIcon, UsersIcon } from 'lucide-react';
+import { MoreHorizontalIcon, PlusIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -21,7 +21,6 @@ import AccessLevelTag from '@/features/ResourcePermission/AccessLevelTag';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
-import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { lambdaClient } from '@/libs/trpc/client';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
@@ -49,7 +48,6 @@ const GroupProfile = memo(() => {
   const hasActiveWorkspace = useHasActiveWorkspace();
   const currentGroup = useAgentGroupStore((s) => agentGroupSelectors.getGroupById(gid ?? '')(s));
   const updateGroup = useAgentGroupStore((s) => s.updateGroup);
-  const router = useQueryRoute();
   // The profile page keeps its active tab in `?tab=`; the permission page has no
   // tabs, so navigate without carrying the query over (unlike `router.push`).
   const navigate = useWorkspaceAwareNavigate();
@@ -116,9 +114,13 @@ const GroupProfile = memo(() => {
   // when another member is editing; acquired implicitly on the first edit.
   const [edited, setEdited] = useState(false);
   const groupIdRef = useRef(groupId);
+  // The description canvas only mounts on demand — a fresh group renders a
+  // compact affordance instead of a page-high empty editor.
+  const [contentRevealed, setContentRevealed] = useState(false);
   if (groupIdRef.current !== groupId) {
     groupIdRef.current = groupId;
     setEdited(false);
+    setContentRevealed(false);
   }
   const lock = useEditLock({
     client: groupLockClient,
@@ -171,6 +173,8 @@ const GroupProfile = memo(() => {
     if (!editor || !agentBuilderContentUpdate || !groupId) return;
     if (agentBuilderContentUpdate.entityId !== groupId) return;
 
+    // The builder is writing the description — surface the canvas for it.
+    setContentRevealed(true);
     // Directly set the editor content
     editor.setDocument('markdown', agentBuilderContentUpdate.content);
 
@@ -202,17 +206,7 @@ const GroupProfile = memo(() => {
         </div>
         {/* Header: Group Avatar + Title */}
         <GroupHeader />
-        {/* Start Conversation Button */}
         <div className="flex items-center gap-2 justify-start" style={{ marginTop: 16 }}>
-          <Button
-            onClick={() => {
-              if (!groupId) return;
-              router.push(urlJoin('/group', groupId));
-            }}
-          >
-            <PlayIcon data-icon="inline-start" />
-            {t('startConversation')}
-          </Button>
           {moreMenuItems.length > 0 && (
             <SidebarDropdownMenu items={moreMenuItems}>
               <ActionIcon
@@ -239,20 +233,34 @@ const GroupProfile = memo(() => {
         </div>
       </div>
       <Separator />
-      {/* Group Content Editor */}
+      {/* Group Content Editor — hidden until the group actually has a
+          description or the user asks for one, so the column never renders a
+          large empty editor. */}
       <EditingIndicator
         holderId={lock.lockedByOther ? lock.holderId : null}
         pending={canEdit && lock.pending}
       />
-      <EditorCanvas
-        disabled={!canEdit}
-        editable={!lock.lockedByOther && !lock.pending}
-        editor={editor}
-        editorData={editorData}
-        entityId={groupId}
-        placeholder={t('group.profile.contentPlaceholder', { ns: 'chat' })}
-        onContentChange={onContentChange}
-      />
+      {currentGroup?.content?.trim() || contentRevealed ? (
+        <EditorCanvas
+          disabled={!canEdit}
+          editable={!lock.lockedByOther && !lock.pending}
+          editor={editor}
+          editorData={editorData}
+          entityId={groupId}
+          placeholder={t('group.profile.contentPlaceholder', { ns: 'chat' })}
+          onContentChange={onContentChange}
+        />
+      ) : canEdit ? (
+        <Button
+          className="w-full justify-start"
+          style={{ borderStyle: 'dashed', color: theme.colorTextSecondary }}
+          variant="outline"
+          onClick={() => setContentRevealed(true)}
+        >
+          <PlusIcon data-icon="inline-start" />
+          {t('group.profile.addInstructions', { ns: 'chat' })}
+        </Button>
+      ) : null}
     </>
   );
 });

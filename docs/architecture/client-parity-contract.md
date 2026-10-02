@@ -76,7 +76,7 @@ assertLocalTargetTransport(); // 非 Desktop 构建抛 TargetRequiredError
 
 ## 4. 生命周期与事件（本轮边界）
 
-- 已有统一链路：`lh hetero exec` → 服务端 `heteroIngest`/`heteroFinish`
+- 已有统一链路：`orvilo hetero exec` → 服务端 `heteroIngest`/`heteroFinish`
   （`AgentStreamEvent` → `HeterogeneousPersistenceHandler` → `StreamEventManager`
   fanout），含 `operationId`/`runGeneration` 隔离、取消裁决、终态确认。
 - **已知缺口（W2-E 未做）**：Desktop `local` hetero 会话仍走 renderer 私有

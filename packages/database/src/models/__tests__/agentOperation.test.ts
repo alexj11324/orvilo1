@@ -739,4 +739,69 @@ describe('AgentOperationModel', () => {
       expect((await model.listByTopic('tpc-a', 2)).map((row) => row.id)).toEqual(['op-4', 'op-3']);
     });
   });
+
+  describe('recordAegisMetadata', () => {
+    beforeEach(async () => {
+      await serverDB.insert(topics).values([{ id: 'tpc-a', userId }]);
+    });
+
+    it('deep-merges into metadata.aegis while preserving the dispatch stamp', async () => {
+      const model = new AgentOperationModel(serverDB, userId);
+      // The dispatch stamp lands first at recordStart; heteroFinish merges the
+      // artifacts in later — a shallow merge would drop `enabled`.
+      await model.recordStart({
+        metadata: { aegis: { enabled: true }, unrelated: 'keep' },
+        operationId: 'op-aegis-1',
+        topicId: 'tpc-a',
+      });
+
+      const wrote = await model.recordAegisMetadata('op-aegis-1', {
+        artifacts: [{ content: '{}', path: '.aegis/closeout.json' }],
+        collectedAt: '2026-10-02T00:00:00Z',
+      });
+      expect(wrote).toBe(true);
+
+      const row = await model.findById('op-aegis-1');
+      expect(row?.metadata).toEqual({
+        aegis: {
+          artifacts: [{ content: '{}', path: '.aegis/closeout.json' }],
+          collectedAt: '2026-10-02T00:00:00Z',
+          enabled: true,
+        },
+        unrelated: 'keep',
+      });
+    });
+
+    it('seeds metadata.aegis when the row had no metadata at all', async () => {
+      const model = new AgentOperationModel(serverDB, userId);
+      await serverDB.insert(agentOperations).values({
+        id: 'op-aegis-2',
+        status: 'done',
+        topicId: 'tpc-a',
+        userId,
+      });
+
+      await model.recordAegisMetadata('op-aegis-2', { enabled: true });
+
+      const row = await model.findById('op-aegis-2');
+      expect(row?.metadata).toEqual({ aegis: { enabled: true } });
+    });
+
+    it("does not touch another owner's operation row", async () => {
+      await serverDB.insert(agentOperations).values({
+        id: 'op-aegis-other',
+        status: 'done',
+        topicId: 'tpc-a',
+        userId: otherUserId,
+      });
+
+      const wrote = await new AgentOperationModel(serverDB, userId).recordAegisMetadata(
+        'op-aegis-other',
+        { enabled: true },
+      );
+      expect(wrote).toBe(false);
+      const row = await new AgentOperationModel(serverDB, otherUserId).findById('op-aegis-other');
+      expect(row?.metadata?.aegis).toBeUndefined();
+    });
+  });
 });

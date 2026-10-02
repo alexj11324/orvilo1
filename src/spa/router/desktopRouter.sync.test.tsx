@@ -78,6 +78,47 @@ async function readRouterSources() {
 }
 
 describe('desktop router shared definition', () => {
+  it.each(mainAreaVariants)(
+    '%s exposes every memory layer with a loading boundary',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+      for (const layer of [
+        'home',
+        'identities',
+        'contexts',
+        'experiences',
+        'activities',
+        'preferences',
+        'search',
+        'prime',
+      ]) {
+        const matches = matchRoutes(routes, `/memory/${layer}`);
+        expect(matches?.at(-1)?.route.path).toBe(layer);
+        expect(
+          resolveRouteSkeleton(matches?.map(({ route }) => ({ handle: route.handle })) ?? []),
+        ).toBe(MemorySkeleton);
+      }
+    },
+  );
+
+  it.each(mainAreaVariants)(
+    '%s exposes personal provider configuration without restoring workspace BYOK',
+    (_, factory) => {
+      const routes = createMainAreaRoutes(factory);
+      // `/settings/provider` mounts the provider layout; its index child
+      // redirects to the `all` detail view.
+      expect(
+        (
+          matchRoutes(routes, '/settings/provider')?.at(-1)?.route.element as ReactElement<{
+            to: string;
+          }>
+        ).props.to,
+      ).toBe('/settings/provider/all');
+      const detail = matchRoutes(routes, '/settings/provider/legacy')?.at(-1)?.route;
+      expect(detail?.path).toBe(':providerId');
+    },
+  );
+
   it('defers platform route factories until React renders their route elements', () => {
     const createHomeElement = vi.fn(() => <div>Home</div>);
     const createWorkspaceSettingsIndexElement = vi.fn(() => <div>Workspace settings</div>);
@@ -572,6 +613,7 @@ describe('desktop router shared definition', () => {
       ['/agent/agent-1/goal/goal-1', GoalDetailSkeleton],
       ['/agent/agent-1/profile', ProfileSkeleton],
       ['/agent/agent-1/topic-1', ConversationLayoutSkeleton],
+      ['/group', createSurfaceSkeleton('list')],
       ['/group/group-1/profile', GroupProfileRouteSkeleton],
       ['/group/group-1/topic-1', ConversationLayoutSkeleton],
       ['/settings/profile', SettingsPageSkeleton],
@@ -735,19 +777,20 @@ describe('desktop router shared definition', () => {
   );
 
   it.each(mainAreaVariants)(
-    '%s redirects retired workspace provider deep-links inside the workspace',
+    '%s keeps workspace provider deep-links inside the workspace',
     (_, factory) => {
       const routes = createMainAreaRoutes(factory);
       const listMatches = matchRoutes(routes, '/acme/settings/provider');
-      const detailMatches = matchRoutes(routes, '/acme/settings/provider/lobehub');
-      const serviceModelMatches = matchRoutes(routes, '/acme/settings/service-model');
+      const detailMatches = matchRoutes(routes, '/acme/settings/provider/orvilo');
 
-      // The provider/service-model pages are retired — deep-links must land on
-      // the workspace settings root instead of the `*` catch-all.
-      for (const matches of [listMatches, detailMatches, serviceModelMatches]) {
-        const leaf = matches?.at(-1)?.route;
-        expect((leaf?.element as { props?: { to?: string } } | undefined)?.props?.to).toBe('..');
-      }
+      expect(listMatches?.at(-1)?.route.path).toBe('provider');
+      // Before the redirect route existed, the detail path fell through to the
+      // root catch-all (`*`) and kicked the user out of the workspace.
+      expect(detailMatches?.at(-1)?.route.path).toBe('provider/:providerId');
+      expect(detailMatches?.at(-1)?.params).toMatchObject({
+        providerId: 'orvilo',
+        workspaceSlug: 'acme',
+      });
     },
   );
 

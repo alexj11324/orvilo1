@@ -47,6 +47,41 @@ export interface TopicUserMemoryExtractRunState {
   traceId?: string;
 }
 
+export interface ChatTopicBotContext {
+  applicationId: string;
+  /**
+   * Whether the message sender is the bot owner. Computed at the bot
+   * router/dispatcher entry point as
+   *   `senderExternalUserId === settings.userId`.
+   *
+   * Downstream policy (`resolveDeviceAccessPolicy`) consumes this directly
+   * and never recomputes — the routers own the owner-identity check.
+   *
+   * Fail-closed: if `settings.userId` is missing or the sender ID can't be
+   * resolved, this MUST be `false`. Never default to `true` "when in doubt".
+   */
+  isOwner: boolean;
+  /**
+   * Set when the run originated from the shared Messenger bot (Telegram global
+   * token, Slack per-workspace install, Discord global token). The value is
+   * the messenger installation key (`<platform>:<tenantId>` or
+   * `<platform>:singleton`) — `BotCallbackService` uses its presence as the
+   * deterministic switch to resolve credentials via the messenger install
+   * store instead of `agent_bot_providers`.
+   */
+  messengerInstallationKey?: string;
+  platform: string;
+  platformThreadId: string;
+  /**
+   * Platform-assigned ID of the actual sender of the inbound message
+   * (e.g. Discord/Slack `user.id`, Telegram `from.id`). Distinct from
+   * `applicationId` (the bot itself) — required so downstream code can tell
+   * "owner @ bot" apart from "external user @ bot" without re-reading
+   * platform-specific message shapes.
+   */
+  senderExternalUserId: string;
+}
+
 export interface OnboardingFeedbackEntry {
   comment?: string;
   rating: 'good' | 'bad';
@@ -117,6 +152,17 @@ export const snapshotTopicExecutionConfig = (
 });
 
 export interface ChatTopicMetadata {
+  /**
+   * User-visible record of mid-conversation agent handoffs. Each entry marks
+   * the moment the topic's bound agent was switched by the user; the message
+   * stream renders a weak separator marker at that point so the handoff is
+   * never silent. `at` anchors the marker against message `createdAt`.
+   */
+  agentHandoffs?: {
+    at: string;
+    fromAgentId: string | null;
+    toAgentId: string;
+  }[];
   /** Watermark written by the background topic-summary workflow. */
   autoSummary?: {
     lastMessageId: string;
@@ -124,6 +170,7 @@ export interface ChatTopicMetadata {
     summarizedAt: string;
     version: number;
   };
+  bot?: ChatTopicBotContext;
   boundDeviceId?: string;
   cronJobId?: string;
   /**
@@ -499,6 +546,15 @@ export const parseTopicScheduledRun = (raw: unknown): TopicScheduledRun | null =
 };
 
 export const chatTopicMetadataUpdateSchema = z.object({
+  agentHandoffs: z
+    .array(
+      z.object({
+        at: z.string(),
+        fromAgentId: z.string().nullable(),
+        toAgentId: z.string(),
+      }),
+    )
+    .optional(),
   executionConfig: topicExecutionConfigSchema.optional(),
   boundDeviceId: z.string().optional(),
   heteroEffort: z
@@ -630,6 +686,13 @@ export const chatTopicStatusSchema = z.enum(TOPIC_STATUSES);
 export type ChatTopicStatus = z.infer<typeof chatTopicStatusSchema>;
 
 export interface ChatTopic extends Omit<BaseDataModel, 'meta'> {
+  /**
+   * The agent the conversation runs under (`topics.agent_id`). The agent is an
+   * execution attribute of the topic: set when the topic binds on first
+   * message and changed when the user switches agents mid-conversation (see
+   * `ChatTopicMetadata.agentHandoffs`).
+   */
+  agentId?: string | null;
   completedAt?: Date | null;
   /** Server-side mock until real cost aggregation lands. */
   cost?: number | null;
@@ -761,6 +824,13 @@ export interface QueryTopicParams {
    */
   isInbox?: boolean;
   pageSize?: number;
+  /**
+   * `'workspace'` returns every non-group topic the caller can see across the
+   * workspace — agent-bound rows whose owning agent is visible, plus legacy
+   * rows with no parent — instead of a single container's list. Skips
+   * `agentId`/`groupId`/`containerId` resolution entirely.
+   */
+  scope?: 'workspace';
   /**
    * Server-side ordering. Defaults to `updatedAt`. Use `status` to back the
    * sidebar "group by status" mode so high-priority topics stay on page one.

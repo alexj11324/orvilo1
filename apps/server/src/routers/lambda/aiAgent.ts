@@ -65,6 +65,10 @@ import {
 } from '@/libs/trpc/utils/internalJwt';
 import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { unwrapPgError } from '@/server/modules/AgentExecution/pgError';
+import {
+  getServerDefaultHeterogeneousModels,
+  SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES,
+} from '@/server/modules/ModelRuntime';
 import { mapAgentInterventionTRPCError } from '@/server/routers/lambda/_helpers/agentInterventionError';
 import { mapAgentStartTRPCError } from '@/server/routers/lambda/_helpers/agentStartError';
 import {
@@ -1382,7 +1386,7 @@ const InterruptTaskSchema = z
   });
 
 /**
- * Wire shape of an `AgentStreamEvent` produced by `lh hetero exec`. Mirrors
+ * Wire shape of an `AgentStreamEvent` produced by `orvilo hetero exec`. Mirrors
  * `AgentStreamEvent` in `@orvilo/agent-gateway-client` (kept here as a Zod
  * schema for tRPC input validation; tRPC's type inference takes care of the
  * client-side typing). Republished verbatim through `StreamEventManager` so
@@ -1416,7 +1420,7 @@ const AgentStreamEventSchema = z.object({
 
 /**
  * Schema for `aiAgent.heteroIngest` — accepts a batch of producer-side
- * `AgentStreamEvent`s from `lh hetero exec`. `topicId` is required (operationId
+ * `AgentStreamEvent`s from `orvilo hetero exec`. `topicId` is required (operationId
  * → topic reverse-lookup is unreliable per design decision).
  */
 const HeteroIngestSchema = z.object({
@@ -1440,6 +1444,26 @@ const HeteroIngestSchema = z.object({
  * (CC's per-cwd id), kept here so the server can resume next time.
  */
 const HeteroFinishSchema = z.object({
+  /**
+   * Aegis method-pack report, present iff the run opted in
+   * (`ORVILO_AEGIS_PACK=1` / `--aegis`). Bounded: the CLI collector already
+   * caps count/size; the schema re-caps so a hostile or confused producer
+   * cannot bloat the operation row. `{ enabled: true, files: [] }` is
+   * meaningful — "opted in, produced nothing".
+   */
+  aegis: z
+    .object({
+      enabled: z.literal(true),
+      files: z
+        .array(
+          z.object({
+            content: z.string().max(128 * 1024),
+            path: z.string().min(1).max(512),
+          }),
+        )
+        .max(64),
+    })
+    .optional(),
   agentType: LocalHeterogeneousAgentTypeSchema,
   /** Initial assistant placeholder forwarded by the producer. Unlike the live
    * ingest path, finish may arrive after gateway session completion has already
@@ -1474,7 +1498,7 @@ const HeteroFinishSchema = z.object({
 
 /**
  * Schema for `aiAgent.waitInterventionResponse` — the exec-side long-poll. The
- * `lh hetero exec` producer calls this in a loop while an `AskUserBridge`
+ * `orvilo hetero exec` producer calls this in a loop while an `AskUserBridge`
  * pending is in flight, draining `agent_intervention_response` events off the
  * op's Redis stream (which the sandbox can't read directly). `lastEventId`
  * threads the cursor forward across polls; `'$'` on the first call means
@@ -1787,7 +1811,45 @@ const authorizeOperationCallback = async (
   }
 };
 
+export const resolveServerDefaultHeterogeneousCapability = async () => {
+  const base = {
+    model: 'orvilo-default' as const,
+  };
+  if (process.env.ENABLE_SERVER_DEFAULT_HETEROGENEOUS_AGENT === '0') {
+    return { ...base, agents: [], enabled: false as const, reason: 'disabled' as const };
+  }
+
+  try {
+    const models = await getServerDefaultHeterogeneousModels();
+    const agents = SERVER_DEFAULT_HETEROGENEOUS_AGENT_TYPES.filter(
+      (agentType) => models[agentType].length > 0,
+    );
+    if (agents.length === 0) {
+      return {
+        ...base,
+        agents,
+        enabled: false as const,
+        models,
+        reason: 'invalidConfiguration' as const,
+      };
+    }
+    return { ...base, agents, enabled: true as const, models };
+  } catch (error) {
+    log('Server-default heterogeneous capability is unavailable: %O', error);
+    return {
+      ...base,
+      agents: [],
+      enabled: false as const,
+      reason: 'invalidConfiguration' as const,
+    };
+  }
+};
+
 export const aiAgentRouter = router({
+  getServerDefaultHeterogeneousCapability: aiAgentBaseProcedure.query(() =>
+    resolveServerDefaultHeterogeneousCapability(),
+  ),
+
   /**
    * Create Thread for client-side task execution in Group mode
    *
@@ -2997,7 +3059,7 @@ export const aiAgentRouter = router({
     }),
 
   /**
-   * Ingest a batch of `AgentStreamEvent`s from a `lh hetero exec` producer
+   * Ingest a batch of `AgentStreamEvent`s from a `orvilo hetero exec` producer
    * (CLI standalone, sandboxed CC, etc.) and republish them through the
    * existing stream fanout so renderer-side gateway WS subscribers see them
    * unchanged. Phase 2a: pub/sub only — no DB persistence (phase 2b adds it).
@@ -3005,7 +3067,16 @@ export const aiAgentRouter = router({
   heteroIngest: heteroAgentProcedure.input(HeteroIngestSchema).mutation(async ({ input, ctx }) => {
     const { agentType, assistantMessageId, events, operationId, runGeneration, topicId } = input;
 
-    await authorizeOperationCallback(ctx, operationId, 'hetero:ingest');
+    try {
+      await authorizeOperationCallback(ctx, operationId, 'hetero:ingest');
+    } catch (error) {
+      // Batches arriving after the operation settled are dropped by the service
+      // anyway; a late duplicate is a no-op ack, not a producer error.
+      if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        return { ack: true as const };
+      }
+      throw error;
+    }
 
     log(
       'heteroIngest: topic=%s op=%s type=%s count=%d',
@@ -3052,7 +3123,7 @@ export const aiAgentRouter = router({
   }),
 
   /**
-   * Re-mint the operation token a long `lh hetero exec` run authenticates with.
+   * Re-mint the operation token a long `orvilo hetero exec` run authenticates with.
    *
    * The token is signed for four hours, and a Goal Task can run far longer. Past
    * the expiry every heteroIngest is rejected, the run's heartbeats stop renewing
@@ -3088,13 +3159,14 @@ export const aiAgentRouter = router({
     }),
 
   /**
-   * Terminal handshake from a `lh hetero exec` producer: signals process exit
+   * Terminal handshake from a `orvilo hetero exec` producer: signals process exit
    * and carries the run's high-level outcome. Always emits a final
    * `agent_runtime_end` so renderer subscribers can shut down even when the
    * CLI's own end-event was lost mid-flight.
    */
   heteroFinish: heteroAgentProcedure.input(HeteroFinishSchema).mutation(async ({ input, ctx }) => {
     const {
+      aegis,
       agentType,
       assistantMessageId,
       error,
@@ -3106,7 +3178,17 @@ export const aiAgentRouter = router({
       topicId,
     } = input;
 
-    await authorizeOperationCallback(ctx, operationId, 'hetero:finish');
+    try {
+      await authorizeOperationCallback(ctx, operationId, 'hetero:finish');
+    } catch (error) {
+      // A finish landing after the operation already settled is a no-op, not a
+      // conflict: the durable row holds the first-wins outcome, so the
+      // producer's bounded retry must ack instead of reporting the run failed.
+      if (error instanceof TRPCError && error.code === 'CONFLICT') {
+        return { ack: true as const };
+      }
+      throw error;
+    }
 
     log('heteroFinish: topic=%s op=%s type=%s result=%s', topicId, operationId, agentType, result);
 
@@ -3127,6 +3209,7 @@ export const aiAgentRouter = router({
       // the same mechanism the normal LLM runtime uses. No bespoke lifecycle call
       // here anymore; this is just the server-to-server ack endpoint.
       await heteroService.heteroFinish({
+        aegis,
         agentType,
         assistantMessageId,
         error,
@@ -3154,7 +3237,7 @@ export const aiAgentRouter = router({
 
   /**
    * Exec-side long-poll for remote Human-in-the-loop (op-JWT auth, same as
-   * `heteroIngest`). The `lh hetero exec` producer — which holds only an
+   * `heteroIngest`). The `orvilo hetero exec` producer — which holds only an
    * op-scoped JWT + tRPC and never the server's Redis — pulls
    * `agent_intervention_response` events off the op's Redis stream through this
    * server-mediated read, then resolves its in-process `AskUserBridge`. One

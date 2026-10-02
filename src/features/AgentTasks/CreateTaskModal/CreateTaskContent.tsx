@@ -40,6 +40,8 @@ import { useUserDisplayMeta } from '../shared/useUserDisplayMeta';
 
 export interface CreateTaskContentProps {
   agentId?: string;
+  /** Member preset from a board column or swimlane. `null` stays unassigned. */
+  assigneeUserId?: string | null;
   /**
    * Continue-editing an issue draft (Drafts page → Edit draft): hydrates
    * title/body/properties once and binds autosave to the draft's id, so edits
@@ -52,6 +54,8 @@ export interface CreateTaskContentProps {
    */
   lockAssignee?: boolean;
   onCreated?: (task: { agentId?: string; identifier: string; name?: string }) => void;
+  /** Priority preset from a board column. `0` is "no priority". */
+  priority?: number;
   projectId?: string;
   /**
    * Whether to show the "minimize to inline entry" button. Only the list view has an
@@ -77,8 +81,10 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
   ({
     agentId,
     draft,
+    assigneeUserId: assigneeUserIdPreset,
     lockAssignee,
     onCreated,
+    priority: priorityPreset = 0,
     projectId,
     showInlineToggle = true,
     status,
@@ -97,9 +103,11 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
     const activeWorkspaceId = useActiveWorkspaceId();
 
     const [title, setTitle] = useState('');
-    const [priority, setPriority] = useState(0);
+    const [priority, setPriority] = useState(priorityPreset);
     const [assigneeAgentId, setAssigneeAgentId] = useState<string | undefined>(agentId);
-    const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>();
+    const [assigneeUserId, setAssigneeUserId] = useState<string | undefined>(
+      assigneeUserIdPreset ?? undefined,
+    );
     // Default to workspace-visible: workspace tasks are team work by default,
     // and going private stays one click away. In personal mode the field is
     // irrelevant and the chip is hidden anyway.
@@ -344,7 +352,7 @@ const CreateTaskContent = memo<CreateTaskContentProps>(
                 onClick={handleInline}
               />
             )}
-            <ActionIcon icon={X} onClick={close} />
+            <ActionIcon icon={X} title={t('close', { ns: 'common' })} onClick={close} />
           </div>
         </div>
 

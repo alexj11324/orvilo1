@@ -30,6 +30,7 @@ import {
   taskActivityActor,
   TaskModel,
   type TaskMutationContext,
+  type TaskStatusTransitionExtra,
 } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
 import { TaskLabelModel, toTaskLabelSummary } from '@/database/models/taskLabel';
@@ -147,6 +148,8 @@ export interface UpdateStatusResult {
 }
 
 interface UpdateStatusCommitOptions {
+  /** Trusted admission inside the execution-contract CAS transaction. */
+  beforeMutation?: (tx: OrviloDatabase) => Promise<boolean>;
   onStatusCommitted?: () => void;
 }
 
@@ -556,6 +559,11 @@ export class TaskService {
       };
       id: string;
       status: TaskStatus;
+      /** Canonical Issue Status written atomically with the legacy `status`. */
+      workflow?: Pick<
+        TaskStatusTransitionExtra,
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+      >;
     },
     /**
      * Present only for a change a person or their agent made; its absence is
@@ -578,6 +586,10 @@ export class TaskService {
       };
       id: string;
       status: TaskStatus;
+      workflow?: Pick<
+        TaskStatusTransitionExtra,
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+      >;
     },
     actor: undefined,
     guard: { currentStatus: TaskStatus; reservationId: string },
@@ -595,12 +607,22 @@ export class TaskService {
       };
       id: string;
       status: TaskStatus;
+      workflow?: Pick<
+        TaskStatusTransitionExtra,
+        'workflowCategory' | 'workflowStateId' | 'workflowStateRefId'
+      >;
     },
     actor?: { agentId?: string | null; userId?: string | null },
     guard?: { currentStatus: TaskStatus; reservationId: string },
     options?: UpdateStatusCommitOptions,
   ): Promise<UpdateStatusResult | null> {
     const { expectedContract, id, status, error: errorMsg } = input;
+    if (options?.beforeMutation && !expectedContract) {
+      throw new TRPCError({
+        code: 'CONFLICT',
+        message: 'Atomic completion requires an execution contract',
+      });
+    }
 
     if (errorMsg && status !== 'failed') {
       throw new TRPCError({
@@ -682,13 +704,7 @@ export class TaskService {
       }
     }
 
-    const extra: {
-      completedAt?: Date;
-      error?: string;
-      runReservationExpiresAt?: Date | null;
-      runReservationId?: string | null;
-      startedAt?: Date;
-    } = {};
+    const extra: TaskStatusTransitionExtra = { ...input.workflow };
     if (status === 'running') extra.startedAt = new Date();
     // A person changing state owns the generation boundary. Clear any dispatch
     // or completion lease so a crashed callback cannot reclaim after their
@@ -714,6 +730,8 @@ export class TaskService {
             }),
           },
           extra,
+          {},
+          options?.beforeMutation,
         )
       : actor
         ? await this.taskModel.updateWithLog(resolved.id, { status, ...extra }, actor)
@@ -1517,7 +1535,8 @@ export class TaskService {
     // lifecycle, model and data are untouched; revert this to bring them back.
     const [
       allDescendants,
-      dependencies,
+      issueRelations,
+      blockingDependents,
       directTopics,
       comments,
       activityLogs,
@@ -1527,6 +1546,7 @@ export class TaskService {
     ] = await Promise.all([
       this.taskModel.findAllDescendants(task.id),
       this.taskModel.getIssueRelations(task.id),
+      this.taskModel.getDependents(task.id),
       this.taskTopicModel.findWithHandoff(task.id, TASK_DETAIL_DIRECT_TOPIC_LIMIT).catch(() => []),
       this.taskModel.getComments(task.id).catch(() => []),
       this.taskModel.getActivities(task.id, TASK_DETAIL_ACTIVITY_LIMIT).catch(() => []),
@@ -1678,6 +1698,26 @@ export class TaskService {
 
     // Root level: always return array (empty [] when no subtasks) for consistent API shape
     const subtasks = buildSubtaskTree(task.id) ?? [];
+
+    // Outgoing edges plus the issues this one blocks. `relates` is already
+    // symmetric in getIssueRelations, so dependents only contribute blocks.
+    const dependencies: {
+      dependsOnId: string;
+      id?: string;
+      relationDirection?: 'blockedBy' | 'blocking';
+      type: string;
+    }[] = [
+      ...issueRelations.map((row) =>
+        row.type === 'blocks' ? { ...row, relationDirection: 'blockedBy' as const } : row,
+      ),
+      ...blockingDependents
+        .filter((row) => row.type === 'blocks')
+        .map((row) => ({
+          ...row,
+          dependsOnId: row.taskId,
+          relationDirection: 'blocking' as const,
+        })),
+    ];
 
     // Resolve dependency task identifiers
     const depTaskIds = [...new Set(dependencies.map((d) => d.dependsOnId))];
@@ -1931,7 +1971,7 @@ export class TaskService {
       config: taskConfig,
       createdAt: task.createdAt ? new Date(task.createdAt).toISOString() : undefined,
       createdByUserId: task.createdByUserId,
-      dependencies: dependencies.map((d) => {
+      dependencies: dependencies.map((d): NonNullable<TaskDetailData['dependencies']>[number] => {
         const info = depIdToInfo.get(d.dependsOnId);
         return {
           dependsOn:
@@ -1942,6 +1982,7 @@ export class TaskService {
           name: info?.name,
           status: info?.status ?? null,
           type: d.type,
+          ...(d.relationDirection ? { direction: d.relationDirection } : {}),
           ...(info?.workflowCategory ? { workflowCategory: info.workflowCategory } : {}),
           ...(info?.workflowStateId ? { workflowStateId: info.workflowStateId } : {}),
         };

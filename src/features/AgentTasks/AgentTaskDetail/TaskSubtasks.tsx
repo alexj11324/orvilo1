@@ -26,8 +26,9 @@ import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
 import AssigneeAvatar from '../features/AssigneeAvatar';
 import AssigneeMemberSelector from '../features/AssigneeMemberSelector';
 import AssigneeUserAvatar from '../features/AssigneeUserAvatar';
+import IssueStatusPicker from '../features/IssueStatusPicker';
+import TaskExecutionBadge from '../features/TaskExecutionBadge';
 import TaskPriorityTag from '../features/TaskPriorityTag';
-import TaskStatusTag from '../features/TaskStatusTag';
 import TaskSubtaskProgressTag from '../features/TaskSubtaskProgressTag';
 import TaskTriggerTag from '../features/TaskTriggerTag';
 import { UnassignedAssigneeIcon } from '../features/UnassignedAssigneeIcon';
@@ -38,7 +39,6 @@ import { styles } from '../shared/style';
 import { taskDetailPath } from '../shared/taskDetailPath';
 import RunSubtasksPreview from './RunSubtasksPreview';
 import { useTaskDetailSelector, useTaskDetailTaskId } from './TaskDetailScope';
-import TopicStatusIcon from './TopicStatusIcon';
 
 type TaskStatus = 'backlog' | 'canceled' | 'completed' | 'failed' | 'paused' | 'running';
 
@@ -85,22 +85,20 @@ const SubtaskTitle = memo<{ task: TaskDetailSubtask }>(({ task }) => {
         style={{ alignItems: 'center', display: 'inline-flex', flex: 'none' }}
         onClick={(e) => e.stopPropagation()}
       >
-        <TaskStatusTag
+        <IssueStatusPicker
           size={14}
-          status={status}
           taskIdentifier={task.identifier}
           workflowCategory={task.workflowCategory}
           workflowStateId={task.workflowStateId}
-        >
-          {hasRunningTopic ? <TopicStatusIcon size={14} status="running" /> : undefined}
-        </TaskStatusTag>
+        />
+        {hasRunningTopic ? <TaskExecutionBadge size={14} status="running" /> : undefined}
       </span>
       {hasName && (
-        <div className="text-[13px] text-muted-foreground" style={{ flex: 'none' }}>
+        <div className="font-mono text-xs text-muted-foreground" style={{ flex: 'none' }}>
           {task.identifier}
         </div>
       )}
-      <div className="truncate block text-[13px]" style={{ flex: 1, minWidth: 0 }}>
+      <div className="truncate block text-sm" style={{ flex: 1, minWidth: 0 }}>
         {task.name || task.identifier}
       </div>
       {task.automationMode ? (
@@ -337,10 +335,7 @@ const TaskSubtasks = memo(() => {
                 onClick={() => setIsExpanded((prev) => !prev)}
               >
                 <ListTodoIcon color={cssVar.colorTextDescription} size={16} />
-                <div
-                  className="text-[13px] font-medium"
-                  style={{ color: cssVar.colorTextSecondary }}
-                >
+                <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
                   {t('taskDetail.subtasks')}
                 </div>
                 <AccordionArrowIcon
@@ -419,7 +414,7 @@ const TaskSubtasks = memo(() => {
             onClick={toggleCreating}
           >
             <Plus color={cssVar.colorTextDescription} size={16} />
-            <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
+            <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
               {t('taskDetail.addSubtask')}
             </div>
           </div>

@@ -103,10 +103,10 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
     }, [open, initialTab, isWorkspace]);
 
     const connectCommand = isWorkspace
-      ? `lh connect --workspace ${workspaceId ?? '<workspace-id>'}${
+      ? `orvilo connect --workspace ${workspaceId ?? '<workspace-id>'}${
           visibility === 'public' ? ' --public' : ''
         } --daemon`
-      : 'lh connect --daemon';
+      : 'orvilo connect --daemon';
 
     const cliSteps = (
       <div className="flex flex-col">
@@ -114,7 +114,7 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
           <CommandLine command={'npm install -g @orvilo/cli'} />
         </Step>
         <Step index={2} title={t('devices.connectWizard.cli.loginTitle')}>
-          <CommandLine command={'lh login'} />
+          <CommandLine command={'orvilo login'} />
         </Step>
         <Step
           last

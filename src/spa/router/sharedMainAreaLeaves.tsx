@@ -14,6 +14,7 @@ import { reviewsRouteMeta } from '@/features/Reviews/routeMeta';
 import { savedViewsRouteMeta } from '@/features/SavedViews/routeMeta';
 import { taskDraftsRouteMeta } from '@/features/TaskDrafts/routeMeta';
 import { inboxRouteMeta } from '@/features/WorkInbox/routeMeta';
+import WorkspaceProviderRedirect from '@/features/WorkspaceSetting/ProviderRedirect';
 import { teamsRouteMeta } from '@/features/WorkTeams/routeMeta';
 import type { RouteMeta } from '@/spa/router/routeMeta';
 import { dynamicElement, ErrorBoundary, redirectElement } from '@/utils/router';
@@ -363,12 +364,25 @@ export const sharedAgentTaskLeaf: SharedRouteLeaf = {
 export interface SharedWorkspaceSettingsLeaf extends SharedRouteLeaf {
   /** Full-bleed tabs own their internal layout (no padded content wrapper). */
   fullBleed?: boolean;
+  /** Mobile-specific page module when the page exposes a mobile variant. */
+  loadMobile?: SharedRouteLeaf['load'];
   path: string;
   /** Skeleton surface the desktop route meta registers. */
   skeleton: SurfaceSkeletonVariant;
 }
 
 export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
+  {
+    fullBleed: true,
+    load: () => import('@/routes/(main)/[workspaceSlug]/settings/provider'),
+    loadMobile: () =>
+      import('@/routes/(main)/[workspaceSlug]/settings/provider').then((m) => ({
+        default: m.WorkspaceProviderSettingMobile,
+      })),
+    name: 'Provider',
+    path: 'provider',
+    skeleton: 'list',
+  },
   {
     fullBleed: true,
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/connector'),
@@ -451,6 +465,12 @@ export const sharedWorkspaceSettingsLeaves: SharedWorkspaceSettingsLeaf[] = [
     name: 'Usage',
     path: 'usage',
     skeleton: 'grid',
+  },
+  {
+    load: () => import('@/routes/(main)/[workspaceSlug]/settings/service-model'),
+    name: 'Service Model',
+    path: 'service-model',
+    skeleton: 'form',
   },
   {
     load: () => import('@/routes/(main)/[workspaceSlug]/settings/credential'),
@@ -538,4 +558,10 @@ export const sharedWorkspaceSettingsAliasRoutes: RouteObject[] = WORKSPACE_SETTI
 /** Legacy `/<slug>/settings/linear` deep links land on the Linear import tab. */
 export const sharedWorkspaceSettingsRedirects: RouteObject[] = [
   { element: redirectElement('../imports/linear'), path: 'linear' },
+  // Path-shaped provider deep-links (`/:slug/settings/provider/:id`)
+  // redirect to the query form the workspace provider page uses, so
+  // they don't fall through to the catch-all and leave the workspace.
+  // Static element: the redirect is tiny and lazy-loading it would
+  // flash the generic brand loader before redirecting.
+  { element: <WorkspaceProviderRedirect />, path: 'provider/:providerId' },
 ];

@@ -11,6 +11,7 @@ import {
   isLocalHeterogeneousType,
   LOCAL_HETEROGENEOUS_AGENT_TYPES,
 } from '@orvilo/heterogeneous-agents';
+import { collectAegisArtifacts, materializeAegisPack } from '@orvilo/heterogeneous-agents/aegis';
 import { AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
 import {
   buildAcpBuiltinToolExtras,
@@ -32,7 +33,12 @@ import {
   isHeteroStatusGuideErrorData,
   spawnAgent,
 } from '@orvilo/heterogeneous-agents/spawn';
-import { isOrviloEngineKind, ORVILO_ENGINE_KINDS, resolveOrviloCliAgentType } from '@orvilo/types';
+import {
+  AEGIS_PACK_ENV,
+  isOrviloEngineKind,
+  ORVILO_ENGINE_KINDS,
+  resolveOrviloCliAgentType,
+} from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import type { Command } from 'commander';
 
@@ -108,6 +114,12 @@ const isMissingGrokResumeSession = (data: Record<string, unknown> | undefined): 
 };
 
 interface ExecOptions {
+  /**
+   * Install the vendored Aegis method pack into the run workspace and ship
+   * `.aegis/` + `docs/aegis/` artifacts back on the finish report. Also
+   * enabled when the dispatch sets `ORVILO_AEGIS_PACK=1` in the env.
+   */
+  aegis?: boolean;
   agentArg?: string[];
   command?: string;
   cwd?: string;
@@ -348,14 +360,14 @@ interface RawStreamDumpAttempt {
  * adapted/ingested view can't tell an agent-side empty `tool_result` apart
  * from an adapter extraction bug; the raw dump can.
  *
- * Enabled via `lh hetero exec --raw-dump <dir>`. Each exec gets its own
+ * Enabled via `orvilo hetero exec --raw-dump <dir>`. Each exec gets its own
  * `<dir>/<timestamp>-<operationId>/` session folder; each spawn attempt (the
  * resume retry is a second attempt) writes `<label>.stdout.jsonl` /
  * `<label>.stderr.log`. Fully best-effort: any dump failure is logged and
  * swallowed so it never affects the run or its exit code.
  *
  * Future: the server-side sandbox runner (`spawnHeteroSandbox`) and the
- * desktop device path (`spawnLhHeteroExec`) can pass `--raw-dump` pointing at
+ * desktop device path (`spawnOrviloHeteroExec`) can pass `--raw-dump` pointing at
  * a collectable location to capture remote runs the same way.
  */
 class RawStreamDump {
@@ -462,9 +474,9 @@ const exec = async (options: ExecOptions): Promise<void> => {
   }
 
   // Local execution trace. Recorded for EVERY run, not just server-ingest ones:
-  // a standalone `lh hetero exec` is exactly the case where nothing else keeps
+  // a standalone `orvilo hetero exec` is exactly the case where nothing else keeps
   // a record of what the agent did, and it is the same snapshot format a native
-  // agent run produces, so `lh trace op inspect` reads both.
+  // agent run produces, so `orvilo trace op inspect` reads both.
   const traceRecorder = new HeteroTraceRecorder({
     agentType: options.type,
     operationId,
@@ -489,6 +501,26 @@ const exec = async (options: ExecOptions): Promise<void> => {
   const agentType = isBuiltinHeterogeneousType(options.type)
     ? resolveOrviloCliAgentType(options.engine)
     : options.type;
+
+  const runCwd = options.cwd || process.cwd();
+
+  // Aegis method-pack install. Opt-in only: `--aegis` for standalone runs,
+  // `ORVILO_AEGIS_PACK=1` when the server dispatch enabled the pack — env
+  // (not a flag) carries the bit so an older `orvilo` on a device ignores it
+  // instead of failing on an unknown option. Best-effort: an install
+  // failure downgrades the run to "enabled but no skills", never kills it.
+  const aegisEnabled = options.aegis === true || process.env[AEGIS_PACK_ENV] === '1';
+  if (aegisEnabled) {
+    try {
+      const { dirs } = await materializeAegisPack({ agentType, cwd: runCwd });
+      log.info(`Aegis pack installed → ${dirs.map((d) => `${runCwd}/${d}`).join(', ')}`);
+    } catch (err) {
+      log.warn(
+        `Aegis pack install failed (run continues): ${err instanceof Error ? err.message : String(err)}`,
+      );
+    }
+  }
+
   let sink: TrpcIngestSink | undefined;
   let serverIngester: CoalescingBatchIngester | undefined;
   // Uploader for tool_result images (CC `Read` on an image file). Reuses the
@@ -982,6 +1014,9 @@ const exec = async (options: ExecOptions): Promise<void> => {
           // event, so this catch runs and exits before the finish block below.
           // Pass the raw errno code along for precise classification.
           await sink.finish({
+            aegis: aegisEnabled
+              ? { enabled: true, files: await collectAegisArtifacts(runCwd).catch(() => []) }
+              : undefined,
             error: buildFinishError(
               String(err),
               'stream_error',
@@ -1043,7 +1078,14 @@ const exec = async (options: ExecOptions): Promise<void> => {
   // a broken `codex` shim shadows PATH — so sandbox/terminal runs no longer
   // ENOENT on a stale global install. Custom commands are used verbatim.
   const resolvedCommand = await resolveHeteroSpawnCommand(agentType, options.command);
-  const commandEnv = resolvedCommand.pathEnv ? { PATH: resolvedCommand.pathEnv } : undefined;
+  const commandEnv = {
+    ...(resolvedCommand.pathEnv ? { PATH: resolvedCommand.pathEnv } : {}),
+    // Automatic mode: the opted-in run applies the pack's discipline without
+    // the agent having to name the skills explicitly. Only set for this run —
+    // the user's own `~/.config/aegis` is untouched.
+    ...(aegisEnabled ? { AEGIS_ACTIVATION_MODE: 'auto' } : {}),
+  };
+  const runEnv = Object.keys(commandEnv).length > 0 ? commandEnv : undefined;
   // Devin ACP's `--permission-mode` is a global flag; default to bypass so
   // headless connected-device runs do not block on permission prompts. The mode
   // response must not overwrite the model selected by `initialModel`.
@@ -1056,7 +1098,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
       command: resolvedCommand.command,
       cwd: options.cwd || process.cwd(),
       detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
-      env: commandEnv,
+      env: runEnv,
       extraArgs,
       mcpServers: askMcpServers,
       permissionMode,
@@ -1096,7 +1138,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
         command: resolvedCommand.command,
         cwd: options.cwd || process.cwd(),
         detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
-        env: commandEnv,
+        env: runEnv,
         extraArgs,
         initialModel:
           agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
@@ -1178,6 +1220,11 @@ const exec = async (options: ExecOptions): Promise<void> => {
   if (serverIngester && sink) {
     try {
       await sink.finish({
+        // `{ enabled: true, files: [] }` is meaningful: the gate reads it as
+        // "opted in, produced nothing" and downgrades to requires-review.
+        aegis: aegisEnabled
+          ? { enabled: true, files: await collectAegisArtifacts(runCwd).catch(() => []) }
+          : undefined,
         error: finishError,
         resumeSessionInvalidated: first.resumeNotFound || undefined,
         result: runResult,
@@ -1252,6 +1299,10 @@ export function registerHeteroCommand(program: Command) {
       '--agent-arg <arg>',
       'Forward one native agent CLI argument after wrapper parsing (repeatable)',
       collectAgentArg,
+    )
+    .option(
+      '--aegis',
+      'Install the vendored Aegis method pack into the workspace skills dirs and collect `.aegis/` + `docs/aegis/` artifacts into the finish report (also enabled via ORVILO_AEGIS_PACK=1)',
     )
     .option(
       '-c, --command <bin>',

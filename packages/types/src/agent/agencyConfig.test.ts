@@ -252,7 +252,7 @@ describe('buildHeteroSpawnArgs', () => {
     expect(buildHeteroExecArgs(provider)).toBeUndefined();
   });
 
-  it('keeps raw Amp args compatible with direct spawns and lh hetero exec', () => {
+  it('keeps raw Amp args compatible with direct spawns and orvilo hetero exec', () => {
     const provider: HeterogeneousProviderConfig = { args: ['--mode', 'high'], type: 'amp' };
 
     expect(buildHeteroSpawnArgs(provider)).toEqual(['--mode', 'high']);
@@ -700,7 +700,7 @@ describe('buildHeteroSpawnArgs', () => {
     ).toEqual(['-c', 'model = "gpt-5.4"']);
   });
 
-  it('builds lh hetero exec wrapper args for Codex selectors', () => {
+  it('builds orvilo hetero exec wrapper args for Codex selectors', () => {
     expect(buildHeteroExecArgs({ type: 'codex', model: 'gpt-5.5', effort: 'high' })).toEqual([
       '--model',
       'gpt-5.5',
@@ -709,7 +709,7 @@ describe('buildHeteroSpawnArgs', () => {
     ]);
   });
 
-  it('does not append native Codex config flags to lh hetero exec args', () => {
+  it('does not append native Codex config flags to orvilo hetero exec args', () => {
     expect(
       buildHeteroExecArgs({
         args: ['-c', 'model = "gpt-5.4"'],
@@ -719,7 +719,7 @@ describe('buildHeteroSpawnArgs', () => {
     ).toEqual(['--agent-arg=-c', '--agent-arg=model = "gpt-5.4"', '--effort', 'xhigh']);
   });
 
-  it('keeps Claude Code lh hetero exec selector args in the same wrapper form', () => {
+  it('keeps Claude Code orvilo hetero exec selector args in the same wrapper form', () => {
     expect(buildHeteroExecArgs({ type: 'claude-code', model: 'opus', effort: 'high' })).toEqual([
       '--model',
       'opus',
@@ -728,7 +728,7 @@ describe('buildHeteroSpawnArgs', () => {
     ]);
   });
 
-  it('encodes native agent args before forwarding them to lh hetero exec', () => {
+  it('encodes native agent args before forwarding them to orvilo hetero exec', () => {
     expect(
       buildHeteroExecArgs({
         args: ['--ask-for-approval', 'never'],
@@ -833,7 +833,7 @@ describe('codex speed mode', () => {
     expect(buildHeteroSpawnArgs({ speed: 'fast', type: 'claude-code' })).toBeUndefined();
   });
 
-  it('keeps lh hetero exec speed overrides in wrapper form', () => {
+  it('keeps orvilo hetero exec speed overrides in wrapper form', () => {
     expect(buildHeteroExecArgs({ model: 'gpt-5.5', speed: 'fast', type: 'codex' })).toEqual([
       '--model',
       'gpt-5.5',

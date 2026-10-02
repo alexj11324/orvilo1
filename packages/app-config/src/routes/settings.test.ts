@@ -100,8 +100,10 @@ describe('SETTINGS_CAPABILITIES', () => {
 
 describe('resolveSettingsCapability', () => {
   it('redirects a withdrawn tab that has a live equivalent', () => {
-    expect(resolveSettingsCapability('provider', BASE_CONTEXT)).toEqual({
-      redirectTo: 'profile',
+    // `agent` / `tts` / `image` were the legacy model surfaces; with the
+    // restored P30 provider surface they land on `service-model` again.
+    expect(resolveSettingsCapability('agent', BASE_CONTEXT)).toEqual({
+      redirectTo: 'service-model',
       status: 'retired',
     });
   });
@@ -153,10 +155,7 @@ describe('resolveSettingsCapability', () => {
     const openDeployment = context();
 
     expect(resolveSettingsCapability('appearance', openDeployment)).toEqual({ status: 'enabled' });
-    expect(resolveSettingsCapability('provider', openDeployment)).toEqual({
-      redirectTo: 'profile',
-      status: 'retired',
-    });
+    expect(resolveSettingsCapability('provider', openDeployment)).toEqual({ status: 'enabled' });
     expect(resolveSettingsCapability('llm', openDeployment)).toEqual({ status: 'retired' });
     expect(resolveSettingsCapability('plans', context({ enableBusinessFeatures: false }))).toEqual({
       status: 'unavailable',
@@ -171,7 +170,7 @@ describe('resolveSettingsCapability', () => {
     // `isSettingsTabAvailable` is the predicate the renderer calls before
     // mounting anything, so "false" has to mean "do not run this page".
     expect(isSettingsTabAvailable('appearance', openDeployment)).toBe(true);
-    expect(isSettingsTabAvailable('provider', openDeployment)).toBe(false);
+    expect(isSettingsTabAvailable('provider', openDeployment)).toBe(true);
     expect(isSettingsTabAvailable('llm', openDeployment)).toBe(false);
     expect(isSettingsTabAvailable('plans', closedDeployment)).toBe(false);
     expect(isSettingsTabAvailable('nonsense', openDeployment)).toBe(false);
@@ -189,7 +188,10 @@ describe('WORKSPACE_SETTINGS_ALIASES', () => {
     const aliases = WORKSPACE_SETTINGS_ALIASES.map((entry) => entry.alias);
 
     expect(new Set(aliases).size).toBe(aliases.length);
-    expect(aliases).toContain('provider');
-    expect(aliases).toContain('service-model');
+    // `provider` and `service-model` are live workspace tabs (restored P30
+    // provider surface) — they resolve through the leaves registry, so an
+    // alias here would shadow the real pages.
+    expect(aliases).not.toContain('provider');
+    expect(aliases).not.toContain('service-model');
   });
 });

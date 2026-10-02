@@ -151,7 +151,7 @@ then binds. So starting instance N **unlinks instance N-1's socket and takes ove
 the path** + rewrites `${appId}-electron-ipc-info.json`. Observed: non-fatal, no
 crash, all instances keep running and their **renderer↔main IPC (standard
 Electron `ipcMain`/`ipcRenderer`) is unaffected** (that's per-webContents). Only
-the external `electron-server-ipc` channel — used by the embedded CLI `lh` and
+the external `electron-server-ipc` channel — used by the embedded CLI `orvilo` and
 the Next server to reach the main process — resolves to the **last-started
 instance**. For CDP-driven UI automation this is harmless. To make it clean for a
 real feature, give the IPC server a per-instance appId (env, decoupled from
@@ -244,7 +244,7 @@ electron-dev.sh stop --all # stop every instance
 
 ### Round 1 — concurrency, login reuse, isolation (Model A)
 
-Golden profile `orvilo-desktop-dev` (logged in, user\_2gmT…); 3 userData copies
+Golden profile `orvilo-desktop-dev` (logged in, user_2gmT…); 3 userData copies
 (27 MB each), app name constant. inst1 = `electron-vite dev` (CDP 9223, Vite
 5173\), inst2/inst3 = raw electron (CDP 9224/9225) sharing Vite.
 

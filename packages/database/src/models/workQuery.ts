@@ -18,11 +18,15 @@ import type {
 } from '@orvilo/types';
 import {
   isWorkAttentionAllowedHttpsHost,
+  normalizeWorkQuery,
+  normalizeWorkQuerySubGroupBy,
   PROJECT_STATUS_VALUES,
+  WORK_QUERY_BOARD_KEY_SEP,
   WORK_QUERY_FACET_FIELDS,
   WORK_QUERY_MAX_DEPTH,
   WORK_QUERY_MAX_IN_VALUES,
   WORK_QUERY_MAX_PREDICATES,
+  WORK_QUERY_PRIORITY_KEYS,
   WORK_QUERY_STATUS_COLUMNS,
   WORK_QUERY_WORKFLOW_COLUMNS,
   WORK_SEARCH_MAX_PER_TYPE,
@@ -37,7 +41,6 @@ import {
   inArray,
   isNotNull,
   isNull,
-  lt,
   ne,
   notInArray,
   or,
@@ -50,7 +53,7 @@ import { actionApprovals } from '../schemas/actionApproval';
 import { executionGrants } from '../schemas/executionGrant';
 import { notifications } from '../schemas/notification';
 import { projects } from '../schemas/project';
-import { taskDependencies, tasks } from '../schemas/task';
+import { taskDependencies, taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { taskLabelBindings } from '../schemas/taskLabel';
 import { projectTeams, teamCycles, teams } from '../schemas/team';
 import { taskSubscriptions } from '../schemas/workAttention';
@@ -74,18 +77,29 @@ export class WorkQueryError extends Error {
 }
 
 const TASK_FIELDS = new Set<WorkQueryField>([
+  'assigneeAgentId',
   'assigneeUserId',
+  'closedAt',
+  'completedAt',
+  'createdAt',
   'createdByUserId',
   'cycleId',
   'delegatedByUserId',
+  'executionState',
+  'hasActivity',
   'id',
   'labelId',
+  'parentTaskId',
   'priority',
   'projectId',
+  'projectMilestoneId',
   'reviewerUserId',
   'status',
+  'subscribed',
   'teamId',
+  'text',
   'triageStatus',
+  'updatedAt',
   'workflowCategory',
 ]);
 
@@ -123,14 +137,36 @@ type CompileCtx = {
   readableTeamIds: ReadonlySet<string>;
 };
 
-const assertInValues = (resolved: unknown, op: 'in' | 'notIn'): string[] => {
+const isCurrentUserRef = (value: unknown): value is { ref: 'currentUser' } =>
+  Boolean(value && typeof value === 'object' && 'ref' in value && value.ref === 'currentUser');
+
+const isDateRange = (value: unknown): value is { from: string; to: string } =>
+  Boolean(
+    value &&
+    typeof value === 'object' &&
+    'from' in value &&
+    'to' in value &&
+    typeof value.from === 'string' &&
+    typeof value.to === 'string',
+  );
+
+/** Resolve `{ref:'currentUser'}` members so `in` can mix "me" with ids. */
+const assertInValues = (
+  resolved: unknown,
+  op: 'in' | 'notIn',
+  currentUserId: string,
+): Array<number | string> => {
   if (!Array.isArray(resolved) || resolved.length === 0) {
     throw new WorkQueryError('INVALID_QUERY', `${op} requires a non-empty array`);
   }
   if (resolved.length > WORK_QUERY_MAX_IN_VALUES) {
     throw new WorkQueryError('QUERY_TOO_COMPLEX', `${op} exceeded maximum values`);
   }
-  return resolved as string[];
+  return resolved.map((item) => {
+    if (isCurrentUserRef(item)) return currentUserId;
+    if (typeof item === 'string' || typeof item === 'number') return item;
+    throw new WorkQueryError('INVALID_QUERY', `${op} values must be strings or numbers`);
+  });
 };
 
 const compileTeamIdColumnPredicate = (
@@ -138,6 +174,7 @@ const compileTeamIdColumnPredicate = (
   op: WorkQueryOp,
   resolved: ReturnType<typeof resolveValue>,
   readableTeamIds: ReadonlySet<string>,
+  currentUserId: string,
 ): SQL => {
   const readable = [...readableTeamIds];
   switch (op) {
@@ -152,7 +189,7 @@ const compileTeamIdColumnPredicate = (
       return eq(column, resolved as never);
     }
     case 'in': {
-      const kept = assertInValues(resolved, 'in').filter(
+      const kept = assertInValues(resolved, 'in', currentUserId).filter(
         (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
       );
       return kept.length ? inArray(column, kept) : FALSE_SQL;
@@ -162,7 +199,7 @@ const compileTeamIdColumnPredicate = (
       return ne(column, resolved as never);
     }
     case 'notIn': {
-      const kept = assertInValues(resolved, 'notIn').filter(
+      const kept = assertInValues(resolved, 'notIn', currentUserId).filter(
         (item): item is string => typeof item === 'string' && readableTeamIds.has(item),
       );
       return kept.length ? notInArray(column, kept) : TRUE_SQL;
@@ -198,8 +235,17 @@ const resolveValue = (value: WorkQueryPredicate['value'], currentUserId: string)
 
 const taskColumn = (field: WorkQueryField) => {
   switch (field) {
+    case 'assigneeAgentId': {
+      return tasks.assigneeAgentId;
+    }
     case 'assigneeUserId': {
       return tasks.assigneeUserId;
+    }
+    case 'completedAt': {
+      return tasks.completedAt;
+    }
+    case 'createdAt': {
+      return tasks.createdAt;
     }
     case 'createdByUserId': {
       return tasks.createdByUserId;
@@ -210,11 +256,17 @@ const taskColumn = (field: WorkQueryField) => {
     case 'id': {
       return tasks.id;
     }
+    case 'parentTaskId': {
+      return tasks.parentTaskId;
+    }
     case 'priority': {
       return tasks.priority;
     }
     case 'projectId': {
       return tasks.projectId;
+    }
+    case 'projectMilestoneId': {
+      return tasks.projectMilestoneId;
     }
     case 'reviewerUserId': {
       return tasks.reviewerUserId;
@@ -227,6 +279,9 @@ const taskColumn = (field: WorkQueryField) => {
     }
     case 'triageStatus': {
       return tasks.triageStatus;
+    }
+    case 'updatedAt': {
+      return tasks.updatedAt;
     }
     case 'workflowCategory': {
       return tasks.workflowCategory;
@@ -241,6 +296,7 @@ const compileColumnPredicate = (
   column: AnyPgColumn,
   op: WorkQueryOp,
   resolved: ReturnType<typeof resolveValue>,
+  currentUserId: string,
 ): SQL => {
   switch (op) {
     case 'isNull': {
@@ -262,10 +318,10 @@ const compileColumnPredicate = (
       return ne(column, resolved as never);
     }
     case 'in': {
-      return inArray(column, assertInValues(resolved, 'in') as never[]);
+      return inArray(column, assertInValues(resolved, 'in', currentUserId) as never[]);
     }
     case 'notIn': {
-      return notInArray(column, assertInValues(resolved, 'notIn') as never[]);
+      return notInArray(column, assertInValues(resolved, 'notIn', currentUserId) as never[]);
     }
     default: {
       throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
@@ -285,6 +341,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         projects.id,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
+        ctx.currentUserId,
       );
     }
     if (predicate.field === 'status') {
@@ -292,6 +349,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         projects.status,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
+        ctx.currentUserId,
       );
     }
     if (predicate.field === 'visibility') {
@@ -299,6 +357,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         projects.visibility,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
+        ctx.currentUserId,
       );
     }
     if (predicate.field === 'ownerUserId') {
@@ -306,6 +365,7 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         projects.userId,
         predicate.op,
         resolveValue(predicate.value, ctx.currentUserId),
+        ctx.currentUserId,
       );
     }
     if (predicate.field === 'teamId') {
@@ -360,6 +420,15 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
       predicate.op,
       resolveValue(predicate.value, ctx.currentUserId),
       ctx.readableTeamIds,
+      ctx.currentUserId,
+    );
+  }
+
+  if (predicate.field === 'executionState') {
+    return compileExecutionStatePredicate(
+      predicate.op,
+      resolveValue(predicate.value, ctx.currentUserId),
+      ctx.currentUserId,
     );
   }
 
@@ -392,13 +461,13 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
         return sql`not ${bindingWith(sql`${taskLabelBindings.labelId} = ${resolved}`)}`;
       }
       case 'in': {
-        const values = assertInValues(resolved, 'in').filter(
+        const values = assertInValues(resolved, 'in', ctx.currentUserId).filter(
           (item): item is string => typeof item === 'string',
         );
         return values.length ? bindingWith(inArray(taskLabelBindings.labelId, values)) : FALSE_SQL;
       }
       case 'notIn': {
-        const values = assertInValues(resolved, 'notIn').filter(
+        const values = assertInValues(resolved, 'notIn', ctx.currentUserId).filter(
           (item): item is string => typeof item === 'string',
         );
         return values.length
@@ -413,7 +482,83 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
 
   const op: WorkQueryOp = predicate.op;
   const resolved = resolveValue(predicate.value, ctx.currentUserId);
-  return compileColumnPredicate(taskColumn(predicate.field), op, resolved);
+
+  if (predicate.field === 'text') {
+    if (op !== 'contains' || typeof resolved !== 'string' || !resolved.trim()) {
+      throw new WorkQueryError('INVALID_QUERY', 'text only supports contains');
+    }
+    const pattern = `%${escapeLike(resolved.trim())}%`;
+    return or(
+      sql`${tasks.name} ilike ${pattern} escape '\\'`,
+      sql`${tasks.description} ilike ${pattern} escape '\\'`,
+      sql`${tasks.instruction} ilike ${pattern} escape '\\'`,
+    )!;
+  }
+
+  if (predicate.field === 'subscribed' || predicate.field === 'hasActivity') {
+    if (op !== 'eq' || resolved !== ctx.currentUserId) {
+      throw new WorkQueryError('INVALID_QUERY', `${predicate.field} only supports eq currentUser`);
+    }
+    return predicate.field === 'subscribed'
+      ? sql`exists (select 1 from ${taskSubscriptions} where ${taskSubscriptions.taskId} = ${tasks.id} and ${taskSubscriptions.userId} = ${ctx.currentUserId} and ${taskSubscriptions.unsubscribedAt} is null)`
+      : sql`exists (select 1 from ${notifications} where ${notifications.userId} = ${ctx.currentUserId} and ${notifications.resourceType} = 'task' and ${notifications.resourceId} = ${tasks.id})`;
+  }
+
+  if (
+    predicate.field === 'createdAt' ||
+    predicate.field === 'updatedAt' ||
+    predicate.field === 'completedAt' ||
+    predicate.field === 'closedAt'
+  ) {
+    const column =
+      predicate.field === 'closedAt'
+        ? sql`coalesce(${tasks.completedAt}, ${tasks.updatedAt})`
+        : taskColumn(predicate.field);
+    return compileDatePredicate(column, op, resolved);
+  }
+
+  return compileColumnPredicate(taskColumn(predicate.field), op, resolved, ctx.currentUserId);
+};
+
+const compileDatePredicate = (
+  column: AnyPgColumn | SQL,
+  op: WorkQueryOp,
+  resolved: ReturnType<typeof resolveValue>,
+): SQL => {
+  const instant = (value: unknown, label: string) => {
+    if (typeof value !== 'string' || Number.isNaN(new Date(value).getTime())) {
+      throw new WorkQueryError('INVALID_QUERY', `${label} requires an ISO timestamp`);
+    }
+    return new Date(value);
+  };
+  // `closedAt` is `coalesce(...)`, a SQL fragment. Drizzle's comparison
+  // helpers only accept a column or a SQL value, not the union, so the
+  // predicate is written as SQL for both.
+  switch (op) {
+    case 'isNull': {
+      return sql`${column} is null`;
+    }
+    case 'isNotNull': {
+      return sql`${column} is not null`;
+    }
+    case 'lt': {
+      return sql`${column} < ${instant(resolved, 'lt')}`;
+    }
+    case 'gte': {
+      return sql`${column} >= ${instant(resolved, 'gte')}`;
+    }
+    case 'between': {
+      if (!isDateRange(resolved)) {
+        throw new WorkQueryError('INVALID_QUERY', 'between requires {from, to}');
+      }
+      const from = instant(resolved.from, 'between.from');
+      const to = instant(resolved.to, 'between.to');
+      return sql`${column} >= ${from} and ${column} <= ${to}`;
+    }
+    default: {
+      throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
+    }
+  }
 };
 
 const compileFilter = (
@@ -445,7 +590,7 @@ const compileFilter = (
 };
 
 export const validateWorkQuery = (query: WorkQuery) => {
-  if (query.schemaVersion !== 1) {
+  if (query.schemaVersion !== 1 && query.schemaVersion !== 2) {
     throw new WorkQueryError('INVALID_QUERY', 'Unsupported schemaVersion');
   }
   if (query.entityType !== 'task' && query.entityType !== 'project') {
@@ -458,6 +603,14 @@ export const validateWorkQuery = (query: WorkQuery) => {
   if (query.sortMode !== undefined && query.sortMode !== 'field' && query.sortMode !== 'manual') {
     throw new WorkQueryError('INVALID_QUERY', `Unknown sortMode: ${String(query.sortMode)}`);
   }
+  if (
+    query.subGroupBy &&
+    query.subGroupBy !== 'none' &&
+    query.layout === 'board' &&
+    !normalizeWorkQuerySubGroupBy(query.groupBy, query.subGroupBy)
+  ) {
+    throw new WorkQueryError('INVALID_QUERY', 'Board axes cannot repeat the same state machine');
+  }
 };
 
 export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
@@ -467,7 +620,7 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'assigneeUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'updatedAt' },
           { direction: 'asc', field: 'id' },
@@ -478,7 +631,7 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'createdByUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'createdAt' },
           { direction: 'asc', field: 'id' },
@@ -489,29 +642,32 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'delegatedByUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
       };
     }
     case 'review': {
       return {
         entityType: 'task',
         filter: { all: [{ field: 'reviewerUserId', op: 'eq', value: current }] },
-        schemaVersion: 1,
+        schemaVersion: 2,
       };
     }
     case 'subscribed': {
       return {
         entityType: 'task',
-        schemaVersion: 1,
+        filter: { all: [{ field: 'subscribed', op: 'eq', value: current }] },
+        schemaVersion: 2,
       };
     }
     case 'activity': {
       // "Activity" = tasks with real activity for the caller — notification
-      // episodes carry actor/verb/subject. The EXISTS lives in taskConditions;
-      // the list path orders by the episode's `lastActivityAt`.
+      // episodes carry actor/verb/subject. The predicate is the same EXISTS
+      // taskConditions adds when `mode` is passed; the list path still orders
+      // by the episode's `lastActivityAt` when that mode is set.
       return {
         entityType: 'task',
-        schemaVersion: 1,
+        filter: { all: [{ field: 'hasActivity', op: 'eq', value: current }] },
+        schemaVersion: 2,
         sort: [
           { direction: 'desc', field: 'updatedAt' },
           { direction: 'asc', field: 'id' },
@@ -523,45 +679,238 @@ export const myWorkQueryForMode = (mode: MyWorkMode): WorkQuery => {
 
 export const hashQuery = (query: WorkQuery) => JSON.stringify(query);
 
+/**
+ * SQL projection of the canonical execution state — mirrors
+ * `deriveTaskExecutionState` (packages/types): the latest dispatch's phase and
+ * the latest run's `run_state` are each mapped onto the execution enum, the
+ * furthest-advanced rank wins (tie → dispatch, the contract fence), and
+ * `tasks.status` is only the legacy fallback when no execution rows exist.
+ * Yields NULL for tasks that never executed (backlog/scheduled statuses
+ * project nothing) — `isNull` on `executionState` is "never ran".
+ */
+const taskExecutionStateExpr = sql`
+  (select case
+    when d.exec_state is not null and r.exec_state is not null then
+      case when d.exec_rank >= r.exec_rank then d.exec_state else r.exec_state end
+    else coalesce(
+      d.exec_state,
+      r.exec_state,
+      case ${tasks.status}
+        when 'canceled' then 'canceled'
+        when 'completed' then 'succeeded'
+        when 'failed' then 'failed'
+        when 'paused' then 'outcome_unknown'
+        when 'running' then 'running'
+      end
+    )
+  end
+  from (values (1)) as seed(x)
+  left join lateral (
+    select
+      case ${taskDispatches.phase}
+        when 'requested' then 'queued'
+        when 'claimed' then 'queued'
+        when 'provisioning' then 'provisioning'
+        when 'dispatched' then 'running'
+        when 'running' then 'running'
+        when 'cancel_requested' then 'running'
+        when 'waiting' then 'waiting'
+        when 'succeeded' then 'succeeded'
+        when 'failed' then 'failed'
+        when 'canceled' then 'canceled'
+        when 'abandoned' then 'outcome_unknown'
+        when 'outcome_unknown' then 'outcome_unknown'
+      end as exec_state,
+      case ${taskDispatches.phase}
+        when 'requested' then 0
+        when 'claimed' then 0
+        when 'provisioning' then 1
+        when 'dispatched' then 2
+        when 'running' then 2
+        when 'cancel_requested' then 2
+        when 'waiting' then 3
+        else 4
+      end as exec_rank
+    from ${taskDispatches}
+    where ${taskDispatches.taskId} = ${tasks.id}
+    order by ${taskDispatches.generation} desc
+    limit 1
+  ) as d on true
+  left join lateral (
+    select
+      case ${taskTopics.runState}
+        when 'queued' then 'queued'
+        when 'provisioning' then 'provisioning'
+        when 'running' then 'running'
+        when 'cancel_requested' then 'running'
+        when 'waiting' then 'waiting'
+        when 'succeeded' then 'succeeded'
+        when 'failed' then 'failed'
+        when 'canceled' then 'canceled'
+        when 'outcome_unknown' then 'outcome_unknown'
+      end as exec_state,
+      case ${taskTopics.runState}
+        when 'queued' then 0
+        when 'provisioning' then 1
+        when 'running' then 2
+        when 'cancel_requested' then 2
+        when 'waiting' then 3
+        else 4
+      end as exec_rank
+    from ${taskTopics}
+    where ${taskTopics.taskId} = ${tasks.id}
+    order by ${taskTopics.createdAt} desc
+    limit 1
+  ) as r on true)`;
+
+/** `executionState` is a projected expression, not a column — same enum ops. */
+const compileExecutionStatePredicate = (
+  op: WorkQueryOp,
+  resolved: ReturnType<typeof resolveValue>,
+  currentUserId: string,
+): SQL => {
+  switch (op) {
+    case 'isNull': {
+      return sql`${taskExecutionStateExpr} is null`;
+    }
+    case 'isNotNull': {
+      return sql`${taskExecutionStateExpr} is not null`;
+    }
+    case 'eq': {
+      if (typeof resolved !== 'string' && typeof resolved !== 'number') {
+        throw new WorkQueryError('INVALID_QUERY', 'eq requires a scalar value');
+      }
+      return sql`${taskExecutionStateExpr} = ${resolved}`;
+    }
+    case 'neq': {
+      if (typeof resolved !== 'string' && typeof resolved !== 'number') {
+        throw new WorkQueryError('INVALID_QUERY', 'neq requires a scalar value');
+      }
+      return sql`${taskExecutionStateExpr} is distinct from ${resolved}`;
+    }
+    case 'in': {
+      return inArray(taskExecutionStateExpr, assertInValues(resolved, 'in', currentUserId));
+    }
+    case 'notIn': {
+      // NULL-safe complement: never-ran tasks (NULL projection) are "not in".
+      return or(
+        sql`${taskExecutionStateExpr} is null`,
+        notInArray(taskExecutionStateExpr, assertInValues(resolved, 'notIn', currentUserId)),
+      )!;
+    }
+    default: {
+      throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
+    }
+  }
+};
+
+/** One extra row tells a full page from the last page. The extra row is not returned. */
+const limitPage = <T>(rows: T[], limit: number): { hasMore: boolean; rows: T[] } => {
+  if (rows.length <= limit) return { hasMore: false, rows };
+  return { hasMore: true, rows: rows.slice(0, limit) };
+};
+
+const BOARD_GROUP_BY = new Set<WorkQueryGroupBy>([
+  'agent',
+  'assignee',
+  'attention',
+  'priority',
+  'status',
+  'workflowCategory',
+]);
+
+const LIST_GROUP_BY = new Set<WorkQueryGroupBy>([
+  'activityDate',
+  'agent',
+  'assignee',
+  'attention',
+  'cycle',
+  'milestone',
+  'priority',
+  'project',
+  'status',
+  'workflowCategory',
+]);
+
 export const applyWorkQueryLayout = (
   query: WorkQuery,
   layout?: WorkQueryLayout,
   groupBy?: WorkQueryGroupBy,
 ): WorkQuery => {
   const nextLayout = layout ?? query.layout ?? 'list';
+  // Projects only have a status axis. A board with no grouping still draws
+  // status columns; a task axis such as workflow would be rejected later.
+  if (query.entityType === 'project') {
+    const requested = groupBy ?? query.groupBy;
+    const projectGroupBy = nextLayout === 'board' || requested === 'status' ? 'status' : 'none';
+    return {
+      ...query,
+      groupBy: projectGroupBy,
+      layout: nextLayout === 'board' ? 'board' : 'list',
+      subGroupBy: undefined,
+    };
+  }
   if (nextLayout !== 'board') {
     const nextGroupBy = groupBy ?? query.groupBy;
     if (nextGroupBy === 'none') {
-      return { ...query, groupBy: 'none', layout: 'list' };
+      return { ...query, groupBy: 'none', layout: 'list', subGroupBy: undefined };
     }
-    return {
-      ...query,
-      groupBy:
-        nextGroupBy === 'workflowCategory' || nextGroupBy === 'attention' ? nextGroupBy : 'status',
-      layout: 'list',
-    };
+    const kept = nextGroupBy && LIST_GROUP_BY.has(nextGroupBy) ? nextGroupBy : 'status';
+    const subGroupBy = normalizeWorkQuerySubGroupBy(kept, query.subGroupBy);
+    return { ...query, groupBy: kept, layout: 'list', subGroupBy };
   }
+  const nextGroupBy = groupBy ?? query.groupBy ?? 'workflowCategory';
+  const boardGroupBy = BOARD_GROUP_BY.has(nextGroupBy) ? nextGroupBy : 'workflowCategory';
+  const subGroupBy = normalizeWorkQuerySubGroupBy(boardGroupBy, query.subGroupBy);
   return {
     ...query,
-    groupBy: groupBy ?? query.groupBy ?? 'workflowCategory',
+    groupBy: boardGroupBy,
     layout: 'board',
+    subGroupBy,
   };
 };
 
-export const workQueryBoardGroupBy = (
-  query: WorkQuery,
-): 'attention' | 'status' | 'workflowCategory' | undefined => {
+export type WorkQueryBoardDimension =
+  | 'activityDate'
+  | 'agent'
+  | 'assignee'
+  | 'attention'
+  | 'cycle'
+  | 'milestone'
+  | 'priority'
+  | 'project'
+  | 'status'
+  | 'workflowCategory';
+
+export const workQueryBoardGroupBy = (query: WorkQuery): WorkQueryBoardDimension | undefined => {
   if (query.layout === 'board') {
-    return query.groupBy === 'status' ? 'status' : 'workflowCategory';
+    if (
+      query.groupBy === 'status' ||
+      query.groupBy === 'priority' ||
+      query.groupBy === 'assignee' ||
+      query.groupBy === 'agent' ||
+      query.groupBy === 'attention'
+    ) {
+      return query.groupBy;
+    }
+    return 'workflowCategory';
   }
-  if (
-    query.groupBy === 'status' ||
-    query.groupBy === 'workflowCategory' ||
-    query.groupBy === 'attention'
-  ) {
+  if (query.groupBy && query.groupBy !== 'none' && LIST_GROUP_BY.has(query.groupBy)) {
     return query.groupBy;
   }
   return undefined;
+};
+
+/** Reject a time zone Postgres would not accept. Missing means UTC. */
+export const assertWorkQueryTimeZone = (timeZone: string | undefined): string => {
+  const zone = timeZone?.trim() || 'UTC';
+  if (zone.length > 100) throw new WorkQueryError('INVALID_QUERY', 'Invalid time zone');
+  try {
+    Intl.DateTimeFormat(undefined, { timeZone: zone });
+  } catch {
+    throw new WorkQueryError('INVALID_QUERY', 'Invalid time zone');
+  }
+  return zone;
 };
 
 /** A canceled/completed blocked row no longer needs the blocker. */
@@ -622,36 +971,121 @@ const attentionGroupExpr = (ctx: {
   ELSE ${tasks.workflowCategory}
 END`;
 
-const groupExprFor = (
-  groupBy: 'attention' | 'status' | 'workflowCategory',
-  attentionExpr: SQL,
-): SQL | AnyPgColumn =>
-  groupBy === 'attention'
-    ? attentionExpr
-    : groupBy === 'status'
-      ? tasks.status
-      : tasks.workflowCategory;
+type BoardLaneAxis =
+  'agent' | 'assignee' | 'milestone' | 'priority' | 'project' | 'status' | 'workflowCategory';
 
-const stableBoardKeys = (
-  groupBy: 'attention' | 'status' | 'workflowCategory',
-): readonly string[] =>
-  groupBy === 'attention'
-    ? ['urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS]
-    : groupBy === 'status'
-      ? WORK_QUERY_STATUS_COLUMNS
-      : WORK_QUERY_WORKFLOW_COLUMNS;
+/**
+ * Local-day recency buckets matching `activityBucketKey`: day:0–6, then
+ * week / month / year. `dayDiff` is the calendar-day distance in `timeZone`.
+ */
+const activityDateExpr = (activity: SQL, timeZone: string): SQL => {
+  const dayDiff = sql`((timezone(${timeZone}, now()))::date - (timezone(${timeZone}, ${activity}))::date)`;
+  return sql`CASE
+    WHEN ${activity} IS NULL THEN 'unknown'
+    WHEN GREATEST(0, ${dayDiff}) < 7 THEN 'day:' || GREATEST(0, ${dayDiff})::text
+    WHEN ${dayDiff} < 30 THEN 'week:' || (${dayDiff} / 7)::text
+    WHEN ${dayDiff} < 365 THEN 'month:' || (${dayDiff} / 30)::text
+    ELSE 'year:' || (${dayDiff} / 365)::text
+  END`;
+};
+
+const axisExpr = (
+  axis: WorkQueryBoardDimension | BoardLaneAxis,
+  ctx: { activity: SQL; attention: SQL; timeZone: string },
+): SQL => {
+  switch (axis) {
+    case 'activityDate': {
+      return activityDateExpr(ctx.activity, ctx.timeZone);
+    }
+    case 'attention': {
+      return ctx.attention;
+    }
+    case 'status': {
+      return sql`${tasks.status}`;
+    }
+    case 'workflowCategory': {
+      return sql`${tasks.workflowCategory}`;
+    }
+    case 'priority': {
+      return sql`coalesce(${tasks.priority}::text, '0')`;
+    }
+    case 'assignee': {
+      return sql`coalesce(${tasks.assigneeUserId}, 'none')`;
+    }
+    case 'agent': {
+      return sql`coalesce(${tasks.assigneeAgentId}, 'none')`;
+    }
+    case 'milestone': {
+      return sql`coalesce(${tasks.projectMilestoneId}::text, 'none')`;
+    }
+    case 'cycle': {
+      return sql`coalesce(${tasks.cycleRefId}::text, 'none')`;
+    }
+    case 'project': {
+      return sql`coalesce(${tasks.projectId}, 'none')`;
+    }
+  }
+};
+
+/** Finite axes keep their empty buckets. Assignee and project only return keys that exist. */
+const finiteBoardKeys = (axis: string): readonly string[] | undefined => {
+  if (axis === 'attention') return ['urgent', 'blocking', ...WORK_QUERY_WORKFLOW_COLUMNS];
+  if (axis === 'status') return WORK_QUERY_STATUS_COLUMNS;
+  if (axis === 'workflowCategory') return WORK_QUERY_WORKFLOW_COLUMNS;
+  if (axis === 'priority') return WORK_QUERY_PRIORITY_KEYS;
+  return undefined;
+};
+
+const stableBoardKeys = (groupBy: string, lane?: string): readonly string[] => {
+  const columns = finiteBoardKeys(groupBy);
+  if (!lane) return columns ?? [];
+  const lanes = finiteBoardKeys(lane);
+  if (!columns || !lanes) return [];
+  return columns.flatMap((column) =>
+    lanes.map((laneKey) => `${column}${WORK_QUERY_BOARD_KEY_SEP}${laneKey}`),
+  );
+};
+
+/**
+ * Board swimlanes keep every finite cell, including empties. A list keeps
+ * finite primary columns and, when a lane is set, only the cells that have
+ * rows — plus a bare column key when a finite column has no children.
+ */
+const listGroupKeys = (
+  groupBy: string,
+  lane: string | undefined,
+  countKeys: readonly string[],
+  includeEmptyLanes: boolean,
+): string[] => {
+  if (includeEmptyLanes) return [...stableBoardKeys(groupBy, lane)];
+  if (!lane) return [...(finiteBoardKeys(groupBy) ?? [])];
+  const columns = finiteBoardKeys(groupBy);
+  if (!columns) return [];
+  const bare: string[] = [];
+  for (const column of columns) {
+    const prefix = `${column}${WORK_QUERY_BOARD_KEY_SEP}`;
+    if (!countKeys.some((key) => key.startsWith(prefix))) bare.push(column);
+  }
+  return bare;
+};
 
 /** Keyset for board-ordered groups: position asc, then createdAt/seq desc —
- * the same total order TASK_BOARD_ORDER applies on the task-store board. */
-const keysetAfterBoardPosition = (cursor: typeof tasks.$inferSelect): SQL => {
-  const curPos = cursor.position ?? -(new Date(cursor.createdAt).getTime() / 1000);
+ * the same total order TASK_BOARD_ORDER applies on the task-store board.
+ * Cursor columns stay in SQL so timestamp equality is exact. */
+const keysetAfterBoardPosition = (afterId: string): SQL => {
+  const cursorPos = sql`(SELECT ${taskEffectivePosition} FROM ${tasks} WHERE ${tasks.id} = ${afterId})`;
+  const cursorCreated = sql`(SELECT ${tasks.createdAt} FROM ${tasks} WHERE ${tasks.id} = ${afterId})`;
+  const cursorSeq = sql`(SELECT ${tasks.seq} FROM ${tasks} WHERE ${tasks.id} = ${afterId})`;
   return or(
-    sql`${taskEffectivePosition} > ${curPos}`,
-    and(sql`${taskEffectivePosition} = ${curPos}`, lt(tasks.createdAt, cursor.createdAt)),
+    sql`${taskEffectivePosition} > ${cursorPos}`,
     and(
-      sql`${taskEffectivePosition} = ${curPos}`,
-      eq(tasks.createdAt, cursor.createdAt),
-      lt(tasks.seq, cursor.seq),
+      sql`${taskEffectivePosition} IS NOT DISTINCT FROM ${cursorPos}`,
+      sql`${tasks.createdAt} < ${cursorCreated}`,
+    ),
+    and(
+      sql`${taskEffectivePosition} IS NOT DISTINCT FROM ${cursorPos}`,
+      sql`${tasks.createdAt} IS NOT DISTINCT FROM ${cursorCreated}`,
+      sql`${tasks.seq} < ${cursorSeq}`,
     ),
   )!;
 };
@@ -714,67 +1148,55 @@ const sortColumn = (field: WorkQuerySort['field']) => {
   return taskColumn(field);
 };
 
-const sortValue = (
-  row: typeof tasks.$inferSelect,
-  field: WorkQuerySort['field'],
-): Date | number | string | null => {
-  if (field === 'updatedAt') return row.updatedAt;
-  if (field === 'createdAt') return row.createdAt;
-  if (field === 'name') return row.name;
-  if (field === 'id') return row.id;
-  if (field === 'cycleId') return row.cycleRefId;
-  if (
-    field === 'delegatedByUserId' ||
-    field === 'labelId' ||
-    field === 'ownerUserId' ||
-    field === 'reviewerUserId' ||
-    field === 'visibility'
-  ) {
-    throw new WorkQueryError('INVALID_QUERY', `Cannot sort tasks by ${field}`);
-  }
-  return row[field];
-};
-
-/** Keyset: (c1, c2, …, id) compared with the cursor row using each column's direction. */
-const keysetEq = (column: AnyPgColumn, value: Date | number | string | null): SQL =>
-  value == null ? isNull(column) : eq(column, value as never);
-
-const keysetBeyond = (
-  column: AnyPgColumn,
-  direction: WorkQuerySort['direction'],
-  value: Date | number | string | null,
-): SQL | undefined => {
-  if (direction === 'asc') {
-    if (value == null) return undefined;
-    return or(gt(column, value as never), isNull(column))!;
-  }
-  if (value == null) return isNotNull(column);
-  return lt(column, value as never);
-};
-
-const keysetAfter = (
+/**
+ * Keyset against the cursor row in SQL. A Date round-trip drops microseconds,
+ * so two rows that share `now()` stop looking equal and the next page is empty.
+ * ASC is NULLS LAST; DESC is NULLS FIRST — the same order Postgres applies.
+ */
+const keysetAfterCursor = (
   sort: WorkQuerySort[],
   columnFor: (field: WorkQuerySort['field']) => AnyPgColumn,
-  valueOf: (field: WorkQuerySort['field']) => Date | number | string | null,
+  idColumn: AnyPgColumn,
+  afterId: string,
 ): SQL => {
+  const cursorValue = (field: WorkQuerySort['field']) => {
+    const column = columnFor(field);
+    return sql`(SELECT ${column} FROM ${idColumn.table} WHERE ${idColumn} = ${afterId})`;
+  };
   const parts: SQL[] = [];
   for (let index = 0; index < sort.length; index += 1) {
     const equalities: SQL[] = [];
     for (let prior = 0; prior < index; prior += 1) {
       const field = sort[prior]!.field;
-      equalities.push(keysetEq(columnFor(field), valueOf(field)));
+      equalities.push(sql`${columnFor(field)} IS NOT DISTINCT FROM ${cursorValue(field)}`);
     }
     const current = sort[index]!;
-    const beyond = keysetBeyond(
-      columnFor(current.field),
-      current.direction,
-      valueOf(current.field),
+    const column = columnFor(current.field);
+    const cursor = cursorValue(current.field);
+    const beyond =
+      current.direction === 'asc'
+        ? sql`(${column} > ${cursor} OR (${cursor} IS NOT NULL AND ${column} IS NULL))`
+        : sql`(${column} < ${cursor} OR (${cursor} IS NULL AND ${column} IS NOT NULL))`;
+    parts.push(
+      equalities.length > 0 ? sql`(${sql.join(equalities, sql` AND `)} AND ${beyond})` : beyond,
     );
-    if (!beyond) continue;
-    parts.push(equalities.length ? and(...equalities, beyond)! : beyond);
   }
-  return parts.length ? or(...parts)! : sql`false`;
+  return parts.length > 0 ? sql`(${sql.join(parts, sql` OR `)})` : sql`false`;
 };
+
+const taskActivityAtFor = (userId: string, taskId: SQL | string) =>
+  sql`(select max(coalesce(${notifications.lastActivityAt}, ${notifications.createdAt}))
+    from ${notifications}
+    where ${notifications.userId} = ${userId}
+      and ${notifications.resourceType} = 'task'
+      and ${notifications.resourceId} = ${taskId})`;
+
+/** Compare an ordering expression to the same expression on the cursor row. */
+const keysetAfterExpr = (expr: SQL, cursorExpr: SQL, afterId: string): SQL =>
+  or(
+    sql`${expr} < ${cursorExpr}`,
+    and(sql`${expr} IS NOT DISTINCT FROM ${cursorExpr}`, gt(tasks.id, afterId)),
+  )!;
 
 const PROJECT_SORT_FIELDS = new Set<WorkQuerySort['field']>([
   'createdAt',
@@ -801,17 +1223,6 @@ const normalizeProjectSort = (sort: WorkQuerySort[] | undefined): WorkQuerySort[
   }
   return next;
 };
-
-const projectValueOf =
-  (cursor: typeof projects.$inferSelect) =>
-  (field: WorkQuerySort['field']): Date | number | string | null => {
-    if (field === 'createdAt') return cursor.createdAt;
-    if (field === 'id') return cursor.id;
-    if (field === 'name') return cursor.name;
-    if (field === 'status') return cursor.status;
-    if (field === 'updatedAt') return cursor.updatedAt;
-    return null;
-  };
 
 const PROJECT_OPTION_SORT: WorkQuerySort[] = [
   { direction: 'desc', field: 'updatedAt' },
@@ -966,7 +1377,7 @@ export class WorkQueryModel {
     query: WorkQuery;
     queryHash?: string;
   }) => {
-    const query = params.query;
+    const query = normalizeWorkQuery(params.query);
     validateWorkQuery(query);
     if (query.entityType !== 'task') {
       throw new WorkQueryError('INVALID_QUERY', 'This kernel currently runs task queries');
@@ -982,17 +1393,24 @@ export class WorkQueryModel {
     const groupBy = workQueryBoardGroupBy(query);
 
     if (groupBy) {
+      const lane = normalizeWorkQuerySubGroupBy(groupBy, query.subGroupBy);
+      const board = query.layout === 'board';
       return this.queryTaskBoard({
         afterId: params.afterId,
         conditions,
         groupBy,
         groupKey: params.groupKey,
-        layout: query.layout === 'board' ? 'board' : 'list',
-        limit,
+        includeEmptyLanes: board,
+        lane,
+        layout: board ? 'board' : 'list',
+        // Board swimlanes page 10 cards per cell. List sub-groups page 25.
+        limit: lane ? Math.min(limit, board ? 10 : 25) : limit,
+        mode: params.mode,
         queryHash,
         requestedHash: params.queryHash,
         sort,
         sortMode: query.sortMode ?? 'manual',
+        timeZone: assertWorkQueryTimeZone(query.timeZone),
       });
     }
 
@@ -1014,24 +1432,15 @@ export class WorkQueryModel {
       if (!cursor) {
         throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
       }
-      if (activityOrdered) {
-        const [activityCursor] = await this.db
-          .select({ at: sql<Date | null>`${activityExpr}` })
-          .from(tasks)
-          .where(eq(tasks.id, cursor.id))
-          .limit(1);
-        const at = activityCursor?.at ?? null;
-        listConditions.push(
-          at
-            ? or(
-                sql`${activityExpr} < ${at}`,
-                and(sql`${activityExpr} = ${at}`, gt(tasks.id, cursor.id)),
-              )!
-            : and(sql`${activityExpr} is null`, gt(tasks.id, cursor.id))!,
-        );
-      } else {
-        listConditions.push(keysetAfter(sort, sortColumn, (f) => sortValue(cursor, f)));
-      }
+      listConditions.push(
+        activityOrdered
+          ? keysetAfterExpr(
+              activityExpr,
+              taskActivityAtFor(this.userId, params.afterId),
+              params.afterId,
+            )
+          : keysetAfterCursor(sort, sortColumn, tasks.id, params.afterId),
+      );
     }
 
     const orderBy = activityOrdered
@@ -1081,14 +1490,18 @@ export class WorkQueryModel {
   private queryTaskBoard = async (params: {
     afterId?: string;
     conditions: SQL[];
-    groupBy: 'attention' | 'status' | 'workflowCategory';
+    groupBy: WorkQueryBoardDimension;
     groupKey?: string;
+    includeEmptyLanes: boolean;
+    lane?: BoardLaneAxis;
     layout: WorkQueryLayout;
     limit: number;
+    mode?: MyWorkMode;
     queryHash: string;
     requestedHash?: string;
     sort: WorkQuerySort[];
     sortMode: 'field' | 'manual';
+    timeZone: string;
   }) => {
     if (params.afterId && !params.groupKey) {
       throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
@@ -1101,14 +1514,20 @@ export class WorkQueryModel {
     // in-review issue never lands in a needs-input run-state bucket. The
     // grouping dimension is an expression, not always a stored column —
     // 'attention' derives urgent/blocking from priority + live blocks edges.
-    const dimension = groupExprFor(
-      params.groupBy,
-      attentionGroupExpr({
-        db: this.db,
-        userId: this.userId,
-        workspaceId: this.workspaceId,
-      }),
-    );
+    const attention = attentionGroupExpr({
+      db: this.db,
+      userId: this.userId,
+      workspaceId: this.workspaceId,
+    });
+    const axisCtx = {
+      activity: sql`coalesce(${this.taskActivityAt()}, ${tasks.updatedAt})`,
+      attention,
+      timeZone: params.timeZone,
+    };
+    const columnExpr = axisExpr(params.groupBy, axisCtx);
+    const dimension = params.lane
+      ? sql`${columnExpr} || E'\\x1f' || ${axisExpr(params.lane, axisCtx)}`
+      : columnExpr;
     const matchesKey = (key: string): SQL => sql`${dimension} = ${key}`;
     // Group over a derived `key` column: the dimension may carry params
     // (attention's NOT-IN list), and Postgres won't match a SELECT CASE whose
@@ -1131,28 +1550,44 @@ export class WorkQueryModel {
     }
     const total = [...countByKey.values()].reduce((sum, count) => sum + count, 0);
 
-    const stable = stableBoardKeys(params.groupBy);
+    const stable = listGroupKeys(
+      params.groupBy,
+      params.lane,
+      [...countByKey.keys()],
+      params.includeEmptyLanes,
+    );
     const extra = [...countByKey.keys()]
       .filter((key) => !(stable as readonly string[]).includes(key))
       .sort();
     const totalsKeys = [...stable, ...extra];
+    // A column page returns only that column. Sibling groups stay on the
+    // client; echoing them with an empty page used to flip their hasMore.
+    const pageKeys = params.groupKey
+      ? totalsKeys.filter((key) => key === params.groupKey)
+      : totalsKeys;
+    if (params.groupKey && pageKeys.length === 0) {
+      throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
+    }
 
     // `manual` board ordering keeps position so a same-column drop persists
     // where the user left it; `field` orders each column by the query's own
-    // sort — switching to board never silently overrides it.
+    // sort — switching to board never silently overrides it. Activity-date
+    // groups, and activity mode off a manual board, use the notification
+    // clock the bucket already uses — not the row's updatedAt.
     const boardOrdered = params.layout === 'board' && params.sortMode === 'manual';
-    const orderBy = boardOrdered
-      ? [sql`${taskEffectivePosition} asc`, desc(tasks.createdAt), desc(tasks.seq)]
-      : params.sort.map((item) =>
-          item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
-        );
+    const activityOrdered =
+      params.groupBy === 'activityDate' || (params.mode === 'activity' && !boardOrdered);
+    const orderBy = activityOrdered
+      ? [desc(axisCtx.activity), asc(tasks.id)]
+      : boardOrdered
+        ? [sql`${taskEffectivePosition} asc`, desc(tasks.createdAt), desc(tasks.seq)]
+        : params.sort.map((item) =>
+            item.direction === 'desc' ? desc(sortColumn(item.field)) : asc(sortColumn(item.field)),
+          );
 
     const groups = await Promise.all(
-      totalsKeys.map(async (key) => {
+      pageKeys.map(async (key) => {
         const groupTotal = countByKey.get(key) ?? 0;
-        if (params.groupKey && key !== params.groupKey) {
-          return { hasMore: groupTotal > 0, key, tasks: [], total: groupTotal };
-        }
 
         const groupConditions: SQL[] = [...params.conditions, matchesKey(key)];
         if (params.afterId) {
@@ -1165,23 +1600,43 @@ export class WorkQueryModel {
             throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
           }
           groupConditions.push(
-            boardOrdered
-              ? keysetAfterBoardPosition(cursor)
-              : keysetAfter(params.sort, sortColumn, (f) => sortValue(cursor, f)),
+            activityOrdered
+              ? keysetAfterExpr(
+                  axisCtx.activity,
+                  sql`coalesce(
+                    ${taskActivityAtFor(this.userId, params.afterId)},
+                    (SELECT ${tasks.updatedAt} FROM ${tasks} WHERE ${tasks.id} = ${params.afterId})
+                  )`,
+                  params.afterId,
+                )
+              : boardOrdered
+                ? keysetAfterBoardPosition(params.afterId)
+                : keysetAfterCursor(params.sort, sortColumn, tasks.id, params.afterId),
           );
         }
 
-        const rows = await this.db
-          .select()
-          .from(tasks)
-          .where(and(...groupConditions))
-          .orderBy(...orderBy)
-          .limit(params.limit);
+        const fetched = activityOrdered
+          ? await this.db
+              .select({
+                ...getTableColumns(tasks),
+                activityAt: sql<Date | null>`${axisCtx.activity}`.mapWith(tasks.updatedAt),
+              })
+              .from(tasks)
+              .where(and(...groupConditions))
+              .orderBy(...orderBy)
+              .limit(params.limit + 1)
+          : await this.db
+              .select()
+              .from(tasks)
+              .where(and(...groupConditions))
+              .orderBy(...orderBy)
+              .limit(params.limit + 1);
+        const page = limitPage(fetched, params.limit);
 
         return {
-          hasMore: params.afterId ? rows.length === params.limit : rows.length < groupTotal,
+          hasMore: page.hasMore,
           key,
-          tasks: rows,
+          tasks: page.rows,
           total: groupTotal,
         };
       }),
@@ -1260,11 +1715,12 @@ export class WorkQueryModel {
     query: WorkQuery;
     queryHash?: string;
   }) => {
-    validateWorkQuery(params.query);
-    if (params.query.entityType !== 'project') {
+    const query = normalizeWorkQuery(params.query);
+    validateWorkQuery(query);
+    if (query.entityType !== 'project') {
       throw new WorkQueryError('INVALID_QUERY', 'entityType must be project');
     }
-    if (params.query.groupBy === 'workflowCategory') {
+    if (query.groupBy === 'workflowCategory') {
       throw new WorkQueryError('INVALID_QUERY', 'Projects group by status only');
     }
     const limit = Math.min(Math.max(params.limit ?? 50, 1), 100);
@@ -1275,28 +1731,25 @@ export class WorkQueryModel {
       }),
     ];
 
-    const readableTeamIds = filterHasTeamId(params.query.filter)
+    const readableTeamIds = filterHasTeamId(query.filter)
       ? await this.listReadableTeamIds()
       : new Set<string>();
-    const filterSql = compileFilter(
-      params.query.filter,
-      this.compileCtx('project', readableTeamIds),
-    );
+    const filterSql = compileFilter(query.filter, this.compileCtx('project', readableTeamIds));
     if (filterSql) conditions.push(filterSql);
 
-    const queryHash = hashQuery(params.query);
-    const sort = normalizeProjectSort(params.query.sort);
+    const queryHash = hashQuery(query);
+    const sort = normalizeProjectSort(query.sort);
     const orderBy = sort.map((item) =>
       item.direction === 'desc'
         ? desc(projectSortColumn(item.field))
         : asc(projectSortColumn(item.field)),
     );
-    const isBoard = params.query.layout === 'board' || params.query.groupBy === 'status';
+    const isBoard = query.layout === 'board' || query.groupBy === 'status';
     if (isBoard) {
       if (params.afterId && !params.groupKey) {
         throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
       }
-      if (params.afterId && (!params.queryHash || params.queryHash !== queryHash)) {
+      if (params.afterId && (!queryHash || queryHash !== queryHash)) {
         throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
       }
       const countRows = await this.db
@@ -1329,25 +1782,28 @@ export class WorkQueryModel {
             if (!cursor) {
               throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
             }
-            groupConditions.push(keysetAfter(sort, projectSortColumn, projectValueOf(cursor)));
+            groupConditions.push(
+              keysetAfterCursor(sort, projectSortColumn, projects.id, params.afterId),
+            );
           }
-          const rows = await this.db
+          const fetched = await this.db
             .select()
             .from(projects)
             .where(and(...groupConditions))
             .orderBy(...orderBy)
-            .limit(limit);
+            .limit(limit + 1);
+          const page = limitPage(fetched, limit);
           return {
-            hasMore: params.afterId ? rows.length === limit : rows.length < groupTotal,
+            hasMore: page.hasMore,
             key,
-            projects: rows,
+            projects: page.rows,
             total: groupTotal,
           };
         }),
       );
       return {
         groupBy: 'status' as const,
-        layout: params.query.layout === 'board' ? ('board' as const) : ('list' as const),
+        layout: query.layout === 'board' ? ('board' as const) : ('list' as const),
         projectGroups,
         projects: projectGroups.flatMap((group) => group.projects),
         queryHash,
@@ -1366,7 +1822,7 @@ export class WorkQueryModel {
         .where(and(...conditions, eq(projects.id, params.afterId)))
         .limit(1);
       if (!cursor) throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
-      listConditions.push(keysetAfter(sort, projectSortColumn, projectValueOf(cursor)));
+      listConditions.push(keysetAfterCursor(sort, projectSortColumn, projects.id, params.afterId));
     }
 
     const [countRow] = await this.db
@@ -1392,7 +1848,7 @@ export class WorkQueryModel {
     mode?: MyWorkMode;
     query: WorkQuery;
   }): Promise<WorkQueryCountResult> => {
-    const query = params.query;
+    const query = normalizeWorkQuery(params.query);
     validateWorkQuery(query);
     if (query.entityType !== 'task') {
       throw new WorkQueryError('INVALID_QUERY', 'This kernel currently counts task queries');
@@ -1417,7 +1873,7 @@ export class WorkQueryModel {
     mode?: MyWorkMode;
     query: WorkQuery;
   }): Promise<WorkQueryFacetResult> => {
-    const query = params.query;
+    const query = normalizeWorkQuery(params.query);
     validateWorkQuery(query);
     if (query.entityType !== 'task') {
       throw new WorkQueryError('INVALID_QUERY', 'This kernel currently facets task queries');
@@ -1596,7 +2052,9 @@ export class WorkQueryModel {
         .where(and(readable, eq(projects.id, params.afterId)))
         .limit(1);
       if (!cursor) throw new WorkQueryError('CURSOR_INVALID', 'CURSOR_INVALID');
-      conditions.push(keysetAfter(PROJECT_OPTION_SORT, projectSortColumn, projectValueOf(cursor)));
+      conditions.push(
+        keysetAfterCursor(PROJECT_OPTION_SORT, projectSortColumn, projects.id, params.afterId),
+      );
     }
     const rows = await this.db
       .select({ id: projects.id, name: projects.name })

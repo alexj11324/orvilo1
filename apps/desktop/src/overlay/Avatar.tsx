@@ -1,5 +1,4 @@
-import { FluentEmoji, getEmoji } from '@lobehub/fluent-emoji';
-import { memo, useMemo } from 'react';
+import { memo } from 'react';
 
 import * as styles from './avatar.css.ts';
 
@@ -12,6 +11,8 @@ export interface OverlayAvatarProps {
 
 const URL_PATTERN = /^(?:blob:|data:|file:|https?:|\/|\.\.?\/)/;
 
+const EMOJI_RE = /^\p{Extended_Pictographic}/u;
+
 const isUrl = (value: string) => URL_PATTERN.test(value);
 
 const firstGlyph = (value?: string | null) => {
@@ -21,21 +22,20 @@ const firstGlyph = (value?: string | null) => {
 };
 
 const OverlayAvatar = memo<OverlayAvatarProps>(({ avatar, background, size = 18, title }) => {
-  const emoji = useMemo(
-    () => (avatar && typeof avatar === 'string' ? getEmoji(avatar) : undefined),
-    [avatar],
-  );
-
   const boxStyle = {
     background: background ?? undefined,
     height: size,
     width: size,
   };
 
-  if (emoji) {
+  if (avatar && EMOJI_RE.test(avatar)) {
+    // Native emoji text, matching how the web Avatar renders emoji avatars.
     return (
-      <span className={styles.emojiBox} style={boxStyle}>
-        <FluentEmoji emoji={emoji} size={Math.round(size * 0.82)} type="3d" />
+      <span
+        className={styles.emojiBox}
+        style={{ ...boxStyle, fontSize: Math.round(size * 0.82), lineHeight: 1 }}
+      >
+        {avatar}
       </span>
     );
   }
@@ -58,7 +58,5 @@ const OverlayAvatar = memo<OverlayAvatarProps>(({ avatar, background, size = 18,
     </span>
   );
 });
-
-OverlayAvatar.displayName = 'OverlayAvatar';
 
 export default OverlayAvatar;

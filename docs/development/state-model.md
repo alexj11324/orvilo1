@@ -122,3 +122,38 @@ Two semantics changed where old behavior conflicted with the table:
 - A verify-bound automation task re-arms `scheduled` while its verdict is
   pending, so heartbeat cadence survives; non-automation tasks hold for the
   verdict.
+
+## Query and saved-view schema (WorkQuery v2)
+
+`WorkQuery.schemaVersion` is the AST epoch. `1` is the legacy read epoch —
+stored v1 predicates on the `status` field meant "whatever `tasks.status`
+projected", a mix of both layers. `2` is the write epoch introduced when the
+fields split by axis:
+
+| Query field           | Layer it reads                                                                                                                                                                                            | Surface label           |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `workflowCategory`    | Issue Workflow (`workflowStateRefId`/`workflowCategory`)                                                                                                                                                  | "Status"                |
+| `executionState`      | Execution — the `deriveTaskExecutionState` projection of `task_dispatches.phase` / `task_topics.run_state` (falls back to `tasks.status` only when no execution row exists; NULL when the task never ran) | "Execution"             |
+| `status` (deprecated) | Legacy `tasks.status` projection                                                                                                                                                                          | read-only compatibility |
+
+`normalizeWorkQuery` (types package) migrates a task query's `status`
+predicates at read time: unambiguous Issue-Status values
+(`backlog`/`completed`/`canceled`) map onto `workflowCategory`,
+execution-meaning values (`running`/`paused`/`failed`/`scheduled`) map onto
+`executionState`, mixed `in`/`notIn` lists split into an `any`/`all` pair, and
+unmigratable members keep the legacy predicate verbatim so old views still
+compile. Project queries are untouched — `projects.status` is a real field,
+not the legacy projection. The migration is idempotent and never rewrites
+the stored row: the server normalizes on `queryTasks`/`queryProjects`/
+`countTasks`/`facetTasks` entry, `SavedViewModel` normalizes on
+create/update/evaluate/present, and the builder renders whatever a v1
+predicate could not express as a preserved, read-only node. A saved view only
+becomes v2 when its owner saves — at which point no `status` predicate the
+migration could express is ever written again.
+
+Authoring surfaces skip `deprecated` field specs: the filter picker and the
+My Work filter directory offer `workflowCategory` as "Status" and
+`executionState` as "Execution". Grouping menus follow the same split —
+boards group by `workflowCategory` ("Status"); a `status`-grouped column is
+the execution axis ("Execution") for old views and is not offered to new
+ones.

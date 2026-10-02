@@ -247,10 +247,12 @@ const FilterRowEditor = memo<{
     spec?.valueKind === 'cycle' && typeof row.value === 'string' ? row.value : undefined,
   );
 
-  const fieldOptions = workQueryFieldSpecs(entityType).map((item) => ({
-    label: t(`savedViews.fields.${item.field}`, { defaultValue: item.field }),
-    value: item.field,
-  }));
+  const fieldOptions = workQueryFieldSpecs(entityType)
+    .filter((item) => !item.deprecated)
+    .map((item) => ({
+      label: t(`savedViews.fields.${item.field}`, { defaultValue: item.field }),
+      value: item.field,
+    }));
 
   const changeField = (field: string) => {
     const nextSpec = workQueryFieldSpec(entityType, field);

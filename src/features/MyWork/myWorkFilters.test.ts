@@ -73,7 +73,7 @@ describe('myWorkComposedQuery', () => {
     expect(query?.subGroupBy).toBe('priority');
     expect(query?.filter?.all).toEqual([
       { field: 'assigneeUserId', op: 'eq', value: { ref: 'currentUser' } },
-      { field: 'status', op: 'notIn', value: ['completed', 'canceled'] },
+      { field: 'workflowCategory', op: 'notIn', value: ['done', 'canceled'] },
     ]);
     const conflict = myWorkComposedQuery({
       delegated: false,
@@ -186,8 +186,15 @@ describe('myWorkActiveFilterCount', () => {
 describe('filter directory', () => {
   it('offers only fields the task field spec covers', () => {
     for (const field of MY_WORK_FILTER_DIRECTORY_FIELDS) {
-      expect(WORK_QUERY_TASK_FIELD_SPECS.some((spec) => spec.field === field)).toBe(true);
+      const spec = WORK_QUERY_TASK_FIELD_SPECS.find((item) => item.field === field);
+      expect(spec).toBeDefined();
+      // Deprecated fields (legacy `status`) are read-only — never authored.
+      expect(spec?.deprecated).toBeUndefined();
     }
+    expect(MY_WORK_FILTER_DIRECTORY_FIELDS).not.toContain('status');
+    expect(MY_WORK_FILTER_DIRECTORY_FIELDS).toEqual(
+      expect.arrayContaining(['workflowCategory', 'executionState']),
+    );
   });
 
   it('single-selects a scalar value through one eq row', () => {
@@ -228,25 +235,28 @@ describe('filter directory', () => {
 
   it('collects enum picks into a single in predicate', () => {
     const picked = toggleMyWorkDirectoryEnum(
-      toggleMyWorkDirectoryEnum(builderWith([]), 'status', 'backlog'),
-      'status',
-      'running',
+      toggleMyWorkDirectoryEnum(builderWith([]), 'workflowCategory', 'backlog'),
+      'workflowCategory',
+      'in_progress',
     );
-    expect(myWorkDirectorySelectedValues(picked, 'status')).toEqual(['backlog', 'running']);
+    expect(myWorkDirectorySelectedValues(picked, 'workflowCategory')).toEqual([
+      'backlog',
+      'in_progress',
+    ]);
     expect(picked.rows).toHaveLength(1);
     // Removing both values drops the row entirely.
     const off = toggleMyWorkDirectoryEnum(
-      toggleMyWorkDirectoryEnum(picked, 'status', 'backlog'),
-      'status',
-      'running',
+      toggleMyWorkDirectoryEnum(picked, 'workflowCategory', 'backlog'),
+      'workflowCategory',
+      'in_progress',
     );
-    expect(myWorkDirectoryFieldActive(off, 'status')).toBe(false);
+    expect(myWorkDirectoryFieldActive(off, 'workflowCategory')).toBe(false);
   });
 
   it('compiles directory picks through builderToFilter', () => {
-    const picked = toggleMyWorkDirectoryEnum(builderWith([]), 'status', 'backlog');
+    const picked = toggleMyWorkDirectoryEnum(builderWith([]), 'workflowCategory', 'backlog');
     expect(builderToFilter('task', picked)).toEqual({
-      all: [{ field: 'status', op: 'in', value: ['backlog'] }],
+      all: [{ field: 'workflowCategory', op: 'in', value: ['backlog'] }],
     });
     const scalar = toggleMyWorkDirectoryValue(builderWith([]), 'priority', 1);
     expect(builderToFilter('task', scalar)).toEqual({

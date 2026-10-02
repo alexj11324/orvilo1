@@ -2,6 +2,7 @@
 
 import type { SavedViewItem } from '@orvilo/database/schemas';
 import {
+  normalizeWorkQuery,
   normalizeWorkQuerySubGroupBy,
   type SavedViewVisibility,
   type WorkQuery,
@@ -297,9 +298,7 @@ export const SavedViewProjectGroupList = memo<{
               <AsyncError
                 error={loadMoreGroupErrors[group.key]}
                 variant={'inline'}
-                onRetry={
-                  onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined
-                }
+                onRetry={onRetryLoadMoreGroup ? () => onRetryLoadMoreGroup(group.key) : undefined}
               />
             ) : group.hasMore && onLoadMoreGroup ? (
               <div className="flex flex-row justify-center">
@@ -318,7 +317,9 @@ export const SavedViewProjectGroupList = memo<{
 SavedViewProjectGroupList.displayName = 'SavedViewProjectGroupList';
 
 const viewToEditorState = (view: SavedViewItem): ViewEditorState => ({
-  builder: filterToBuilder(view.entityType, view.queryAst.filter),
+  // Normalize first: stored v1 ASTs present migrated workflow/execution rows
+  // (and legacy status predicates as preserved, read-only nodes).
+  builder: filterToBuilder(view.entityType, normalizeWorkQuery(view.queryAst).filter),
   entityType: view.entityType,
   groupBy: savedViewGroupByForLayout(
     view.entityType,
@@ -338,7 +339,7 @@ const draftQuery = (state: ViewEditorState): WorkQuery => ({
   entityType: state.entityType,
   filter: builderToFilter(state.entityType, state.builder),
   groupBy: state.groupBy === 'none' ? undefined : state.groupBy,
-  schemaVersion: 1,
+  schemaVersion: 2,
   sort: state.sort,
   // Board ordering is explicit — the field is meaningless off-board.
   sortMode: state.layout === 'board' ? state.sortMode : undefined,
@@ -388,8 +389,7 @@ const SavedViewPage = memo(() => {
           ? [view.teamId]
           : joinedTeamOptions.map((team) => team.id)
         : [],
-    needsAssignee:
-      evaluation?.groupBy === 'assignee' || view?.queryAst.subGroupBy === 'assignee',
+    needsAssignee: evaluation?.groupBy === 'assignee' || view?.queryAst.subGroupBy === 'assignee',
     needsProject: evaluation?.groupBy === 'project' || view?.queryAst.subGroupBy === 'project',
   });
   const firstTasks = evaluation?.tasks ?? [];
@@ -446,7 +446,7 @@ const SavedViewPage = memo(() => {
       draft.layout !== (view.layout ?? 'list') ||
       draft.visibility !== view.visibility ||
       draft.teamId !== (view.teamId ?? null) ||
-      comparableQuery(draftQuery(draft)) !== comparableQuery(view.queryAst)
+      comparableQuery(draftQuery(draft)) !== comparableQuery(normalizeWorkQuery(view.queryAst))
     );
   }, [draft, view]);
 

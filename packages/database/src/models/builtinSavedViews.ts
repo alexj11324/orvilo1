@@ -13,22 +13,24 @@ const STAMP = new Date('2026-01-01T00:00:00.000Z');
 export const BUILTIN_SAVED_VIEW_OWNER = 'system';
 
 const QUERY: Record<BuiltinSavedViewKey, WorkQuery> = {
-  'all': { entityType: 'task', schemaVersion: 1 },
+  'all': { entityType: 'task', schemaVersion: 2 },
   'blocked': {
     entityType: 'task',
-    filter: { all: [{ field: 'status', op: 'in', value: ['failed', 'paused'] }] },
-    schemaVersion: 1,
+    filter: {
+      all: [{ field: 'executionState', op: 'in', value: ['failed', 'outcome_unknown'] }],
+    },
+    schemaVersion: 2,
   },
   'in-progress': {
     entityType: 'task',
-    filter: { all: [{ field: 'status', op: 'eq', value: 'running' }] },
-    schemaVersion: 1,
+    filter: { all: [{ field: 'executionState', op: 'eq', value: 'running' }] },
+    schemaVersion: 2,
   },
-  'projects': { entityType: 'project', schemaVersion: 1 },
+  'projects': { entityType: 'project', schemaVersion: 2 },
   'review': {
     entityType: 'task',
     filter: { all: [{ field: 'reviewerUserId', op: 'eq', value: CURRENT_USER }] },
-    schemaVersion: 1,
+    schemaVersion: 2,
   },
 };
 

@@ -72,7 +72,7 @@ describe('projectIssueWorkQuery', () => {
     expect(query.filter?.all).toEqual(
       expect.arrayContaining([
         { field: 'projectId', op: 'eq', value: 'p1' },
-        { field: 'status', op: 'notIn', value: ['completed', 'canceled'] },
+        { field: 'workflowCategory', op: 'notIn', value: ['done', 'canceled'] },
       ]),
     );
     expect(projectIssueListSort('title', 'desc')).toEqual([
@@ -127,7 +127,7 @@ describe('projectIssueWorkQuery', () => {
     });
     expect(narrowed.filter?.all).toEqual(
       expect.arrayContaining([
-        { field: 'status', op: 'notIn', value: ['completed', 'canceled'] },
+        { field: 'workflowCategory', op: 'notIn', value: ['done', 'canceled'] },
         { field: 'parentTaskId', op: 'isNull' },
       ]),
     );

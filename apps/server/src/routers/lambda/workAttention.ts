@@ -71,6 +71,7 @@ const workQueryPredicateSchema: z.ZodType<WorkQueryPredicate> = z.strictObject({
     'createdByUserId',
     'cycleId',
     'delegatedByUserId',
+    'executionState',
     'hasActivity',
     'id',
     'labelId',
@@ -130,8 +131,21 @@ const workQueryNodeSchema: z.ZodType<WorkQueryFilter | WorkQueryPredicate> = z.l
   z.union([workQueryPredicateSchema, workQueryFilterSchema]),
 );
 
-const COLUMN_OPS = ['eq', 'in', 'isNotNull', 'isNull', 'neq', 'notIn'] as const satisfies readonly WorkQueryOp[];
-const DATE_OPS = ['between', 'gte', 'isNotNull', 'isNull', 'lt'] as const satisfies readonly WorkQueryOp[];
+const COLUMN_OPS = [
+  'eq',
+  'in',
+  'isNotNull',
+  'isNull',
+  'neq',
+  'notIn',
+] as const satisfies readonly WorkQueryOp[];
+const DATE_OPS = [
+  'between',
+  'gte',
+  'isNotNull',
+  'isNull',
+  'lt',
+] as const satisfies readonly WorkQueryOp[];
 
 /** Fields the compiler accepts that the visual builder does not offer. */
 const COMPILER_FIELD_OPS: Record<
@@ -180,69 +194,71 @@ const rejectIllegalOps = (
   );
 };
 
-export const workQuerySchema: z.ZodType<WorkQuery> = z.object({
-  entityType: z.enum(['project', 'task']),
-  filter: workQueryFilterSchema.optional(),
-  groupBy: z
-    .enum([
-      'activityDate',
-      'agent',
-      'assignee',
-      'attention',
-      'cycle',
-      'milestone',
-      'none',
-      'priority',
-      'project',
-      'status',
-      'workflowCategory',
-    ])
-    .optional(),
-  layout: z.enum(['board', 'list']).optional(),
-  schemaVersion: z.literal(1),
-  sort: z
-    .array(
-      z.object({
-        direction: z.enum(['asc', 'desc']),
-        field: z.enum([
-          'assigneeUserId',
-          'createdAt',
-          'createdByUserId',
-          'cycleId',
-          'delegatedByUserId',
-          'id',
-          'name',
-          'ownerUserId',
-          'priority',
-          'projectId',
-          'reviewerUserId',
-          'status',
-          'teamId',
-          'triageStatus',
-          'updatedAt',
-          'visibility',
-          'workflowCategory',
-        ]),
-      }),
-    )
-    .optional(),
-  sortMode: z.enum(['field', 'manual']).optional(),
-  subGroupBy: z
-    .enum([
-      'agent',
-      'assignee',
-      'milestone',
-      'none',
-      'priority',
-      'project',
-      'status',
-      'workflowCategory',
-    ])
-    .optional(),
-  timeZone: z.string().min(1).max(100).optional(),
-}).superRefine((query, ctx) => {
-  rejectIllegalOps(query.filter, query.entityType, ctx, ['filter']);
-});
+export const workQuerySchema: z.ZodType<WorkQuery> = z
+  .object({
+    entityType: z.enum(['project', 'task']),
+    filter: workQueryFilterSchema.optional(),
+    groupBy: z
+      .enum([
+        'activityDate',
+        'agent',
+        'assignee',
+        'attention',
+        'cycle',
+        'milestone',
+        'none',
+        'priority',
+        'project',
+        'status',
+        'workflowCategory',
+      ])
+      .optional(),
+    layout: z.enum(['board', 'list']).optional(),
+    schemaVersion: z.union([z.literal(1), z.literal(2)]),
+    sort: z
+      .array(
+        z.object({
+          direction: z.enum(['asc', 'desc']),
+          field: z.enum([
+            'assigneeUserId',
+            'createdAt',
+            'createdByUserId',
+            'cycleId',
+            'delegatedByUserId',
+            'id',
+            'name',
+            'ownerUserId',
+            'priority',
+            'projectId',
+            'reviewerUserId',
+            'status',
+            'teamId',
+            'triageStatus',
+            'updatedAt',
+            'visibility',
+            'workflowCategory',
+          ]),
+        }),
+      )
+      .optional(),
+    sortMode: z.enum(['field', 'manual']).optional(),
+    subGroupBy: z
+      .enum([
+        'agent',
+        'assignee',
+        'milestone',
+        'none',
+        'priority',
+        'project',
+        'status',
+        'workflowCategory',
+      ])
+      .optional(),
+    timeZone: z.string().min(1).max(100).optional(),
+  })
+  .superRefine((query, ctx) => {
+    rejectIllegalOps(query.filter, query.entityType, ctx, ['filter']);
+  });
 
 const mapQueryError = (error: unknown): never => {
   if (error instanceof WorkQueryError) {

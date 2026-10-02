@@ -66,6 +66,24 @@ surfaces: `fontSize: 13` → 12 or 14 (13px is treated as drift),
 `text-[13px]`/`text-[12px]` → `text-sm`/`text-xs` (the linear-tokens gate
 rejects arbitrary values on added lines).
 
+### F7 — Close/dismiss icon buttons without accessible names (E2E follow-up)
+
+The recorded E2E pass caught the same F4 class on controls the audit sweep
+missed: the Create Task / Create Goal / create / template-detail modal close
+buttons, the task-dock dismiss-all button, the Portal thread/topic/local-file
+header closes (plus the unlabeled swap-threads control), and the chat alert
+dismiss buttons. All now carry `title` (`common.close`, new
+`chat.workingPanel.tabs.swapThreads`). Remaining unlabeled X icons exist in
+out-of-scope surfaces (Electron titlebar, device manager, settings, chat
+terminal) — deferred, documented in the PR.
+
+### F8 — Typography residuals on the audited board (E2E follow-up)
+
+Same E2E pass caught residual drift inside files the sweep touched:
+`KanbanColumn` count still 13px/450 → 12px tabular-nums, `TaskBoardCard`
+title still 13px → 14px, and the New-view dialog (`ViewDefinitionEditor`)
+labels still `text-[13px]` → `text-sm`.
+
 ## Won't fix
 
 - `···` no-priority glyph on task cards — `PRIORITY_ICONS[0]`, intentional

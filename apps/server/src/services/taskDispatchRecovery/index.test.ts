@@ -10,6 +10,7 @@ import { TaskLifecycleService } from '@/server/services/taskLifecycle';
 import { processTaskDispatchRecovery, sweepTaskDispatchRecovery } from './index';
 
 const mocks = vi.hoisted(() => ({
+  abandonRecovery: vi.fn(),
   claimForRecovery: vi.fn(),
   findById: vi.fn(),
   findLatestAssistantByOperationId: vi.fn(),
@@ -38,6 +39,7 @@ vi.mock('@/database/models/taskDispatch', () => ({
   TaskDispatchModel: Object.assign(
     vi.fn(function () {
       return {
+        abandonRecovery: mocks.abandonRecovery,
         claimForRecovery: mocks.claimForRecovery,
         releaseRecovery: mocks.releaseRecovery,
       };
@@ -57,6 +59,7 @@ const claim = () => ({
     generation: 3,
     id: 'dispatch-1',
     operationId: 'operation-1',
+    recoveryAttempts: 0,
     taskId: 'task-1',
   },
   fence: 4,
@@ -88,6 +91,7 @@ const operation = (status: string) => ({
 describe('task dispatch recovery', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mocks.abandonRecovery.mockResolvedValue({ dispatch: { id: 'dispatch-1' }, topicId: 'topic-1' });
     mocks.claimForRecovery.mockResolvedValue(claim());
     mocks.findLatestAssistantByOperationId.mockResolvedValue({ content: 'Recovered result' });
     mocks.onTopicComplete.mockResolvedValue(undefined);
@@ -194,6 +198,30 @@ describe('task dispatch recovery', () => {
       reason: 'operation_identity_mismatch:operation-1',
     });
     expect(mocks.onTopicComplete).not.toHaveBeenCalled();
+  });
+
+  it('abandons a dispatch whose reconcile retries hit the bound', async () => {
+    const exhausted = claim();
+    exhausted.dispatch.recoveryAttempts = 60;
+    mocks.claimForRecovery.mockResolvedValue(exhausted);
+
+    await expect(
+      processTaskDispatchRecovery({
+        db: {} as never,
+        dispatchId: 'dispatch-1',
+        workspaceId: 'workspace-1',
+      }),
+    ).resolves.toEqual({ dispatchId: 'dispatch-1', outcome: 'abandoned' });
+
+    expect(mocks.abandonRecovery).toHaveBeenCalledWith({
+      dispatchId: 'dispatch-1',
+      fence: 4,
+      generation: 3,
+      owner: expect.stringMatching(/^task-recovery:/),
+      reason: 'recovery_attempts_exhausted:60',
+    });
+    expect(mocks.findById).not.toHaveBeenCalled();
+    expect(mocks.releaseRecovery).not.toHaveBeenCalled();
   });
 
   it('sweeps each expired candidate in its own workspace scope', async () => {

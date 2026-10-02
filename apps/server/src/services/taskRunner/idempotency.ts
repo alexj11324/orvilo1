@@ -6,6 +6,14 @@
  * find the same dispatch instead of allocating a new one.
  */
 export const taskRunIdempotencyKey = {
+  /**
+   * Backlog-intake starts are keyed on the task's execution generation so a
+   * consumed (terminal) intent never blocks a later intake attempt for the
+   * same revision lineage — each burned intent bumps the generation.
+   */
+  backlogIntake: (input: { executionGeneration: number; taskId: string }): string =>
+    `backlog-intake:task:${input.taskId}:generation:${input.executionGeneration + 1}`,
+
   automationTick: (input: {
     executionGeneration: number;
     kind: 'heartbeat' | 'schedule';

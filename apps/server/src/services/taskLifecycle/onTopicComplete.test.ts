@@ -427,7 +427,13 @@ describe('TaskLifecycleService.onTopicComplete', () => {
     });
 
     it('reclaims a scheduled completion lease with a scheduled CAS guard', async () => {
-      const task = baseTask({ automationMode: 'heartbeat', status: 'scheduled' });
+      const task = baseTask({
+        automationMode: 'heartbeat',
+        // Canonical 'scheduled' is an armed automation — a live tickToken in
+        // context.scheduler — and the derived label the model row reports.
+        context: { scheduler: { tickToken: 'tick-1' } },
+        status: 'scheduled',
+      });
       findById.mockResolvedValue(task);
 
       await service.onTopicComplete({

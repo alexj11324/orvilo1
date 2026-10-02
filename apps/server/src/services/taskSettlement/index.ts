@@ -1,9 +1,4 @@
-import {
-  deriveLegacyTaskStatus,
-  deriveTaskExecutionState,
-  type TaskItem,
-  type TaskStatus,
-} from '@orvilo/types';
+import { deriveTaskExecutionState, type TaskItem, type TaskStatus } from '@orvilo/types';
 
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
@@ -61,7 +56,7 @@ export const settleTaskExecution = async (
   if (!task) {
     return noWrite({ type: 'hold' }, null, 'no_task');
   }
-  if (TERMINAL_LEGACY_STATUSES.has(deriveLegacyTaskStatus(task))) {
+  if (TERMINAL_LEGACY_STATUSES.has(task.status)) {
     return noWrite({ type: 'hold' }, null, 'terminal');
   }
 
@@ -181,7 +176,7 @@ const applyPlan = async (
 ) => {
   const { context } = input;
   const taskModel = new TaskModel(db, userId, workspaceId);
-  const status = plan.legacyStatus ?? deriveLegacyTaskStatus(task);
+  const status = plan.legacyStatus ?? task.status;
 
   const extra = {
     ...workflowPatch,
@@ -218,7 +213,7 @@ const applyPlan = async (
           serviceInput,
           undefined,
           {
-            currentStatus: (context.expectedStatus ?? deriveLegacyTaskStatus(task)) as TaskStatus,
+            currentStatus: (context.expectedStatus ?? task.status) as TaskStatus,
             reservationId: context.reservationId,
           },
           options,
@@ -243,7 +238,7 @@ const applyPlan = async (
     return taskModel.updateStatusIfReservation(
       task.id,
       context.reservationId,
-      context.expectedStatus ?? deriveLegacyTaskStatus(task),
+      context.expectedStatus ?? task.status,
       status,
       extra,
     );

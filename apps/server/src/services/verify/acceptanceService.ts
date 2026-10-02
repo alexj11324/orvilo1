@@ -15,7 +15,6 @@ import type {
   VerifyRunDecisionDetail,
   VerifySurface,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
 import debug from 'debug';
 
 import { AcceptanceModel } from '@/database/models/acceptance';
@@ -1059,8 +1058,7 @@ export class AcceptanceService {
     try {
       const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
       const task = await taskModel.resolve(subjectId);
-      if (!task || ['canceled', 'completed', 'failed'].includes(deriveLegacyTaskStatus(task)))
-        return;
+      if (!task || ['canceled', 'completed', 'failed'].includes(task.status)) return;
       if (operationId) {
         const taskTopic = await new TaskTopicModel(
           this.db,

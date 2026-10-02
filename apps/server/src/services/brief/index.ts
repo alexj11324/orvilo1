@@ -1,5 +1,4 @@
 import type { TaskStatus } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
 
 import { AgentModel } from '@/database/models/agent';
 import { BriefModel } from '@/database/models/brief';
@@ -240,7 +239,7 @@ export class BriefService {
 
     if (options?.action === 'approve' && brief.taskId && brief.type === 'result') {
       const task = await this.taskModel.findById(brief.taskId);
-      if (task && deriveLegacyTaskStatus(task) !== 'scheduled') {
+      if (task && task.status !== 'scheduled') {
         // Approval completes the Issue too — the same workflow-state
         // resolution a board drag to Done would run.
         const move = resolveWorkflowMove({

@@ -19,7 +19,6 @@ import type {
   TaskWorkflowCategory,
   WorkspaceData,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
@@ -1769,7 +1768,7 @@ export class TaskService {
           ...(s.schedulePattern || s.scheduleTimezone
             ? { schedule: { pattern: s.schedulePattern, timezone: s.scheduleTimezone } }
             : {}),
-          status: descendantStatusById[s.id] ?? deriveLegacyTaskStatus(s),
+          status: descendantStatusById[s.id] ?? s.status,
           updatedAt: s.updatedAt ? new Date(s.updatedAt).toISOString() : undefined,
           ...(s.workflowCategory ? { workflowCategory: s.workflowCategory } : {}),
           ...(s.workflowStateId ? { workflowStateId: s.workflowStateId } : {}),
@@ -1814,7 +1813,7 @@ export class TaskService {
           {
             identifier: t.identifier,
             name: t.name,
-            status: depStatusById[t.id] ?? deriveLegacyTaskStatus(t),
+            status: depStatusById[t.id] ?? t.status,
             workflowCategory: t.workflowCategory,
             workflowStateId: t.workflowStateId,
           },
@@ -2103,7 +2102,7 @@ export class TaskService {
           : undefined,
       reviewerUserId: task.reviewerUserId,
       startedAt: task.startedAt ? new Date(task.startedAt).toISOString() : undefined,
-      status: heartbeatStatus ?? deriveLegacyTaskStatus(task),
+      status: heartbeatStatus ?? task.status,
       userId: task.assigneeUserId,
       verify: acceptance
         ? { ...acceptance.config, requirement: acceptance.requirement }

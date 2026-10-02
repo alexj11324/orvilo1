@@ -1,5 +1,5 @@
 import type { TaskContext, TaskTopicHandoff } from '@orvilo/types';
-import { deriveLegacyTaskStatus, RequestTrigger } from '@orvilo/types';
+import { RequestTrigger } from '@orvilo/types';
 import debug from 'debug';
 import { sql } from 'drizzle-orm';
 
@@ -124,12 +124,8 @@ export class TaskResultBridgeService {
     // Automation tasks (heartbeat/schedule) run many topics — only bridge once
     // the task itself reaches a terminal state, to avoid per-tick spam. One-shot
     // tasks have no automationMode and bridge on topic completion.
-    if (task?.automationMode && !TERMINAL_TASK_STATUS.has(deriveLegacyTaskStatus(task))) {
-      log(
-        'automation task %s not terminal (%s), deferring bridge',
-        taskIdentifier,
-        deriveLegacyTaskStatus(task),
-      );
+    if (task?.automationMode && !TERMINAL_TASK_STATUS.has(task.status)) {
+      log('automation task %s not terminal (%s), deferring bridge', taskIdentifier, task.status);
       return;
     }
 

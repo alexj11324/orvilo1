@@ -17,7 +17,7 @@ import type {
   GoalMetricComparison,
   TaskItem,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus, toMetricScale } from '@orvilo/types';
+import { toMetricScale } from '@orvilo/types';
 
 export { GOAL_ACCEPTANCE_TASK_TITLE } from '@orvilo/const/goal';
 
@@ -92,7 +92,7 @@ export const needsBudget = (task?: TaskItem | null, status?: string | null): boo
   if (task === undefined) return true;
   if (task === null) return false;
   // A failure the coordinator can retry spends money too.
-  const resolved = status ?? deriveLegacyTaskStatus(task);
+  const resolved = status ?? task.status;
   if (resolved === 'paused') {
     return (
       task.error === LEASE_EXPIRED_ERROR ||
@@ -190,7 +190,7 @@ export interface GoalMoveInput {
   /**
    * Canonical execution truth per task id — the SQL-derived retired `status`
    * labels ({@link TaskModel.derivedStatusByIds}). Rows missing from the map
-   * fall back to the row-level derivation ({@link deriveLegacyTaskStatus}).
+   * fall back to the derived label on the task row itself.
    */
   statusById?: ReadonlyMap<string, string>;
   /**
@@ -208,7 +208,7 @@ const IN_FLIGHT_STATUSES = new Set(['running', 'scheduled']);
  * neither actionable nor a reason to stop looking at the others.
  */
 const isInFlight = (task: TaskItem | undefined, status?: string | null): boolean =>
-  Boolean(task && IN_FLIGHT_STATUSES.has(status ?? deriveLegacyTaskStatus(task)));
+  Boolean(task && IN_FLIGHT_STATUSES.has(status ?? task.status));
 
 export interface GoalMove {
   branch: GoalTickBranch;
@@ -284,8 +284,7 @@ export const decideNextMove = ({
   // old single-node frontier made them: the running node stayed eligible, was
   // re-picked every tick, and reported `waiting_external`, which ends the
   // advance before anything behind it is even considered.
-  const statusOf = (task: TaskItem): string =>
-    statusById?.get(task.id) ?? deriveLegacyTaskStatus(task);
+  const statusOf = (task: TaskItem): string => statusById?.get(task.id) ?? task.status;
 
   const inFlight = graph.nodes.filter((node) => {
     const task = tasksById.get(node.taskId ?? '');
@@ -396,7 +395,7 @@ const decideForCandidate = ({
     };
   }
 
-  return decideForTask(base, task, status ?? deriveLegacyTaskStatus(task), budget, graph, capacity);
+  return decideForTask(base, task, status ?? task.status, budget, graph, capacity);
 };
 
 const decideWithoutFrontier = (

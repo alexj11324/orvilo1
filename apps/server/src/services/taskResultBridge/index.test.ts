@@ -345,6 +345,7 @@ describe('TaskResultBridgeService.deliver', () => {
     findById.mockResolvedValue({
       automationMode: 'schedule',
       context: { origin: ORIGIN },
+      status: 'completed',
       workflowCategory: 'done',
     } as any);
 

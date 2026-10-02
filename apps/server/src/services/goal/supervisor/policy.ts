@@ -5,7 +5,6 @@ import type {
   GoalItem,
   TaskItem,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
 
 import type { AgentOperationItem } from '@/database/schemas/agentOperations';
 import { HETERO_DISPATCH_ERROR_HEADLINES } from '@/server/services/aiAgent/helpers/heteroErrors';
@@ -117,7 +116,7 @@ export const recoveryEligibility = (
   ) {
     return { eligible: false, reason: 'Operation stopped at an explicit intervention or limit' };
   }
-  const taskStatus = deriveLegacyTaskStatus(task);
+  const taskStatus = task.status;
   if (!RECOVERABLE_TASK_STATUSES.has(taskStatus)) {
     return {
       eligible: false,

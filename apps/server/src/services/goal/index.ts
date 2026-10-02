@@ -21,7 +21,6 @@ import type {
   TaskTopicHandoff,
   WorkVersionEventItem,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { experimentOwner, provenanceParentId } from '@orvilo/utils/goalGraph';
 import { TRPCError } from '@trpc/server';
 import { and, eq, inArray, sql } from 'drizzle-orm';
@@ -1168,7 +1167,7 @@ export class GoalService {
         if (task.workflowCategory === 'done') continue;
         const reset = await this.taskModel.updateStatusIfCurrent(
           task.id,
-          derivedStatuses[task.id] ?? deriveLegacyTaskStatus(task),
+          derivedStatuses[task.id] ?? task.status,
           'backlog',
           {
             error: null,
@@ -1926,14 +1925,9 @@ export class GoalService {
           ? 'The assigned agent is no longer usable — reassign the goal or this task'
           : 'The assigned agent cannot mount the builtin tools this goal task requires ' +
             '(its runtime cannot host the MCP tool surface) — reassign it to a capable agent';
-        const parked = await this.taskModel.updateStatusIfCurrent(
-          task.id,
-          deriveLegacyTaskStatus(task),
-          'paused',
-          {
-            error: reason,
-          },
-        );
+        const parked = await this.taskModel.updateStatusIfCurrent(task.id, task.status, 'paused', {
+          error: reason,
+        });
         if (!parked) {
           return {
             goalId,
@@ -2022,9 +2016,9 @@ export class GoalService {
 
       const fenced = await claimGoalTask(
         new TaskModel(tx, this.userId, this.workspaceId),
-        // Fence on the derived status the decision read — `task.status` is the
-        // frozen column and cannot stand in for what the tick actually saw.
-        { id: task.id, status: deriveLegacyTaskStatus(task) },
+        // Fence on the derived status the decision read — `task.status` is
+        // already that derived label on a model-fetched row.
+        { id: task.id, status: task.status },
         'running',
         {
           error: null,

@@ -7,7 +7,6 @@ import type {
   GoalTickResult,
   TaskItem,
 } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 
 import { AgentModel } from '@/database/models/agent';
@@ -160,7 +159,7 @@ export class GoalSupervisorService {
         return null;
       }
       const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
-      const taskStatus = deriveLegacyTaskStatus(task);
+      const taskStatus = task.status;
       let eligibility = recoveryEligibility(
         graph,
         task,
@@ -364,7 +363,7 @@ export class GoalSupervisorService {
           failedOperation,
           statusAuthoredByActor(
             await new TaskModel(tx, this.userId, this.workspaceId).getActivities(task.id, 20),
-            deriveLegacyTaskStatus(currentTask),
+            currentTask.status,
           ),
         ).eligible ||
         (await new GoalSupervisorService(tx, this.userId, this.workspaceId).budgetBlocked(
@@ -375,7 +374,7 @@ export class GoalSupervisorService {
       // A diagnosis takes minutes, so claim against the status the incident was
       // opened on. Re-reading first and comparing against that would swap whatever
       // the person chose in the meantime.
-      if (!RECOVERABLE_TASK_STATUSES.has(deriveLegacyTaskStatus(currentTask))) return false;
+      if (!RECOVERABLE_TASK_STATUSES.has(currentTask.status)) return false;
       // An incident persisted before this field existed cannot say what it opened
       // on, so it cannot show the row is unchanged. Claiming against a later read
       // would restore the race this closes; a rolling deploy leaves at most the

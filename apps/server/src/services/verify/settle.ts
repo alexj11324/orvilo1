@@ -5,7 +5,6 @@ import {
   VERIFICATION_FAILED_ERROR,
   VERIFICATION_UNJUDGEABLE_ERROR,
 } from '@orvilo/const/goal';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
@@ -116,7 +115,7 @@ export const driveTaskFromVerify = async (
 
     const taskModel = new TaskModel(db, userId, workspaceId);
     const task = await taskModel.findById(taskOperation.taskId);
-    if (!task || TERMINAL_TASK_STATUS.has(deriveLegacyTaskStatus(task))) return; // task already settled
+    if (!task || TERMINAL_TASK_STATUS.has(task.status)) return; // task already settled
     const originalCompletionReservationId = task.runReservationId?.startsWith(
       `completion:${operationId}:`,
     )
@@ -292,6 +291,7 @@ export const driveTaskFromVerify = async (
       executionGeneration: dispatchTopic.executionGeneration,
       policyRevision: dispatchTopic.policyRevision,
       requirementRevision: dispatchTopic.requirementRevision,
+      status: 'running',
     };
     const dispatchContract = {
       dispatchId: dispatchTopic.dispatchId,
@@ -420,7 +420,7 @@ export const driveTaskFromVerify = async (
                   ? expectedContract
                   : undefined
                 : expectedContract,
-            expectedStatus: deriveLegacyTaskStatus(currentTask),
+            expectedStatus: currentTask.status,
             onStatusCommitted: () => {
               completionReservationActive = false;
               completionLeaseFailure = undefined;
@@ -494,7 +494,7 @@ export const driveTaskFromVerify = async (
             context: {
               error: pauseSummary,
               expectedContract,
-              expectedStatus: deriveLegacyTaskStatus(currentTask),
+              expectedStatus: currentTask.status,
               reservationId: completionReservationId ?? undefined,
             },
             operationId,

@@ -25,7 +25,7 @@ import type {
   TaskSchedulerContext,
   TaskTopicHandoff,
 } from '@orvilo/types';
-import { ChatErrorType, DEFAULT_BRIEF_ACTIONS, deriveLegacyTaskStatus } from '@orvilo/types';
+import { ChatErrorType, DEFAULT_BRIEF_ACTIONS } from '@orvilo/types';
 import debug from 'debug';
 
 import {
@@ -264,8 +264,7 @@ export class TaskLifecycleService {
     // lease after the scheduler has moved the task back to `scheduled`. Keep
     // the CAS aligned with the status that settleIfRunning actually claimed;
     // requiring `running` here would strand that task with no next tick.
-    const claimedTaskStatus =
-      deriveLegacyTaskStatus(currentTask) === 'scheduled' ? 'scheduled' : 'running';
+    const claimedTaskStatus = currentTask.status === 'scheduled' ? 'scheduled' : 'running';
 
     // All state decisions flow through the settlement service — the only
     // thing this lifecycle still owns is the concurrency guard (the claimed
@@ -1016,7 +1015,7 @@ export class TaskLifecycleService {
   ): Promise<void> {
     if (task.automationMode !== 'heartbeat') return;
     if (!task.heartbeatInterval || task.heartbeatInterval <= 0) return;
-    if (isTerminal(deriveLegacyTaskStatus(task))) return;
+    if (isTerminal(task.status)) return;
 
     const ctx = (task.context as { scheduler?: TaskSchedulerContext } | null) ?? {};
     const sched = ctx.scheduler ?? {};
@@ -1117,8 +1116,7 @@ export class TaskLifecycleService {
   /** Re-arm a Verify-bound heartbeat only after Verify releases its completion lease. */
   async rearmHeartbeatAfterVerify(taskId: string): Promise<void> {
     const task = await this.taskModel.findById(taskId);
-    if (task && deriveLegacyTaskStatus(task) === 'scheduled')
-      await this.maybeRearmHeartbeat(task, 'done');
+    if (task && task.status === 'scheduled') await this.maybeRearmHeartbeat(task, 'done');
   }
 
   /**

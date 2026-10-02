@@ -1,5 +1,4 @@
 import type { TaskPlanningAction, TaskPlanningProposal, TaskPlanningTrigger } from '@orvilo/types';
-import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils';
 import { and, asc, count, eq, inArray, isNull, notInArray, or, sql } from 'drizzle-orm';
 
@@ -739,7 +738,7 @@ export class LinearPlanningWorker {
         if (!inScope) {
           throw new Error('Planning resume requires a task in the active scope');
         }
-        const taskStatus = deriveLegacyTaskStatus(task);
+        const taskStatus = task.status;
         if (!['backlog', 'failed', 'paused'].includes(taskStatus)) {
           throw new Error(`Task ${action.taskId} is not ready to resume from ${taskStatus}`);
         }

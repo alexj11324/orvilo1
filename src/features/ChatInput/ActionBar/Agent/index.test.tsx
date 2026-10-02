@@ -174,6 +174,8 @@ describe('Agent action', () => {
       false,
       'composerAgent/switch',
     );
+    // An explicit pick on a blank composer is a `lastUsedAgentId` write point.
+    expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ lastUsedAgentId: 'agt_other' });
     expect(mocks.confirmModal).not.toHaveBeenCalled();
     expect(mocks.navigate).not.toHaveBeenCalled();
   });

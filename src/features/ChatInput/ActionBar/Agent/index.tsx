@@ -85,9 +85,13 @@ const Agent = memo(() => {
       if (!activeTopicId) {
         // Blank composer: the pick retargets the pending send, no navigation —
         // carrying the draft keeps the typed text on screen while the draft
-        // key flips to the new agent's bucket.
+        // key flips to the new agent's bucket. An explicit pick is also one of
+        // the three write points for `lastUsedAgentId` (pick / send / handoff)
+        // — recording it here keeps the next blank composer's default on the
+        // agent the user last chose, never on background list churn.
         carryDraftToKey(messageMapKey(draftInput(agentId)), messageMapKey(draftInput(id)));
         useChatStore.setState({ composerAgentId: id }, false, 'composerAgent/switch');
+        useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
         return;
       }
 

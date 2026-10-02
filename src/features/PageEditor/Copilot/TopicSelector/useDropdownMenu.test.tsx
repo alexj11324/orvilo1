@@ -58,12 +58,12 @@ vi.mock('@/hooks/usePermission', () => ({
 vi.mock('@/store/chat', () => ({
   useChatStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
+      archiveTopic: vi.fn(),
       autoRenameTopicTitle: vi.fn(),
       duplicateTopic: vi.fn(),
       favoriteTopic: vi.fn(),
-      markTopicCompleted: vi.fn(),
       removeTopic: removeTopicMock,
-      unmarkTopicCompleted: vi.fn(),
+      unarchiveTopic: vi.fn(),
       updateTopicTitle: vi.fn(),
     }),
 }));
@@ -113,7 +113,7 @@ describe('PageEditor Copilot TopicSelector useDropdownMenu', () => {
     const keys = result.current()?.flatMap((item) => (item && 'key' in item ? [item.key] : []));
 
     expect(keys).toEqual([
-      'markCompleted',
+      'archive',
       'favorite',
       'autoRename',
       'rename',
@@ -142,7 +142,7 @@ describe('PageEditor Copilot TopicSelector useDropdownMenu', () => {
     const items = result.current();
 
     for (const key of [
-      'markCompleted',
+      'archive',
       'favorite',
       'autoRename',
       'rename',

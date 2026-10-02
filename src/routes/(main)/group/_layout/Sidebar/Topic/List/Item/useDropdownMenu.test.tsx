@@ -58,11 +58,11 @@ vi.mock('@/store/agentGroup', () => ({
 vi.mock('@/store/chat', () => ({
   useChatStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
+      archiveTopic: vi.fn(),
       autoRenameTopicTitle: vi.fn(),
       duplicateTopic: vi.fn(),
-      markTopicCompleted: vi.fn(),
       removeTopic: vi.fn(),
-      unmarkTopicCompleted: vi.fn(),
+      unarchiveTopic: vi.fn(),
     }),
 }));
 
@@ -99,7 +99,7 @@ describe('group useTopicItemDropdownMenu', () => {
     );
     const items = result.current();
 
-    for (const key of ['markCompleted', 'autoRename', 'rename', 'duplicate', 'delete']) {
+    for (const key of ['archive', 'autoRename', 'rename', 'duplicate', 'delete']) {
       expect(getMenuItem(items, key)).toMatchObject({ disabled: true });
     }
 

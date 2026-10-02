@@ -180,11 +180,11 @@ describe('group useTopicActionsDropdownMenu', () => {
     await confirmModalMock.mock.calls[0][0].onOk();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledTimes(2);
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'own-merged',
     });
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'other-merged',
     });
 
@@ -245,7 +245,7 @@ describe('group useTopicActionsDropdownMenu', () => {
     if (archiveItem && 'onClick' in archiveItem) await archiveItem.onClick?.({} as never);
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledOnce();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'own-merged',
     });
 
@@ -297,7 +297,7 @@ describe('group useTopicActionsDropdownMenu', () => {
 
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledOnce();
     expect(chatStoreMock.updateTopicStatus).toHaveBeenCalledWith({
-      status: 'completed',
+      status: 'archived',
       topicId: 'merged',
     });
     expect(chatStoreMock.refreshTopic).toHaveBeenCalledOnce();

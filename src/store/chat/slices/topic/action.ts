@@ -407,6 +407,21 @@ export class ChatTopicActionImpl {
     });
   };
 
+  /**
+   * Archive a conversation: writes the dedicated `archived` status — NOT
+   * `completed`. Completion is lifecycle metadata (a finished run stays listed
+   * in the feed); archive is the user's explicit "hide this" and is the only
+   * status the sidebar feed excludes. Reachable again via search or a direct
+   * link, then {@link unarchiveTopic} restores `active`.
+   */
+  archiveTopic = async (id: string): Promise<void> => {
+    await this.#get().updateTopicStatus({ status: 'archived', topicId: id });
+  };
+
+  unarchiveTopic = async (id: string): Promise<void> => {
+    await this.#get().updateTopicStatus({ status: 'active', topicId: id });
+  };
+
   favoriteTopic = async (id: string, favorite: boolean): Promise<void> => {
     const { activeAgentId } = this.#get();
     await this.#get().internal_updateTopic(id, { favorite });
@@ -889,11 +904,17 @@ export class ChatTopicActionImpl {
     const state = this.#get();
     const scopedAgentId = scope ? agentId : (agentId ?? state.activeAgentId);
     const scopedGroupId = scope ? groupId : (groupId ?? state.activeGroupId);
-    const key = topicMapKey({
-      agentId: scopedAgentId,
-      groupId: scopedGroupId,
-      scope,
-    });
+    // The workspace feed holds the sidebar's rows, not the agent bucket the
+    // scope params would derive — target the bucket that actually contains the
+    // topic (same rule as `internal_updateTopic`), falling back to the
+    // scope-derived key when no loaded bucket has it yet.
+    const key =
+      topicSelectors.getTopicContainerKeyById(topicId)(state) ??
+      topicMapKey({
+        agentId: scopedAgentId,
+        groupId: scopedGroupId,
+        scope,
+      });
     const topic = state.topicDataMap[key]?.items?.find((t) => t.id === topicId);
 
     // Already at the target status — both the in-memory and DB writes are no-ops.
@@ -901,10 +922,10 @@ export class ChatTopicActionImpl {
 
     this.internal_pinTopicStatus(params);
 
-    // "Archive" in the UI writes status:'completed'. Stamp `completedAt` on that
-    // transition so bulk/stale archive records when the topic was completed,
-    // matching the single-item `markTopicCompleted`. Other status transitions
-    // (agent runs → running/active/unread/…) leave `completedAt` untouched.
+    // Stamp `completedAt` on the transition into 'completed' so bulk/stale
+    // completions record when the topic finished, matching the single-item
+    // `markTopicCompleted`. Other status transitions (agent runs →
+    // running/active/unread/archived) leave `completedAt` untouched.
     const patch: Partial<ChatTopic> =
       status === 'completed' ? { completedAt: new Date(), status } : { status };
 
@@ -943,11 +964,13 @@ export class ChatTopicActionImpl {
     const state = this.#get();
     const scopedAgentId = scope ? agentId : (agentId ?? state.activeAgentId);
     const scopedGroupId = scope ? groupId : (groupId ?? state.activeGroupId);
-    const key = topicMapKey({
-      agentId: scopedAgentId,
-      groupId: scopedGroupId,
-      scope,
-    });
+    const key =
+      topicSelectors.getTopicContainerKeyById(topicId)(state) ??
+      topicMapKey({
+        agentId: scopedAgentId,
+        groupId: scopedGroupId,
+        scope,
+      });
     const topic = state.topicDataMap[key]?.items?.find((t) => t.id === topicId);
 
     if (topic?.status === status) return;
@@ -964,9 +987,7 @@ export class ChatTopicActionImpl {
       type: 'updateTopic',
       id: topicId,
       value: patch,
-      agentId,
-      groupId,
-      scope,
+      containerKey: key,
     });
   };
 

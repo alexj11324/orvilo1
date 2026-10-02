@@ -633,7 +633,11 @@ describe('topicSelectors', () => {
   });
 
   describe('displayTopicsForSidebar', () => {
-    it('hides completed topics immediately when completed topics are excluded', () => {
+    it('keeps a completed conversation listed while an archived one drops out', () => {
+      // Completion is lifecycle metadata — a finished run stays in the feed.
+      // Archiving is the user's explicit hide: the only status the sidebar
+      // filters even when the row lands in the bucket (belt and braces for a
+      // looser overwrite of the container-keyed map).
       const now = Date.now();
       const state = merge(initialStore, {
         activeAgentId: 'agent-1',
@@ -644,17 +648,22 @@ describe('topicSelectors', () => {
             items: [
               { createdAt: now, id: 'active', status: 'active', updatedAt: now },
               { createdAt: now, id: 'completed', status: 'completed', updatedAt: now },
+              { createdAt: now, id: 'archived', status: 'archived', updatedAt: now },
             ],
             pageSize: 20,
-            total: 2,
+            total: 3,
           },
         },
       });
 
-      expect(topicSelectors.displayTopicsForSidebar(20, 'updatedAt', false)(state)).toEqual([
-        expect.objectContaining({ id: 'active' }),
-      ]);
-      expect(topicSelectors.displayTopicsForSidebar(20, 'updatedAt', true)(state)).toHaveLength(2);
+      expect(
+        topicSelectors
+          .displayTopicsForSidebar(
+            20,
+            'updatedAt',
+          )(state)
+          ?.map(({ id }) => id),
+      ).toEqual(['active', 'completed']);
     });
 
     it('keeps the active topic visible when it falls outside the configured page', () => {
@@ -681,13 +690,12 @@ describe('topicSelectors', () => {
           .displayTopicsForSidebar(
             2,
             'updatedAt',
-            false,
           )(state)
           ?.map(({ id }) => id),
       ).toEqual(['newest', 'newer', 'older-active']);
     });
 
-    it('keeps an active completed topic from the detail cache visible', () => {
+    it('keeps an active archived topic from the detail cache visible', () => {
       const state = merge(initialStore, {
         activeAgentId: 'agent-1',
         activeTopicId: 'archived-active',
@@ -701,7 +709,7 @@ describe('topicSelectors', () => {
           },
         },
         topicDetailMap: {
-          'archived-active': { id: 'archived-active', status: 'completed', updatedAt: 1 },
+          'archived-active': { id: 'archived-active', status: 'archived', updatedAt: 1 },
         },
       });
 
@@ -710,7 +718,6 @@ describe('topicSelectors', () => {
           .displayTopicsForSidebar(
             20,
             'updatedAt',
-            false,
           )(state)
           ?.map(({ id }) => id),
       ).toEqual(['visible', 'archived-active']);
@@ -736,7 +743,7 @@ describe('topicSelectors', () => {
           'archived-favorite': {
             favorite: true,
             id: 'archived-favorite',
-            status: 'completed',
+            status: 'archived',
             updatedAt: 1,
           },
         },
@@ -747,7 +754,6 @@ describe('topicSelectors', () => {
           .displayTopicsForSidebar(
             20,
             'updatedAt',
-            false,
           )(state)
           ?.map(({ id }) => id),
       ).toEqual(['visible-favorite', 'archived-favorite', 'regular']);

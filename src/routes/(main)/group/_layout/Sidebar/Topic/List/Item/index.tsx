@@ -327,7 +327,7 @@ const TopicItem = memo<TopicItemProps>(({ id, title, active, threadId, status, u
   return (
     <div className="flex flex-col" style={{ position: 'relative' }}>
       <NavItem
-        actions={<Actions dropdownMenu={dropdownMenu} />}
+        actions={<Actions dropdownMenu={dropdownMenu} id={id} status={status} />}
         active={active && !threadId}
         contextMenuItems={dropdownMenu}
         disabled={editing}

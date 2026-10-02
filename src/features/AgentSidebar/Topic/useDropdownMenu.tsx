@@ -91,7 +91,7 @@ export const useTopicActionsDropdownMenu = (
       }
 
       await Promise.all(
-        mergedTopics.map(({ id }) => updateTopicStatus({ status: 'completed', topicId: id })),
+        mergedTopics.map(({ id }) => updateTopicStatus({ status: 'archived', topicId: id })),
       );
       await refreshTopic();
       toast.success(t('actions.archiveMergedPullRequestsSuccess', { count: mergedTopics.length }));

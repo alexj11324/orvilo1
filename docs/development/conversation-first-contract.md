@@ -69,15 +69,16 @@ The optimistic topic row minted on first send carries `agentId`, so
 
 ## Mobile
 
-The mobile 会话 tab reads the same cross-agent feed with a bounded first
-page (`MOBILE_FEED_PAGE_SIZE = 40`, inside the 30–50 contract band; cursor
-pagination is follow-up), and `Settings → Agents` stays inside the settings
-tree (pinned by the shared `surfaces` router test).
+The mobile 会话 tab reads the same cross-agent feed through real cursor
+pagination (`useSWRInfinite` + `queryTopicsPage`, first page `limit: 30`
+inside the 30–50 contract band, `loadMore` walks `nextCursor` — no
+unbounded fetch reaches the server), and `Settings → Agents` stays inside
+the settings tree (pinned by the shared `surfaces` router test).
 
-| Pin                                                          | Test                                                               |
-| ------------------------------------------------------------ | ------------------------------------------------------------------ |
-| Bounded `queryTopics` first page + `lastUsedAgentId` reader  | `src/features/MobileHome/TopicListContent/useMobileTopics.test.ts` |
-| `/settings/agents` stays under `settings/*` on every surface | `src/spa/router/reservedRootPaths.test.ts`                         |
+| Pin                                                                                          | Test                                                               |
+| -------------------------------------------------------------------------------------------- | ------------------------------------------------------------------ |
+| Cursor-paginated feed (`limit: 30`, cursor walk, boundary dedupe) + `lastUsedAgentId` reader | `src/features/MobileHome/TopicListContent/useMobileTopics.test.ts` |
+| `/settings/agents` stays under `settings/*` on every surface                                 | `src/spa/router/reservedRootPaths.test.ts`                         |
 
 E2e backstop: the `conversation-mgmt` feature exercises the whole loop end
 to end (create → mint → navigate → list → rename/delete/switch), so unit

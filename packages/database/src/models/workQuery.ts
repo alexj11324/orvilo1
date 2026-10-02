@@ -1,6 +1,7 @@
 import type {
   MyWorkMode,
   TaskLabelSummary,
+  TaskStatus,
   WorkQuery,
   WorkQueryCountResult,
   WorkQueryEntityType,
@@ -46,6 +47,7 @@ import {
   or,
   type SQL,
   sql,
+  type SQLWrapper,
 } from 'drizzle-orm';
 import { alias, type AnyPgColumn } from 'drizzle-orm/pg-core';
 
@@ -63,6 +65,12 @@ import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
 import { ProjectModel } from './project';
 import { taskEffectivePosition } from './task';
+import {
+  legacyStatusExpr,
+  predicateForLegacyStatus,
+  predicateForLegacyStatuses,
+  TASK_OPEN_WORKFLOW,
+} from './taskExecutionSql';
 import { TaskLabelModel, toTaskLabelSummary } from './taskLabel';
 import { TeamModel } from './team';
 
@@ -272,7 +280,7 @@ const taskColumn = (field: WorkQueryField) => {
       return tasks.reviewerUserId;
     }
     case 'status': {
-      return tasks.status;
+      return legacyStatusExpr;
     }
     case 'teamId': {
       return tasks.teamId;
@@ -293,7 +301,7 @@ const taskColumn = (field: WorkQueryField) => {
 };
 
 const compileColumnPredicate = (
-  column: AnyPgColumn,
+  column: SQLWrapper,
   op: WorkQueryOp,
   resolved: ReturnType<typeof resolveValue>,
   currentUserId: string,
@@ -517,7 +525,58 @@ const compilePredicate = (predicate: WorkQueryPredicate, ctx: CompileCtx): SQL =
     return compileDatePredicate(column, op, resolved);
   }
 
+  if (predicate.field === 'status') {
+    return compileLegacyStatusPredicate(predicate.op, resolved, ctx.currentUserId);
+  }
+
   return compileColumnPredicate(taskColumn(predicate.field), op, resolved, ctx.currentUserId);
+};
+
+/**
+ * The deprecated `status` filter field — translated to canonical workflow /
+ * execution predicates so saved views keep working while `tasks.status` is
+ * never read. `isNull` never matches (every task has canonical truth).
+ */
+const compileLegacyStatusPredicate = (
+  op: WorkQueryOp,
+  resolved: ReturnType<typeof resolveValue>,
+  currentUserId: string,
+): SQL => {
+  const match = (statuses: readonly (number | string)[]) => {
+    const predicate = predicateForLegacyStatuses(statuses.map((status) => String(status)));
+    return predicate ?? FALSE_SQL;
+  };
+  switch (op) {
+    case 'isNull': {
+      return FALSE_SQL;
+    }
+    case 'isNotNull': {
+      return TRUE_SQL;
+    }
+    case 'eq': {
+      if (typeof resolved !== 'string' && typeof resolved !== 'number') {
+        throw new WorkQueryError('INVALID_QUERY', 'eq requires a scalar value');
+      }
+      return predicateForLegacyStatus(String(resolved)) ?? FALSE_SQL;
+    }
+    case 'neq': {
+      if (typeof resolved !== 'string' && typeof resolved !== 'number') {
+        throw new WorkQueryError('INVALID_QUERY', 'neq requires a scalar value');
+      }
+      const predicate = predicateForLegacyStatus(String(resolved));
+      return predicate ? sql`not (${predicate})` : TRUE_SQL;
+    }
+    case 'in': {
+      return match(assertInValues(resolved, 'in', currentUserId));
+    }
+    case 'notIn': {
+      const predicate = match(assertInValues(resolved, 'notIn', currentUserId));
+      return sql`not (${predicate})`;
+    }
+    default: {
+      throw new WorkQueryError('INVALID_QUERY', `Unknown operator: ${String(op)}`);
+    }
+  }
 };
 
 const compileDatePredicate = (
@@ -684,25 +743,14 @@ export const hashQuery = (query: WorkQuery) => JSON.stringify(query);
  * `deriveTaskExecutionState` (packages/types): the latest dispatch's phase and
  * the latest run's `run_state` are each mapped onto the execution enum, the
  * furthest-advanced rank wins (tie → dispatch, the contract fence), and
- * `tasks.status` is only the legacy fallback when no execution rows exist.
- * Yields NULL for tasks that never executed (backlog/scheduled statuses
- * project nothing) — `isNull` on `executionState` is "never ran".
+ * Never reads `tasks.status` (retired): tasks with no execution rows project
+ * NULL — `isNull` on `executionState` is "never ran".
  */
 const taskExecutionStateExpr = sql`
   (select case
     when d.exec_state is not null and r.exec_state is not null then
       case when d.exec_rank >= r.exec_rank then d.exec_state else r.exec_state end
-    else coalesce(
-      d.exec_state,
-      r.exec_state,
-      case ${tasks.status}
-        when 'canceled' then 'canceled'
-        when 'completed' then 'succeeded'
-        when 'failed' then 'failed'
-        when 'paused' then 'outcome_unknown'
-        when 'running' then 'running'
-      end
-    )
+    else coalesce(d.exec_state, r.exec_state)
   end
   from (values (1)) as seed(x)
   left join lateral (
@@ -913,14 +961,6 @@ export const assertWorkQueryTimeZone = (timeZone: string | undefined): string =>
   return zone;
 };
 
-/** A canceled/completed blocked row no longer needs the blocker. */
-const OPEN_BLOCKED_STATUS_SQL = sql.join(
-  WORK_QUERY_STATUS_COLUMNS.filter((status) => status !== 'completed' && status !== 'canceled').map(
-    (status) => sql`${status}`,
-  ),
-  sql`, `,
-);
-
 /**
  * The blocked side of a `blocks` edge inside the attention EXISTS leg. The
  * alias is declared in the raw `INNER JOIN` clause; its columns resolve to
@@ -928,6 +968,9 @@ const OPEN_BLOCKED_STATUS_SQL = sql.join(
  * task, not the grouped row.
  */
 const attentionBlockedTasks = alias(tasks, 'attention_blocked');
+
+/** A done/canceled blocked row no longer needs the blocker. */
+const ATTENTION_OPEN_ALIAS_WORKFLOW = sql`${attentionBlockedTasks.workflowCategory} NOT IN ('done', 'canceled')`;
 
 /**
  * Linear's My issues grouping: urgent issues first, then issues that block
@@ -949,15 +992,15 @@ const attentionGroupExpr = (ctx: {
   workspaceId?: string;
 }): SQL<string> =>
   sql<string>`CASE
-  WHEN ${tasks.status} IN (${OPEN_BLOCKED_STATUS_SQL}) AND ${tasks.priority} = 1 THEN 'urgent'
-  WHEN ${tasks.status} IN (${OPEN_BLOCKED_STATUS_SQL}) AND EXISTS (
+  WHEN ${TASK_OPEN_WORKFLOW} AND ${tasks.priority} = 1 THEN 'urgent'
+  WHEN ${TASK_OPEN_WORKFLOW} AND EXISTS (
     SELECT 1
     FROM ${taskDependencies} attention_dep
     INNER JOIN ${tasks} attention_blocked
       ON attention_dep.task_id = ${attentionBlockedTasks.id}
     WHERE attention_dep.depends_on_id = ${tasks.id}
       AND attention_dep.type = 'blocks'
-      AND ${attentionBlockedTasks.status} IN (${OPEN_BLOCKED_STATUS_SQL})
+      AND ${ATTENTION_OPEN_ALIAS_WORKFLOW}
       AND ${buildWorkspaceWhere(
         { userId: ctx.userId, workspaceId: ctx.workspaceId },
         {
@@ -1001,7 +1044,7 @@ const axisExpr = (
       return ctx.attention;
     }
     case 'status': {
-      return sql`${tasks.status}`;
+      return legacyStatusExpr;
     }
     case 'workflowCategory': {
       return sql`${tasks.workflowCategory}`;
@@ -1155,7 +1198,7 @@ const sortColumn = (field: WorkQuerySort['field']) => {
  */
 const keysetAfterCursor = (
   sort: WorkQuerySort[],
-  columnFor: (field: WorkQuerySort['field']) => AnyPgColumn,
+  columnFor: (field: WorkQuerySort['field']) => SQLWrapper,
   idColumn: AnyPgColumn,
   afterId: string,
 ): SQL => {
@@ -1319,15 +1362,28 @@ export class WorkQueryModel {
   private hydrateTaskRows = async <T extends { id: string; parentTaskId: null | string }>(
     rows: T[],
   ) => {
-    const [labelsByTask, parentsById] = await Promise.all([
+    const [labelsByTask, parentsById, statusById] = await Promise.all([
       this.taskLabelsByTaskIds(rows.map((row) => row.id)),
       this.taskParentsByIds(rows.map((row) => row.parentTaskId)),
+      this.derivedTaskStatusByIds(rows.map((row) => row.id)),
     ]);
     return rows.map((row) => ({
       ...row,
       labels: labelsByTask.get(row.id) ?? [],
       parent: row.parentTaskId ? (parentsById.get(row.parentTaskId) ?? null) : null,
+      // Deprecated wire field — derived from canonical workflow/execution
+      // rows, never the stored `tasks.status` value.
+      status: statusById.get(row.id) ?? 'backlog',
     }));
+  };
+
+  private derivedTaskStatusByIds = async (ids: string[]) => {
+    if (ids.length === 0) return new Map<string, TaskStatus>();
+    const rows = await this.db
+      .select({ id: tasks.id, status: sql<TaskStatus>`${legacyStatusExpr}` })
+      .from(tasks)
+      .where(and(inArray(tasks.id, ids), this.ownership()));
+    return new Map(rows.map((row) => [row.id, row.status]));
   };
 
   private compileCtx = (
@@ -1896,7 +1952,7 @@ export class WorkQueryModel {
         : params.field === 'teamId'
           ? tasks.teamId
           : params.field === 'status'
-            ? tasks.status
+            ? legacyStatusExpr
             : tasks.workflowCategory;
 
     const rows = await this.db

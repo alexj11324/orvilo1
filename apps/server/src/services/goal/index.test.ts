@@ -11,6 +11,7 @@ import type * as GoalGraphModule from '@/database/models/goalGraph';
 import { GoalGraphModel } from '@/database/models/goalGraph';
 import { MetricModel } from '@/database/models/metric';
 import { TaskModel } from '@/database/models/task';
+import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { WorkModel } from '@/database/models/work';
 import {
@@ -24,6 +25,7 @@ import {
   goals,
   metricPoints,
   metrics,
+  taskDispatches,
   tasks,
   taskTopics,
   topics,
@@ -86,6 +88,37 @@ vi.mock('@/server/featureFlags/caidAdmission', () => ({
 const serverDB: OrviloDatabase = await getTestDB();
 const userId = 'goal-service-test-user';
 
+/**
+ * `tasks.status` is retired — fixtures put a task in a legacy state by writing
+ * the canonical rows instead of the frozen column. A live run means a
+ * `taskDispatches` row in an active phase.
+ */
+const dispatchFixture = async (
+  taskId: string,
+  phase: 'requested' | 'running' | 'waiting',
+  generation = 1,
+) => {
+  await serverDB.insert(taskDispatches).values({
+    generation,
+    id: `disp_${taskId}_${phase}_${generation}`,
+    idempotencyKey: `idem_${taskId}_${phase}_${generation}`,
+    phase,
+    policyRevision: 1,
+    requestedBy: 'goal-test',
+    requirementRevision: 1,
+    taskId,
+    taskRevision: 1,
+  });
+};
+
+const derivedStatus = async (id: string) => {
+  const [row] = await serverDB
+    .select({ status: legacyStatusExpr })
+    .from(tasks)
+    .where(eq(tasks.id, id));
+  return row?.status;
+};
+
 beforeEach(async () => {
   await serverDB.insert(users).values({ id: userId }).onConflictDoNothing();
 });
@@ -104,6 +137,7 @@ afterEach(async () => {
   await serverDB.delete(acceptances);
   await serverDB.delete(agentOperations);
   await serverDB.delete(taskTopics);
+  await serverDB.delete(taskDispatches);
   await serverDB.delete(topics);
   await serverDB.delete(tasks);
   await serverDB.delete(agents);
@@ -395,7 +429,6 @@ describe('GoalService', () => {
         .spyOn(TaskRunnerService.prototype, 'runTask')
         .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
       const service = new GoalService(serverDB, userId);
-      const taskModel = new TaskModel(serverDB, userId);
       const graph = await service.create({ title: 'Gated dispatch', tasks: ['Stay gated'] });
       // First tick materializes the task node; the second reaches dispatchWork.
       await service.tick(graph.goal.id);
@@ -406,7 +439,7 @@ describe('GoalService', () => {
       expect(result.outcome).toBe('waiting_external');
       expect(result.message).toContain('CAID dispatch admission');
       expect(runSpy).not.toHaveBeenCalled();
-      expect((await taskModel.findById(result.taskId!))?.status).not.toBe('running');
+      expect(await derivedStatus(result.taskId!)).not.toBe('running');
     } finally {
       caidAdmission.allowed.mockResolvedValue(true);
     }
@@ -491,7 +524,7 @@ describe('GoalService', () => {
 
     expect(recovery.outcome).toBe('settled');
     expect(runSpy).not.toHaveBeenCalled();
-    expect((await taskModel.findById(created.taskId!))?.status).toBe(settledAs);
+    expect(await derivedStatus(created.taskId!)).toBe(settledAs);
   });
 
   it('does not restart a Task a person paused themselves', async () => {
@@ -519,7 +552,7 @@ describe('GoalService', () => {
 
     expect(recovery.outcome).toBe('settled');
     expect(runSpy).not.toHaveBeenCalled();
-    expect((await taskModel.findById(created.taskId!))?.status).toBe('paused');
+    expect(await derivedStatus(created.taskId!)).toBe('paused');
   });
 
   it('hands back a dispatch claim whose worker died before the run existed', async () => {
@@ -530,13 +563,12 @@ describe('GoalService', () => {
       .spyOn(TaskRunnerService.prototype, 'runTask')
       .mockRejectedValue(new Error('worker died'));
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Start me'], title: 'Orphaned claim' });
     const created = await service.tick(graph.goal.id);
 
     // The claim survives the crash: put the row back where a dead worker left it.
     await expect(service.tick(graph.goal.id)).rejects.toThrow('worker died');
-    await taskModel.updateStatus(created.taskId!, 'running');
+    await dispatchFixture(created.taskId!, 'running');
     await serverDB
       .update(tasks)
       .set({ updatedAt: new Date(Date.now() - 60 * 60 * 1000) })
@@ -545,7 +577,9 @@ describe('GoalService', () => {
     const released = await service.tick(graph.goal.id);
 
     expect(released.outcome).toBe('advanced');
-    expect((await taskModel.findById(created.taskId!))?.status).toBe('backlog');
+    // The orphaned claim abandons — the task parks for recovery, it does not
+    // silently become dispatchable again.
+    expect(await derivedStatus(created.taskId!)).toBe('paused');
     runSpy.mockRestore();
   });
 
@@ -557,7 +591,6 @@ describe('GoalService', () => {
     // verify settle path then canceled.
     const runSpy = vi.spyOn(TaskRunnerService.prototype, 'runTask').mockResolvedValue({} as never);
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
       title: 'Deliveries wait for verification',
@@ -571,7 +604,7 @@ describe('GoalService', () => {
       taskId: created.taskId!,
       userId,
     });
-    await taskModel.updateStatus(created.taskId!, 'running');
+    await dispatchFixture(created.taskId!, 'running');
     await serverDB
       .update(tasks)
       .set({ updatedAt: new Date(Date.now() - 10 * 60 * 1000) })
@@ -584,7 +617,7 @@ describe('GoalService', () => {
       outcome: 'waiting_external',
       taskId: created.taskId,
     });
-    expect((await taskModel.findById(created.taskId!))?.status).toBe('running');
+    expect(await derivedStatus(created.taskId!)).toBe('running');
     expect(runSpy).not.toHaveBeenCalled();
   });
 
@@ -593,7 +626,6 @@ describe('GoalService', () => {
     // silently would otherwise strand the goal forever, which is exactly the
     // failure mode the sweep exists to break.
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
       title: 'Dead verification is reclaimed',
@@ -608,7 +640,7 @@ describe('GoalService', () => {
       taskId: created.taskId!,
       userId,
     });
-    await taskModel.updateStatus(created.taskId!, 'running');
+    await dispatchFixture(created.taskId!, 'running');
     await serverDB
       .update(tasks)
       .set({ updatedAt: new Date(Date.now() - 10 * 60 * 1000) })
@@ -617,7 +649,7 @@ describe('GoalService', () => {
     const released = await service.tick(graph.goal.id);
 
     expect(released.outcome).toBe('advanced');
-    expect((await taskModel.findById(created.taskId!))?.status).toBe('backlog');
+    expect(await derivedStatus(created.taskId!)).toBe('paused');
   });
 
   it('synthesizes the finding from the delivered topic, not a canceled retry', async () => {
@@ -740,16 +772,15 @@ describe('GoalService', () => {
     // The same shape a moment after the claim is just a run about to start.
     vi.spyOn(TaskRunnerService.prototype, 'runTask').mockRejectedValue(new Error('worker died'));
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Start me'], title: 'Fresh claim' });
     const created = await service.tick(graph.goal.id);
     await expect(service.tick(graph.goal.id)).rejects.toThrow('worker died');
-    await taskModel.updateStatus(created.taskId!, 'running');
+    await dispatchFixture(created.taskId!, 'running');
 
     const result = await service.tick(graph.goal.id);
 
     expect(result.outcome).toBe('waiting_external');
-    expect((await taskModel.findById(created.taskId!))?.status).toBe('running');
+    expect(await derivedStatus(created.taskId!)).toBe('running');
   });
 
   it('reopens a goal its round budget stopped when the budget is raised', async () => {
@@ -952,7 +983,8 @@ describe('GoalService', () => {
       'tpc_restart',
       'running',
     );
-    await taskModel.update(created.taskId!, { error: 'lease expired', status: 'running' });
+    await taskModel.update(created.taskId!, { error: 'lease expired' });
+    await dispatchFixture(created.taskId!, 'running');
 
     const result = await service.restart(graph.goal.id, { agentId: 'agt_restart' });
 
@@ -962,7 +994,6 @@ describe('GoalService', () => {
     expect(await taskModel.findById(created.taskId!)).toMatchObject({
       assigneeAgentId: 'agt_restart',
       error: null,
-      status: 'backlog',
     });
 
     // "Start over" on a parked goal must begin ticking again without a second
@@ -2088,17 +2119,15 @@ describe('GoalService', () => {
       .mockResolvedValue({ operationId: 'op-cap', taskId: 'placeholder' } as never);
 
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { maxConcurrentTasks: 1 },
       title: 'Capped goal',
       tasks: ['First', 'Second'],
     });
 
-    // Fill the single slot.
-    const first = await service.tick(graph.goal.id);
+    // Fill the single slot — the tick's claim mints the dispatch row itself.
     await service.tick(graph.goal.id);
-    await taskModel.updateStatus(first.taskId!, 'running');
+    await service.tick(graph.goal.id);
     runSpy.mockClear();
 
     // The second task exists and is unblocked, but there is no room for it.
@@ -2194,7 +2223,7 @@ describe('GoalService', () => {
     });
     const created = await service.tick(graph.goal.id);
     await taskModel.update(created.taskId!, { totalTopics: 1 });
-    await taskModel.updateStatus(created.taskId!, 'running');
+    await dispatchFixture(created.taskId!, 'running');
 
     const recovered = await service.tick(graph.goal.id);
 
@@ -2237,7 +2266,7 @@ describe('GoalService', () => {
     });
     const created = await service.tick(graph.goal.id);
     await taskModel.update(created.taskId!, { totalTopics: 1 });
-    await taskModel.updateStatus(created.taskId!, 'running');
+    await dispatchFixture(created.taskId!, 'running');
     await new AgentOperationModel(serverDB, userId).recordStart({
       operationId: 'op-stale-cost',
       taskId: created.taskId,
@@ -2266,14 +2295,13 @@ describe('GoalService', () => {
     const settleSpy = vi.spyOn(AgentOperationModel.prototype, 'settleStaleRunning');
 
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
       title: 'Wait for topic persistence',
       tasks: ['Run a durable experiment'],
     });
     const created = await service.tick(graph.goal.id);
-    await taskModel.updateStatus(created.taskId!, 'running');
+    await dispatchFixture(created.taskId!, 'running');
 
     const waiting = await service.tick(graph.goal.id);
 
@@ -2287,14 +2315,13 @@ describe('GoalService', () => {
 
   it('starts a ready sibling Task even when a running Task row is older than the operation lease', async () => {
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
       title: 'Keep parallel work moving',
       tasks: ['Long-running experiment', 'Independent analysis'],
     });
     const running = await service.tick(graph.goal.id);
-    await taskModel.updateStatus(running.taskId!, 'running');
+    await dispatchFixture(running.taskId!, 'running');
     await serverDB
       .update(tasks)
       .set({ updatedAt: new Date('2026-01-01T00:00:00.000Z') })
@@ -2315,7 +2342,6 @@ describe('GoalService', () => {
     );
 
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const operationModel = new AgentOperationModel(serverDB, userId);
     const graph = await service.create({
       config: { recovery: { operationLeaseTimeoutMs: 60_000 } },
@@ -2323,7 +2349,7 @@ describe('GoalService', () => {
       tasks: ['Run a durable experiment'],
     });
     const created = await service.tick(graph.goal.id);
-    await taskModel.updateStatus(created.taskId!, 'running');
+    await dispatchFixture(created.taskId!, 'running');
     await operationModel.recordStart({ operationId: 'op-atomic-recovery' });
     await serverDB
       .update(agentOperations)
@@ -2333,7 +2359,7 @@ describe('GoalService', () => {
     await expect(service.tick(graph.goal.id)).rejects.toThrow('topic update failed');
 
     expect((await operationModel.findById('op-atomic-recovery'))?.status).toBe('running');
-    expect((await taskModel.findById(created.taskId!))?.status).toBe('running');
+    expect(await derivedStatus(created.taskId!)).toBe('running');
   });
 
   it('resumes automatic recovery after the atomic bookkeeping transaction committed', async () => {
@@ -2471,7 +2497,6 @@ describe('dispatch readiness recheck', () => {
       .spyOn(TaskRunnerService.prototype, 'runTask')
       .mockImplementation(async ({ taskId }) => ({ taskId }) as never);
     const service = new GoalService(serverDB, userId);
-    const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({
       tasks: ['Ship the report'],
       title: 'Patch-raced dispatch',
@@ -2499,7 +2524,7 @@ describe('dispatch readiness recheck', () => {
       expect(blocked).toMatchObject({ nodeId, outcome: 'waiting_external' });
       expect(blocked.message).toContain('blocked');
       expect(runSpy).not.toHaveBeenCalled();
-      expect((await taskModel.findById(created.taskId!))!.status).toBe('backlog');
+      expect(await derivedStatus(created.taskId!)).toBe('backlog');
     } finally {
       graphEdgeInjection.current = null;
     }

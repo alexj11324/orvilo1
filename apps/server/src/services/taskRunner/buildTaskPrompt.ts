@@ -235,6 +235,13 @@ export async function buildTaskPrompt(
       .catch((): WorkspaceData => ({ nodeMap: {}, tree: [] })),
   ]);
 
+  // Prompt-facing lifecycle labels derive from canonical workflow/execution
+  // state — the retired `tasks.status` column is never read.
+  const statusById = await taskModel.derivedStatusByIds([
+    task.id,
+    ...subtasks.map((s: { id: string }) => s.id),
+  ]);
+
   // Derive fileIds from the persisted Lexical state. editor_data is the
   // single source of truth — fileId is recovered from the URL in each node
   // (proxy URL form via regex; pre-signed dev URLs via files.url lookup).
@@ -285,7 +292,7 @@ export async function buildTaskPrompt(
   const depTaskIds = [...new Set(liveDependencies.map((d: any) => d.dependsOnId))];
   const depTasks = await taskModel.findByIds(depTaskIds);
   const depIdToIdentifier = new Map(depTasks.map((t: any) => [t.id, t.identifier]));
-  const depStatusById = new Map(depTasks.map((t: any) => [t.id, t.status]));
+  const depStatusById = new Map(Object.entries(await taskModel.derivedStatusByIds(depTaskIds)));
   const depGenerationById = new Map(
     depTasks.map((t: any) => [t.id, t.executionGeneration as number | undefined]),
   );
@@ -353,6 +360,7 @@ export async function buildTaskPrompt(
         siblingIds.length > 0
           ? await taskModel.getDependenciesByTaskIds(siblingIds).catch(() => [])
           : [];
+      const siblingStatusById = await taskModel.derivedStatusByIds(siblingIds);
       const siblingIdToIdentifier = new Map(siblings.map((s: any) => [s.id, s.identifier]));
       const siblingDepMap = new Map<string, string>();
       for (const dep of siblingDeps as any[]) {
@@ -369,7 +377,7 @@ export async function buildTaskPrompt(
           identifier: s.identifier,
           name: s.name,
           priority: s.priority,
-          status: s.status,
+          status: siblingStatusById[s.id] ?? 'backlog',
         })),
       };
     }
@@ -464,7 +472,7 @@ export async function buildTaskPrompt(
         id: s.id,
         identifier: s.identifier,
         name: s.name,
-        status: s.status,
+        status: statusById[s.id] ?? 'backlog',
       })),
       topics: (topics as any[]).map((t) => {
         const handoff = t.handoff as TaskTopicHandoff | null;
@@ -503,7 +511,7 @@ export async function buildTaskPrompt(
       review: taskModel.getReviewConfig(task) as any,
       schedulePattern: task.schedulePattern,
       scheduleTimezone: task.scheduleTimezone,
-      status: task.status,
+      status: statusById[task.id] ?? 'backlog',
       verify: verifyEnabled
         ? {
             criteria: verifyCriteria,

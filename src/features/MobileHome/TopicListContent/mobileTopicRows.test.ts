@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { MOBILE_TOPIC_STATUSES, type MobileTopicInput, toMobileTopicRows } from './mobileTopicRows';
+import type { TopicListItem, TopicListPage } from '@/services/topic';
+
+import {
+  flattenTopicPages,
+  MOBILE_TOPIC_STATUSES,
+  type MobileTopicInput,
+  toMobileTopicRows,
+} from './mobileTopicRows';
 
 const topic = (overrides: Partial<MobileTopicInput> = {}): MobileTopicInput => ({
   agentId: 'agent-1',
@@ -64,5 +71,51 @@ describe('MOBILE_TOPIC_STATUSES', () => {
     expect(MOBILE_TOPIC_STATUSES).toContain('unread');
     expect(MOBILE_TOPIC_STATUSES).toContain('active');
     expect(MOBILE_TOPIC_STATUSES).toContain('completed');
+  });
+});
+
+const feedItem = (id: string): TopicListItem => ({ id }) as TopicListItem;
+
+const feedPage = (ids: string[], nextCursor: string | null): TopicListPage => ({
+  items: ids.map(feedItem),
+  nextCursor,
+});
+
+describe('flattenTopicPages', () => {
+  it('concatenates pages in order', () => {
+    const items = flattenTopicPages([
+      feedPage(['a', 'b'], 'cursor-1'),
+      feedPage(['c', 'd'], 'cursor-2'),
+    ]);
+
+    expect(items.map((item) => item.id)).toEqual(['a', 'b', 'c', 'd']);
+  });
+
+  it('dedupes a topic repeated across a page boundary — bumped rows can appear twice', () => {
+    // Cursor-overlap regression: a conversation bumped between the two fetches
+    // is the tail of the fresh page AND the head of the older page. The feed
+    // must still paint one row, and keep the newer page's copy.
+    const staleCopy = { id: 'b', title: 'old snapshot' } as TopicListItem;
+    const items = flattenTopicPages([
+      {
+        items: [feedItem('a'), { id: 'b', title: 'fresh snapshot' } as TopicListItem],
+        nextCursor: 'c1',
+      },
+      { items: [staleCopy, feedItem('c')], nextCursor: null },
+    ]);
+
+    expect(items.map((item) => item.id)).toEqual(['a', 'b', 'c']);
+    expect(items[1].title).toBe('fresh snapshot');
+  });
+
+  it('an empty final page (cursor past the list end) contributes nothing', () => {
+    const items = flattenTopicPages([feedPage(['a', 'b'], 'cursor-1'), feedPage([], null)]);
+
+    expect(items.map((item) => item.id)).toEqual(['a', 'b']);
+  });
+
+  it('returns an empty list for no pages / undefined page slots', () => {
+    expect(flattenTopicPages([])).toEqual([]);
+    expect(flattenTopicPages([undefined, feedPage(['a'], null)])).toHaveLength(1);
   });
 });

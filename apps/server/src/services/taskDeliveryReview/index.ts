@@ -9,6 +9,7 @@ import { and, asc, eq, isNull, or, sql } from 'drizzle-orm';
 
 import { AgentModel } from '@/database/models/agent';
 import { TaskModel } from '@/database/models/task';
+import { hasActiveExecution, isExecutionParked } from '@/database/models/taskExecutionSql';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
@@ -409,8 +410,11 @@ const ensureReviewTaskPaused = async (
 ): Promise<boolean> => {
   // A paused task can still have a live topic while cancellation settles.
   if (rows.some((row) => row.status === 'running')) return false;
-  if (task.status === 'paused') return true;
-  if (task.status !== 'running') return false;
+  const derivedStatus = (
+    await new TaskModel(db, ownerId, workspaceId).derivedStatusByIds([task.id])
+  )[task.id];
+  if (derivedStatus === 'paused') return true;
+  if (derivedStatus !== 'running') return false;
   await new TaskService(db, ownerId, workspaceId).updateStatus({
     id: task.id,
     status: 'paused',
@@ -435,7 +439,7 @@ export const runTaskDeliveryReviewSweep = async (
 ): Promise<TaskDeliveryReviewSweepResult> => {
   const filters = [
     or(isNull(tasks.isDeleted), eq(tasks.isDeleted, false)),
-    or(eq(tasks.status, 'running'), eq(tasks.status, 'paused')),
+    or(hasActiveExecution, isExecutionParked),
   ];
   if (options.createdByUserId) {
     filters.push(eq(tasks.createdByUserId, options.createdByUserId));
@@ -737,11 +741,14 @@ export const runTaskDeliveryReviewSweep = async (
       // read at scan time may be stale — a restart, cancellation or deletion
       // since then means this snapshot no longer owns the outcome.
       const fresh = await taskModel.findById(task.id);
+      const freshStatus = fresh
+        ? (await taskModel.derivedStatusByIds([task.id]))[task.id]
+        : undefined;
       if (
         !fresh ||
         fresh.isDeleted === true ||
         fresh.executionGeneration !== row.executionGeneration ||
-        (fresh.status !== 'paused' && fresh.status !== 'running')
+        (freshStatus !== 'paused' && freshStatus !== 'running')
       ) {
         result.waiting.push(task.identifier);
         continue;

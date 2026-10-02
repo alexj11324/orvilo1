@@ -40,7 +40,10 @@ import { TaskModel, TaskRevisionConflictError } from '@/database/models/task';
 import { TaskDependencyError } from '@/database/models/taskDependency';
 import { TaskSubscriptionModel } from '@/database/models/taskSubscription';
 import { TeamModel } from '@/database/models/team';
-import { resolveWorkflowMove } from '@/database/models/workflowMove';
+import {
+  resolveWorkflowMove,
+  workflowCategoryForLegacyStatus,
+} from '@/database/models/workflowMove';
 import {
   applyWorkQueryLayout,
   myWorkQueryForMode,
@@ -932,6 +935,22 @@ export const workAttentionRouter = router({
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unknown status column' });
       }
 
+      // Status-board drops carry the same Issue move when the column means
+      // done/canceled — resolve them through the workflow path too. 'paused'
+      // and 'failed' stay park writes (Issue untouched); 'running' and
+      // 'scheduled' are execution outcomes a board move cannot synthesize.
+      const statusCategory =
+        input.groupBy === 'status' ? workflowCategoryForLegacyStatus(input.targetKey) : undefined;
+      if (
+        input.groupBy === 'status' &&
+        (input.targetKey === 'running' || input.targetKey === 'scheduled')
+      ) {
+        throw new TRPCError({
+          code: 'BAD_REQUEST',
+          message: 'Execution state cannot be set by a board move',
+        });
+      }
+
       let patch: {
         status?: TaskStatus;
         workflowCategory?: TaskWorkflowCategory;
@@ -940,11 +959,17 @@ export const workAttentionRouter = router({
       } =
         input.groupBy === 'workflowCategory'
           ? { workflowCategory: input.targetKey as TaskWorkflowCategory }
-          : { status: input.targetKey as TaskStatus };
+          : statusCategory
+            ? { workflowCategory: statusCategory }
+            : { status: input.targetKey as TaskStatus };
 
-      if (input.groupBy === 'workflowCategory' && task.teamId && ctx.teamModel) {
+      if (
+        (input.groupBy === 'workflowCategory' || statusCategory !== undefined) &&
+        task.teamId &&
+        ctx.teamModel
+      ) {
         const resolved = resolveWorkflowMove({
-          category: input.targetKey as TaskWorkflowCategory,
+          category: statusCategory ?? (input.targetKey as TaskWorkflowCategory),
           states: await ctx.teamModel.listWorkflowStates(task.teamId),
           targetWorkflowStateRefId: input.targetWorkflowStateRefId,
         });

@@ -92,10 +92,8 @@ const createRunningDispatch = async (taskId: string, seq: number, agentId = 'age
 describe('running-task assignee guard', () => {
   it('rejects an assignee change on a running task outside a transfer protocol', async () => {
     const taskModel = new TaskModel(db, userId, workspaceId);
-    const task = await createTask('OWN-1', 101, {
-      assigneeAgentId: 'agent-a',
-      status: 'running',
-    });
+    const task = await createTask('OWN-1', 101, { assigneeAgentId: 'agent-a' });
+    await createRunningDispatch(task.id, 101, 'agent-a');
 
     await expect(
       taskModel.updateWithLog(task.id, { assigneeAgentId: 'agent-b' }, { userId }),
@@ -104,8 +102,10 @@ describe('running-task assignee guard', () => {
       taskModel.updateWithLog(task.id, { assigneeAgentId: null }, { userId }),
     ).rejects.toBeInstanceOf(TaskHandoffRequiredError);
 
-    const unchanged = await db.select().from(tasks).where(eq(tasks.id, task.id));
-    expect(unchanged[0]).toMatchObject({ assigneeAgentId: 'agent-a', status: 'running' });
+    await expect(taskModel.findById(task.id)).resolves.toMatchObject({
+      assigneeAgentId: 'agent-a',
+      status: 'running',
+    });
   });
 
   it('still permits assignee edits on non-running tasks and transfer-marked writes', async () => {
@@ -115,10 +115,8 @@ describe('running-task assignee guard', () => {
       taskModel.updateWithLog(idle.id, { assigneeAgentId: 'agent-b' }, { userId }),
     ).resolves.toMatchObject({ assigneeAgentId: 'agent-b' });
 
-    const running = await createTask('OWN-3', 103, {
-      assigneeAgentId: 'agent-a',
-      status: 'running',
-    });
+    const running = await createTask('OWN-3', 103, { assigneeAgentId: 'agent-a' });
+    await createRunningDispatch(running.id, 103, 'agent-a');
     // Re-saving the same assignee is not a transfer and stays allowed.
     await expect(
       taskModel.updateWithLog(running.id, { assigneeAgentId: 'agent-a' }, { userId }),
@@ -166,10 +164,8 @@ describe('update() model-level assignee invariant', () => {
     // F3 regression: service callers (Linear inbound, goal moves) reach
     // update() directly — the invariant must live below updateWithLog.
     const taskModel = new TaskModel(db, userId, workspaceId);
-    const task = await createTask('OWN-10', 110, {
-      assigneeAgentId: 'agent-a',
-      status: 'running',
-    });
+    const task = await createTask('OWN-10', 110, { assigneeAgentId: 'agent-a' });
+    await createRunningDispatch(task.id, 110, 'agent-a');
 
     await expect(taskModel.update(task.id, { assigneeAgentId: 'agent-b' })).rejects.toBeInstanceOf(
       TaskHandoffRequiredError,
@@ -178,16 +174,16 @@ describe('update() model-level assignee invariant', () => {
       TaskHandoffRequiredError,
     );
 
-    const unchanged = await db.select().from(tasks).where(eq(tasks.id, task.id));
-    expect(unchanged[0]).toMatchObject({ assigneeAgentId: 'agent-a', status: 'running' });
+    await expect(taskModel.findById(task.id)).resolves.toMatchObject({
+      assigneeAgentId: 'agent-a',
+      status: 'running',
+    });
   });
 
   it('permits same-value, non-running, transfer-marked and park+reassign writes', async () => {
     const taskModel = new TaskModel(db, userId, workspaceId);
-    const running = await createTask('OWN-11', 111, {
-      assigneeAgentId: 'agent-a',
-      status: 'running',
-    });
+    const running = await createTask('OWN-11', 111, { assigneeAgentId: 'agent-a' });
+    await createRunningDispatch(running.id, 111, 'agent-a');
 
     // Re-saving the incumbent is a no-op, not a transfer.
     await expect(
@@ -198,10 +194,8 @@ describe('update() model-level assignee invariant', () => {
       taskModel.update(running.id, { assigneeAgentId: 'agent-b' }, { executionTransfer: true }),
     ).resolves.toMatchObject({ assigneeAgentId: 'agent-b', status: 'running' });
 
-    const runningAgain = await createTask('OWN-12', 112, {
-      assigneeAgentId: 'agent-a',
-      status: 'running',
-    });
+    const runningAgain = await createTask('OWN-12', 112, { assigneeAgentId: 'agent-a' });
+    await createRunningDispatch(runningAgain.id, 112, 'agent-a');
     // Parking and reassigning in one statement never reads back as running+B.
     await expect(
       taskModel.update(runningAgain.id, { assigneeAgentId: 'agent-b', status: 'paused' }),
@@ -216,7 +210,7 @@ describe('update() model-level assignee invariant', () => {
 
 describe('bounded cancellation', () => {
   it('stamps the cancel window on requestStop and counts each claim', async () => {
-    const task = await createTask('OWN-5', 105, { status: 'running' });
+    const task = await createTask('OWN-5', 105);
     const { dispatch, model } = await createRunningDispatch(task.id, 105);
 
     const stopping = await model.requestStop({
@@ -253,7 +247,7 @@ describe('bounded cancellation', () => {
   });
 
   it('abandons a cancel_requested dispatch and parks its running task', async () => {
-    const task = await createTask('OWN-6', 106, { status: 'running' });
+    const task = await createTask('OWN-6', 106);
     const { dispatch, model } = await createRunningDispatch(task.id, 106);
     await db.insert(topics).values({ id: 'topic-own-6', userId });
     await db.insert(taskTopics).values({
@@ -286,9 +280,10 @@ describe('bounded cancellation', () => {
     });
     expect(abandoned?.dispatch.phase).toBe('abandoned');
 
-    await expect(db.select().from(tasks).where(eq(tasks.id, task.id))).resolves.toMatchObject([
-      { status: 'paused' },
-    ]);
+    // Parked lands on the canonical marker; the derived label reads 'paused'.
+    await expect(new TaskModel(db, userId, workspaceId).findById(task.id)).resolves.toMatchObject({
+      status: 'paused',
+    });
     await expect(
       db.select().from(taskTopics).where(eq(taskTopics.dispatchId, dispatch.id)),
     ).resolves.toMatchObject([{ runState: 'canceled', status: 'abandoned' }]);
@@ -309,7 +304,7 @@ describe('bounded cancellation', () => {
 
 describe('execution-ownership scanners', () => {
   it('findActiveByTaskId returns the live dispatch and skips terminal rows', async () => {
-    const task = await createTask('OWN-7', 107, { status: 'running' });
+    const task = await createTask('OWN-7', 107);
     const model = new TaskDispatchModel(db, workspaceId);
     await expect(model.findActiveByTaskId(task.id)).resolves.toBeUndefined();
 
@@ -321,9 +316,9 @@ describe('execution-ownership scanners', () => {
   });
 
   it('requestStopForTasks fences every active dispatch behind the given tasks', async () => {
-    const first = await createTask('OWN-8', 108, { status: 'running' });
-    const second = await createTask('OWN-9', 109, { status: 'running' });
-    const settledTask = await createTask('OWN-10', 110, { status: 'completed' });
+    const first = await createTask('OWN-8', 108);
+    const second = await createTask('OWN-9', 109);
+    const settledTask = await createTask('OWN-10', 110, { workflowCategory: 'done' });
     const firstRun = await createRunningDispatch(first.id, 108);
     const secondRun = await createRunningDispatch(second.id, 109);
     await db.insert(taskDispatches).values({

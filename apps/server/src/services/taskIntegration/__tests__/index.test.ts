@@ -2349,7 +2349,7 @@ describe('TaskIntegrationService', () => {
           : [asTopic(seedRecord())],
       );
       mockTaskModel.findById.mockImplementation(async (taskId: string) =>
-        taskId === 'task_up' ? baseTask({ id: 'task_up', status: 'completed' }) : baseTask(),
+        taskId === 'task_up' ? baseTask({ id: 'task_up', workflowCategory: 'done' }) : baseTask(),
       );
 
       const outcome = await service.integrateOnComplete({
@@ -2376,7 +2376,7 @@ describe('TaskIntegrationService', () => {
       // Upstream's live generation moved past the recorded delivery.
       mockTaskModel.findById.mockImplementation(async (taskId: string) =>
         taskId === 'task_up'
-          ? baseTask({ executionGeneration: 2, id: 'task_up', status: 'completed' })
+          ? baseTask({ executionGeneration: 2, id: 'task_up', workflowCategory: 'done' })
           : baseTask(),
       );
 
@@ -2395,7 +2395,7 @@ describe('TaskIntegrationService', () => {
         taskId === 'task_up' ? [upstreamTopic()] : [asTopic(seedRecord())],
       );
       mockTaskModel.findById.mockImplementation(async (taskId: string) =>
-        taskId === 'task_up' ? baseTask({ id: 'task_up', status: 'completed' }) : baseTask(),
+        taskId === 'task_up' ? baseTask({ id: 'task_up', workflowCategory: 'done' }) : baseTask(),
       );
       vi.mocked(deviceGateway.mergeGitBranch).mockResolvedValue({
         sha: 'merged-sha',

@@ -1,4 +1,5 @@
 import type { DurableReceipt } from '@orvilo/agent-execution';
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { and, eq } from 'drizzle-orm';
 
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
@@ -60,8 +61,13 @@ export class CanonicalVerifyCompletion {
       .where(and(eq(tasks.id, binding.taskId), eq(tasks.workspaceId, binding.workspaceId)))
       .limit(1);
     if (!task) return deny('task_missing_after_reconciliation');
-    // Recurring tasks may rearm as scheduled; a void settlement return is not done.
-    return { state: 'observed', taskStatus: task.status, completed: task.status === 'completed' };
+    // Recurring tasks may rearm as scheduled; a void settlement return is not
+    // done. `tasks.status` is retired — Issue Status is `workflowCategory`.
+    return {
+      completed: task.workflowCategory === 'done',
+      state: 'observed',
+      taskStatus: deriveLegacyTaskStatus(task),
+    };
   }
   /** Runs only inside the actual TaskModel status CAS transaction, never around settlement. */
   async authorizeAtCommit(

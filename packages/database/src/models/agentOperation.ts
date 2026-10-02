@@ -3,9 +3,10 @@ import {
   type AgentOperationLaunchStatus,
   type AgentOperationStatus,
   LIVE_AGENT_OPERATION_LAUNCH_STATUSES,
+  TERMINAL_AGENT_OPERATION_STATUSES,
   type VerifyRunStatus,
 } from '@orvilo/types';
-import { and, desc, eq, gte, inArray, isNotNull, isNull, or, sql } from 'drizzle-orm';
+import { and, desc, eq, gte, inArray, isNotNull, isNull, notInArray, or, sql } from 'drizzle-orm';
 
 import { today } from '@/utils/time';
 
@@ -392,6 +393,26 @@ export class AgentOperationModel {
       .returning({ id: agentOperations.id });
 
     return Boolean(row);
+  }
+
+  /**
+   * Whether a non-terminal child operation still produces for a parked parent
+   * (`callSubAgent` children). A `waiting_for_async_tool` parent with no live
+   * child has no producer left to fulfil its barrier — the wait is orphaned.
+   */
+  async hasLiveChildOperation(parentOperationId: string): Promise<boolean> {
+    const [child] = await this.db
+      .select({ id: agentOperations.id })
+      .from(agentOperations)
+      .where(
+        and(
+          eq(agentOperations.parentOperationId, parentOperationId),
+          notInArray(agentOperations.status, [...TERMINAL_AGENT_OPERATION_STATUSES]),
+          this.ownership(),
+        ),
+      )
+      .limit(1);
+    return Boolean(child);
   }
 
   /**

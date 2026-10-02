@@ -87,6 +87,30 @@ every successful root task paused for review.
   category → `team_workflow_states` resolution the board move uses, including
   the multi-state ambiguity rule (settlement never guesses a state).
 
+### Dispatch recovery
+
+`taskDispatchRecovery` reconciles `task_dispatches` rows left in
+`provisioning`/`dispatched`/`running`/`outcome_unknown` past their lease. Its
+decisions key on the **execution's truth** — the `agent_operations` row and its
+producers — never on lease freshness alone:
+
+- Operation missing, identity-mismatched, or non-terminal in an unknown state →
+  `outcome_unknown` + bounded retry (`MAX_RECOVERY_ATTEMPTS`), then the abandon
+  path frees the dispatch slot.
+- `running` with a stale `updatedAt` → same bounded retry; a live producer
+  (`touchRunning`, generation-fenced) resets the bound because the writer is
+  provably alive.
+- `waiting_for_async_tool` parks legitimately quiet, so `updatedAt` cannot
+  stale it out. The reclaim signal is the awaited producer: a stale park with
+  **no live child operation** is an orphaned wait (`operation_orphaned_wait`)
+  and enters the bounded path — restoring `running` there would re-arm the
+  lease and reset the bound forever, pinning the slot behind a dead run.
+- `waiting_for_human` is a legitimate indefinite park (the producer is a
+  person) and is never staleness-gated.
+- Terminal operation → the row converges through the normal settle path
+  (`onTopicComplete` → `settleTaskExecution`), fenced by generation/revision/
+  operation identity — never a blind delete.
+
 ## Reader guidance
 
 - Issue Status: read `workflowCategory` (+ `workflowStateRefId` for the exact

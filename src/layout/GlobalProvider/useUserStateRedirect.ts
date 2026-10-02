@@ -15,6 +15,7 @@ const RESERVED_FIRST_SEGMENTS = new Set([
   'acceptance',
   'agent',
   'apps',
+  'chat',
   'desktop-onboarding',
   'devtools',
   'eval',

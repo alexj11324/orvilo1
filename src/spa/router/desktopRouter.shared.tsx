@@ -21,6 +21,7 @@ import {
   Suspense,
 } from 'react';
 import type { RouteObject } from 'react-router';
+import { Navigate, useParams } from 'react-router';
 
 import {
   BusinessDesktopRoutesWithMainLayout,
@@ -63,6 +64,7 @@ import {
   agentStatisticsRouteMeta,
 } from '@/routes/(main)/agent/features/routeMeta';
 import {
+  groupIndexRouteMeta,
   groupPermissionRouteMeta,
   groupProfileRouteMeta,
   groupRouteMeta,
@@ -88,6 +90,17 @@ import { SettingsTabs } from '@/store/global/initialState';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
 
 const LazyResourceCategorySkeleton = lazy(() => import('@/features/ResourceHome/Skeleton'));
+
+/**
+ * `/agent/:aid/profile` → `/settings/agents/:aid`. The profile surface moved
+ * under Settings → Agents (config exile); deep links and the sidebar agent
+ * switcher keep landing on it. `redirectElement` can't interpolate the `:aid`
+ * param, so this reads it explicitly.
+ */
+const AgentProfileRedirect = () => {
+  const { aid } = useParams();
+  return <Navigate replace to={`/settings/agents/${aid ?? ''}`} />;
+};
 
 export const ResourceCategorySkeleton = (props: RouteSkeletonProps) => (
   <Suspense fallback={null}>
@@ -237,10 +250,7 @@ export const sharedMainAreaChildren: RouteObject[] = [
             path: 'goal/:goalId',
           },
           {
-            element: dynamicElement(
-              () => import('@/routes/(main)/agent/profile'),
-              'Desktop > Chat > Profile',
-            ),
+            element: <AgentProfileRedirect />,
             handle: { meta: agentProfileRouteMeta },
             path: 'profile',
           },
@@ -383,7 +393,15 @@ export const sharedMainAreaChildren: RouteObject[] = [
   {
     children: [
       {
-        element: redirectElement('..'),
+        // `/group` is the top-level Groups destination: it resolves to the
+        // most recent group's conversation, or a create entry when the account
+        // has none.
+        element: dynamicElement(
+          () => import('@/routes/(main)/group/features/GroupIndex'),
+          'Desktop > Group > Index',
+          { preloadId: 'group' },
+        ),
+        handle: { meta: groupIndexRouteMeta },
         index: true,
       },
       {
@@ -872,6 +890,17 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
       {
         element: redirectElement('/settings/credential'),
         path: 'creds',
+      },
+      // Literal `agents` index — required because `/:workspaceSlug/agents`
+      // (plus its index-route bonus) out-scores `settings/:tab`, which would
+      // otherwise parse "settings" as a workspace slug and 404 the section.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/settings'),
+          'Desktop > Settings > Agents',
+        ),
+        handle: { meta: settingsRouteMeta, settingsTab: SettingsTabs.Agents },
+        path: 'agents',
       },
       // Other settings tabs
       {

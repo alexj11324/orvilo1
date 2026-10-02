@@ -759,7 +759,7 @@ describe('Topic Router Integration Tests', () => {
       expect(result.items.some((t) => t.title === 'Legacy Inbox Topic')).toBe(false);
     });
 
-    it('should not return sessionId/agentId in items for inbox queries', async () => {
+    it('should not return sessionId in items for inbox queries', async () => {
       const caller = topicRouter.createCaller(createTestContext(userId));
 
       // Insert inbox topic with agentId
@@ -778,9 +778,10 @@ describe('Topic Router Integration Tests', () => {
       });
 
       expect(result.items).toHaveLength(1);
-      // Verify internal fields are not exposed
+      // `sessionId` stays internal; `agentId` is part of the slim item shape
+      // (the sidebar renders the bound agent as topic-row metadata).
       expect('sessionId' in result.items[0]).toBe(false);
-      expect('agentId' in result.items[0]).toBe(false);
+      expect(result.items[0].agentId).toBe(inboxAgentId);
     });
   });
 

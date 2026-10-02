@@ -1,8 +1,8 @@
 'use client';
 
 import isEqual from 'fast-deep-equal';
-import { InfoIcon, PlayIcon } from 'lucide-react';
-import React, { memo, useCallback, useEffect, useMemo } from 'react';
+import { InfoIcon, PlayIcon, PlusIcon } from 'lucide-react';
+import React, { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 import urlJoin from 'url-join';
@@ -68,6 +68,15 @@ const MemberProfile = memo(() => {
     [config?.systemRole, config?.editorData],
   );
 
+  // The prompt canvas only mounts on demand — a member without instructions
+  // renders a compact affordance instead of a page-high empty editor.
+  const [contentRevealed, setContentRevealed] = useState(false);
+  const agentIdRef = useRef(agentId);
+  if (agentIdRef.current !== agentId) {
+    agentIdRef.current = agentId;
+    setContentRevealed(false);
+  }
+
   // Wrap updateAgentConfigById for saving editor content
   const updateContent = useCallback(
     async (payload: { content: string; editorData: Record<string, any> }) => {
@@ -93,6 +102,8 @@ const MemberProfile = memo(() => {
     if (!editor || !agentBuilderContentUpdate) return;
     if (agentBuilderContentUpdate.entityId !== agentId) return;
 
+    // The builder is writing the prompt — surface the canvas for it.
+    setContentRevealed(true);
     // Directly set the editor content
     editor.setDocument('markdown', agentBuilderContentUpdate.content);
 
@@ -138,19 +149,33 @@ const MemberProfile = memo(() => {
         </div>
       </div>
       <Separator />
-      {/* Main Content: Prompt Editor */}
-      <EditorCanvas
-        disabled={!canEdit}
-        editor={editor}
-        editorData={editorData}
-        entityId={agentId}
-        placeholder={
-          isSupervisor
-            ? t('group.profile.supervisorPlaceholder', { ns: 'chat' })
-            : t('settingAgent.prompt.placeholder')
-        }
-        onContentChange={onContentChange}
-      />
+      {/* Main Content: Prompt Editor — hidden until the member actually has
+          instructions or the user asks for them, so the column never renders a
+          large empty editor. */}
+      {config?.systemRole?.trim() || contentRevealed ? (
+        <EditorCanvas
+          disabled={!canEdit}
+          editor={editor}
+          editorData={editorData}
+          entityId={agentId}
+          placeholder={
+            isSupervisor
+              ? t('group.profile.supervisorPlaceholder', { ns: 'chat' })
+              : t('settingAgent.prompt.placeholder')
+          }
+          onContentChange={onContentChange}
+        />
+      ) : canEdit ? (
+        <Button
+          className="w-full justify-start"
+          style={{ borderStyle: 'dashed' }}
+          variant="outline"
+          onClick={() => setContentRevealed(true)}
+        >
+          <PlusIcon data-icon="inline-start" />
+          {t('group.profile.addInstructions', { ns: 'chat' })}
+        </Button>
+      ) : null}
     </>
   );
 });

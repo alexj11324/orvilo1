@@ -33,6 +33,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
         <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem
+              agentId={topic.agentId}
               fav={topic.favorite}
               id={topic.id}
               key={topic.id}

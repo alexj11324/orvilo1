@@ -119,6 +119,9 @@ export const SETTINGS_CAPABILITIES: Readonly<Record<SettingsTabs, SettingsCapabi
   // Settings that follow the user everywhere.
   [SettingsTabs.Profile]: { status: 'enabled' },
   [SettingsTabs.Appearance]: { status: 'enabled' },
+  // Per-agent configuration home — the workspace keeps config out of the work
+  // surface; Settings → Agents is where model/runtime/tools live.
+  [SettingsTabs.Agents]: { status: 'enabled' },
   // Hotkeys are a desktop concept; the mobile shell has nothing to bind.
   [SettingsTabs.Hotkey]: { gate: ({ mobile }) => !mobile, status: 'enabled' },
 

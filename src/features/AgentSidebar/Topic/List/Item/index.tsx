@@ -1,6 +1,6 @@
 import { PreviewCard } from '@base-ui/react/preview-card';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
-import type { ChatTopicMetadata, ChatTopicStatus } from '@orvilo/types';
+import { agentDisplayName, type ChatTopicMetadata, type ChatTopicStatus } from '@orvilo/types';
 import { formatElapsedClockTime } from '@orvilo/utils';
 import {
   getTopicMetadataWorkingDirectoryEffectivePath,
@@ -160,6 +160,12 @@ const RunningElapsedTime = memo<RunningElapsedTimeProps>(({ agentId, topicId }) 
 RunningElapsedTime.displayName = 'RunningElapsedTime';
 
 interface TopicItemProps {
+  /**
+   * Agent the topic is bound to (`ChatTopic.agentId`). Rendered as a weak
+   * second line only when it differs from the room's agent — cross-bound
+   * residue right after a handoff, or a group/mixed list entry.
+   */
+  agentId?: string | null;
   fav?: boolean;
   id?: string;
   metadata?: ChatTopicMetadata;
@@ -192,6 +198,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     id,
     title,
     fav,
+    agentId: topicAgentId,
     metadata,
     status,
     showWorkingDirectory,
@@ -305,6 +312,39 @@ const TopicItemRow = memo<TopicItemRowProps>(
         </div>
       </div>
     ) : undefined;
+
+    // Weak second line per the topic-centric model — the bound agent is
+    // metadata, not navigation, so it only earns a line when it differs from
+    // the room's agent (a topic already sits under its owner's list).
+    const boundAgentName = useAgentStore((s) =>
+      topicAgentId && topicAgentId !== s.activeAgentId
+        ? agentDisplayName(agentSelectors.getAgentMetaById(topicAgentId)(s), '')
+        : '',
+    );
+    const boundAgentNode = boundAgentName ? (
+      <div className="flex items-center gap-1.5" style={{ overflow: 'hidden' }}>
+        <span
+          aria-hidden
+          style={{
+            width: 5,
+            height: 5,
+            borderRadius: '50%',
+            background: cssVar.colorTextQuaternary,
+            flex: 'none',
+          }}
+        />
+        <div className="truncate text-[12px]" style={{ color: cssVar.colorTextDescription }}>
+          {boundAgentName}
+        </div>
+      </div>
+    ) : undefined;
+    const descriptionNode =
+      boundAgentNode || workingDirectoryNode ? (
+        <>
+          {boundAgentNode}
+          {workingDirectoryNode}
+        </>
+      ) : undefined;
 
     // Surface the unread dot right away during the masked tail instead of a
     // blank icon gap until markTopicUnread's persisted 'unread' lands. Skipped
@@ -502,7 +542,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
           draggable
           actions={() => <Actions fav={fav} id={id} status={status} title={title} />}
           active={isTopicActive}
-          description={workingDirectoryNode}
+          description={descriptionNode}
           href={href}
           icon={leadingIconNode}
           slots={{ titlePrefix: draftPrefix }}

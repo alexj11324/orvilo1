@@ -18,7 +18,6 @@ import {
   conversationSelectors,
   useConversationStore,
 } from '@/features/Conversation';
-import CopilotModelSelect from '@/features/PageEditor/Copilot/CopilotModelSelect';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
 
@@ -76,8 +75,6 @@ const Conversation = memo(() => {
     [handleAgentChange],
   );
 
-  const modelSelector = useMemo(() => <CopilotModelSelect />, []);
-
   return (
     <DragUploadZone style={{ flex: 1, height: '100%' }} onUploadFiles={handleUploadFiles}>
       <div className="flex h-full flex-1 flex-col" style={{ overflow: 'hidden' }}>
@@ -90,7 +87,6 @@ const Conversation = memo(() => {
           allowExpand={false}
           leftActions={EMPTY_LEFT_ACTIONS}
           leftContent={leftContent}
-          sendAreaPrefix={modelSelector}
           sendButtonProps={COMPACT_SEND_BUTTON_PROPS}
           showControlBar={false}
         />

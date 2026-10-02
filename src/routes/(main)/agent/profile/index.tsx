@@ -102,15 +102,18 @@ const AgentBuilderSlot = memo(() => {
   return <AgentBuilder />;
 });
 
-const AgentProfile: FC = () => {
+const AgentProfile: FC<{ agentId?: string }> = ({ agentId: agentIdProp }) => {
   const { aid } = useParams<{ aid: string }>();
+  // Embedded hosts (Settings → Agents) pass the id in since `:aid` only exists
+  // on the agent route — which now redirects here.
+  const agentId = agentIdProp ?? aid;
 
   return (
     <Suspense fallback={delayed(<ProfileSkeleton />)}>
       <ResourceConfigAccessGate
         loading={<ProfileSkeleton />}
-        redirectPath={`/agent/${aid ?? ''}`}
-        resourceId={aid}
+        redirectPath={agentIdProp ? '/settings/agents' : `/agent/${agentId ?? ''}`}
+        resourceId={agentId}
         resourceType="agent"
       >
         <ProfileProvider>

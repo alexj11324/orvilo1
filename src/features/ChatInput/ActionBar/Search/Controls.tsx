@@ -13,7 +13,6 @@ import { type SearchMode } from '@/types/search';
 import { useAgentId } from '../../hooks/useAgentId';
 import { useEffectiveModel } from '../../hooks/useEffectiveModel';
 import { useUpdateAgentConfig } from '../../hooks/useUpdateAgentConfig';
-import FCSearchModel from './FCSearchModel';
 import ModelBuiltinSearch from './ModelBuiltinSearch';
 
 const styles = createStaticStyles(({ css }) => ({
@@ -110,12 +109,9 @@ const Controls = memo(() => {
   const { allowed: canCreate } = usePermission('create_content');
 
   const { model, provider } = useEffectiveModel(agentId);
-  const [useModelBuiltinSearch, searchMode] = useAgentStore((s) => [
-    chatConfigByIdSelectors.getUseModelBuiltinSearchById(agentId)(s),
-    chatConfigByIdSelectors.getChatConfigById(agentId)(s).searchMode,
-  ]);
-
-  const supportFC = useAiInfraStore(aiModelSelectors.isModelSupportToolUse(model, provider));
+  const searchMode = useAgentStore(
+    (s) => chatConfigByIdSelectors.getChatConfigById(agentId)(s).searchMode,
+  );
   const isProviderHasBuiltinSearchConfig = useAiInfraStore(
     aiProviderSelectors.isProviderHasBuiltinSearchConfig(provider),
   );
@@ -124,9 +120,6 @@ const Controls = memo(() => {
   );
   const isModelBuiltinSearchInternal = useAiInfraStore(
     aiModelSelectors.isModelBuiltinSearchInternal(model, provider),
-  );
-  const modelBuiltinSearchImpl = useAiInfraStore(
-    aiModelSelectors.modelBuiltinSearchImpl(model, provider),
   );
 
   useEffect(() => {
@@ -168,20 +161,13 @@ const Controls = memo(() => {
     !isModelBuiltinSearchInternal &&
     (isModelHasBuiltinSearchConfig || isProviderHasBuiltinSearchConfig);
 
-  const showFCSearchModel =
-    !supportFC &&
-    (!modelBuiltinSearchImpl || (!isModelBuiltinSearchInternal && !useModelBuiltinSearch));
-
-  const showDivider = showModelBuiltinSearch || showFCSearchModel;
-
   return (
     <div className="flex flex-col gap-1">
       {options.map((option) => (
         <Item {...option} key={option.value} />
       ))}
-      {showDivider && <Separator style={{ margin: 0 }} />}
+      {showModelBuiltinSearch && <Separator style={{ margin: 0 }} />}
       {showModelBuiltinSearch && <ModelBuiltinSearch disabled={!canCreate} />}
-      {showFCSearchModel && <FCSearchModel disabled={!canCreate} />}
     </div>
   );
 });

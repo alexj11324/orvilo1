@@ -587,6 +587,7 @@ export class TopicModel {
               // to a union; the runtime shape is correct and the client casts
               // back to `ChatTopic[]` after TRPC serialization.
               .select({
+                agentId: topics.agentId,
                 completedAt: topics.completedAt,
                 createdAt: topics.createdAt,
                 favorite: topics.favorite,
@@ -665,6 +666,7 @@ export class TopicModel {
             this.db
               // See note on the group-branch select above re: `as any` cast.
               .select({
+                agentId: topics.agentId,
                 completedAt: topics.completedAt,
                 createdAt: topics.createdAt,
                 favorite: topics.favorite,

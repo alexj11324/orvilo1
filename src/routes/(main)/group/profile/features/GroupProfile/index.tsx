@@ -1,7 +1,7 @@
 'use client';
 
 import { useTheme } from 'antd-style';
-import { MoreHorizontalIcon, PlayIcon, UsersIcon } from 'lucide-react';
+import { MoreHorizontalIcon, PlayIcon, PlusIcon, UsersIcon } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
@@ -116,9 +116,13 @@ const GroupProfile = memo(() => {
   // when another member is editing; acquired implicitly on the first edit.
   const [edited, setEdited] = useState(false);
   const groupIdRef = useRef(groupId);
+  // The description canvas only mounts on demand — a fresh group renders a
+  // compact affordance instead of a page-high empty editor.
+  const [contentRevealed, setContentRevealed] = useState(false);
   if (groupIdRef.current !== groupId) {
     groupIdRef.current = groupId;
     setEdited(false);
+    setContentRevealed(false);
   }
   const lock = useEditLock({
     client: groupLockClient,
@@ -171,6 +175,8 @@ const GroupProfile = memo(() => {
     if (!editor || !agentBuilderContentUpdate || !groupId) return;
     if (agentBuilderContentUpdate.entityId !== groupId) return;
 
+    // The builder is writing the description — surface the canvas for it.
+    setContentRevealed(true);
     // Directly set the editor content
     editor.setDocument('markdown', agentBuilderContentUpdate.content);
 
@@ -239,20 +245,34 @@ const GroupProfile = memo(() => {
         </div>
       </div>
       <Separator />
-      {/* Group Content Editor */}
+      {/* Group Content Editor — hidden until the group actually has a
+          description or the user asks for one, so the column never renders a
+          large empty editor. */}
       <EditingIndicator
         holderId={lock.lockedByOther ? lock.holderId : null}
         pending={canEdit && lock.pending}
       />
-      <EditorCanvas
-        disabled={!canEdit}
-        editable={!lock.lockedByOther && !lock.pending}
-        editor={editor}
-        editorData={editorData}
-        entityId={groupId}
-        placeholder={t('group.profile.contentPlaceholder', { ns: 'chat' })}
-        onContentChange={onContentChange}
-      />
+      {currentGroup?.content?.trim() || contentRevealed ? (
+        <EditorCanvas
+          disabled={!canEdit}
+          editable={!lock.lockedByOther && !lock.pending}
+          editor={editor}
+          editorData={editorData}
+          entityId={groupId}
+          placeholder={t('group.profile.contentPlaceholder', { ns: 'chat' })}
+          onContentChange={onContentChange}
+        />
+      ) : canEdit ? (
+        <Button
+          className="w-full justify-start"
+          style={{ borderStyle: 'dashed', color: theme.colorTextSecondary }}
+          variant="outline"
+          onClick={() => setContentRevealed(true)}
+        >
+          <PlusIcon data-icon="inline-start" />
+          {t('group.profile.addInstructions', { ns: 'chat' })}
+        </Button>
+      ) : null}
     </>
   );
 });

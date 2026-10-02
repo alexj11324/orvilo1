@@ -59,6 +59,7 @@ vi.mock('@/services/topic', () => ({
     updateTopicTitle: vi.fn(),
     updateTopic: vi.fn(),
     batchRemoveTopics: vi.fn(),
+    batchMoveTopics: vi.fn(),
     getTopicDetail: vi.fn(),
     getTopics: vi.fn(),
     queryTopics: vi.fn(),
@@ -1986,6 +1987,98 @@ describe('topic action', () => {
           result.current.internal_updateTopic(topicId, { title: 'New' }),
         ).rejects.toThrow('rename failed');
       });
+    });
+  });
+  describe('rebindTopicAgent', () => {
+    const setupBoundTopic = (overrides: Partial<ChatTopic> = {}) => {
+      const agentId = 'agent-a';
+      const topicId = 'topic-1';
+      const key = topicMapKey({ agentId });
+      const topic: ChatTopic = {
+        agentId,
+        createdAt: Date.now(),
+        favorite: false,
+        id: topicId,
+        sessionId: agentId,
+        title: 'Topic',
+        updatedAt: Date.now(),
+        ...overrides,
+      };
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [key]: {
+              currentPage: 0,
+              hasMore: false,
+              isExpandingPageSize: false,
+              isLoadingMore: false,
+              items: [topic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+
+      return { topicId };
+    };
+
+    it('is a no-op when the topic already runs under the target agent', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      const batchMoveMock = vi.spyOn(topicService, 'batchMoveTopics');
+      const updateTopicMetadataMock = vi.spyOn(topicService, 'updateTopicMetadata');
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-a');
+      });
+
+      expect(batchMoveMock).not.toHaveBeenCalled();
+      expect(updateTopicMetadataMock).not.toHaveBeenCalled();
+    });
+
+    it('rebinds the topic via the move mutation and appends a handoff entry', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      vi.spyOn(topicService, 'batchMoveTopics').mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      const updateTopicMetadataMock = vi
+        .spyOn(topicService, 'updateTopicMetadata')
+        .mockResolvedValue([]);
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-b');
+      });
+
+      // Only the move mutation writes `topics.agent_id` and re-parents the
+      // topic's messages — plain updateTopic cannot persist the rebind.
+      expect(topicService.batchMoveTopics).toHaveBeenCalledWith([topicId], 'agent-b');
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0],
+      ).toMatchObject({ agentId: 'agent-b' });
+      expect(updateTopicMetadataMock).toHaveBeenCalledWith(topicId, {
+        agentHandoffs: [expect.objectContaining({ fromAgentId: 'agent-a', toAgentId: 'agent-b' })],
+      });
+    });
+
+    it('still completes the switch when the handoff metadata write fails', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const { topicId } = setupBoundTopic();
+      vi.spyOn(topicService, 'batchMoveTopics').mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      vi.spyOn(topicService, 'updateTopicMetadata').mockRejectedValue(
+        new Error('metadata write failed'),
+      );
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-b');
+      });
+
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0],
+      ).toMatchObject({ agentId: 'agent-b' });
     });
   });
   describe('cleanupStaleRunningTopics', () => {

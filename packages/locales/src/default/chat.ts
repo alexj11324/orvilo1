@@ -81,6 +81,7 @@ export default {
   'agentDocument.emptyTitle': 'No document open',
   'agentDocument.linkCopied': 'Link copied',
   'agentDocument.openAsPage': 'Open as full page',
+  'agentHandoffMarker': '── Agent changed to {{name}} ──',
   'agentNotFound.desc':
     'This agent does not exist or is no longer accessible — it may have been deleted or set to private by its owner.',
   'permission.configAccess.agentChatOnly':
@@ -120,6 +121,9 @@ export default {
   'agentSignal.receipts.skill.detail': 'Self-refined how this agent handles similar requests',
   'agentSignal.receipts.skill.title': 'Auto-learned a new skill',
   'agents': 'Agents',
+  'agentSwitchConfirm': '{{name}} will continue this conversation with the existing context.',
+  'agentSwitchConfirmAction': 'Switch to {{name}}',
+  'agentSwitchConfirmTitle': 'Switch agent?',
   'artifact.generating': 'Generating',
   'artifact.inThread':
     'Cannot view in subtopic, please switch to the main conversation area to open',
@@ -354,8 +358,11 @@ export default {
     'When enabled, web links will be automatically parsed to retrieve the actual webpage context content',
   'extendParams.urlContext.title': 'Extract Webpage Link Content',
   'group.desc': 'Move a task forward with multiple Agents in one shared space.',
+  'group.emptyDescription': 'A room where agents and people work together.',
+  'group.emptyTitle': 'Start a group chat',
   'group.memberTooltip': 'There are {{count}} members in the group',
   'group.orchestratorThinking': 'Orchestrator is thinking...',
+  'group.profile.addInstructions': 'Add instructions',
   'group.profile.addMember.addExisting': 'Add existing agent',
   'group.profile.addMember.createNew': 'New member',
   'group.profile.addMember.newMemberTitle': 'New member',
@@ -1079,6 +1086,7 @@ export default {
   'newPlatformAgent': 'Connect External Agents',
   'newPlatformAgentDesc': 'Connect Claude Code, OpenClaw, and other agents',
   'newGroupChat': 'Create Group',
+  'newGroupChatFromDescription': 'Generate from a description',
   'agent.publishToWorkspace': 'Publish to Workspace',
   'agent.publishToWorkspaceErrorFixedPrivateDevice':
     'Publish the fixed device to the workspace, or let members choose a device, before publishing this Agent.',

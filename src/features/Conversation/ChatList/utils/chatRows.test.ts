@@ -73,4 +73,44 @@ describe('buildChatRows', () => {
 
     expect(rows.map((row) => row.id)).toEqual(['u1', 'g1', 'u2', 'g2']);
   });
+
+  it('interleaves an agent-handoff marker before the first newer message', () => {
+    const rows = buildChatRows(
+      [
+        { ...msg('u1', 'user'), createdAt: 1000 },
+        { ...msg('g1', 'assistantGroup'), createdAt: 2000 },
+        { ...msg('u2', 'user'), createdAt: 3000 },
+      ],
+      [{ at: new Date(2500).toISOString(), fromAgentId: 'a', toAgentId: 'b' }],
+    );
+
+    expect(rows).toEqual([
+      { id: 'u1' },
+      { id: 'g1' },
+      {
+        id: `agent-handoff-${new Date(2500).toISOString()}-b`,
+        marker: { kind: 'agentHandoff', toAgentId: 'b' },
+      },
+      { id: 'u2' },
+    ]);
+  });
+
+  it('appends a trailing handoff marker and sorts out-of-order handoffs', () => {
+    const h1 = { at: new Date(500).toISOString(), fromAgentId: 'a', toAgentId: 'b' };
+    const h2 = { at: new Date(4000).toISOString(), fromAgentId: 'b', toAgentId: 'c' };
+
+    const rows = buildChatRows([{ ...msg('u1', 'user'), createdAt: 1000 }], [h2, h1]);
+
+    expect(rows).toEqual([
+      {
+        id: `agent-handoff-${h1.at}-b`,
+        marker: { kind: 'agentHandoff', toAgentId: 'b' },
+      },
+      { id: 'u1' },
+      {
+        id: `agent-handoff-${h2.at}-c`,
+        marker: { kind: 'agentHandoff', toAgentId: 'c' },
+      },
+    ]);
+  });
 });

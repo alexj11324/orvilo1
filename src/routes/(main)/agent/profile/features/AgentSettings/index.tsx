@@ -2,8 +2,7 @@
 
 import { createModal } from '@/components/Modal';
 import { type ModalInstance } from '@/components/Modal';
-
-import Content from './Content';
+import Content from '@/features/AgentSetting/Content';
 
 export const openAgentSettingsModal = (): ModalInstance =>
   createModal({

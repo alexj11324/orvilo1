@@ -17,10 +17,8 @@ export const useOpenChatSettings = (tab: ChatSettingsTabs = ChatSettingsTabs.Ope
     if (isMobile)
       return () => navigate(`/agent/${activeAgentId}/settings?showMobileWorkspace=true`);
 
-    return () => {
-      void import('@/routes/(main)/agent/profile/features/AgentSettings').then((m) =>
-        m.openAgentSettingsModal(),
-      );
-    };
+    // Settings → Agents is the per-agent config home — "Open Agent settings"
+    // lands on the agent's settings page rather than a work-surface modal.
+    return () => navigate(`/settings/agents/${activeAgentId}`);
   }, [activeAgentId, navigate, location.pathname, tab, isMobile]);
 };

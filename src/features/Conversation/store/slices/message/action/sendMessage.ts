@@ -3,6 +3,7 @@ import { type ConversationContext, type SendMessageParams } from '@orvilo/types'
 import { useChatStore } from '@/store/chat';
 import { isLocalOnlyMessage } from '@/store/chat/utils/localMessages';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { useGlobalStore } from '@/store/global';
 
 import { type Store as ConversationStore } from '../../../action';
 
@@ -87,6 +88,17 @@ export const sendMessage = (
       ...(messages ? { messages } : undefined),
       onTopicCreated: hooks.onTopicCreated,
     });
+
+    // Topic-centric model: the agent a send ran under becomes the default for
+    // the next new topic (`lastUsedAgentId`), and a composer pick that drove
+    // this send is consumed with it. Agent contexts only — a group send would
+    // otherwise pin the supervisor as the personal default.
+    if (targetContext.agentId && !targetContext.groupId) {
+      useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: targetContext.agentId });
+      if (useChatStore.getState().composerAgentId) {
+        useChatStore.setState({ composerAgentId: undefined }, false, 'composerAgent/consumed');
+      }
+    }
 
     // ===== Hook: onAfterMessageCreate =====
     // Called after messages are created but before AI response is complete

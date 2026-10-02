@@ -34,6 +34,12 @@ export interface ChatTopicState {
    * whether all topics drawer is open
    */
   allTopicsDrawerOpen: boolean;
+  /**
+   * Agent picked in the blank composer (no topic yet) — the agent the next
+   * send binds to the new topic. Transient: read only while `activeTopicId`
+   * is empty, cleared once a send consumes it.
+   */
+  composerAgentId?: string;
   creatingTopic: boolean;
   /**
    * Ids of client-minted topics whose server row does not exist yet (the

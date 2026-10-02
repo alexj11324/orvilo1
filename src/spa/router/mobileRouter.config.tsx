@@ -25,6 +25,7 @@ import {
   sharedWorkspaceSettingsLeaves,
   sharedWorkspaceSettingsRedirects,
 } from '@/spa/router/sharedMainAreaLeaves';
+import { SettingsTabs } from '@/store/global/initialState';
 import { dynamicElement, dynamicLayout, ErrorBoundary, redirectElement } from '@/utils/router';
 
 /**
@@ -211,6 +212,18 @@ export const mobileRoutes: RouteObject[] = [
           {
             element: redirectElement('/settings/credential'),
             path: 'creds',
+          },
+          // Literal `agents` index — `/:workspaceSlug/agents` + its index
+          // bonus out-scores `settings/:tab` and would otherwise 404 the
+          // Settings → Agents section (see desktopRouter.shared.tsx).
+          {
+            element: dynamicElement(
+              () => import('@/routes/(main)/settings'),
+              'Mobile > Settings > Agents',
+              { preloadId: 'mobile-settings' },
+            ),
+            handle: { settingsTab: SettingsTabs.Agents },
+            path: 'agents',
           },
           // Other settings tabs (common, agent, memory, tts, about, etc.)
           {

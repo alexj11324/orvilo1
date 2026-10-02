@@ -1,6 +1,13 @@
 import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import type { SFSymbol } from '@orvilo/electron-client-ipc';
-import { BotIcon, FolderCogIcon, FolderPlus, ListPlusIcon, MonitorSmartphone } from 'lucide-react';
+import {
+  BotIcon,
+  FolderCogIcon,
+  FolderPlus,
+  ListPlusIcon,
+  MonitorSmartphone,
+  SparklesIcon,
+} from 'lucide-react';
 import { useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWRMutation from 'swr/mutation';
@@ -75,13 +82,13 @@ export const useCreateMenuItems = () => {
     },
     {
       onSuccess: async (result) => {
-        navigate(`/agent/${result.agentId}/profile`);
+        navigate(`/settings/agents/${result.agentId}`);
         await refreshAgentList();
       },
     },
   );
 
-  // SWR-based group creation with auto navigation to profile
+  // SWR-based group creation landing straight in the conversation
   const { trigger: mutateGroup, isMutating: isMutatingGroup } = useSWRMutation(
     'group.createGroup',
     async (_key: string, { arg }: { arg?: CreateAgentOptions & { title?: string } }) => {
@@ -101,7 +108,7 @@ export const useCreateMenuItems = () => {
     },
     {
       onSuccess: async (groupId) => {
-        navigate(`/group/${groupId}/profile`);
+        navigate(`/group/${groupId}`);
         await refreshAgentList();
         await loadGroups();
       },
@@ -214,7 +221,7 @@ export const useCreateMenuItems = () => {
   );
 
   /**
-   * Create empty group and navigate to profile
+   * Create empty group and land in its conversation
    */
   const createEmptyGroup = useCallback(
     async (options?: CreateAgentOptions & { title?: string }) => {
@@ -310,7 +317,8 @@ export const useCreateMenuItems = () => {
 
   /**
    * Create group chat menu item
-   * Creates an empty group and navigates to its profile page
+   * Primary flow: create a generic group room immediately — no purpose prompt —
+   * and land in its conversation.
    */
   const createGroupChatMenuItem = useCallback(
     (options?: CreateAgentOptions): MenuItem => ({
@@ -323,17 +331,38 @@ export const useCreateMenuItems = () => {
         stopMenuItemDomEvent(info.domEvent);
         if (!canCreate) return;
 
-        if (openCreateModal) {
+        await createEmptyGroup(options);
+      },
+    }),
+    [canCreate, t, createEmptyGroup],
+  );
+
+  /**
+   * Optional secondary affordance: generate the group from a written description
+   * (the create modal's purpose prompt, which still runs the builder flow).
+   * Only offered where the create modal can actually open.
+   */
+  const createGroupFromDescriptionMenuItem = useCallback(
+    (options?: CreateAgentOptions): MenuItem | null => {
+      if (!openCreateModal) return null;
+      return {
+        icon: <SparklesIcon size={14} />,
+        disabled: !canCreate,
+        key: 'newGroupChatFromDescription',
+        label: t('newGroupChatFromDescription'),
+        sfSymbol: 'sparkles',
+        onClick: (info) => {
+          stopMenuItemDomEvent(info.domEvent);
+          if (!canCreate) return;
+
           openCreateModal('group', {
             ...(options?.groupId ? { groupId: options.groupId } : {}),
             ...(options?.visibility ? { visibility: options.visibility } : {}),
           });
-        } else {
-          await createEmptyGroup(options);
-        }
-      },
-    }),
-    [canCreate, t, createEmptyGroup, openCreateModal],
+        },
+      };
+    },
+    [canCreate, t, openCreateModal],
   );
 
   /**
@@ -386,10 +415,12 @@ export const useCreateMenuItems = () => {
    */
   const createTopLevelMenuItems = useCallback((): MenuItem[] => {
     const connectItem = createConnectAgentMenuItem();
+    const groupFromDescription = createGroupFromDescriptionMenuItem();
 
     return [
       createAgentMenuItem(),
       createGroupChatMenuItem(),
+      ...(groupFromDescription ? [groupFromDescription] : []),
       ...(connectItem ? [{ type: 'divider' as const }, connectItem] : []),
       { type: 'divider' as const },
       createAgentListMenuItem(),
@@ -399,6 +430,7 @@ export const useCreateMenuItems = () => {
     createAgentMenuItem,
     createConnectAgentMenuItem,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
   ]);
 
   return {
@@ -409,6 +441,7 @@ export const useCreateMenuItems = () => {
     createConnectAgentMenuItem,
     createEmptyGroup,
     createGroupChatMenuItem,
+    createGroupFromDescriptionMenuItem,
     createGroupFromTemplate,
     createGroupWithMembers,
     createSessionGroupMenuItem,

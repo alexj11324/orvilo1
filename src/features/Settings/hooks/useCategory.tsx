@@ -2,6 +2,7 @@ import { McpIcon } from '@lobehub/ui/icons';
 import { isDesktop } from '@orvilo/const';
 import {
   BellIcon,
+  BotMessageSquareIcon,
   Brain,
   BrainCircuit,
   ChartColumnBigIcon,
@@ -137,6 +138,14 @@ export const useCategory = () => {
       // 执行环境与 Agent — the agent plus the runtime it executes in.
       {
         items: [
+          // Per-agent configuration home (General / Runtime / Model / Tools &
+          // Permissions / Environment / Advanced) — exiled from the work
+          // surface so the agent page stays an instant workbench.
+          offered(SettingsTabs.Agents) && {
+            icon: BotMessageSquareIcon,
+            key: SettingsTabs.Agents,
+            label: t('tab.agents'),
+          },
           // Provider settings should not depend on Advanced tools: new users may need
           // non-LobeHub providers, and desktop users often bring their own API keys.
           showProvider && {

@@ -17,7 +17,13 @@ const navigateMock = vi.hoisted(() => vi.fn());
 const openConnectAgentModalMock = vi.hoisted(() => vi.fn());
 const openCreateGroupModalMock = vi.hoisted(() => vi.fn());
 const agentModalMock = vi.hoisted(() => ({
-  current: undefined as { openCreateGroupModal: (id?: string, v?: string) => void } | undefined,
+  current: undefined as
+    | { openCreateGroupModal: (id?: string, v?: string) => void; openCreateModal?: unknown }
+    | undefined,
+}));
+const openCreateModalMock = vi.hoisted(() => vi.fn());
+const swrMutations = vi.hoisted(() => ({
+  map: new Map<string, { options?: { onSuccess?: (result: unknown) => void }; trigger: unknown }>(),
 }));
 
 vi.mock('@orvilo/const', () => ({
@@ -39,10 +45,11 @@ vi.mock('react-router', () => ({
 }));
 
 vi.mock('swr/mutation', () => ({
-  default: () => ({
-    isMutating: false,
-    trigger: vi.fn(),
-  }),
+  default: (key: string, _fetcher: unknown, options?: { onSuccess?: (r: unknown) => void }) => {
+    const entry = { options, trigger: vi.fn() };
+    swrMutations.map.set(key, entry);
+    return { isMutating: false, trigger: entry.trigger };
+  },
 }));
 
 vi.mock('@/components/ChatGroupWizard/templates', () => ({
@@ -99,6 +106,7 @@ describe('useCreateMenuItems', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     agentModalMock.current = undefined;
+    swrMutations.map.clear();
   });
 
   it('keeps the Agent-list entry without retired marketplace or Page actions', async () => {
@@ -242,5 +250,84 @@ describe('useCreateMenuItems', () => {
       groupId: 'group-1',
       visibility: 'private',
     });
+  });
+
+  it('creates the group directly — never through the purpose modal — even when the modal exists', async () => {
+    agentModalMock.current = {
+      openCreateGroupModal: openCreateGroupModalMock,
+      openCreateModal: openCreateModalMock,
+    };
+
+    const { result } = renderHook(() => useCreateMenuItems());
+    const groupItem = result.current.createGroupChatMenuItem();
+
+    if (!isActionItem(groupItem)) throw new Error('Expected group chat menu item');
+
+    await act(async () => {
+      await groupItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
+    });
+
+    const groupMutation = swrMutations.map.get('group.createGroup');
+    expect(groupMutation?.trigger).toHaveBeenCalled();
+    expect(openCreateModalMock).not.toHaveBeenCalled();
+  });
+
+  it('lands inside the new group conversation, not the profile screen', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    const groupItem = result.current.createGroupChatMenuItem();
+
+    if (!isActionItem(groupItem)) throw new Error('Expected group chat menu item');
+
+    await act(async () => {
+      await groupItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
+    });
+
+    await act(async () => {
+      await swrMutations.map.get('group.createGroup')?.options?.onSuccess?.('group-42');
+    });
+
+    expect(navigateMock).toHaveBeenCalledWith('/group/group-42');
+  });
+
+  it('offers generate-from-description only as a secondary item when the modal exists', async () => {
+    agentModalMock.current = {
+      openCreateGroupModal: openCreateGroupModalMock,
+      openCreateModal: openCreateModalMock,
+    };
+
+    const { result } = renderHook(() => useCreateMenuItems());
+    const keys = result.current
+      .createTopLevelMenuItems()
+      .map((item) => (isActionItem(item) ? item.key : (item as { type?: string })?.type));
+
+    expect(keys).toEqual([
+      'newAgent',
+      'newGroupChat',
+      'newGroupChatFromDescription',
+      'divider',
+      'newPlatformAgent',
+      'divider',
+      'addAgentFromList',
+    ]);
+
+    const item = result.current.createGroupFromDescriptionMenuItem({ visibility: 'private' });
+    if (!item || !isActionItem(item)) throw new Error('Expected description menu item');
+
+    await act(async () => {
+      await item.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
+    });
+
+    expect(openCreateModalMock).toHaveBeenCalledWith('group', { visibility: 'private' });
+  });
+
+  it('hides the description affordance without the modal provider', () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+
+    const keys = result.current
+      .createTopLevelMenuItems()
+      .map((item) => (isActionItem(item) ? item.key : (item as { type?: string })?.type));
+
+    expect(keys).not.toContain('newGroupChatFromDescription');
+    expect(result.current.createGroupFromDescriptionMenuItem()).toBeNull();
   });
 });

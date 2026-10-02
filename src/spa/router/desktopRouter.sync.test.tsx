@@ -613,6 +613,7 @@ describe('desktop router shared definition', () => {
       ['/agent/agent-1/goal/goal-1', GoalDetailSkeleton],
       ['/agent/agent-1/profile', ProfileSkeleton],
       ['/agent/agent-1/topic-1', ConversationLayoutSkeleton],
+      ['/group', createSurfaceSkeleton('list')],
       ['/group/group-1/profile', GroupProfileRouteSkeleton],
       ['/group/group-1/topic-1', ConversationLayoutSkeleton],
       ['/settings/profile', SettingsPageSkeleton],

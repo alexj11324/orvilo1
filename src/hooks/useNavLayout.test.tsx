@@ -42,12 +42,12 @@ describe('useNavLayout', () => {
     expect(await renderedKeys()).not.toContain(key);
   });
 
-  it('keeps the fixed primary entries: inbox, my work, reviews, agent', async () => {
+  it('keeps the fixed primary entries: inbox, my work, reviews, agent, groups', async () => {
     const { useNavLayout } = await import('./useNavLayout');
     const { result } = renderHook(() => useNavLayout());
     const keys = result.current.topNavItems.map((item) => item.key);
 
-    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent']);
+    expect(keys).toEqual(['inbox', 'my-work', 'reviews', 'agent', 'group']);
     expect(result.current.topNavItems.find((item) => item.key === 'inbox')?.url).toBe('/inbox');
     expect(result.current.topNavItems.find((item) => item.key === 'my-work')?.url).toBe(
       '/my-issues',
@@ -58,5 +58,8 @@ describe('useNavLayout', () => {
     expect(result.current.topNavItems.find((item) => item.key === 'agent')?.url).toBe(
       '/agent/inbox',
     );
+    // Groups is a first-class destination: `/group` resolves to the most
+    // recent group or the empty state, never a redirect away.
+    expect(result.current.topNavItems.find((item) => item.key === 'group')?.url).toBe('/group');
   });
 });

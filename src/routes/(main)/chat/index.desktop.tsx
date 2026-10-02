@@ -6,8 +6,10 @@ import { useParams } from 'react-router';
 
 import AgentSidebar from '@/features/AgentSidebar';
 import TopicOwnerSync from '@/features/Conversation/TopicOwnerSync';
+import { TopicNotFoundGuard } from '@/features/TopicNotFound';
 import TopicInPopupGuard from '@/features/TopicPopupGuard';
 import { useTopicInPopup } from '@/features/TopicPopupGuard/useTopicPopupsRegistry';
+import RegisterHotkeys from '@/routes/(main)/agent/_layout/RegisterHotkeys';
 import Conversation from '@/routes/(main)/agent/features/Conversation';
 import ChatHydration from '@/routes/(main)/agent/features/Conversation/ChatHydration';
 import TelemetryNotification from '@/routes/(main)/agent/features/TelemetryNotification';
@@ -31,7 +33,7 @@ const ChatPage = memo(() => {
     urlTopicId && popup ? (
       <TopicInPopupGuard popup={popup} />
     ) : (
-      <>
+      <TopicNotFoundGuard>
         <div
           className="flex"
           style={{ height: '100%', width: '100%', overflow: 'hidden', position: 'relative' }}
@@ -39,7 +41,7 @@ const ChatPage = memo(() => {
           <Conversation />
         </div>
         <TelemetryNotification mobile={false} />
-      </>
+      </TopicNotFoundGuard>
     );
 
   return (
@@ -49,6 +51,7 @@ const ChatPage = memo(() => {
       <TopicOwnerSync />
       <ChatHydration getConversationPath={getConversationPath} getTopicPath={getTopicPath} />
       {pageContent}
+      <RegisterHotkeys />
     </>
   );
 });

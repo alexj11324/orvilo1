@@ -4,6 +4,8 @@ import { CHAT_NEW_URL, CHAT_TOPIC_URL } from '@orvilo/const';
 
 import AgentSidebar from '@/features/AgentSidebar';
 import TopicOwnerSync from '@/features/Conversation/TopicOwnerSync';
+import { TopicNotFoundGuard } from '@/features/TopicNotFound';
+import RegisterHotkeys from '@/routes/(main)/agent/_layout/RegisterHotkeys';
 import Conversation from '@/routes/(main)/agent/features/Conversation';
 import ChatHydration from '@/routes/(main)/agent/features/Conversation/ChatHydration';
 import TelemetryNotification from '@/routes/(main)/agent/features/TelemetryNotification';
@@ -26,19 +28,22 @@ const ChatPage = () => {
       <AgentSidebar />
       <TopicOwnerSync />
       <ChatHydration getConversationPath={getConversationPath} getTopicPath={getTopicPath} />
-      <div
-        className="flex flex-col"
-        style={{
-          height: '100%',
-          width: '100%',
-          minHeight: 0,
-          overflow: 'hidden',
-          position: 'relative',
-        }}
-      >
-        <Conversation />
-      </div>
-      <TelemetryNotification mobile={false} />
+      <TopicNotFoundGuard>
+        <div
+          className="flex flex-col"
+          style={{
+            height: '100%',
+            width: '100%',
+            minHeight: 0,
+            overflow: 'hidden',
+            position: 'relative',
+          }}
+        >
+          <Conversation />
+        </div>
+        <TelemetryNotification mobile={false} />
+      </TopicNotFoundGuard>
+      <RegisterHotkeys />
     </>
   );
 };

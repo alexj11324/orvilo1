@@ -189,7 +189,6 @@ describe('canonical completion admission', () => {
         executionGeneration: binding.generation,
         policyRevision: binding.policyRevision,
         requirementRevision: task.requirementRevision,
-        status: 'running',
       },
       undefined,
       { suppressDomainEvent: true },
@@ -198,7 +197,9 @@ describe('canonical completion admission', () => {
   }
 
   it('authorizes the exact canonical completion CAS with persisted passed criteria and mapped receipt', async () => {
-    expect(await commit(await acceptedEvidence())).toMatchObject({ status: 'completed' });
+    expect(await commit(await acceptedEvidence())).toMatchObject({
+      workflowCategory: 'done',
+    });
   });
 
   it.each(['revoked', 'epoch'] as const)(
@@ -252,9 +253,12 @@ describe('canonical completion admission', () => {
       }
       return read();
     };
+    // Takeover denied: the dispatch already settled `succeeded`, so the
+    // derived label is 'backlog' — the retired column can no longer report
+    // 'running' for a finished run.
     expect(await new CanonicalVerifyCompletion(db).reconcile(binding, mapped)).toMatchObject({
       state: 'observed',
-      taskStatus: 'running',
+      taskStatus: 'backlog',
       completed: false,
     });
   }, 30_000);
@@ -271,9 +275,13 @@ describe('canonical completion admission', () => {
         .update(tasks)
         .set({
           automationMode: 'schedule',
-          status: 'scheduled',
           config: { schedule: { maxExecutions: 1 } },
-          context: { scheduler: { scheduleStartedAt: new Date(0).toISOString() } },
+          context: {
+            scheduler: {
+              scheduleStartedAt: new Date(0).toISOString(),
+              tickToken: 'tick-1',
+            },
+          },
           runReservationId: `completion:${binding.operationId}:test`,
           runReservationExpiresAt: new Date(Date.now() + 60_000),
         })

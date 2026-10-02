@@ -58,7 +58,10 @@ vi.mock('@/database/models/task', () => ({
     updateComment = mocks.updateComment;
   },
 }));
-vi.mock('@/database/schemas/task', () => ({ tasks: { id: 'id', workspaceId: 'workspaceId' } }));
+vi.mock('@/database/schemas/task', () => ({
+  taskDispatches: {},
+  tasks: { id: 'id', workspaceId: 'workspaceId' },
+}));
 vi.mock('@/server/services/task', () => ({ TaskService: class {} }));
 
 const integrationTasks = () => ({

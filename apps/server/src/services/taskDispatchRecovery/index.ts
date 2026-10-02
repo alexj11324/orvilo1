@@ -128,11 +128,8 @@ export const processTaskDispatchRecovery = async (input: {
   }
 
   try {
-    const operation = await new AgentOperationModel(
-      input.db,
-      principalId,
-      input.workspaceId,
-    ).findById(operationId);
+    const operationModel = new AgentOperationModel(input.db, principalId, input.workspaceId);
+    const operation = await operationModel.findById(operationId);
     if (!operation) {
       return releaseUnknown({
         claim,
@@ -154,12 +151,31 @@ export const processTaskDispatchRecovery = async (input: {
 
     if (['running', 'waiting_for_async_tool', 'waiting_for_human'].includes(operation.status)) {
       const staleBefore = Date.now() - (input.staleOperationMs ?? DEFAULT_STALE_OPERATION_MS);
-      if (operation.status === 'running' && new Date(operation.updatedAt).getTime() < staleBefore) {
+      const stale = new Date(operation.updatedAt).getTime() < staleBefore;
+      if (operation.status === 'running' && stale) {
         return releaseUnknown({
           claim,
           model,
           owner,
           reason: `operation_stale:${operation.status}`,
+          retryMs,
+        });
+      }
+      // `waiting_for_async_tool` parks legitimately quiet, so `updatedAt` alone
+      // cannot stale it out — but a stale park with no live child op has no
+      // producer left to fulfil its barrier (child missing/terminal and its
+      // own abandonment path dead). Restoring 'running' re-arms the lease and
+      // resets the reconcile bound every pass, which is the orphan-slot leak.
+      if (
+        operation.status === 'waiting_for_async_tool' &&
+        stale &&
+        !(await operationModel.hasLiveChildOperation(operation.id))
+      ) {
+        return releaseUnknown({
+          claim,
+          model,
+          owner,
+          reason: `operation_orphaned_wait:${operation.status}`,
           retryMs,
         });
       }

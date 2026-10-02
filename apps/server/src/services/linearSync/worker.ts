@@ -238,11 +238,12 @@ const remoteTaskPatch = (
  * pushes the local assignee back to Linear).
  */
 const deferRunningTaskAssignee = (
+  taskIsRunning: boolean,
   task: TaskItem,
   patch: Parameters<TaskModel['update']>[1],
 ): { deferred: boolean; patch: Parameters<TaskModel['update']>[1] } => {
   if (
-    task.status !== 'running' ||
+    !taskIsRunning ||
     patch.assigneeAgentId === undefined ||
     patch.assigneeAgentId === task.assigneeAgentId
   ) {
@@ -2848,7 +2849,11 @@ export class LinearSyncWorker {
       if (task.cycleRefId !== cycleRefId) {
         patch.cycleRefId = cycleRefId;
       }
-      const assigneeDeferral = deferRunningTaskAssignee(task, patch);
+      const assigneeDeferral = deferRunningTaskAssignee(
+        await integrationTasks.isTaskExecutionLive(task.id),
+        task,
+        patch,
+      );
       let taskAfterRemote = task;
       if (Object.keys(assigneeDeferral.patch).length > 0) {
         const updatedTask = await integrationTasks.updatePublicTask(
@@ -3401,7 +3406,11 @@ export class LinearSyncWorker {
         : null;
       if (task.cycleRefId !== cycleRef) patch.cycleRefId = cycleRef;
     }
-    const assigneeDeferral = deferRunningTaskAssignee(task, patch);
+    const assigneeDeferral = deferRunningTaskAssignee(
+      await integrationTasks.isTaskExecutionLive(task.id),
+      task,
+      patch,
+    );
     let taskAfterRemote = task;
     if (Object.keys(assigneeDeferral.patch).length > 0) {
       const updatedTask = await integrationTasks.updatePublicTask(task.id, assigneeDeferral.patch, {

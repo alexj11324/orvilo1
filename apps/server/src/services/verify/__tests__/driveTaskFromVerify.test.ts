@@ -342,7 +342,6 @@ describe('driveTaskFromVerify', () => {
           executionGeneration: 1,
           policyRevision: 1,
           requirementRevision: 1,
-          status: 'running',
         },
         id: 'task-1',
         status: 'completed',
@@ -714,7 +713,7 @@ describe('driveTaskFromVerify', () => {
 
   it('skips when the task is already terminal', async () => {
     runFindByOperation.mockResolvedValue({ id: 'run-1', metadata: null, status: 'passed' });
-    taskFindById.mockResolvedValue({ id: 'task-1', status: 'completed' });
+    taskFindById.mockResolvedValue({ id: 'task-1', status: 'completed', workflowCategory: 'done' });
     await driveTaskFromVerify(db, 'u1', 'op-1');
     expect(serviceUpdateStatus).not.toHaveBeenCalled();
   });

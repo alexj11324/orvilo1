@@ -159,11 +159,12 @@ export class GoalSupervisorService {
         return null;
       }
       const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
+      const taskStatus = task.status;
       let eligibility = recoveryEligibility(
         graph,
         task,
         failedOperation,
-        statusAuthoredByActor(await taskModel.getActivities(task.id, 20), task.status),
+        statusAuthoredByActor(await taskModel.getActivities(task.id, 20), taskStatus),
       );
       if (eligibility.eligible && (await this.budgetBlocked(graph))) {
         eligibility = {
@@ -180,7 +181,7 @@ export class GoalSupervisorService {
         reason: eligibility.reason,
         status: eligibility.eligible ? 'diagnosing' : 'escalated',
         taskId: task.id,
-        taskStatus: task.status,
+        taskStatus,
       };
       const claimed = await new GoalModel(
         this.db,

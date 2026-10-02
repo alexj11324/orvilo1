@@ -8,6 +8,7 @@ import {
   linearInstallations,
   linearSyncOutbox,
   taskDependencies,
+  taskDispatches,
   taskDomainEvents,
   tasks,
   users,
@@ -321,7 +322,24 @@ describe('task prerequisite invariants', () => {
     const a = await create('A');
     const b = await create('B');
     for (const status of ['running', 'completed']) {
-      await model.updateStatus(b.id, status);
+      if (status === 'running') {
+        // A live dispatch is the only canonical way to be running —
+        // `updateStatus` cannot synthesize one.
+        await db.insert(taskDispatches).values({
+          generation: 1,
+          id: 'dispatch-dep-running',
+          idempotencyKey: 'manual:dep:running',
+          phase: 'running',
+          policyRevision: 1,
+          requestedBy: `user:${userId}`,
+          requirementRevision: 1,
+          taskId: b.id,
+          taskRevision: 1,
+          workspaceId: null,
+        });
+      } else {
+        await model.updateStatus(b.id, status);
+      }
       await expect(model.addDependency(b.id, a.id)).rejects.toMatchObject({
         code: 'PRECONDITION_FAILED',
       });

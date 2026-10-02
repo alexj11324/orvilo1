@@ -5,7 +5,9 @@ import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
-import { confirmModal } from '@/components/Modal';
+import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
+import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import AgentList from '@/features/Home/AgentSelect/AgentList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -35,6 +37,60 @@ const carryDraftToKey = (fromKey: string, toKey: string) => {
   removeDraft(fromKey);
 };
 
+interface HandoffChoiceContentProps {
+  agentName: string;
+  onContinue: () => Promise<void>;
+  onFork: () => Promise<void>;
+}
+
+/**
+ * The agent pick on an open topic offers the two explicit handoff modes:
+ * Continue reassigns this conversation's execution to the new agent (it keeps
+ * its id, history and feed position); Fork seeds a new conversation from this
+ * one bound to the new agent, leaving the original untouched.
+ */
+const HandoffChoiceContent = memo<HandoffChoiceContentProps>(
+  ({ agentName, onContinue, onFork }) => {
+    const { t } = useTranslation('chat');
+    const { close } = useModalContext();
+    const [pending, setPending] = useState<'continue' | 'fork' | null>(null);
+
+    const run = (kind: 'continue' | 'fork', action: () => Promise<void>) => {
+      if (pending) return;
+      setPending(kind);
+      action()
+        .then(() => close())
+        .catch((error: unknown) => {
+          setPending(null);
+          toast.error(error instanceof Error ? error.message : String(error));
+        });
+    };
+
+    return (
+      <>
+        <div style={{ fontSize: 14, lineHeight: 1.6 }}>{t('agentSwitchChoice.description')}</div>
+        <ModalFooter>
+          <Button disabled={!!pending} onClick={close}>
+            {t('cancel', { ns: 'common' })}
+          </Button>
+          <Button disabled={!!pending} variant="outline" onClick={() => run('fork', onFork)}>
+            {t('agentSwitchChoice.fork', { name: agentName })}
+          </Button>
+          <Button
+            disabled={!!pending}
+            variant="default"
+            onClick={() => run('continue', onContinue)}
+          >
+            {t('agentSwitchChoice.continue', { name: agentName })}
+          </Button>
+        </ModalFooter>
+      </>
+    );
+  },
+);
+
+HandoffChoiceContent.displayName = 'HandoffChoiceContent';
+
 /**
  * Agent chip — the agent-first replacement for the model picker in the
  * conversation composer. Shows the bound agent's avatar + display name and
@@ -46,9 +102,10 @@ const carryDraftToKey = (fromKey: string, toKey: string) => {
  * - Blank composer (no topic): picking an agent only re-targets the pending
  *   send — `composerAgentId` becomes the new topic's bound agent on first
  *   message. No navigation; the draft is carried to the new agent's bucket.
- * - Open topic: picking an agent asks for a light confirm, rebinds the topic
- *   (recording the handoff marker), then moves the view to the new agent's
- *   room — the topic lives with its bound agent.
+ * - Open topic: picking an agent offers Continue (reassign execution — the
+ *   conversation keeps its id and history, drafts stay put since they key on
+ *   topicId) or Fork (a new topic seeded from this one, bound to the agent),
+ *   each behind a light confirmation.
  */
 const Agent = memo(() => {
   const { t } = useTranslation('chat');
@@ -95,25 +152,38 @@ const Agent = memo(() => {
         return;
       }
 
-      // Open topic: switching hands the existing conversation to another
-      // agent — a light confirm so the handoff is never silent.
+      // Open topic: the pick offers the two explicit handoff modes — the
+      // switch is never silent, and the copy says what each mode does.
       const toMeta = agentSelectors.getAgentMetaById(id)(useAgentStore.getState());
       const toName = agentDisplayName(
         toMeta,
         id === taskAgentId ? t('taskManager.agent', { ns: 'topic' }) : t('untitledAgent'),
       );
-      confirmModal({
-        cancelText: t('cancel', { ns: 'common' }),
-        content: t('agentSwitchConfirm', { name: toName }),
-        okText: t('agentSwitchConfirmAction', { name: toName }),
-        onOk: async () => {
-          carryDraftToKey(messageMapKey(draftInput(agentId)), messageMapKey(draftInput(id)));
-          await rebindTopicAgent(activeTopicId, id);
-          useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
-          useChatStore.getState().clearPortalStack();
-          workspaceAwareNavigate(AGENT_CHAT_TOPIC_URL(id, activeTopicId));
-        },
-        title: t('agentSwitchConfirmTitle'),
+      const topicId = activeTopicId;
+      createModal({
+        content: (
+          <HandoffChoiceContent
+            agentName={toName}
+            onContinue={async () => {
+              // Continue reassigns execution only — the draft keys on the
+              // topic id, so the typed text stays with the conversation.
+              await rebindTopicAgent(topicId, id);
+              useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
+              useChatStore.getState().clearPortalStack();
+              workspaceAwareNavigate(AGENT_CHAT_TOPIC_URL(id, topicId));
+            }}
+            onFork={async () => {
+              const newTopicId = await useChatStore.getState().forkTopicAgent(topicId, id);
+              useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
+              useChatStore.getState().clearPortalStack();
+              workspaceAwareNavigate(AGENT_CHAT_TOPIC_URL(id, newTopicId));
+            }}
+          />
+        ),
+        footer: null,
+        maskClosable: true,
+        title: t('agentSwitchChoice.title', { name: toName }),
+        width: 420,
       });
     },
     [agentId, t, taskAgentId, workspaceAwareNavigate],

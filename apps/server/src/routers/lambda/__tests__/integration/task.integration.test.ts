@@ -9,7 +9,7 @@ import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
-import { tasks } from '@/database/schemas';
+import { taskDispatches, tasks } from '@/database/schemas';
 import { TaskService } from '@/server/services/task';
 import { TaskIntegrationService } from '@/server/services/taskIntegration';
 
@@ -385,7 +385,7 @@ describe('Task Router Integration', () => {
       });
 
       expect(moved.data).toMatchObject({
-        status: 'backlog',
+        status: 'completed',
         workflowCategory: 'done',
         workflowStateId: 'linear-state-done',
       });
@@ -585,11 +585,21 @@ describe('Task Router Integration', () => {
     it('should transition backlog → running → paused → completed', async () => {
       const task = await caller.create({ instruction: 'Test' });
 
-      // backlog → running
-      const running = await caller.updateStatus({
-        id: task.data.id,
-        status: 'running',
+      // backlog → running — execution truth is a live dispatch row; no status
+      // write can synthesize it.
+      await serverDB.insert(taskDispatches).values({
+        generation: 1,
+        id: 'dispatch-transition-running',
+        idempotencyKey: 'manual:transition:running',
+        phase: 'running',
+        policyRevision: 1,
+        requestedBy: `user:${userId}`,
+        requirementRevision: 1,
+        taskId: task.data.id,
+        taskRevision: 1,
+        workspaceId: null,
       });
+      const running = await caller.find({ id: task.data.id });
       expect(running.data.status).toBe('running');
 
       // running → paused
@@ -610,12 +620,12 @@ describe('Task Router Integration', () => {
     it('resolves a task identifier to its row when changing status', async () => {
       const task = await caller.create({ instruction: 'Test identifier resolution' });
 
-      const running = await caller.updateStatus({
+      const paused = await caller.updateStatus({
         id: task.data.identifier,
-        status: 'running',
+        status: 'paused',
       });
 
-      expect(running.data).toMatchObject({ id: task.data.id, status: 'running' });
+      expect(paused.data).toMatchObject({ id: task.data.id, status: 'paused' });
     });
   });
 

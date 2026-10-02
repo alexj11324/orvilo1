@@ -9,6 +9,7 @@ import { AgentModel } from '@/database/models/agent';
 import { IntegrationLeaseModel } from '@/database/models/integrationLease';
 import { TaskModel } from '@/database/models/task';
 import { TaskDispatchModel } from '@/database/models/taskDispatch';
+import { hasActiveExecution, isExecutionParked } from '@/database/models/taskExecutionSql';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { VerifyRunModel } from '@/database/models/verifyRun';
 import type { IntegrationLeaseItem } from '@/database/schemas';
@@ -2008,7 +2009,7 @@ export class TaskIntegrationService {
       const receiptDelivery = receipt.delivery;
       const stillValid =
         delivered !== undefined &&
-        upstreamTask?.status === 'completed' &&
+        upstreamTask?.workflowCategory === 'done' &&
         upstreamTask?.executionGeneration === delivered.executionGeneration &&
         (!receiptDelivery ||
           (delivered.topicId === receiptDelivery.topicId &&
@@ -2118,7 +2119,7 @@ export class TaskIntegrationService {
   ): Promise<{ blocked: string[]; completed: string[]; held: string[] }> {
     const filters = [
       or(isNull(tasks.isDeleted), eq(tasks.isDeleted, false)),
-      or(eq(tasks.status, 'running'), eq(tasks.status, 'paused')),
+      or(hasActiveExecution, isExecutionParked),
       sql`exists (
         select 1 from task_topics tt
         where tt.task_id = ${tasks.id}

@@ -11,6 +11,7 @@ import { agentConfigKeys, builtinAgentKeys } from '@/libs/swr/keys';
 import * as cacheScopeModule from '@/libs/swr/useCacheScope';
 import { agentService } from '@/services/agent';
 import { agentDocumentService } from '@/services/agentDocument';
+import { homeService } from '@/services/home';
 import { useGlobalStore } from '@/store/global';
 import { useUserStore } from '@/store/user';
 import { type OrviloAgentConfig } from '@/types/agent';
@@ -29,6 +30,19 @@ vi.mock('@/services/agent', () => ({
     queryAgents: vi.fn(),
     updateAgentConfig: vi.fn(),
     updateAgentMeta: vi.fn(),
+  },
+}));
+
+vi.mock('@/services/home', () => ({
+  homeService: {
+    getSidebarAgentList: vi.fn(() => ({
+      groups: [],
+      pinned: [],
+      privateGroups: [],
+      privatePinned: [],
+      privateUngrouped: [],
+      ungrouped: [],
+    })),
   },
 }));
 
@@ -383,23 +397,46 @@ describe('AgentSlice Actions', () => {
       expect(result.current.availableAgents).toBeUndefined();
     });
 
-    it('should seed a personal name matching the user language', async () => {
+    it('should seed the agent title as the personal name', async () => {
       vi.mocked(agentService.createAgent).mockResolvedValue({ agentId: 'agent-2' });
-      const status = useGlobalStore.getState().status;
-      useGlobalStore.setState({ status: { ...status, language: 'zh-CN' } });
       const { result } = renderHook(() => useAgentStore());
 
-      try {
-        await act(async () => {
-          await result.current.createAgent({ config: { title: '健康助手' } });
-        });
+      await act(async () => {
+        await result.current.createAgent({ config: { title: '健康助手' } });
+      });
 
-        const config = vi.mocked(agentService.createAgent).mock.calls[0][0].config!;
-        expect(config.title).toBe('健康助手');
-        expect(config.name).toMatch(/^\p{Script=Han}+$/u);
-      } finally {
-        useGlobalStore.setState({ status });
-      }
+      const config = vi.mocked(agentService.createAgent).mock.calls[0][0].config!;
+      expect(config.title).toBe('健康助手');
+      expect(config.name).toBe('健康助手');
+    });
+
+    it('numbers the seeded name when the sidebar already has one', async () => {
+      vi.mocked(agentService.createAgent).mockResolvedValue({ agentId: 'agent-2' });
+      vi.mocked(homeService.getSidebarAgentList).mockResolvedValueOnce({
+        groups: [],
+        pinned: [
+          { id: 'a1', name: 'Claude Code' } as never,
+          { id: 'a2', name: 'Claude Code 2' } as never,
+        ],
+        privateGroups: [],
+        privatePinned: [],
+        privateUngrouped: [],
+        ungrouped: [],
+      });
+      const { result } = renderHook(() => useAgentStore());
+
+      await act(async () => {
+        await result.current.createAgent({
+          config: {
+            agencyConfig: { heterogeneousProvider: { command: 'claude', type: 'claude-code' } },
+            title: 'Claude Code',
+          },
+        });
+      });
+
+      expect(vi.mocked(agentService.createAgent).mock.calls[0][0].config?.name).toBe(
+        'Claude Code 3',
+      );
     });
 
     it('uses the product title as a personal heterogeneous agent name', async () => {

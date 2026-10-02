@@ -20,6 +20,7 @@ import {
   like,
   lt,
   ne,
+  not,
   notLike,
   or,
   sql,
@@ -37,6 +38,7 @@ import type { OrviloDatabase, Transaction } from '../type';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
 import { normalizeProjectOrchestrationPolicy } from './projectOrchestrationPolicy';
+import { hasActiveExecution, isExecutionParked, isParked, parkMarkerSet } from './taskExecutionSql';
 
 const ACTIVE_PHASES: TaskDispatchPhase[] = [
   'requested',
@@ -620,7 +622,8 @@ export class TaskDispatchModel {
       .innerJoin(projects, eq(projects.id, tasks.projectId))
       .where(
         and(
-          eq(tasks.status, 'backlog'),
+          eq(tasks.workflowCategory, 'backlog'),
+          sql`NOT ${isParked}`,
           isNotNull(tasks.workspaceId),
           isNotNull(tasks.assigneeAgentId),
           isNull(tasks.automationMode),
@@ -1844,24 +1847,24 @@ export class TaskDispatchModel {
         }
       }
 
-      if (currentGeneration && task.status === 'running') {
+      if (currentGeneration) {
         const [paused] = await runner
           .update(tasks)
           .set({
+            context: parkMarkerSet({ at: new Date().toISOString(), reason: 'canceled' }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             reviewerUserId: sql<string | null>`coalesce(
               ${tasks.reviewerUserId},
               ${tasks.assigneeUserId},
               ${tasks.createdByUserId}
             )`,
-            status: 'paused',
             updatedAt: new Date(),
           })
           .where(
             and(
               eq(tasks.id, task.id),
               eq(tasks.executionGeneration, dispatch.generation),
-              eq(tasks.status, 'running'),
+              hasActiveExecution,
             ),
           )
           .returning();
@@ -1968,10 +1971,11 @@ export class TaskDispatchModel {
         }
       }
 
-      if (task.status === 'running' && task.executionGeneration === dispatch.generation) {
+      if (task.executionGeneration === dispatch.generation) {
         const [paused] = await runner
           .update(tasks)
           .set({
+            context: parkMarkerSet({ at: new Date().toISOString(), reason: input.reason }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: input.reason,
             reviewerUserId: sql<string | null>`coalesce(
@@ -1979,14 +1983,13 @@ export class TaskDispatchModel {
               ${tasks.assigneeUserId},
               ${tasks.createdByUserId}
             )`,
-            status: 'paused',
             updatedAt: new Date(),
           })
           .where(
             and(
               eq(tasks.id, task.id),
               eq(tasks.executionGeneration, dispatch.generation),
-              eq(tasks.status, 'running'),
+              hasActiveExecution,
             ),
           )
           .returning();
@@ -2095,10 +2098,11 @@ export class TaskDispatchModel {
         }
       }
 
-      if (task.status === 'running' && task.executionGeneration === dispatch.generation) {
+      if (task.executionGeneration === dispatch.generation) {
         const [paused] = await runner
           .update(tasks)
           .set({
+            context: parkMarkerSet({ at: new Date().toISOString(), reason: input.reason }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: input.reason,
             reviewerUserId: sql<string | null>`coalesce(
@@ -2106,14 +2110,13 @@ export class TaskDispatchModel {
               ${tasks.assigneeUserId},
               ${tasks.createdByUserId}
             )`,
-            status: 'paused',
             updatedAt: new Date(),
           })
           .where(
             and(
               eq(tasks.id, task.id),
               eq(tasks.executionGeneration, dispatch.generation),
-              eq(tasks.status, 'running'),
+              hasActiveExecution,
             ),
           )
           .returning();
@@ -2325,10 +2328,14 @@ export class TaskDispatchModel {
       // policy, or assignee snapshot is obsolete. Park that exact run while the
       // Task row is still locked so a successor dispatch cannot start between
       // settlement and the protective status transition.
-      if (currentGeneration && !currentContract && task.status === 'running') {
+      if (currentGeneration && !currentContract) {
         const [parked] = await tx
           .update(tasks)
           .set({
+            context: parkMarkerSet({
+              at: new Date().toISOString(),
+              reason: 'stale-contract',
+            }),
             domainRevision: sql`${tasks.domainRevision} + 1`,
             error: 'Task changed while this run was active; review before retrying.',
             reviewerUserId: sql<string | null>`coalesce(
@@ -2336,14 +2343,16 @@ export class TaskDispatchModel {
               ${tasks.assigneeUserId},
               ${tasks.createdByUserId}
             )`,
-            status: 'paused',
             updatedAt: new Date(),
           })
           .where(
             and(
               eq(tasks.id, task.id),
               eq(tasks.executionGeneration, dispatch.generation),
-              eq(tasks.status, 'running'),
+              // The dispatch row above already left the active-phase set, so
+              // "was live" is asserted by the generation bind; the guard that
+              // remains is that nobody parked the task ahead of this settle.
+              not(isExecutionParked),
             ),
           )
           .returning();

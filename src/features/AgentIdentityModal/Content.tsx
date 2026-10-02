@@ -1,6 +1,7 @@
 'use client';
 
-import { randomAgentName } from '@orvilo/const';
+import { numberedAgentName } from '@orvilo/const';
+import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import { cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { DicesIcon } from 'lucide-react';
@@ -16,8 +17,6 @@ import {
   InputGroupInput,
   InputGroupText,
 } from '@/components/ui/input-group';
-import { useGlobalStore } from '@/store/global';
-import { globalGeneralSelectors } from '@/store/global/selectors';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
 
@@ -49,23 +48,26 @@ interface AgentIdentityContentProps {
 const AgentIdentityContent = memo<AgentIdentityContentProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'common']);
   const { close } = useModalContext();
-  const locale = useGlobalStore(globalGeneralSelectors.currentLanguage);
   const form = useAgentIdentityForm({ agentId, onSaved: close });
   const { setName } = form;
 
-  // Same draw as the header's "name it for me" button: the pool matches the
-  // user's language, and names already visible in the sidebar are excluded so
-  // the dice never suggests a second "佳宁". Read at click time — the list only
-  // matters at the moment of the roll.
+  // Same deterministic suggestion as the header's "name it for me" button and
+  // agent creation: the agent's own type name, numbered when the sidebar
+  // already has one. Read at click time — the list only matters at that moment.
   const rollName = useCallback(() => {
-    const takenNames = homeAgentListSelectors
-      .allAgents(useHomeStore.getState())
-      .filter((agent) => agent.id !== agentId)
-      .map((agent) => agent.name)
+    const agents = homeAgentListSelectors.allAgents(useHomeStore.getState());
+    const agent = agents.find((a) => a.id === agentId);
+    const takenNames = agents
+      .filter((a) => a.id !== agentId)
+      .map((a) => a.name)
       .filter((name): name is string => !!name);
+    const base =
+      agent?.title?.trim() ||
+      (agent?.heterogeneousType ? getHeterogeneousTypeLabel(agent.heterogeneousType) : undefined) ||
+      'Orvilo AI';
 
-    setName(randomAgentName(locale, takenNames));
-  }, [agentId, locale, setName]);
+    setName(numberedAgentName(base, takenNames));
+  }, [agentId, setName]);
 
   return (
     <div className="flex flex-col gap-5 p-5">

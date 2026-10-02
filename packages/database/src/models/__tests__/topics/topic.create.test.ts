@@ -434,6 +434,63 @@ describe('TopicModel - Create', () => {
       expect(duplicatedMessages[1].content).toBe('Assistant message');
     });
 
+    it('should fork the topic onto a target agent and detach its session', async () => {
+      const topicId = 'topic-fork-agent';
+      const sourceAgentId = 'fork-source-agent';
+      const targetAgentId = 'fork-target-agent';
+
+      await serverDB.insert(agents).values([
+        { id: sourceAgentId, title: 'Source Agent', userId },
+        { id: targetAgentId, title: 'Target Agent', userId },
+      ]);
+      await serverDB.transaction(async (tx) => {
+        await tx.insert(topics).values({
+          agentId: sourceAgentId,
+          id: topicId,
+          sessionId,
+          title: 'Original Topic',
+          userId,
+        });
+        await tx.insert(messages).values({
+          agentId: sourceAgentId,
+          content: 'Seeded context',
+          id: 'fork-message-1',
+          role: 'assistant',
+          topicId,
+          userId,
+        });
+      });
+
+      const { topic: forkedTopic, messages: forkedMessages } = await topicModel.duplicate(
+        topicId,
+        'Forked Topic',
+        targetAgentId,
+      );
+
+      // The fork is a new conversation bound to the target agent, detached
+      // from the source's session — the original row is untouched.
+      expect(forkedTopic.id).not.toBe(topicId);
+      expect(forkedTopic.agentId).toBe(targetAgentId);
+      expect(forkedTopic.sessionId).toBeNull();
+      const [original] = await serverDB.select().from(topics).where(eq(topics.id, topicId));
+      expect(original.agentId).toBe(sourceAgentId);
+      expect(original.sessionId).toBe(sessionId);
+
+      // Copied messages keep their producing agent — the execution segment.
+      expect(forkedMessages).toHaveLength(1);
+      expect(forkedMessages[0].agentId).toBe(sourceAgentId);
+      expect(forkedMessages[0].topicId).toBe(forkedTopic.id);
+    });
+
+    it('should reject forking onto an agent outside the accessible set', async () => {
+      const topicId = 'topic-fork-bad-agent';
+      await serverDB.insert(topics).values({ id: topicId, sessionId, title: 'T', userId });
+
+      await expect(topicModel.duplicate(topicId, 'Forked', 'agent-does-not-exist')).rejects.toThrow(
+        'Target agent agent-does-not-exist not found or not accessible',
+      );
+    });
+
     it('should duplicate workspace messages created by other members', async () => {
       const workspaceId = 'topic-duplicate-workspace';
       const topicId = 'workspace-topic-duplicate';

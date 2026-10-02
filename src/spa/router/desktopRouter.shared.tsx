@@ -891,6 +891,17 @@ const createMainAreaChildrenDefinition = (options: MainAreaRouteOptions = {}): R
         element: redirectElement('/settings/credential'),
         path: 'creds',
       },
+      // Literal `agents` index — required because `/:workspaceSlug/agents`
+      // (plus its index-route bonus) out-scores `settings/:tab`, which would
+      // otherwise parse "settings" as a workspace slug and 404 the section.
+      {
+        element: dynamicElement(
+          () => import('@/routes/(main)/settings'),
+          'Desktop > Settings > Agents',
+        ),
+        handle: { meta: settingsRouteMeta, settingsTab: SettingsTabs.Agents },
+        path: 'agents',
+      },
       // Other settings tabs
       {
         element: dynamicElement(

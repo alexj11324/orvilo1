@@ -12,7 +12,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
 import { useAgentStore } from '@/store/agent';
-import { agentSelectors } from '@/store/agent/selectors';
+import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useGlobalStore } from '@/store/global';
@@ -62,8 +62,14 @@ const Agent = memo(() => {
   // it once `builtinAgentIdMap` resolves).
   useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.taskAgent);
 
+  const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
-  const title = agentDisplayName(meta, t('untitledAgent'));
+  // The task agent is a virtual row — its label comes from the same fallback
+  // the task-manager selector uses, not the agent meta map.
+  const title = agentDisplayName(
+    meta,
+    agentId === taskAgentId ? t('taskManager.agent', { ns: 'topic' }) : t('untitledAgent'),
+  );
 
   const handleSelect = useCallback(
     (id: string) => {
@@ -88,7 +94,10 @@ const Agent = memo(() => {
       // Open topic: switching hands the existing conversation to another
       // agent — a light confirm so the handoff is never silent.
       const toMeta = agentSelectors.getAgentMetaById(id)(useAgentStore.getState());
-      const toName = agentDisplayName(toMeta, t('untitledAgent'));
+      const toName = agentDisplayName(
+        toMeta,
+        id === taskAgentId ? t('taskManager.agent', { ns: 'topic' }) : t('untitledAgent'),
+      );
       confirmModal({
         cancelText: t('cancel', { ns: 'common' }),
         content: t('agentSwitchConfirm', { name: toName }),
@@ -103,7 +112,7 @@ const Agent = memo(() => {
         title: t('agentSwitchConfirmTitle'),
       });
     },
-    [agentId, t, workspaceAwareNavigate],
+    [agentId, t, taskAgentId, workspaceAwareNavigate],
   );
 
   return (

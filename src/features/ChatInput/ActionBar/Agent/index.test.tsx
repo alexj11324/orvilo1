@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   listSelect: vi.fn(),
   navigate: vi.fn(),
   setState: vi.fn(),
+  taskAgentId: 'agt_task',
   updateSystemStatus: vi.fn(),
 }));
 
@@ -102,6 +103,9 @@ vi.mock('@/store/agent', () => ({
 vi.mock('@/store/agent/selectors', () => ({
   agentSelectors: {
     getAgentMetaById: (id: string) => (s: typeof mocks) => s.agentMap[id] ?? {},
+  },
+  builtinAgentSelectors: {
+    taskAgentId: (s: typeof mocks) => s.taskAgentId,
   },
 }));
 

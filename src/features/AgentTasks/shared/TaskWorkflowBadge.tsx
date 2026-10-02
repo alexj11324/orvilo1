@@ -38,21 +38,19 @@ export const useTaskWorkflowGlyph = ({
     ...WORKFLOW_CATEGORY_VISUALS[workflowCategory],
     label: (
       <div className="flex flex-col gap-1" style={{ maxWidth: 320 }}>
-        <div className="text-[12px] text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           {t('taskDetail.workflow.businessStatus')}: {categoryLabel}
         </div>
         {workflowStateId && (
           <div
-            className="text-[12px] text-muted-foreground"
+            className="text-xs text-muted-foreground"
             style={{ fontFamily: cssVar.fontFamilyCode }}
           >
             {workflowStateId}
           </div>
         )}
         {deliveryPending && (
-          <div className="text-[12px] text-warning">
-            {t('taskDetail.workflow.deliveryPendingHelp')}
-          </div>
+          <div className="text-xs text-warning">{t('taskDetail.workflow.deliveryPendingHelp')}</div>
         )}
       </div>
     ),

@@ -921,7 +921,12 @@ export class TaskService {
     const resolved = await this.resolveOrThrow(input.id);
     const subtasks = await this.taskModel.findAllDescendants(resolved.id);
     const openSubtasks = subtasks.filter(
-      (task) => task.workflowCategory !== 'done' && task.workflowCategory !== 'canceled',
+      // `task.status` is the derived label — a parked-failed subtask keeps its
+      // failure instead of being rewritten by the parent's cascade.
+      (task) =>
+        task.workflowCategory !== 'done' &&
+        task.workflowCategory !== 'canceled' &&
+        task.status !== 'failed',
     );
     // Freeze the cascade to this snapshot: both the interrupt pass and the
     // status update operate on the same id set, so a subtask created or

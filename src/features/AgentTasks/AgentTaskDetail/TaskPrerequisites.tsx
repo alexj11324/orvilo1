@@ -316,7 +316,7 @@ const TaskRelationFields = ({ taskId }: { taskId: string }) => {
               </div>
             )}
             {rows.length === 0 ? (
-              <div className={`px-1 ${styles.propertyPlaceholder}`} style={{ fontSize: 13 }}>
+              <div className={`px-1 ${styles.propertyPlaceholder}`} style={{ fontSize: 14 }}>
                 {t('taskDetail.relations.none')}
               </div>
             ) : (

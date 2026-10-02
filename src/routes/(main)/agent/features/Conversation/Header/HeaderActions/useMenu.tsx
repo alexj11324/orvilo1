@@ -53,10 +53,10 @@ interface TopicInfoHeaderProps {
 const TopicInfoHeader = ({ authorName, title, updatedAtLabel }: TopicInfoHeaderProps) => (
   <div className="flex items-center gap-3 py-2 px-3" style={{ minWidth: 240 }}>
     <div className="flex flex-col flex-1 gap-0.5" style={{ minWidth: 0, overflow: 'hidden' }}>
-      <div className="truncate font-bold" style={{ lineHeight: 1.4 }}>
+      <div className="truncate font-semibold" style={{ lineHeight: 1.4 }}>
         {title}
       </div>
-      <div className="truncate text-[12px] text-muted-foreground" style={{ lineHeight: 1.4 }}>
+      <div className="truncate text-xs text-muted-foreground" style={{ lineHeight: 1.4 }}>
         {updatedAtLabel ? `${authorName} ${updatedAtLabel}` : authorName}
       </div>
     </div>

@@ -375,7 +375,7 @@ const KanbanColumn = memo<KanbanColumnProps>(
               <>
                 {statusIcon &&
                   createElement(statusIcon.icon, { color: statusIcon.color, size: 16 })}
-                <div className="text-[13px] font-medium">{label}</div>
+                <div className="text-sm font-medium">{label}</div>
               </>
             )}
             {headerVariant !== 'loading' && <span className={styles.count}>{total}</span>}

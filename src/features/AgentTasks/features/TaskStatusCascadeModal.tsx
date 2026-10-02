@@ -109,7 +109,7 @@ const TaskStatusCascadeModalContent = ({
   return (
     <div className="flex flex-col">
       <div className={`flex flex-col gap-2 ${styles.content}`}>
-        <h3 className="font-bold">{t('taskDetail.statusCascade.title')}</h3>
+        <h3 className="font-semibold">{t('taskDetail.statusCascade.title')}</h3>
         <div style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.statusCascade.description', {
             count: subtasks.length,

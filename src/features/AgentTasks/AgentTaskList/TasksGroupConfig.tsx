@@ -298,7 +298,7 @@ const TasksGroupConfig = memo<TasksHeaderProps>(
         <FieldGroup className="gap-3">
           {(viewMode === 'kanban' ? boardFormItems : formItems).map((item) => (
             <Field key={item.label} orientation={'horizontal'}>
-              <FieldLabel style={{ color: cssVar.colorTextSecondary, fontSize: 13 }}>
+              <FieldLabel style={{ color: cssVar.colorTextSecondary, fontSize: 14 }}>
                 {item.label}
               </FieldLabel>
               {item.children}

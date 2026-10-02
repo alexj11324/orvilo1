@@ -29,7 +29,7 @@ export const TaskAcceptanceHeader = memo<TaskAcceptanceHeaderProps>(
         onClick={onToggle}
       >
         <ShieldCheck color={cssVar.colorTextDescription} size={16} />
-        <div className="text-[13px] font-medium" style={{ color: cssVar.colorTextSecondary }}>
+        <div className="text-sm font-medium" style={{ color: cssVar.colorTextSecondary }}>
           {t('taskDetail.acceptance.title')}
         </div>
         {Boolean(count) && <Tag size="sm">{count}</Tag>}

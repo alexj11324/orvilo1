@@ -82,7 +82,7 @@ const TaskTriggerTag = memo<TaskTriggerTagProps>(
             style={{
               ...FLEX_MIN_WIDTH_0,
               color: data ? undefined : cssVar.colorTextPlaceholder,
-              fontSize: 13,
+              fontSize: 12,
               fontWeight: 400,
               lineHeight: 1.4,
             }}

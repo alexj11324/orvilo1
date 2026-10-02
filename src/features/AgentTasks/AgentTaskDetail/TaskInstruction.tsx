@@ -149,10 +149,10 @@ const TaskInstruction = memo(() => {
         <div onFocus={handleFocus}>
           <EditorCanvas
             contentRevision={instructionRevision}
-            // Linear's issue body runs 15px at a slightly darker weight than
-            // the editor's 16/400 default — the description reads as prose,
-            // not as a comment.
-            contentStyle={{ fontSize: 15, fontWeight: 450 }}
+            // The issue body runs 14px at a slightly darker weight than the
+            // editor's 16/400 default — the description reads as prose, not
+            // as a comment.
+            contentStyle={{ fontSize: 14, fontWeight: 500 }}
             disabled={!canEditTask}
             editable={!lock.lockedByOther && !lock.pending}
             editor={editor}

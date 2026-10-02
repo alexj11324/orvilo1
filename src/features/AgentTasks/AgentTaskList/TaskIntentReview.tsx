@@ -208,14 +208,14 @@ const TaskIntentReview = memo<TaskIntentReviewProps>((props) => {
       </div>
 
       <div className={`flex flex-col gap-4 ${styles.body}`}>
-        <div className="text-[13px] text-muted-foreground">{analysis.summary}</div>
+        <div className="text-sm text-muted-foreground">{analysis.summary}</div>
 
         {showGoalExit && (
           <div className={`flex items-center gap-3 ${styles.goalCallout}`}>
             <Target color={cssVar.colorTextSecondary} size={16} />
             <div className="flex flex-1 flex-col gap-0.5">
-              <div className="text-[13px] font-medium">{t('taskIntent.goalCallout.title')}</div>
-              <div className="text-[12px] text-muted-foreground">
+              <div className="text-sm font-medium">{t('taskIntent.goalCallout.title')}</div>
+              <div className="text-xs text-muted-foreground">
                 {analysis.kindReason || t('taskIntent.goalCallout.desc')}
               </div>
             </div>

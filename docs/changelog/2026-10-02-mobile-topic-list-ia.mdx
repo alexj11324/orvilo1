@@ -3,7 +3,7 @@ title: Mobile Chat tab becomes a real conversation list
 description: >-
   The mobile web Chat tab now lists conversations instead of agents, drops
   raw model badges from navigation, moves agent management into settings, and
-  stops the tab bar from covering content.
+  restores the stylesheet the mobile bundle was missing.
 tags:
   - Mobile
   - Chat
@@ -32,3 +32,11 @@ directory.
 - **Tab bar no longer covers content.** The bar now respects the iOS home
   indicator safe area, and the inbox / my-issues pages reserve space for the
   fixed bar so list ends are reachable.
+- **Global styles actually load on mobile.** The mobile bundle never imported
+  the app's stylesheet, so every Tailwind utility silently fell back to block
+  layout — composer controls overflowed the input card, settings rows wrapped
+  their chevrons onto a second line, and lists lost their row layout. The
+  mobile entry now loads the same global stylesheet as web and desktop.
+- **Composer placeholder stops advertising a keyboard shortcut.** The mobile
+  composer no longer shows the ⌘+ENTER send hint that touch keyboards cannot
+  use.

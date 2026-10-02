@@ -1,8 +1,9 @@
 import type { TaskItem } from '@orvilo/types';
-import { and, asc, eq, lt } from 'drizzle-orm';
+import { and, asc, lt } from 'drizzle-orm';
 
 import { TaskModel, type TaskMutationContext } from '@/database/models/task';
 import { matchesDispatchAssignee, TaskDispatchModel } from '@/database/models/taskDispatch';
+import { hasActiveExecution } from '@/database/models/taskExecutionSql';
 import { tasks } from '@/database/schemas/task';
 import type { OrviloDatabase } from '@/database/type';
 
@@ -45,7 +46,7 @@ export const sweepTaskOwnershipInvariants = async (input: {
       workspaceId: tasks.workspaceId,
     })
     .from(tasks)
-    .where(and(eq(tasks.status, 'running'), lt(tasks.updatedAt, cutoff)))
+    .where(and(hasActiveExecution, lt(tasks.updatedAt, cutoff)))
     .orderBy(asc(tasks.updatedAt), asc(tasks.id))
     .limit(limit);
 
@@ -56,7 +57,10 @@ export const sweepTaskOwnershipInvariants = async (input: {
     const dispatchModel = new TaskDispatchModel(input.db, workspaceId);
 
     const task = await taskModel.findById(candidate.taskId);
-    if (!task || task.status !== 'running') {
+    if (
+      !task ||
+      (await taskModel.derivedStatusByIds([candidate.taskId]))[candidate.taskId] !== 'running'
+    ) {
       outcomes.push({ outcome: 'skipped', taskId: candidate.taskId });
       continue;
     }
@@ -116,14 +120,16 @@ export const transferTaskExecutionOwnership = async (input: {
   reason: string;
   task: TaskItem;
 }): Promise<TaskItem | null> => {
-  if (input.task.status === 'running') {
-    await TaskDispatchModel.requestStopForTasks(input.db, [input.task.id], input.reason);
-  }
   const taskModel = new TaskModel(
     input.db,
     input.task.createdByUserId ?? '',
     input.task.workspaceId ?? undefined,
   );
+  // Fence first under the derived state — `task.status` is the frozen column
+  // and cannot report a live run.
+  if ((await taskModel.derivedStatusByIds([input.task.id]))[input.task.id] === 'running') {
+    await TaskDispatchModel.requestStopForTasks(input.db, [input.task.id], input.reason);
+  }
   return taskModel.update(input.task.id, input.patch, {
     ...input.mutation,
     executionTransfer: true,

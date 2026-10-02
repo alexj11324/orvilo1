@@ -31,7 +31,10 @@ vi.mock('@/database/models/linearSync', () => ({
   linearSyncRetryDelayMs: vi.fn(() => 1_000),
 }));
 vi.mock('@/database/models/task', () => ({ TaskModel: class {} }));
-vi.mock('@/database/schemas/task', () => ({ tasks: { id: 'id', workspaceId: 'workspaceId' } }));
+vi.mock('@/database/schemas/task', () => ({
+  taskDispatches: {},
+  tasks: { id: 'id', workspaceId: 'workspaceId' },
+}));
 vi.mock('./integrationTask', () => ({
   LinearIntegrationTaskService: class {
     findPublicTask = mocks.findPublicTask;

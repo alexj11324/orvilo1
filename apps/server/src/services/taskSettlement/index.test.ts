@@ -212,7 +212,9 @@ describe('settleTaskExecution', () => {
   });
 
   it('settle on a canceled task is a no-op', async () => {
-    mocks.findById.mockResolvedValue(runningTask({ status: 'canceled' }));
+    mocks.findById.mockResolvedValue(
+      runningTask({ status: 'canceled', workflowCategory: 'canceled' }),
+    );
 
     const result = await settle({ outcome: 'succeeded' });
 
@@ -225,7 +227,9 @@ describe('settleTaskExecution', () => {
     expect(first.applied).toBe(true);
 
     // The task row now carries the settled state — a replayed settle holds.
-    mocks.findById.mockResolvedValue(runningTask({ status: 'completed' }));
+    mocks.findById.mockResolvedValue(
+      runningTask({ status: 'completed', workflowCategory: 'done' }),
+    );
     const second = await settle({ outcome: 'succeeded' });
 
     expect(second).toMatchObject({ applied: false, skippedReason: 'terminal' });

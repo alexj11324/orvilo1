@@ -20,7 +20,7 @@ import { afterAll, afterEach, beforeAll, beforeEach, describe, expect, it } from
 
 import { getTestDB } from '@/database/core/getTestDB';
 import { CredentialModel } from '@/database/models/credential';
-import { credentials, providerBindings, tasks, workspaces } from '@/database/schemas';
+import { credentials, providerBindings, taskDispatches, workspaces } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
@@ -376,7 +376,12 @@ describe('embedded broker inference round-trip', () => {
     const first = await iterator.next();
     expect(first.value).toEqual({ type: 'text', text: 'a' });
 
-    await db.update(tasks).set({ status: 'stopped' }).where(eq(tasks.id, binding!.taskId));
+    // Canonical stop is the dispatch leaving its live phase — the retired
+    // tasks.status column carries no truth.
+    await db
+      .update(taskDispatches)
+      .set({ phase: 'cancel_requested' })
+      .where(eq(taskDispatches.id, binding!.dispatchId));
     chunk.release();
 
     const second = await iterator.next();

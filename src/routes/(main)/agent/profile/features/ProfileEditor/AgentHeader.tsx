@@ -12,6 +12,7 @@ import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createAgentIdentityModal } from '@/features/AgentIdentityModal';
+import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -21,6 +22,7 @@ import { useAutoName } from './useAutoName';
 const AgentHeader = memo(() => {
   const { t } = useTranslation(['setting', 'common']);
   const { allowed: canEdit } = usePermission('edit_own_content');
+  const isMobile = useIsMobile();
 
   const agentId = useAgentStore((s) => s.activeAgentId || '');
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId), isEqual);
@@ -45,8 +47,10 @@ const AgentHeader = memo(() => {
         paddingBlock: '0 16px',
 
         cursor: 'default',
-        marginInline: -16,
-        width: 'calc(100% + 32px)',
+        // The -16px bleed pushes the colour band past the editor's container
+        // padding on desktop; on mobile it runs the header past the viewport.
+        marginInline: isMobile ? 0 : -16,
+        width: isMobile ? '100%' : 'calc(100% + 32px)',
       }}
       onClick={(e) => {
         e.stopPropagation();
@@ -59,8 +63,8 @@ const AgentHeader = memo(() => {
             background: meta.backgroundColor || 'transparent',
             borderRadius: cssVar.borderRadiusLG,
             height: meta.backgroundColor ? 160 : 80,
-            marginInline: -16,
-            width: 'calc(100% + 32px)',
+            marginInline: isMobile ? 0 : -16,
+            width: isMobile ? '100%' : 'calc(100% + 32px)',
           }}
         />
         <div

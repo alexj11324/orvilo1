@@ -600,6 +600,14 @@ export const topicRouter = router({
     .input(
       z
         .object({
+          /**
+           * Opaque `updatedAt|id` cursor from a previous page's `nextCursor`.
+           * Passing `cursor`/`limit` switches the response to the paged
+           * envelope `{items, nextCursor}`; callers that pass neither keep the
+           * legacy flat-array response.
+           */
+          cursor: z.string().min(1).optional(),
+          limit: z.number().int().min(1).max(50).optional(),
           pageSize: z.number().max(500).optional(),
           statuses: z.array(z.string()).optional(),
           withLastMessage: z.boolean().optional(),
@@ -607,6 +615,15 @@ export const topicRouter = router({
         .optional(),
     )
     .query(async ({ input, ctx }) => {
+      if (input?.limit !== undefined || input?.cursor !== undefined) {
+        return ctx.topicModel.queryTopicsPage({
+          cursor: input.cursor,
+          limit: input.limit,
+          statuses: input.statuses,
+          withLastMessage: input.withLastMessage,
+        });
+      }
+
       return ctx.topicModel.queryTopics({
         pageSize: input?.pageSize,
         statuses: input?.statuses,

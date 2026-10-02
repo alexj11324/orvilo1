@@ -22,6 +22,7 @@ import { buildProjectReadableWhere } from '../utils/projectReadable';
 import { notShareVisitorTopic } from '../utils/shareVisitor';
 import { buildTaskTeamReadableWhere } from '../utils/taskTeamReadable';
 import { buildWorkspaceWhere } from '../utils/workspace';
+import { legacyStatusExpr, TASK_OPEN_WORKFLOW } from './taskExecutionSql';
 
 export interface RecentDbItem {
   description?: string | null;
@@ -55,7 +56,7 @@ const SYSTEM_TOPIC_TRIGGERS = ['cron', 'eval', 'task_manager', 'task', 'document
 // only user-authored pages ('api') and legacy 'topic' rows remain.
 const TOOL_DOCUMENT_SOURCE_TYPES = ['agent', 'agent-signal', 'file', 'web'] as const;
 
-const TASK_FINAL_STATUSES = ['completed', 'canceled'];
+// Mine-scope = open workflow: TASK_OPEN_WORKFLOW keeps done/canceled out.
 const TOPIC_INBOX_STATUSES: ChatTopicStatus[] = ['running', 'unread'];
 const LAST_MESSAGE_PREVIEW_LENGTH = 2000;
 
@@ -252,7 +253,7 @@ export class RecentModel {
         // reads as something; `slugTitle` deliberately does not, so the link
         // this row builds carries only what the task was actually named.
         slugTitle: sql<string | null>`${tasks.name}`.as('slug_title'),
-        status: sql<TaskStatus | null>`${tasks.status}`.as('status'),
+        status: sql<TaskStatus | null>`${legacyStatusExpr}`.as('status'),
         title: sql<string>`COALESCE(${tasks.name}, ${tasks.instruction}, 'Untitled Task')`.as(
           'title',
         ),
@@ -264,7 +265,7 @@ export class RecentModel {
       .where(
         requestedTypes && !requestedTypes.has('task')
           ? sql`false`
-          : and(taskScopeWhere, mineTaskWhere, not(inArray(tasks.status, TASK_FINAL_STATUSES))),
+          : and(taskScopeWhere, mineTaskWhere, TASK_OPEN_WORKFLOW),
       );
 
     const projectArm = this.db

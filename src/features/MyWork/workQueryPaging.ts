@@ -1,11 +1,13 @@
-import type { TaskListItem } from '@orvilo/types';
+import type { TaskListItem, TaskStatus } from '@orvilo/types';
 
 /**
  * A task row inside a work-query result. The server selects full `tasks` rows,
  * so this is the complete task shape; `participants` is the only list-read
- * attachment the work query doesn't join in.
+ * attachment the work query doesn't join in. `status` is the derived legacy
+ * label the server projects — always a vocabulary member, never raw text.
  */
-export type WorkQueryResultTask = Omit<TaskListItem, 'participants'> & {
+export type WorkQueryResultTask = Omit<TaskListItem, 'participants' | 'status'> & {
+  status: TaskStatus;
   participants?: TaskListItem['participants'];
 };
 

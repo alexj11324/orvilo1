@@ -22,7 +22,7 @@ const TERMINAL_LEGACY_STATUSES = new Set(['canceled', 'completed', 'failed']);
  * Given `taskId` + what just happened (`outcome`, or `verifyOutcome` for the
  * verify-driven path), the policy table decides the three canonical layers —
  * Issue Status (`workflowCategory`/`workflowStateRefId`), execution
- * projection, attention reason — plus the legacy `tasks.status` projection,
+ * projection, attention reason — plus the legacy status-transition vocabulary,
  * and applies them atomically through the caller-supplied concurrency guard
  * (`expectedContract`, `reservationId`, `expectedStatus`) or plain write.
  *

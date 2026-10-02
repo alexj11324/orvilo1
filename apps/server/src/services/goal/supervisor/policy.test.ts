@@ -15,7 +15,28 @@ const graph = {
   workVersions: [],
   goal: { config: { supervision: { enabled: true } }, status: 'running' } as GoalItem,
 } as GoalGraphSnapshot;
-const task = { status: 'failed', totalTopics: 1 } as TaskItem;
+// `deriveLegacyTaskStatus` reads the canonical shape (parked marker,
+// workflowCategory), never the retired `status` column — build fixtures in
+// the same vocabulary the row would carry.
+const withStatus = <T extends Partial<TaskItem>>(item: T, status: string): T => ({
+  ...item,
+  context:
+    status === 'paused' || status === 'failed'
+      ? {
+          execution: {
+            parked: {
+              at: '2024-01-01T00:00:00.000Z',
+              ...(status === 'failed' ? { reason: 'failed' } : {}),
+            },
+          },
+        }
+      : undefined,
+  status,
+  workflowCategory:
+    status === 'completed' ? 'done' : status === 'canceled' ? 'canceled' : 'in_progress',
+});
+
+const task = withStatus({ status: 'failed', totalTopics: 1 }, 'failed') as TaskItem;
 const operation = {
   completionReason: 'error',
   error: { message: 'fetch failed: ECONNRESET' },
@@ -48,7 +69,7 @@ describe('supervisor recovery authority', () => {
   });
 
   it('does not interpret a running, cancelled or unknown failure as recoverable', () => {
-    expect(recoveryEligibility(graph, { ...task, status: 'canceled' }, operation).eligible).toBe(
+    expect(recoveryEligibility(graph, withStatus(task, 'canceled'), operation).eligible).toBe(
       false,
     );
     expect(recoveryEligibility(graph, task, { ...operation, status: 'running' }).eligible).toBe(
@@ -80,7 +101,7 @@ describe('supervisor recovery authority', () => {
       humanizeHeteroDispatchError('DEVICE_GATEWAY_ERROR'),
     ])
       expect(
-        recoveryEligibility(graph, { ...task, error, status: 'paused' }, settled).eligible,
+        recoveryEligibility(graph, withStatus({ ...task, error }, 'paused'), settled).eligible,
       ).toBe(true);
   });
 
@@ -93,7 +114,7 @@ describe('supervisor recovery authority', () => {
       humanizeHeteroDispatchError('GATEWAY_NOT_CONFIGURED'),
     ])
       expect(
-        recoveryEligibility(graph, { ...task, error, status: 'paused' }, settled).eligible,
+        recoveryEligibility(graph, withStatus({ ...task, error }, 'paused'), settled).eligible,
       ).toBe(false);
   });
 
@@ -107,27 +128,26 @@ describe('supervisor recovery authority', () => {
     // Same for a dispatch failure a person closed out.
     const stalled = { ...task, error: '{"error":"DEVICE_OFFLINE","success":false}' };
     expect(recoveryEligibility(graph, stalled, settled, true).eligible).toBe(false);
-    expect(recoveryEligibility(graph, { ...stalled, status: 'paused' }, settled).eligible).toBe(
-      true,
-    );
+    expect(recoveryEligibility(graph, withStatus(stalled, 'paused'), settled).eligible).toBe(true);
   });
 
   it('still refuses a pipeline failure that a person or a limit caused', () => {
     expect(
       recoveryEligibility(
         graph,
-        { ...task, error: 'device unauthorized', status: 'paused' },
+        withStatus({ ...task, error: 'device unauthorized' }, 'paused'),
         settled,
       ).eligible,
     ).toBe(false);
     expect(
-      recoveryEligibility(graph, { ...task, status: 'paused' }, {
+      recoveryEligibility(graph, withStatus(task, 'paused'), {
         ...settled,
         completionReason: 'cost_limit',
       } as AgentOperationItem).eligible,
     ).toBe(false);
     expect(
-      recoveryEligibility(graph, { ...task, totalTopics: 3, status: 'paused' }, settled).eligible,
+      recoveryEligibility(graph, withStatus({ ...task, totalTopics: 3 }, 'paused'), settled)
+        .eligible,
     ).toBe(false);
   });
 

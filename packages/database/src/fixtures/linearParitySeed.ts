@@ -40,7 +40,6 @@ export const LINEAR_PARITY_MY_ISSUES = [
     name: 'Urgent: review release evidence',
     parentTaskId: null,
     priority: 1,
-    status: 'backlog',
     workflowCategory: 'todo',
   },
   {
@@ -49,7 +48,6 @@ export const LINEAR_PARITY_MY_ISSUES = [
     name: 'Urgent: verify handoff status',
     parentTaskId: 'taskparitymine0001',
     priority: 1,
-    status: 'backlog',
     workflowCategory: 'todo',
   },
   {
@@ -58,7 +56,6 @@ export const LINEAR_PARITY_MY_ISSUES = [
     name: 'Blocking: resolve dependency contract',
     parentTaskId: null,
     priority: 2,
-    status: 'backlog',
     workflowCategory: 'in_progress',
   },
   {
@@ -67,7 +64,6 @@ export const LINEAR_PARITY_MY_ISSUES = [
     name: 'Blocking: verify downstream acceptance',
     parentTaskId: 'taskparitymine0003',
     priority: 2,
-    status: 'backlog',
     workflowCategory: 'in_progress',
   },
   {
@@ -76,7 +72,6 @@ export const LINEAR_PARITY_MY_ISSUES = [
     name: 'Assigned: document follow-up',
     parentTaskId: null,
     priority: 3,
-    status: 'backlog',
     workflowCategory: 'todo',
   },
   {
@@ -85,7 +80,6 @@ export const LINEAR_PARITY_MY_ISSUES = [
     name: 'Assigned: completed example',
     parentTaskId: null,
     priority: 0,
-    status: 'completed',
     workflowCategory: 'done',
   },
 ] as const satisfies ReadonlyArray<{
@@ -94,7 +88,6 @@ export const LINEAR_PARITY_MY_ISSUES = [
   name: string;
   parentTaskId: string | null;
   priority: number;
-  status: 'backlog' | 'completed';
   workflowCategory: TaskWorkflowCategory;
 }>;
 
@@ -453,7 +446,6 @@ const ensureTasks = async (
         name: identifier,
         projectId,
         seq: index + 1,
-        status: 'completed',
         triageStatus: 'accepted' as const,
         visibility: 'public' as const,
         workflowCategory: 'done' as const,
@@ -527,7 +519,6 @@ const ensureMyIssuesTasks = async (
       parentTaskId: definition.parentTaskId,
       priority: definition.priority,
       seq: PARITY_TASK_COUNT + index + 1,
-      status: definition.status,
       teamId,
       triageStatus: 'accepted',
       visibility: 'public',
@@ -558,7 +549,6 @@ const ensureMyIssuesTasks = async (
         projectId: null,
         projectMilestoneId: null,
         seq: PARITY_TASK_COUNT + index + 1,
-        status: definition.status,
         teamId,
         triageStatus: 'accepted',
         visibility: 'public',
@@ -632,7 +622,6 @@ export const seedLinearParity = async (
     await taskModel.update(
       task.id,
       {
-        status: 'completed',
         teamId: team.id,
         triageStatus: 'accepted',
         visibility: 'public',

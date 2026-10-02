@@ -134,6 +134,9 @@ vi.mock('model-bank', async (importOriginal) => {
 });
 
 const baseAgentConfig = (plugins: unknown[], overrides: Record<string, unknown> = {}) => ({
+  // Mount-capable external binding — the builtin orvilo agent is
+  // embedded-only (mounts no tools).
+  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
   chatConfig: {},
   id: 'agent-1',
   model: 'gpt-4',

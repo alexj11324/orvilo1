@@ -54,11 +54,27 @@ describe('TeamTriageRow status icon', () => {
     expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
   });
 
-  it('keeps the execution icon when no provider workflow state is linked', () => {
+  it('draws the category mark for a local task without a provider link', () => {
+    // `workflowCategory` IS the Issue Status — no provider workflow state
+    // needed for the glyph to render.
     render(
       <TeamTriageRow
         {...props}
         task={{ id: 'task-2', name: 'Local issue', status: 'backlog', workflowCategory: 'todo' }}
+      />,
+    );
+
+    expect(
+      screen.getByRole('link').querySelector('[data-workflow-icon="todo"]'),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('execution-icon')).not.toBeInTheDocument();
+  });
+
+  it('keeps the execution icon when the task has no workflow category', () => {
+    render(
+      <TeamTriageRow
+        {...props}
+        task={{ id: 'task-2b', name: 'Legacy issue', status: 'backlog' }}
       />,
     );
 

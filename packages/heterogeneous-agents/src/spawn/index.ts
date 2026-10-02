@@ -37,6 +37,25 @@ export {
   type UploadHeterogeneousImage,
 } from './agentStreamPipeline';
 export {
+  CACHE_KEEPALIVE_PROMPT_TEXT,
+  CACHE_KEEPALIVE_PROMPT_TIMEOUT_MS,
+  type CacheKeepaliveClock,
+  CacheKeepaliveController,
+  type CacheKeepaliveControllerOptions,
+  type CacheKeepaliveDisarmReason,
+} from './cacheKeepalive';
+export {
+  AGENT_CACHE_POLICIES,
+  type AgentCachePolicy,
+  CACHE_KEEPALIVE_ENV,
+  type CacheKeepaliveOverrides,
+  CODEX_PROMPT_CACHE_KEY_ENV,
+  computeMaxKeepalivePings,
+  resolveAgentCachePolicy,
+  resolveCacheKeepalive,
+  type ResolvedCacheKeepalive,
+} from './cachePolicy';
+export {
   classifyHeteroProcessFailure,
   type ClassifyHeteroProcessFailureParams,
   HETERO_WORKING_DIRECTORY_NOT_FOUND,
@@ -115,6 +134,7 @@ export {
 } from './input';
 export { JsonlStreamProcessor } from './jsonlProcessor';
 export type {
+  HeterogeneousAgentCacheKeepaliveStatus,
   HeterogeneousAgentRuntimeState,
   HeterogeneousAgentRuntimeStatus,
   HeterogeneousAgentRuntimeTask,

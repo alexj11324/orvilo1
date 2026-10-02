@@ -13,6 +13,10 @@ import type { AcpAgentRuntimeSpec } from './acpRuntime';
 import type { AcpRpcMessage } from './acpStdioClient';
 import { AcpRpcResponseError, AcpServerRequestError } from './acpStdioClient';
 import type { UploadHeterogeneousImage } from './agentStreamPipeline';
+import {
+  resolveCacheKeepalive as resolveAgentCacheKeepalive,
+  type ResolvedCacheKeepalive,
+} from './cachePolicy';
 import type { AgentPromptInput, BuildAgentInputOptions } from './input';
 import {
   buildTraeAcpPrompt,
@@ -225,6 +229,7 @@ export class StandardAcpSession extends AcpAgentSession<
   StandardAcpSessionOptions
 > {
   private acceptUpdates = false;
+  private resolvedCacheKeepalive?: ResolvedCacheKeepalive;
   /**
    * Latest `configId → allowed values` snapshot the agent advertised — seeded
    * from `session/new`/`session/load` and refreshed by every
@@ -350,6 +355,7 @@ export class StandardAcpSession extends AcpAgentSession<
     this.mergeAdvertisedConfigOptions(sessionResult.configOptions);
     const model = await this.applyInitialModel(sessionId, sessionResult);
     await this.applySessionConfigOptions(sessionId);
+    await this.applyPromptCacheKey(sessionId);
     if (model) {
       this.pipeline.configureSession({ model });
       this.options.onModel?.(model);
@@ -366,6 +372,15 @@ export class StandardAcpSession extends AcpAgentSession<
 
   protected buildPromptParams(sessionId: string): unknown {
     return { prompt: this.resolvedPrompt, sessionId };
+  }
+
+  protected override resolveCacheKeepalive(): ResolvedCacheKeepalive | undefined {
+    this.resolvedCacheKeepalive ??= resolveAgentCacheKeepalive(
+      this.sessionConfig.agentType,
+      this.options.env,
+      this.options.cacheKeepalive,
+    );
+    return this.resolvedCacheKeepalive;
   }
 
   protected override async settlePrompt(result: unknown): Promise<void> {
@@ -391,6 +406,8 @@ export class StandardAcpSession extends AcpAgentSession<
   }
 
   protected async handleAgentMessage(message: AcpRpcMessage): Promise<void> {
+    // Inert keep-alive turns must not leak updates into the run's event stream.
+    if (this.inInertTurn) return;
     if (message.method !== 'session/update' || !this.acceptUpdates) return;
     const params = isRecord(message.params) ? message.params : undefined;
     if (!isRecord(params?.update)) return;
@@ -411,9 +428,13 @@ export class StandardAcpSession extends AcpAgentSession<
   protected async handleServerRequest(message: AcpRpcMessage): Promise<unknown> {
     switch (message.method) {
       case 'session/request_permission': {
+        // Fail closed during an inert turn: a keep-alive ping never invokes
+        // tools, so a permission ask means the agent misbehaved — cancel it.
+        if (this.inInertTurn) return { outcome: { outcome: 'cancelled' } };
         return this.respondToPermissionRequest(message);
       }
       case 'elicitation/create': {
+        if (this.inInertTurn) return { action: 'cancel' };
         return this.respondToElicitation(message);
       }
       default: {
@@ -476,6 +497,30 @@ export class StandardAcpSession extends AcpAgentSession<
 
     await this.client.request('session/set_model', { modelId: value, sessionId });
     return value;
+  }
+
+  /**
+   * Pin provider prompt-cache routing (`prompt_cache_key`) to the ACP
+   * session id so a fresh process resuming this session lands on the same
+   * cache chain — only when the engine's policy declares the configId AND
+   * the env opt-in is on (codex-rs support pending verification). Applied
+   * as an optional config option: skipped/tolerated when unadvertised.
+   */
+  private async applyPromptCacheKey(sessionId: string): Promise<void> {
+    const configId = this.resolveCacheKeepalive()?.promptCacheKey;
+    if (!configId) return;
+    try {
+      const response = await this.client.request<StandardAcpSetConfigOptionResult>(
+        'session/set_config_option',
+        { configId, sessionId, value: sessionId },
+      );
+      this.mergeAdvertisedConfigOptions(response?.configOptions);
+    } catch (error) {
+      this.noteSkippedConfigOption(
+        { configId, value: sessionId },
+        error instanceof Error ? error.message : String(error),
+      );
+    }
   }
 
   /**

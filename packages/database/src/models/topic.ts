@@ -1545,7 +1545,7 @@ export class TopicModel {
     });
   };
 
-  duplicate = async (topicId: string, newTitle?: string) => {
+  duplicate = async (topicId: string, newTitle?: string, targetAgentId?: string) => {
     return this.db.transaction(async (tx) => {
       // find original topic
       const originalTopic = await tx.query.topics.findFirst({
@@ -1556,7 +1556,26 @@ export class TopicModel {
         throw new Error(`Topic with id ${topicId} not found`);
       }
 
-      // copy topic
+      if (targetAgentId) {
+        const [targetAgent] = await tx
+          .select({ id: agents.id })
+          .from(agents)
+          .where(
+            and(
+              eq(agents.id, targetAgentId),
+              buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, agents),
+            ),
+          )
+          .limit(1);
+
+        if (!targetAgent) {
+          throw new Error(`Target agent ${targetAgentId} not found or not accessible`);
+        }
+      }
+
+      // copy topic — a fork onto another agent detaches from the source
+      // agent's legacy session the same way a move does, while the copied
+      // messages keep their per-row producing agentId as execution segments.
       const [duplicatedTopic] = await tx
         .insert(topics)
         .values(
@@ -1565,8 +1584,10 @@ export class TopicModel {
             {
               ...originalTopic,
               ...COPIED_TOPIC_USAGE_RESET,
+              agentId: targetAgentId ?? originalTopic.agentId,
               clientId: null,
               id: this.genId(),
+              sessionId: targetAgentId ? null : originalTopic.sessionId,
               title: newTitle || originalTopic?.title,
             },
           ),

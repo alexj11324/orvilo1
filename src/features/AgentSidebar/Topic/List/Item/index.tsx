@@ -26,7 +26,7 @@ import UnreadDot from '@/components/UnreadDot';
 import { isDesktop } from '@/const/version';
 import { TopicMigrationIndicator } from '@/features/AgentTransferMigration';
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
-import { useHasDraft } from '@/features/ChatInput/draftStorage';
+import { topicDraftKey, useHasDraft } from '@/features/ChatInput/draftStorage';
 import { startTopicDrag } from '@/features/ChatInput/InputEditor/ReferTopic/topicDragData';
 import NavItem from '@/features/NavPanel/components/NavItem';
 import TopicCreatorAvatar, { useTopicCreator } from '@/features/TopicCreatorAvatar';
@@ -36,7 +36,6 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
-import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useElectronStore } from '@/store/electron';
 
 import { useTopicNavigation } from '../../hooks/useTopicNavigation';
@@ -365,13 +364,10 @@ const TopicItemRow = memo<TopicItemRowProps>(
     }, [rowAgentId, hasLocalRunningRuntime, id, isUnreadCompleted]);
 
     // Surface a WeChat-style red "[Draft]" hint when this topic holds unsent
-    // input. Drafts live in localStorage keyed by messageMapKey; the default
+    // input. Drafts live in localStorage keyed by topic id; the default
     // topic (no id) maps to the new-topic draft. `useHasDraft` re-renders the
     // row only when the draft appears or clears.
-    const draftKey = useMemo(
-      () => (rowAgentId ? messageMapKey({ agentId: rowAgentId, topicId: id }) : undefined),
-      [rowAgentId, id],
-    );
+    const draftKey = useMemo(() => (id ? topicDraftKey(id) : undefined), [id]);
     const hasDraft = useHasDraft(draftKey);
     const draftPrefix = hasDraft ? (
       <div className="text-[12px]" style={{ color: cssVar.colorError, flex: 'none' }}>

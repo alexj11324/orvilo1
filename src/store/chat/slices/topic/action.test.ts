@@ -2131,6 +2131,7 @@ describe('topic action', () => {
     it('is a no-op when the topic already runs under the target agent', async () => {
       const { result } = renderHook(() => useChatStore());
       const { topicId } = setupBoundTopic();
+      const updateTopicMock = vi.spyOn(topicService, 'updateTopic');
       const batchMoveMock = vi.spyOn(topicService, 'batchMoveTopics');
       const updateTopicMetadataMock = vi.spyOn(topicService, 'updateTopicMetadata');
 
@@ -2138,14 +2139,16 @@ describe('topic action', () => {
         await result.current.rebindTopicAgent(topicId, 'agent-a');
       });
 
+      expect(updateTopicMock).not.toHaveBeenCalled();
       expect(batchMoveMock).not.toHaveBeenCalled();
       expect(updateTopicMetadataMock).not.toHaveBeenCalled();
     });
 
-    it('rebinds the topic via the move mutation and appends a handoff entry', async () => {
+    it('reassigns execution via updateTopic — never the move mutation — and appends a handoff entry', async () => {
       const { result } = renderHook(() => useChatStore());
       const { topicId } = setupBoundTopic();
-      vi.spyOn(topicService, 'batchMoveTopics').mockResolvedValue([] as never);
+      const updateTopicMock = vi.spyOn(topicService, 'updateTopic').mockResolvedValue([] as never);
+      const batchMoveMock = vi.spyOn(topicService, 'batchMoveTopics');
       vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
       const updateTopicMetadataMock = vi
         .spyOn(topicService, 'updateTopicMetadata')
@@ -2155,21 +2158,64 @@ describe('topic action', () => {
         await result.current.rebindTopicAgent(topicId, 'agent-b');
       });
 
-      // Only the move mutation writes `topics.agent_id` and re-parents the
-      // topic's messages — plain updateTopic cannot persist the rebind.
-      expect(topicService.batchMoveTopics).toHaveBeenCalledWith([topicId], 'agent-b');
+      // Continue only flips the topic's owner column — messages/threads are
+      // never re-parented, so earlier execution segments stay attributed.
+      expect(updateTopicMock).toHaveBeenCalledWith(topicId, { agentId: 'agent-b' });
+      expect(batchMoveMock).not.toHaveBeenCalled();
       expect(
         useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0],
-      ).toMatchObject({ agentId: 'agent-b' });
+      ).toMatchObject({ agentId: 'agent-b', id: topicId });
       expect(updateTopicMetadataMock).toHaveBeenCalledWith(topicId, {
         agentHandoffs: [expect.objectContaining({ fromAgentId: 'agent-a', toAgentId: 'agent-b' })],
       });
     });
 
+    it('keeps the topic in the workspace feed bucket under its flipped agentId', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const agentId = 'agent-a';
+      const topicId = 'topic-feed';
+      const topic: ChatTopic = {
+        agentId,
+        createdAt: Date.now(),
+        favorite: false,
+        id: topicId,
+        title: 'Feed topic',
+        updatedAt: Date.now(),
+      };
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
+              currentPage: 0,
+              hasMore: false,
+              isExpandingPageSize: false,
+              isLoadingMore: false,
+              items: [topic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+      vi.spyOn(topicService, 'updateTopic').mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      vi.spyOn(topicService, 'updateTopicMetadata').mockResolvedValue([]);
+
+      await act(async () => {
+        await result.current.rebindTopicAgent(topicId, 'agent-b');
+      });
+
+      // A handoff must never push the row out of the shared feed.
+      expect(useChatStore.getState().topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items).toEqual([
+        expect.objectContaining({ agentId: 'agent-b', id: topicId }),
+      ]);
+    });
+
     it('still completes the switch when the handoff metadata write fails', async () => {
       const { result } = renderHook(() => useChatStore());
       const { topicId } = setupBoundTopic();
-      vi.spyOn(topicService, 'batchMoveTopics').mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'updateTopic').mockResolvedValue([] as never);
       vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
       vi.spyOn(topicService, 'updateTopicMetadata').mockRejectedValue(
         new Error('metadata write failed'),
@@ -2182,6 +2228,25 @@ describe('topic action', () => {
       expect(
         useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0],
       ).toMatchObject({ agentId: 'agent-b' });
+    });
+  });
+
+  describe('forkTopicAgent', () => {
+    it('clones the topic under the target agent and leaves the original untouched', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const cloneSpy = vi.spyOn(topicService, 'cloneTopic').mockResolvedValue('topic-fork');
+      const batchMoveMock = vi.spyOn(topicService, 'batchMoveTopics');
+
+      let newTopicId: string | undefined;
+      await act(async () => {
+        newTopicId = await result.current.forkTopicAgent('topic-1', 'agent-b');
+      });
+
+      expect(newTopicId).toBe('topic-fork');
+      expect(cloneSpy).toHaveBeenCalledWith('topic-1', undefined, 'agent-b');
+      expect(batchMoveMock).not.toHaveBeenCalled();
+      // The fork reconciles the workspace feed so the new topic appears.
+      expect(mutate).toHaveBeenCalledWith(expect.any(Function));
     });
   });
   describe('cleanupStaleRunningTopics', () => {

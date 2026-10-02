@@ -124,9 +124,11 @@ export default {
   'agentSignal.receipts.skill.detail': 'Self-refined how this agent handles similar requests',
   'agentSignal.receipts.skill.title': 'Auto-learned a new skill',
   'agents': 'Agents',
-  'agentSwitchConfirm': '{{name}} will continue this conversation with the existing context.',
-  'agentSwitchConfirmAction': 'Switch to {{name}}',
-  'agentSwitchConfirmTitle': 'Switch agent?',
+  'agentSwitchChoice.continue': 'Continue with {{name}}',
+  'agentSwitchChoice.description':
+    'Continue reassigns this conversation — it keeps its history and place in the list. Fork starts a new conversation seeded from this one, leaving it untouched.',
+  'agentSwitchChoice.fork': 'Fork to {{name}}',
+  'agentSwitchChoice.title': 'Hand off to {{name}}?',
   'artifact.generating': 'Generating',
   'artifact.inThread':
     'Cannot view in subtopic, please switch to the main conversation area to open',

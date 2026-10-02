@@ -16,6 +16,7 @@ import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import type { ActionKeys, ChatInputFeature } from '@/features/ChatInput';
 import { ChatInputProvider, DesktopChatInput } from '@/features/ChatInput';
 import { type ActionDropdownMenu } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
+import { topicDraftKey } from '@/features/ChatInput/draftStorage';
 import {
   type SendButtonHandler,
   type SendButtonProps,
@@ -204,6 +205,16 @@ const ChatInput = memo<ChatInputProps>(
     const dbMessages = useConversationStore(dataSelectors.dbMessages);
     const context = useConversationStore((s) => s.context);
     const contextKey = useMemo(() => messageMapKey(context), [context]);
+    // Drafts belong to the conversation: an existing topic's draft keys on
+    // its topicId so an agent handoff (Continue with {agent}) never strands
+    // the typed text under the previous agent's bucket.
+    const draftKey = useMemo(
+      () =>
+        context.topicId && !context.threadId && !context.groupId
+          ? topicDraftKey(context.topicId)
+          : contextKey,
+      [context, contextKey],
+    );
     const canRecordVoiceMessage = useCanSendVoiceMessage(context);
     const [agentId, inputMessage, sendMessage, stopGenerating] = useConversationStore((s) => [
       s.context.agentId,
@@ -525,7 +536,7 @@ const ChatInput = memo<ChatInputProps>(
         canRecordVoiceMessage={canRecordVoiceMessage}
         contextSelectionKey={contextKey}
         contextWindowMessages={contextWindowMessages}
-        draftKey={contextKey}
+        draftKey={draftKey}
         feature={feature}
         getMessages={getMessages}
         leftActions={leftActions}

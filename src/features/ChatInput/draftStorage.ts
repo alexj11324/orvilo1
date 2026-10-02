@@ -2,6 +2,14 @@ import { useSyncExternalStore } from 'react';
 
 export const CHAT_INPUT_DRAFTS_STORAGE_KEY = 'orvilo:chat-input-drafts:v1';
 
+/**
+ * Draft key for an existing topic conversation. The draft belongs to the
+ * conversation, not the agent — a mid-topic agent handoff must never strand
+ * the user's typed text, so the key keys on the topic id alone (no agentId
+ * segment, unlike the messageMapKey-derived agent buckets).
+ */
+export const topicDraftKey = (topicId: string): string => `topic_${topicId}`;
+
 const MAX_DRAFTS = 50;
 
 export interface ChatInputDraftEntry {

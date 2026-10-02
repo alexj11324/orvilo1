@@ -18,9 +18,9 @@ export const topicDraftKey = (topicId: string): string => `topic_${topicId}`;
 export const newTopicDraftKey = 'topic_new';
 
 interface ConversationDraftContext {
-  groupId?: string;
-  threadId?: string;
-  topicId?: string;
+  groupId?: string | null;
+  threadId?: string | null;
+  topicId?: string | null;
 }
 
 /**

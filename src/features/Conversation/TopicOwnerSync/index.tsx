@@ -47,7 +47,7 @@ const TopicOwnerSync = memo(() => {
 
   // Hydrate the bound agent's config — `AgentIdSync` does this for
   // `/agent/:aid`; `/chat` resolves the same id from the topic instead.
-  useInitAgentConfig(configAgentId);
+  useInitAgentConfig(configAgentId ?? undefined);
 
   // Resolve the owner on deep links where the topic isn't in any loaded
   // bucket yet. `getTopicById` also scans the detail map, so once the fetch

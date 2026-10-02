@@ -771,9 +771,9 @@ export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): strin
       '  Run the Acceptance inside this Task, not after it: drive the real product surface and submit each artifact as soon as the criterion it proves is provable.',
     );
     taskLines.push(
-      '  Criterion ids are minted when this run starts, so they are not listed above. Read them at runtime with `listCriteria`, or `lh verify plan state "$ORVILO_OPERATION_ID" --json` if you have a shell.',
+      '  Criterion ids are minted when this run starts, so they are not listed above. Read them at runtime with `listCriteria`, or `orvilo verify plan state "$ORVILO_OPERATION_ID" --json` if you have a shell.',
     );
-    // One toolchain now, not two. The `lh acceptance install` / `lh acceptance
+    // One toolchain now, not two. The `orvilo acceptance install` / `orvilo acceptance
     // run result submit` pair went away with the standalone Acceptance platform,
     // so the prompt no longer branches on whether the builder has a shell.
     taskLines.push(
@@ -815,7 +815,7 @@ export const buildTaskRunPrompt = (input: TaskRunPromptInput, now?: Date): strin
       }
     }
     taskLines.push(
-      '  To read a previous round in full, run: `lh task topic view ' +
+      '  To read a previous round in full, run: `orvilo task topic view ' +
         task.identifier +
         ' <seq>` (seq from the Activities list below).',
     );

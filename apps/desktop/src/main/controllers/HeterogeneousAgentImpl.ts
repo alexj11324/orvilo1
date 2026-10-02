@@ -373,10 +373,10 @@ interface CliTraceSession {
   writeQueue: Promise<void>;
 }
 
-export type LhHeteroExecCancellationResult = HeterogeneousAgentCancellationResult;
+export type OrviloHeteroExecCancellationResult = HeterogeneousAgentCancellationResult;
 
-interface LhHeteroExecTask {
-  cancellation?: Promise<LhHeteroExecCancellationResult>;
+interface OrviloHeteroExecTask {
+  cancellation?: Promise<OrviloHeteroExecCancellationResult>;
   exit: Promise<void>;
   process: ChildProcess;
 }
@@ -426,7 +426,7 @@ export default class HeterogeneousAgentCtr {
 
   private sessions = new Map<string, AgentSession>();
   /** Device-gateway CLI wrappers keyed by their server operation id. */
-  private lhHeteroExecTasks = new Map<string, LhHeteroExecTask>();
+  private orviloHeteroExecTasks = new Map<string, OrviloHeteroExecTask>();
   /**
    * Per-operation AskUserQuestion bridge state. Keyed by `operationId` so the
    * `submitIntervention` IPC can route an answer to the right pending MCP
@@ -455,7 +455,7 @@ export default class HeterogeneousAgentCtr {
   /**
    * Uploads a base64 tool_result image (CC `Read` on an image file) to the file
    * store, so the persisted event carries a `{ fileId, url }` reference instead
-   * of heavy base64. Mirrors what `lh hetero exec` does for the gateway path.
+   * of heavy base64. Mirrors what `orvilo hetero exec` does for the gateway path.
    */
   private uploadResultImage = createFileStoreImageUploader(() =>
     createLambdaFileStorePort(this.remoteServerAuth),
@@ -2098,7 +2098,7 @@ export default class HeterogeneousAgentCtr {
   }
 
   private async waitForProcessTreeExit(
-    task: LhHeteroExecTask,
+    task: OrviloHeteroExecTask,
     timeoutMs: number,
   ): Promise<boolean> {
     if (process.platform === 'win32') {
@@ -2300,10 +2300,10 @@ export default class HeterogeneousAgentCtr {
    * failures such as an inaccessible cwd asynchronously through `error`, so an
    * eager accepted ack would strand the server operation without a producer.
    */
-  spawnLhHeteroExec(params: {
+  spawnOrviloHeteroExec(params: {
     agentType: string;
     assistantMessageId?: string;
-    /** Resolved `lh hetero exec` wrapper args. */
+    /** Resolved `orvilo hetero exec` wrapper args. */
     args?: string[];
     /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
     builtinTools?: AcpBuiltinToolSpec[];
@@ -2324,7 +2324,7 @@ export default class HeterogeneousAgentCtr {
     prompt: string;
     resumeFallbackSystemContext?: string;
     resumeSessionId?: string;
-    /** Admission fence relayed to `lh hetero exec` via `ORVILO_RUN_GENERATION`. */
+    /** Admission fence relayed to `orvilo hetero exec` via `ORVILO_RUN_GENERATION`. */
     runGeneration?: number;
     serverUrl: string;
     systemContext?: string;
@@ -2366,7 +2366,7 @@ export default class HeterogeneousAgentCtr {
     const spawnCwd = resolveHeteroSpawnCwd(workDir);
 
     // When CLI tracing is enabled (dev builds, or the Help-menu toggle in
-    // packaged builds), have `lh hetero exec` persist the agent process's RAW
+    // packaged builds), have `orvilo hetero exec` persist the agent process's RAW
     // ACP wire stream (pre-adapter) on this device. The remote-device path
     // otherwise leaves no local record — the CLI consumes stdout internally and
     // only POSTs adapted events to the server — so without this there's nothing
@@ -2436,9 +2436,9 @@ export default class HeterogeneousAgentCtr {
       ...(workspaceId ? { ORVILO_WORKSPACE_ID: workspaceId } : {}),
     };
 
-    logger.info('spawnLhHeteroExec: type=%s op=%s topic=%s', agentType, operationId, topicId);
+    logger.info('spawnOrviloHeteroExec: type=%s op=%s topic=%s', agentType, operationId, topicId);
 
-    // Execute the CLI shipped with this desktop build. A bare `lh` would prefer
+    // Execute the CLI shipped with this desktop build. A bare `orvilo` would prefer
     // an older global install earlier on PATH, letting model discovery report a
     // capability that the actual execution runtime does not support.
     // `detached: true` puts the CLI in its own process group so
@@ -2461,18 +2461,23 @@ export default class HeterogeneousAgentCtr {
       child.once('exit', () => resolve());
       child.once('error', () => resolve());
     });
-    this.lhHeteroExecTasks.set(operationId, { exit, process: child });
+    this.orviloHeteroExecTasks.set(operationId, { exit, process: child });
 
     child.on('exit', (code, signal) => {
-      logger.info('spawnLhHeteroExec: exited — op=%s code=%s signal=%s', operationId, code, signal);
-      if (this.lhHeteroExecTasks.get(operationId)?.process === child) {
-        this.lhHeteroExecTasks.delete(operationId);
+      logger.info(
+        'spawnOrviloHeteroExec: exited — op=%s code=%s signal=%s',
+        operationId,
+        code,
+        signal,
+      );
+      if (this.orviloHeteroExecTasks.get(operationId)?.process === child) {
+        this.orviloHeteroExecTasks.delete(operationId);
       }
     });
 
     child.on('error', () => {
-      if (this.lhHeteroExecTasks.get(operationId)?.process === child) {
-        this.lhHeteroExecTasks.delete(operationId);
+      if (this.orviloHeteroExecTasks.get(operationId)?.process === child) {
+        this.orviloHeteroExecTasks.delete(operationId);
       }
     });
 
@@ -2486,7 +2491,7 @@ export default class HeterogeneousAgentCtr {
 
       child.stdin.once('error', (err) => {
         logger.error(
-          'spawnLhHeteroExec: stdin write failed — op=%s error=%s',
+          'spawnOrviloHeteroExec: stdin write failed — op=%s error=%s',
           operationId,
           err.message,
         );
@@ -2507,7 +2512,7 @@ export default class HeterogeneousAgentCtr {
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
           logger.error(
-            'spawnLhHeteroExec: stdin write threw — op=%s error=%s',
+            'spawnOrviloHeteroExec: stdin write threw — op=%s error=%s',
             operationId,
             reason,
           );
@@ -2516,14 +2521,14 @@ export default class HeterogeneousAgentCtr {
       });
 
       child.once('error', (err) => {
-        logger.error('spawnLhHeteroExec: spawn failed — %s', err.message);
+        logger.error('spawnOrviloHeteroExec: spawn failed — %s', err.message);
         settle({ reason: err.message, status: 'rejected' });
       });
     });
   }
 
   /**
-   * Cancels a device-gateway `lh hetero exec` wrapper and waits for its native
+   * Cancels a device-gateway `orvilo hetero exec` wrapper and waits for its native
    * writer to exit.
    *
    * Use when:
@@ -2531,17 +2536,17 @@ export default class HeterogeneousAgentCtr {
    * - A replacement turn must not resume the same native thread concurrently.
    *
    * Expects:
-   * - `operationId` is the id supplied to {@link spawnLhHeteroExec}.
+   * - `operationId` is the id supplied to {@link spawnOrviloHeteroExec}.
    *
    * Returns:
    * - Process details when a live wrapper was found; otherwise `undefined`.
    */
-  async cancelLhHeteroExec(params: {
+  async cancelOrviloHeteroExec(params: {
     operationId: string;
     signal?: HeterogeneousAgentCancellationSignal;
-  }): Promise<LhHeteroExecCancellationResult | undefined> {
+  }): Promise<OrviloHeteroExecCancellationResult | undefined> {
     const { operationId, signal = 'SIGINT' } = params;
-    const task = this.lhHeteroExecTasks.get(operationId);
+    const task = this.orviloHeteroExecTasks.get(operationId);
     if (!task) return;
     if (task.cancellation) return task.cancellation;
 

@@ -42,7 +42,7 @@ const collectArtifacts = (metadata: unknown): AegisArtifactFile[] => {
 /**
  * Persist the Aegis method-pack artifacts a hetero run shipped back in its
  * operation metadata (`metadata.aegis.artifacts` — the `.aegis/` closeout and
- * any drift/retirement reports, collected by `lh hetero exec` at finish) as
+ * any drift/retirement reports, collected by `orvilo hetero exec` at finish) as
  * `file` Works on the task.
  *
  * Unlike entity-file Works there is NO sandbox export: the artifact bytes are

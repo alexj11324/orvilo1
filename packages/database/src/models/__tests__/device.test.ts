@@ -362,7 +362,7 @@ describe('DeviceModel', () => {
           workspaceId: wsId,
         });
 
-        // `lh connect --workspace … --public` on an existing private enrollment
+        // `orvilo connect --workspace … --public` on an existing private enrollment
         // must promote it — an ignored explicit flag would be a silent no-op
         const promoted = await wsModel.registerWorkspaceDevice({
           deviceId: 'wdev',

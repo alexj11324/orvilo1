@@ -70,7 +70,7 @@ export interface SpawnAgentOptions {
   mcpServers?: Record<string, unknown>[];
   /**
    * Optional tee for the ACP wire traffic — every raw JSON-RPC line the agent
-   * writes, BEFORE the adapter sees it. `lh hetero exec --raw-dump` wires it
+   * writes, BEFORE the adapter sees it. `orvilo hetero exec --raw-dump` wires it
    * to a file writer so the untouched stream can be inspected after the fact.
    */
   onRawStdout?: (chunk: Buffer) => void;
@@ -123,7 +123,7 @@ export interface SpawnAgentHandle {
   /**
    * The agent's native session id, reported by `session/new` / `session/load`.
    * Available after the `events` async iterable has been fully consumed.
-   * Used by `lh hetero exec` to pass `sessionId` to `heteroFinish` so the
+   * Used by `orvilo hetero exec` to pass `sessionId` to `heteroFinish` so the
    * server can persist it for `--resume` on the next turn.
    */
   readonly sessionId: string | undefined;
@@ -440,7 +440,7 @@ const spawnStandardAcpAgent = async (
 /**
  * Spawn an external agent through its ACP v1 session — every locally
  * executed agent type runs the shared initialize → session/new|load →
- * session/prompt lifecycle. Used by `lh hetero exec` for both standalone
+ * session/prompt lifecycle. Used by `orvilo hetero exec` for both standalone
  * terminal runs and sandbox-driven runs that ingest into the server.
  *
  * Stays minimal on purpose — no on-disk tracing, no proxy env composition,

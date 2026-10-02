@@ -155,7 +155,7 @@ export const agentNotifyRouter = router({
     // `findOwnTopicById` excludes agent-share visitor topics: they live under
     // the creator's userId, and no legitimate visitor run reaches this
     // callback (heterogeneous providers, sub-agent dispatch and the sandbox
-    // `lh` CLI are all refused for share runs), so a visitor topic id here can
+    // `orvilo` CLI are all refused for share runs), so a visitor topic id here can
     // only be a creator-side caller trying to write into a private transcript.
     const topic = await ctx.topicModel.findOwnTopicById(topicId);
     if (!topic) {
@@ -441,7 +441,7 @@ export const agentNotifyRouter = router({
           // Terminal signal (done or error) with empty content + existing
           // placeholder → just finalize the run, no message update. Pass the
           // resolved id so the finalizer can reload the agent's final reply
-          // (written in-place via earlier `lh notify` calls) into
+          // (written in-place via earlier `orvilo notify` calls) into
           // `lastAssistantContent` — bot completion callbacks and the task
           // lifecycle follow-ups (handoff / auto-review / brief) depend on it.
           if (isTerminal && !content) {

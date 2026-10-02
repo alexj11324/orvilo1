@@ -29,38 +29,38 @@ process.
 ## Ornith reproduction scenario
 
 ```bash
-lh goal create "Reproduce the Ornith self-improvement training system" \
+orvilo goal create "Reproduce the Ornith self-improvement training system" \
   --requirement "A reproducible minimal training loop, frozen-set evaluation, and evidence that capability improves without verifier leakage" \
   --work \
     "Recover and validate the public training specification" \
     "Implement the minimal training loop" \
     "Build a frozen-set verifier and adversarial checks"
 
-lh goal graph <goal-id>
-lh goal run <goal-id>
+orvilo goal graph <goal-id>
+orvilo goal run <goal-id>
 ```
 
 When a failed Work opens a gate:
 
 ```bash
-lh goal decisions <goal-id>
-lh goal decide <goal-id> <decision-id> --option retry --reason "Harden the verifier first"
-lh goal run <goal-id>
+orvilo goal decisions <goal-id>
+orvilo goal decide <goal-id> <decision-id> --option retry --reason "Harden the verifier first"
+orvilo goal run <goal-id>
 ```
 
 The graph can evolve during exploration instead of requiring all branches at
 creation time:
 
 ```bash
-lh goal add-node <goal-id> work "Run leakage-resistant frozen-set evaluation"
-lh goal add-edge <goal-id> <finding-node-id> <new-work-node-id> leads_to
-lh goal run <goal-id>
+orvilo goal add-node <goal-id> work "Run leakage-resistant frozen-set evaluation"
+orvilo goal add-edge <goal-id> <finding-node-id> <new-work-node-id> leads_to
+orvilo goal run <goal-id>
 ```
 
 Budget exhaustion pauses coordination and is resumable:
 
 ```bash
-lh goal set-budget <goal-id> --max-rounds 20 --max-cost 10
-lh goal resume <goal-id>
-lh goal run <goal-id>
+orvilo goal set-budget <goal-id> --max-rounds 20 --max-cost 10
+orvilo goal resume <goal-id>
+orvilo goal run <goal-id>
 ```

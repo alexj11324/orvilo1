@@ -3,11 +3,9 @@
   "version": "0.0.54",
   "type": "module",
   "bin": {
-    "lh": "./dist/index.js",
     "orvilo": "./dist/index.js"
   },
   "man": [
-    "./man/man1/lh.1",
     "./man/man1/orvilo.1"
   ],
   "files": [

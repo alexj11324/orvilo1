@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * Regenerates `src/aegis/files.generated.ts` — the embedded copy of the
- * vendored Aegis method pack (`vendor/aegis/`). The `lh` CLI ships `dist`
+ * vendored Aegis method pack (`vendor/aegis/`). The `orvilo` CLI ships `dist`
  * only, so the pack must travel as bundled data, not files. See
  * `vendor/aegis/VENDORED.md` for the pinned upstream commit.
  *

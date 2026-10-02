@@ -60,7 +60,7 @@
 以下能力在 `canary@e8d1d428` 上被视为**既有行为**；任何后续 PR 不得在未声明的情况下削弱：
 
 - **聊天**：流式输出、工具卡片渲染、审批 / 取消 / 重连、线程、群聊 supervisor/member、附件（图片 / 文件）下发执行目标。
-- **任务**：Task 手动执行、重试、claim / 依赖 /worktree/ 完成门控（`taskRunner`/`taskDispatch`/`taskIntegration`/`taskLifecycle`）、Verify/CI/Review/Repair、证据提交（`orvilo-acceptance-evidence` 是 run-scoped KEEP\_SHARED）。
+- **任务**：Task 手动执行、重试、claim / 依赖 /worktree/ 完成门控（`taskRunner`/`taskDispatch`/`taskIntegration`/`taskLifecycle`）、Verify/CI/Review/Repair、证据提交（`orvilo-acceptance-evidence` 是 run-scoped KEEP_SHARED）。
 - **编排**：`execAgent`/`execAgents`/`execGroupAgent`/`execSubAgent`/`execVirtualSubAgent`/`execAgentMember`/`execAgentTasks` 全部经 `dispatchHeteroAgent`；Hatchet `delivery:'hatchet'` 钩子（subAgent/groupMember/threadRun/bot callback + `finalizeAbandoned`）存活。
 - **异步**：独立 child operation、K=N member barrier、父子关系、完成桥（`completeSubAgentBridge`/`completeGroupActionMember`）保留；`waiting_for_async_tool`/`tryResumeParentFromAsyncTool` 只对历史遗留快照有效（ACP 父 run 阻塞在宿主 MCP 工具调用内，不写该快照）。
 - **automation**：服务端调度、时区、立即运行、历史；不依赖 renderer 常驻。
@@ -72,7 +72,7 @@
 
 - Responses API：`autoStart:false` 语义断、topic 级末条助手文本串扰、function tools 无 ACP 等价物（ORVILO-5860）。
 - group-member 专用 timeout：被通用 inactivity watchdog 替代，per-child deadline 语义缺口。
-- 本地环境：无 Docker；migrations 0090/0093 需 pg\_search/bm25 stub 变通（见 environment knowledge）。
+- 本地环境：无 Docker；migrations 0090/0093 需 pg_search/bm25 stub 变通（见 environment knowledge）。
 
 ## 6. 并行与重型验证约束（沿用方案）
 
@@ -94,5 +94,5 @@
 | Desktop 宿主仍含 `providerBindingHost/providerBindingPort`/`serverDefault*` 辅助                                                                                                                                                           | `apps/desktop/src/main/controllers/HeterogeneousAgentImpl.ts`、`modules/heterogeneousAgent/` |
 | ACP `clientInfo` 仍发送 `title: 'LobeHub'`                                                                                                                                                                                                 | `packages/heterogeneous-agents/src/spawn/standardAcpSession.ts:305`                          |
 | 品牌常量已就位（`BRANDING_NAME='Orvilo'`）；残余 `Lobe*` 命中 ≈21 文件，多为 `@lobehub/*` 第三方真实标识或历史文档                                                                                                                         | `packages/business/const/src/branding.ts` + 全仓扫描                                         |
-| CLI bin 已双名 `lh` + `orvilo`                                                                                                                                                                                                             | `apps/cli/package.json`                                                                      |
+| CLI bin 已双名 `orvilo` + `orvilo`                                                                                                                                                                                                         | `apps/cli/package.json`                                                                      |
 | builtin-skills 仅剩 4 项：agent-browser/artifacts/orvilo/task                                                                                                                                                                              | `packages/builtin-skills/src/index.ts`                                                       |

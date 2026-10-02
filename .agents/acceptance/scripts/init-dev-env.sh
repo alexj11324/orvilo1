@@ -571,7 +571,7 @@ const client = new pg.Client({ connectionString: databaseUrl });
     ],
   );
 
-  // Self-heal the inbox agent: a prior test run (e.g. `lh agent edit --slug inbox`)
+  // Self-heal the inbox agent: a prior test run (e.g. `orvilo agent edit --slug inbox`)
   // can turn the built-in default cloud agent into a heterogeneous (external-CLI)
   // one, which then fails every run with GATEWAY_NOT_CONFIGURED. Reset any polluted
   // inbox row for the test user back to a clean cloud default. Idempotent — a
@@ -641,7 +641,7 @@ cmd_status() {
 
 # Prerequisite gate for agent-runtime tests. In queue mode (the production
 # path), the server requires a Hatchet client token and a reachable Hatchet
-# deployment before an operation can start. Run this before `lh agent run` (or
+# deployment before an operation can start. Run this before `orvilo agent run` (or
 # any durable-op path).
 cmd_preflight() {
   apply_env

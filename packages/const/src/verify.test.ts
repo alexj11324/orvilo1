@@ -143,7 +143,7 @@ describe('isProgrammaticTestCheck', () => {
   it('leaves real acceptance checks alone, including command-asserted ones', () => {
     // `program` verifier ≠ programmatic-test check: the subject here is product
     // behavior, and the command is only how it was observed.
-    expect(isProgrammaticTestCheck('lh task list --tree returns nested children')).toBe(false);
+    expect(isProgrammaticTestCheck('orvilo task list --tree returns nested children')).toBe(false);
     expect(isProgrammaticTestCheck('The client reconnects after a dropped socket')).toBe(false);
     expect(isProgrammaticTestCheck('TTS output plays in the reply bubble')).toBe(false);
     expect(isProgrammaticTestCheck('Rejecting a check re-tasks the next round')).toBe(false);

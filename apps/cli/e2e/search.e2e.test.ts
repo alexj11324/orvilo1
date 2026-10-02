@@ -3,15 +3,15 @@ import { execSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 
 /**
- * E2E tests for `lh search` global search command.
+ * E2E tests for `orvilo search` global search command.
  *
  * Prerequisites:
- * - `lh` CLI is installed and linked globally
- * - User is authenticated (`lh login` completed)
+ * - `orvilo` CLI is installed and linked globally
+ * - User is authenticated (`orvilo login` completed)
  * - Network access to the Orvilo server
  */
 
-const CLI = process.env.LH_CLI_PATH || 'lh';
+const CLI = process.env.ORVILO_CLI_PATH || 'orvilo';
 const TIMEOUT = 30_000;
 
 function run(args: string): string {
@@ -27,7 +27,7 @@ function runJson<T = any>(args: string): T {
   return JSON.parse(output) as T;
 }
 
-describe('lh search - E2E', () => {
+describe('orvilo search - E2E', () => {
   it('should search across types', () => {
     const output = run('search "test"');
     // May show results or "No results found."

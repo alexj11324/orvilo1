@@ -58,13 +58,13 @@ A task can be turned into a recurring job instead of a one-off: give it a cron s
 
 ## Using the CLI
 
-If you use the Orvilo CLI, the same task system is available from the command line via `lh task`:
+If you use the Orvilo CLI, the same task system is available from the command line via `orvilo task`:
 
 ```
-lh task list                                   # list your tasks
-lh task view T-1                               # view a task's details
-lh task create -i "Draft the release notes"    # create a task
-lh task edit T-1 --status completed            # update a task's status
+orvilo task list                                   # list your tasks
+orvilo task view T-1                               # view a task's details
+orvilo task create -i "Draft the release notes"    # create a task
+orvilo task edit T-1 --status completed            # update a task's status
 ```
 
 This is useful for scripting task creation, checking status from automation, or managing tasks alongside coding sessions without switching to the UI.

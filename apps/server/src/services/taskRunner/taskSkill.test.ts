@@ -15,7 +15,7 @@ const content = readFileSync(join(dirname(builtinSkillsEntry), 'task/SKILL.md'),
  * SKILL.md lands in the system context — a higher-priority surface than the
  * per-run task prompt. Guard that the "complete when done" guidance it ships
  * carries the automation exception; without it, a quiet automation tick can
- * follow the skill and `lh task complete` its own recurring task, which
+ * follow the skill and `orvilo task complete` its own recurring task, which
  * cancels the in-flight run and permanently disarms the heartbeat/schedule
  * loop.
  */
@@ -25,17 +25,17 @@ describe('task skill instructions', () => {
   });
 
   it('ships the complete-when-done guidance the exception guards against', () => {
-    expect(content).toContain('lh task complete');
+    expect(content).toContain('orvilo task complete');
     expect(content).toContain('Complete when done');
   });
 
   it('forbids completing automation tasks via the CLI', () => {
     expect(content).toContain('Automation tasks are the exception — NEVER complete them');
     expect(content).toContain(
-      'NEVER run `lh task complete` (or set a terminal status via `lh task edit --status`)',
+      'NEVER run `orvilo task complete` (or set a terminal status via `orvilo task edit --status`)',
     );
     // The exception must follow the completion guidance it carves out of.
-    expect(content.indexOf('NEVER run `lh task complete`')).toBeGreaterThan(
+    expect(content.indexOf('NEVER run `orvilo task complete`')).toBeGreaterThan(
       content.indexOf('Complete when done'),
     );
   });

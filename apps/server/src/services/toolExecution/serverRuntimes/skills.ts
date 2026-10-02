@@ -172,12 +172,12 @@ class SkillServerRuntimeService implements SkillRuntimeService {
   };
 
   /**
-   * Rewrite an `lh` command for sandbox execution: prepend the auth +
+   * Rewrite an `orvilo` command for sandbox execution: prepend the auth +
    * workspace-scope prelude so the CLI runs as this user, against this run's
    * workspace. Shared by `runCommand` and `execScript` — the model picks
    * between them by manifest wording alone (`execScript` is the one described
    * as "run the CLI commands a skill's instructions tell you to"), so a hole in
-   * either one is a hole in the whole `lh` surface.
+   * either one is a hole in the whole `orvilo` surface.
    */
   private preprocessSandboxCommand = async (
     command: string,
@@ -219,7 +219,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
       throw new Error('topicId is required for runCommand');
     }
 
-    // Preprocess lh commands: resolve `lh` to the CLI + inject auth/workspace env
+    // Preprocess orvilo commands: resolve `orvilo` to the CLI + inject auth/workspace env
     const lhResult = await this.preprocessSandboxCommand(options.command);
     if (lhResult.error) {
       return {
@@ -437,7 +437,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
           arguments: JSON.stringify({
             command,
             ...(cwd && { cwd }),
-            // Keep `lh` on the device in this run's workspace instead of the
+            // Keep `orvilo` on the device in this run's workspace instead of the
             // device credentials' personal scope.
             ...(deviceLhEnv && { env: deviceLhEnv }),
             ...(device.executionTimeoutMs && { timeout: device.executionTimeoutMs }),
@@ -539,7 +539,7 @@ class SkillServerRuntimeService implements SkillRuntimeService {
       throw new Error('topicId is required for execScript');
     }
 
-    // Same `lh` handling as runCommand — the client-side executor
+    // Same `orvilo` handling as runCommand — the client-side executor
     // (`routers/tools/market.ts`) has always preprocessed both tools, and
     // gateway runs must not behave differently.
     const lhResult = await this.preprocessSandboxCommand(command);

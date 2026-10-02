@@ -12,7 +12,7 @@ Orvilo CLI (`@orvilo/cli`) is a command-line tool for managing and interacting w
 
 - **Package**: `apps/cli/`
 - **Entry**: `apps/cli/src/index.ts`
-- **Binaries**: `lh`, `orvilo`, `orvilo` (all aliases for the same CLI)
+- **Binaries**: `orvilo`, `orvilo`, `orvilo` (all aliases for the same CLI)
 - **Build**: tsup
 - **Runtime**: Node.js / Bun
 
@@ -66,28 +66,28 @@ apps/cli/src/
 
 ## Command Groups
 
-| Command        | Alias | Description                                                 |
-| -------------- | ----- | ----------------------------------------------------------- |
-| `lh login`     | -     | Authenticate via OIDC Device Code Flow                      |
-| `lh logout`    | -     | Clear stored credentials                                    |
-| `lh connect`   | -     | Device gateway connection & daemon management               |
-| `lh status`    | -     | Quick gateway connectivity check                            |
-| `lh agent`     | -     | Agent CRUD, run, status                                     |
-| `lh generate`  | `gen` | Content generation (text, image, video, tts, asr, download) |
-| `lh doc`       | -     | Document CRUD, batch-create, parse, topic linking           |
-| `lh file`      | -     | File list, view, delete, recent                             |
-| `lh kb`        | -     | Knowledge base CRUD, folders, docs, upload, tree view       |
-| `lh memory`    | -     | User memory CRUD + extraction                               |
-| `lh message`   | -     | Message list, search, delete, count, heatmap                |
-| `lh topic`     | -     | Topic CRUD + search + recent                                |
-| `lh skill`     | -     | Skill CRUD + import (GitHub/URL/market)                     |
-| `lh model`     | -     | Model CRUD, toggle, batch-toggle, clear                     |
-| `lh provider`  | -     | Provider CRUD, config, test, toggle                         |
-| `lh plugin`    | -     | Plugin install, uninstall, update                           |
-| `lh search`    | -     | Global search across all types                              |
-| `lh workspace` | `ws`  | Workspace list, scope switch, members, invites, usage       |
-| `lh whoami`    | -     | Current user info (including the resolved workspace scope)  |
-| `lh usage`     | -     | Monthly/daily usage statistics                              |
+| Command            | Alias | Description                                                 |
+| ------------------ | ----- | ----------------------------------------------------------- |
+| `orvilo login`     | -     | Authenticate via OIDC Device Code Flow                      |
+| `orvilo logout`    | -     | Clear stored credentials                                    |
+| `orvilo connect`   | -     | Device gateway connection & daemon management               |
+| `orvilo status`    | -     | Quick gateway connectivity check                            |
+| `orvilo agent`     | -     | Agent CRUD, run, status                                     |
+| `orvilo generate`  | `gen` | Content generation (text, image, video, tts, asr, download) |
+| `orvilo doc`       | -     | Document CRUD, batch-create, parse, topic linking           |
+| `orvilo file`      | -     | File list, view, delete, recent                             |
+| `orvilo kb`        | -     | Knowledge base CRUD, folders, docs, upload, tree view       |
+| `orvilo memory`    | -     | User memory CRUD + extraction                               |
+| `orvilo message`   | -     | Message list, search, delete, count, heatmap                |
+| `orvilo topic`     | -     | Topic CRUD + search + recent                                |
+| `orvilo skill`     | -     | Skill CRUD + import (GitHub/URL/market)                     |
+| `orvilo model`     | -     | Model CRUD, toggle, batch-toggle, clear                     |
+| `orvilo provider`  | -     | Provider CRUD, config, test, toggle                         |
+| `orvilo plugin`    | -     | Plugin install, uninstall, update                           |
+| `orvilo search`    | -     | Global search across all types                              |
+| `orvilo workspace` | `ws`  | Workspace list, scope switch, members, invites, usage       |
+| `orvilo whoami`    | -     | Current user info (including the resolved workspace scope)  |
+| `orvilo usage`     | -     | Monthly/daily usage statistics                              |
 
 ### Workspace Scope
 
@@ -95,13 +95,13 @@ Every command runs against one scope, resolved in this order:
 
 1. an explicit `--workspace <id>` on the commands that take it
 2. the `ORVILO_WORKSPACE_ID` env var
-3. the scope persisted by `lh workspace use <id|slug>`
+3. the scope persisted by `orvilo workspace use <id|slug>`
 4. personal content (no workspace)
 
 The persisted scope is bound to the account and server it was chosen under. If
-either changes — a different `lh login`, a `--server` switch — it is ignored and
+either changes — a different `orvilo login`, a `--server` switch — it is ignored and
 reported as stale rather than attaching a workspace header the new identity has
-no membership in. `lh logout` clears it. `lh whoami` and `lh workspace current`
+no membership in. `orvilo logout` clears it. `orvilo whoami` and `orvilo workspace current`
 both print which of the four sources is in effect.
 
 API-key auth carries no local account identity, so there is nothing to bind a
@@ -283,7 +283,7 @@ cd apps/cli && bun run dev -- agent list
 cd apps/cli && bun run dev -- <command>
 
 # Production (orvilo.aspectlylabs.com) — uses ~/.orvilo/
-lh <command>
+orvilo <command>
 ```
 
 The two environments are completely isolated by different credential directories.
@@ -300,7 +300,7 @@ cd apps/cli && bun run test
 # E2E tests (requires authenticated CLI)
 cd apps/cli && bunx vitest run e2e/kb.e2e.test.ts
 
-# Link globally for testing (installs lh/orvilo commands)
+# Link globally for testing (installs orvilo/orvilo commands)
 cd apps/cli && bun run cli:link
 ```
 

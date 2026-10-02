@@ -48,12 +48,12 @@ packages/agent-tracing/
 
 Server deployments also upload completed snapshots to object storage (zstd-compressed; the key is stored in `agent_operations.trace_s3_key`).
 
-**Preferred: `lh trace op`.** The server resolves the key and signs the object for the caller's own scope, so a Orvilo login is the only requirement — no `TRACING_BASE_URL`, no bucket domain, and no SQL to turn a topic id into an operation id:
+**Preferred: `orvilo trace op`.** The server resolves the key and signs the object for the caller's own scope, so a Orvilo login is the only requirement — no `TRACING_BASE_URL`, no bucket domain, and no SQL to turn a topic id into an operation id:
 
 ```bash
-lh trace op list --topic tpc_xxx # operations of a topic, newest first, with a TRACE column
-lh trace op inspect op_xxx_agt_xxx_tpc_xxx_xxxx
-lh trace op inspect op_xxx_agt_xxx_tpc_xxx_xxxx -T # tool injection (enabledToolIds, manifests)
+orvilo trace op list --topic tpc_xxx # operations of a topic, newest first, with a TRACE column
+orvilo trace op inspect op_xxx_agt_xxx_tpc_xxx_xxxx
+orvilo trace op inspect op_xxx_agt_xxx_tpc_xxx_xxxx -T # tool injection (enabledToolIds, manifests)
 ```
 
 `TRACE = —` in `list` means no snapshot was recorded for that run (it predates trace upload, or upload was off). A recorded snapshot can still 404 in storage after its retention window.
@@ -79,7 +79,7 @@ Implementation: `packages/agent-tracing/src/store/loadSnapshot.ts` (resolution o
 
 A goal is one complete _goal_ execution the way an operation is one complete agent execution, so it gets the same trace format one level up: `GoalTrajectory : AdvanceSnapshot` mirrors `ExecutionSnapshot : StepSnapshot`. There is no table of advances, exactly as there is no `agent_steps` table — `goal_traces` holds one rollup row per goal plus the object key, and the detail lives in the object.
 
-The leaves join back down: an advance records the `operationId`s it put in flight (on `tick.effects[].operationId`), so `lh trace op inspect <opId>` continues from where the goal trace stops.
+The leaves join back down: an advance records the `operationId`s it put in flight (on `tick.effects[].operationId`), so `orvilo trace op inspect <opId>` continues from where the goal trace stops.
 
 ```bash
 agent-tracing goal               # list local goal trajectories
@@ -181,19 +181,19 @@ exact message array sent to the model, `context.payload.tools` the toolset it co
 output is attributable to the model rather than to context assembly. If every model fails the
 same payload, the context is at fault; if some pass, it is model selection.
 
-Available from both CLIs — `agent-tracing replay` (reads `ORVILO_JWT`) and `lh trace op replay`
-(uses the `lh login` session). Both need credentials because the call goes out through the
+Available from both CLIs — `agent-tracing replay` (reads `ORVILO_JWT`) and `orvilo trace op replay`
+(uses the `orvilo login` session). Both need credentials because the call goes out through the
 Orvilo chat route.
 
 ```bash
 # One call: defaults to the last call_llm step and the model the op ran on
-lh trace op replay <operationId>
-lh trace op replay <operationId> -s 4 -m openai/gpt-5,anthropic/claude-sonnet-5
-lh trace op replay <operationId> --judge "answers with a concrete file path"
+orvilo trace op replay <operationId>
+orvilo trace op replay <operationId> -s 4 -m openai/gpt-5,anthropic/claude-sonnet-5
+orvilo trace op replay <operationId> --judge "answers with a concrete file path"
 
 # Every call of the operation
-lh trace op replay <operationId> --all-steps
-lh trace op replay <operationId> --all-steps --concurrency 8
+orvilo trace op replay <operationId> --all-steps
+orvilo trace op replay <operationId> --all-steps --concurrency 8
 ```
 
 `--all-steps` answers the question the whole feature exists for: **take a run that succeeded, put
@@ -272,7 +272,7 @@ says which basis is in use. Analysis lives in `analysis/contextMap.ts` and is ex
 | `--step <n>`      | `-s`  | Target a specific step                                                                            | —            |
 | `--messages`      | `-m`  | Messages context (CE input → params → LLM payload)                                                | —            |
 | `--tools`         | `-t`  | Tool calls & results (what agent invoked)                                                         | —            |
-| `--events`        | `-e`  | Raw events (llm\_start, llm\_result, etc.)                                                        | —            |
+| `--events`        | `-e`  | Raw events (llm_start, llm_result, etc.)                                                          | —            |
 | `--context`       | `-c`  | Runtime context & payload (raw)                                                                   | —            |
 | `--system-role`   | `-r`  | Full system role content                                                                          | 0            |
 | `--env`           |       | Environment context                                                                               | 0            |

@@ -57,12 +57,12 @@ function saveHermesSessionId(topicId: string, sessionId: string): void {
   fs.writeFileSync(HERMES_SESSIONS_FILE, JSON.stringify(data), 'utf8');
 }
 
-/** Resolve the absolute path to the `lh` binary to avoid PATH issues in child processes. */
-function resolveLhPath(): string {
+/** Resolve the absolute path to the `orvilo` binary to avoid PATH issues in child processes. */
+function resolveCliPath(): string {
   try {
-    return execFileSync('which', ['lh'], { encoding: 'utf8' }).trim();
+    return execFileSync('which', ['orvilo'], { encoding: 'utf8' }).trim();
   } catch {
-    return 'lh';
+    return 'orvilo';
   }
 }
 
@@ -85,7 +85,7 @@ export interface RunHeteroTaskParams {
   /**
    * Workspace id seeded by the server when the dispatched topic lives in a
    * workspace. Threaded into auto-notify calls (as `X-Workspace-Id`) and into
-   * the spawned child's `ORVILO_WORKSPACE_ID` env so its own `lh notify`
+   * the spawned child's `ORVILO_WORKSPACE_ID` env so its own `orvilo notify`
    * shells inherit the same scope.
    */
   workspaceId?: string;
@@ -140,7 +140,7 @@ async function sendAutoNotify(
  *
  * Pass `error` to finalize the run as FAILED (non-zero process exit), or
  * `cancelled` to finalize it as INTERRUPTED (signal exit). Omit both for a clean
- * completion (the agent already sent its final message via `lh notify`).
+ * completion (the agent already sent its final message via `orvilo notify`).
  */
 async function sendTerminalSignal(
   topicId: string,
@@ -171,27 +171,27 @@ async function sendTerminalSignal(
 
 /**
  * Build the notify protocol injected into the first message of a new hetero-agent session.
- * Tells the agent how to push updates back to the Orvilo user via `lh notify`.
+ * Tells the agent how to push updates back to the Orvilo user via `orvilo notify`.
  */
-function buildNotifyProtocol(lhPath: string, topicId: string): string {
+function buildNotifyProtocol(cliPath: string, topicId: string): string {
   return (
     `## Context: This task was dispatched by ${CLI_PRODUCT_NAME}\n\n` +
     `This conversation / task was sent to you by the **${CLI_PRODUCT_NAME} platform** on behalf of a user. You are running as a background agent; the user is waiting for your response inside the ${CLI_PRODUCT_NAME} chat interface.\n\n` +
     `**When to call notify**: any time you have something meaningful to tell the user — a key finding, a decision you made, a result, a question, or your final answer. Think of it as speaking directly to the user in the chat window.\n\n` +
     `**What to hide**: internal work details such as tool call sequences, file reads, intermediate command output, retries, or low-level reasoning steps. The user cares about outcomes and insights, not your step-by-step mechanics.\n\n` +
     `## Sending messages back to the user\n\n` +
-    `Use the \`${lhPath} notify\` command. All your updates appear as a **single message bubble** in the UI — create it once and update it in place.\n\n` +
+    `Use the \`${cliPath} notify\` command. All your updates appear as a **single message bubble** in the UI — create it once and update it in place.\n\n` +
     `**Step 1 — Open the bubble on your first meaningful update** (captures the messageId):\n` +
     `\`\`\`\n` +
-    `MSG_ID=$(${lhPath} notify --topic ${topicId} --role assistant --content "Starting..." --json | grep -o '"messageId":"[^"]*"' | cut -d'"' -f4)\n` +
+    `MSG_ID=$(${cliPath} notify --topic ${topicId} --role assistant --content "Starting..." --json | grep -o '"messageId":"[^"]*"' | cut -d'"' -f4)\n` +
     `\`\`\`\n\n` +
     `**Step 2 — Update the same bubble as you make progress**:\n` +
     `\`\`\`\n` +
-    `${lhPath} notify --topic ${topicId} --role assistant --message-id "$MSG_ID" --content "Still working..."\n` +
+    `${cliPath} notify --topic ${topicId} --role assistant --message-id "$MSG_ID" --content "Still working..."\n` +
     `\`\`\`\n\n` +
     `**Step 3 — Replace with your complete, final response when done**:\n` +
     `\`\`\`\n` +
-    `${lhPath} notify --topic ${topicId} --role assistant --message-id "$MSG_ID" --content "<your full response here>"\n` +
+    `${cliPath} notify --topic ${topicId} --role assistant --message-id "$MSG_ID" --content "<your full response here>"\n` +
     `\`\`\`\n\n` +
     `Rules:\n` +
     `- Always use \`--json\` on the first call and capture \`messageId\` from the output.\n` +
@@ -216,7 +216,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
     workspaceId,
   } = params;
   const workDir = cwd || process.cwd();
-  const lhPath = resolveLhPath();
+  const cliPath = resolveCliPath();
 
   // Idempotent redelivery: the gateway retries this tool call after a lost
   // ack with the same taskId. A live tracked task IS the accepted run — ack
@@ -239,7 +239,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
     removeTask(taskId);
   }
 
-  // Propagate workspace scope into the spawned child so its own `lh notify`
+  // Propagate workspace scope into the spawned child so its own `orvilo notify`
   // invocations (and any grandchildren it shells out) inherit the same scope
   // via getTrpcClient → resolveWorkspaceId.
   const childEnv: NodeJS.ProcessEnv = {
@@ -266,7 +266,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
     // Always inject the notify protocol so openclaw knows how to report results
     // back to the Orvilo UI — even if the previous turn failed and the session
     // history was not cleanly committed.
-    const enrichedPrompt = `${prompt}\n\n${buildNotifyProtocol(lhPath, topicId)}`;
+    const enrichedPrompt = `${prompt}\n\n${buildNotifyProtocol(cliPath, topicId)}`;
     const openclawArgs = [
       'agent',
       '--agent',
@@ -331,7 +331,7 @@ export async function runHeteroTask(params: RunHeteroTaskParams): Promise<string
     // - Cancelled (killed by signal, e.g. interruptTask): write a notice + a plain
     //   terminal signal — cancellation is not a failure.
     // - Clean exit (code=0, no signal): openclaw already sent its final message via
-    //   `lh notify`; just send a terminal signal to publish `agent_runtime_end`.
+    //   `orvilo notify`; just send a terminal signal to publish `agent_runtime_end`.
     child.on('close', (code, signal) => {
       if (getTask(taskId)?.pid !== pid) return;
       removeTask(taskId);

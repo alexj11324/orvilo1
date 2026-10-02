@@ -187,7 +187,7 @@ export class DeviceModel {
       // ONE device no matter which member (re-)runs the enrollment. `userId` and
       // `sharedFromDeviceId` are left untouched on conflict — the original
       // enroller keeps the enrollment. `visibility` on conflict:
-      //   - an EXPLICIT `visibility: 'public'` (`lh connect --workspace --public`)
+      //   - an EXPLICIT `visibility: 'public'` (`orvilo connect --workspace --public`)
       //     always publishes — the caller just asked for it, silently keeping the
       //     row private would make the flag a no-op on re-enroll. Callers pass
       //     `visibility` only when the user chose explicitly, so a plain

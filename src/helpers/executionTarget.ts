@@ -61,7 +61,7 @@ export interface ResolveExecutionTargetOptions {
    * `local` capability): the two coincide on a server (both equal
    * `gatewayConfigured`), but split on the web client — the browser can't run
    * `local` in-process (`clientExecutionAvailable` false) yet its backend may
-   * still have a device-gateway that routes to a `lh connect`-ed machine
+   * still have a device-gateway that routes to a `orvilo connect`-ed machine
    * (`deviceRoutingAvailable` true).
    *
    * Gates ONLY the web-display upgrade of a bound `local` target to `device`
@@ -158,7 +158,7 @@ export const isHeterogeneousSandboxExecutionAvailable = (type: string | undefine
  * A desktop `local` pick pins that desktop's own `deviceId` as
  * `boundDeviceId`, and the server routes such a config to that bound device —
  * so on web we resolve it to `device`, surfacing honestly that it runs on the
- * user's machine (via `lh connect`) instead of masquerading as `sandbox`. This
+ * user's machine (via `orvilo connect`) instead of masquerading as `sandbox`. This
  * applies to plain agents too, not just heterogeneous CLI agents (plain agents
  * used to leak here, showing "cloud sandbox" while the server ran on the
  * device).

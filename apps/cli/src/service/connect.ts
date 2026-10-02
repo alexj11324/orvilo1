@@ -159,7 +159,7 @@ function assertNoConnectDaemonRunning(): void {
     [
       `Background connect daemon is already running (PID ${daemonPid}).`,
       'Stop it before starting the systemd service.',
-      'Run `lh connect stop`, then retry this command.',
+      'Run `orvilo connect stop`, then retry this command.',
     ].join(' '),
   );
 }

@@ -15,7 +15,7 @@ describe('buildOrviloSessionEnv', () => {
 
   it('omits an id that did not resolve rather than exporting an empty var', () => {
     // A var set to '' or 'undefined' reads as present to every consumer down the
-    // chain — `lh` would stamp a report with a topic id that resolves to nothing.
+    // chain — `orvilo` would stamp a report with a topic id that resolves to nothing.
     expect(
       buildOrviloSessionEnv({ agentId: 'agt_1', operationId: null, topicId: undefined }),
     ).toEqual({ ORVILO_AGENT_ID: 'agt_1' });

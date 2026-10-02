@@ -754,7 +754,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
     expect(resumeFallbackSystemContext).not.toContain('Continue in cloud');
   });
 
-  it('should encode native Codex args before forwarding them to sandbox lh hetero exec', async () => {
+  it('should encode native Codex args before forwarding them to sandbox orvilo hetero exec', async () => {
     heteroAgentConfig.model = 'codex';
     heteroAgentConfig.provider = 'codex';
     heteroAgentConfig.agencyConfig.heterogeneousProvider = {

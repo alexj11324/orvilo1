@@ -22,7 +22,7 @@ const topicReferenceGuidanceProvider: HeterogeneousPromptContextProvider = {
 
     return [
       '## Referenced topics',
-      'The user message contains one or more `<refer_topic>` tags. When you need the conversation from a referenced topic, retrieve it with `lh topic view <topic-id>` using the `id` from the tag.',
+      'The user message contains one or more `<refer_topic>` tags. When you need the conversation from a referenced topic, retrieve it with `orvilo topic view <topic-id>` using the `id` from the tag.',
     ].join('\n');
   },
   name: 'TopicReferenceGuidanceProvider',

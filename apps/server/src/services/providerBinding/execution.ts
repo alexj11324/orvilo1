@@ -56,7 +56,7 @@ export interface IssuedByokSpawnExecution {
   /** Spawn env minted for the engine's CLI family; empty unless `device`. */
   env: Record<string, string>;
   /**
-   * Extra `lh hetero exec` wrapper args (`--agent-arg=<native arg>` encoded so
+   * Extra `orvilo hetero exec` wrapper args (`--agent-arg=<native arg>` encoded so
    * wrapper flags like `-c` cannot collide with native ones); empty unless
    * `device`.
    */

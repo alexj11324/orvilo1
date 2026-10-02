@@ -97,12 +97,12 @@ export const uvBinary: BinarySpec = defineCommandBinary('uv', {
 
 /**
  * Orvilo CLI
- * Tries orvilo, lh in order; validates via --help output containing "Orvilo"
+ * Resolves `orvilo` on PATH; validates via --help output containing "Orvilo"
  */
 export const orviloBinary: BinarySpec = {
   description: 'Orvilo CLI - manage and connect to Orvilo services',
   async detect(): Promise<BinaryStatus> {
-    const commands = ['orvilo', 'lh'];
+    const commands = ['orvilo'];
     const whichCmd = platform() === 'win32' ? 'where' : 'which';
 
     for (const cmd of commands) {

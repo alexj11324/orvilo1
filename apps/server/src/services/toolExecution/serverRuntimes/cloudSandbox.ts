@@ -17,21 +17,21 @@ import { type ServerRuntimeRegistration } from './types';
 
 const log = debug('orvilo-server:cloud-sandbox');
 
-/** Sandbox tools whose `command` param can carry an `lh` invocation. */
+/** Sandbox tools whose `command` param can carry an `orvilo` invocation. */
 const SHELL_TOOL_NAMES = new Set(['execScript', 'runCommand']);
 
 /**
- * Wrap a sandbox service so shell tools get the same `lh` prelude as the skills
+ * Wrap a sandbox service so shell tools get the same `orvilo` prelude as the skills
  * runtime and the client-side executor (`routers/tools/market.ts`).
  *
- * Without this the sandbox has no `lh` binary and no credentials at all, so a
+ * Without this the sandbox has no `orvilo` binary and no credentials at all, so a
  * model that reaches for the cloud-sandbox shell instead of the skills one —
  * both expose a `runCommand` and nothing tells the model they differ — gets a
- * bare `lh: not found` for a command the platform advertises.
+ * bare `orvilo: not found` for a command the platform advertises.
  *
  * `isShareVisitor` (set from `context.agentShareVisitor`, see the factory
  * below) disables the shim entirely: a share visitor's run executes under the
- * creator's identity, so the shim's `lh() { ORVILO_JWT=… }` prelude would
+ * creator's identity, so the shim's `orvilo() { ORVILO_JWT=… }` prelude would
  * otherwise hand a JWT scoped to the CREATOR's own account into a shell the
  * VISITOR fully controls. `orvilo-cloud-sandbox` is allowlisted for share
  * visitors specifically because this shim is skipped for them — see
@@ -56,7 +56,7 @@ const withLhPreprocessing = (
     }
 
     // Fail closed BEFORE any workspace/JWT resolution: a share visitor never
-    // gets the `lh` shim, so an `lh` invocation in their sandbox command
+    // gets the `orvilo` shim, so an `orvilo` invocation in their sandbox command
     // returns a plain error result the model can react to, instead of
     // silently falling through to `preprocessLhCommand` (which independently
     // refuses too — see its `shareVisitorBlocked` param — but this is the
@@ -65,7 +65,7 @@ const withLhPreprocessing = (
       // Deliberately no command content: it is visitor/model-controlled and
       // may carry an inline token — same as the `preprocessLhCommand` refusal.
       log(
-        'Refused lh command for share visitor (user %s, workspace %s)',
+        'Refused orvilo command for share visitor (user %s, workspace %s)',
         resolve.userId,
         resolve.workspaceIdHint,
       );

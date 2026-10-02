@@ -1706,7 +1706,7 @@ export class DeviceGateway {
   async dispatchAgentRun(params: {
     agentType: HeterogeneousAgentType;
     assistantMessageId: string;
-    /** Resolved `lh hetero exec` wrapper args. */
+    /** Resolved `orvilo hetero exec` wrapper args. */
     args?: string[];
     /**
      * Server-backed builtin tools resolved for this run. The device mounts

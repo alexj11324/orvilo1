@@ -12,7 +12,7 @@ export interface GetClaudeCodeQuotaParams {
   force?: boolean;
 }
 
-// One cache per device host process (`lh connect` daemon / desktop gateway
+// One cache per device host process (`orvilo connect` daemon / desktop gateway
 // connection): every web client polling this device's quota coalesces into a
 // single usage-API request per fresh window.
 const quotaCache = new QuotaSnapshotCache<ClaudeCodeQuotaSnapshot>({

@@ -5,7 +5,7 @@ import { getTrpcClient } from '../../../api/client';
 import { log } from '../../../utils/logger';
 
 /**
- * Resolve the trajectory a `lh trace goal` subcommand was pointed at, or exit
+ * Resolve the trajectory a `orvilo trace goal` subcommand was pointed at, or exit
  * with a message that says what to do about it.
  *
  * Unlike an operation snapshot there is no `TRACING_BASE_URL` fallback: a goal
@@ -45,7 +45,7 @@ export const resolveTrajectoryOrExit = async (target: string): Promise<GoalTraje
 
     log.error(
       serverReason ??
-        `No trajectory found for "${target}". Run \`lh trace goal list\` to see which goals have one.`,
+        `No trajectory found for "${target}". Run \`orvilo trace goal list\` to see which goals have one.`,
     );
   } catch (error) {
     log.error(error instanceof Error ? error.message : String(error));

@@ -138,7 +138,7 @@ const execInSandboxSchema = z.object({
    * It used to override `ctx.userId`, which let any authenticated caller mint
    * and read another user's JWT: `preprocessLhCommand` signs a user JWT and
    * inlines it into the shell command run inside a sandbox the caller fully
-   * controls (`declare -f lh` prints the injected token back). The same forged
+   * controls (`declare -f orvilo` prints the injected token back). The same forged
    * id also selected the AgentSkill/File rows and the sandbox session.
    *
    * @deprecated Ignored by the server; will be dropped once no client sends it.
@@ -223,7 +223,7 @@ const execInSandboxHandler = async ({
   try {
     let enhancedParams = params;
 
-    // Preprocess lh commands: rewrite to npx @orvilo/cli + inject auth env vars
+    // Preprocess orvilo commands: rewrite to npx @orvilo/cli + inject auth env vars
     //
     // The minted credential is always scoped to `ctx.userId`, i.e. the caller
     // themselves. This route is an `authedProcedure` invoked directly by a

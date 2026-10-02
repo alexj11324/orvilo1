@@ -107,7 +107,7 @@ export const signInternalJWT = async (): Promise<string> => {
  * Used by server-side sandbox execution to authenticate CLI commands.
  * The token contains `sub: userId` and passes standard OIDC JWT validation
  * (its `cli-sandbox` purpose is accepted by `oidcAuth`, unlike the narrow
- * `hetero-operation` token), so the sandbox's nested `lh` calls can reach
+ * `hetero-operation` token), so the sandbox's nested `orvilo` calls can reach
  * user-scoped endpoints (e.g. file upload).
  *
  * Defaults to a short 5-minute expiry for one-shot command auth; long-running

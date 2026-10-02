@@ -8,7 +8,7 @@ import {
 import type { HeterogeneousTerminalErrorData } from '../types';
 
 /**
- * Process-level failure classification for `lh hetero exec` runs.
+ * Process-level failure classification for `orvilo hetero exec` runs.
  *
  * The stream adapters (`adapters/claudeCode.ts`, `adapters/codex.ts`) classify
  * failures the CLI reports in-stream (overloaded / rate-limit / auth relayed

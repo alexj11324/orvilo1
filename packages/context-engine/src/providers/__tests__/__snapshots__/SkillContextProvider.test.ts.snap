@@ -2,7 +2,7 @@
 
 exports[`SkillContextProvider > should directly inject content for activated skills 1`] = `
 "<task_guides>
-Use \`lh task\` to manage tasks.
+Use \`orvilo task\` to manage tasks.
 </task_guides>
 
 <available_skills>

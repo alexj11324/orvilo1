@@ -28,7 +28,7 @@ UserRoutes.get(
   requireAuth,
   // Deliberately reachable by every authenticated caller, including restricted
   // API keys holding no `user:read` — please do not add a scope gate here.
-  // This is how `lh login` resolves a userId from a freshly minted key
+  // This is how `orvilo login` resolves a userId from a freshly minted key
   // (`apps/cli/src/auth/apiKey.ts`); gating the route strands the holder of a
   // valid key outside the product with a scope error, same reason GitHub keeps
   // `/user` open to any token.

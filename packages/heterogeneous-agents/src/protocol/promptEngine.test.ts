@@ -13,7 +13,7 @@ describe('HeterogeneousPromptEngine', () => {
     ).toEqual([
       { text: 'Workspace context', type: 'text' },
       {
-        text: expect.stringContaining('`lh topic view <topic-id>`'),
+        text: expect.stringContaining('`orvilo topic view <topic-id>`'),
         type: 'text',
       },
       {
@@ -39,7 +39,7 @@ describe('HeterogeneousPromptEngine', () => {
     });
 
     expect(blocks[0]).toEqual({
-      text: expect.stringContaining('`lh topic view <topic-id>`'),
+      text: expect.stringContaining('`orvilo topic view <topic-id>`'),
       type: 'text',
     });
   });

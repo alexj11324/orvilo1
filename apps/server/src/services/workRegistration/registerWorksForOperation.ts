@@ -415,7 +415,7 @@ export const registerWorksForOperation = async (
   const fileService = new FileService(serverDB, userId, workspaceId);
 
   // Aegis method-pack artifacts (.aegis/ closeout + drift/retirement reports)
-  // ride back inside `agent_operations.metadata.aegis` — collected by `lh
+  // ride back inside `agent_operations.metadata.aegis` — collected by `orvilo
   // hetero exec` at finish, so they register even on runs that produced zero
   // tool-call records (the early return below would otherwise drop them).
   const aegisOutcome = await registerAegisArtifactWorks({

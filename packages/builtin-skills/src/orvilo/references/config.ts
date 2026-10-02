@@ -1,11 +1,11 @@
-const content = `# lh config - User Info and Usage
+const content = `# orvilo config - User Info and Usage
 
 View account information and usage statistics.
 
 ## Subcommands
 
-- \`lh config whoami\` - Display current user information
-- \`lh config usage [--month <YYYY-MM>] [--daily]\` - View token usage statistics
+- \`orvilo config whoami\` - Display current user information
+- \`orvilo config usage [--month <YYYY-MM>] [--daily]\` - View token usage statistics
 
 ## Tips
 

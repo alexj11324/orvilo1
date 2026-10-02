@@ -17,8 +17,10 @@ vi.mock('@/utils/env', () => ({
 }));
 
 const CREDS = "ORVILO_JWT='mock-jwt-token' ORVILO_SERVER='https://orvilo.aspectlylabs.com'";
-/** The shim, with credentials scoped to the `npx` process rather than exported. */
-const shim = (extraEnv = '') => `lh() { ${CREDS}${extraEnv} npx -y @orvilo/cli "$@"; }`;
+/** The shim, with credentials scoped to the `npx` process rather than exported.
+ * `lh` forwards to `orvilo` so pre-rename scripts get the same injection. */
+const shim = (extraEnv = '') =>
+  `orvilo() { ${CREDS}${extraEnv} npx -y @orvilo/cli "$@"; }\nlh() { orvilo "$@"; }`;
 
 describe('preprocessLhCommand', () => {
   it('should return unchanged command for non-lh commands', async () => {
@@ -67,7 +69,7 @@ describe('preprocessLhCommand', () => {
     const [shimLine] = result.command.split('\n');
     // The only occurrence of the token is inside the function body, prefixed to
     // `npx` — so it scopes to that one process and nothing else inherits it.
-    expect(shimLine).toMatch(/^lh\(\) \{ .*ORVILO_JWT='mock-jwt-token'.* npx -y @orvilo\/cli/);
+    expect(shimLine).toMatch(/^orvilo\(\) \{ .*ORVILO_JWT='mock-jwt-token'.* npx -y @orvilo\/cli/);
     expect(result.command.slice(shimLine.length)).not.toContain('mock-jwt-token');
   });
 
@@ -121,6 +123,11 @@ describe('isLhCommand', () => {
   // "view yourself, then edit yourself" is naturally written as two lines.
   it.each([
     ['bare', 'lh'],
+    // The renamed binary name must get the same interception.
+    ['orvilo bare', 'orvilo'],
+    ['orvilo subcommand', 'orvilo agent list'],
+    ['orvilo after &&', 'cd /tmp && orvilo agent view agt_1'],
+    ['orvilo piped', 'orvilo agent view agt_1 --json | jq .title'],
     ['leading whitespace', '  lh agent list'],
     ['after &&', 'cd /tmp && lh agent view agt_1'],
     ['after ||', 'lh agent view agt_1 || lh agent list'],

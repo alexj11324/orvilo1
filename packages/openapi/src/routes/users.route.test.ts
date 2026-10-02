@@ -21,7 +21,7 @@ const { default: UserRoutes } = await import('./users.route');
 
 /**
  * A key minted with narrow scopes still has to be able to identify itself, or
- * `lh login` cannot resolve a userId from it. Guarding this route on
+ * `orvilo login` cannot resolve a userId from it. Guarding this route on
  * `user:read` stranded such keys outside the product.
  */
 describe('GET /users/me', () => {

@@ -360,14 +360,14 @@ interface RawStreamDumpAttempt {
  * adapted/ingested view can't tell an agent-side empty `tool_result` apart
  * from an adapter extraction bug; the raw dump can.
  *
- * Enabled via `lh hetero exec --raw-dump <dir>`. Each exec gets its own
+ * Enabled via `orvilo hetero exec --raw-dump <dir>`. Each exec gets its own
  * `<dir>/<timestamp>-<operationId>/` session folder; each spawn attempt (the
  * resume retry is a second attempt) writes `<label>.stdout.jsonl` /
  * `<label>.stderr.log`. Fully best-effort: any dump failure is logged and
  * swallowed so it never affects the run or its exit code.
  *
  * Future: the server-side sandbox runner (`spawnHeteroSandbox`) and the
- * desktop device path (`spawnLhHeteroExec`) can pass `--raw-dump` pointing at
+ * desktop device path (`spawnOrviloHeteroExec`) can pass `--raw-dump` pointing at
  * a collectable location to capture remote runs the same way.
  */
 class RawStreamDump {
@@ -474,9 +474,9 @@ const exec = async (options: ExecOptions): Promise<void> => {
   }
 
   // Local execution trace. Recorded for EVERY run, not just server-ingest ones:
-  // a standalone `lh hetero exec` is exactly the case where nothing else keeps
+  // a standalone `orvilo hetero exec` is exactly the case where nothing else keeps
   // a record of what the agent did, and it is the same snapshot format a native
-  // agent run produces, so `lh trace op inspect` reads both.
+  // agent run produces, so `orvilo trace op inspect` reads both.
   const traceRecorder = new HeteroTraceRecorder({
     agentType: options.type,
     operationId,
@@ -506,7 +506,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
 
   // Aegis method-pack install. Opt-in only: `--aegis` for standalone runs,
   // `ORVILO_AEGIS_PACK=1` when the server dispatch enabled the pack — env
-  // (not a flag) carries the bit so an older `lh` on a device ignores it
+  // (not a flag) carries the bit so an older `orvilo` on a device ignores it
   // instead of failing on an unknown option. Best-effort: an install
   // failure downgrades the run to "enabled but no skills", never kills it.
   const aegisEnabled = options.aegis === true || process.env[AEGIS_PACK_ENV] === '1';

@@ -25,7 +25,7 @@ type DeviceScopeContext = Pick<
  * below — that exception is about which gateway pool to ADDRESS, which is a
  * different question from which workspace's data a call operates on. A
  * workspace agent routed to the caller's own machine still edits workspace
- * content, so `lh` running there must carry `ORVILO_WORKSPACE_ID` or the CLI
+ * content, so `orvilo` running there must carry `ORVILO_WORKSPACE_ID` or the CLI
  * silently resolves to personal scope and the agent cannot even find itself.
  */
 export const resolveContentWorkspaceId = async (

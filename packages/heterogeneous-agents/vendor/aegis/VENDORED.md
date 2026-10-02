@@ -32,5 +32,5 @@
    `src/aegis/files.generated.ts` together.
 
 `files.generated.ts` is checked in (not a build artifact) so the published
-`lh` bundle — which ships `dist` only — embeds the pack as data with no
+`orvilo` bundle — which ships `dist` only — embeds the pack as data with no
 file-system dependency at runtime.

@@ -8,7 +8,7 @@ import type { ExecutionSnapshot } from '../types';
 /**
  * `zlib.zstdDecompress` only exists from Node 22.15. Resolved lazily rather
  * than promisified at module scope so that importing this file — which the
- * `lh` command tree does at startup — cannot crash the whole CLI on an older
+ * `orvilo` command tree does at startup — cannot crash the whole CLI on an older
  * runtime, and so the failure names the actual requirement.
  */
 const decompressZstd = async (buf: Buffer): Promise<Buffer> => {

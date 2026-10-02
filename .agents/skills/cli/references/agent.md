@@ -4,12 +4,12 @@ Manage AI agents: create, edit, delete, list, run, and check status.
 
 **Source**: `apps/cli/src/commands/agent.ts`
 
-## `lh agent list`
+## `orvilo agent list`
 
 List all agents.
 
 ```bash
-lh agent list [-L [-k [--json [fields]] < n > ] < keyword > ]
+orvilo agent list [-L [-k [--json [fields]] < n > ] < keyword > ]
 ```
 
 | Option                    | Description                            | Default |
@@ -22,24 +22,24 @@ lh agent list [-L [-k [--json [fields]] < n > ] < keyword > ]
 
 ---
 
-## `lh agent view <agentId>`
+## `orvilo agent view <agentId>`
 
 View agent configuration details.
 
 ```bash
-lh agent view [fields]] < agentId > [--json
+orvilo agent view [fields]] < agentId > [--json
 ```
 
 **Displays**: Title, description, model, provider, system role, plugins, tools.
 
 ---
 
-## `lh agent create`
+## `orvilo agent create`
 
 Create a new agent.
 
 ```bash
-lh agent create [options]
+orvilo agent create [options]
 ```
 
 | Option                      | Description    | Required |
@@ -55,34 +55,34 @@ lh agent create [options]
 
 ---
 
-## `lh agent edit <agentId>`
+## `orvilo agent edit <agentId>`
 
 Update an existing agent. Same options as `create`, all optional. Only specified fields are updated.
 
 ```bash
-lh agent edit [-m [-s ... < agentId > [-t < title > ] < model > ] < role > ]
+orvilo agent edit [-m [-s ... < agentId > [-t < title > ] < model > ] < role > ]
 ```
 
 ---
 
-## `lh agent delete <agentId>`
+## `orvilo agent delete <agentId>`
 
 Delete an agent.
 
 ```bash
-lh agent delete < agentId > [--yes]
+orvilo agent delete < agentId > [--yes]
 ```
 
 Requires confirmation unless `--yes` is provided.
 
 ---
 
-## `lh agent duplicate <agentId>`
+## `orvilo agent duplicate <agentId>`
 
 Duplicate an existing agent.
 
 ```bash
-lh agent duplicate < agentId > [-t < title > ]
+orvilo agent duplicate < agentId > [-t < title > ]
 ```
 
 | Option                | Description                          |
@@ -93,12 +93,12 @@ lh agent duplicate < agentId > [-t < title > ]
 
 ---
 
-## `lh agent run`
+## `orvilo agent run`
 
 Start an agent execution (streaming SSE).
 
 ```bash
-lh agent run [options]
+orvilo agent run [options]
 ```
 
 | Option                | Description                                  |
@@ -127,12 +127,12 @@ Uses `utils/agentStream.ts` to handle Server-Sent Events:
 
 ---
 
-## `lh agent status <operationId>`
+## `orvilo agent status <operationId>`
 
 Check agent operation status.
 
 ```bash
-lh agent status [fields]] [--history] [--history-limit < operationId > [--json < n > ]
+orvilo agent status [fields]] [--history] [--history-limit < operationId > [--json < n > ]
 ```
 
 | Option                | Description          | Default |

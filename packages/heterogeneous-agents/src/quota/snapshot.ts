@@ -2,7 +2,7 @@ import type { QuotaAccountIdentity, QuotaLimitReading } from './types';
 
 /**
  * Provider-quota snapshot shapes shared by every sampler host: the desktop
- * main process (IPC), connected devices (`lh connect` RPC), and the web client
+ * main process (IPC), connected devices (`orvilo connect` RPC), and the web client
  * that renders them. Pure types — the Node-only fetch lives in
  * `../quota-sampler`.
  */

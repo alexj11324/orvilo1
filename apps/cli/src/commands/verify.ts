@@ -25,11 +25,11 @@ export function registerVerifyCommand(program: Command) {
     .command('verify')
     .description('Agent Run verification machinery — criteria, rubrics, and per-run check plans');
 
-  // The `lh acceptance …` group and its `lh verify` spellings (acceptance,
+  // The `orvilo acceptance …` group and its `orvilo verify` spellings (acceptance,
   // init/install, ingest-report, run/result/decision/evidence/report) were
   // retired with the standalone Acceptance / Verify platform. What stays is the
   // criterion / rubric / plan machinery the task runtime actually reads —
-  // `lh verify plan state` is quoted to the agent by the task prompt.
+  // `orvilo verify plan state` is quoted to the agent by the task prompt.
   // ════════════ criteria ════════════
   const criterion = verify.command('criterion').description('Reusable pass/fail standards');
 

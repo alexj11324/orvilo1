@@ -931,12 +931,12 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
       {showWorkspaceEnrollHint ? (
         <div className={styles.empty}>
           {t('heteroAgent.executionTarget.noWorkspaceDevices', {
-            cmd: `lh connect --workspace ${agentWorkspaceId}`,
+            cmd: `orvilo connect --workspace ${agentWorkspaceId}`,
           })}
         </div>
       ) : null}
       {/* On web with no remote device, guide the user to the desktop app (which
-          unlocks local execution + `lh connect`) rather than a muted dead-end. */}
+          unlocks local execution + `orvilo connect`) rather than a muted dead-end. */}
       {showWebDownloadCard ? (
         <a
           className={styles.downloadCard}

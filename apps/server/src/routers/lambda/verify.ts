@@ -140,7 +140,7 @@ const pullRequestContextSchema = z.object({
 /**
  * A surface, canonicalized at the door.
  *
- * Not a bare `z.enum`: `lh` is installed independently of this server, so an
+ * Not a bare `z.enum`: `orvilo` is installed independently of this server, so an
  * older CLI still posts the historical spellings — `electron` alone accounts for
  * most of the surfaces ever written. Rejecting those would break ingest for
  * every client that hasn't upgraded, to no benefit, since they name a surface we
@@ -181,7 +181,7 @@ const scenarioSchema = z.enum(verifyRunScenarios);
 
 /**
  * Validate `context` by its sibling `scenario`. Absent scenario defaults to
- * `coding` (the legacy contract — an older `lh` posts a coding scope with no
+ * `coding` (the legacy contract — an older `orvilo` posts a coding scope with no
  * scenario field), so callers setting a non-coding context MUST send `scenario`
  * in the same payload or the coding schema strips their fields. Applied as a
  * transform (not a plain union) for two reasons: the coding path canonicalizes
@@ -740,7 +740,7 @@ export const verifyRouter = router({
       // Settle the run through the SAME finalizer the completion-time gate uses
       // (runVerifyOnCompletion → finalizeVerifyRun): repair-aware tail (spawn a
       // repair round on auto_repair failures), then report + drive the bound task.
-      // Without this, a verify triggered via the CLI (`lh verify run`, e.g. a
+      // Without this, a verify triggered via the CLI (`orvilo verify run`, e.g. a
       // device/agent-testing run) would write verdicts and stop — never auto-repair.
       await finalizeVerifyRun(
         ctx.serverDB,

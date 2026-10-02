@@ -260,6 +260,12 @@ interface QueryTopicParams {
   isInbox?: boolean;
   pageSize?: number;
   /**
+   * `'workspace'` lists every non-group topic the caller can see across the
+   * workspace — agent-bound rows whose owning agent is visible, plus legacy
+   * rows with no parent — instead of a single container's list.
+   */
+  scope?: 'workspace';
+  /**
    * Server-side ordering. Defaults to `updatedAt`. `status` orders by status
    * priority (see `STATUS_SORT_RANK`) so the sidebar "group by status" mode
    * keeps high-priority topics on the first page.
@@ -296,6 +302,12 @@ export interface TopicKeywordScope {
    */
   containerId?: string | null;
   groupId?: string | null;
+  /**
+   * `true` searches the workspace conversation feed — every non-group topic
+   * whose owning agent is visible to the caller, plus unowned rows. Wins over
+   * the container scopes.
+   */
+  workspace?: boolean;
 }
 
 export interface ListTopicsForMemoryExtractorCursor {
@@ -474,6 +486,7 @@ export class TopicModel {
     pageSize = 9999,
     groupId,
     isInbox,
+    scope,
     sortBy,
     timing,
     triggers,
@@ -563,6 +576,82 @@ export class TopicModel {
       editingAgentId ? sql`${topics.metadata}->>'editingAgentId' = ${editingAgentId}` : undefined,
       editingGroupId ? sql`${topics.metadata}->>'editingGroupId' = ${editingGroupId}` : undefined,
     );
+
+    // Workspace conversation feed: every non-group topic the caller can see —
+    // rows whose owning agent exists and is visible to them (mirroring the
+    // parent-visibility gate `queryTopics` uses), plus legacy rows with no
+    // parent at all. `ownership()` alone is not enough: in workspace mode it
+    // matches every member's rows, including topics under other members'
+    // private agents — the parent gate drops those.
+    if (scope === 'workspace') {
+      const feedScope = { userId: this.userId, workspaceId: this.workspaceId };
+      const workspaceWhere = and(
+        this.ownership(),
+        this.notShareVisitor(),
+        isNull(topics.groupId),
+        or(isNull(topics.agentId), buildWorkspaceWhere(feedScope, agents)),
+        includeTriggerCondition,
+        excludeTriggerCondition,
+        triggerCondition,
+        excludeStatusCondition,
+      );
+
+      const [items, totalResult] = await Promise.all([
+        runTimedStage(
+          timing,
+          'db.topic.query.workspace.items.select',
+          () =>
+            // The join makes `.select(fields as any)` infer Drizzle's default
+            // nested `{topics, agents}` selection — cast the awaited result so
+            // `query()`'s return stays the flat slim rows every branch returns.
+            this.db
+              // See note on the group-branch select below re: `as any` cast.
+              .select({
+                agentId: topics.agentId,
+                completedAt: topics.completedAt,
+                createdAt: topics.createdAt,
+                favorite: topics.favorite,
+                historySummary: topics.historySummary,
+                id: topics.id,
+                metadata: topics.metadata,
+                model: topics.model,
+                provider: topics.provider,
+                status: topics.status,
+                title: topics.title,
+                updatedAt: topics.updatedAt,
+                // `sortUpdatedAt` keeps the client-side sort key identical to
+                // the server's `topicActivityAt` ORDER BY — see the group
+                // branch below for the full rationale.
+                sortUpdatedAt: topicActivityAt,
+                // Workspace sidebars filter maintenance actions client-side by
+                // ownership — the filter needs the row owner in the slim shape.
+                userId: topics.userId,
+                ...detailColumns,
+              } as any)
+              .from(topics)
+              .leftJoin(agents, eq(topics.agentId, agents.id))
+              .where(workspaceWhere)
+              .orderBy(...orderBy)
+              .limit(pageSize)
+              .offset(offset) as Promise<{ [x: string]: any }[]>,
+          { current, pageSize },
+        ),
+        runTimedStage(timing, 'db.topic.query.workspace.count.select', () =>
+          this.db
+            .select({ count: count(topics.id) })
+            .from(topics)
+            .leftJoin(agents, eq(topics.agentId, agents.id))
+            .where(workspaceWhere),
+        ),
+      ]);
+
+      logTiming(timing, 'db.topic.query:done', {
+        itemCount: items.length,
+        stageMs: getDurationMs(queryStartedAt),
+        total: totalResult[0].count,
+      });
+      return { items, total: totalResult[0].count };
+    }
 
     // If groupId is provided, query topics by groupId directly
     if (groupId) {
@@ -2544,7 +2633,19 @@ export class TopicModel {
     agentId,
     containerId,
     groupId,
+    workspace,
   }: TopicKeywordScope): SQL | undefined => {
+    if (workspace) {
+      // Same contract as the feed list in `query(scope: 'workspace')` —
+      // `exists` keeps the keyword queries join-free.
+      return and(
+        isNull(topics.groupId),
+        or(
+          isNull(topics.agentId),
+          sql`exists (select 1 from ${agents} where ${agents.id} = ${topics.agentId} and ${buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, agents)})`,
+        ),
+      );
+    }
     if (groupId) return eq(topics.groupId, groupId);
     if (agentId) return eq(topics.agentId, agentId);
     return this.matchContainer(containerId);

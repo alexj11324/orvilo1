@@ -31,7 +31,6 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
     loadMoreError,
     isExpandingPageSize,
     loadMoreTopics,
-    activeAgentId,
     useSearchTopics,
   ] = useChatStore((s) => [
     topicSelectors.hasMoreTopics(s),
@@ -39,7 +38,6 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
     topicSelectors.loadMoreTopicsError(s),
     topicSelectors.isExpandingPageSize(s),
     s.loadMoreTopics,
-    s.activeAgentId,
     s.useSearchTopics,
   ]);
 
@@ -57,10 +55,10 @@ const Content = memo<ContentProps>(({ open, searchKeyword }) => {
     }
   }, [isSearching]);
 
-  // Only search when there's a keyword (pass undefined to disable SWR)
+  // Only search when there's a keyword (pass undefined to disable SWR).
+  // Workspace scope matches the feed the drawer lists.
   useSearchTopics(isSearching ? trimmedKeyword : undefined, {
-    agentId: activeAgentId,
-    groupId: undefined,
+    scope: 'workspace',
   });
 
   const searchResults = useChatStore(topicSelectors.searchTopics, isEqual);

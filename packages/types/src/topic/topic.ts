@@ -825,6 +825,13 @@ export interface QueryTopicParams {
   isInbox?: boolean;
   pageSize?: number;
   /**
+   * `'workspace'` returns every non-group topic the caller can see across the
+   * workspace — agent-bound rows whose owning agent is visible, plus legacy
+   * rows with no parent — instead of a single container's list. Skips
+   * `agentId`/`groupId`/`containerId` resolution entirely.
+   */
+  scope?: 'workspace';
+  /**
    * Server-side ordering. Defaults to `updatedAt`. Use `status` to back the
    * sidebar "group by status" mode so high-priority topics stay on page one.
    */

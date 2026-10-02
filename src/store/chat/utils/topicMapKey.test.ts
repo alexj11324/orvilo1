@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { topicMapKey } from './topicMapKey';
+import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from './topicMapKey';
 
 describe('topicMapKey', () => {
   describe('auto-detection', () => {
@@ -46,6 +46,26 @@ describe('topicMapKey', () => {
         scope: 'group_agent',
       });
       expect(result).toBe('group_agent_group-456_agent-123');
+    });
+
+    it('should produce the workspace key regardless of container ids', () => {
+      // The feed bucket is explicit-only: an agent or group id passed
+      // alongside `scope: 'workspace'` must not leak into the key.
+      expect(topicMapKey({ scope: 'workspace' })).toBe(WORKSPACE_TOPIC_MAP_KEY);
+      expect(topicMapKey({ agentId: 'agent-123', scope: 'workspace' })).toBe(
+        WORKSPACE_TOPIC_MAP_KEY,
+      );
+      expect(topicMapKey({ groupId: 'group-456', scope: 'workspace' })).toBe(
+        WORKSPACE_TOPIC_MAP_KEY,
+      );
+    });
+
+    it('should never auto-detect the workspace scope', () => {
+      // No combination of container ids may resolve to the workspace bucket —
+      // only an explicit `scope: 'workspace'` opts in.
+      expect(topicMapKey({})).not.toBe(WORKSPACE_TOPIC_MAP_KEY);
+      expect(topicMapKey({ agentId: 'a' })).not.toBe(WORKSPACE_TOPIC_MAP_KEY);
+      expect(topicMapKey({ groupId: 'g' })).not.toBe(WORKSPACE_TOPIC_MAP_KEY);
     });
   });
 

@@ -15,6 +15,7 @@ const chatStoreStateMock = vi.hoisted(() => ({
   activeAgentId: 'agent-1' as string | undefined,
   activeTopicId: undefined as string | undefined,
   switchTopic: undefined as unknown,
+  topicDataMap: {} as Record<string, unknown>,
 }));
 const workspaceStoreStateMock = vi.hoisted(() => ({
   activeWorkspaceId: null as string | null,
@@ -35,10 +36,12 @@ vi.mock('@/hooks/useActiveLocation', () => ({
   useActiveLocation: () => ({ hash: '', pathname: pathnameMock(), search: '' }),
 }));
 
-vi.mock('@/store/chat', () => ({
-  useChatStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector(chatStoreStateMock as unknown as Record<string, unknown>),
-}));
+vi.mock('@/store/chat', () => {
+  const useChatStore = (selector: (state: Record<string, unknown>) => unknown) =>
+    selector(chatStoreStateMock as unknown as Record<string, unknown>);
+  useChatStore.getState = () => chatStoreStateMock;
+  return { useChatStore };
+});
 
 vi.mock('@/store/global', () => ({
   useGlobalStore: (selector: (state: Record<string, unknown>) => unknown) =>

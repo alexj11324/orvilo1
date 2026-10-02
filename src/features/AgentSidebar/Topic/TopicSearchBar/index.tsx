@@ -13,12 +13,11 @@ const TopicSearchBar = memo<{ onClear?: () => void }>(({ onClear }) => {
 
   const [tempValue, setTempValue] = useState('');
   const [searchKeyword, setSearchKeywords] = useState('');
-  const [activeAgentId, useSearchTopics] = useChatStore((s) => [
-    s.activeAgentId,
-    s.useSearchTopics,
-  ]);
+  const useSearchTopics = useChatStore((s) => s.useSearchTopics);
 
-  useSearchTopics(searchKeyword, { agentId: activeAgentId });
+  // The sidebar feed is workspace-wide — search matches it, not just the
+  // room agent's rows.
+  useSearchTopics(searchKeyword, { scope: 'workspace' });
 
   useUnmount(() => {
     useChatStore.setState({ inSearchingMode: false, isSearchingTopic: false });

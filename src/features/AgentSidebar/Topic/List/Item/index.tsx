@@ -222,30 +222,35 @@ const TopicItemRow = memo<TopicItemRowProps>(
     // the identity-first icon layout below.
     const author = useTopicCreator(isSharedAgent ? userId : undefined);
 
+    // The workspace feed mixes topics from many agents — every agent-scoped
+    // read (runtime buckets, message prefetch, draft key, deep link) binds the
+    // row's owning agent, not the room's.
+    const rowAgentId = topicAgentId ?? activeAgentId;
+
     const loadingRingColor = isDarkMode
       ? cssVar.colorWarningBorder
       : `color-mix(in srgb, ${cssVar.colorWarning} 45%, transparent)`;
 
     // Construct href for cmd+click support
     const href = useMemo(() => {
-      if (!activeAgentId || !id) return undefined;
-      return buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(activeAgentId, id), activeWorkspaceSlug);
-    }, [activeAgentId, activeWorkspaceSlug, id]);
+      if (!rowAgentId || !id) return undefined;
+      return buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(rowAgentId, id), activeWorkspaceSlug);
+    }, [rowAgentId, activeWorkspaceSlug, id]);
 
     const [isLoading, isUnreadCompleted, hasLocalRunningRuntime, isRuntimeVisiblyRunning] =
       useChatStore((s) => [
         !!id && operationSelectors.isTopicVisiblyRunning(id)(s),
         !!id && operationSelectors.isTopicUnreadCompleted(id)(s),
         !!id &&
-          !!activeAgentId &&
+          !!rowAgentId &&
           operationSelectors.isAgentRuntimeRunningByContext({
-            agentId: activeAgentId,
+            agentId: rowAgentId,
             topicId: id,
           })(s),
         !!id &&
-          !!activeAgentId &&
+          !!rowAgentId &&
           operationSelectors.isAgentRuntimeVisiblyRunningByContext({
-            agentId: activeAgentId,
+            agentId: rowAgentId,
             topicId: id,
           })(s),
       ]);
@@ -272,7 +277,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
     }, [id, navRef]);
 
     const handleDoubleClick = useCallback(async () => {
-      if (!id || !activeAgentId || !isDesktop) return;
+      if (!id || !rowAgentId || !isDesktop) return;
       cancelPendingSingleClick();
       if (await navRef.current.focusTopicPopup(id)) {
         void navRef.current.navigateToTopic(id, { skipPopupFocus: true });
@@ -280,11 +285,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
       }
       useElectronStore
         .getState()
-        .addTab(
-          buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(activeAgentId, id), activeWorkspaceSlug),
-        );
+        .addTab(buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(rowAgentId, id), activeWorkspaceSlug));
       void navRef.current.navigateToTopic(id);
-    }, [id, activeAgentId, activeWorkspaceSlug, navRef]);
+    }, [id, rowAgentId, activeWorkspaceSlug, navRef]);
 
     const isFailed = status === 'failed';
     const isRunning = status === 'running';
@@ -354,20 +357,20 @@ const TopicItemRow = memo<TopicItemRowProps>(
     const hasUnread = id && (isUnreadCompleted || isRunningTailUnread);
 
     useEffect(() => {
-      if (!activeAgentId || !id || !isUnreadCompleted || hasLocalRunningRuntime) return;
+      if (!rowAgentId || !id || !isUnreadCompleted || hasLocalRunningRuntime) return;
 
       void useChatStore
         .getState()
-        .prefetchMessages({ agentId: activeAgentId, scope: 'main', topicId: id });
-    }, [activeAgentId, hasLocalRunningRuntime, id, isUnreadCompleted]);
+        .prefetchMessages({ agentId: rowAgentId, scope: 'main', topicId: id });
+    }, [rowAgentId, hasLocalRunningRuntime, id, isUnreadCompleted]);
 
     // Surface a WeChat-style red "[Draft]" hint when this topic holds unsent
     // input. Drafts live in localStorage keyed by messageMapKey; the default
     // topic (no id) maps to the new-topic draft. `useHasDraft` re-renders the
     // row only when the draft appears or clears.
     const draftKey = useMemo(
-      () => (activeAgentId ? messageMapKey({ agentId: activeAgentId, topicId: id }) : undefined),
-      [activeAgentId, id],
+      () => (rowAgentId ? messageMapKey({ agentId: rowAgentId, topicId: id }) : undefined),
+      [rowAgentId, id],
     );
     const hasDraft = useHasDraft(draftKey);
     const draftPrefix = hasDraft ? (
@@ -550,8 +553,8 @@ const TopicItemRow = memo<TopicItemRowProps>(
           titleColor={cssVar.colorText}
           extra={
             <>
-              <TopicMigrationIndicator agentId={activeAgentId} topicId={id} />
-              <RunningElapsedTime agentId={activeAgentId} topicId={id} />
+              <TopicMigrationIndicator agentId={rowAgentId} topicId={id} />
+              <RunningElapsedTime agentId={rowAgentId} topicId={id} />
             </>
           }
           onClick={handleClick}

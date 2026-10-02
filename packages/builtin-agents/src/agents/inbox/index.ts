@@ -12,7 +12,7 @@ import { createSystemRole } from './systemRole';
  * Note: model and provider are intentionally undefined to use user's default settings
  */
 export const INBOX: BuiltinAgentDefinition = {
-  avatar: '/avatars/orvilo-ai.png',
+  avatar: '/app-icons/icon-512x512.png',
   // The inbox agent is bound to the builtin Orvilo harness at creation — an
   // agent that exists without a harness is a write bug, so the binding is part
   // of the persist payload rather than something the user repairs later.

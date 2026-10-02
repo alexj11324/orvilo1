@@ -1,5 +1,4 @@
 import { type IconAvatarProps } from '@lobehub/icons';
-import { LobeHub as Orvilo } from '@lobehub/icons';
 import { type ChatModelCard } from '@orvilo/types';
 import { createStaticStyles, useResponsive } from 'antd-style';
 import { cn } from 'cn';
@@ -20,6 +19,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import Avatar from '@/components/Avatar';
+import { ProductLogo } from '@/components/Branding';
 import { ModelIcon, ProviderIcon } from '@/components/OrviloIcons';
 import { Badge, type BadgeProps } from '@/components/reui/badge';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
@@ -365,7 +365,7 @@ export const ProviderItemRender = memo<ProviderItemRenderProps>(
             title={name}
           />
         ) : provider === 'orvilo' ? (
-          <Orvilo.Morden size={size} />
+          <ProductLogo size={size} type={'flat'} />
         ) : (
           <ProviderIcon provider={provider} size={size} type={type} />
         )}

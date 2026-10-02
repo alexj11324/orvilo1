@@ -36,7 +36,7 @@ drive / probe / capture. Skip a row only when its surface AND runtime both miss 
 | P10 | web           | gateway         | fixture        | `review_predict` is pinned to Gemini; pin the constants, allow private IPs, return schema JSON from the stub                                   |
 | P11 | any           | gateway         | fixture        | `generateObject` via the deepseek stub crashes; route through the openai `/v1/responses` stub                                                  |
 | P12 | web           | gateway         | fixture        | Backdate node and op rows past the client's 15-minute lease, not the server's 5                                                                |
-| P13 | web, cli      | any             | fixture        | `lh topic create` rows have NULL trigger/status and drop out of the paged view; set both, then `goto`                                          |
+| P13 | web, cli      | any             | fixture        | `orvilo topic create` rows have NULL trigger/status and drop out of the paged view; set both, then `goto`                                      |
 | P14 | web, electron | hetero          | fixture        | Seed `agency_config.heterogeneousProvider` with SQL, then cold-load; the store write drops it                                                  |
 | P15 | web           | any             | fixture        | Derive day boundaries from the browser's `resolvedOptions().timeZone`, never an assumed zone                                                   |
 | P16 | web, electron | any             | fixture        | Clear cache tiers in the NEW document via `addScriptToEvaluateOnNewDocument`; the outgoing page re-flushes on reload                           |
@@ -84,7 +84,7 @@ drive / probe / capture. Skip a row only when its surface AND runtime both miss 
 | P60 | electron      | any             | auth, env      | Read `dataSyncConfig` first; `storageMode: cloud` means the run must stay read-only                                                            |
 | P61 | web, electron | any             | capture        | Stall `indexedDB.open` only on web; it kills the Electron renderer                                                                             |
 | P62 | electron      | any             | env            | Keep locale tests out of `packages/locales/src/default/` or the renderer imports vitest                                                        |
-| P63 | cli           | gateway         | auth           | `lh task run --follow` needs OIDC; poll with `task view`; use internal ids for `--subject task:`                                               |
+| P63 | cli           | gateway         | auth           | `orvilo task run --follow` needs OIDC; poll with `task view`; use internal ids for `--subject task:`                                           |
 | P64 | web           | any             | auth           | No seeded session for the debug proxy; drive the user's Chrome and add DOM measurements                                                        |
 | P65 | electron      | any             | auth, env      | Start the server on the snapshot's port with `SERVER_PORT=`; inject a better-auth cookie over CDP                                              |
 | P66 | electron      | any             | auth           | `safeStorage` cannot decrypt the copied token; fall back to the legacy single instance                                                         |
@@ -101,7 +101,7 @@ drive / probe / capture. Skip a row only when its surface AND runtime both miss 
 | P77 | web, cli      | gateway         | probe          | Read `llm_generation_tracing.prompt_version` after one call; restart the server if stale                                                       |
 | P78 | web, cli      | gateway         | env            | `SSRF_ALLOW_PRIVATE_IP_ADDRESS=1` so the server can read local s3rver URLs                                                                     |
 | P79 | web, cli      | client, gateway | env            | Local SearXNG with `SEARCH_PROVIDERS=searxng`; the on-disk search1api keys are dead                                                            |
-| P84 | cli           | any             | auth           | Drive `lh` against the local orvilo-cloud runtime by seeding an API key row into its main database                                             |
+| P84 | cli           | any             | auth           | Drive `orvilo` against the local orvilo-cloud runtime by seeding an API key row into its main database                                         |
 | P85 | cli           | any             | fixture        | Simulate a publish whose response was lost by restoring `pendingCreateKey` in `.orvilo/artifacts.json`                                         |
 | P82 | web           | any             | drive          | Acceptance flow canvas through the production debug proxy: anonymous shared link, one uninterrupted script, canvas controls for clipped groups |
 
@@ -412,14 +412,14 @@ client view model has its own `DEFAULT_LEASE_TIMEOUT_MS = 15 min` and only honor
 goal with an explicit `--operation-lease-timeout-ms`. Liveness = the newer of the
 node row and `runHeartbeats` (the running operation's `updated_at` served by
 `goal.graph`), so the A/B is: node stale + op fresh → 运行中；both stale → 失联.
-Restore the forced rows (node/task/task\_topics/operation status + timestamps) after
+Restore the forced rows (node/task/task_topics/operation status + timestamps) after
 capturing.
 
 #### P13 · A CLI-created topic has no trigger/status and is filtered out of the Agent paged view
 
 **applies-to:** surface=web, cli · runtime=any · phase=fixture
 
-**Situation:** building a topic fixture with `lh topic create`, writing fields such as
+**Situation:** building a topic fixture with `orvilo topic create`, writing fields such as
 `workingDirectoryConfig` into `metadata` with SQL, then opening the UI to verify.
 
 **Doesn't work:** navigating straight to `/agent/<agentId>/<topicId>`. The route and
@@ -429,7 +429,7 @@ stays 0 — so `currentTopicMetadata` is undefined and any UI reading topic meta
 never sees the fixture, which looks like a product defect. The CLI-created row has
 NULL `trigger` and NULL `status`, while the paged query carries `excludeTriggers`
 (cron/document/eval/task) and `excludeStatuses` (completed); in SQL `NULL NOT IN (...)`
-evaluates to NULL, i.e. false, and the whole row is dropped. `lh topic list` runs a
+evaluates to NULL, i.e. false, and the whole row is dropped. `orvilo topic list` runs a
 different query and returns it as usual, so the "visible to the CLI, invisible to the
 UI" split is especially misleading.
 
@@ -1313,7 +1313,7 @@ second message AND ends on a tool round, so the first turn renders as an
 - Pointing the openai provider at the chat-completions `llm-stub.mjs`. The openai
   provider calls `/v1/responses` (the stub 404s and the turn dies with
   `ProviderBizError … retrying 4/6`). Side requests (topic title) hit the same endpoint
-  with `stream: false` and a `text.format` json\_schema — answer them with a JSON
+  with `stream: false` and a `text.format` json_schema — answer them with a JSON
   `{"title":…}` string, never with SSE.
 - Setting `model: 'gpt-4o'` on the agent. Only models present in
   `aiInfra().enabledAiModels` for the provider carry `abilities.functionCall`; an
@@ -1364,8 +1364,8 @@ for the `agencyConfig.heterogeneousProvider` SQL seed, and the Electron auth/por
 command: 'claude' }` and call `selectRuntimeType(ctx, { isDesktop: true })`.
 
 Line order that streams live: `system/init` → `stream_event message_start` → `assistant`
-(tool\_use Bash) → `user` (tool\_result) → `stream_event message_start` → `content_block_delta`
-text\_delta ×N → `assistant` (full text) → `result`. The op shows as `execHeterogeneousAgent`,
+(tool_use Bash) → `user` (tool_result) → `stream_event message_start` → `content_block_delta`
+text_delta ×N → `assistant` (full text) → `result`. The op shows as `execHeterogeneousAgent`,
 the bubble shows "Claude Code is running…", and the topic persists user → assistant(Bash) →
 tool → assistant(text) rows. Capture mid-turn by polling the top-level `[data-index]` rows,
 not `body.innerText`, and key turn-2 captures on the store/DOM state you assert rather than a
@@ -1928,16 +1928,16 @@ bad scan because the optimized dependency graph can remain poisoned.
 
 **applies-to:** surface=cli · runtime=gateway · phase=auth
 
-**Situation:** A local acceptance run is driven through `lh task run` with the
+**Situation:** A local acceptance run is driven through `orvilo task run` with the
 seeded `ORVILO_CLI_API_KEY`, and the test needs to observe the asynchronous
 repair lifecycle.
 
-**Doesn't work:** `lh task run <id> --follow` switches to `/webapi/*`, which
+**Doesn't work:** `orvilo task run <id> --follow` switches to `/webapi/*`, which
 requires OIDC and rejects API-key auth after the task has already started.
 Subject ids do not resolve by task identifier either — `task:T-N` is not a
 subject key the aggregate accepts.
 
-**Works:** Start the task without `--follow` and poll with `lh task view T-N`.
+**Works:** Start the task without `--follow` and poll with `orvilo task view T-N`.
 The start response and task activity expose the operation and topic ids; the
 acceptance bundle for the internal subject id is read from the in-app acceptance
 panel on the task detail page.
@@ -1964,7 +1964,7 @@ production.
 **Works:** drive the proxy in the user's already-authenticated Chrome (the
 `claude-in-chrome` tooling), and compensate for the weaker evidence channel with
 DOM measurements (`getBoundingClientRect` / `getComputedStyle`) alongside every
-screenshot, plus an independent server-side check through `lh` in a clean env.
+screenshot, plus an independent server-side check through `orvilo` in a clean env.
 Prove the working-tree bundle is actually live first — read back a string that
 exists only in the working tree (e.g. a changed placeholder), never assume HMR
 applied.
@@ -2417,7 +2417,7 @@ rate-limit (429) or ship JSON-disabled (HTML back).
 `SEARCH_PROVIDERS=searxng SEARXNG_URL=http://localhost:8888`. It aggregates real
 engines, so the whole product path (server search impl → result cards → tool
 message persistence) is genuine. English queries return results more reliably
-than Chinese ones. One trap when the model is a tool\_call-emitting stub AND a
+than Chinese ones. One trap when the model is a tool_call-emitting stub AND a
 synthetic context injector is active (e.g. `getGoalContext`): "last message is a
 tool result → answer" fires on the injected pair and skips the search — key the
 stub's answer-mode off the NAME of the last `function_call` instead.
@@ -2463,7 +2463,7 @@ ScreenshotTiles, and Highlighter's `styles.content` styles a container whose
 prove the visible edge or total inset changed. Measure the settled DOM, then
 inspect a screenshot before declaring the styling verified.
 
-#### P84 · Driving `lh` against the local orvilo-cloud runtime
+#### P84 · Driving `orvilo` against the local orvilo-cloud runtime
 
 **applies-to:** surface=cli · runtime=any · phase=auth
 
@@ -2476,7 +2476,7 @@ adapter's seeded CLI profile (§4 CLI) points at the wrong backend, and cloud's
 **Doesn't work:** `dev:runtime:auth` for the CLI (cookies, not a token); an
 interactive device-code login (hijacks the user's browser and is forbidden).
 
-**Works:** insert an api\_keys row into the runtime's main database and use it as
+**Works:** insert an api_keys row into the runtime's main database and use it as
 `ORVILO_CLI_API_KEY`. `key_hash` is `HMAC-SHA256(key, KEY_VAULTS_SECRET)`;
 `key` is the same plaintext AES-GCM encrypted with that secret as
 `iv:authTag:ciphertext` hex — the shapes `init-dev-env.sh seed-user` uses. Read
@@ -2507,7 +2507,7 @@ project's Postgres and fails as `password authentication failed for user
 
 **applies-to:** surface=cli · runtime=any · phase=fixture
 
-**Situation:** proving that retrying an interrupted `lh artifact publish` does not
+**Situation:** proving that retrying an interrupted `orvilo artifact publish` does not
 create a second site. The real failure — a dropped reply — cannot be produced by
 killing the process, because the manifest is what carries the recovery state.
 

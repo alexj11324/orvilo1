@@ -44,7 +44,7 @@ export type AgentStreamEventType =
   /**
    * Lightweight invalidation signal emitted by `agentNotify.notify` when a
    * remote hetero agent (openclaw / hermes) writes a message to DB via
-   * `lh notify`. The frontend reacts by calling `fetchAndReplaceMessages` —
+   * `orvilo notify`. The frontend reacts by calling `fetchAndReplaceMessages` —
    * no content is carried in the event itself (DB is the source of truth).
    */
   | 'notify_update'
@@ -81,7 +81,7 @@ export interface StreamChunkData {
   reasoning?: string;
   reasoningParts?: Array<{ text: string; type: 'text' } | { image: string; type: 'image' }>;
   /**
-   * `lh hetero exec` coalesces main-agent text deltas into full-text
+   * `orvilo hetero exec` coalesces main-agent text deltas into full-text
    * snapshots: `content` carries the WHOLE message so far and must replace
    * the accumulated text, not append to it. Absent on plain deltas.
    */

@@ -43,7 +43,7 @@ describe('loadLocalSnapshot', () => {
     await write(cwd, 'trace_server_new', 9_000);
 
     // The dev-mode server's store holds the newer run — resolving `latest` from
-    // the CLI home alone would inspect the stale one while `lh trace op list`
+    // the CLI home alone would inspect the stale one while `orvilo trace op list`
     // shows the newer one first.
     const resolved = await loadLocalSnapshot(undefined, { cliHome, cwd });
     expect(resolved?.traceId).toBe('trace_server_new');

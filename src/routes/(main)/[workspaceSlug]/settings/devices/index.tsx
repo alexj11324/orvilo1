@@ -14,7 +14,7 @@ import { DeviceConnectModal, DeviceManager, useDeviceList } from '@/features/Dev
  * - Workspace: the shared (public-visibility) pool every member sees.
  * - Private: the caller's own private enrollments in this workspace.
  * The tab also parameterises the connect wizard, so a device enrolled from the
- * Private tab registers as private (`lh connect … --private`).
+ * Private tab registers as private (`orvilo connect … --private`).
  */
 const WorkspaceDevicesSetting = memo(() => {
   const { t } = useTranslation('setting');

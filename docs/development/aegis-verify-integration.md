@@ -31,16 +31,16 @@ When enabled, `dispatchHeteroAgent` does three things:
    nothing" stays distinguishable from "not enabled".
 2. Appends `AEGIS_ORVILO_CONTRACT` to the run's agent system context — the
    agent gets the exact artifact contract the gate later evaluates.
-3. Sets `ORVILO_AEGIS_PACK=1` on the spawned `lh hetero exec` env (both the
+3. Sets `ORVILO_AEGIS_PACK=1` on the spawned `orvilo hetero exec` env (both the
    device `dispatchAgentRun` path and the cloud `spawnHeteroSandbox` path).
-   Env — not a CLI flag — carries the bit so an older device-side `lh` ignores
+   Env — not a CLI flag — carries the bit so an older device-side `orvilo` ignores
    it instead of dying on an unknown option.
 
-Standalone runs can also opt in with `lh hetero exec --aegis`.
+Standalone runs can also opt in with `orvilo hetero exec --aegis`.
 
 ## What the agent sees / writes
 
-Inside the spawned workspace, `lh hetero exec` (`apps/cli`):
+Inside the spawned workspace, `orvilo hetero exec` (`apps/cli`):
 
 - Materializes the vendored pack into `.agents/skills/aegis/` plus the
   host-native skills dir (`.claude/skills/aegis`, `.opencode/skills/aegis`,

@@ -102,7 +102,7 @@ export type DeviceRpcMethod = (typeof DEVICE_RPC_METHODS)[number];
 /**
  * Dispatch a generic server-internal device RPC by method name. This is the
  * single device-control entry point shared by the desktop main process
- * (`GatewayConnectionCtr`) and the CLI daemon (`lh connect`); both hand it the
+ * (`GatewayConnectionCtr`) and the CLI daemon (`orvilo connect`); both hand it the
  * raw `(method, params)` off the gateway WebSocket and inject their own
  * platform-specific `deps`.
  *

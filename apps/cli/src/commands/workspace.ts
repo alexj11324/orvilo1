@@ -91,7 +91,7 @@ const listWorkspaces = async (): Promise<WorkspaceRow[]> => {
   return (await client.workspace.list.query()) as WorkspaceRow[];
 };
 
-/** Accept either a workspace id or its slug, so `lh workspace use acme` works. */
+/** Accept either a workspace id or its slug, so `orvilo workspace use acme` works. */
 const findWorkspace = (workspaces: WorkspaceRow[], idOrSlug: string): WorkspaceRow | undefined =>
   workspaces.find((w) => w.id === idOrSlug) ?? workspaces.find((w) => w.slug === idOrSlug);
 

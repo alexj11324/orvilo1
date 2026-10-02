@@ -43,7 +43,9 @@ describe('completion command', () => {
     await program.parseAsync(['node', 'test', 'completion']);
 
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('compdef _orvilo_completion'));
-    expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('lh orvilo orvilo'));
+    expect(consoleSpy).toHaveBeenCalledWith(
+      expect.stringContaining('compdef _orvilo_completion orvilo'),
+    );
     expect(consoleSpy).toHaveBeenCalledWith(expect.stringContaining('"${(@)words[@]:1}"'));
   });
 

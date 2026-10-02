@@ -18,7 +18,7 @@ export interface LoadSnapshotOptions {
   dirName?: string;
   /**
    * Resolve the download URL for an operation id, instead of building one from
-   * `TRACING_BASE_URL`. Lets an authenticated caller (`lh`) reach the object
+   * `TRACING_BASE_URL`. Lets an authenticated caller (`orvilo`) reach the object
    * through the Orvilo server — which knows the key from
    * `agent_operations.trace_s3_key` and signs it for the caller's own scope —
    * so no public bucket domain has to be configured. Returning `null` falls
@@ -62,7 +62,7 @@ const isUrl = (target: string) => target.startsWith('http://') || target.startsW
  * cache → optional download), an `op_` prefix matched against the cache, a
  * traceId, `latest`, or nothing (latest local).
  *
- * Shared by the `agent-tracing` CLI and by `lh trace`, which needs the same
+ * Shared by the `agent-tracing` CLI and by `orvilo trace`, which needs the same
  * resolution but reaches the model through the authenticated Orvilo server.
  */
 export async function loadSnapshot(

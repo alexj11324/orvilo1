@@ -15,7 +15,7 @@ import type { HeterogeneousAgentScanMap, HeterogeneousAgentScanStatus } from './
 /**
  * Host-side scanner behind the `scanHeterogeneousAgents` device tool: probes
  * every known heterogeneous agent type on the current machine in one pass.
- * Runs in Node contexts only (the `lh connect` CLI and Electron main) — like
+ * Runs in Node contexts only (the `orvilo connect` CLI and Electron main) — like
  * `resolveCliCommand`, it must be imported via its dedicated subpath
  * (`@orvilo/heterogeneous-agents/scanHost`), never from a browser bundle.
  */

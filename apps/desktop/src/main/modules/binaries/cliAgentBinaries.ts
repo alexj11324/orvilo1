@@ -10,7 +10,7 @@ import { defineCommandBinary } from '@/core/infrastructure/BinaryManager';
 // The command-resolution + validation logic (which/where lookup, login-shell
 // PATH retry, well-known install fallbacks incl. app-bundled Codex CLIs,
 // `--version` keyword validation) lives in the shared `@orvilo/heterogeneous-
-// agents` package so the desktop manager path and the `lh hetero exec` CLI /
+// agents` package so the desktop manager path and the `orvilo hetero exec` CLI /
 // sandbox path resolve binaries identically. This module only adapts it into
 // the desktop `BinarySpec` shape.
 export {

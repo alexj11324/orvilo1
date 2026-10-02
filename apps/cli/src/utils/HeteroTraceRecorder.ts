@@ -73,7 +73,7 @@ export type HeteroRunResult = 'cancelled' | 'error' | 'success';
  * The stream a CLI-wrapped agent emits (`stream_start` … `step_complete`,
  * `tool_start` … `tool_end`) already carries everything a step needs, so this
  * folds it into the SAME snapshot format the server writes for native agent
- * runs — which is what lets `lh trace op inspect` read both without branching.
+ * runs — which is what lets `orvilo trace op inspect` read both without branching.
  *
  * Fields that only a native run can produce (`messagesBaseline`,
  * `contextEngine`, `toolsetBaseline`) are simply absent; they are optional on
@@ -134,7 +134,7 @@ export class HeteroTraceRecorder {
 
       // A run that produced no step and no error has nothing worth a snapshot —
       // writing one anyway fills the store with empty files to page past in
-      // `lh trace op list`. A failure with no steps IS worth keeping: "it never
+      // `orvilo trace op list`. A failure with no steps IS worth keeping: "it never
       // got off the ground" is exactly what someone reads a trace to find out.
       const hasContent =
         (this.partial.steps?.length ?? 0) > 0 || this.totalTokens > 0 || !!completion.error;

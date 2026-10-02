@@ -83,7 +83,7 @@ describe('buildHeteroExecStdinPayload', () => {
     });
 
     expect(JSON.parse(payload)).toEqual([
-      expect.objectContaining({ text: expect.stringContaining('`lh topic view <topic-id>`') }),
+      expect.objectContaining({ text: expect.stringContaining('`orvilo topic view <topic-id>`') }),
       {
         text: '<refer_topic name="Previous" id="topic-ref" />\nSummarize it',
         type: 'text',

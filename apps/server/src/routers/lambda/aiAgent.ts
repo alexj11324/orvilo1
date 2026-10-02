@@ -1386,7 +1386,7 @@ const InterruptTaskSchema = z
   });
 
 /**
- * Wire shape of an `AgentStreamEvent` produced by `lh hetero exec`. Mirrors
+ * Wire shape of an `AgentStreamEvent` produced by `orvilo hetero exec`. Mirrors
  * `AgentStreamEvent` in `@orvilo/agent-gateway-client` (kept here as a Zod
  * schema for tRPC input validation; tRPC's type inference takes care of the
  * client-side typing). Republished verbatim through `StreamEventManager` so
@@ -1420,7 +1420,7 @@ const AgentStreamEventSchema = z.object({
 
 /**
  * Schema for `aiAgent.heteroIngest` — accepts a batch of producer-side
- * `AgentStreamEvent`s from `lh hetero exec`. `topicId` is required (operationId
+ * `AgentStreamEvent`s from `orvilo hetero exec`. `topicId` is required (operationId
  * → topic reverse-lookup is unreliable per design decision).
  */
 const HeteroIngestSchema = z.object({
@@ -1498,7 +1498,7 @@ const HeteroFinishSchema = z.object({
 
 /**
  * Schema for `aiAgent.waitInterventionResponse` — the exec-side long-poll. The
- * `lh hetero exec` producer calls this in a loop while an `AskUserBridge`
+ * `orvilo hetero exec` producer calls this in a loop while an `AskUserBridge`
  * pending is in flight, draining `agent_intervention_response` events off the
  * op's Redis stream (which the sandbox can't read directly). `lastEventId`
  * threads the cursor forward across polls; `'$'` on the first call means
@@ -3059,7 +3059,7 @@ export const aiAgentRouter = router({
     }),
 
   /**
-   * Ingest a batch of `AgentStreamEvent`s from a `lh hetero exec` producer
+   * Ingest a batch of `AgentStreamEvent`s from a `orvilo hetero exec` producer
    * (CLI standalone, sandboxed CC, etc.) and republish them through the
    * existing stream fanout so renderer-side gateway WS subscribers see them
    * unchanged. Phase 2a: pub/sub only — no DB persistence (phase 2b adds it).
@@ -3123,7 +3123,7 @@ export const aiAgentRouter = router({
   }),
 
   /**
-   * Re-mint the operation token a long `lh hetero exec` run authenticates with.
+   * Re-mint the operation token a long `orvilo hetero exec` run authenticates with.
    *
    * The token is signed for four hours, and a Goal Task can run far longer. Past
    * the expiry every heteroIngest is rejected, the run's heartbeats stop renewing
@@ -3159,7 +3159,7 @@ export const aiAgentRouter = router({
     }),
 
   /**
-   * Terminal handshake from a `lh hetero exec` producer: signals process exit
+   * Terminal handshake from a `orvilo hetero exec` producer: signals process exit
    * and carries the run's high-level outcome. Always emits a final
    * `agent_runtime_end` so renderer subscribers can shut down even when the
    * CLI's own end-event was lost mid-flight.
@@ -3237,7 +3237,7 @@ export const aiAgentRouter = router({
 
   /**
    * Exec-side long-poll for remote Human-in-the-loop (op-JWT auth, same as
-   * `heteroIngest`). The `lh hetero exec` producer — which holds only an
+   * `heteroIngest`). The `orvilo hetero exec` producer — which holds only an
    * op-scoped JWT + tRPC and never the server's Redis — pulls
    * `agent_intervention_response` events off the op's Redis stream through this
    * server-mediated read, then resolves its in-process `AskUserBridge`. One

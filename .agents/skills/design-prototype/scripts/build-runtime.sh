@@ -30,5 +30,5 @@ if [ ! -s "$BABEL" ]; then
   curl -fsSL "https://unpkg.com/@babel/standalone@7.26.4/babel.min.js" -o "$BABEL"
 fi
 
-ls -lh "$OUT_DIR/orvilo-prototype-runtime.js" "$BABEL" | awk '{print $5, $NF}'
+ls -orvilo "$OUT_DIR/orvilo-prototype-runtime.js" "$BABEL" | awk '{print $5, $NF}'
 echo "done → $OUT_DIR"

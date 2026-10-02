@@ -1087,7 +1087,7 @@ export const deviceRouter = router({
    * join their dev box. Viewers are blocked: writing a row to the workspace
    * device pool is a mutation, not a read. The signed token carries the
    * `workspace_id` claim the device gateway trusts to route the device to the
-   * `workspace:<id>` principal. The CLI (`lh connect --workspace`) / settings
+   * `workspace:<id>` principal. The CLI (`orvilo connect --workspace`) / settings
    * page use this.
    */
   mintWorkspaceConnectToken: wsWritableProcedure.mutation(async ({ ctx }) => {
@@ -1102,7 +1102,7 @@ export const deviceRouter = router({
    * first enroller of each `(workspaceId, deviceId)` pair and is preserved on
    * re-enroll (see `DeviceModel.registerWorkspaceDevice`), which
    * `updateWorkspaceDevice` / `removeWorkspaceDevice` use to gate writes to
-   * "self or owner". Used by `lh connect --workspace` after minting the
+   * "self or owner". Used by `orvilo connect --workspace` after minting the
    * connect token.
    */
   registerWorkspaceDevice: wsWritableProcedure
@@ -1114,7 +1114,7 @@ export const deviceRouter = router({
         identitySource: z.enum(['machine-id', 'fallback']),
         platform: z.string().max(20).nullish(),
         // 'private' enrolls the device for the calling member only (settings
-        // page "Private" tab / `lh connect --workspace <id> --private`);
+        // page "Private" tab / `orvilo connect --workspace <id> --private`);
         // defaults to the shared pool. Preserved on re-enroll — see
         // `DeviceModel.registerWorkspaceDevice`.
         visibility: z.enum(['private', 'public']).optional(),
@@ -1147,7 +1147,7 @@ export const deviceRouter = router({
    * `DeviceModel.registerWorkspaceDevice`.
    *
    * The machine may ALREADY be enrolled in this workspace (e.g. via
-   * `lh connect --workspace`, which the personal share map can't link to).
+   * `orvilo connect --workspace`, which the personal share map can't link to).
    * Silently upserting would discard the caller's explicit visibility choice
    * (the conflict branch preserves the existing value), so instead the first
    * call reports `alreadyEnrolled` without writing; a `confirmOverwrite`
@@ -1427,7 +1427,7 @@ export const deviceRouter = router({
 
   /**
    * Auto-register the calling device (desktop after OIDC login / CLI on first
-   * `lh connect`). Upserts on (userId, deviceId); user-owned fields are
+   * `orvilo connect`). Upserts on (userId, deviceId); user-owned fields are
    * preserved on conflict.
    */
   register: deviceProcedure

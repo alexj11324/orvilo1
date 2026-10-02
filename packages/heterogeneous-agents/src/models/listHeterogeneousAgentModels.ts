@@ -252,7 +252,7 @@ const getCatalogErrorMessage = (
  * Query the model catalog from the same host that will execute the agent.
  *
  * Callers own construction of the full child environment so Desktop can apply
- * the same inherited-env stripping/proxy rules as a real session while `lh
+ * the same inherited-env stripping/proxy rules as a real session while `orvilo
  * connect` can use its daemon environment. Resolver-discovered PATH is merged
  * underneath explicit caller values.
  */

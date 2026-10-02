@@ -105,7 +105,7 @@ describe('spawnHeteroAgentRun', () => {
     });
   };
 
-  it('spawns `lh hetero exec` in server-ingest mode via the current CLI entry', async () => {
+  it('spawns `orvilo hetero exec` in server-ingest mode via the current CLI entry', async () => {
     const child = makeFakeChild();
     spawnMock.mockReturnValue(child);
 
@@ -244,7 +244,7 @@ describe('spawnHeteroAgentRun', () => {
     await ack;
   });
 
-  it('forwards resolved args to lh hetero exec', async () => {
+  it('forwards resolved args to orvilo hetero exec', async () => {
     const child = makeFakeChild();
     spawnMock.mockReturnValue(child);
 

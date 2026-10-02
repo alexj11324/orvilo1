@@ -552,7 +552,7 @@ export const dispatchHeteroAgent = async (
 
   const isRemoteHetero = isRemoteHeterogeneousType(heteroType);
   // Builtin Orvilo harness: `heteroType` keeps the declared identity for
-  // metadata and hooks, but every CLI-family concern — `lh hetero exec --type`,
+  // metadata and hooks, but every CLI-family concern — `orvilo hetero exec --type`,
   // adapter/error classification, sandbox support, resume binding — resolves to
   // the selected engine's family. There is no `orvilo` executable or ingest
   // schema entry, so anything reaching a device or sandbox must carry the
@@ -561,7 +561,7 @@ export const dispatchHeteroAgent = async (
     heteroType === 'orvilo' ? resolveOrviloCliAgentType(heterogeneousProvider?.engine) : heteroType;
   // Aegis method-pack opt-in (provider config `methodPacks.aegis`, local CLI
   // families only). Env — not a CLI flag — carries the bit to the spawned
-  // `lh hetero exec` so an older device-side CLI ignores it rather than
+  // `orvilo hetero exec` so an older device-side CLI ignores it rather than
   // dying on an unknown option.
   const aegisEnabled =
     heterogeneousProvider?.type === heteroType &&
@@ -808,7 +808,7 @@ export const dispatchHeteroAgent = async (
       ? runAttachments.imageList.map((image) => ({ id: image.id, url: image.url }))
       : undefined;
   const heteroParams = {
-    // Devices and sandboxes receive the CLI family — their `lh hetero exec`
+    // Devices and sandboxes receive the CLI family — their `orvilo hetero exec`
     // may predate `--type orvilo` support.
     agentType: heteroCliAgentType,
     assistantMessageId,
@@ -1160,7 +1160,7 @@ export const dispatchHeteroAgent = async (
       })
       .catch((err) => log('execAgent: failed to init stream for remote hetero: %O', err));
 
-    // lh connect only handles tool_call_request (not agent_run_request),
+    // orvilo connect only handles tool_call_request (not agent_run_request),
     // so we use executeToolCall with the runHeteroTask tool instead of dispatchAgentRun.
     const authorizationError = await resolveDeviceDispatchAuthorizationFailure(
       deps.db,
@@ -1698,7 +1698,7 @@ export const dispatchHeteroAgent = async (
       const { spawnHeteroSandbox } =
         await import('@/server/services/heterogeneousAgent/sandboxRunner');
       const marketService = await deps.getMarketService();
-      // The sandbox authenticates its nested `lh` calls with this JWT. The
+      // The sandbox authenticates its nested `orvilo` calls with this JWT. The
       // narrow `hetero-operation` token (used for the device-dispatch path
       // above) is rejected by `oidcAuth`, so CC capabilities that hit
       // user-scoped endpoints — e.g. uploading a `Read`-on-image result to

@@ -446,7 +446,7 @@ export function registerGoalCommand(program: Command) {
           // left, so leave a non-zero code behind for the caller to branch on.
           process.exitCode = 1;
           log.warn(
-            `Stopped after ${advancingTicks} advancing ticks (--max-ticks ${maxTicks}); the goal is unfinished. Resume with: lh goal run ${id}`,
+            `Stopped after ${advancingTicks} advancing ticks (--max-ticks ${maxTicks}); the goal is unfinished. Resume with: orvilo goal run ${id}`,
           );
         }
       },
@@ -514,7 +514,7 @@ export function registerGoalCommand(program: Command) {
       const result = await (
         await getTrpcClient()
       ).goal.restart.mutate({ agentId: options.agent, id });
-      log.info(`${result.message}. Resume ticking with: lh goal run ${id}`);
+      log.info(`${result.message}. Resume ticking with: orvilo goal run ${id}`);
     });
 
   goal

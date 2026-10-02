@@ -21,11 +21,11 @@ the generic capture toolchain (`report-init.sh`, `cdp-screenshot.sh`,
 ## 1. Project summary
 
 Orvilo is a chat/agent product with a Next.js server, a Vite + React SPA, an
-Electron desktop shell, and a CLI (`lh`). Repo layout that matters for testing:
+Electron desktop shell, and a CLI (`orvilo`). Repo layout that matters for testing:
 
 - `apps/server/` — the Next.js backend (TRPC routers, services, modules, auth).
 - `apps/desktop/` — the Electron shell. **Standalone install** (see §6).
-- `apps/cli/` — the `lh` CLI; runs from source (`bun src/index.ts`), no rebuild.
+- `apps/cli/` — the `orvilo` CLI; runs from source (`bun src/index.ts`), no rebuild.
   **Standalone install** (see §6).
 - `packages/**`, `e2e`, `apps/server` — covered by the root pnpm workspace.
 - `src/` — the SPA and shared web app; `apps/server/src/router-hono/` holds the
@@ -197,7 +197,7 @@ stale standalone install: a recently added workspace package fails to resolve �
   edited-file cards, works, topic content), drive the run with
 
   ```bash
-  lh agent run -a local --sse --json -p '<prompt>' [-t < agentId > --device < topicId > ]
+  orvilo agent run -a local --sse --json -p '<prompt>' [-t < agentId > --device < topicId > ]
   ```
 
   and use the browser only to capture the rendered evidence afterwards. `--sse`
@@ -317,7 +317,7 @@ in `.agents/acceptance/references/agent-gateway.md`.
 ## 6. Known constraints
 
 - **Hatchet is a hard prerequisite for queue-mode agent-runtime tests.** Any
-  test that runs an agent (`lh agent run`, durable ops, the server agent
+  test that runs an agent (`orvilo agent run`, durable ops, the server agent
   runtime) uses `AGENT_RUNTIME_MODE=queue` (the production path). The server
   requires `HATCHET_CLIENT_TOKEN` and a running Hatchet worker before an
   operation can start. Configure the client and worker, then gate before the

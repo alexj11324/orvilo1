@@ -41,23 +41,23 @@ const FILE_ENTRIES = [
 
 const EXAMPLES = [
   {
-    command: 'lh login',
+    command: 'orvilo login',
     description: 'Start interactive login in the browser.',
   },
   {
-    command: 'lh connect --daemon',
+    command: 'orvilo connect --daemon',
     description: 'Start the device gateway connection in the background.',
   },
   {
-    command: 'lh search -q "gpt-5"',
+    command: 'orvilo search -q "gpt-5"',
     description: 'Search local resources for a query.',
   },
   {
-    command: 'lh generate text "Write release notes"',
+    command: 'orvilo generate text "Write release notes"',
     description: 'Generate text from a prompt.',
   },
   {
-    command: 'lh man generate',
+    command: 'orvilo man generate',
     description: 'Show the built-in manual for the generate command group.',
   },
 ] as const;
@@ -89,7 +89,7 @@ export function generateRootManPage(program: Command, version: string) {
     'For command-specific manuals, use the built-in manual command:',
     '.PP',
     '.RS',
-    '.B lh man',
+    '.B orvilo man',
     '[\\fICOMMAND\\fR]...',
     '.RE',
     '.SH COMMANDS',
@@ -113,7 +113,8 @@ export function generateRootManPage(program: Command, version: string) {
       escapeRoff(example.description),
     ]),
     '.SH SEE ALSO',
-    '.BR orvilo (1)',
+    '.UR https://docs.orvilo.dev',
+    '.UE',
   ];
 
   return `${lines.join('\n')}\n`;

@@ -22,7 +22,7 @@ describe('spawnHeteroSandbox', () => {
     mockCallTool.mockResolvedValue({ success: true });
   });
 
-  it('forwards resolved selector args to lh hetero exec', async () => {
+  it('forwards resolved selector args to orvilo hetero exec', async () => {
     await spawnHeteroSandbox({
       agentType: 'claude-code',
       args: ['--model', 'opus', '--effort', 'high'],

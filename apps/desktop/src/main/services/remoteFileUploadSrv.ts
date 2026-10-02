@@ -19,14 +19,14 @@ export interface UploadedFileRecord {
 
 /**
  * Upload local files to the server's file storage from the MAIN process by
- * delegating to the embedded CLI — `lh file upload <path> --json` already
+ * delegating to the embedded CLI — `orvilo file upload <path> --json` already
  * implements the whole flow (hash dedup, pre-signed S3 PUT, file record).
  *
  * Runs the CLI script with the app's own binary via `ELECTRON_RUN_AS_NODE=1`
  * (what the generated `orvilo` shell wrapper does), so nothing is spawned
  * through a shell and no PATH install is required. The desktop session is
  * injected via `ORVILO_JWT` / `ORVILO_SERVER` (same convention as CliCtr
- * and the hetero spawn paths); without one, `lh` falls back to its own
+ * and the hetero spawn paths); without one, `orvilo` falls back to its own
  * stored login.
  */
 export default class RemoteFileUploadService extends ServiceModule {

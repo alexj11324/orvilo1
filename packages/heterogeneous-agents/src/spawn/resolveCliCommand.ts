@@ -13,7 +13,7 @@ import { resolveCliSpawnPlan } from './cliSpawn';
  * This is the single source of truth for "given a command name, where is the
  * runnable binary?". It's consumed by BOTH spawn sites:
  *   - desktop main (`cliAgentBinaries` → `HeterogeneousAgentCtr`)
- *   - the `lh hetero exec` CLI (sandbox + terminal), via `resolveHeteroSpawnCommand`
+ *   - the `orvilo hetero exec` CLI (sandbox + terminal), via `resolveHeteroSpawnCommand`
  *
  * Kept dependency-free (node built-ins only) so it runs unchanged in Electron
  * main, the CLI, the server, and cloud sandboxes. Every external call is
@@ -114,7 +114,7 @@ const pickWindowsRunnables = (lines: string[]): string[] => lines.filter(isWindo
  * Whether the command already names a location instead of something to look up
  * on PATH. Windows is judged by Windows rules — `path.isAbsolute` follows the
  * host, so `C:\…` reads as a bare command name anywhere but Windows, which
- * matters for the `lh hetero exec` CLI resolving a Windows path off-host and
+ * matters for the `orvilo hetero exec` CLI resolving a Windows path off-host and
  * keeps this in step with `resolveCliSpawnPlan`.
  */
 const isPathLikeCommand = (command: string): boolean =>
@@ -942,7 +942,7 @@ export interface ResolvedHeteroCommand {
 }
 
 /**
- * Resolve the binary a spawn site (e.g. `lh hetero exec`) should launch for a
+ * Resolve the binary a spawn site (e.g. `orvilo hetero exec`) should launch for a
  * heterogeneous CLI agent. Best-effort and non-throwing: any failure degrades
  * to the requested command, preserving the prior PATH-trusting behavior.
  *

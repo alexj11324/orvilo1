@@ -1,15 +1,15 @@
 # Conversation Commands (Topic & Message)
 
-## Topic Management (`lh topic`)
+## Topic Management (`orvilo topic`)
 
 Manage conversation topics (threads).
 
 **Source**: `apps/cli/src/commands/topic.ts`
 
-### `lh topic list`
+### `orvilo topic list`
 
 ```bash
-lh topic list [--agent-id [-L [--page [--json [fields]] < id > ] < n > ] < n > ]
+orvilo topic list [--agent-id [-L [--page [--json [fields]] < id > ] < n > ] < n > ]
 ```
 
 | Option            | Description     | Default |
@@ -20,16 +20,16 @@ lh topic list [--agent-id [-L [--page [--json [fields]] < id > ] < n > ] < n > ]
 
 **Table columns**: ID, TITLE, FAV, UPDATED
 
-### `lh topic search <keywords>`
+### `orvilo topic search <keywords>`
 
 ```bash
-lh topic search [--json [fields]] < keywords > [--agent-id < id > ]
+orvilo topic search [--json [fields]] < keywords > [--agent-id < id > ]
 ```
 
-### `lh topic create`
+### `orvilo topic create`
 
 ```bash
-lh topic create -t [--favorite] < title > [--agent-id < id > ]
+orvilo topic create -t [--favorite] < title > [--agent-id < id > ]
 ```
 
 | Option                | Description          | Required |
@@ -38,22 +38,22 @@ lh topic create -t [--favorite] < title > [--agent-id < id > ]
 | `--agent-id <id>`     | Associate with agent | No       |
 | `--favorite`          | Mark as favorite     | No       |
 
-### `lh topic edit <id>`
+### `orvilo topic edit <id>`
 
 ```bash
-lh topic edit [--favorite] [--no-favorite] < id > [-t < title > ]
+orvilo topic edit [--favorite] [--no-favorite] < id > [-t < title > ]
 ```
 
-### `lh topic delete <ids...>`
+### `orvilo topic delete <ids...>`
 
 ```bash
-lh topic delete [--yes] < id1 > [id2...]
+orvilo topic delete [--yes] < id1 > [id2...]
 ```
 
-### `lh topic recent`
+### `orvilo topic recent`
 
 ```bash
-lh topic recent [-L [--json [fields]] < n > ]
+orvilo topic recent [-L [--json [fields]] < n > ]
 ```
 
 | Option            | Description     | Default |
@@ -62,16 +62,16 @@ lh topic recent [-L [--json [fields]] < n > ]
 
 ---
 
-## Message Management (`lh message`)
+## Message Management (`orvilo message`)
 
 Manage chat messages within topics.
 
 **Source**: `apps/cli/src/commands/message.ts`
 
-### `lh message list`
+### `orvilo message list`
 
 ```bash
-lh message list [options] [--json [fields]]
+orvilo message list [options] [--json [fields]]
 ```
 
 | Option            | Description             | Default |
@@ -86,24 +86,24 @@ lh message list [options] [--json [fields]]
 
 **Note**: When `--topic-id` or `--agent-id` is provided, uses `message.getMessages`; otherwise uses `message.listAll`.
 
-### `lh message search <keywords>`
+### `orvilo message search <keywords>`
 
 ```bash
-lh message search [fields]] < keywords > [--json
+orvilo message search [fields]] < keywords > [--json
 ```
 
 Full-text search across all messages.
 
-### `lh message delete <ids...>`
+### `orvilo message delete <ids...>`
 
 ```bash
-lh message delete [--yes] < id1 > [id2...]
+orvilo message delete [--yes] < id1 > [id2...]
 ```
 
-### `lh message count`
+### `orvilo message count`
 
 ```bash
-lh message count [--start [--end [--json] < date > ] < date > ]
+orvilo message count [--start [--end [--json] < date > ] < date > ]
 ```
 
 | Option           | Description                                |
@@ -113,10 +113,10 @@ lh message count [--start [--end [--json] < date > ] < date > ]
 
 **Output**: Total message count for the specified period.
 
-### `lh message heatmap`
+### `orvilo message heatmap`
 
 ```bash
-lh message heatmap [--json]
+orvilo message heatmap [--json]
 ```
 
 **Output**: Activity heatmap data showing message frequency over time.

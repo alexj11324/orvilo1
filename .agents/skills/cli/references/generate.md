@@ -7,7 +7,7 @@ Generate text, speech, and transcriptions.
 ## Command Structure
 
 ```
-lh generate (alias: gen)
+orvilo generate (alias: gen)
 ├── text <prompt>                          # Text generation
 ├── tts <text>                             # Text-to-speech
 └── asr <audioFile>                        # Audio-to-text (speech recognition)
@@ -15,15 +15,15 @@ lh generate (alias: gen)
 
 ---
 
-## `lh generate text <prompt>` / `lh gen text <prompt>`
+## `orvilo generate text <prompt>` / `orvilo gen text <prompt>`
 
 Generate text completion.
 
 **Source**: `apps/cli/src/commands/generate/text.ts`
 
 ```bash
-lh gen text "Explain quantum computing" [options]
-echo "context" | lh gen text "summarize" --pipe
+orvilo gen text "Explain quantum computing" [options]
+echo "context" | orvilo gen text "summarize" --pipe
 ```
 
 | Option                      | Description                        | Default              |
@@ -42,31 +42,31 @@ echo "context" | lh gen text "summarize" --pipe
 When `--pipe` is used, reads stdin and prepends it to the prompt. Useful for piping file contents:
 
 ```bash
-cat README.md | lh gen text "summarize this" --pipe
+cat README.md | orvilo gen text "summarize this" --pipe
 ```
 
 ---
 
-## `lh generate tts <text>` / `lh gen tts <text>`
+## `orvilo generate tts <text>` / `orvilo gen tts <text>`
 
 Text-to-speech generation.
 
 **Source**: `apps/cli/src/commands/generate/tts.ts`
 
 ```bash
-lh gen tts "Hello, world!" [options]
+orvilo gen tts "Hello, world!" [options]
 ```
 
 ---
 
-## `lh generate asr <audioFile>` / `lh gen asr <audioFile>`
+## `orvilo generate asr <audioFile>` / `orvilo gen asr <audioFile>`
 
 Audio-to-text transcription (Automatic Speech Recognition).
 
 **Source**: `apps/cli/src/commands/generate/asr.ts`
 
 ```bash
-lh gen asr recording.wav [options]
+orvilo gen asr recording.wav [options]
 ```
 
 ---

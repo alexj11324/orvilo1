@@ -4,7 +4,7 @@ export interface RecentChannelTopic {
   createdAt?: string;
   /** Topic description / summary, if any. */
   description?: string;
-  /** Topic id — lets the model fetch the full transcript via `lh topic view <id>`. */
+  /** Topic id — lets the model fetch the full transcript via `orvilo topic view <id>`. */
   id: string;
   /** The last user message in this topic (pre-truncated upstream). */
   lastUserMessage?: string;
@@ -156,7 +156,7 @@ export const formatBotPlatformContext = ({
       '',
       '<recent_topics>',
       'Prior sessions from THIS channel (most recent first). Use them for continuity; do not treat them as the current turn.',
-      'To read the full conversation of a topic, run `lh topic view <topic-id>` with the `id` below.',
+      'To read the full conversation of a topic, run `orvilo topic view <topic-id>` with the `id` below.',
     );
     for (const topic of recentTopics) {
       const attrs = [

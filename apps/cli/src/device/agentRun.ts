@@ -24,7 +24,7 @@ function isProcessGroupAlive(pid: number): boolean {
 
 /** Poll interval while confirming a killed process group is really gone. */
 const PROCESS_GROUP_POLL_MS = 50;
-/** Bounded window to observe the exit after the forced kill — same contract as `lh task cancel`. */
+/** Bounded window to observe the exit after the forced kill — same contract as `orvilo task cancel`. */
 const KILL_CONFIRM_TIMEOUT_MS = 3000;
 
 const waitForProcessGroupExit = async (pid: number, timeoutMs: number): Promise<boolean> => {
@@ -124,7 +124,7 @@ const stopTrackedRun = async (
 
 export interface SpawnHeteroAgentRunParams {
   agentType: string;
-  /** Resolved `lh hetero exec` wrapper args. */
+  /** Resolved `orvilo hetero exec` wrapper args. */
   args?: string[];
   assistantMessageId?: string;
   /** Server-backed builtin tool surface for the per-run `orvilo_cc` MCP server. */
@@ -151,7 +151,7 @@ export interface SpawnHeteroAgentRunParams {
   /** System context used only by the automatic retry without native resume. */
   resumeFallbackSystemContext?: string;
   resumeSessionId?: string;
-  /** Admission fence relayed to `lh hetero exec` via `ORVILO_RUN_GENERATION`. */
+  /** Admission fence relayed to `orvilo hetero exec` via `ORVILO_RUN_GENERATION`. */
   runGeneration?: number;
   serverUrl: string;
   systemContext?: string;
@@ -171,18 +171,18 @@ interface SpawnHeteroAgentRunLogger {
 }
 
 /**
- * Spawn `lh hetero exec` for a gateway-dispatched agent run. Mirrors the
- * desktop app's `spawnLhHeteroExec`: the spawned CLI owns the full pipeline
+ * Spawn `orvilo hetero exec` for a gateway-dispatched agent run. Mirrors the
+ * desktop app's `spawnOrviloHeteroExec`: the spawned CLI owns the full pipeline
  * (spawn -> adapt -> BatchIngester -> server ingest), so the connect daemon
  * needs no local stream handling — it only kicks off the process.
  *
  * Re-invokes the current CLI entry (`process.execPath` + `process.argv[1]`)
- * instead of relying on `lh` being on `PATH`, so it also works inside the
- * detached `lh connect --daemon` child where `PATH` may be minimal.
+ * instead of relying on `orvilo` being on `PATH`, so it also works inside the
+ * detached `orvilo connect --daemon` child where `PATH` may be minimal.
  *
  * Resolves only once the child's outcome is known: `accepted` on the `spawn`
  * event, `rejected` on an early wrapper-process `error`. A missing target cwd
- * is handled inside `lh hetero exec`, which can classify it and emit
+ * is handled inside `orvilo hetero exec`, which can classify it and emit
  * `heteroFinish`; other wrapper spawn failures flow back as rejected dispatches.
  */
 /**
@@ -313,7 +313,7 @@ async function admitHeteroAgentRun(
 
   // systemContext / image attachments turn the payload into a content-block
   // array: context block first, then the user's prompt, then images — mirrors
-  // the desktop path. `lh hetero exec` coerces both shapes via
+  // the desktop path. `orvilo hetero exec` coerces both shapes via
   // coerceJsonPrompt.
   const stdinPayload = buildHeteroExecStdinPayload({
     imageList,

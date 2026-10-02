@@ -102,7 +102,7 @@ export class App {
     logger.info('Starting Orvilo...');
 
     // Append the CLI wrapper directory to PATH so spawned shells can resolve
-    // `orvilo` / `lh` / `orvilo`. Managed binary dirs (e.g. agent-browser) are
+    // `orvilo` / `orvilo` / `orvilo`. Managed binary dirs (e.g. agent-browser) are
     // augmented separately by `binaryManager.augmentPath()` during bootstrap.
     const pathSep = process.platform === 'win32' ? ';' : ':';
     process.env.PATH = `${process.env.PATH}${pathSep}${getCliWrapperDir()}`;

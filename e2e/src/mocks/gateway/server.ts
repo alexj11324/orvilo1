@@ -15,7 +15,7 @@
  *                                         a `tool_execute` agent_event
  *
  *  Server → fake gateway (device dispatch — the fake gateway IS the device):
- *    POST /api/device/agent/run         agent_run_request → synthesized `lh
+ *    POST /api/device/agent/run         agent_run_request → synthesized `orvilo
  *                                         hetero exec` turn: mock-LLM reply
  *                                         streamed back through the real
  *                                         aiAgent.heteroIngest/heteroFinish
@@ -207,7 +207,7 @@ export const startFakeGateway = (
 
       // Device dispatch channel: the server hands the gateway an
       // `agent_run_request`; a real gateway relays it to a connected device
-      // running `lh hetero exec`. The fake gateway plays the device itself —
+      // running `orvilo hetero exec`. The fake gateway plays the device itself —
       // ack the dispatch, then stream a mock-LLM reply back through the real
       // hetero ingest pipeline so e2e sends produce a genuine assistant turn.
       if (req.method === 'POST' && path === '/api/device/agent/run') {

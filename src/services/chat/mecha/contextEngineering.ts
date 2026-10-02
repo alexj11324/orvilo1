@@ -811,7 +811,7 @@ export const contextEngineering = async ({
       memory_effort: () => (userMemoryConfig ? (memoryContext?.effort ?? '') : ''),
       // Current agent + topic identity — referenced by the Orvilo builtin
       // skill (packages/builtin-skills/src/orvilo/content.ts) so the model
-      // can run `lh agent run -a {{agent_id}}` etc without first having to
+      // can run `orvilo agent run -a {{agent_id}}` etc without first having to
       // search for itself. Read lazily from stores so we only pay the cost
       // when the placeholder actually appears in a rendered message.
       agent_id: () => agentId ?? '',

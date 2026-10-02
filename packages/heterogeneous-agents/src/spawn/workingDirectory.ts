@@ -5,7 +5,7 @@ import { HETERO_WORKING_DIRECTORY_NOT_FOUND } from './classifyProcessFailure';
 
 /**
  * Working-directory checks shared by every heterogeneous-agent spawn site
- * (desktop main, `lh connect` daemon, `lh hetero exec`).
+ * (desktop main, `orvilo connect` daemon, `orvilo hetero exec`).
  *
  * Exposed as its own package subpath rather than through the `./spawn` barrel:
  * the connect daemon only needs these few lines, and the barrel pulls in the
@@ -56,7 +56,7 @@ export const assertSpawnableWorkingDirectory = (dir: string): void => {
 };
 
 /**
- * Pick the cwd to start the `lh hetero exec` wrapper process from. A stale
+ * Pick the cwd to start the `orvilo hetero exec` wrapper process from. A stale
  * project path must not prevent the wrapper from starting: its inner
  * `spawnAgent` preflight owns cwd classification and reports the structured
  * `working_directory_not_found` error through `heteroFinish`, which the bare

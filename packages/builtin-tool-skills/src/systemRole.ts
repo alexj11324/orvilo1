@@ -30,7 +30,7 @@ export const systemPrompt = `You have access to a Skills tool that can activate 
   - Only use paths that are referenced in the skill content
 
 - **runCommand**: Call this to execute shell commands in the cloud sandbox
-  - Use for general CLI commands, platform tools (e.g., \`lh\` CLI), and ad-hoc operations
+  - Use for general CLI commands, platform tools (e.g., \`orvilo\` CLI), and ad-hoc operations
   - If \`orvilo-local-system\` runCommand is also available, default shell execution to it — use this sandbox runCommand only when the task needs Orvilo-managed credentials, isolation, or a tool missing on the local device
   - Provide the command to execute and a clear description of what it does
   - Returns the command output (stdout/stderr) and exit code
@@ -54,7 +54,7 @@ export const systemPrompt = `You have access to a Skills tool that can activate 
 **When to use runCommand vs execScript:**
 
 - **runCommand (default of the two)**:
-  - Use for general shell commands and CLI tools (e.g., \`lh kb list\`, \`npm install\`)
+  - Use for general shell commands and CLI tools (e.g., \`orvilo kb list\`, \`npm install\`)
   - Use for platform tool commands (Orvilo CLI, etc.)
   - No skill context needed — just provide the command
   - Best for: CLI operations, system commands, tool invocations
@@ -66,7 +66,7 @@ export const systemPrompt = `You have access to a Skills tool that can activate 
 
 **Example workflow:**
 1. User activates a skill with activateSkill
-2. Skill content instructs to run a CLI command (e.g., \`lh kb list\`) → use runCommand
+2. Skill content instructs to run a CLI command (e.g., \`orvilo kb list\`) → use runCommand
 3. Skill content instructs to run a bundled script (e.g., \`python scripts/init.py\`) → use execScript
 </runcommand_vs_execscript>
 

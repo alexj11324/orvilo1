@@ -16,7 +16,7 @@
 | wire/proc  | `aiAgent.startExecution`                               | `startRun` 语义或明确退役错误（queued-intent 迁移期内保留 shape）                                                    | RB01/P05 | 消灭 “接口成功实际没启动”            | P05 前决定                  |
 | MCP name   | `lobe_cc`                                              | `orvilo_cc`                                                                                                          | P04      | 宿主 per-run MCP 命名统一            | 已存 session 工具名限期双读 |
 | clientInfo | `title:'LobeHub'`                                      | `title:'Orvilo'`（standardAcpSession）                                                                               | P03      | ACP 握手自报第一方身份               | 立即                        |
-| CLI        | `lh` bin                                               | `orvilo` 规范名，`lh` 限期转发（退役命令→退役错误）                                                                  | P03/P04  | 旧客户端升级窗口                     | 版本窗口由 P04 定           |
+| CLI        | `orvilo` bin                                           | `orvilo` 规范名，`orvilo` 限期转发（退役命令→退役错误）                                                              | P03/P04  | 旧客户端升级窗口                     | 版本窗口由 P04 定           |
 | state      | `waiting_for_async_tool`                               | 业务状态 × 等待原因 ×ACP session 三分                                                                                | P10      | 等待对象不一定是子 Agent             | 历史值永久可解码            |
 
 ## 2. 持久化标识（P04 迁移表，不得全文替换）

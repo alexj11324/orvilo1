@@ -8,11 +8,11 @@
  *   opt-in      `heterogeneousProvider.methodPacks.aegis` on the agent config
  *               → dispatch stamps `agent_operations.metadata.aegis.enabled`,
  *               injects {@link AEGIS_ORVILO_CONTRACT} into the run context and
- *               sets `ORVILO_AEGIS_PACK=1` on the spawned `lh hetero exec`.
+ *               sets `ORVILO_AEGIS_PACK=1` on the spawned `orvilo hetero exec`.
  *   emit        the agent writes `.aegis/closeout.json` (schema
  *               {@link AEGIS_CLOSEOUT_SCHEMA}) plus optional reports; the pack
  *               itself may also write `docs/aegis/**` workspace output.
- *   collect     `lh hetero exec` ships the bounded file set back inside
+ *   collect     `orvilo hetero exec` ships the bounded file set back inside
  *               `heteroFinish.params.aegis` ({@link AegisFinishReport}).
  *   persist     the server merges it into `agent_operations.metadata.aegis`
  *               before `completeOperation`, so the verify lifecycle, the
@@ -25,7 +25,7 @@
  * and never hard-failed by Aegis alone.
  */
 
-/** Env flag the dispatch sets on `lh hetero exec` to install + collect. */
+/** Env flag the dispatch sets on `orvilo hetero exec` to install + collect. */
 export const AEGIS_PACK_ENV = 'ORVILO_AEGIS_PACK';
 
 /**

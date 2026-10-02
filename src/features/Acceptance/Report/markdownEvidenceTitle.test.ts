@@ -18,8 +18,8 @@ describe('evidenceTitleFromMarkdown — the collapsed row label', () => {
   });
 
   it('skips blank lines and fence markers — a doc opening with a code block is labeled by its first code line', () => {
-    expect(evidenceTitleFromMarkdown('\n\n```bash\n$ lh acceptance view --json\n```')).toBe(
-      '$ lh acceptance view --json',
+    expect(evidenceTitleFromMarkdown('\n\n```bash\n$ orvilo acceptance view --json\n```')).toBe(
+      '$ orvilo acceptance view --json',
     );
   });
 

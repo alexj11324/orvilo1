@@ -518,7 +518,7 @@ export class AiAgentService {
     // A replacement is allowed to take over the topic marker, but the device
     // process that owned the old marker may still hold a native Codex/CC writer.
     // Settle that physical run before reserving and dispatching the replacement;
-    // otherwise two `lh hetero exec` wrappers can resume the same thread.
+    // otherwise two `orvilo hetero exec` wrappers can resume the same thread.
     if (params.replacesOperationId && !isInterventionThreadStart) {
       const interruption = await this.interruptTask({
         operationId: params.replacesOperationId,

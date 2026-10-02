@@ -134,7 +134,7 @@ describe('agentNotifyRouter.notify — remote hetero terminal signal', () => {
       },
     });
     // The placeholder message holds the agent's final reply (written in-place
-    // by earlier `lh notify` calls).
+    // by earlier `orvilo notify` calls).
     mockMessageFindById.mockResolvedValue({ content: 'the final reply', topicId: TOPIC });
     mockTopicUpdateMetadata.mockResolvedValue(undefined);
     mockTopicRemoveRunningOperationChild.mockResolvedValue(undefined);

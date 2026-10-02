@@ -21,7 +21,7 @@ const orviloHubContent = OrviloSkill.content;
  *   2. The placeholder engine substitutes them with caller-provided values.
  *
  * If anyone renames a token in content.ts without updating the generators (or
- * vice versa), this test fails before users see a broken `lh agent run -a {{agent_id}}`
+ * vice versa), this test fails before users see a broken `orvilo agent run -a {{agent_id}}`
  * literal in their prompts.
  */
 describe('Orvilo skill identity placeholders ()', () => {

@@ -1,6 +1,8 @@
 // @vitest-environment node
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as WorkspaceModel from '@/database/models/workspace';
+
 import { marketRouter } from './market';
 
 const mockPreprocessLhCommand = vi.hoisted(() => vi.fn());
@@ -34,7 +36,7 @@ vi.mock('@/libs/trpc/lambda/middleware', () => ({
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModel>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 
@@ -77,7 +79,7 @@ describe('tools marketRouter', () => {
     vi.clearAllMocks();
   });
 
-  it('should pass workspace scope when preprocessing sandbox lh commands', async () => {
+  it('should pass workspace scope when preprocessing sandbox orvilo commands', async () => {
     const caller = marketRouter.createCaller({
       serverDB: {},
       userId: 'user-1',
@@ -85,26 +87,26 @@ describe('tools marketRouter', () => {
     } as any);
     mockPreprocessLhCommand.mockResolvedValue({
       command:
-        'lh() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent view agt_1',
+        'orvilo() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh() { orvilo "$@"; }\norvilo agent view agt_1',
       isLhCommand: true,
       skipSkillLookup: true,
     });
     mockSandboxCallTool.mockResolvedValue({ result: { ok: true }, success: true });
 
     await caller.execInSandbox({
-      params: { command: 'lh agent view agt_1' },
+      params: { command: 'orvilo agent view agt_1' },
       toolName: 'runCommand',
       topicId: 'topic-1',
     });
 
     expect(mockPreprocessLhCommand).toHaveBeenCalledWith(
-      'lh agent view agt_1',
+      'orvilo agent view agt_1',
       'user-1',
       'workspace-1',
     );
     expect(mockSandboxCallTool).toHaveBeenCalledWith('runCommand', {
       command:
-        'lh() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh agent view agt_1',
+        'orvilo() { ORVILO_WORKSPACE_ID=\'workspace-1\' npx -y @orvilo/cli "$@"; }\nlh() { orvilo "$@"; }\norvilo agent view agt_1',
     });
   });
 
@@ -118,21 +120,21 @@ describe('tools marketRouter', () => {
       workspaceId: null,
     } as any);
     mockPreprocessLhCommand.mockResolvedValue({
-      command: 'lh agent view agt_1',
+      command: 'orvilo agent view agt_1',
       isLhCommand: true,
       skipSkillLookup: true,
     });
     mockSandboxCallTool.mockResolvedValue({ result: { ok: true }, success: true });
 
     await caller.execInSandbox({
-      params: { command: 'lh agent view agt_1' },
+      params: { command: 'orvilo agent view agt_1' },
       toolName: 'runCommand',
       topicId: 'topic-1',
       userId: 'someone-else',
     });
 
     expect(mockPreprocessLhCommand).toHaveBeenCalledWith(
-      'lh agent view agt_1',
+      'orvilo agent view agt_1',
       'caller-user',
       undefined,
     );

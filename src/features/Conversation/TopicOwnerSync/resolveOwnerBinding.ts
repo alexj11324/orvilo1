@@ -15,14 +15,14 @@
  */
 export const resolveOwnerBinding = (params: {
   composerAgentId?: string;
-  lastUsedAgentId?: string;
+  lastUsedAgentId?: string | null;
   routeTopicId: string | null;
-  topicAgentId?: string;
+  topicAgentId?: string | null;
 }): { activeAgentId?: string; configAgentId?: string } => {
   const { composerAgentId, lastUsedAgentId, routeTopicId, topicAgentId } = params;
 
   if (routeTopicId) {
-    return { activeAgentId: topicAgentId ?? undefined, configAgentId: topicAgentId };
+    return { activeAgentId: topicAgentId ?? undefined, configAgentId: topicAgentId ?? undefined };
   }
 
   return {

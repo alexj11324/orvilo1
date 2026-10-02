@@ -11,6 +11,8 @@ import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
+import { resolveOwnerBinding } from './resolveOwnerBinding';
+
 /**
  * Binds the conversation-stable `/chat` routes to the topic's owner agent.
  *
@@ -41,9 +43,12 @@ const TopicOwnerSync = memo(() => {
     useChatStore((s) => (routeTopicId ? undefined : s.composerAgentId)),
     useGlobalStore(systemStatusSelectors.lastUsedAgentId),
   ];
-  const configAgentId = routeTopicId
-    ? topicAgentId
-    : (composerAgentId ?? lastUsedAgentId ?? undefined);
+  const { activeAgentId: boundAgentId, configAgentId } = resolveOwnerBinding({
+    composerAgentId,
+    lastUsedAgentId,
+    routeTopicId,
+    topicAgentId,
+  });
 
   // Hydrate the bound agent's config — `AgentIdSync` does this for
   // `/agent/:aid`; `/chat` resolves the same id from the topic instead.
@@ -76,14 +81,14 @@ const TopicOwnerSync = memo(() => {
   }, [routeTopicId, topicAgentId]);
 
   useLayoutEffect(() => {
-    const next = routeTopicId ? (topicAgentId ?? undefined) : undefined;
+    const next = boundAgentId;
     if (useChatStore.getState().activeAgentId !== next) {
       useChatStore.setState({ activeAgentId: next }, false, 'TopicOwnerSync/syncAgentId');
     }
     if (useAgentStore.getState().activeAgentId !== next) {
       useAgentStore.setState({ activeAgentId: next }, false, 'TopicOwnerSync/syncAgentId');
     }
-  }, [routeTopicId, topicAgentId]);
+  }, [boundAgentId]);
 
   useLayoutEffect(
     () => () => {

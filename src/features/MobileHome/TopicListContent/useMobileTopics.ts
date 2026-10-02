@@ -11,6 +11,14 @@ import { authSelectors } from '@/store/user/selectors';
 import { MOBILE_TOPIC_STATUSES, type MobileTopicRow, toMobileTopicRows } from './mobileTopicRows';
 
 /**
+ * First-page bound for the mobile conversation feed — inside the 30–50 range
+ * the conversation-first contract fixes. `queryTopics` has no cursor param
+ * yet, so this pageSize is the guard against an unbounded fetch reaching the
+ * server (its model default is 200); real cursor pagination is the follow-up.
+ */
+export const MOBILE_FEED_PAGE_SIZE = 40;
+
+/**
  * Workspace-wide conversation feed for the mobile 会话 tab — the same
  * `queryTopics` source the home inbox uses, minus the status narrowing, so
  * every non-archived conversation shows up regardless of which agent owns it.
@@ -20,7 +28,11 @@ export const useMobileTopics = () => {
 
   const { data, error, isLoading, mutate } = useClientDataSWR(
     isLogin ? topicKeys.list('mobile-home', { statuses: MOBILE_TOPIC_STATUSES }) : null,
-    () => topicService.queryTopics({ statuses: MOBILE_TOPIC_STATUSES }),
+    () =>
+      topicService.queryTopics({
+        pageSize: MOBILE_FEED_PAGE_SIZE,
+        statuses: MOBILE_TOPIC_STATUSES,
+      }),
     // Rows carry live statuses (running / unread), so refetch promptly on focus.
     { focusThrottleInterval: 1000 },
   );

@@ -7,7 +7,8 @@
   },
   "main": "./src/index.ts",
   "scripts": {
-    "test": "bunx vitest run --silent='passed-only'"
+    "test": "bunx vitest run --silent='passed-only'",
+    "test:coverage": "bunx vitest run --coverage"
   },
   "dependencies": {
     "@orvilo/agent-execution": "link:../agent-execution",

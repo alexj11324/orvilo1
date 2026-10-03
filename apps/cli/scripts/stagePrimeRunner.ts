@@ -42,6 +42,9 @@ for (const file of [runnerDist, manifestDist]) {
   }
 }
 
+// Runs standalone too (tsdown normally creates dist/ first — mkdir keeps the
+// script idempotent when invoked by itself during debugging).
+fs.mkdirSync(path.join(CLI, 'dist'), { recursive: true });
 fs.copyFileSync(runnerDist, path.join(CLI, 'dist', 'runner.mjs'));
 fs.copyFileSync(manifestDist, path.join(CLI, 'dist', 'runner.manifest.json'));
 console.info('✅ Prime runner artifact staged into dist/');

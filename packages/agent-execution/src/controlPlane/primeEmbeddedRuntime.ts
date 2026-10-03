@@ -144,8 +144,9 @@ const RUNTIME_ID = 'prime-embedded' as const;
 const PROMPT_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
 /**
- * First-party runtime. Sessions come from the runner's init handshake; resume
- * stays 'none' in v1 (in-memory SessionManager — nothing to reload).
+ * First-party runtime. Sessions come from the runner's init handshake and
+ * persist under the runner stateDir; resume stays 'none' — `start()` has no
+ * resume-session slot, so advertising it would lie.
  */
 export class PrimeEmbeddedRuntime implements ExecutionRuntime {
   private readonly sessions = new Map<string, Entry>();

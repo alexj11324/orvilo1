@@ -268,7 +268,11 @@ const fakeBackend = (hooks?: { between?: () => Promise<void> }): TrustedProvider
  * `broker.event` back as the runner's `harness.event` notifications, and
  * answers `end_turn` when the broker stream ends (or reports an error).
  */
-const promptDrivingSupervisor = () => {
+const promptDrivingSupervisor = (options?: {
+  /** Extra `harness.event` notifications emitted after the broker stream
+   * ends — stands in for the runner executing a tool itself. */
+  harnessEvents?: (wire: RunnerWire, sessionId: string) => void;
+}) => {
   const order: string[] = [];
   const supervisor = fakeSupervisor({
     supervisorId: 'sup-embedded-test',
@@ -327,7 +331,12 @@ const promptDrivingSupervisor = () => {
           endTurn();
           return;
         }
-        if (event.type === 'end') endTurn();
+        if (event.type === 'end') {
+          // Runner-executed tool activity lands inside the turn, before the
+          // prompt response — emit before `endTurn` so the host pump sees it.
+          options?.harnessEvents?.(wire, sessionId);
+          endTurn();
+        }
       });
       void wire.reverseRequest('broker.infer', {
         request: {
@@ -850,5 +859,74 @@ describe('driveEmbeddedCanonicalRun', () => {
     expect(assistant?.content).toBe('hello ');
     expect(assistant?.error).toBeTruthy();
     expect(supervisor.state.terminated.length).toBeGreaterThan(0);
+  }, 30_000);
+
+  it('surfaces runner tool/thinking activity to the ledger like hetero', async () => {
+    const run = await seedEmbeddedRun();
+    await seedBinding(run.userId);
+    const { artifact, root } = await fixtureDirectories();
+    const { supervisor } = promptDrivingSupervisor({
+      harnessEvents: (wire, sessionId) => {
+        wire.notify('harness.event', {
+          event: { kind: 'thinking', text: 'pondering' },
+          sessionId,
+        });
+        wire.notify('harness.event', {
+          event: {
+            args: { code: 'print(1)' },
+            kind: 'tool_call',
+            toolCallId: 'call_1',
+            toolName: 'ipython',
+          },
+          sessionId,
+        });
+        wire.notify('harness.event', {
+          event: {
+            isError: false,
+            kind: 'tool_result',
+            result: { content: [{ text: '1', type: 'text' }] },
+            toolCallId: 'call_1',
+            toolName: 'ipython',
+          },
+          sessionId,
+        });
+      },
+    });
+    const prepared = await openEmbeddedDispatchHost(
+      { database: db, userId: run.userId },
+      openInput(run, environmentFor(root, artifact, { supervisor: supervisor.factory })),
+    );
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+
+    await driveEmbeddedCanonicalRun(
+      { database: db, userId: run.userId, workspaceId: run.workspaceId },
+      prepared.value,
+      {
+        agentType: 'claude-code',
+        assistantMessageId: run.assistantMessageId,
+        operationId: run.operationId,
+        prompt: 'run the tool',
+        topicId: run.topicId,
+      },
+    );
+
+    // tools_calling populated the assistant message's tool rows — the same
+    // persistence a hetero ToolCallPayload lands on for chat rendering.
+    const [assistant] = await db
+      .select({ reasoning: messages.reasoning, tools: messages.tools })
+      .from(messages)
+      .where(eq(messages.id, run.assistantMessageId));
+    expect(assistant?.tools).toEqual([
+      expect.objectContaining({ apiName: 'ipython', id: 'call_1', identifier: 'orvilo' }),
+    ]);
+    expect(assistant?.reasoning).toBeTruthy();
+
+    const toolRows = await db
+      .select({ content: messages.content, role: messages.role })
+      .from(messages)
+      .where(eq(messages.topicId, run.topicId));
+    const toolMessage = toolRows.find((row) => row.role === 'tool');
+    expect(toolMessage?.content).toBe('1');
   }, 30_000);
 });

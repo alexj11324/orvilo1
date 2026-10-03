@@ -36,6 +36,10 @@ import type {
   ControlResult,
   TrustedProviderBackend,
 } from '@orvilo/agent-execution/controlPlane';
+import {
+  createPrimeStreamState,
+  mapRuntimeEvent,
+} from '@orvilo/agent-execution/controlPlane/primeStreamMapping';
 import type {
   DockerSupervisorOptions,
   EmbeddedArtifactManifest,
@@ -463,6 +467,9 @@ const streamEvent = (
     | 'stream_end'
     | 'stream_start'
     | 'step_complete'
+    | 'tool_start'
+    | 'tool_result'
+    | 'tool_end'
     | 'visible_output_end',
   data: Record<string, unknown>,
 ): AgentStreamEvent =>
@@ -517,11 +524,18 @@ export const driveEmbeddedCanonicalRun = async (
           provider: 'orvilo',
         }),
       ]);
+      const streamState = createPrimeStreamState();
       for await (const event of prepared.host.prompt(run.prompt)) {
         if (event.type === 'text') {
           await ingest([
             streamEvent(operationId, 'stream_chunk', { chunkType: 'text', content: event.text }),
           ]);
+        } else if (event.type === 'thinking' || event.type.startsWith('tool_')) {
+          const emissions = mapRuntimeEvent(streamState, event);
+          if (emissions.length > 0)
+            await ingest(
+              emissions.map((emission) => streamEvent(operationId, emission.type, emission.data)),
+            );
         } else if (event.type === 'usage') {
           const total = event.totalTokens ?? event.inputTokens + event.outputTokens;
           await ingest([
@@ -545,8 +559,6 @@ export const driveEmbeddedCanonicalRun = async (
           finishError = { message: event.error.message, type: 'AgentRuntimeError' };
           result = 'error';
         }
-        // thinking/tool_* RuntimeEvents are surfaced to the ledger by the
-        // pipeline surfacing layer — skipped here until that lands.
       }
       if (result === 'error' && finishError)
         await ingest([streamEvent(operationId, 'error', { message: finishError.message })]);

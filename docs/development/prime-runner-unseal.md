@@ -90,6 +90,34 @@ path resumes via `HarnessInitParams.resumeSessionId`.
 - `primeEmbeddedRuntime` drops the `tools.length !== 0` handshake rejection and
   maps the new harness events onto `RuntimeEvent`.
 
+## Layer E — ledger + chat surfacing
+
+`packages/agent-execution/src/controlPlane/primeStreamMapping.ts` translates
+the v2 surfacing events into the exact `AgentStreamEvent` vocabulary the
+heterogeneous adapters emit, so Prime activity lands on the same ledger rows
+and chat renders it unchanged — the ingest reducers are agentType-agnostic:
+
+- `thinking` → `stream_chunk{chunkType:'reasoning'}` (persisted to
+  `messages.reasoning`).
+- `tool_call` → `stream_chunk{chunkType:'tools_calling', toolsCalling:[…cumulative]}` +
+  `tool_start{toolCalling, toolCallId}` — cumulative per turn like the pi
+  adapter's `stepToolCalls`; each payload is
+  `{apiName, arguments, id, identifier:'orvilo', type:'default'}` and lands on
+  `messages.tools`.
+- `tool_progress` → `stream_chunk{chunkType:'tool_state', toolCallId,
+pluginState, snapshotMode:'replace', snapshotSeq}` — seq monotonic per
+  `toolCallId`.
+- `tool_result` → `tool_result{content, isError, toolCallId, state?}` +
+  `tool_end{isSuccess, toolCallId, result, payload:{toolCalling}}` — the
+  re-attached payload lets the renderer resolve the call by id.
+
+Both producers consume the one mapper: the embedded drive loop maps
+`RuntimeEvent`s inside `driveEmbeddedCanonicalRun`, and the device-side session
+pump in `apps/cli/src/device/primeRun.ts` maps `HarnessSessionEvent`s per op
+(`PrimeStreamOperation.streamState` — per-turn bookkeeping). `tool-violation`
+never reaches the mapper: it remains a fail-closed error at each call site for
+calls outside the negotiated surface.
+
 ## SDK surface enabled vs deferred
 
 Enabled: default builtin toolset, persistent sessions + resume, real

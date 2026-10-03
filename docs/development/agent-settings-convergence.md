@@ -84,6 +84,15 @@ connect flow: inventory failure ≠ empty, single candidate auto-resolves at
 flow admission, zero candidates shows the blocking empty state with offline
 devices still listed.
 
+## Agent sidebar nav
+
+`src/features/AgentSidebar/Header/Nav.tsx` carries the lobehub nav rows —
+新话题 / 搜索 / 助理档案 /self-learning+goals (labs-gated) / 任务 — with the
+permission gate (`hideProfile` = not editable, or access not yet resolved, or
+no resource/content edit rights) restored. The profile entry pushes
+`/agent/:aid/profile`, whose route owns the Settings→Agents exile redirect
+into `/settings/agents/:aid`; the tasks entry lands on `/agent/:aid/tasks`.
+
 ## Invariants pinned by tests
 
 - `useDeviceSelectorState.test.tsx` — the visibility matrix (loading, error,

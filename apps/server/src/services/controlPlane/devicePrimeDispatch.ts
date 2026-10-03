@@ -42,6 +42,7 @@ import {
 import type { CanonicalRunBinding } from './canonicalRun';
 import { deviceRuntimeOwnerId } from './deviceRunBinding';
 import type { EmbeddedDispatchContext } from './embeddedDispatch';
+import { defaultRunnerArtifact } from './embeddedDispatch';
 
 /** Mirrors the embedded grant window — same run length, different owner. */
 const DEVICE_RUN_GRANT_TTL_MS = 6 * 60 * 60 * 1000;
@@ -60,21 +61,12 @@ const failure = (code: ControlError['code'], message: string): ControlResult<nev
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-/** Same artifact location as embeddedDispatch's `defaultRunnerArtifact` —
- * kept repo-relative lazily so bundlers never trace the unbuilt dist. */
+/** The manifest ships beside `runner.mjs`, so it resolves through the same
+ * candidate chain as `defaultRunnerArtifact` — including the
+ * `ORVILO_PRIME_EMBEDDED_ARTIFACT` override and bundled-runtime fallbacks,
+ * which a bare `import.meta.dirname` join cannot survive. */
 const defaultRunnerManifest = () =>
-  path.join(
-    import.meta.dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    '..',
-    'packages',
-    'prime-harness',
-    'dist',
-    'runner.manifest.json',
-  );
+  path.join(path.dirname(defaultRunnerArtifact()), 'runner.manifest.json');
 
 export interface ComposeDevicePrimeRunInput {
   deviceId: string;

@@ -268,6 +268,22 @@ jobs:
               identifier: 'web',
             });
 
+      # Builtin `type:'orvilo'` chat/task runs dispatch to the embedded Prime
+      # host unconditionally post-cutover: `composeEmbeddedRunHost` refuses a
+      # run without the built runner bundle (runner.manifest.json beside
+      # runner.mjs) and a digest-pinned supervisor image
+      # (ORVILO_PRIME_EMBEDDED_IMAGE_ID). Neither exists on a fresh runner —
+      # the bundle is gitignored and nothing builds the image — so every
+      # embedded admission failed until this step existed.
+      - name: Build embedded Prime runner image
+        run: |
+          (cd vendor/prime && npm ci --ignore-scripts)
+          node packages/prime-harness/scripts/build.mjs
+          BUNDLE_SHA=$(node -p "require('./packages/prime-harness/dist/runner.manifest.json').sha256")
+          docker build --build-arg "HARNESS_BUNDLE_SHA256=$BUNDLE_SHA" -t orvilo/prime-harness:e2e packages/prime-harness
+          echo "ORVILO_PRIME_EMBEDDED_IMAGE_ID=$(docker inspect -f '{{.Id}}' orvilo/prime-harness:e2e)" >> "$GITHUB_ENV"
+          echo "ORVILO_PRIME_EMBEDDED_ARTIFACT=$PWD/packages/prime-harness/dist/runner.mjs" >> "$GITHUB_ENV"
+
       - name: Start E2E mock services
         run: |
           bun e2e/scripts/mockServices.ts > /tmp/orvilo-e2e-mocks.log 2>&1 &
@@ -300,6 +316,12 @@ jobs:
           E2E_PARALLEL: '3'
           E2E_REPORTS: '0'
           HEADLESS: 'true'
+
+      # Server-side errors (embedded dispatch, docker runner) never reach the
+      # Cucumber output — surface the tail on failure instead of a black box.
+      - name: Dump E2E server log on failure
+        if: failure()
+        run: tail -n 400 /tmp/orvilo-e2e-server.log || true
 
       - name: Upload E2E test artifacts
         if: always()

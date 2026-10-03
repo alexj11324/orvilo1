@@ -693,6 +693,32 @@ describe('openEmbeddedDispatchHost', () => {
     await prepared.value.host.shutdown().catch(() => {});
   });
 
+  it('composes the container supervisor with the calibrated memory budget', async () => {
+    const run = await seedEmbeddedRun();
+    await seedBinding(run.userId);
+    const { artifact, root } = await fixtureDirectories();
+    const { supervisor } = promptDrivingSupervisor();
+    let supervised: DockerSupervisorOptions | undefined;
+    const prepared = await openEmbeddedDispatchHost(
+      { database: db, userId: run.userId },
+      openInput(
+        run,
+        environmentFor(root, artifact, {
+          supervisor: (options) => {
+            supervised = options;
+            return supervisor.factory(options);
+          },
+        }),
+      ),
+    );
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+    // The runner idles at ~200 MiB; the supervisor default (256) OOM-kills it
+    // intermittently under stream/queue allocation bursts.
+    expect(supervised?.memoryMiB).toBe(768);
+    await prepared.value.host.shutdown().catch(() => {});
+  });
+
   it('mints a bounded run grant for a manual run that lacks one', async () => {
     const run = await seedEmbeddedRun();
     await seedBinding(run.userId);

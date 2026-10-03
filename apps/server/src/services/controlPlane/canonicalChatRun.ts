@@ -5,6 +5,7 @@ import { agentOperations, topics, workspaceMembers } from '@/database/schemas';
 import type { TaskExecutionControl } from '@/database/schemas/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
 
+import { withCanonicalAdmissionRetry } from './canonicalAdmissionRetry';
 import type { CanonicalRunBinding, CanonicalRunSnapshot } from './canonicalRun';
 
 /**
@@ -89,8 +90,8 @@ export class CanonicalChatRunAuthority {
     if (!isCanonicalChatRunBinding(input))
       return denied('Chat run binding is missing its chat execution context');
     const binding = structuredClone(input);
-    return this.db
-      .transaction(
+    return withCanonicalAdmissionRetry(() =>
+      this.db.transaction(
         async (tx) => {
           // Operation before topic matches the task path's task→dispatch→…→topic
           // lock order. NOWAIT prevents a mixed legacy lock order from hanging
@@ -194,7 +195,7 @@ export class CanonicalChatRunAuthority {
           return { ok: true as const, value };
         },
         serializable ? { isolationLevel: 'serializable' } : undefined,
-      )
-      .catch(() => denied('Canonical admission is busy or unavailable'));
+      ),
+    ).catch(() => denied('Canonical admission is busy or unavailable'));
   }
 }

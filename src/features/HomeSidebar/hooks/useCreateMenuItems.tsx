@@ -16,6 +16,7 @@ import { useGroupTemplates } from '@/components/ChatGroupWizard/templates';
 import { toast } from '@/components/toast';
 import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
+import { openNewConversation } from '@/features/Conversation/selectAgent';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -45,6 +46,14 @@ interface CreateAgentOptions {
   isPinned?: boolean;
   onSuccess?: () => void;
   /**
+   * Which surface the create entry lives on. The contract fixes the
+   * destination by origin: a chat-surface entry opens a blank conversation
+   * with the new agent selected; a settings entry stays in the new agent's
+   * settings without touching the chat default. Default `chat` — the
+   * sidebar menus are conversation chrome.
+   */
+  origin?: 'chat' | 'settings';
+  /**
    * Forwarded to the server-side `visibility` column. Used by the sidebar's
    * "Create Private …" entries; defaults to undefined which the server reads
    * as `'public'`. Has no effect in personal mode.
@@ -73,18 +82,14 @@ export const useCreateMenuItems = () => {
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [isCreatingSessionGroup, setIsCreatingSessionGroup] = useState(false);
 
-  // SWR-based agent creation with auto navigation to profile
+  // SWR-based agent creation; the caller decides the destination after the
+  // mutation resolves (origin decides destination per the create contract).
   const { trigger: mutateAgent, isMutating: isMutatingAgent } = useSWRMutation(
     'agent.createAgent',
     async (_key: string, { arg }: { arg?: CreateAgentParams }) => {
       const result = await storeCreateAgent(arg ?? {});
+      await refreshAgentList();
       return result;
-    },
-    {
-      onSuccess: async (result) => {
-        navigate(`/settings/agents/${result.agentId}`);
-        await refreshAgentList();
-      },
     },
   );
 
@@ -116,21 +121,35 @@ export const useCreateMenuItems = () => {
   );
 
   /**
-   * Create agent action (optionally with a prompt as systemRole)
+   * One-click Orvilo agent create — no LLM call, no purpose field, no Agent
+   * Builder (docs/development/device-execution-contract.md). Writes the fixed
+   * `type:'orvilo'` binding and a client-side idempotency key so a
+   * double-click / UI retry can never mint a twin; everything else inherits
+   * the legal defaults (the inbox's temporary model is deliberately NOT
+   * copied). The entry's origin decides the destination.
    */
   const createAgent = useCallback(
-    async (options?: CreateAgentOptions & { prompt?: string }) => {
+    async (options?: CreateAgentOptions) => {
       if (!canCreate) return;
 
-      const config = options?.prompt ? { systemRole: options.prompt } : undefined;
-      await mutateAgent({
-        config,
+      const result = await mutateAgent({
+        clientRequestId: crypto.randomUUID(),
+        config: {
+          agencyConfig: { heterogeneousProvider: { type: 'orvilo' } },
+          title: 'Orvilo AI',
+        },
         groupId: options?.groupId,
         visibility: options?.visibility,
       });
+
+      if (options?.origin === 'settings') {
+        navigate(`/settings/agents/${result.agentId}`);
+      } else {
+        openNewConversation({ agentId: result.agentId });
+      }
       options?.onSuccess?.();
     },
-    [canCreate, mutateAgent],
+    [canCreate, mutateAgent, navigate],
   );
 
   /**
@@ -251,18 +270,10 @@ export const useCreateMenuItems = () => {
       onClick: async (info) => {
         stopMenuItemDomEvent(info.domEvent);
         if (!canCreate) return;
-
-        if (openCreateModal) {
-          openCreateModal('agent', {
-            ...(options?.groupId ? { groupId: options.groupId } : {}),
-            ...(options?.visibility ? { visibility: options.visibility } : {}),
-          });
-        } else {
-          await createAgent(options);
-        }
+        await createAgent(options);
       },
     }),
-    [canCreate, t, createAgent, openCreateModal],
+    [canCreate, t, createAgent],
   );
 
   /**

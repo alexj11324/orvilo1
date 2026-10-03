@@ -161,10 +161,11 @@ describe('Agent action', () => {
 
     fireEvent.click(getByText('Other Agent'));
 
+    // The pick routes through the unified `selectAgentForConversation` action.
     expect(mocks.setState).toHaveBeenCalledWith(
       { composerAgentId: 'agt_other' },
       false,
-      'composerAgent/switch',
+      'selectAgent/explicit',
     );
     // An explicit pick on a blank composer is a `lastUsedAgentId` write point.
     expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ lastUsedAgentId: 'agt_other' });

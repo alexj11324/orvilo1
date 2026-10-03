@@ -549,6 +549,49 @@ describe('AgentSlice Actions', () => {
 
       expect(vi.mocked(agentService.createAgent).mock.calls[0][0].config?.name).toBe('Ada');
     });
+
+    it('dedupes concurrent creates that share a clientRequestId', async () => {
+      // The create contract's idempotency key: a double-click must not mint a
+      // twin — the in-flight call is shared, not re-run.
+      let resolveCreate: ((value: { agentId: string }) => void) | undefined;
+      vi.mocked(agentService.createAgent).mockImplementation(
+        () =>
+          new Promise((resolve) => {
+            resolveCreate = resolve;
+          }),
+      );
+      const { result } = renderHook(() => useAgentStore());
+
+      const params = {
+        clientRequestId: 'req-1',
+        config: { title: 'New Agent' },
+      };
+      const first = result.current.createAgent(params);
+      const second = result.current.createAgent(params);
+
+      await waitFor(() => {
+        expect(agentService.createAgent).toHaveBeenCalledTimes(1);
+      });
+      resolveCreate?.({ agentId: 'agent-2' });
+      await act(async () => {
+        await Promise.all([first, second]);
+      });
+      expect(agentService.createAgent).toHaveBeenCalledTimes(1);
+    });
+
+    it('a different clientRequestId is a real second create', async () => {
+      vi.mocked(agentService.createAgent).mockResolvedValue({ agentId: 'agent-2' });
+      const { result } = renderHook(() => useAgentStore());
+
+      await act(async () => {
+        await result.current.createAgent({ clientRequestId: 'req-1', config: { title: 'A' } });
+      });
+      await act(async () => {
+        await result.current.createAgent({ clientRequestId: 'req-2', config: { title: 'B' } });
+      });
+
+      expect(agentService.createAgent).toHaveBeenCalledTimes(2);
+    });
   });
 
   describe('useFetchAgentDocuments', () => {

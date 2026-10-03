@@ -90,3 +90,34 @@
 - CAS 首绑（两入口并发绑定）属服务端 admission 持久层 → WD-03；纯函数 resolver 无状态，不在此测试。
 - 仓库 `isDesktop` 在 `src/` 约 494 处 / 194 文件 —— 绝大多数合法外壳用法（inventory 口径），WD-05/WD-06 建立清单 + 门禁防新增违规。
 - PR #426（draft，自动化绑定）范围重叠 → 集成阶段对齐其契约，不重复 outbox / 回执。
+
+## 6. WD-02 进展登记（PR #435，`refactor/wd-host-adapters`）
+
+### HostPort 适配层落地
+
+- `src/platform/host.ts` — `HostPort` 契约：子端口 `window / menu / updater / tray / dialog / notification / shell / openExternal`；`HostResult<T>`（值或 `HOST_UNSUPPORTED`，禁用 optional-function + 静默 no-op）；`hasHostCapability` / `registerHostPort` / `setHostPortForTesting`；未注册时回落到 fail-closed 的 unsupported host。
+- `src/platform/web.ts` — 浏览器宿主：`file.pickAttachment`（瞬态 DOM `<input type=file>`）+ `link.openExternal`（`window.open` noopener）；其余返回 `HOST_UNSUPPORTED`。Web 无 preload 可启动。
+- `src/platform/desktop.ts` — Electron 宿主，委托既有 `electronSystemService`/`autoUpdateService`/`desktopTrayService`/`desktopSettingsService`/`desktopNotificationService`/`electronOpenInAppService`/`gatewayConnectionService`；不经 barrel 导出，web 依赖图不可达。
+- 入口：`entry.web/mobile` 注册 web host；`entry.desktop/popup` 注册 desktop host。
+
+### 调用点迁移（仅此一批有现成实现，不搭空接口）
+
+窗口（WinControl/TabBar/NavigationBar/PinOnTopButton）、原生菜单（`libs/contextMenu` 路由 + LoginStep/InputEditor/Messages）、更新（Version/advanced/UpdateNotification）、托盘快照、桌面通知（`desktopNotification.ts`/ 通知设置预览）、文件夹选择（WorkingDirectoryPicker/DeviceDetailPanel）、全部 `openExternalLink`（\~12 文件 —— web 上由抛错改为 `window.open`）。
+
+`shell.openInApp` 收 `HostLocalResourceRef{deviceId,path}`：desktop 适配器先经 `gatewayConnectionService.getDeviceInfo()` 证明本机身份，不匹配即 `RESOURCE_OUT_OF_SCOPE` —— B 的路径不会再被拿去开 A 的 Finder（§6.1 场景）。
+
+### Preload / IPC 安全校验（§8 要求）
+
+| 项                      | 结论                                                                                                     | 证据                                                                                                                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| contextIsolation        | ✅ 主窗 + webview 均强制                                                                                 | `Browser.ts:206,268`                                                                                                                                                                                                            |
+| nodeIntegration         | ✅ webview 显式 `false`；主窗走默认关                                                                    | `Browser.ts:269`                                                                                                                                                                                                                |
+| sandbox                 | ⚠️ 主窗 `false`（preload 桥接需要）；✅ webview 强制 `true`                                              | `Browser.ts:208,271`                                                                                                                                                                                                            |
+| window\.open            | ✅ 一律 deny，外链走 `shell.openExternal`                                                                | `Browser.ts:319-334`                                                                                                                                                                                                            |
+| will-attach-webview     | ✅ partition 白名单 + 协议白名单 + 剥 preload                                                            | `Browser.ts:247-272`                                                                                                                                                                                                            |
+| IPC sender/frame/origin | ⚠️→✅ **本 PR 修**：原 `IpcHandler` 不校验 sender；`webviewTag` 场景下嵌入 guest 理论上可触达 shell 通道 | 修复：`isAppShellSender`（`hostWebContents === null`）收口于 `utils/ipc/base.ts` 的 chokepoint，并补齐 4 处裸 `ipcMain.*`（`retry-connection`、`desktop:get-bootstrap-identity`、`desktop:boot-profile-ready`、`stream:start`） |
+
+### 遗留（登记给后续包）
+
+- 主窗 `sandbox:false` + `nodeIntegration` 隐式默认 —— 收紧需要 preload 改造评估，WD-07 前复核。
+- `src/platform` 未覆盖的宿主面（`shortcut.global`、`os.openPermissionSettings`、devtools、remoteServer、completionSound、binary-probe、browserWebview、rendererOta、desktopExportService、auv）仍是 native-shell 内部实现，WD-06 归口进导入门禁 allowlist。

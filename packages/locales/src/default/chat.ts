@@ -436,7 +436,7 @@ export default {
     'Turn it on in Settings → Labs, or switch this agent to Subscription authentication.',
   'heteroAgent.apiMode.labDisabled.title': 'Provider binding is a Labs experiment',
   'heteroAgent.apiMode.localOnly.desc':
-    'Switch the execution environment to Local device, or use Subscription authentication.',
+    'Switch the execution device to Local device, or use Subscription authentication.',
   'heteroAgent.apiMode.localOnly.title': 'API mode requires Desktop local execution',
   'heteroAgent.apiMode.modelUnavailable':
     'The model "{{providerId}}/{{model}}" is disabled or no longer available.',
@@ -626,7 +626,7 @@ export default {
   'heteroAgent.executionTarget.autoDesc':
     'Use an online device automatically, picking one when several are available',
   'heteroAgent.executionTarget.fixedTip':
-    'The execution environment is fixed in the Agent Profile and cannot be switched while chatting.',
+    'The execution device is fixed in the agent\u0027s settings and cannot be switched while chatting.',
   'heteroAgent.executionTarget.infoTooltip':
     'Choose where this Agent runs. A device can read and write files or operate a computer; Cloud Sandbox runs in an isolated temporary environment.',
   'heteroAgent.executionTarget.gateway': 'Gateway',
@@ -668,7 +668,7 @@ export default {
   'heteroAgent.executionTarget.downloadDesktop': 'Get Desktop App',
   'heteroAgent.executionTarget.downloadDesktopDesc': 'Run agents with access to your computer',
   'heteroAgent.executionTarget.downloadDesktopTitle': 'Get the desktop app',
-  'heteroAgent.executionTarget.title': 'Execution Environment',
+  'heteroAgent.executionTarget.title': 'Device',
   'heteroAgent.executionTarget.unknownDevice': 'Unknown device',
   'hideForYou':
     "Direct message content is hidden. Please enable 'Show Direct Message Content' in settings to view.",
@@ -1075,6 +1075,7 @@ export default {
   'traeInstallGuide.reason': 'Orvilo could not start TRAE CLI: {{message}}',
   'traeInstallGuide.title': 'Install TRAE CLI',
   'addAgent': 'Add Agent',
+  'agentCreated': 'Created {{name}}',
   'addAgentFromList': 'Add from Agent list',
   'addAgentFromMarket': 'Add from Market',
   'newAgent': 'Create Agent',
@@ -1182,7 +1183,7 @@ export default {
   'connectAgent.providerDesc.amp': 'Sourcegraph coding agent CLI',
   'connectAgent.providerDesc.kimi-code': 'Moonshot AI coding agent CLI',
   'connectAgent.providerDesc.opencode': 'Open-source coding agent CLI',
-  'connectAgent.providerDesc.orvilo': 'Orvilo managed agent engine',
+  'connectAgent.providerDesc.orvilo': 'Orvilo managed agent',
   'connectAgent.providerDesc.pi': 'Minimal coding agent CLI',
   'connectAgent.providerDesc.qoder': 'Qoder coding agent CLI',
   'connectAgent.providerDesc.trae': 'TRAE Enterprise coding agent CLI',
@@ -1283,14 +1284,6 @@ export default {
   'chatMode.chat': 'Chat',
   'chatMode.chatDesc': 'No runtime environment or autonomy; uses fewer tokens',
   'chatMode.select': 'Switch Mode',
-  'runtimeEnv.mode.cloud': 'Cloud Sandbox',
-  'runtimeEnv.mode.cloudDesc': 'Run in a secure cloud sandbox',
-  'runtimeEnv.mode.local': 'Local',
-  'runtimeEnv.mode.localDesc': 'Access local files and commands',
-  'runtimeEnv.mode.none': 'Off',
-  'runtimeEnv.mode.noneDesc': 'Disable runtime environment',
-  'runtimeEnv.selectMode': 'Select Runtime Environment',
-  'runtimeEnv.title': 'Runtime Environment',
   'search.grounding.searchQueries': 'Search Keywords',
   'search.grounding.title': 'Found {{count}} results',
   'search.mode.auto.desc': 'Search the web automatically when needed.',

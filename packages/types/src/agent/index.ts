@@ -5,6 +5,7 @@ export * from './agentConfig';
 export * from './agentIntervention';
 export * from './agentTier';
 export * from './chatConfig';
+export * from './deviceExecution';
 export * from './displayName';
 export * from './document';
 export type * from './graph';

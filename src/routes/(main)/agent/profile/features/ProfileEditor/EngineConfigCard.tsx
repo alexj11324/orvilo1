@@ -13,11 +13,10 @@ import type {
   HeterogeneousReasoningEffort,
   HeterogeneousSpeedMode,
   ListHeterogeneousAgentModelsParams,
-  OrviloEngineKind,
 } from '@orvilo/types';
 import {
+  applyHeteroSelection,
   getHeteroSelectorCapability,
-  getOrviloEngineCapabilities,
   HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   normalizeHeterogeneousProviderConfig,
 } from '@orvilo/types';
@@ -60,13 +59,8 @@ import {
   resolveExecutionTargetSelection,
 } from '@/features/ExecutionTargetPicker';
 import {
-  applyEngineAwareSelection,
-  buildEngineProviderPatch,
   buildHarnessProviderPatch,
-  DEFAULT_ORVILO_ENGINE,
   isBuiltinEngineType,
-  ORVILO_ENGINE_KINDS,
-  resolveOrviloEngineCliType,
 } from '@/features/HeterogeneousAgent/engine';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import {
@@ -79,6 +73,7 @@ import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useElectronStore } from '@/store/electron';
+import { useFetchProviderBindings, useProviderBindingStore } from '@/store/providerBinding';
 
 const styles = createStaticStyles(({ css }) => ({
   card: css`
@@ -227,11 +222,17 @@ interface EngineConfigCardProps {
 }
 
 /**
- * Per-agent engine settings: which harness runs the agent, the builtin
- * Orvilo engine selection, per-harness model/effort/mode/speed, and where
- * runs execute. Everything persists through
- * `agencyConfig.heterogeneousProvider` / `executionTarget` / `boundDeviceId`
- * — the legacy `model`/`provider` fields are untouched.
+ * Per-agent engine settings: for external agents, which harness runs the
+ * agent, per-harness model/effort/mode/speed, and where runs execute. The
+ * builtin Orvilo agent's harness is fixed to Prime — it renders no
+ * Harness/Engine row and no target row (the device picker follows the
+ * shared showDeviceSelector rule, wired separately); its model picker lists
+ * the model routes of the user's enabled Orvilo provider bindings
+ * (`selection.runtime === 'orvilo'` + `selection.target === 'sandbox'`),
+ * which is the same narrowing `resolveOrviloProviderBinding` applies at
+ * dispatch. Everything persists through
+ * `agencyConfig.heterogeneousProvider` / `executionTarget` /
+ * `boundDeviceId` — the legacy `model`/`provider` fields are untouched.
  */
 const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat']);
@@ -258,20 +259,14 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
   const harnessType: HeterogeneousAgentType = provider?.type ?? 'orvilo';
   const builtinEngine = !legacyRuntime && isBuiltinEngineType(harnessType);
   const remoteEngine = isRemoteHeterogeneousType(harnessType);
-  const selectorType = builtinEngine ? resolveOrviloEngineCliType(provider?.engine) : harnessType;
-  const capability = legacyRuntime ? undefined : getHeteroSelectorCapability(selectorType);
-  const engineCapabilities = builtinEngine
-    ? getOrviloEngineCapabilities(provider?.engine)
-    : undefined;
+  // The builtin agent is bound to Prime — fixed: no selector capability
+  // catalog drives its pickers (there is no engine family to map onto).
+  const capability =
+    legacyRuntime || builtinEngine ? undefined : getHeteroSelectorCapability(harnessType);
 
   const patchProvider = (patch: PartialDeep<HeterogeneousProviderConfig>) => {
     const nextType = patch.type ?? provider?.type ?? 'orvilo';
-    const base: PartialDeep<HeterogeneousProviderConfig> = provider
-      ? {}
-      : {
-          ...(isBuiltinEngineType(nextType) ? { engine: DEFAULT_ORVILO_ENGINE } : {}),
-          type: nextType,
-        };
+    const base: PartialDeep<HeterogeneousProviderConfig> = provider ? {} : { type: nextType };
     return updateAgentConfigById(agentId, {
       agencyConfig: { heterogeneousProvider: { ...base, ...patch } },
     });
@@ -297,25 +292,33 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
     ];
   }, [t]);
 
-  const engineOptions = useMemo<SelectOptions>(
-    () =>
-      ORVILO_ENGINE_KINDS.map((engine) => {
-        const cliType = resolveOrviloEngineCliType(engine);
-        const name = t(
-          engine === 'codex-app-server'
-            ? 'agentEngine.engine.codexAppServer'
-            : 'agentEngine.engine.claudeSdk',
-        );
-        return {
-          label: <HarnessOptionLabel name={name} type={cliType} />,
-          title: name,
-          value: engine,
-        };
-      }),
-    [t],
-  );
+  // Prime's model contract: an embedded run's model is the `modelRoute` of
+  // the provider binding it issues, so the picker lists the routes of the
+  // user's enabled embedded-eligible bindings (runtime 'orvilo' + target
+  // 'sandbox') — the same rows `resolveOrviloProviderBinding` may resolve.
+  const bindings = useProviderBindingStore((s) => s.bindings);
+  useFetchProviderBindings();
 
-  const model = capability?.model?.resolve(provider) ?? HETEROGENEOUS_AGENT_DEFAULT_SELECTION;
+  const primeModelOptions = useMemo<SelectOptions>(() => {
+    if (!builtinEngine) return [];
+    const routes = new Set<string>();
+    for (const binding of bindings) {
+      const selection = binding.selection;
+      if (
+        binding.enabled === true &&
+        selection?.runtime === 'orvilo' &&
+        selection.target === 'sandbox' &&
+        binding.model
+      ) {
+        routes.add(binding.model);
+      }
+    }
+    return [...routes].map((route) => ({ label: route, title: route, value: route }));
+  }, [bindings, builtinEngine]);
+
+  const model =
+    capability?.model?.resolve(provider) ??
+    (builtinEngine ? (provider?.model ?? '') : HETEROGENEOUS_AGENT_DEFAULT_SELECTION);
   const effort = capability?.effort?.resolve(provider);
   const mode = capability?.mode?.resolve(provider);
   const speedSupported = capability?.speed?.supported(model) ?? false;
@@ -323,7 +326,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
     ? capability!.speed!.resolve(provider)
     : HETEROGENEOUS_AGENT_DEFAULT_SELECTION;
 
-  const effortLabelKeys = getEffortLabelKeys(selectorType);
+  const effortLabelKeys = getEffortLabelKeys(harnessType);
   const defaultLabel = t('chat:heteroAgent.modelSelector.default');
 
   const modelOptions = useMemo<SelectOptions>(() => {
@@ -331,14 +334,14 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
 
     const base: SelectOptions = [
       { label: defaultLabel, value: HETEROGENEOUS_AGENT_DEFAULT_SELECTION },
-      ...getStaticModelOptions(selectorType),
+      ...getStaticModelOptions(harnessType),
     ];
 
     return model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION &&
       !base.some((option) => 'value' in option && option.value === model)
       ? [{ label: model, title: model, value: model }, ...base]
       : base;
-  }, [capability?.model?.source, defaultLabel, model, selectorType]);
+  }, [capability?.model?.source, defaultLabel, model, harnessType]);
 
   const effortOptions = useMemo<SelectOptions>(() => {
     if (!capability?.effort || effort === undefined) return [];
@@ -425,9 +428,9 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
 
   // Members pick their own environment on workspace agents (shared pool,
   // `WorkspaceAgentDevicePolicy` below); platform agents bind a device through
-  // `RemoteAgentConfigCard`. The inline picker is for personal CLI/builtin
-  // harnesses, which otherwise had no environment control in the profile.
-  const showTargetPicker = !!provider && !remoteEngine && !isWorkspaceAgent;
+  // `RemoteAgentConfigCard`. The inline picker is for personal CLI harnesses;
+  // the builtin agent is embedded-Prime-only and shows a static target.
+  const showTargetPicker = !!provider && !remoteEngine && !isWorkspaceAgent && !builtinEngine;
   const supportsSandbox = isHeterogeneousSandboxExecutionAvailable(harnessType);
   const personalDevices = useMemo(() => groupExecutionTargetDevices(devices).personal, [devices]);
 
@@ -527,80 +530,85 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
       isFastSpeed: speed === 'fast',
       value,
     });
-    void patchProvider(applyEngineAwareSelection(provider, selection));
+    void patchProvider(applyHeteroSelection(provider, selection));
   };
 
-  const rows: { content: ReactNode; key: string; label: string }[] = [
-    {
-      content: legacyRuntime ? (
-        <div className="flex flex-col items-start gap-2">
-          <div>{t('agentEngine.legacy.name')}</div>
-          <div className={styles.hint}>{t('agentEngine.legacy.description')}</div>
-          <Button
-            disabled={!canEdit}
-            size="sm"
-            onClick={() => {
-              void patchProvider({ engine: DEFAULT_ORVILO_ENGINE, type: 'orvilo' });
-            }}
-          >
-            {t('agentEngine.legacy.migrate')}
-          </Button>
-        </div>
-      ) : (
-        <Select
-          disabled={!canEdit}
-          items={selectItems(harnessOptions)}
-          value={harnessType}
-          onValueChange={(value) => {
-            if (typeof value !== 'string') return;
-            void patchProvider(
-              buildHarnessProviderPatch(provider, value as HeterogeneousAgentType),
-            );
-          }}
-        >
-          <SelectTrigger className={styles.select}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectOptionItems options={harnessOptions} />
-          </SelectContent>
-        </Select>
-      ),
-      key: 'harness',
-      label: t('agentEngine.harness.label'),
-    },
-  ];
+  // The builtin agent renders no harness row: its harness is fixed to Prime
+  // and the settings contract forbids a Harness/Engine row on it.
+  const rows: { content: ReactNode; key: string; label: string }[] = builtinEngine
+    ? []
+    : [
+        {
+          content: legacyRuntime ? (
+            <div className="flex flex-col items-start gap-2">
+              <div>{t('agentEngine.legacy.name')}</div>
+              <div className={styles.hint}>{t('agentEngine.legacy.description')}</div>
+              <Button
+                disabled={!canEdit}
+                size="sm"
+                onClick={() => {
+                  void patchProvider({ type: 'orvilo' });
+                }}
+              >
+                {t('agentEngine.legacy.migrate')}
+              </Button>
+            </div>
+          ) : (
+            <Select
+              disabled={!canEdit}
+              items={selectItems(harnessOptions)}
+              value={harnessType}
+              onValueChange={(value) => {
+                if (typeof value !== 'string') return;
+                void patchProvider(
+                  buildHarnessProviderPatch(provider, value as HeterogeneousAgentType),
+                );
+              }}
+            >
+              <SelectTrigger className={styles.select}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectOptionItems options={harnessOptions} />
+              </SelectContent>
+            </Select>
+          ),
+          key: 'harness',
+          label: t('agentEngine.harness.label'),
+        },
+      ];
 
   if (builtinEngine) {
     rows.push({
       content: (
         <>
-          <Select
-            disabled={!canEdit}
-            items={selectItems(engineOptions)}
-            value={provider?.engine ?? DEFAULT_ORVILO_ENGINE}
-            onValueChange={(value) => {
-              if (typeof value !== 'string') return;
-              void patchProvider(buildEngineProviderPatch(provider, value as OrviloEngineKind));
-            }}
-          >
-            <SelectTrigger className={styles.select}>
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectOptionItems options={engineOptions} />
-            </SelectContent>
-          </Select>
-          {engineCapabilities &&
-          (!engineCapabilities.userQuestions || !engineCapabilities.builtinTools) ? (
-            <div className={cn(styles.hint, 'text-warning')}>
-              {t('agentEngine.engine.limitedCapabilities')}
-            </div>
+          {primeModelOptions.length > 0 ? (
+            <Select
+              disabled={!canEdit}
+              items={selectItems(primeModelOptions)}
+              value={model || undefined}
+              onValueChange={(value) => {
+                if (typeof value !== 'string') return;
+                void patchProvider({ model: value });
+              }}
+            >
+              <SelectTrigger className={styles.select}>
+                <SelectValue placeholder={t('agentEngine.model.label')} />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectOptionItems options={primeModelOptions} />
+              </SelectContent>
+            </Select>
+          ) : (
+            <div className={styles.hint}>{t('agentEngine.model.noPrimeBinding')}</div>
+          )}
+          {primeModelOptions.length > 0 ? (
+            <div className={styles.hint}>{t('agentEngine.model.primeHint')}</div>
           ) : null}
         </>
       ),
-      key: 'engine',
-      label: t('agentEngine.engine.label'),
+      key: 'model',
+      label: t('agentEngine.model.label'),
     });
   }
 
@@ -683,7 +691,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
           onValueChange={(value) => {
             if (typeof value !== 'string') return;
             void patchProvider(
-              applyEngineAwareSelection(provider, {
+              applyHeteroSelection(provider, {
                 effort: value as HeterogeneousReasoningEffort,
               }),
             );
@@ -712,7 +720,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
           onValueChange={(value) => {
             if (typeof value !== 'string') return;
             void patchProvider(
-              applyEngineAwareSelection(provider, {
+              applyHeteroSelection(provider, {
                 mode: value as HeterogeneousAgentMode,
               }),
             );
@@ -741,7 +749,7 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
           onValueChange={(value) => {
             if (typeof value !== 'string') return;
             void patchProvider(
-              applyEngineAwareSelection(provider, {
+              applyHeteroSelection(provider, {
                 speed: value as HeterogeneousSpeedMode,
               }),
             );
@@ -779,9 +787,6 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
               <SelectOptionItems options={targetOptions} />
             </SelectContent>
           </Select>
-          {builtinEngine ? (
-            <div className={styles.hint}>{t('agentEngine.target.orviloHint')}</div>
-          ) : null}
         </>
       ),
       key: 'target',

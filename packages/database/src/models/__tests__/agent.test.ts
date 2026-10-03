@@ -1352,8 +1352,8 @@ describe('AgentModel', () => {
       expect(result?.model).toBe('gpt-4');
     });
 
-    it('should keep the builtin orvilo harness binding when updating the inbox agent', async () => {
-      // 'orvilo' is the inbox agent's own builtin engine, not an external-CLI
+    it('should keep the builtin orvilo binding when updating the inbox agent', async () => {
+      // 'orvilo' is the inbox agent's own builtin type, not an external-CLI
       // binding — the guard must not strip it, or the Migrate-to-Orvilo write
       // is silently reverted.
       const agent = await serverDB
@@ -1364,7 +1364,7 @@ describe('AgentModel', () => {
 
       await agentModel.updateConfig(agent.id, {
         agencyConfig: {
-          heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' },
+          heterogeneousProvider: { type: 'orvilo' },
         },
       } as any);
 
@@ -1373,7 +1373,6 @@ describe('AgentModel', () => {
       });
 
       expect((result?.agencyConfig as any)?.heterogeneousProvider).toEqual({
-        engine: 'claude-sdk',
         type: 'orvilo',
       });
     });
@@ -1789,7 +1788,6 @@ describe('AgentModel', () => {
           where: eq(agents.id, result!.id),
         });
         expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
-          engine: 'claude-sdk',
           type: 'orvilo',
         });
       });
@@ -1809,7 +1807,6 @@ describe('AgentModel', () => {
           where: eq(agents.id, unbound.id),
         });
         expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
-          engine: 'claude-sdk',
           type: 'orvilo',
         });
       });
@@ -1819,7 +1816,7 @@ describe('AgentModel', () => {
           .insert(agents)
           .values({
             agencyConfig: {
-              heterogeneousProvider: { engine: 'codex-app-server', type: 'orvilo' },
+              heterogeneousProvider: { type: 'claude-code' },
             },
             slug: INBOX_SESSION_ID,
             userId,
@@ -1832,8 +1829,7 @@ describe('AgentModel', () => {
           where: eq(agents.id, bound.id),
         });
         expect((row?.agencyConfig as any)?.heterogeneousProvider).toEqual({
-          engine: 'codex-app-server',
-          type: 'orvilo',
+          type: 'claude-code',
         });
       });
 
@@ -1929,7 +1925,7 @@ describe('AgentModel', () => {
         expect(result?.userId).toBe(userId);
         expect(result?.agencyConfig).toEqual({
           executionTargetSelectionPolicy: 'member',
-          heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' },
+          heterogeneousProvider: { type: 'orvilo' },
           modelSelectionPolicy: 'member',
           topicSharePolicy: 'member',
         });

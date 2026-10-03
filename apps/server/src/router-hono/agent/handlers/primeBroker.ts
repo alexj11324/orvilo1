@@ -4,7 +4,11 @@ import type {
   InferenceRequest,
   ProviderBinding,
 } from '@orvilo/agent-execution/controlPlane';
-import { CONTROL_PLANE_VERSION, createInferenceBroker } from '@orvilo/agent-execution/controlPlane';
+import {
+  CONTROL_PLANE_VERSION,
+  createInferenceBroker,
+  toInferenceMessage,
+} from '@orvilo/agent-execution/controlPlane';
 import type {
   BrokerStreamEvent,
   SanitizedInferenceRequest,
@@ -390,7 +394,7 @@ export const primeBrokerInfer = async (c: Context): Promise<Response> => {
       bindingRevision: issued.binding.revision,
       fence: requestFence,
       maxOutputTokens: request.maxOutputTokens,
-      messages: request.messages.map((m) => ({ content: m.content, role: m.role })),
+      messages: request.messages.map(toInferenceMessage),
       modelRoute: claims.model_route,
       requestId: request.requestId,
       schemaVersion: CONTROL_PLANE_VERSION,
@@ -467,7 +471,7 @@ export const primeBrokerInfer = async (c: Context): Promise<Response> => {
     bindingRevision: issued.binding.revision,
     fence: conversationFence,
     maxOutputTokens: request.maxOutputTokens,
-    messages: request.messages.map((m) => ({ content: m.content, role: m.role })),
+    messages: request.messages.map(toInferenceMessage),
     modelRoute: claims.model_route,
     requestId: request.requestId,
     schemaVersion: CONTROL_PLANE_VERSION,

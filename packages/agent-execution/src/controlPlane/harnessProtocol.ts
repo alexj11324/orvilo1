@@ -19,7 +19,7 @@ import { isNonEmptyString, isRecord } from '@orvilo/utils/object';
 
 import { CONTROL_PLANE_VERSION } from './contracts';
 
-export const HARNESS_PROTOCOL_VERSION = 1 as const;
+export const HARNESS_PROTOCOL_VERSION = 2 as const;
 
 export const HARNESS_MAX_FRAME_BYTES = 1_048_576;
 export const HARNESS_MAX_PENDING_REQUESTS = 16;
@@ -28,6 +28,8 @@ export const HARNESS_REQUEST_TIMEOUT_MS = 30_000;
 export const HARNESS_INIT_METHOD = 'harness.init' as const;
 export const HARNESS_PROMPT_METHOD = 'session.prompt' as const;
 export const HARNESS_ABORT_METHOD = 'session.abort' as const;
+export const HARNESS_RESUME_METHOD = 'session.resume' as const;
+export const HARNESS_LIST_SESSIONS_METHOD = 'session.list' as const;
 export const HARNESS_EVENT_NOTIFICATION = 'harness.event' as const;
 export const BROKER_INFER_METHOD = 'broker.infer' as const;
 export const BROKER_CANCEL_METHOD = 'broker.cancel' as const;
@@ -37,6 +39,8 @@ export const HARNESS_FORWARD_METHODS = [
   HARNESS_INIT_METHOD,
   HARNESS_PROMPT_METHOD,
   HARNESS_ABORT_METHOD,
+  HARNESS_RESUME_METHOD,
+  HARNESS_LIST_SESSIONS_METHOD,
 ] as const;
 
 /** Reverse requests the host will actually answer; everything else gets -32601. */
@@ -54,8 +58,14 @@ export type HarnessReverseMethod = (typeof HARNESS_REVERSE_METHODS)[number];
  * Runner-visible metadata only; never an endpoint or credential.
  */
 export interface HarnessInitModel {
+  /** Context window in tokens, when the issued capability declares it. */
+  contextWindow?: number;
   id: string;
+  /** Input modalities the route accepts, e.g. `['text','image']`. */
+  input?: string[];
   maxOutputTokens: number;
+  /** True when the issued binding's model capability declares reasoning. */
+  reasoning?: boolean;
 }
 
 export interface HarnessInitParams {
@@ -64,6 +74,13 @@ export interface HarnessInitParams {
   /** Source pin echo — the runner must return it verbatim. */
   pin: { commit: string; version: string; license: string };
   protocolVersion: number;
+  /**
+   * Upstream session file id (`<sessionDir>/<id>.jsonl`) the runner should
+   * reopen instead of minting a fresh session — real resume across a runner
+   * restart. Absent or unmatched → fresh session; the ack's `sessionId`
+   * reports which branch happened (equal id = resumed, new id = rebuilt).
+   */
+  resumeSessionId?: string;
   /** Host-supplied runner state dir. Optional for embedded parity — the
    * runner falls back to its local default when the host does not supply
    * one; device hosts always pass an explicit device-resolved path. */
@@ -76,7 +93,7 @@ export interface HarnessInitAck {
     prompt: boolean;
     stream: boolean;
     cancel: boolean;
-    /** Tool names the runner will actually execute (v1: always empty). */
+    /** Tool names the runner will actually execute (empty while tools are sealed). */
     tools: string[];
     /** Reverse request methods the runner may issue (v1: broker.infer, broker.cancel). */
     requests: string[];
@@ -89,6 +106,28 @@ export interface HarnessInitAck {
 export interface HarnessPromptParams {
   sessionId: string;
   text: string;
+}
+
+export interface HarnessResumeParams {
+  /** Upstream session file id to reopen under the runner's session dir. */
+  resumeSessionId: string;
+  sessionId: string;
+}
+
+export interface HarnessResumeResult {
+  resumed: boolean;
+  /** The session id now bound to this runner — equal to resumeSessionId on
+   * a real resume, a fresh id when no matching session file existed. */
+  sessionId: string;
+}
+
+export interface HarnessListSessionsParams {
+  sessionId: string;
+}
+
+export interface HarnessListSessionsResult {
+  /** Upstream session file ids persisted under the runner's session dir. */
+  sessions: string[];
 }
 
 export type HarnessStopReason = 'end_turn' | 'cancelled' | 'budget' | 'error';
@@ -120,6 +159,38 @@ export type HarnessSessionEvent =
       };
     }
   | {
+      /** Model reasoning text (thinking block delta). */
+      kind: 'thinking';
+      text: string;
+    }
+  | {
+      /** A tool call entered execution inside the runner (tool_execution_start). */
+      args: unknown;
+      kind: 'tool_call';
+      toolCallId: string;
+      toolName: string;
+    }
+  | {
+      /** In-flight partial result while a tool call executes (tool_execution_update). */
+      kind: 'tool_progress';
+      partialResult: unknown;
+      toolCallId: string;
+      toolName: string;
+    }
+  | {
+      /** A tool call finished executing inside the runner (tool_execution_end). */
+      isError: boolean;
+      kind: 'tool_result';
+      result: unknown;
+      toolCallId: string;
+      toolName: string;
+    }
+  | {
+      /**
+       * A tool event fired for a name outside the session's tool allowlist —
+       * kept as the fail-closed invariant for undeclared tools, not the
+       * normal path for negotiated tools.
+       */
       kind: 'tool-violation';
       toolName: string;
       event:
@@ -139,9 +210,55 @@ export interface HarnessEventParams {
 
 // ---------- runner → host broker requests ----------
 
-export interface SanitizedInferenceMessage {
-  content: string;
-  role: 'system' | 'user' | 'assistant';
+export interface SanitizedTextContent {
+  text: string;
+  type: 'text';
+}
+
+export interface SanitizedThinkingContent {
+  thinking: string;
+  type: 'thinking';
+}
+
+export interface SanitizedImageContent {
+  data: string;
+  mimeType: string;
+  type: 'image';
+}
+
+export interface SanitizedToolCall {
+  arguments: Record<string, unknown>;
+  id: string;
+  name: string;
+  type: 'toolCall';
+}
+
+export type SanitizedContentBlock =
+  SanitizedTextContent | SanitizedThinkingContent | SanitizedImageContent | SanitizedToolCall;
+
+/**
+ * Message content on the wire: either the legacy plain string (most
+ * messages) or upstream content blocks (text/thinking/image/toolCall),
+ * mirroring pi-ai's `Message.content` shape.
+ */
+export type SanitizedMessageContent = string | SanitizedContentBlock[];
+
+export type SanitizedInferenceMessage =
+  | { content: SanitizedMessageContent; role: 'system' | 'user' }
+  | { content: SanitizedMessageContent; role: 'assistant' }
+  | {
+      content: SanitizedMessageContent;
+      isError?: boolean;
+      role: 'tool';
+      toolCallId: string;
+      toolName?: string;
+    };
+
+/** A tool definition the model may see (upstream `Tool` minus executor). */
+export interface SanitizedToolDefinition {
+  description?: string;
+  name: string;
+  parameters: unknown;
 }
 
 /**
@@ -153,7 +270,15 @@ export interface SanitizedInferenceRequest {
   maxOutputTokens: number;
   messages: SanitizedInferenceMessage[];
   modelRoute: string;
+  /** Provider options the binding granted (opaque pass-through). */
+  providerOptions?: Record<string, unknown>;
   requestId: string;
+  /** Service tier for providers that support one. */
+  serviceTier?: string;
+  /** Upstream thinking level the session negotiated (`off`..`xhigh`). */
+  thinkingLevel?: string;
+  /** Tool definitions the model may call — upstream `Tool` schemas. */
+  tools?: SanitizedToolDefinition[];
 }
 
 export interface BrokerInferParams {
@@ -172,6 +297,20 @@ export interface BrokerCancelParams {
 
 export type BrokerStreamEvent =
   | { type: 'text'; text: string }
+  | {
+      /** Model reasoning stream — relays the provider's thinking deltas. */
+      text: string;
+      type: 'thinking_delta';
+    }
+  | {
+      /** A streamed tool call began (`index` disambiguates parallel calls). */
+      index?: number;
+      name?: string;
+      toolCallId?: string;
+      type: 'toolcall_start';
+    }
+  | { argumentsDelta: string; index?: number; toolCallId?: string; type: 'toolcall_delta' }
+  | { index?: number; toolCall: SanitizedToolCall; type: 'toolcall_end' }
   | { type: 'usage'; inputTokens: number; outputTokens: number }
   | { type: 'error'; code: string; message: string }
   | { type: 'end' };
@@ -226,6 +365,22 @@ const isHarnessSessionEvent = (event: unknown): event is HarnessSessionEvent => 
     case 'usage': {
       return isFiniteNumber(event.inputTokens) && isFiniteNumber(event.outputTokens);
     }
+    case 'thinking': {
+      return isString(event.text);
+    }
+    case 'tool_call': {
+      return isNonEmptyString(event.toolCallId) && isNonEmptyString(event.toolName);
+    }
+    case 'tool_progress': {
+      return isNonEmptyString(event.toolCallId) && isNonEmptyString(event.toolName);
+    }
+    case 'tool_result': {
+      return (
+        isNonEmptyString(event.toolCallId) &&
+        isNonEmptyString(event.toolName) &&
+        typeof event.isError === 'boolean'
+      );
+    }
     case 'tool-violation': {
       return isNonEmptyString(event.toolName) && isNonEmptyString(event.event);
     }
@@ -241,7 +396,66 @@ const isHarnessSessionEvent = (event: unknown): event is HarnessSessionEvent => 
 export const isHarnessEventParams = (params: unknown): params is HarnessEventParams =>
   isRecord(params) && isNonEmptyString(params.sessionId) && isHarnessSessionEvent(params.event);
 
-const INFERENCE_ROLES: ReadonlySet<string> = new Set(['system', 'user', 'assistant']);
+export const isHarnessResumeParams = (params: unknown): params is HarnessResumeParams =>
+  isRecord(params) &&
+  isNonEmptyString(params.sessionId) &&
+  isNonEmptyString(params.resumeSessionId);
+
+export const isHarnessResumeResult = (value: unknown): value is HarnessResumeResult =>
+  isRecord(value) && isNonEmptyString(value.sessionId) && typeof value.resumed === 'boolean';
+
+export const isHarnessListSessionsResult = (value: unknown): value is HarnessListSessionsResult =>
+  isRecord(value) && Array.isArray(value.sessions) && value.sessions.every(isString);
+
+const isSanitizedToolCall = (value: unknown): value is SanitizedToolCall =>
+  isRecord(value) &&
+  isNonEmptyString(value.id) &&
+  isNonEmptyString(value.name) &&
+  isRecord(value.arguments);
+
+const isSanitizedContentBlock = (value: unknown): value is SanitizedContentBlock => {
+  if (!isRecord(value) || !isString(value.type)) return false;
+  switch (value.type) {
+    case 'text': {
+      return isString(value.text);
+    }
+    case 'thinking': {
+      return isString(value.thinking);
+    }
+    case 'image': {
+      return isNonEmptyString(value.data) && isNonEmptyString(value.mimeType);
+    }
+    case 'toolCall': {
+      return isSanitizedToolCall(value);
+    }
+    default: {
+      return false;
+    }
+  }
+};
+
+const isSanitizedMessageContent = (value: unknown): value is SanitizedMessageContent =>
+  isString(value) || (Array.isArray(value) && value.every(isSanitizedContentBlock));
+
+const isSanitizedInferenceMessage = (value: unknown): value is SanitizedInferenceMessage => {
+  if (!isRecord(value) || !isString(value.role)) return false;
+  switch (value.role) {
+    case 'system':
+    case 'user':
+    case 'assistant': {
+      return isSanitizedMessageContent(value.content);
+    }
+    case 'tool': {
+      return isNonEmptyString(value.toolCallId) && isSanitizedMessageContent(value.content);
+    }
+    default: {
+      return false;
+    }
+  }
+};
+
+const isSanitizedToolDefinition = (value: unknown): value is SanitizedToolDefinition =>
+  isRecord(value) && isNonEmptyString(value.name) && value.parameters !== undefined;
 
 export const isSanitizedInferenceRequest = (value: unknown): value is SanitizedInferenceRequest => {
   if (!isRecord(value)) return false;
@@ -249,9 +463,17 @@ export const isSanitizedInferenceRequest = (value: unknown): value is SanitizedI
   if (!isNonEmptyString(value.modelRoute)) return false;
   if (!isFiniteNumber(value.maxOutputTokens) || value.maxOutputTokens < 1) return false;
   if (!Array.isArray(value.messages) || value.messages.length === 0) return false;
-  return value.messages.every(
-    (m) => isRecord(m) && INFERENCE_ROLES.has(m.role as string) && isString(m.content),
-  );
+  if (!value.messages.every(isSanitizedInferenceMessage)) return false;
+  if (
+    value.tools !== undefined &&
+    (!Array.isArray(value.tools) || !value.tools.every(isSanitizedToolDefinition))
+  ) {
+    return false;
+  }
+  if (value.thinkingLevel !== undefined && !isString(value.thinkingLevel)) return false;
+  if (value.serviceTier !== undefined && !isString(value.serviceTier)) return false;
+  if (value.providerOptions !== undefined && !isRecord(value.providerOptions)) return false;
+  return true;
 };
 
 export const isBrokerInferParams = (params: unknown): params is BrokerInferParams =>
@@ -261,6 +483,50 @@ export const isBrokerInferParams = (params: unknown): params is BrokerInferParam
 
 export const isBrokerCancelParams = (params: unknown): params is BrokerCancelParams =>
   isRecord(params) && isNonEmptyString(params.requestId);
+
+export const isBrokerStreamEvent = (value: unknown): value is BrokerStreamEvent => {
+  if (!isRecord(value) || !isString(value.type)) return false;
+  switch (value.type) {
+    case 'text': {
+      return isString(value.text);
+    }
+    case 'thinking_delta': {
+      return isString(value.text);
+    }
+    case 'toolcall_start': {
+      return (
+        (value.toolCallId === undefined || isString(value.toolCallId)) &&
+        (value.name === undefined || isString(value.name)) &&
+        (value.index === undefined || isFiniteNumber(value.index))
+      );
+    }
+    case 'toolcall_delta': {
+      return (
+        isString(value.argumentsDelta) &&
+        (value.toolCallId === undefined || isString(value.toolCallId)) &&
+        (value.index === undefined || isFiniteNumber(value.index))
+      );
+    }
+    case 'toolcall_end': {
+      return (
+        isSanitizedToolCall(value.toolCall) &&
+        (value.index === undefined || isFiniteNumber(value.index))
+      );
+    }
+    case 'usage': {
+      return isFiniteNumber(value.inputTokens) && isFiniteNumber(value.outputTokens);
+    }
+    case 'error': {
+      return isNonEmptyString(value.code) && isString(value.message);
+    }
+    case 'end': {
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+};
 
 export const harnessProtocolSummary = () =>
   `harness-v${HARNESS_PROTOCOL_VERSION}/cpv-${CONTROL_PLANE_VERSION}`;

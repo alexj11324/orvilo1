@@ -5,6 +5,7 @@ import {
   type HeteroSessionScanResult,
 } from '@orvilo/types';
 
+import { requireProvenLocalDeviceId } from '@/services/localExecutionIdentity';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 /**
@@ -18,6 +19,7 @@ class ElectronHeteroSessionService {
   }
 
   async listLocalSessions(): Promise<HeteroSessionScanResult> {
+    await requireProvenLocalDeviceId('listLocalSessions');
     return this.ipc.heteroSession.listLocalSessions();
   }
 
@@ -25,14 +27,17 @@ class ElectronHeteroSessionService {
     filePath: string;
     source: HeteroSessionImportSource;
   }): Promise<HeteroSessionImportPayload | null> {
+    await requireProvenLocalDeviceId('readLocalSession');
     return this.ipc.heteroSession.readLocalSession(params);
   }
 
   async getDirPrefs(): Promise<Record<string, HeteroSessionDirPref>> {
+    await requireProvenLocalDeviceId('getDirPrefs');
     return this.ipc.heteroSession.getDirPrefs();
   }
 
   async setDirPref(params: { key: string; pref: HeteroSessionDirPref | null }): Promise<void> {
+    await requireProvenLocalDeviceId('setDirPref');
     return this.ipc.heteroSession.setDirPref(params);
   }
 }

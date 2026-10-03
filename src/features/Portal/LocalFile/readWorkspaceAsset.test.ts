@@ -117,7 +117,10 @@ describe('readWorkspaceAsset', () => {
   it('accepts a local asset larger than the former 8 MiB packaging cap', async () => {
     const bytes = new Uint8Array(9 * 1024 * 1024);
     getLocalFilePreview.mockResolvedValue({ type: 'unsupported' });
-    readProjectFileBytes.mockResolvedValue({ bytes, contentType: 'application/javascript' });
+    readProjectFileBytes.mockResolvedValue({
+      status: 'ok',
+      value: { bytes, contentType: 'application/javascript' },
+    });
 
     const result = await readWorkspaceAsset({
       path: '/tmp/runtime.js',
@@ -131,7 +134,10 @@ describe('readWorkspaceAsset', () => {
   it('reports the measured size when a local asset exceeds the hosting hard limit', async () => {
     const bytes = new Uint8Array(50 * 1024 * 1024 + 1);
     getLocalFilePreview.mockResolvedValue({ type: 'unsupported' });
-    readProjectFileBytes.mockResolvedValue({ bytes, contentType: 'application/javascript' });
+    readProjectFileBytes.mockResolvedValue({
+      status: 'ok',
+      value: { bytes, contentType: 'application/javascript' },
+    });
 
     await expect(
       readWorkspaceAsset({ path: '/tmp/runtime.js', workingDirectory: '/tmp' }),
@@ -149,8 +155,11 @@ describe('readWorkspaceAsset', () => {
 
   it('reads an external path only through the publish-scoped transport', async () => {
     readExternalAssetForPublishBytes.mockResolvedValue({
-      bytes: new TextEncoder().encode('body{}'),
-      contentType: 'text/css',
+      status: 'ok',
+      value: {
+        bytes: new TextEncoder().encode('body{}'),
+        contentType: 'text/css',
+      },
     });
 
     await expect(

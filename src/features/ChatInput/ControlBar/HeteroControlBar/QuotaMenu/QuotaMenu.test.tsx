@@ -103,6 +103,13 @@ vi.mock('@/services/electron/heterogeneousAgent', () => ({
   heterogeneousAgentService: mockService,
 }));
 
+// The quota snapshot service now requires proven local device identity before
+// the IPC leg — this suite simulates a host whose handshake proved it.
+vi.mock('@/services/localExecutionIdentity', () => ({
+  requireProvenLocalDeviceId: vi.fn(async () => 'local-device'),
+  resolveLocalExecutionIdentity: vi.fn(async () => ({ localDeviceId: 'local-device' })),
+}));
+
 // A `deviceId` routes the live sample through the device gateway TRPC instead
 // of Electron IPC (see `fetchClaudeCodeQuotaSnapshot`).
 const mockLambdaDeviceQuota = vi.hoisted(() => vi.fn());

@@ -19,6 +19,12 @@ vi.mock('@/utils/electron/ipc', () => ({
   }),
 }));
 
+// These tests simulate a host whose gateway handshake proved its device id —
+// `requireProvenLocalDeviceId` then authorizes the IPC bridge.
+vi.mock('@/services/localExecutionIdentity', () => ({
+  requireProvenLocalDeviceId: vi.fn(async () => 'local-device'),
+}));
+
 describe('heterogeneousAgentService', () => {
   it('forwards model catalog params over IPC', async () => {
     const { heterogeneousAgentService } = await import('./heterogeneousAgent');

@@ -26,6 +26,12 @@ vi.mock('@/services/electron/heterogeneousAgent', () => ({
   heterogeneousAgentService: { listModels: mocks.electronListModels },
 }));
 
+// Stand in for a host whose handshake proved a local device id — the IPC leg
+// is the desktop-local transport it authorizes.
+vi.mock('@/services/localExecutionIdentity', () => ({
+  resolveLocalExecutionIdentity: vi.fn(async () => ({ localDeviceId: 'local-device' })),
+}));
+
 describe('heterogeneousAgentCatalogService', () => {
   beforeEach(() => {
     vi.clearAllMocks();

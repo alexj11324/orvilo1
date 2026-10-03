@@ -11,6 +11,7 @@ import type {
   OrviloEngineKind,
 } from '@orvilo/types';
 
+import { requireProvenLocalDeviceId } from '@/services/localExecutionIdentity';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 /**
@@ -40,6 +41,7 @@ class HeterogeneousAgentService {
     useClaudeCodeSdk?: boolean;
     useCodexAppServer?: boolean;
   }) {
+    await requireProvenLocalDeviceId('startSession');
     return this.ipc.heterogeneousAgent.startSession(params);
   }
 
@@ -54,24 +56,29 @@ class HeterogeneousAgentService {
     systemContext?: string;
     topicId?: string;
   }) {
+    await requireProvenLocalDeviceId('sendPrompt');
     return this.ipc.heterogeneousAgent.sendPrompt(params);
   }
 
   async cancelSession(sessionId: string) {
+    await requireProvenLocalDeviceId('cancelSession');
     return this.ipc.heterogeneousAgent.cancelSession({ sessionId });
   }
 
   async stopSession(sessionId: string) {
+    await requireProvenLocalDeviceId('stopSession');
     return this.ipc.heterogeneousAgent.stopSession({ sessionId });
   }
 
   async getSessionInfo(sessionId: string) {
+    await requireProvenLocalDeviceId('getSessionInfo');
     return this.ipc.heterogeneousAgent.getSessionInfo({ sessionId });
   }
 
   async listModels(
     params: ListHeterogeneousAgentModelsParams,
   ): Promise<HeterogeneousAgentModelCatalog> {
+    await requireProvenLocalDeviceId('listModels');
     return this.ipc.heterogeneousAgent.listModels(params);
   }
 
@@ -80,6 +87,7 @@ class HeterogeneousAgentService {
     env?: Record<string, string>;
     force?: boolean;
   }): Promise<CodexQuotaSnapshot> {
+    await requireProvenLocalDeviceId('getCodexQuota');
     return this.ipc.heterogeneousAgent.getCodexQuota(params);
   }
 
@@ -89,6 +97,7 @@ class HeterogeneousAgentService {
     env?: Record<string, string>;
     idempotencyKey: string;
   }): Promise<CodexRateLimitResetResult> {
+    await requireProvenLocalDeviceId('consumeCodexRateLimitResetCredit');
     return this.ipc.heterogeneousAgent.consumeCodexRateLimitResetCredit(params);
   }
 
@@ -96,6 +105,7 @@ class HeterogeneousAgentService {
     env?: Record<string, string>;
     force?: boolean;
   }): Promise<ClaudeCodeQuotaSnapshot> {
+    await requireProvenLocalDeviceId('getClaudeCodeQuota');
     return this.ipc.heterogeneousAgent.getClaudeCodeQuota(params);
   }
 
@@ -106,6 +116,7 @@ class HeterogeneousAgentService {
   async getClaudeCodeIdentity(params?: {
     env?: Record<string, string>;
   }): Promise<ClaudeCodeQuotaSnapshot['identity']> {
+    await requireProvenLocalDeviceId('getClaudeCodeIdentity');
     return this.ipc.heterogeneousAgent.getClaudeCodeIdentity(params);
   }
 
@@ -121,6 +132,7 @@ class HeterogeneousAgentService {
     result?: unknown;
     toolCallId: string;
   }) {
+    await requireProvenLocalDeviceId('submitIntervention');
     return this.ipc.heterogeneousAgent.submitIntervention(params);
   }
 }

@@ -13,6 +13,7 @@ const mockLocalFileService = vi.hoisted(() => ({
   getLocalFilePreview: vi.fn(),
   getProjectFileIndex: vi.fn(),
   readExternalAssetForPublish: vi.fn(),
+  readLocalFileBytes: vi.fn(),
   searchProjectFiles: vi.fn(),
 }));
 
@@ -29,6 +30,13 @@ vi.mock('@/libs/trpc/client', () => ({
 
 vi.mock('@/services/electron/localFileService', () => ({
   localFileService: mockLocalFileService,
+}));
+
+// The desktop tests stand in for a host whose gateway handshake proves a
+// local device id, so the local-transport guard sees real evidence.
+vi.mock('@/services/localExecutionIdentity', () => ({
+  requireProvenLocalDeviceId: vi.fn(async () => 'local-device'),
+  resolveLocalExecutionIdentity: vi.fn(async () => ({ localDeviceId: 'local-device' })),
 }));
 
 describe('projectFileService', () => {
@@ -159,7 +167,10 @@ describe('projectFileService', () => {
         path: '/outside/image.png',
         workingDirectory: '/repo',
       }),
-    ).resolves.toEqual({ bytes: new Uint8Array([1, 2, 3]), contentType: 'image/png' });
+    ).resolves.toEqual({
+      status: 'ok',
+      value: { bytes: new Uint8Array([1, 2, 3]), contentType: 'image/png' },
+    });
 
     expect(mockDeviceClient.readExternalAssetForPublish.query).toHaveBeenCalledWith({
       deviceId: 'device-1',
@@ -179,13 +190,49 @@ describe('projectFileService', () => {
         path: '/outside/font.woff2',
         workingDirectory: '/repo',
       }),
-    ).resolves.toBe(result);
+    ).resolves.toEqual({ status: 'ok', value: result });
 
     expect(mockLocalFileService.readExternalAssetForPublish).toHaveBeenCalledWith({
       path: '/outside/font.woff2',
       workingDirectory: '/repo',
     });
     expect(mockLocalFileService.getLocalFilePreview).not.toHaveBeenCalled();
+  });
+
+  it('answers OPERATION_UNSUPPORTED for a byte read bound to a remote device', async () => {
+    const { projectFileService } = await import('./projectFile');
+
+    await expect(
+      projectFileService.readProjectFileBytes({
+        deviceId: 'device-1',
+        path: '/repo/index.html',
+        workingDirectory: '/repo',
+      }),
+    ).resolves.toEqual({
+      error: expect.objectContaining({ code: 'OPERATION_UNSUPPORTED', deviceId: 'device-1' }),
+      status: 'error',
+    });
+
+    expect(mockLocalFileService.readLocalFileBytes).not.toHaveBeenCalled();
+  });
+
+  it('answers TARGET_QUERY_FAILED when a remote publish read returns no bytes', async () => {
+    const { projectFileService } = await import('./projectFile');
+    mockDeviceClient.readExternalAssetForPublish.query.mockResolvedValue({
+      error: 'not found',
+      success: false,
+    });
+
+    await expect(
+      projectFileService.readExternalAssetForPublish({
+        deviceId: 'device-1',
+        path: '/outside/missing.png',
+        workingDirectory: '/repo',
+      }),
+    ).resolves.toEqual({
+      error: expect.objectContaining({ code: 'TARGET_QUERY_FAILED', deviceId: 'device-1' }),
+      status: 'error',
+    });
   });
 
   it('copies a publish asset through the remote RPC or the desktop service', async () => {

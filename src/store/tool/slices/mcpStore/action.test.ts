@@ -350,8 +350,9 @@ describe('mcpStore actions', () => {
         const { result } = renderHook(() => useToolStore());
 
         vi.spyOn(mcpService, 'getStreamableMcpServerManifest').mockImplementation(
-          async (params, signal) => {
+          async (params, options) => {
             // Simulate cancellation
+            const signal = options instanceof AbortSignal ? options : options?.signal;
             signal?.dispatchEvent(new Event('abort'));
             throw new Error('Aborted');
           },

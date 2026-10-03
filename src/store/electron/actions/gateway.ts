@@ -5,6 +5,7 @@ import useSWR from 'swr';
 
 import { electronKeys } from '@/libs/swr/keys';
 import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
+import { primeLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { type StoreSetter } from '@/store/types';
 
 import { type ElectronStore } from '../store';
@@ -61,6 +62,9 @@ export class ElectronGatewayActionImpl {
       async () => gatewayConnectionService.getDeviceInfo() as Promise<GatewayDeviceInfo>,
       {
         onSuccess: (data) => {
+          // The handshake response is the local device's proven identity —
+          // prime the service-layer resolver so guarded calls reuse it.
+          primeLocalExecutionIdentity(data?.deviceId);
           this.#set({ gatewayDeviceInfo: data }, false, 'setGatewayDeviceInfo');
         },
       },

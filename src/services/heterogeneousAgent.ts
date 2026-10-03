@@ -5,6 +5,7 @@ import type {
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { heterogeneousAgentService as electronHeterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
 
 interface ListModelsParams extends ListHeterogeneousAgentModelsParams {
@@ -19,8 +20,11 @@ interface ListModelsParams extends ListHeterogeneousAgentModelsParams {
  * local runtime.
  */
 class HeterogeneousAgentCatalogService {
-  listModels({ deviceId, ...params }: ListModelsParams): Promise<HeterogeneousAgentModelCatalog> {
-    requireLocalExecutionTransport(deviceId, 'listModels');
+  async listModels({
+    deviceId,
+    ...params
+  }: ListModelsParams): Promise<HeterogeneousAgentModelCatalog> {
+    requireLocalExecutionTransport(deviceId, 'listModels', await resolveLocalExecutionIdentity());
     return deviceId
       ? lambdaClient.device.listHeterogeneousAgentModels.query({ deviceId, ...params })
       : electronHeterogeneousAgentService.listModels(params);

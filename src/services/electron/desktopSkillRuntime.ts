@@ -1,5 +1,6 @@
 import type { ExecScriptActivatedSkill } from '@orvilo/builtin-tool-skills';
 
+import { requireProvenLocalDeviceId } from '@/services/localExecutionIdentity';
 import { agentSkillService } from '@/services/skill';
 
 import { localFileService } from './localFileService';
@@ -35,6 +36,7 @@ class DesktopSkillRuntimeService {
   async resolveExecutionDirectory(
     activatedSkills?: ExecScriptActivatedSkill[],
   ): Promise<string | undefined> {
+    await requireProvenLocalDeviceId('resolveExecutionDirectory');
     if (!activatedSkills?.length) return undefined;
 
     // Walk from the most recent activation and use the first one that
@@ -57,6 +59,7 @@ class DesktopSkillRuntimeService {
     skillId?: string;
     skillName?: string;
   }): Promise<string | undefined> {
+    await requireProvenLocalDeviceId('resolveReferenceFullPath');
     const skill = await this.resolveSkill({ id: params.skillId, name: params.skillName });
     if (!skill?.zipFileHash) return undefined;
 

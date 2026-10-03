@@ -11,6 +11,12 @@ vi.mock('@/utils/electron/ipc', () => ({
   }),
 }));
 
+// These tests simulate a host whose gateway handshake proved its device id —
+// `requireProvenLocalDeviceId` then authorizes the IPC bridge.
+vi.mock('@/services/localExecutionIdentity', () => ({
+  requireProvenLocalDeviceId: vi.fn(async () => 'local-device'),
+}));
+
 describe('localFileService', () => {
   afterEach(() => {
     vi.clearAllMocks();

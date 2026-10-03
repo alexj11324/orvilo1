@@ -114,7 +114,9 @@ const McpPresetItem = memo<McpPresetItemProps>(
           createConnector,
           fetchConnectors,
           ...(isDesktop && {
-            openExternalLink: (url: string) => getHostPort().openExternal(url),
+            openExternalLink: async (url: string) => {
+              await getHostPort().openExternal(url);
+            },
           }),
           startConnectorOAuth,
         });

@@ -86,7 +86,8 @@ export const useOpenInApp = (workingDirectory: string): UseOpenInAppResult => {
         return;
       }
 
-      const reason = result.error.message ?? result.error.code;
+      // The error union's TARGET_QUERY_FAILED variant carries no message.
+      const reason = ('message' in result.error && result.error.message) || result.error.code;
       toast.error(t('errors.launchFailed', { appName, error: reason }));
     },
     [displayNameMap, workingDirectory, userDefault, updatePreference, t],

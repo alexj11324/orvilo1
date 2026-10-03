@@ -74,6 +74,7 @@ export const createBrokerReverseHandler = (
   const pump = async (sessionId: string | undefined, parsed: ParsedInfer): Promise<void> => {
     const controller = new AbortController();
     inflight.set(parsed.requestId, controller);
+    let sawEnd = false;
     try {
       const response = await fetchImpl(`${options.endpoint}/infer`, {
         body: JSON.stringify({ request: parsed.request, sessionId }),
@@ -114,10 +115,13 @@ export const createBrokerReverseHandler = (
           if (!isRecord(parsedLine)) continue;
           const requestId =
             typeof parsedLine.requestId === 'string' ? parsedLine.requestId : parsed.requestId;
+          if (isRecord(parsedLine.event) && parsedLine.event.type === 'end') sawEnd = true;
           options.sendEvent(requestId, parsedLine.event);
         }
       }
-      options.sendEvent(parsed.requestId, { type: 'end' });
+      // The server's terminal 'end' frame is authoritative — only emit ours
+      // when the stream closed without one (abrupt disconnect).
+      if (!sawEnd) options.sendEvent(parsed.requestId, { type: 'end' });
     } catch (error) {
       if (!controller.signal.aborted)
         emitError(

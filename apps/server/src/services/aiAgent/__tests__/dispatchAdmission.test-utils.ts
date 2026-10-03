@@ -14,7 +14,7 @@ const dbChain = (): unknown => {
   return new Proxy(p, {
     get: (target, prop) => {
       if (prop === 'then' || prop === 'catch' || prop === 'finally') {
-        return (target as never)[prop].bind(target);
+        return target[prop].bind(target);
       }
       if (prop === Symbol.toPrimitive) return undefined;
       return () => dbChain();

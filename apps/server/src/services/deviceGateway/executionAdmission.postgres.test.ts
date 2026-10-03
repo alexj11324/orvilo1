@@ -41,7 +41,7 @@ describe('bindTopicDeviceAtomically (real PostgreSQL)', () => {
   });
 
   it('installs the canonical binding — executionConfig + legacy top-level pin together', async () => {
-    await insertTopic('t-bind-canon', { favorite: true });
+    await insertTopic('t-bind-canon', { workingDirectory: '/repo/keep-me' });
 
     const result = await bindTopicDeviceAtomically(db, {
       deviceId: 'dev-B',
@@ -59,7 +59,7 @@ describe('bindTopicDeviceAtomically (real PostgreSQL)', () => {
     });
     expect(topic?.metadata?.boundDeviceId).toBe('dev-B');
     // Unrelated metadata is preserved, not clobbered by the merge.
-    expect(topic?.metadata?.favorite).toBe(true);
+    expect(topic?.metadata?.workingDirectory).toBe('/repo/keep-me');
   });
 
   it('preserves existing executionConfig keys while merging the pin', async () => {

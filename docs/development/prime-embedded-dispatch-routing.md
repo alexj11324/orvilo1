@@ -56,7 +56,12 @@ On admission, `openEmbeddedDispatchHost` (server-side,
 3. **Artifact + image.** `runner.manifest.json` beside the pinned
    `packages/prime-harness/dist/runner.mjs`, `isEmbeddedArtifactManifest`
    re-validated; `imageId` explicit or `ORVILO_PRIME_EMBEDDED_IMAGE_ID`
-   (`policy_denied` when absent).
+   (`policy_denied` when absent). The artifact path resolves in order:
+   `ORVILO_PRIME_EMBEDDED_ARTIFACT`, the `import.meta.dirname`-relative join
+   (real ESM only — bundled builds drop it or repoint it at the chunk dir),
+   then `<cwd>/packages/prime-harness/dist/runner.mjs` (`next start` runs from
+   the repo root). E2E builds the bundle + image in `e2e.yml`'s "Build
+   embedded Prime runner image" step and exports both variables.
 4. **Binding → initModel.** `resolveOrviloProviderBinding(db, userId,
 engine, 'sandbox', { model, provider })` — the new `match` filter pins the
    task's `ctx.model`/`ctx.provider` selection, so a task configured for

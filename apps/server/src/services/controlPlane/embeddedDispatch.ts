@@ -26,6 +26,7 @@
  * inputs, no workspace materialization, single turn.
  */
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
@@ -177,23 +178,40 @@ export interface EmbeddedDispatchHost {
   initModelId: string;
 }
 
-/** The built runner bundle, resolved lazily and repo-relative from this file.
- * A plain dirname join, never `new URL(literal, import.meta.url)` — bundlers
- * trace that form into the module graph and the unbuilt `dist/` breaks the
- * web-app build; only the flag-on dispatch path ever evaluates this. */
-const defaultRunnerArtifact = () =>
-  path.join(
-    import.meta.dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    '..',
-    'packages',
-    'prime-harness',
-    'dist',
-    'runner.mjs',
-  );
+/** The built runner bundle, resolved lazily.
+ *
+ * `import.meta.dirname` is the honest base under real ESM (vitest, tsx, plain
+ * node), but bundled server builds either leave it undefined or repoint it at
+ * the output chunk directory — never `new URL(literal, import.meta.url)`,
+ * which bundlers trace into the module graph and breaks the web-app build on
+ * the unbuilt `dist/`. Resolution is therefore candidate-based: an explicit
+ * `ORVILO_PRIME_EMBEDDED_ARTIFACT` first (deployments pin it like the image
+ * id), then the source-relative join when it exists on disk, then the
+ * checkout the server process runs from (`next start`/`next dev` cwd is the
+ * repo root). The last fallback is still returned so a missing bundle fails
+ * `policy_denied` on a meaningful path instead of a crashed resolution. */
+export const defaultRunnerArtifact = (): string => {
+  const fromEnv = process.env.ORVILO_PRIME_EMBEDDED_ARTIFACT;
+  if (fromEnv) return fromEnv;
+  const candidates = [
+    typeof import.meta.dirname === 'string'
+      ? path.join(
+          import.meta.dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'packages',
+          'prime-harness',
+          'dist',
+          'runner.mjs',
+        )
+      : undefined,
+    path.resolve('packages', 'prime-harness', 'dist', 'runner.mjs'),
+  ].filter((candidate): candidate is string => typeof candidate === 'string');
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+};
 
 /**
  * Everything before launch: read the canonical rows the binding pins, mint or

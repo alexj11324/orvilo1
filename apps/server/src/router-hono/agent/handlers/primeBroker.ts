@@ -25,7 +25,10 @@ import {
   deviceIdFromRuntimeOwner,
   deviceRuntimeOwnerId,
 } from '@/server/services/controlPlane/deviceRunBinding';
-import { readRemoteRunAdmission } from '@/server/services/heterogeneousAgent/runAdmission';
+import {
+  isDeviceAdmissionLive,
+  readRemoteRunAdmission,
+} from '@/server/services/heterogeneousAgent/runAdmission';
 import { SqlTrustedProviderBackend } from '@/server/services/providerBinding/controlPlane';
 import {
   issueBindingExecution,
@@ -80,8 +83,8 @@ const readDevicePrimeSession = (metadata: unknown): string | undefined => {
  * authorizes as device B). Conversation subjects carry no task rows, so
  * their authority is the op's live device admission instead: the op must
  * still be running with an `agent_run_request` admission recorded against
- * the same device. That is a narrower but honest fence — bounded by the op's
- * liveness, the device identity, and the credential's own TTL.
+ * the same device. That is a narrower but honest fence — bounded by the
+ * op's liveness, the device identity, and the credential's own TTL.
  */
 const resolvePrimeRun = async (
   claims: PrimeOperationClaims,
@@ -111,10 +114,7 @@ const resolvePrimeRun = async (
     .limit(1);
   const admission = operation ? readRemoteRunAdmission(operation.metadata) : undefined;
   const admitted =
-    operation?.status === 'running' &&
-    admission?.channel === 'agent_run_request' &&
-    admission.deviceId === claims.device_id &&
-    (admission.state === 'running' || admission.state === 'acknowledged');
+    operation?.status === 'running' && isDeviceAdmissionLive(admission, claims.device_id);
   if (!operation || !admitted) {
     log('prime-broker: no device-admitted run for op=%s', claims.operation_id);
     return new Response(JSON.stringify({ error: 'Run is not device-admitted' }), {
@@ -450,9 +450,7 @@ export const primeBrokerInfer = async (c: Context): Promise<Response> => {
       const admission = current ? readRemoteRunAdmission(current.metadata) : undefined;
       const live =
         current?.status === 'running' &&
-        admission?.channel === 'agent_run_request' &&
-        admission.deviceId === claims.device_id &&
-        (admission.state === 'running' || admission.state === 'acknowledged') &&
+        isDeviceAdmissionLive(admission, claims.device_id) &&
         readDevicePrimeSession(current.metadata) === sessionId;
       return {
         binding: issued.binding,

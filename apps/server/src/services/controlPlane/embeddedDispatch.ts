@@ -26,9 +26,11 @@
  * inputs, no workspace materialization, single turn.
  */
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type {
   ControlError,
@@ -180,20 +182,44 @@ export interface EmbeddedDispatchHost {
 /** The built runner bundle, resolved lazily and repo-relative from this file.
  * A plain dirname join, never `new URL(literal, import.meta.url)` — bundlers
  * trace that form into the module graph and the unbuilt `dist/` breaks the
- * web-app build; only the flag-on dispatch path ever evaluates this. */
-const defaultRunnerArtifact = () =>
-  path.join(
-    import.meta.dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    '..',
-    'packages',
-    'prime-harness',
-    'dist',
-    'runner.mjs',
-  );
+ * web-app build; only the flag-on dispatch path ever evaluates this.
+ * `import.meta.dirname` is unavailable under turbopack dev (and stripped
+ * bundles) — fall back through `import.meta.url`, then cwd-relative repo
+ * roots (monorepo root when run via root scripts, `apps/server` under
+ * `pnpm --filter`). */
+const moduleDir = (): string | undefined => {
+  if (import.meta.dirname) return import.meta.dirname;
+  try {
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    return undefined;
+  }
+};
+
+const defaultRunnerArtifact = () => {
+  const dir = moduleDir();
+  const candidates = [
+    ...(dir
+      ? [
+          path.join(
+            dir,
+            '..',
+            '..',
+            '..',
+            '..',
+            '..',
+            'packages',
+            'prime-harness',
+            'dist',
+            'runner.mjs',
+          ),
+        ]
+      : []),
+    path.resolve(process.cwd(), 'packages', 'prime-harness', 'dist', 'runner.mjs'),
+    path.resolve(process.cwd(), '..', '..', 'packages', 'prime-harness', 'dist', 'runner.mjs'),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+};
 
 /**
  * Everything before launch: read the canonical rows the binding pins, mint or

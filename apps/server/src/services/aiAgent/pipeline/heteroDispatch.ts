@@ -315,6 +315,7 @@ const writeDispatchAdmission = async (
     deviceId?: string;
     deviceUserId?: string;
     deviceWorkspaceId?: string;
+    harness?: string;
     operationId: string;
   },
 ): Promise<void> => {
@@ -325,6 +326,7 @@ const writeDispatchAdmission = async (
       deviceUserId: params.deviceUserId,
       deviceWorkspaceId: params.deviceWorkspaceId,
       generation: 1,
+      harness: params.harness,
       idempotencyKey: params.operationId,
     });
   } catch (err) {
@@ -1088,13 +1090,14 @@ export const dispatchHeteroAgent = async (
       deviceId: remoteDeviceId,
       deviceUserId: remoteDeviceUserId,
       deviceWorkspaceId: remoteDeviceWorkspaceId,
+      harness: resolveHarnessAdapter(heteroType),
       operationId,
     });
 
     const result = authorizationError
       ? {
           content: 'The workspace device is no longer registered or visible for this run.',
-          error: 'DEVICE_NOT_FOUND',
+          error: authorizationError.code,
           errorCode: DeviceTransportErrorCode.DeviceNotFound,
           errorData: authorizationError,
           success: false,
@@ -1368,6 +1371,7 @@ export const dispatchHeteroAgent = async (
         deviceId: dispatchDeviceId,
         deviceUserId: deps.userId,
         deviceWorkspaceId: dispatchWorkspaceId,
+        harness: resolveHarnessAdapter(heteroType),
         operationId,
       });
 
@@ -1423,7 +1427,7 @@ export const dispatchHeteroAgent = async (
 
       const result = authorizationError
         ? {
-            error: 'DEVICE_NOT_FOUND',
+            error: authorizationError.code,
             errorCode: DeviceTransportErrorCode.DeviceNotFound,
             errorData: authorizationError,
             success: false,

@@ -18,8 +18,10 @@
  * endpoint applies the conversation-scoped authority for those.
  */
 import { randomUUID } from 'node:crypto';
+import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 
 import type { ControlError, ControlResult } from '@orvilo/agent-execution/controlPlane';
 import type { EmbeddedArtifactManifest } from '@orvilo/agent-execution/controlPlane/server';
@@ -60,21 +62,55 @@ const failure = (code: ControlError['code'], message: string): ControlResult<nev
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
+/**
+ * `import.meta.dirname` is unavailable under turbopack dev (and stripped
+ * bundles) — fall back through `import.meta.url`, then cwd-relative repo
+ * roots (monorepo root when run via root scripts, `apps/server` under
+ * `pnpm --filter`).
+ */
+const moduleDir = (): string | undefined => {
+  if (import.meta.dirname) return import.meta.dirname;
+  try {
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    return undefined;
+  }
+};
+
 /** Same artifact location as embeddedDispatch's `defaultRunnerArtifact` —
  * kept repo-relative lazily so bundlers never trace the unbuilt dist. */
-const defaultRunnerManifest = () =>
-  path.join(
-    import.meta.dirname,
-    '..',
-    '..',
-    '..',
-    '..',
-    '..',
-    'packages',
-    'prime-harness',
-    'dist',
-    'runner.manifest.json',
-  );
+const defaultRunnerManifest = () => {
+  const dir = moduleDir();
+  const candidates = [
+    ...(dir
+      ? [
+          path.join(
+            dir,
+            '..',
+            '..',
+            '..',
+            '..',
+            '..',
+            'packages',
+            'prime-harness',
+            'dist',
+            'runner.manifest.json',
+          ),
+        ]
+      : []),
+    path.resolve(process.cwd(), 'packages', 'prime-harness', 'dist', 'runner.manifest.json'),
+    path.resolve(
+      process.cwd(),
+      '..',
+      '..',
+      'packages',
+      'prime-harness',
+      'dist',
+      'runner.manifest.json',
+    ),
+  ];
+  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
+};
 
 export interface ComposeDevicePrimeRunInput {
   deviceId: string;

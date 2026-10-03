@@ -115,14 +115,27 @@ export interface PrimeDeviceRun {
   /** The runner child — process-group leader. Registered in the daemon's
    * run registry so `cancel` signals it exactly like a wrapper CLI. */
   child: ChildProcess;
+  /** The run's stdio event stream is closed (runner exited or transport
+   * torn down) — a closed run can never accept another prompt. */
+  readonly closed: boolean;
   /** Harness session events in arrival order (text/usage/tool-violation/error). */
   events: AsyncIterable<HarnessSessionEvent>;
   /** Hard stop: kill the process group + close the transport. */
   kill: () => Promise<void>;
   /** Resolves when the side-effect lease lapses; the run is already dead. */
   leaseExpired: Promise<void>;
+  /** True once the bounded lease lapsed — lets the driver report a
+   * lease-kill honestly instead of a generic runner exit. */
+  readonly leaseLapsed: boolean;
+  /** Events pushed by the runner but not yet consumed by an `events`
+   * iterator — a driver draining after prompt completion waits for 0. */
+  pendingEvents: () => number;
   /** `session.prompt` — resolves with the runner's stop result. */
   prompt: (text: string) => Promise<ControlResult<HarnessPromptResult>>;
+  /** Re-POST the launch proof for a NEW operation resuming this session —
+   * the server records activation evidence per operation, so a resumed turn
+   * must re-activate under its own bound credential (same sessionId). */
+  reactivate: (credential: string) => Promise<ControlResult<void>>;
   /** Re-arm the bounded side-effect lease (control-side liveness signal). */
   renewLease: () => void;
 }
@@ -232,16 +245,18 @@ export const openPrimeDeviceRun = async (
   // Bounded lease: lapse → abort + kill. The daemon renews on each
   // control-side liveness signal; silence stops new side-effects.
   let leaseExpiresAt = Date.now() + descriptor.lease.ttlMs;
-  let leaseLapsed!: () => void;
+  let resolveLeaseExpired!: () => void;
   const leaseExpired = new Promise<void>((resolve) => {
-    leaseLapsed = resolve;
+    resolveLeaseExpired = resolve;
   });
+  let leaseLapsed = false;
   const leaseTimer = setInterval(() => {
     if (Date.now() < leaseExpiresAt) return;
     log.error(
       'prime-device-host: device lease lapsed for op=%s — stopping side-effects',
       options.operationId,
     );
+    leaseLapsed = true;
     void (async () => {
       try {
         await transport.request(HARNESS_ABORT_METHOD, { sessionId }, { timeoutMs: 5_000 });
@@ -249,7 +264,7 @@ export const openPrimeDeviceRun = async (
         // Runner unreachable — the group kill below still settles it.
       }
       teardown();
-      leaseLapsed();
+      resolveLeaseExpired();
     })();
   }, LEASE_CHECK_MS);
   leaseTimer.unref?.();
@@ -327,28 +342,33 @@ export const openPrimeDeviceRun = async (
     treeId: `device-pg-${child.pid ?? 'unknown'}`,
   };
 
-  try {
-    const response = await fetchImpl(`${options.brokerUrl.replace(/\/$/, '')}/activate`, {
-      body: JSON.stringify({
-        artifact: activation.artifact,
-        runtime: { supervisorId: activation.supervisorId, treeId: activation.treeId },
-        sessionId: activation.sessionId,
-      }),
-      headers: {
-        'authorization': `Bearer ${descriptor.broker.credential}`,
-        'content-type': 'application/json',
-      },
-      method: 'POST',
-    });
-    if (!response.ok) {
-      teardown();
-      clearInterval(leaseTimer);
-      return failure('policy_denied', `Device run activation refused (HTTP ${response.status})`);
+  const postActivation = async (credential: string): Promise<ControlResult<void>> => {
+    try {
+      const response = await fetchImpl(`${options.brokerUrl.replace(/\/$/, '')}/activate`, {
+        body: JSON.stringify({
+          artifact: activation.artifact,
+          runtime: { supervisorId: activation.supervisorId, treeId: activation.treeId },
+          sessionId: activation.sessionId,
+        }),
+        headers: {
+          'authorization': `Bearer ${credential}`,
+          'content-type': 'application/json',
+        },
+        method: 'POST',
+      });
+      if (!response.ok)
+        return failure('policy_denied', `Device run activation refused (HTTP ${response.status})`);
+    } catch (error) {
+      return failure('policy_denied', `Device run activation failed: ${errorMessage(error)}`);
     }
-  } catch (error) {
+    return { ok: true, value: undefined };
+  };
+
+  const initialActivation = await postActivation(descriptor.broker.credential);
+  if (!initialActivation.ok) {
     teardown();
     clearInterval(leaseTimer);
-    return failure('policy_denied', `Device run activation failed: ${errorMessage(error)}`);
+    return initialActivation;
   }
 
   const events: AsyncIterable<HarnessSessionEvent> = {
@@ -373,6 +393,14 @@ export const openPrimeDeviceRun = async (
     child,
     leaseExpired,
     events,
+    get closed() {
+      return eventStreamClosed;
+    },
+    get leaseLapsed() {
+      return leaseLapsed;
+    },
+    pendingEvents: () => eventQueue.length,
+    reactivate: (credential) => postActivation(credential),
     prompt: async (text) => {
       try {
         const result = await transport.request(

@@ -49,12 +49,13 @@ steps aside because a root `.env` exists.
 
 ## Run modes
 
-| Command                            | Starts                                                                                                                          | Port                    |
-| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
-| `bun run dev`                      | Next.js + Vite SPA concurrently (full stack)                                                                                    | app 3010, SPA 9876      |
-| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend | 9876                    |
-| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                 | —                       |
-| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                  | 3010 (`-p` to override) |
+| Command                            | Starts                                                                                                                                 | Port                    |
+| ---------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- | ----------------------- |
+| `bun run dev`                      | Next.js + Vite SPA concurrently (full stack)                                                                                           | app 3010, SPA 9876      |
+| `bun run dev:spa`                  | Vite SPA only; proxies API calls to `localhost:3010` and prints a Debug Proxy URL for developing against the production backend        | 9876                    |
+| `bun run dev:desktop:skip-login`   | Next.js + Electron with an isolated temporary desktop profile; signs in the existing local seed user and verifies renderer/server auth | app 3010, CDP 9263      |
+| `pnpm --filter @orvilo/server dev` | Standalone Hono backend service                                                                                                        | —                       |
+| `bunx next start`                  | Production build serve (after `bun run build`)                                                                                         | 3010 (`-p` to override) |
 
 **`APP_URL` is read at runtime.** Auth redirects (sign-in callback, OIDC
 handoff) are built from it, so the server must listen on the same port
@@ -73,6 +74,16 @@ handoff) are built from it, so the server must listen on the same port
 After `seed-user`: `http://localhost:3010/signin` →
 `agent-testing@orvilo.aspectlylabs.com` / `TestPassword123!`. First login
 auto-provisions a workspace.
+
+For Electron development, run `bun run dev:desktop:skip-login` after the local
+database already has the seed user. The command starts Next.js and Electron,
+signs in through Better Auth, and prints the user ID only after both the
+renderer and backend accept the session. It does not create a user or seed a
+database. `SEED_EMAIL` and `SEED_PASSWORD` can select another existing local
+test account. `Ctrl-C` stops both processes and removes the temporary desktop
+profile. For an Electron instance already running with CDP on port 9263, use
+`bun run dev:desktop:login-local`; set `ORVILO_DESKTOP_CDP_PORT` if it uses a
+different port. Both commands require an HTTP server on literal `localhost`.
 
 ## Ports
 

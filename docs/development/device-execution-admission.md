@@ -100,3 +100,13 @@ execution _intent_:
 - Real two-device verification (web→B, desktop-A→B) — exercised by unit
   tests against the resolver + candidate semantics; end-to-end matrix belongs
   to WD-06/WD-07.
+
+## Known adjacent issue (pre-existing, not introduced here)
+
+During WD-03 verification, dispatches that finalize in under \~100 ms (e.g. an
+honest `GATEWAY_NOT_CONFIGURED` transport error) were observed leaving
+`topics.status='running'` on at least one send path: `agent_operations`,
+`messages`, and the Redis stream all settle correctly, but the UI keeps an
+infinite "Task is running" banner on every surface. The settle/finalize path
+predates this change — flagged for a staging sanity check and a follow-up fix,
+not patched here.

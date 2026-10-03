@@ -32,6 +32,11 @@ import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
+import {
+  createPrimeStreamState,
+  mapHarnessSessionEvent,
+  type PrimeStreamState,
+} from '@orvilo/agent-execution/controlPlane/primeStreamMapping';
 import { openPrimeDeviceRun, type PrimeDeviceRun } from '@orvilo/device-prime-host';
 import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
 
@@ -56,6 +61,8 @@ interface PrimeRunOperation {
   ingester: CoalescingBatchIngester;
   operationId: string;
   settled: boolean;
+  /** Per-turn cumulative tool/stream bookkeeping for the ledger mapping. */
+  streamState: PrimeStreamState;
   usage?: { inputTokens: number; outputTokens: number };
   /** Woken once when the session dies mid-op — races the prompt request. */
   waiters: Array<() => void>;
@@ -170,6 +177,14 @@ const startSessionPump = (session: PrimeRunSession, logger?: PrimeRunLogger): vo
             op.usage = { inputTokens: event.inputTokens, outputTokens: event.outputTokens };
             break;
           }
+          case 'thinking':
+          case 'tool_call':
+          case 'tool_progress':
+          case 'tool_result': {
+            for (const emission of mapHarnessSessionEvent(op.streamState, event))
+              op.ingester.push(makeEvent(op.operationId, emission.type, emission.data));
+            break;
+          }
           case 'tool-violation': {
             op.ingester.push(
               makeEvent(op.operationId, 'error', {
@@ -281,6 +296,7 @@ const runOperationOnSession = async (
     ingester,
     operationId,
     settled: false,
+    streamState: createPrimeStreamState(),
     waiters: [],
   };
 

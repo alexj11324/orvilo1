@@ -40,6 +40,11 @@ jobs:
           # do_not_skip gives the pair a deterministic owner: the push run
           # always executes, the PR run always mirrors it.
           do_not_skip: '["push", "workflow_dispatch", "schedule"]'
+          # `do_not_skip` only stops THIS run from self-skipping — the action
+          # still cancels the older sibling run (the push-run owner) when the
+          # newer PR run proceeds. `cancel_others: false` keeps sibling runs
+          # alive so the owner verdict always lands.
+          cancel_others: 'false'
 
   # Path triage — one cheap job diffs the PR and reports which test areas
   # actually need to run. Leaf jobs skip when their area is untouched, and the

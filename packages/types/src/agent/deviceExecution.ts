@@ -81,6 +81,18 @@ export const isRunnableDevice = (device: DeviceCandidate): boolean =>
 export type DeviceResolutionErrorCode =
   /** Bound device was deleted, revoked, or became incompatible — never auto-rebound. */
   | 'DEVICE_BINDING_INVALID'
+  /**
+   * The device inventory query has not settled (loading, failed, or partially
+   * paged). An incomplete inventory is never read as 0 or 1 candidates, and
+   * never auto-binds — resolution waits for an authoritative candidate set.
+   */
+  | 'DEVICE_INVENTORY_INCOMPLETE'
+  /**
+   * The request explicitly named a device that is not in the principal's
+   * authorized candidate set. Rejected outright — never silently swapped for
+   * an available default.
+   */
+  | 'DEVICE_REQUEST_UNAUTHORIZED'
   /** Zero legitimate candidates. */
   | 'DEVICE_REQUIRED'
   /** Multiple candidates and no applicable default — the user must choose. */
@@ -112,11 +124,28 @@ export type DeviceResolutionReason =
 export interface ResolveExecutionDeviceInput {
   /** Workspace/agent shared default (admins set it; members may not override when policy-fixed). */
   agentDefaultDeviceId?: string;
+  /**
+   * The candidate inventory behind `candidates` is authoritative. Pass `false`
+   * while the device list is still loading, failed, or partially paged — an
+   * incomplete inventory resolves to `DEVICE_INVENTORY_INCOMPLETE`, never to a
+   * guessed 0/1 answer and never to an auto-bind. Defaults to `true`: the
+   * server-side admission path always has an authoritative set.
+   */
+  deviceInventoryComplete?: boolean;
   /** Request-supplied device — honored only when `explicitRequestAllowed`. */
   explicitDeviceId?: string;
-  /** Policy (e.g. `executionTargetSelectionPolicy !== 'fixed'`) permits an explicit pick. */
+  /**
+   * Policy (e.g. `executionTargetSelectionPolicy !== 'fixed'`) permits member
+   * choice. When `false`, BOTH explicit requests and member preferences are
+   * skipped — a pinned policy cannot be overridden through either door.
+   */
   explicitRequestAllowed?: boolean;
-  /** The device this execution session is already bound to — always wins. */
+  /**
+   * The device this execution session is already bound to. A valid binding
+   * always wins; an invalid one blocks with `DEVICE_BINDING_INVALID` — it is
+   * never quietly re-resolved onto another device, and an explicit request in
+   * the same call is a repair proposal, not a normal resume.
+   */
   sessionBoundDeviceId?: string;
   /** The user's personal preference for this agent (`agentDeviceOverrides`). */
   userAgentPreferenceDeviceId?: string;
@@ -124,9 +153,10 @@ export interface ResolveExecutionDeviceInput {
 
 /**
  * Unified device resolution — the contract's priority chain, in order:
- *   1. session-bound device,
- *   2. explicit request (policy permitting),
- *   3. the user's per-agent device preference,
+ *   0. an incomplete inventory blocks first (never read as 0/1 candidates),
+ *   1. session-bound device (invalid binding blocks: DEVICE_BINDING_INVALID),
+ *   2. explicit request (policy permitting; unauthorized: DEVICE_REQUEST_UNAUTHORIZED),
+ *   3. the user's per-agent device preference (skipped when policy is pinned),
  *   4. agent/workspace default,
  *   5. the single legitimate candidate,
  *   6. otherwise DEVICE_REQUIRED / DEVICE_SELECTION_REQUIRED.
@@ -139,6 +169,11 @@ export const resolveExecutionDevice = (
   input: ResolveExecutionDeviceInput,
   candidates: readonly DeviceCandidate[],
 ): DeviceResolution => {
+  // 0. The inventory must be authoritative before any 0/1/N judgment or
+  //    auto-bind. Loading / failed / partial-paging is never "zero devices".
+  if (input.deviceInventoryComplete === false)
+    return { code: 'DEVICE_INVENTORY_INCOMPLETE', status: 'blocked' };
+
   const selectable = candidates.filter(isSelectableDevice);
   const selectableIds = new Set(selectable.map((device) => device.deviceId));
 
@@ -147,20 +182,38 @@ export const resolveExecutionDevice = (
       ? ({ deviceId, reason, status: 'resolved' } as const)
       : undefined;
 
-  // 1. A run already bound to a session device stays on it — never migrated
-  //    by preference changes.
-  const bound = pick(input.sessionBoundDeviceId, 'session_bound');
-  if (bound) return bound;
+  // 1. A session-bound device wins while still legitimate. An invalid binding
+  //    (deleted / revoked / incompatible) blocks outright: it is repaired by an
+  //    explicit authorized action, never silently re-bound by falling through
+  //    to defaults — even when the request also carries an explicit device.
+  if (input.sessionBoundDeviceId !== undefined) {
+    const bound = pick(input.sessionBoundDeviceId, 'session_bound');
+    if (bound) return bound;
+    return {
+      code: 'DEVICE_BINDING_INVALID',
+      repairCandidates: selectable.map((device) => device.deviceId),
+      status: 'blocked',
+    };
+  }
 
-  // 2. Explicit request, only when policy permits it.
-  if (input.explicitRequestAllowed !== false) {
+  const policyAllowsChoice = input.explicitRequestAllowed !== false;
+
+  // 2. An explicit request is honored only when it names an authorized
+  //    candidate; an unauthorized pick is rejected, not silently replaced by
+  //    an available default.
+  if (policyAllowsChoice && input.explicitDeviceId) {
     const explicit = pick(input.explicitDeviceId, 'explicit_request');
     if (explicit) return explicit;
+    return { code: 'DEVICE_REQUEST_UNAUTHORIZED', status: 'blocked' };
   }
 
   // 3. The user's own preference for this agent (member overrides ride here).
-  const preference = pick(input.userAgentPreferenceDeviceId, 'user_agent_preference');
-  if (preference) return preference;
+  //    A pinned policy skips this door too — members cannot override a fixed
+  //    workspace default through their personal preference.
+  if (policyAllowsChoice) {
+    const preference = pick(input.userAgentPreferenceDeviceId, 'user_agent_preference');
+    if (preference) return preference;
+  }
 
   // 4. Agent/workspace default.
   const agentDefault = pick(input.agentDefaultDeviceId, 'agent_default');
@@ -180,6 +233,10 @@ export const resolveExecutionDevice = (
  * Whether a persisted `boundDeviceId` that no longer resolves is an invalid
  * binding (explicit repair) rather than "never bound" (auto-resolve). A
  * stale binding never silently re-binds.
+ *
+ * Thin predicate for UI repair surfaces. The authoritative enforcement lives
+ * inside {@link resolveExecutionDevice} itself (step 1) — callers must not
+ * resolve around it by hand.
  */
 export const isDeviceBindingInvalid = (
   boundDeviceId: string | undefined,

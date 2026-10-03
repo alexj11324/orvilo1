@@ -8,6 +8,7 @@ import {
 } from '@/server/services/controlPlane/embeddedChatDispatch';
 
 import { AiAgentService } from '../index';
+import { createDispatchTestDb } from './dispatchAdmission.test-utils';
 
 const {
   mockDeviceFindByDeviceId,
@@ -294,7 +295,7 @@ vi.mock('@/server/services/controlPlane/embeddedChatDispatch', async () => {
 describe('AiAgentService.execAgent - hetero early-exit file attachments', () => {
   let service: AiAgentService;
   let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
-  const mockDb = {} as any;
+  const mockDb = createDispatchTestDb() as any;
   const userId = 'test-user-id';
 
   beforeEach(() => {

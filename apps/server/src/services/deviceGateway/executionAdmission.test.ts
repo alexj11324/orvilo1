@@ -1,7 +1,7 @@
 import { jsonb, pgTable, text } from 'drizzle-orm/pg-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { bindTopicDeviceIfUnset, resolveHeteroExecutionPlan } from './executionAdmission';
+import { bindTopicDeviceAtomically, resolveHeteroExecutionPlan } from './executionAdmission';
 
 const { queryDeviceList, queryPersonal, queryWorkspaceDevices } = vi.hoisted(() => ({
   queryDeviceList: vi.fn(),
@@ -249,58 +249,144 @@ describe('resolveHeteroExecutionPlan', () => {
     expect(queryPersonal).not.toHaveBeenCalled();
   });
 
-  it("a pinned session binding survives 'auto' suppression — auto re-picks from candidates", async () => {
+  it("a pinned session binding survives 'auto' — auto never re-picks a bound conversation", async () => {
+    const plan = await resolveHeteroExecutionPlan(db, {
+      ...baseParams,
+      agencyConfig: { executionTarget: 'auto' },
+      sessionBoundDeviceId: 'dev-a',
+    });
+
+    // The pin is the conversation's device — `auto` cannot steal it.
+    expect(plan).toMatchObject({
+      deviceId: 'dev-a',
+      kind: 'device',
+      reason: 'session_bound',
+    });
+  });
+
+  it('auto + an INVALID session binding blocks for explicit repair — never migrates', async () => {
     const plan = await resolveHeteroExecutionPlan(db, {
       ...baseParams,
       agencyConfig: { executionTarget: 'auto' },
       sessionBoundDeviceId: 'dev-gone',
     });
 
-    // auto ignores the stale pin → two candidates → selection required.
-    expect(plan).toMatchObject({ code: 'DEVICE_SELECTION_REQUIRED', kind: 'blocked' });
+    // The pin is invalid → DEVICE_BINDING_INVALID (repair, not silent re-pick).
+    expect(plan.kind).toBe('blocked');
+    if (plan.kind === 'blocked') {
+      expect(plan.code).toBe('DEVICE_BINDING_INVALID');
+      expect(plan.repairCandidates).toEqual(['dev-a', 'dev-b']);
+    }
+  });
+
+  it('auto + no binding still picks the single legitimate candidate', async () => {
+    queryPersonal.mockResolvedValue(deviceRows('dev-only'));
+
+    const plan = await resolveHeteroExecutionPlan(db, {
+      ...baseParams,
+      agencyConfig: { executionTarget: 'auto' },
+    });
+
+    expect(plan).toMatchObject({
+      deviceId: 'dev-only',
+      kind: 'device',
+      reason: 'single_candidate',
+    });
+  });
+
+  it('an UNSET execution target still honors the session pin — admission reaches the resolver', async () => {
+    // Regression: an unset `executionTarget` + session pin used to block on
+    // EXECUTION_TARGET_NONE before the resolver ever saw the binding — the
+    // second message of a bound conversation stranded forever.
+    const plan = await resolveHeteroExecutionPlan(db, {
+      ...baseParams,
+      agencyConfig: {},
+      sessionBoundDeviceId: 'dev-a',
+    });
+
+    expect(plan).toMatchObject({
+      deviceId: 'dev-a',
+      kind: 'device',
+      reason: 'session_bound',
+    });
   });
 });
 
-describe('bindTopicDeviceIfUnset (conditional first-bind CAS)', () => {
-  const updateWhere = vi.fn();
+describe('bindTopicDeviceAtomically (conditional first-bind CAS)', () => {
+  const updateReturning = vi.fn();
+  const updateWhere = vi.fn(() => ({ returning: updateReturning }));
   const updateSet = vi.fn(() => ({ where: updateWhere }));
   const update = vi.fn(() => ({ set: updateSet }));
+  const selectLimit = vi.fn();
+  const selectWhere = vi.fn(() => ({ limit: selectLimit }));
+  const selectFrom = vi.fn(() => ({ where: selectWhere }));
+  const select = vi.fn(() => ({ from: selectFrom }));
 
   beforeEach(() => {
-    updateWhere.mockReset();
+    updateReturning.mockReset();
+    updateWhere.mockClear();
     updateSet.mockClear();
     update.mockClear();
+    selectLimit.mockReset();
+    selectWhere.mockClear();
+    selectFrom.mockClear();
+    select.mockClear();
   });
 
-  it('returns true when the CAS write installs the binding', async () => {
-    updateWhere.mockReturnValue({ returning: vi.fn(async () => [{ id: 'topic-1' }]) });
-    const fakeDb = { update } as never;
+  it('returns the binding it installed when the CAS write wins', async () => {
+    updateReturning.mockResolvedValue([{ boundDeviceId: 'dev-a' }]);
+    const fakeDb = { select, update } as never;
 
     await expect(
-      bindTopicDeviceIfUnset(fakeDb, { deviceId: 'dev-a', topicId: 'topic-1', userId: 'user-1' }),
-    ).resolves.toBe(true);
-    expect(update).toHaveBeenCalledTimes(1);
-  });
-
-  it('returns false when an existing binding wins the race', async () => {
-    updateWhere.mockReturnValue({ returning: vi.fn(async () => []) });
-    const fakeDb = { update } as never;
-
-    await expect(
-      bindTopicDeviceIfUnset(fakeDb, { deviceId: 'dev-a', topicId: 'topic-1', userId: 'user-1' }),
-    ).resolves.toBe(false);
-  });
-
-  it('returns false instead of throwing when the write fails (audit write, not the gate)', async () => {
-    updateWhere.mockReturnValue({
-      returning: vi.fn(async () => {
-        throw new Error('deadlock');
+      bindTopicDeviceAtomically(fakeDb, {
+        deviceId: 'dev-a',
+        topicId: 'topic-1',
+        userId: 'user-1',
       }),
-    });
-    const fakeDb = { update } as never;
+    ).resolves.toEqual({ boundDeviceId: 'dev-a', outcome: 'bound' });
+    expect(update).toHaveBeenCalledTimes(1);
+    // The winner is already known — no re-read.
+    expect(select).not.toHaveBeenCalled();
+  });
+
+  it('re-reads and returns the winner when the CAS loses', async () => {
+    updateReturning.mockResolvedValue([]);
+    selectLimit.mockResolvedValue([{ boundDeviceId: 'dev-winner' }]);
+    const fakeDb = { select, update } as never;
 
     await expect(
-      bindTopicDeviceIfUnset(fakeDb, { deviceId: 'dev-a', topicId: 'topic-1', userId: 'user-1' }),
-    ).resolves.toBe(false);
+      bindTopicDeviceAtomically(fakeDb, {
+        deviceId: 'dev-a',
+        topicId: 'topic-1',
+        userId: 'user-1',
+      }),
+    ).resolves.toEqual({ boundDeviceId: 'dev-winner', outcome: 'occupied' });
+  });
+
+  it('throws when the CAS loses and no binding can be read — never guesses', async () => {
+    updateReturning.mockResolvedValue([]);
+    selectLimit.mockResolvedValue([]);
+    const fakeDb = { select, update } as never;
+
+    await expect(
+      bindTopicDeviceAtomically(fakeDb, {
+        deviceId: 'dev-a',
+        topicId: 'topic-1',
+        userId: 'user-1',
+      }),
+    ).rejects.toThrow(/no binding persisted/);
+  });
+
+  it('throws when the write fails — persistence failure is an admission failure', async () => {
+    updateReturning.mockRejectedValue(new Error('deadlock'));
+    const fakeDb = { select, update } as never;
+
+    await expect(
+      bindTopicDeviceAtomically(fakeDb, {
+        deviceId: 'dev-a',
+        topicId: 'topic-1',
+        userId: 'user-1',
+      }),
+    ).rejects.toThrow('deadlock');
   });
 });

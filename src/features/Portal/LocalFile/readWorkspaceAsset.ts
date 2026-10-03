@@ -166,16 +166,16 @@ const readAsset = async (
     const bytesResult = externalForPublish
       ? await projectFileService.readExternalAssetForPublish({ deviceId, path, workingDirectory })
       : await projectFileService.readProjectFileBytes({ deviceId, path, workingDirectory });
-    if (!bytesResult) return { ok: false, reason: 'unreadable' };
-    if (bytesResult.bytes.byteLength > WORKSPACE_HTML_ARTIFACT_MAX_FILE_BYTES) {
-      return { ok: false, reason: 'oversized', sizeBytes: bytesResult.bytes.byteLength };
+    if (bytesResult.status !== 'ok') return { ok: false, reason: 'unreadable' };
+    if (bytesResult.value.bytes.byteLength > WORKSPACE_HTML_ARTIFACT_MAX_FILE_BYTES) {
+      return { ok: false, reason: 'oversized', sizeBytes: bytesResult.value.bytes.byteLength };
     }
 
-    const contentType = resolveWorkspaceAssetContentType(path, bytesResult.contentType);
+    const contentType = resolveWorkspaceAssetContentType(path, bytesResult.value.contentType);
     const text = isTextContentType(contentType)
-      ? new TextDecoder().decode(bytesResult.bytes)
+      ? new TextDecoder().decode(bytesResult.value.bytes)
       : undefined;
-    return { ...bytesResult, contentType, ok: true, text };
+    return { ...bytesResult.value, contentType, ok: true, text };
   } catch {
     return { ok: false, reason: 'missing' };
   }

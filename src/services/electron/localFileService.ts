@@ -47,6 +47,7 @@ import {
   type WriteLocalFileParams,
 } from '@orvilo/electron-client-ipc';
 
+import { requireProvenLocalDeviceId } from '@/services/localExecutionIdentity';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 const TEXT_PREVIEW_MIME_TYPES = new Set([
@@ -194,34 +195,42 @@ const fetchLocalFileBytes = async (
 class LocalFileService {
   // File Operations
   async listLocalFiles(params: ListLocalFileParams): Promise<ListLocalFilesResult> {
+    await requireProvenLocalDeviceId('listLocalFiles');
     return ensureElectronIpc().localSystem.listLocalFiles(params);
   }
 
   async readLocalFile(params: LocalReadFileParams): Promise<LocalReadFileResult> {
+    await requireProvenLocalDeviceId('readLocalFile');
     return ensureElectronIpc().localSystem.readFile(params);
   }
 
   async hashLocalFile(params: HashLocalFileParams): Promise<string> {
+    await requireProvenLocalDeviceId('hashLocalFile');
     return ensureElectronIpc().localSystem.hashLocalFile(params);
   }
 
   async readLocalFiles(params: LocalReadFilesParams): Promise<LocalReadFileResult[]> {
+    await requireProvenLocalDeviceId('readLocalFiles');
     return ensureElectronIpc().localSystem.readFiles(params);
   }
 
   async searchLocalFiles(params: LocalSearchFilesParams): Promise<LocalFileItem[]> {
+    await requireProvenLocalDeviceId('searchLocalFiles');
     return ensureElectronIpc().localSystem.handleLocalFilesSearch(params);
   }
 
   async getProjectFileIndex(params: ProjectFileIndexParams): Promise<ProjectFileIndexResult> {
+    await requireProvenLocalDeviceId('getProjectFileIndex');
     return ensureElectronIpc().localSystem.getProjectFileIndex(params);
   }
 
   async searchProjectFiles(params: ProjectFileSearchParams): Promise<ProjectFileSearchResult> {
+    await requireProvenLocalDeviceId('searchProjectFiles');
     return ensureElectronIpc().localSystem.searchProjectFiles(params);
   }
 
   async listProjectSkills(params: ListProjectSkillsParams): Promise<ListProjectSkillsResult> {
+    await requireProvenLocalDeviceId('listProjectSkills');
     // Project-skill scanning lives in the main-process WorkspaceCtr ('workspace'
     // group), split out of LocalFileCtr — hence the namespace differs from the
     // other local-file ops here.
@@ -229,30 +238,37 @@ class LocalFileService {
   }
 
   async openLocalFile(params: OpenLocalFileParams) {
+    await requireProvenLocalDeviceId('openLocalFile');
     return ensureElectronIpc().localSystem.handleOpenLocalFile(params);
   }
 
   async openLocalFolder(params: OpenLocalFolderParams) {
+    await requireProvenLocalDeviceId('openLocalFolder');
     return ensureElectronIpc().localSystem.handleOpenLocalFolder(params);
   }
 
   async moveLocalFiles(params: MoveLocalFilesParams): Promise<LocalMoveFilesResultItem[]> {
+    await requireProvenLocalDeviceId('moveLocalFiles');
     return ensureElectronIpc().localSystem.handleMoveFiles(params);
   }
 
   async renameLocalFile(params: RenameLocalFileParams) {
+    await requireProvenLocalDeviceId('renameLocalFile');
     return ensureElectronIpc().localSystem.handleRenameFile(params);
   }
 
   async writeFile(params: WriteLocalFileParams) {
+    await requireProvenLocalDeviceId('writeFile');
     return ensureElectronIpc().localSystem.handleWriteFile(params);
   }
 
   async auditSafePaths(params: AuditSafePathsParams): Promise<AuditSafePathsResult> {
+    await requireProvenLocalDeviceId('auditSafePaths');
     return ensureElectronIpc().localSystem.auditSafePaths(params);
   }
 
   async getLocalFilePreview(params: LocalFilePreviewUrlParams): Promise<LocalFilePreview> {
+    await requireProvenLocalDeviceId('getLocalFilePreview');
     const result = await ensureElectronIpc().localSystem.getLocalFilePreviewUrl(params);
 
     if (!result.success || !result.url) {
@@ -265,6 +281,7 @@ class LocalFileService {
   async readLocalFileBytes(
     params: LocalFilePreviewUrlParams,
   ): Promise<{ bytes: Uint8Array; contentType: string } | undefined> {
+    await requireProvenLocalDeviceId('readLocalFileBytes');
     const result = await ensureElectronIpc().localSystem.getLocalFilePreviewUrl(params);
 
     if (!result.success || !result.url) return;
@@ -276,6 +293,7 @@ class LocalFileService {
     path: string;
     workingDirectory: string;
   }): Promise<{ bytes: Uint8Array; contentType: string } | undefined> {
+    await requireProvenLocalDeviceId('readExternalAssetForPublish');
     const result = await ensureElectronIpc().localSystem.getExternalAssetForPublishUrl(params);
     if (!result.success || !result.url) return;
 
@@ -287,27 +305,32 @@ class LocalFileService {
     to: string;
     workingDirectory: string;
   }): Promise<{ error?: string; success: boolean }> {
+    await requireProvenLocalDeviceId('copyAssetForPublish');
     return ensureElectronIpc().localSystem.copyAssetForPublish(params);
   }
 
   async prepareSkillDirectory(
     params: PrepareSkillDirectoryParams,
   ): Promise<PrepareSkillDirectoryResult> {
+    await requireProvenLocalDeviceId('prepareSkillDirectory');
     return ensureElectronIpc().localSystem.handlePrepareSkillDirectory(params);
   }
 
   async resolveSkillResourcePath(
     params: ResolveSkillResourcePathParams,
   ): Promise<ResolveSkillResourcePathResult> {
+    await requireProvenLocalDeviceId('resolveSkillResourcePath');
     return ensureElectronIpc().localSystem.handleResolveSkillResourcePath(params);
   }
 
   async editLocalFile(params: EditLocalFileParams): Promise<EditLocalFileResult> {
+    await requireProvenLocalDeviceId('editLocalFile');
     return ensureElectronIpc().localSystem.handleEditFile(params);
   }
 
   // Shell Commands
   async runCommand(params: RunCommandParams): Promise<RunCommandResult> {
+    await requireProvenLocalDeviceId('runCommand');
     return ensureElectronIpc().shellCommand.handleRunCommand(params);
   }
 
@@ -317,6 +340,7 @@ class LocalFileService {
    * is the authority (Linux support depends on binaries that may be absent).
    */
   async getSandboxCapability(): Promise<DeviceSandboxCapabilityResult> {
+    await requireProvenLocalDeviceId('getSandboxCapability');
     return ensureElectronIpc().shellCommand.getSandboxCapability();
   }
 
@@ -325,6 +349,7 @@ class LocalFileService {
    * Windows) and report the capability afterwards. User-initiated only.
    */
   async installSandbox(): Promise<DeviceSandboxInstallResult> {
+    await requireProvenLocalDeviceId('installSandbox');
     return ensureElectronIpc().shellCommand.installSandbox();
   }
 
@@ -336,33 +361,40 @@ class LocalFileService {
   async ensureSandboxWorkspace(
     params: EnsureSandboxWorkspaceParams,
   ): Promise<EnsureSandboxWorkspaceResult> {
+    await requireProvenLocalDeviceId('ensureSandboxWorkspace');
     return ensureElectronIpc().shellCommand.ensureSandboxWorkspace(params);
   }
 
   async getCommandOutput(params: GetCommandOutputParams): Promise<GetCommandOutputResult> {
+    await requireProvenLocalDeviceId('getCommandOutput');
     return ensureElectronIpc().shellCommand.handleGetCommandOutput(params);
   }
 
   async killCommand(params: KillCommandParams): Promise<KillCommandResult> {
+    await requireProvenLocalDeviceId('killCommand');
     return ensureElectronIpc().shellCommand.handleKillCommand(params);
   }
 
   // Search & Find
   async grepContent(params: GrepContentParams): Promise<GrepContentResult> {
+    await requireProvenLocalDeviceId('grepContent');
     return ensureElectronIpc().localSystem.handleGrepContent(params);
   }
 
   async globFiles(params: GlobFilesParams): Promise<GlobFilesResult> {
+    await requireProvenLocalDeviceId('globFiles');
     return ensureElectronIpc().localSystem.handleGlobFiles(params);
   }
 
   // Dialog
   async showSaveDialog(params: ShowSaveDialogParams): Promise<ShowSaveDialogResult> {
+    await requireProvenLocalDeviceId('showSaveDialog');
     return ensureElectronIpc().localSystem.handleShowSaveDialog(params);
   }
 
   // Helper methods
   async openLocalFileOrFolder(path: string, isDirectory: boolean) {
+    await requireProvenLocalDeviceId('openLocalFileOrFolder');
     if (isDirectory) {
       return this.openLocalFolder({ isDirectory, path });
     } else {
@@ -371,6 +403,7 @@ class LocalFileService {
   }
 
   async openFileFolder(path: string) {
+    await requireProvenLocalDeviceId('openFileFolder');
     return this.openLocalFolder({ isDirectory: false, path });
   }
 }

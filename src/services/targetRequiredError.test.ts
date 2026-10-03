@@ -45,6 +45,15 @@ vi.mock('@/services/electron/heterogeneousAgent', () => ({
   heterogeneousAgentService: mockHeterogeneousAgentService,
 }));
 
+// This suite simulates a web client: no local identity can be proven, so
+// every unbound call must hit the TargetRequiredError guard.
+vi.mock('@/services/localExecutionIdentity', () => ({
+  requireProvenLocalDeviceId: vi.fn(async () => {
+    throw new Error('proven local device identity required');
+  }),
+  resolveLocalExecutionIdentity: vi.fn(async () => ({})),
+}));
+
 // Guards throw synchronously in non-async methods and reject in async ones —
 // capture both shapes so each chokepoint is asserted on the error, not the
 // delivery mechanism.

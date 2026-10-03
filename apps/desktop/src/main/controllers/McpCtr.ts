@@ -110,6 +110,17 @@ export interface CallToolInput {
   toolName: string;
 }
 
+export interface CallHttpToolInput {
+  args: any;
+  params: {
+    auth?: { accessToken?: string; token?: string; type: 'none' | 'bearer' | 'oauth2' };
+    headers?: Record<string, string>;
+    name: string;
+    url: string;
+  };
+  toolName: string;
+}
+
 type SuperJSONSerialized<T = unknown> = McpIpcPayload<T>;
 
 const deserializePayload = deserializeMcpIpcPayload;
@@ -392,6 +403,19 @@ export default class McpCtr extends ControllerModule {
   async callTool(payload: SuperJSONSerialized<CallToolInput>) {
     const input = deserializePayload<CallToolInput>(payload);
     return serializePayload(await this.runStdioMcpTool(input));
+  }
+
+  /**
+   * Renderer IPC counterpart of {@link runHttpMcpTool}: a localhost / LAN MCP
+   * endpoint resolves in THIS machine's network space, so the renderer's call
+   * must come over IPC instead of the server relay. The renderer only sends
+   * client-visible connection params (same envelope it would have sent to the
+   * cloud relay).
+   */
+  @IpcMethod()
+  async callHttpTool(payload: SuperJSONSerialized<CallHttpToolInput>) {
+    const input = deserializePayload<CallHttpToolInput>(payload);
+    return serializePayload(await this.runHttpMcpTool(input.params, input.toolName, input.args));
   }
 
   /**

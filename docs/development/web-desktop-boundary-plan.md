@@ -367,7 +367,7 @@ Electron 侧必须验证实际配置：`contextIsolation: true`、`nodeIntegrati
 
 ### WD-03：统一 admission 与设备执行（Agent B）
 
-对齐现有 chat /task/heteroDispatch /deviceGateway/device-control / CLI 生命周期；同一个最终上下文覆盖 start/resume/cancel/subtask。Prime 设备执行与现有后续 PR 共享实现，不能新造分支。确保 deviceId、subject、generation 贯穿实际处理链。
+对齐现有 chat /task/heteroDispatch/deviceGateway/device-control/ CLI 生命周期；同一个最终上下文覆盖 start/resume/cancel/subtask。Prime 设备执行与现有后续 PR 共享实现，不能新造分支。确保 deviceId、subject、generation 贯穿实际处理链。
 
 验收：Web→B 和 Desktop A→B 运行到同一 B；A/B 交换控制端不换设备；无设备不落应用后端；Prime/Codex/Claude Code 行为按真实能力报告。没有实际 Prime Device transport 时，明确阻断，不假装 builtin 已完整可用。
 
@@ -376,6 +376,15 @@ Electron 侧必须验证实际配置：`contextIsolation: true`、`nodeIntegrati
 升级现有 services 到显式 Device context；移动中立 DTO；拆分 Host 的 reveal/open 与 Device 操作；修复无 ID fallback、远程 undefined、MCP localhost 位置漂移；补齐仅本轮承诺开放的真实操作链。
 
 验收：代码不再依据 host 决定 fs/git/MCP 执行位置；无法支持的动作有结构化错误与正确 UI gate；A 文件路径不会流入 B；远程字节读取若未实施不能保留假入口。
+
+**落地记录（PR #440，base `refactor/wd-contract`）**
+
+- 新增 `src/services/localExecutionIdentity.ts`：host 经 `gatewayConnection.getDeviceInfo()` 握手取得本机 `localDeviceId`，缓存 + 并发去重；`'unknown'` 哨兵与握手失败永不授权 IPC。`useFetchGatewayDeviceInfo` SWR 成功后 `primeLocalExecutionIdentity` 回填。`requireProvenLocalDeviceId` 为本地运行时入口统一前置。
+- `requireLocalExecutionTransport(deviceId, op, evidence)`：`deviceId` → device RPC；`isDesktop && evidence.localDeviceId` → IPC；其余 → `TargetRequiredError`。裸 `isDesktop` 不再放行。全部审计调用点（git×18、projectFile×8、projectSkill、heteroAgentQuota、heterogeneousAgent）传 `resolveLocalExecutionIdentity()`。
+- `projectFile.readProjectFileBytes` / `readExternalAssetForPublish` 返回 `DeviceOperationResult`：远程字节读取 → `OPERATION_UNSUPPORTED`（尚无客户端字节 RPC），查询失败 → `TARGET_QUERY_FAILED`，不再静默 `undefined`。
+- `mcp.ts`：stdio 与 localhost/LAN http 端点在 "连接设备" 的网络空间解析 —— 绑定本机 → IPC（新增 `mcp.callHttpTool`，原 IPC 仅 stdio）；绑定远程 → `OPERATION_UNSUPPORTED` 结构化结果；无绑定且无法证明本机 → `TargetRequiredError`。`deviceId` 或话题 `executionConfig.boundDeviceId`（兼容旧 `boundDeviceId`）定目标；connector/cloud 腿不变。
+- W2-D 入口逐项加本机身份前置：`localFileService`（32）、`electron/git`（19）、`electron/heterogeneousAgent`（11，含 CodexQuotaMenu 链）、`terminal`（4）、`heteroSession`（4）、`desktopSkillRuntime`（2）—— 不再有 "无 ID = 本机" 入口。
+- **遗留契约缺口（提请契约层）**：① 客户端远程字节读取 RPC（`lambdaClient.device` 无 byte-read 入口）；② 客户端 device MCP RPC（`DEVICE_RPC_METHODS` 无 mcp 项，gateway 隧道仅服务端可达）；③ MCP 安装 / 清单调用点尚无 `deviceId`/ 话题上下文（当前 unbound→本地）。
 
 ### WD-05：设置、页面、selector、命令与路由（Agent D）
 

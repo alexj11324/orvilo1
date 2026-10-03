@@ -7,11 +7,21 @@ import { mcpService } from './mcp';
 const mockElectronIpc = {
   mcp: {
     callTool: vi.fn(),
+    callHttpTool: vi.fn(),
     getStreamableMcpServerManifest: vi.fn(),
     getStdioMcpServerManifest: vi.fn(),
     validMcpServerInstallable: vi.fn(),
   },
 };
+
+// Bound execution devices persisted on conversations.
+const mockTopicBindings = vi.hoisted(() => new Map<string, string | undefined>());
+
+// Local execution identity — `{localDeviceId}` means this host proved its own
+// device id through the gateway handshake; `{}` is an unproven host.
+const mockLocalIdentity = vi.hoisted(() => ({
+  resolveLocalExecutionIdentity: vi.fn(),
+}));
 
 // Mock dependencies
 vi.mock('@orvilo/const', () => ({
@@ -75,11 +85,33 @@ vi.mock('@/store/tool/selectors', () => ({
   pluginSelectors: mockPluginSelectors,
 }));
 
+vi.mock('@/store/chat/selectors', () => ({
+  topicSelectors: {
+    getTopicById: (id: string) => () => ({
+      metadata: { executionConfig: { boundDeviceId: mockTopicBindings.get(id) } },
+    }),
+  },
+}));
+
+vi.mock('@/store/chat/store', () => ({
+  getChatStoreState: () => ({}),
+}));
+
+vi.mock('@/services/localExecutionIdentity', () => ({
+  requireProvenLocalDeviceId: vi.fn(async () => 'local-device'),
+  resolveLocalExecutionIdentity: mockLocalIdentity.resolveLocalExecutionIdentity,
+}));
+
 describe('MCPService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.resetModules();
     mockGetToolStoreState.mockReturnValue({});
+    mockTopicBindings.clear();
+    // Default: this host is a proven local execution device.
+    mockLocalIdentity.resolveLocalExecutionIdentity.mockResolvedValue({
+      localDeviceId: 'local-device',
+    });
   });
 
   describe('invokeMcpToolCall', () => {
@@ -185,7 +217,7 @@ describe('MCPService', () => {
       expect(toolsClient.mcp.callTool.mutate).toHaveBeenCalled();
     });
 
-    it('should use toolsClient for stdio plugin when not on desktop', async () => {
+    it('should use the local IPC transport for a stdio plugin on the local device', async () => {
       const { toolsClient } = await import('@/libs/trpc/client');
 
       const mockStdioPlugin = {
@@ -206,8 +238,7 @@ describe('MCPService', () => {
       mockPluginSelectors.getInstalledPluginById.mockReturnValue(() => mockStdioPlugin);
       mockPluginSelectors.getCustomPluginById.mockReturnValue(() => null);
 
-      const mockResult = 'stdio result';
-      vi.mocked(toolsClient.mcp.callTool.mutate).mockResolvedValue(mockResult);
+      mockElectronIpc.mcp.callTool.mockResolvedValue('stdio result');
 
       const payload: ChatToolPayload = {
         id: 'tool-call-3',
@@ -219,8 +250,104 @@ describe('MCPService', () => {
 
       const result = await mcpService.invokeMcpToolCall(payload, {});
 
-      expect(result).toEqual(mockResult);
-      expect(toolsClient.mcp.callTool.mutate).toHaveBeenCalled();
+      expect(result).toEqual('stdio result');
+      expect(mockElectronIpc.mcp.callTool).toHaveBeenCalled();
+      expect(toolsClient.mcp.callTool.mutate).not.toHaveBeenCalled();
+    });
+
+    it('should reject a stdio tool call when no device identity is proven', async () => {
+      const { toolsClient } = await import('@/libs/trpc/client');
+      // An unproven host (no handshake identity) — e.g. a web client with no
+      // bound device. stdio can never fall back to the server relay.
+      mockLocalIdentity.resolveLocalExecutionIdentity.mockResolvedValue({});
+
+      const mockStdioPlugin = {
+        customParams: {
+          mcp: { type: 'stdio', command: 'node', args: ['script.js'] },
+        },
+        manifest: { meta: { title: 'Stdio Plugin' }, version: '1.0.0' },
+      };
+
+      mockPluginSelectors.getInstalledPluginById.mockReturnValue(() => mockStdioPlugin);
+      mockPluginSelectors.getCustomPluginById.mockReturnValue(() => null);
+
+      const payload: ChatToolPayload = {
+        id: 'tool-call-3b',
+        identifier: 'stdio-plugin',
+        apiName: 'execute',
+        arguments: '{}',
+        type: 'standalone',
+      };
+
+      await expect(mcpService.invokeMcpToolCall(payload, {})).rejects.toThrow(
+        'requires an execution device',
+      );
+      expect(toolsClient.mcp.callTool.mutate).not.toHaveBeenCalled();
+      expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
+    });
+
+    it('should answer OPERATION_UNSUPPORTED for a device-only call bound to a remote device', async () => {
+      const { toolsClient } = await import('@/libs/trpc/client');
+      mockTopicBindings.set('topic-remote', 'remote-device-1');
+
+      const mockStdioPlugin = {
+        customParams: {
+          mcp: { type: 'stdio', command: 'node', args: ['script.js'] },
+        },
+        manifest: { meta: { title: 'Stdio Plugin' }, version: '1.0.0' },
+      };
+
+      mockPluginSelectors.getInstalledPluginById.mockReturnValue(() => mockStdioPlugin);
+      mockPluginSelectors.getCustomPluginById.mockReturnValue(() => null);
+
+      const payload: ChatToolPayload = {
+        id: 'tool-call-3c',
+        identifier: 'stdio-plugin',
+        apiName: 'execute',
+        arguments: '{}',
+        type: 'standalone',
+      };
+
+      const result = await mcpService.invokeMcpToolCall(payload, { topicId: 'topic-remote' });
+
+      expect(result).toMatchObject({
+        error: { code: 'OPERATION_UNSUPPORTED', deviceId: 'remote-device-1' },
+        success: false,
+      });
+      expect(toolsClient.mcp.callTool.mutate).not.toHaveBeenCalled();
+      expect(mockElectronIpc.mcp.callTool).not.toHaveBeenCalled();
+    });
+
+    it('should use the local IPC transport for a localhost http endpoint', async () => {
+      const { toolsClient } = await import('@/libs/trpc/client');
+
+      const mockHttpPlugin = {
+        customParams: {
+          mcp: { type: 'http', url: 'http://localhost:3000/mcp' },
+        },
+        manifest: { meta: { title: 'Http Plugin' }, version: '1.0.0' },
+      };
+
+      mockPluginSelectors.getInstalledPluginById.mockReturnValue(() => mockHttpPlugin);
+      mockPluginSelectors.getCustomPluginById.mockReturnValue(() => null);
+
+      mockElectronIpc.mcp.callHttpTool.mockResolvedValue('http result');
+
+      const payload: ChatToolPayload = {
+        id: 'tool-call-3d',
+        identifier: 'http-plugin',
+        apiName: 'run',
+        arguments: '{}',
+        type: 'standalone',
+      };
+
+      const result = await mcpService.invokeMcpToolCall(payload, {});
+
+      // The endpoint resolves in the local device's network space — never the
+      // backend's relay.
+      expect(result).toEqual('http result');
+      expect(mockElectronIpc.mcp.callHttpTool).toHaveBeenCalled();
+      expect(toolsClient.mcp.callTool.mutate).not.toHaveBeenCalled();
     });
 
     it('should return undefined when plugin is not found', async () => {
@@ -421,7 +548,7 @@ describe('MCPService', () => {
   });
 
   describe('getStreamableMcpServerManifest', () => {
-    it('should use toolsClient for streamable URLs when not on desktop', async () => {
+    it('should probe a localhost URL over the local device IPC', async () => {
       const { toolsClient } = await import('@/libs/trpc/client');
       const mockManifest: ToolManifest = {
         identifier: 'streamable-server',
@@ -435,9 +562,7 @@ describe('MCPService', () => {
           },
         ],
       };
-      vi.mocked(toolsClient.mcp.getStreamableMcpServerManifest.query).mockResolvedValue(
-        mockManifest,
-      );
+      mockElectronIpc.mcp.getStreamableMcpServerManifest.mockResolvedValue(mockManifest);
 
       const params = {
         identifier: 'streamable-server',
@@ -447,10 +572,28 @@ describe('MCPService', () => {
 
       const result = await mcpService.getStreamableMcpServerManifest(params);
 
+      // 127.0.0.1 resolves in the CONNECTING device's network space: the
+      // proven local device probes it over IPC, never the backend relay.
       expect(result).toEqual(mockManifest);
-      expect(toolsClient.mcp.getStreamableMcpServerManifest.query).toHaveBeenCalledWith(params, {
-        signal: undefined,
-      });
+      expect(mockElectronIpc.mcp.getStreamableMcpServerManifest).toHaveBeenCalled();
+      expect(toolsClient.mcp.getStreamableMcpServerManifest.query).not.toHaveBeenCalled();
+    });
+
+    it('should reject a localhost probe without proven local identity', async () => {
+      const { toolsClient } = await import('@/libs/trpc/client');
+      mockLocalIdentity.resolveLocalExecutionIdentity.mockResolvedValue({});
+
+      const params = {
+        identifier: 'streamable-server',
+        url: 'http://127.0.0.1:3000/manifest',
+        auth: { type: 'none' as const },
+      };
+
+      await expect(mcpService.getStreamableMcpServerManifest(params)).rejects.toThrow(
+        'requires an execution device',
+      );
+      expect(toolsClient.mcp.getStreamableMcpServerManifest.query).not.toHaveBeenCalled();
+      expect(mockElectronIpc.mcp.getStreamableMcpServerManifest).not.toHaveBeenCalled();
     });
 
     it('should use toolsClient for remote URLs', async () => {
@@ -491,7 +634,6 @@ describe('MCPService', () => {
     });
 
     it('should handle different URL formats correctly', async () => {
-      const { toolsClient } = await import('@/libs/trpc/client');
       const mockManifest: ToolManifest = {
         identifier: 'server',
         version: '1',
@@ -504,9 +646,7 @@ describe('MCPService', () => {
           },
         ],
       };
-      vi.mocked(toolsClient.mcp.getStreamableMcpServerManifest.query).mockResolvedValue(
-        mockManifest,
-      );
+      mockElectronIpc.mcp.getStreamableMcpServerManifest.mockResolvedValue(mockManifest);
 
       const params = {
         identifier: 'server',
@@ -516,8 +656,10 @@ describe('MCPService', () => {
 
       const result = await mcpService.getStreamableMcpServerManifest(params);
 
+      // localhost is device-scoped: on the proven local device it goes over
+      // IPC rather than the server relay.
       expect(result).toEqual(mockManifest);
-      expect(toolsClient.mcp.getStreamableMcpServerManifest.query).toHaveBeenCalled();
+      expect(mockElectronIpc.mcp.getStreamableMcpServerManifest).toHaveBeenCalled();
     });
 
     it('should handle OAuth2 authentication', async () => {

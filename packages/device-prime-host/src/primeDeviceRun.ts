@@ -183,12 +183,15 @@ export const openPrimeDeviceRun = async (
     args: readonly string[],
     options: SpawnOptions,
   ) => ChildProcess = options.spawnImpl ?? spawn;
-  const env: Record<string, string> = {
+  // `ProcessEnv` is augmented with required keys by packages/env for typed
+  // `process.env` reads — a deliberately minimal child env can't satisfy it
+  // structurally, so this uses the repo's `as NodeJS.ProcessEnv` convention.
+  const env = {
     HOME: options.stateDir,
     PATH: process.env.PATH ?? '',
     TMPDIR: options.stateDir,
     ...options.env,
-  };
+  } as unknown as NodeJS.ProcessEnv;
   const child = spawnImpl(
     options.executable,
     [options.artifact, '--operation-id', options.operationId],

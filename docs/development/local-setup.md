@@ -115,3 +115,11 @@ The Docker e2e path uses different ports on purpose — app `:3006`, Postgres
   distinct basename (see `workQueryVirtualListModel.ts`, renamed from
   `workQueryVirtualList.ts` for exactly this). Audit for other collisions
   with `find src -type f \( -name '*.ts' -o -name '*.tsx' \) | sed 's/\.[^.]*$//' | tr 'A-Z' 'a-z' | sort | uniq -d`.
+- **Desktop shell crashes after login** — `SyntaxError: lucide-react.js does
+not provide an export named 'GlobeOff'` (or another recent icon): the
+  desktop vite optimizer bundled the stale transitive `lucide-react` copy
+  hoisted by `publicHoistPattern`. `apps/desktop` now declares
+  `lucide-react` as a direct dependency so its lockfile resolves a current
+  version; if you see this on an older checkout, `pnpm install` inside
+  `apps/desktop` after pulling, then `rm -rf node_modules/.vite/deps` to
+  drop the stale optimized chunk.

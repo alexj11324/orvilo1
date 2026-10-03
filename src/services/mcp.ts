@@ -99,15 +99,15 @@ const normalizeScopeOptions = <T extends { signal?: AbortSignal }>(options?: Abo
  */
 const normalizeMcpScope = (
   options?: McpQueryScopeOptions | McpScopeOptions,
-): McpDeviceScope | undefined =>
-  options?.scope ??
-  (options?.subject?.kind === 'resource'
-    ? { deviceId: options.subject.resource.deviceId, kind: 'device' }
-    : options?.deviceId
-      ? { deviceId: options.deviceId, kind: 'device' }
-      : options?.topicId
-        ? { kind: 'topic', topicId: options.topicId }
-        : undefined);
+): McpDeviceScope | undefined => {
+  if (options?.scope) return options.scope;
+  if (options?.subject?.kind === 'resource') {
+    return { deviceId: options.subject.resource.deviceId, kind: 'device' };
+  }
+  if (options?.deviceId) return { deviceId: options.deviceId, kind: 'device' };
+  const topicId = options && 'topicId' in options ? options.topicId : undefined;
+  return topicId ? { kind: 'topic', topicId } : undefined;
+};
 
 /**
  * The topic's persisted device binding as a tri-state — `unknown` means the

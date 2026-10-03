@@ -5,6 +5,7 @@ packages:
   - '../../packages/device-sandbox'
   - '../../packages/device-gateway-client'
   - '../../packages/device-identity'
+  - '../../packages/device-prime-host'
   - '../../packages/heterogeneous-agents'
   - '../../packages/html-artifact'
   - '../../packages/local-file-shell'

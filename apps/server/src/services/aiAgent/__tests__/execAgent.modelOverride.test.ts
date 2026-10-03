@@ -256,7 +256,10 @@ describe('AiAgentService.execAgent - model/provider override', () => {
     async (kind) => {
       mockGetAgentConfig.mockResolvedValue({
         ...defaultAgentConfig,
-        agencyConfig: { modelSelectionPolicy: 'member' },
+        agencyConfig: {
+          heterogeneousProvider: { type: 'claude-code' },
+          modelSelectionPolicy: 'member',
+        },
         userId: 'agent-author',
         visibility: 'public',
         workspaceId: 'workspace-1',

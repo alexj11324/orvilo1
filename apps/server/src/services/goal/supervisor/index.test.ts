@@ -77,7 +77,9 @@ const runResult = (operationId: string, topicId: string, agentId = 'agent'): Exe
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
   vi.spyOn(modelConfig, 'resolveGoalModelConfig').mockResolvedValue({
-    model: 'test-model',
+    // A heterogeneous goal-model retypes the supervisor's own binding onto a
+    // mount-capable CLI runtime — the gate under test needs that capability.
+    model: 'claude-code',
     provider: 'openai',
   });
   vi.spyOn(scheduler, 'scheduleGoalAdvance').mockResolvedValue();

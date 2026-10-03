@@ -30,7 +30,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
 import type { CanonicalRunBinding } from './canonicalRun';
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 import { CanonicalCoreRuntimeHost } from './coreRuntimeHost';
 import {
   directoriesFor,
@@ -62,7 +62,7 @@ let provider: StubProvider;
 const directories: string[] = [];
 
 const bindConfig = (endpoint: string, secretReference: string): ProviderBindingConfig => ({
-  enabled: false,
+  enabled: true,
   endpoint,
   model: MODEL_ID,
   name: 'Embedded acceptance binding',
@@ -297,7 +297,10 @@ describe.skipIf(!RUNNER_UP)('embedded acceptance: inference (real chain)', () =>
       const first = await iterator.next();
       expect(first.value).toMatchObject({ text: 'a', type: 'text' });
 
-      await db.update(tasks).set({ status: 'stopped' }).where(eq(tasks.id, binding!.taskId));
+      await db
+        .update(tasks)
+        .set({ status: 'stopped' })
+        .where(eq(tasks.id, fixtureTaskId(binding!)));
       chunk.release();
 
       const events: RuntimeEvent[] = [];

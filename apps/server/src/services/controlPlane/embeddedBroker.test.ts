@@ -25,7 +25,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
 import type { CanonicalRunBinding } from './canonicalRun';
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 import { createEmbeddedInferenceBridge } from './embeddedBroker';
 
 const db: OrviloDatabase = await getTestDB();
@@ -106,12 +106,12 @@ const bindConfig = (
   endpointUrl: string,
   secretReference: string,
   overrides?: {
-    engine?: ProviderBindingConfig['selection']['engine'];
     runtime?: ProviderBindingConfig['selection']['runtime'];
     target?: ProviderBindingConfig['selection']['target'];
   },
 ): ProviderBindingConfig => ({
-  enabled: false,
+  // Armed: `enabled` gates both resolution and claim-time issuance.
+  enabled: true,
   endpoint: endpointUrl,
   model: MODEL_ID,
   name: 'Embedded broker fixture',
@@ -119,7 +119,6 @@ const bindConfig = (
   secretReference,
   selection: {
     effort: 'default',
-    engine: overrides?.engine,
     mode: 'default',
     runtime: overrides?.runtime ?? 'orvilo',
     speed: 'default',
@@ -150,7 +149,7 @@ const fenceFor = (b: CanonicalRunBinding): ExecutionFence => ({
   policyRevision: b.policyRevision,
   principalId: b.userId,
   stateRevision: b.stateRevision,
-  taskId: b.taskId,
+  taskId: fixtureTaskId(b),
   tenantId: b.workspaceId,
 });
 
@@ -247,7 +246,12 @@ describe('embedded inference bridge composition', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const bridge = result.value;
-    expect(bridge.initModel).toEqual({ id: MODEL_ID, maxOutputTokens: 8192 });
+    expect(bridge.initModel).toEqual({
+      contextWindow: 32768,
+      id: MODEL_ID,
+      input: ['text'],
+      maxOutputTokens: 8192,
+    });
 
     const wrong = bridge.buildInferenceRequest({
       request: sanitizedRequest('other-model'),

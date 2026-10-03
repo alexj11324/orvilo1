@@ -125,8 +125,19 @@ leases.
 
 ## Prime on-device
 
-Reuse the existing runner (`noTools`/session/inference gaps are unfinished
-work, not the final state): the device host ships the Prime artifact (packaged
+Reuse the existing runner — the upstream-capability unseal (protocol v2 +
+`docs/development/prime-runner-unseal.md`) made the vendored SDK defaults the
+device defaults: builtin tool surface enabled (default `ipython`; bash/edit
+extension-registered when their runtime deps exist — the shipped image only
+guarantees what it ships, the runner reports what it actually activated),
+persistent `SessionManager` under the device `stateDir` (restart = real resume,
+not rebuild — the init ack's `sessionId` echo is the truth oracle), real
+`ResourceLoader`/`McpManager`/`SettingsManager` against the device-supplied
+workspace, thinking level upstream-clamped to the model capability the issued
+binding advertises. Tools execute INSIDE the runner on the device — the broker
+only relays inference traffic (`broker.infer` carries tool schemas +
+`tool_calls`/`tool` results both directions; there is no host-side tool
+round-trip). The device host ships the Prime artifact (packaged
 into Desktop + CLI releases; no reliance on dev relative paths); the device
 reports a verified version + artifact digest + protocol capability, re-checked
 at startup; real isolation is kept (Docker ≠ Device; bare `spawn` on this
@@ -134,6 +145,10 @@ machine is not isolation); reuse the unified ACP boundary (Prime's own NDJSON
 protocol must not pretend to be ACP); reuse the `apps/cli` agentRun lifecycle
 (serial admission per operation, dedup, no duplicate writers); no separate
 Prime gateway / cancel registry / callback settlement.
+
+Still sealed (credential architecture, not capability): zero-credential
+`AuthStorage`, single-provider `ModelRegistry` = `orvilo-broker` only, telemetry
+off, broker-only inference egress, artifact pin verification, lease bounds.
 
 Inference credentials do not determine the device: the broker may be reused,
 but Prime does not have to be on the same machine as the broker. Short-lived
@@ -193,6 +208,46 @@ TS `never`); `local` + `deviceId` → same device; `device` + `deviceId` → kep
 `local` without `deviceId` → unresolved (no guessing); `sandbox`/`embedded` →
 mapped only when a real node can be proven; switching models never
 batch-clears instructions/history/memory.
+
+Enforcement as shipped (Package D):
+
+- **Write refusal** — `refuseRetiredAgencyConfigFields` (a shared zod
+  `superRefine` in `apps/server/src/routers/lambda/_helpers/`) rejects any
+  request carrying `agencyConfig.heterogeneousProvider.engine` or
+  `adapterType` with `BAD_REQUEST`. It is wired into every client write
+  surface that accepts an `agencyConfig` payload: `agent.updateAgentConfig`,
+  `agent.createAgent`, `agent.createAgentOnly`, and the agentGroup member
+  schema (`batchCreateAgentsInGroup`, `createGroupWithMembers`). Internal
+  callers that bypass the schema get the same smallest normalization at the
+  write chokepoint instead: `AgentModel.create` / `batchCreate` /
+  `updateConfig` strip the retired fields via
+  `normalizeAgencyConfigForWrite` (`@orvilo/types`) before persisting — the
+  values are meaningless to every reader, so they are dropped rather than
+  carried forward.
+- **Client merge** — the optimistic-config merge in
+  `src/store/agent/slices/agent/action.ts` re-sends the cached row wholesale;
+  it normalizes the merged `agencyConfig` first so a legacy row still holding
+  retired fields does not re-send them and trip the new rejection.
+- **`local` + `deviceId`** — unchanged semantics: the bound device is the
+  stored identity (`resolveExecutionTarget` still upgrades a bound `local` to
+  `device` off-client; `resolveExecutionPlan` binds `boundDeviceId`).
+- **`local` without `deviceId`** — unresolved, no guessing:
+  `resolveExecutionPlan` no longer falls back to `localDeviceId` for
+  non-platform agents (the machine running the resolution is not the row's
+  device — platform-task `local` keeps its own semantic because the locally
+  registered runtime IS the provable node), and the bot-trigger `local`
+  promotion now leaves unbound rows unrouted instead of auto-grabbing an
+  online device.
+- **Retired spellings (`embedded`, and any value outside the live
+  `executionTarget` union)** — `resolveExecutionTarget` maps them to `device`
+  only when a stored `boundDeviceId` proves a real node; otherwise they
+  resolve to `none` (pending) and wait for explicit config. `sandbox` stays
+  live: it is a current target spelling for heterogeneous harnesses, and for
+  builtin-orvilo rows the transitional embedded fence is itself the provable
+  node until package B flips it.
+- **Model switch** — `AgentModel.updateConfig` deep-merges; a regression test
+  pins that `{model, provider}` writes preserve `systemRole`, `chatConfig`,
+  `editorData`, `params`, `profile`, and `agencyConfig` verbatim.
 
 ## Acceptance matrix (all must pass)
 

@@ -4,8 +4,8 @@ import type { OrviloDatabase } from '@orvilo/database';
 import {
   classifyHeteroProcessFailure,
   getNativeHeteroSessionBindingKey,
+  type HeterogeneousAgentType as AnyHeterogeneousAgentType,
   isHeteroStatusGuideErrorData,
-  type LocalHeterogeneousAgentType,
 } from '@orvilo/heterogeneous-agents';
 import { type AegisFinishReport, ThreadStatus } from '@orvilo/types';
 import debug from 'debug';
@@ -35,7 +35,12 @@ import {
 
 const log = debug('orvilo-server:hetero-agent-service');
 
-export type HeterogeneousAgentType = LocalHeterogeneousAgentType;
+/**
+ * Producer identity carried on ingest/finish calls. Covers every hetero
+ * producer surface — external CLI agents (local + remote families) and the
+ * builtin `'orvilo'` type, which produces through the Prime adapter.
+ */
+export type HeterogeneousAgentType = AnyHeterogeneousAgentType;
 
 export type HeterogeneousFinishResult = 'success' | 'error' | 'cancelled';
 

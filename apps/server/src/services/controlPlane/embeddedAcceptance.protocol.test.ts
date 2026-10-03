@@ -7,11 +7,13 @@
  * HarnessTransport. These are the exact frames the host sends; the transcript
  * of the handshake test doubles as the PR evidence capture.
  */
-import { mkdir } from 'node:fs/promises';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 import { CONTROL_PLANE_VERSION } from '@orvilo/agent-execution/controlPlane';
 import type {
+  BrokerInferParams,
   HarnessInitAck,
   HarnessPromptResult,
 } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
@@ -34,29 +36,33 @@ const EXPECTED_PIN = {
   version: '0.9.8',
 } as const;
 
-const initParams = {
-  controlPlaneVersion: CONTROL_PLANE_VERSION,
-  model: { id: 'stub-model-1', maxOutputTokens: 8192 },
-  pin: EXPECTED_PIN,
-  protocolVersion: HARNESS_PROTOCOL_VERSION,
-  workspace: '/workspace',
-};
-
-interface BrokerInferParams {
-  request: {
-    maxOutputTokens: number;
-    messages: { content: string; role: string }[];
-    modelRoute: string;
-    requestId: string;
+// A real upstream session needs real dirs: the persistent SessionManager +
+// settings + session jsonl all live under the supplied workspace/stateDir.
+const makeInitParams = async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'embedded-acc-protocol-'));
+  const workspace = path.join(root, 'workspace');
+  const stateDir = path.join(root, 'agent');
+  await mkdir(workspace, { recursive: true });
+  await mkdir(stateDir, { recursive: true });
+  return {
+    params: {
+      controlPlaneVersion: CONTROL_PLANE_VERSION,
+      model: { id: 'stub-model-1', maxOutputTokens: 8192 },
+      pin: EXPECTED_PIN,
+      protocolVersion: HARNESS_PROTOCOL_VERSION,
+      stateDir,
+      workspace,
+    },
+    root,
   };
-  sessionId: string;
-}
+};
 
 describe.skipIf(!RUNNER_UP)('embedded acceptance: protocol (real runner process)', () => {
   it(
     'completes init handshake, prompt→text round-trip and clean exit',
     { timeout: 60_000 },
     async () => {
+      const { params: initParams, root } = await makeInitParams();
       const runner = spawnRunner();
       try {
         runner.transport.setReverseHandler((method, params) => {
@@ -78,16 +84,18 @@ describe.skipIf(!RUNNER_UP)('embedded acceptance: protocol (real runner process)
         });
 
         const ack = (await runner.transport.request('harness.init', initParams)) as HarnessInitAck;
-        expect(ack.sessionId).toMatch(/^embedded-/);
+        // Upstream session ids are uuidv7 — no runner-minted prefix anymore.
+        expect(ack.sessionId).toMatch(/^[0-9a-f]{8}-[0-9a-f-]{27}$/);
         expect(ack.protocolVersion).toBe(HARNESS_PROTOCOL_VERSION);
         expect(ack.pin).toEqual(EXPECTED_PIN);
-        expect(ack.capabilities).toEqual({
+        expect(ack.capabilities).toMatchObject({
           cancel: true,
           prompt: true,
           requests: ['broker.infer', 'broker.cancel'],
           stream: true,
-          tools: [],
         });
+        // Unsealed: the upstream default toolset advertises ipython.
+        expect(ack.capabilities.tools).toContain('ipython');
 
         const prompt = (await runner.transport.request('session.prompt', {
           sessionId: ack.sessionId,
@@ -108,13 +116,15 @@ describe.skipIf(!RUNNER_UP)('embedded acceptance: protocol (real runner process)
           method: string;
           params: BrokerInferParams;
         };
+        expect(infer.params.request.tools?.map((tool) => tool.name)).toContain('ipython');
         expect(infer.params.sessionId).toBe(ack.sessionId);
         expect(infer.params.request.modelRoute).toBe('stub-model-1');
         expect(infer.params.request.maxOutputTokens).toBe(8192);
         // The vendored agent prepends its own harness preamble; the runner
-        // must carry the user turn verbatim as the final message.
+        // must carry the user turn verbatim as the final message (upstream
+        // stores the prompt as content blocks, so the wire shape is blocks).
         expect(infer.params.request.messages.at(-1)).toEqual({
-          content: 'hello runner',
+          content: [{ text: 'hello runner', type: 'text' }],
           role: 'user',
         });
         expect(infer.params.request.requestId).toMatch(/^infer-/);
@@ -136,6 +146,7 @@ describe.skipIf(!RUNNER_UP)('embedded acceptance: protocol (real runner process)
         }
       } finally {
         runner.child.kill('SIGKILL');
+        await rm(root, { force: true, recursive: true });
       }
     },
   );
@@ -160,7 +171,10 @@ describe.skipIf(!RUNNER_UP)('embedded acceptance: protocol (real runner process)
           return { error: { code: -32601, message: `unexpected ${method}` } };
         });
 
-        const ack = (await runner.transport.request('harness.init', initParams)) as HarnessInitAck;
+        const ack = (await runner.transport.request(
+          'harness.init',
+          (await makeInitParams()).params,
+        )) as HarnessInitAck;
         const prompting = runner.transport.request('session.prompt', {
           sessionId: ack.sessionId,
           text: 'long running',
@@ -245,7 +259,7 @@ describe.skipIf(!RUNNER_UP)('embedded acceptance: protocol (real runner process)
       const runner = spawnRunner();
       try {
         const ack = (await runner.transport.request('harness.init', {
-          ...initParams,
+          ...(await makeInitParams()).params,
           pin: { commit: 'deadbeef'.repeat(8), license: 'BSD-0', version: '9.9.9' },
         })) as HarnessInitAck;
         expect(ack.pin).toEqual(EXPECTED_PIN);

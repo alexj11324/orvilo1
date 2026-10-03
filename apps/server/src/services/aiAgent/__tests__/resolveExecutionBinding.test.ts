@@ -4,9 +4,11 @@ import { describe, expect, it } from 'vitest';
 import { agentCanMountBuiltinToolSurface } from '../pipeline/resolveExecutionBinding';
 
 describe('agentCanMountBuiltinToolSurface', () => {
-  it('treats the builtin orvilo binding as mount-capable', () => {
-    expect(agentCanMountBuiltinToolSurface({ agencyConfig: null })).toBe(true);
-    expect(agentCanMountBuiltinToolSurface(undefined)).toBe(true);
+  it('treats the builtin orvilo binding as mount-incapable — Prime mounts no tools', () => {
+    // The synthesized/default binding is 'orvilo', which runs on the embedded
+    // Prime harness (`noTools: 'all'`) — the builtin tool surface cannot mount.
+    expect(agentCanMountBuiltinToolSurface({ agencyConfig: null })).toBe(false);
+    expect(agentCanMountBuiltinToolSurface(undefined)).toBe(false);
   });
 
   it('rejects heterogeneous agents whose engine cannot mount MCP', () => {
@@ -24,7 +26,9 @@ describe('agentCanMountBuiltinToolSurface', () => {
     expect(agentCanMountBuiltinToolSurface({ agencyConfig: null }, 'pi')).toBe(false);
     expect(agentCanMountBuiltinToolSurface({ agencyConfig: null }, 'cursor')).toBe(false);
     expect(agentCanMountBuiltinToolSurface({ agencyConfig: null }, 'claude-code')).toBe(true);
-    expect(agentCanMountBuiltinToolSurface({ agencyConfig: null }, 'devin')).toBe(true);
+    // 'devin' is not a legacy hetero model id, so the binding stays on the
+    // synthesized builtin 'orvilo' runtime — which cannot mount the surface.
+    expect(agentCanMountBuiltinToolSurface({ agencyConfig: null }, 'devin')).toBe(false);
   });
 
   it('an explicit provider beats a model override', () => {

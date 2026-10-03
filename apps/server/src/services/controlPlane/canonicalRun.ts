@@ -1,6 +1,12 @@
 import type { ControlResult, ExecutionFence } from '@orvilo/agent-execution';
+import type { RunSubject } from '@orvilo/types';
 import { and, eq } from 'drizzle-orm';
 
+import type {
+  HandoffIntent,
+  RuntimeIdentity,
+  RuntimeRunBinding,
+} from '@/database/models/taskExecutionControl';
 import {
   executionGrants,
   taskDispatches,
@@ -9,8 +15,15 @@ import {
   topics,
   workspaceMembers,
 } from '@/database/schemas';
+import type {
+  TaskExecutionControl,
+  TaskExecutionHandoffRecord,
+  TaskExecutionProof,
+} from '@/database/schemas/taskExecutionControl';
 import type { OrviloDatabase } from '@/database/type';
 import { AgentDelegationService } from '@/server/services/agentDelegation/executionGrants';
+
+import { withCanonicalAdmissionRetry } from './canonicalAdmissionRetry';
 
 /** Trusted server registration. Never construct this from a runtime action payload. */
 export interface CanonicalRunBinding {
@@ -25,10 +38,76 @@ export interface CanonicalRunBinding {
   runtimeOwnerId: string;
   runtimeRegistrationId: string;
   stateRevision: number;
-  taskId: string;
+  /** The run's explicit subject — task or conversation (device-execution-contract). */
+  subject: RunSubject;
   topicId: string;
   userId: string;
   workspaceId: string;
+}
+
+/**
+ * The authority port `CanonicalCoreRuntimeHost` admits against. The task
+ * implementation is {@link CanonicalRunAuthority}; the chat-scoped
+ * implementation (`CanonicalChatRunAuthority`, canonicalChatRun.ts) presents
+ * the same surface over the `agent_operations` chat-parallel record. Typed
+ * structurally — the concrete classes carry private members, so they are not
+ * mutually assignable.
+ */
+export interface CanonicalRunAuthorityPort {
+  withRegistration: <T>(
+    input: CanonicalRunBinding,
+    run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
+  ) => Promise<ControlResult<T>>;
+  withRun: <T>(
+    input: CanonicalRunBinding,
+    run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
+  ) => Promise<ControlResult<T>>;
+  withSnapshot: <T>(
+    input: CanonicalRunBinding,
+    run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
+  ) => Promise<ControlResult<T>>;
+}
+
+interface CanonicalHandoffRow {
+  id: string;
+  phase: string;
+  record: TaskExecutionHandoffRecord;
+  revision: number;
+}
+
+/**
+ * The registration port `CanonicalCoreRuntimeHost` owns process state through.
+ * `TaskExecutionControlModel` is the task implementation;
+ * `ChatExecutionControlModel` presents the same surface over
+ * `agent_operations.metadata.executionControl` (its handoff family is
+ * unreachable for chat and fails loudly). Only the members the host calls are
+ * ported; unused members (`renew`) are implementation details.
+ */
+export interface CanonicalRunRegistrationPort {
+  activate: (binding: RuntimeRunBinding, identity: RuntimeIdentity) => Promise<unknown>;
+  advance: (
+    id: string,
+    revision: number,
+    phase: 'quiescing' | 'quiescent',
+    proof?: TaskExecutionProof,
+  ) => Promise<CanonicalHandoffRow>;
+  beginHandoff: (binding: RuntimeRunBinding, intent: HandoffIntent) => Promise<CanonicalHandoffRow>;
+  read: (id: string) => Promise<CanonicalHandoffRow | undefined>;
+  readControl: (binding: RuntimeRunBinding) => Promise<
+    | {
+        control: TaskExecutionControl | null | undefined;
+        epoch: number | null | undefined;
+        revision: number;
+      }
+    | undefined
+  >;
+  register: (binding: RuntimeRunBinding, leaseMs: number) => Promise<unknown>;
+  resume: (id: string, revision: number, identity: RuntimeIdentity) => Promise<unknown>;
+  stop: (binding: RuntimeRunBinding) => Promise<unknown>;
+  transfer: (
+    id: string,
+    revision: number,
+  ) => Promise<{ record: CanonicalHandoffRow; control: TaskExecutionControl; epoch: number }>;
 }
 
 export interface CanonicalRunSnapshot {
@@ -85,15 +164,19 @@ export class CanonicalRunAuthority {
     serializable = false,
   ): Promise<ControlResult<T>> {
     const binding = structuredClone(input);
-    return this.db
-      .transaction(
+    // This authority admits task subjects only — a conversation subject has
+    // no task rows to lock and no placeholder may stand in for one.
+    if (binding.subject.kind !== 'task') return denied('Run subject is not a task execution');
+    const taskId = binding.subject.taskId;
+    return withCanonicalAdmissionRetry(() =>
+      this.db.transaction(
         async (tx) => {
           // Task before dispatch matches ownership transitions. NOWAIT prevents a
           // mixed legacy lock order from hanging admission before any side effect.
           const [task] = await tx
             .select()
             .from(tasks)
-            .where(and(eq(tasks.id, binding.taskId), eq(tasks.workspaceId, binding.workspaceId)))
+            .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
             .for('update', { noWait: true })
             .limit(1);
           const [dispatch] = await tx
@@ -109,7 +192,7 @@ export class CanonicalRunAuthority {
             .limit(1);
           if (
             !dispatch ||
-            dispatch.taskId !== binding.taskId ||
+            dispatch.taskId !== taskId ||
             dispatch.operationId !== binding.operationId ||
             dispatch.phase !== 'running' ||
             dispatch.fence !== binding.dispatchFence ||
@@ -146,7 +229,7 @@ export class CanonicalRunAuthority {
             .limit(1);
           if (
             !grant ||
-            grant.taskId !== binding.taskId ||
+            grant.taskId !== taskId ||
             grant.agentId !== dispatch.agentId ||
             grant.delegationSubjectType !== 'user' ||
             grant.delegationSubjectId !== binding.userId ||
@@ -159,9 +242,7 @@ export class CanonicalRunAuthority {
           const [topic] = await tx
             .select()
             .from(taskTopics)
-            .where(
-              and(eq(taskTopics.taskId, binding.taskId), eq(taskTopics.topicId, binding.topicId)),
-            )
+            .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, binding.topicId)))
             .for('update', { noWait: true })
             .limit(1);
           if (
@@ -224,7 +305,7 @@ export class CanonicalRunAuthority {
               binding.userId,
               binding.workspaceId,
             ).assertMayCommit({
-              taskId: binding.taskId,
+              taskId,
               topicId: binding.topicId,
               grantId: binding.grantId,
               epoch: binding.executionEpoch,
@@ -254,7 +335,7 @@ export class CanonicalRunAuthority {
               fence: {
                 tenantId: binding.workspaceId,
                 principalId: binding.userId,
-                taskId: binding.taskId,
+                taskId,
                 grantId: binding.grantId,
                 ownerId: binding.runtimeOwnerId,
                 leaseId: binding.runtimeLeaseId,
@@ -276,7 +357,7 @@ export class CanonicalRunAuthority {
           return { ok: true as const, value };
         },
         serializable ? { isolationLevel: 'serializable' } : undefined,
-      )
-      .catch(() => denied('Canonical admission is busy or unavailable'));
+      ),
+    ).catch(() => denied('Canonical admission is busy or unavailable'));
   }
 }

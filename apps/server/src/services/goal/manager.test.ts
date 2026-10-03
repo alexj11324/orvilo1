@@ -53,7 +53,11 @@ const taskPlan = {
 
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
-  await db.insert(agents).values({ id: agentId, userId });
+  await db.insert(agents).values({
+    agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+    id: agentId,
+    userId,
+  });
   vi.spyOn(scheduler, 'scheduleGoalAdvance').mockResolvedValue();
   vi.spyOn(AiAgentService.prototype, 'execAgent').mockImplementation(async (params) => {
     const operationId = `op-manager-${++seq}`;
@@ -190,7 +194,11 @@ describe('CLI main Agent planning', () => {
   });
 
   it('explicitly dispatches the creator instead of the default Task assignee', async () => {
-    await db.insert(agents).values({ id: 'task-worker', userId });
+    await db.insert(agents).values({
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      id: 'task-worker',
+      userId,
+    });
     const graph = await service().create({
       agentId: 'task-worker',
       createdByAgentId: agentId,
@@ -237,7 +245,11 @@ describe('CLI main Agent planning', () => {
       title: 'Bound creator',
     });
     expect(graph.goal.config?.manager).toEqual({ agentId, maxTurns: 5 });
-    await db.insert(agents).values({ id: 'new-task-worker', userId });
+    await db.insert(agents).values({
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      id: 'new-task-worker',
+      userId,
+    });
     await service().setAgent(graph.goal.id, 'new-task-worker');
     expect((await model().findById(graph.goal.id))?.config?.manager?.agentId).toBe(agentId);
   });

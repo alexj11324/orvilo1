@@ -1,7 +1,7 @@
 import { isHeterogeneousAgentModelId } from '@orvilo/const';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
-import { DEFAULT_ORVILO_ENGINE, type OrviloAgentAgencyConfig } from '@orvilo/types';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 
 import type { AgentConfigWithId } from '@/server/services/agent';
 
@@ -12,8 +12,9 @@ import type { AgentConfigWithId } from '@/server/services/agent';
  * Since the Lobe model loop is retired, every agent run resolves to an ACP
  * execution binding — an explicit `agencyConfig.heterogeneousProvider` when
  * configured, a legacy heterogeneous `model` id (`'claude-code'`, `'codex'`,
- * …) when set, otherwise the builtin `'orvilo'` harness (default engine
- * `claude-sdk`, which the dispatch layer maps onto the claude-code ACP agent).
+ * …) when set, otherwise the builtin `'orvilo'` agent, whose harness is
+ * fixed to Prime and resolves a device like every other type
+ * (docs/development/device-execution-contract.md).
  * The binding is resolved per run; downstream device/sandbox dispatch in
  * `pipeline/heteroDispatch` validates the target environment, pins it to the
  * run, and rejects targets it cannot safely execute on.
@@ -42,7 +43,7 @@ export const resolveExecutionBinding = (
     return { heteroType: model, heterogeneousProvider: undefined, synthesized: false };
   return {
     heteroType: 'orvilo',
-    heterogeneousProvider: { engine: DEFAULT_ORVILO_ENGINE, type: 'orvilo' },
+    heterogeneousProvider: { type: 'orvilo' },
     synthesized: true,
   };
 };
@@ -62,12 +63,9 @@ export const agentCanMountBuiltinToolSurface = (
     | undefined,
   model?: string | null,
 ): boolean => {
-  const { heteroType, heterogeneousProvider } = resolveExecutionBinding(
+  const { heteroType } = resolveExecutionBinding(
     agentConfig?.agencyConfig ? { agencyConfig: agentConfig.agencyConfig } : {},
     model,
   );
-  return canMountBuiltinToolSurface({
-    engine: heterogeneousProvider?.engine,
-    type: heteroType,
-  });
+  return canMountBuiltinToolSurface({ type: heteroType });
 };

@@ -42,8 +42,6 @@ import {
   HETEROGENEOUS_AGENT_DEFAULT_SELECTION,
   normalizeHeterogeneousProviderConfig,
   resolveHeteroAgentSystemContext,
-  resolveOrviloCliAgentType,
-  resolveOrviloEngine,
   ThreadStatus,
   ThreadType,
   unwrapServerDefaultHeterogeneousModel,
@@ -480,16 +478,18 @@ export const executeHeterogeneousAgent = async (
   const heterogeneousProvider = normalizeHeterogeneousProviderConfig(
     persistedHeterogeneousProvider,
   );
-  // The builtin Orvilo harness has no adapter or executable of its own — the
-  // selected engine's CLI family owns adapters, auth/error classification,
-  // quota accounting, command resolution, and the resume binding identity.
-  const orviloEngine =
-    heterogeneousProvider.type === 'orvilo'
-      ? resolveOrviloEngine(heterogeneousProvider.engine)
-      : undefined;
-  const adapterType = orviloEngine
-    ? resolveOrviloCliAgentType(orviloEngine)
-    : heterogeneousProvider.type;
+  if (heterogeneousProvider.type === 'orvilo') {
+    // TRANSITIONAL backstop: orvilo execution stays server-side on the
+    // embedded fork while the device-side Prime adapter is packaged — the
+    // dispatcher's fence keeps device-resolved orvilo plans off the device
+    // gateway, so a local executor should never see an orvilo run. Fail
+    // loudly rather than resolving a wrong-family local executable (see
+    // docs/development/device-execution-contract.md §transitional-fence).
+    throw new Error(
+      "The builtin Orvilo agent's Prime adapter is not packaged for device execution yet.",
+    );
+  }
+  const adapterType = heterogeneousProvider.type;
   const serverDefaultConfiguredModel =
     heterogeneousProvider.authMode === 'api' &&
     heterogeneousProvider.apiConfig?.source === 'server-default'
@@ -1946,7 +1946,6 @@ export const executeHeterogeneousAgent = async (
         heterogeneousProvider.model !== HETEROGENEOUS_AGENT_DEFAULT_SELECTION
           ? heterogeneousProvider.model
           : undefined,
-      orviloEngine,
       providerBinding,
       resumeSessionId,
     });

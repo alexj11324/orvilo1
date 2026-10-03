@@ -1019,7 +1019,6 @@ export class AiAgentService {
       // drop the payload (pi-acp) never see a spec, so they never advertise
       // uncallable tools.
       supportsBuiltinToolMount: canMountBuiltinToolSurface({
-        engine: turn.heterogeneousProvider?.engine,
         type: turn.heteroType,
       }),
     });

@@ -1,9 +1,12 @@
 import { randomUUID } from 'node:crypto';
 
+import type { RunSubject } from '@orvilo/types';
 import { sql } from 'drizzle-orm';
 
+import { ChatExecutionControlModel } from '@/database/models/chatExecutionControl';
 import { TaskExecutionControlModel } from '@/database/models/taskExecutionControl';
 import {
+  agentOperations,
   agents,
   taskDispatches,
   tasks,
@@ -17,6 +20,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { createTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 import { AgentDelegationService } from '@/server/services/agentDelegation/executionGrants';
 
+import type { CanonicalChatRunBinding } from './canonicalChatRun';
 import type { CanonicalRunBinding } from './canonicalRun';
 
 /** Seeds actual canonical rows only in the disposable acceptance database. */
@@ -98,7 +102,7 @@ export async function createCanonicalRunFixture(
   const binding: CanonicalRunBinding = {
     workspaceId: workspace.id,
     userId,
-    taskId: task.id,
+    subject: { dispatchId, kind: 'task', taskId: task.id },
     dispatchId,
     dispatchFence: 2,
     generation: 1,
@@ -121,6 +125,76 @@ export async function createCanonicalRunFixture(
       treeId: 'fixture-tree',
       supervisorId: 'fixture-supervisor',
       sessionId: 'fixture-session',
+    });
+  return binding;
+}
+
+/** Fixture bindings built here are task-shaped — narrow the explicit subject
+ * for task-side reads (a conversation subject has no task id to return). */
+export const fixtureTaskId = (binding: { subject: RunSubject }): string =>
+  binding.subject.kind === 'task' ? binding.subject.taskId : 'unreachable';
+
+/**
+ * The chat-parallel of `createCanonicalRunFixture`: a live `agent_operations`
+ * run on a chat topic (no task/dispatch/taskTopics rows, no grant row), with
+ * `metadata.executionControl` registered through `ChatExecutionControlModel`.
+ * `workspace: false` seeds a personal-scope chat (tenant `personal:<userId>`).
+ */
+export async function createCanonicalChatRunFixture(
+  db: OrviloDatabase,
+  options: { state?: 'registering' | 'running'; workspace?: boolean } = {},
+): Promise<CanonicalChatRunBinding> {
+  const userId = await createTestUser(db);
+  let chatWorkspaceId: string | null = null;
+  if (options.workspace !== false) {
+    const [workspace] = await db
+      .insert(workspaces)
+      .values({ name: 'Chat', primaryOwnerId: userId, slug: randomUUID() })
+      .returning();
+    await db.insert(workspaceMembers).values({ userId, workspaceId: workspace.id, role: 'owner' });
+    chatWorkspaceId = workspace.id;
+  }
+  const agentId = `agt_${randomUUID()}`;
+  await db.insert(agents).values({ id: agentId, userId, workspaceId: chatWorkspaceId });
+  const topicId = `tpc_${randomUUID()}`;
+  await db.insert(topics).values({ agentId, id: topicId, userId, workspaceId: chatWorkspaceId });
+  const operationId = `op_${randomUUID()}`;
+  await db.insert(agentOperations).values({
+    agentId,
+    id: operationId,
+    status: 'running',
+    taskId: null,
+    topicId,
+    userId,
+    workspaceId: chatWorkspaceId,
+  });
+  const binding: CanonicalChatRunBinding = {
+    chatAgentId: agentId,
+    chatWorkspaceId,
+    dispatchFence: 0,
+    dispatchId: operationId,
+    executionEpoch: 1,
+    generation: 1,
+    grantId: operationId,
+    operationId,
+    policyRevision: 0,
+    runExpiresAt: Date.now() + 300_000,
+    runtimeLeaseId: randomUUID(),
+    runtimeOwnerId: 'registered-chat-host',
+    runtimeRegistrationId: randomUUID(),
+    stateRevision: 0,
+    subject: { kind: 'conversation', topicId },
+    topicId,
+    userId,
+    workspaceId: chatWorkspaceId ?? `personal:${userId}`,
+  };
+  const registration = new ChatExecutionControlModel(db, userId, binding.workspaceId);
+  await registration.register(binding, 300_000);
+  if (options.state !== 'registering')
+    await registration.activate(binding, {
+      treeId: 'fixture-chat-tree',
+      supervisorId: 'fixture-chat-supervisor',
+      sessionId: 'fixture-chat-session',
     });
   return binding;
 }

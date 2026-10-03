@@ -128,77 +128,19 @@ Acceptance evidence exposed two real bugs, fixed minimally in this branch:
   `AbortController` (`pumpBrokerEvents` cancels it on the cancel latch and on
   the stopped early-exit). Regression: inference "cancel propagates" test.
 
-## Merge recipe — `feat/byok-execution-chain` (#367) after this stack
+## Post-cutover note (Prime convergence)
 
-`providerBinding/execution.ts` diverged on both lines; the resolver keeps
-**canonical + compat** (this file) verbatim — do not take any #367 hunk of
-`execution.ts`. Everything #367's callers need is already in the compat
-superset, so the merge resolves to zero compile breaks for `execAgent`.
+The compat layer this document's earlier merge recipe described is **deleted**:
+`OrviloBindingTarget`, `OrviloBindingResolution`, `IssuedByokSpawnExecution`,
+`selectOrviloProviderBinding`, `buildByokExecutionCredentials`, the engine-aware
+resolver overloads, and `resolveOrviloEngine` all retired when the builtin
+Orvilo agent was fixed to the embedded Prime harness
+(see `docs/development/prime-cutover.md`). The canonical surface is now the
+only surface:
 
-### Files resolved by keeping canonical + compat verbatim
-
-- `apps/server/src/services/providerBinding/execution.ts` — take this side.
-  The #367 caller surface is overlaid as leading overloads:
-  - `resolveOrviloProviderBinding(db, userId, engine, target: OrviloBindingTarget)`
-    → `OrviloBindingResolution` (`none` / `unavailable` / `applied:{execution}`).
-    `typeof` an overloaded function covers the whole overload set, so the
-    `EmbeddedInferenceBridgeDeps` seams instead name the exported alias types
-    `ResolveOrviloProviderBindingForTarget` / `IssueBindingExecutionForClaim`
-    (the canonical signatures) — keep those aliases in sync with the canonical
-    overloads if the file is ever refactored.
-  - `issueBindingExecution(db, userId, candidate:{id,revision}, engine, target)`
-    → `IssuedByokSpawnExecution | undefined`; canonical `(db, claim)` stays last.
-  - `OrviloBindingTarget`, `OrviloBindingResolution`, `IssuedByokSpawnExecution`,
-    `selectOrviloProviderBinding`, `buildByokExecutionCredentials` — same names
-    \#367's tests/consumers reference (`IssuedByokSpawnExecution` is the only
-    rename; #367 imported no name for this return type).
-- `apps/server/src/services/providerBinding/controlPlane.ts` — take this side;
-  `resolveProviderCredentialHeaders` is exported (same function #367 added —
-  both sides now share it).
-- `packages/database/src/models/providerBinding.ts` — take this side;
-  `setEnabled` is present (verbatim from #367).
-- `apps/server/src/services/deviceGateway/index.ts`,
-  `packages/device-gateway-client/src/{http,types}.ts`,
-  `apps/cli/src/{commands/connect.ts,device/agentRun.ts}`,
-  `apps/desktop/src/main/controllers/{GatewayConnectionCtr,HeterogeneousAgentImpl}.ts`,
-  `apps/server/src/services/heterogeneousAgent/sandboxRunner.ts` — the `env`
-  param chains are identical additive hunks on both sides; either side or a
-  trivial both-keep resolves them.
-
-### #367 hunks that still need manual porting
-
-In `heteroDispatch.ts` the resolver keeps the canonical file (embedded-dispatch
-block intact) and re-applies #367's additions:
-
-1. `import { resolveOrviloEngine } from '@orvilo/types'` and
-   `import { resolveOrviloProviderBinding } from '…/providerBinding/execution'`.
-2. The `byokTarget` / `byokResolution` block (unavailable →
-   `finalizeHeteroDispatchError` + `PROVIDER_BINDING_UNAVAILABLE` return).
-3. The `agentOperations.metadata.byok = {bindingId, revision}` pin update.
-4. `heteroExecArgs` composed with `byok?.model` + `byok?.execArgs` — keep it
-   after the resolution block (canonical moved the provider-effective block
-   up; the merge must restore #367's ordering since `byok` is built there).
-5. `env: byok?.env` in **both** dispatch call sites:
-   `deviceGateway.dispatchAgentRun({…, env: byok?.env})` and
-   `spawnHeteroSandbox({…, env: byok?.env})` — both params exist on this side.
-
-Expected result: `execAgent` compiles unchanged; `byok?.env`/`execArgs`/`model`
-`bindingId`/`revision` all resolve to the compat return shape.
-
-### Deliberate semantic mapping (not bugs)
-
-- **Sandbox arm returns `applied` with `env: {}` and `execArgs: []`.** On
-  \#367 the sandbox path minted provider env into the cloud sandbox; canonical
-  serves sandbox credentials through the embedded inference broker instead.
-  A byok-bound sandbox run that is not embedded-admitted spawns without BYOK
-  env — it fails at the provider (loud), never silently on another account.
-- **`enabled` gate is stored-JSONB truth.** `config.enabled` is typed
-  `literal(false)`; the compat path reads `Boolean(row.config.enabled)` so
-  post-verification `enabled:true` rows resolve — same as #367.
-- \*\*`issueBindingExecution` compat arm fences on `{id, revision}` + ownership
-  - `enabled` at mint time\*\* — identical to #367's fence; the canonical claim
-    arm (`bindingId`/`bindingRevision`/`ownerId`/`tenantId`) is untouched.
-
-Coverage: `execution.compat.test.ts` runs the #367-side expectations against
-this file (device arm keeps full env/execArgs assertions; sandbox arm asserts
-the empty-surface descriptor contract).
+- `resolveOrviloProviderBinding(db, userId, target, match?: {model?, provider?})`
+  → `ProviderBindingRow | undefined` — enabled `runtime:'orvilo'` +
+  `target:'sandbox'` bindings only; `selection.engine` on pre-cutover rows is
+  dead data and never consulted.
+- `issueBindingExecution(db, {bindingId, bindingRevision, ownerId, tenantId})`
+  → `{binding} | undefined` — revision-fenced, `enabled`-rechecked issuance.

@@ -13,14 +13,13 @@ import { ACP_MCP_MOUNT_AGENT_TYPES } from './acpRuntime';
  * is transport-capable and mount-incapable. Remote platform types and the
  * non-standard adapters (cursor/devin/droid/grok/trae) are in neither set.
  *
- * The `'orvilo'` builtin harness resolves through its engine family the same
- * way the dispatch admission check does (`resolveHeteroCliAgentType`).
+ * The builtin `'orvilo'` agent's fixed Prime adapter mounts no tools
+ * (`noTools: 'all'` on the runner session) — it is never in the
+ * mount-capable set.
  */
 export const canMountBuiltinToolSurface = (
-  binding: { engine?: string | null; type?: string | null } | null | undefined,
+  binding: { type?: string | null } | null | undefined,
 ): boolean => {
-  const cliType = binding?.type
-    ? resolveHeteroCliAgentType({ engine: binding.engine, type: binding.type })
-    : undefined;
+  const cliType = resolveHeteroCliAgentType(binding?.type ? { type: binding.type } : undefined);
   return !!cliType && ACP_MCP_MOUNT_AGENT_TYPES.has(cliType);
 };

@@ -194,6 +194,46 @@ TS `never`); `local` + `deviceId` → same device; `device` + `deviceId` → kep
 mapped only when a real node can be proven; switching models never
 batch-clears instructions/history/memory.
 
+Enforcement as shipped (Package D):
+
+- **Write refusal** — `refuseRetiredAgencyConfigFields` (a shared zod
+  `superRefine` in `apps/server/src/routers/lambda/_helpers/`) rejects any
+  request carrying `agencyConfig.heterogeneousProvider.engine` or
+  `adapterType` with `BAD_REQUEST`. It is wired into every client write
+  surface that accepts an `agencyConfig` payload: `agent.updateAgentConfig`,
+  `agent.createAgent`, `agent.createAgentOnly`, and the agentGroup member
+  schema (`batchCreateAgentsInGroup`, `createGroupWithMembers`). Internal
+  callers that bypass the schema get the same smallest normalization at the
+  write chokepoint instead: `AgentModel.create` / `batchCreate` /
+  `updateConfig` strip the retired fields via
+  `normalizeAgencyConfigForWrite` (`@orvilo/types`) before persisting — the
+  values are meaningless to every reader, so they are dropped rather than
+  carried forward.
+- **Client merge** — the optimistic-config merge in
+  `src/store/agent/slices/agent/action.ts` re-sends the cached row wholesale;
+  it normalizes the merged `agencyConfig` first so a legacy row still holding
+  retired fields does not re-send them and trip the new rejection.
+- **`local` + `deviceId`** — unchanged semantics: the bound device is the
+  stored identity (`resolveExecutionTarget` still upgrades a bound `local` to
+  `device` off-client; `resolveExecutionPlan` binds `boundDeviceId`).
+- **`local` without `deviceId`** — unresolved, no guessing:
+  `resolveExecutionPlan` no longer falls back to `localDeviceId` for
+  non-platform agents (the machine running the resolution is not the row's
+  device — platform-task `local` keeps its own semantic because the locally
+  registered runtime IS the provable node), and the bot-trigger `local`
+  promotion now leaves unbound rows unrouted instead of auto-grabbing an
+  online device.
+- **Retired spellings (`embedded`, and any value outside the live
+  `executionTarget` union)** — `resolveExecutionTarget` maps them to `device`
+  only when a stored `boundDeviceId` proves a real node; otherwise they
+  resolve to `none` (pending) and wait for explicit config. `sandbox` stays
+  live: it is a current target spelling for heterogeneous harnesses, and for
+  builtin-orvilo rows the transitional embedded fence is itself the provable
+  node until package B flips it.
+- **Model switch** — `AgentModel.updateConfig` deep-merges; a regression test
+  pins that `{model, provider}` writes preserve `systemRole`, `chatConfig`,
+  `editorData`, `params`, `profile`, and `agencyConfig` verbatim.
+
 ## Acceptance matrix (all must pass)
 
 - New agent → no Builder, no model call; new conversation → no agent created.

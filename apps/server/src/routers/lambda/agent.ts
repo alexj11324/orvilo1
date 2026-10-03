@@ -65,6 +65,7 @@ import {
   getRestrictedKnowledgeBaseIds,
   getUseLevelKnowledgeBaseIds,
 } from './_helpers/knowledgeBaseAccess';
+import { refuseRetiredAgencyConfigFields } from './_helpers/refuseRetiredAgencyConfigFields';
 import { getResourceConfigAccess, redactAgentConfig } from './_helpers/resourceConfigGuard';
 
 const getAgentPermissionPolicyPatch = (value: Record<string, unknown>) => {
@@ -186,7 +187,7 @@ export const agentRouter = router({
     .use(withScopedPermission('agent:create'))
     .input(
       z.object({
-        config: CreateAgentSchema.optional(),
+        config: CreateAgentSchema.optional().superRefine(refuseRetiredAgencyConfigFields),
         groupId: z.string().optional(),
         visibility: z.enum(['private', 'public']).optional(),
       }),
@@ -464,7 +465,7 @@ export const agentRouter = router({
     .use(withScopedPermission('agent:create'))
     .input(
       z.object({
-        config: z.object({}).passthrough().optional(),
+        config: z.object({}).passthrough().optional().superRefine(refuseRetiredAgencyConfigFields),
         groupId: z.string(),
       }),
     )
@@ -1399,7 +1400,7 @@ export const agentRouter = router({
     .input(
       z.object({
         agentId: z.string(),
-        value: z.object({}).passthrough().partial(),
+        value: z.object({}).passthrough().partial().superRefine(refuseRetiredAgencyConfigFields),
       }),
     )
     .mutation(async ({ input, ctx }) => {

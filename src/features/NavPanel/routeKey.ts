@@ -17,6 +17,12 @@ export const resolveNavPanelKey = (
       return grandchildSegment === 'docs' ? 'agent-docs' : 'agent';
     }
 
+    case 'chat': {
+      // `/chat/:topicId` is the canonical conversation surface — it owns the
+      // same topics panel as the legacy `/agent/:aid` route it redirects from.
+      return 'agent';
+    }
+
     case 'community': {
       return 'discover';
     }

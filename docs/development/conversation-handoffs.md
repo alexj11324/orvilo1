@@ -36,11 +36,11 @@ An existing topic's composer draft keys on `topicDraftKey(topicId)`
 Continue can never strand typed text under the previous agent's key. The
 sidebar's `[Draft]` hint derives the same key.
 
-The blank/new-topic composer still uses the agent-scoped bucket
-(`main_<agentId>_new`), and `carryDraftToKey` survives only for the blank
-pick — it moves the in-progress draft to the picked agent's bucket. It is
-**not** used by Continue (no key change) or Fork (the fork gets its own fresh
-key).
+The blank/new-topic composer keys on the workspace (`topic_new`), so an
+agent pick on it keeps the typed text too. `carryDraftToKey` is gone:
+no flow moves drafts between keys anymore. See
+[conversation-routing.md](./conversation-routing.md) for the URL contract
+that makes these keys stable.
 
 ## Write points
 

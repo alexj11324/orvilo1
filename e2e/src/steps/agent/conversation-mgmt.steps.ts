@@ -139,7 +139,11 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
   // live, so its topic would never be created inside the poll window — wait
   // for this turn to finish before opening the new topic.
   await waitForTurnSettled(this, '测试对话内容', firstSentAt);
-  await this.page.waitForURL((url) => /\/tpc_[^/]+$/.test(url.pathname), { timeout: 30_000 });
+  // `/chat/:topicId` is the canonical conversation route — the legacy
+  // `/agent/:aid/:tid` path auto-redirects, so wait for the settled URL.
+  await this.page.waitForURL((url) => /\/chat\/tpc_[^/]+$/.test(url.pathname), {
+    timeout: 30_000,
+  });
   const firstTopicPath = new URL(this.page.url()).pathname;
   const agentPath = firstTopicPath.slice(0, firstTopicPath.lastIndexOf('/'));
 
@@ -176,8 +180,20 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
     await this.page.keyboard.press('Enter');
   };
 
+  // The new-topic button opens the blank composer at `/chat/new`. The click
+  // can still land while the row is mid-re-render after the settled poll, so
+  // retry it once when the first navigation never fires.
   await addTopicButton.click();
-  await this.page.waitForURL((url) => url.pathname === agentPath, { timeout: 30_000 });
+  try {
+    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
+      timeout: 30_000,
+    });
+  } catch {
+    await addTopicButton.click();
+    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
+      timeout: 30_000,
+    });
+  }
   await expect(this.page.locator('.message-wrapper')).toHaveCount(0, { timeout: 30_000 });
   await sendSecondMessage();
 
@@ -344,15 +360,20 @@ When('用户右键点击对话', async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击对话...');
 
   const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await sidebarTopics.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
+  let topicCount = 0;
+  await expect
+    .poll(
+      async () => {
+        topicCount = await sidebarTopics.count();
+        console.log(`   📍 Found ${topicCount} topic items`);
+        return topicCount;
+      },
+      { message: 'sidebar never listed a topic', timeout: 30_000 },
+    )
+    .toBeGreaterThanOrEqual(1);
 
-  if (topicCount > 0) {
-    await sidebarTopics.first().click({ button: 'right' });
-    console.log('   ✅ 已右键点击对话');
-  } else {
-    throw new Error('No topics found to right-click');
-  }
+  await sidebarTopics.first().click({ button: 'right' });
+  console.log('   ✅ 已右键点击对话');
 
   await this.page.waitForTimeout(500);
 });
@@ -361,18 +382,23 @@ When('用户右键点击一个对话', async function (this: CustomWorld) {
   console.log('   📍 Step: 右键点击一个对话...');
 
   const sidebarTopics = this.page.locator('[data-testid="topic-item"]');
-  const topicCount = await sidebarTopics.count();
-  console.log(`   📍 Found ${topicCount} topic items`);
+  let topicCount = 0;
+  await expect
+    .poll(
+      async () => {
+        topicCount = await sidebarTopics.count();
+        console.log(`   📍 Found ${topicCount} topic items`);
+        return topicCount;
+      },
+      { message: 'sidebar never listed a topic', timeout: 30_000 },
+    )
+    .toBeGreaterThanOrEqual(1);
 
   // Store the topic text for later verification
-  if (topicCount > 0) {
-    const topicText = await sidebarTopics.first().textContent();
-    this.testContext.deletedTopicTitle = topicText?.slice(0, 30);
-    await sidebarTopics.first().click({ button: 'right' });
-    console.log(`   ✅ 已右键点击对话: "${topicText?.slice(0, 30)}..."`);
-  } else {
-    throw new Error('No topics found to right-click');
-  }
+  const topicText = await sidebarTopics.first().textContent();
+  this.testContext.deletedTopicTitle = topicText?.slice(0, 30);
+  await sidebarTopics.first().click({ button: 'right' });
+  console.log(`   ✅ 已右键点击对话: "${topicText?.slice(0, 30)}..."`);
 
   await this.page.waitForTimeout(500);
 });

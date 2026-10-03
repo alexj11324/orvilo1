@@ -73,20 +73,20 @@ export const useTopicItemDropdownMenu = ({
     duplicateTopic,
     removeTopic,
     favoriteTopic,
-    markTopicCompleted,
-    unmarkTopicCompleted,
+    archiveTopic,
+    unarchiveTopic,
     updateTopicTitle,
   ] = useChatStore((s) => [
     s.autoRenameTopicTitle,
     s.duplicateTopic,
     s.removeTopic,
     s.favoriteTopic,
-    s.markTopicCompleted,
-    s.unmarkTopicCompleted,
+    s.archiveTopic,
+    s.unarchiveTopic,
     s.updateTopicTitle,
   ]);
 
-  const isCompleted = status === 'completed';
+  const isArchived = status === 'archived';
   const handleOpenShareModal = useCallback(() => {
     if (!id) return;
 
@@ -99,17 +99,17 @@ export const useTopicItemDropdownMenu = ({
     return [
       {
         disabled: !canEditTopic,
-        icon: isCompleted ? <ArchiveRestore /> : <Archive />,
-        key: 'markCompleted',
-        label: isCompleted ? t('actions.unmarkCompleted') : t('actions.markCompleted'),
+        icon: isArchived ? <ArchiveRestore /> : <Archive />,
+        key: 'archive',
+        label: isArchived ? t('actions.unarchive') : t('actions.archive'),
         onClick: () => {
-          if (isCompleted) {
-            unmarkTopicCompleted(id);
+          if (isArchived) {
+            unarchiveTopic(id);
           } else {
-            markTopicCompleted(id);
+            archiveTopic(id);
           }
         },
-        sfSymbol: isCompleted ? 'tray.and.arrow.up' : 'archivebox',
+        sfSymbol: isArchived ? 'tray.and.arrow.up' : 'archivebox',
       },
       {
         disabled: !canEditTopic,
@@ -306,18 +306,18 @@ export const useTopicItemDropdownMenu = ({
   }, [
     id,
     fav,
-    isCompleted,
+    isArchived,
     title,
     canCreateTopic,
     canEditTopic,
     activeAgentId,
     activeWorkspaceSlug,
     appOrigin,
+    archiveTopic,
+    unarchiveTopic,
     autoRenameTopicTitle,
     duplicateTopic,
     favoriteTopic,
-    markTopicCompleted,
-    unmarkTopicCompleted,
     removeTopic,
     updateTopicTitle,
     openTopicInNewWindow,

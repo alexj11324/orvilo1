@@ -1,4 +1,4 @@
-import { AGENT_CHAT_TOPIC_URL, AGENT_CHAT_URL } from '@orvilo/const';
+import { CHAT_NEW_URL, CHAT_TOPIC_URL } from '@orvilo/const';
 import { useCallback, useMemo } from 'react';
 
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
@@ -8,7 +8,6 @@ import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { useQueryRoute } from '@/hooks/useQueryRoute';
 import { useChatStore } from '@/store/chat';
-import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
 
 import { buildPrefixedAgentRoutePath, parseAgentPathname } from '../../utils/agentPathname';
@@ -64,47 +63,17 @@ export const useTopicNavigation = () => {
         await focusTopicPopup(topicId);
       }
 
-      // The workspace feed mixes topics from many agents. A topic owned by a
-      // different agent can't be opened under the current `/agent/:aid` URL —
-      // deep-link straight into its owner's route so the conversation, its
-      // message bucket and the composer all bind the owning agent.
-      const ownerAgentId = topicId
-        ? topicSelectors.getTopicById(topicId)(useChatStore.getState())?.agentId
-        : undefined;
-      if (topicId && ownerAgentId && ownerAgentId !== routeAgentId) {
-        router.push(
-          buildWorkspaceAwarePath(AGENT_CHAT_TOPIC_URL(ownerAgentId, topicId), activeWorkspaceSlug),
-        );
-        toggleConfig(false);
-        return;
-      }
-
-      // If in agent sub-route, navigate back to agent chat first
-      if (isInAgentSubRoute() && routeAgentId) {
-        const basePath = topicId
-          ? AGENT_CHAT_TOPIC_URL(routeAgentId, topicId)
-          : AGENT_CHAT_URL(routeAgentId);
-        const targetPath = buildPrefixedAgentRoutePath(basePath, agentRoute, activeWorkspaceSlug);
-
-        // Include topicId in URL when navigating from sub-route
-        router.push(targetPath);
-        toggleConfig(false);
-        return;
-      }
-
+      // The conversation is the navigation unit: `/chat/:topicId` resolves
+      // the topic's owner agent on the route, so a row never needs the
+      // owner's id — and the workspace feed can mix topics from many agents.
+      // No topic id means the blank composer (`/chat/new`).
+      const basePath = topicId ? CHAT_TOPIC_URL(topicId) : CHAT_NEW_URL;
+      const awarePath = buildWorkspaceAwarePath(basePath, activeWorkspaceSlug);
+      router.push(buildPrefixedAgentRoutePath(awarePath, agentRoute, activeWorkspaceSlug));
       switchTopic(topicId);
       toggleConfig(false);
     },
-    [
-      activeWorkspaceSlug,
-      agentRoute,
-      focusTopicPopup,
-      isInAgentSubRoute,
-      routeAgentId,
-      router,
-      switchTopic,
-      toggleConfig,
-    ],
+    [activeWorkspaceSlug, agentRoute, focusTopicPopup, router, switchTopic, toggleConfig],
   );
 
   return {

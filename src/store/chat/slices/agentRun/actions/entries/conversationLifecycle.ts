@@ -272,7 +272,7 @@ export class ConversationLifecycleActionImpl {
    * Read the active topic-list filter from `topicDataMap` so it can be
    * forwarded to `sendMessageInServer`. Without this, the server returns
    * an unfiltered list which `internal_updateTopics` then writes back over
-   * the filtered sidebar — completed/cron topics reappear until the next
+   * the filtered sidebar — archived/cron topics reappear until the next
    * SWR revalidation.
    */
   #getTopicFilter = (
@@ -1121,6 +1121,11 @@ export class ConversationLifecycleActionImpl {
           optimistic: true,
           type: 'addTopic',
           value: {
+            // The owner agent belongs on the row itself — `/chat/:topicId`'s
+            // TopicOwnerSync binds `activeAgentId` from `topic.agentId`, and
+            // without it the conversation's context loses its agent segment
+            // until the server row arrives.
+            agentId: topicListAgentId,
             id: mintedTopicId,
             ...newTopicModelSnapshot,
             ...(operationContext.groupId ? {} : { sessionId: operationContext.agentId }),

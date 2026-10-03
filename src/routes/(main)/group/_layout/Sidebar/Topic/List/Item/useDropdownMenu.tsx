@@ -52,21 +52,16 @@ export const useTopicItemDropdownMenu = ({
   const addTab = useElectronStore((s) => s.addTab);
   const appOrigin = useAppOrigin();
 
-  const [
-    autoRenameTopicTitle,
-    duplicateTopic,
-    removeTopic,
-    markTopicCompleted,
-    unmarkTopicCompleted,
-  ] = useChatStore((s) => [
-    s.autoRenameTopicTitle,
-    s.duplicateTopic,
-    s.removeTopic,
-    s.markTopicCompleted,
-    s.unmarkTopicCompleted,
-  ]);
+  const [autoRenameTopicTitle, duplicateTopic, removeTopic, archiveTopic, unarchiveTopic] =
+    useChatStore((s) => [
+      s.autoRenameTopicTitle,
+      s.duplicateTopic,
+      s.removeTopic,
+      s.archiveTopic,
+      s.unarchiveTopic,
+    ]);
 
-  const isCompleted = status === 'completed';
+  const isArchived = status === 'archived';
 
   return useCallback(() => {
     if (!id) return [];
@@ -74,17 +69,17 @@ export const useTopicItemDropdownMenu = ({
     return [
       {
         disabled: !canEditTopic,
-        icon: createElement(isCompleted ? ArchiveRestore : Archive, {}),
-        key: 'markCompleted',
-        label: isCompleted ? t('actions.unmarkCompleted') : t('actions.markCompleted'),
+        icon: createElement(isArchived ? ArchiveRestore : Archive, {}),
+        key: 'archive',
+        label: isArchived ? t('actions.unarchive') : t('actions.archive'),
         onClick: () => {
-          if (isCompleted) {
-            unmarkTopicCompleted(id);
+          if (isArchived) {
+            unarchiveTopic(id);
           } else {
-            markTopicCompleted(id);
+            archiveTopic(id);
           }
         },
-        sfSymbol: isCompleted ? 'tray.and.arrow.up' : 'archivebox',
+        sfSymbol: isArchived ? 'tray.and.arrow.up' : 'archivebox',
       },
       {
         type: 'divider' as const,
@@ -192,7 +187,7 @@ export const useTopicItemDropdownMenu = ({
     ].filter(Boolean) as SidebarMenuItemData[];
   }, [
     id,
-    isCompleted,
+    isArchived,
     canCreateTopic,
     canEditTopic,
     activeGroupId,
@@ -200,8 +195,8 @@ export const useTopicItemDropdownMenu = ({
     appOrigin,
     autoRenameTopicTitle,
     duplicateTopic,
-    markTopicCompleted,
-    unmarkTopicCompleted,
+    archiveTopic,
+    unarchiveTopic,
     removeTopic,
     openGroupTopicInNewWindow,
     addTab,

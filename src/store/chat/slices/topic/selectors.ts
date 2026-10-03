@@ -54,16 +54,21 @@ const currentTopics = (s: ChatStoreState): ChatTopic[] | undefined => currentTop
 const currentTopicsWithoutSystemTriggers = (s: ChatStoreState): ChatTopic[] | undefined => {
   const topics = currentTopics(s);
   if (!topics) return undefined;
+  // `archived` repeats the fetch's `excludeStatuses` for the same belt-and-braces
+  // reason: archiving is the only status that removes a row from the feed — a
+  // `completed` conversation stays listed (completion is metadata, not archive).
   return topics.filter(
-    (topic) => !topic.trigger || !MAIN_SIDEBAR_EXCLUDE_TRIGGERS.includes(topic.trigger),
+    (topic) =>
+      topic.status !== 'archived' &&
+      (!topic.trigger || !MAIN_SIDEBAR_EXCLUDE_TRIGGERS.includes(topic.trigger)),
   );
 };
 
 const currentActiveTopic = (s: ChatStoreState): ChatTopic | undefined =>
-  // The active topic can be absent from the list bucket — archived (completed)
-  // topics are excluded by the sidebar fetch's `excludeStatuses`, and the
-  // workspace feed may simply not have paged it in yet. getTopicById already
-  // falls back through every loaded bucket to the by-id detail cache.
+  // The active topic can be absent from the list bucket — archived topics are
+  // excluded by the sidebar fetch's `excludeStatuses`, and the workspace feed
+  // may simply not have paged it in yet. getTopicById already falls back
+  // through every loaded bucket to the by-id detail cache.
   s.activeTopicId ? getTopicById(s.activeTopicId)(s) : undefined;
 const searchTopics = (s: ChatStoreState): ChatTopic[] => s.searchTopics;
 
@@ -306,18 +311,14 @@ const sortTopics = (topics: ChatTopic[], sortBy: TopicSortBy): ChatTopic[] => {
 
 // Limit topics for sidebar display based on user's page size preference
 const displayTopicsForSidebar =
-  (pageSize: number, sortBy: TopicSortBy = 'updatedAt', includeCompleted = true) =>
+  (pageSize: number, sortBy: TopicSortBy = 'updatedAt') =>
   (s: ChatStoreState): ChatTopic[] | undefined => {
     const topics = currentTopicsWithoutSystemTriggers(s);
     if (!topics) return undefined;
 
-    const visibleTopics = includeCompleted
-      ? topics
-      : topics.filter((topic) => topic.status !== 'completed');
-
     // Favorites first, then sorted by the chosen timestamp, then page-sliced
-    const favTopics = visibleTopics.filter((t) => t.favorite);
-    const rest = visibleTopics.filter((t) => !t.favorite);
+    const favTopics = topics.filter((t) => t.favorite);
+    const rest = topics.filter((t) => !t.favorite);
     const pagedTopics = [...sortTopics(favTopics, sortBy), ...sortTopics(rest, sortBy)].slice(
       0,
       pageSize,
@@ -325,7 +326,7 @@ const displayTopicsForSidebar =
     const activeTopic = currentActiveTopic(s);
 
     // A search result or direct URL can open a topic outside the sidebar's
-    // first page (or an archived topic excluded by the completed filter). Keep
+    // first page (or an archived topic excluded by the fetch). Keep
     // the configured page intact and add that one active row so selection never
     // disappears merely because the route target was filtered out. An injected
     // favorite stays in the favorite prefix instead of falling below regular rows.
@@ -405,14 +406,9 @@ const groupedTopicsSelector =
   };
 
 const groupedTopicsForSidebar =
-  (
-    pageSize: number,
-    sortBy: TopicSortBy = 'updatedAt',
-    groupMode: TopicGroupMode = 'byTime',
-    includeCompleted = true,
-  ) =>
+  (pageSize: number, sortBy: TopicSortBy = 'updatedAt', groupMode: TopicGroupMode = 'byTime') =>
   (s: ChatStoreState): GroupedTopic[] => {
-    const limitedTopics = displayTopicsForSidebar(pageSize, sortBy, includeCompleted)(s);
+    const limitedTopics = displayTopicsForSidebar(pageSize, sortBy)(s);
     if (!limitedTopics) return [];
     // Topics actively streaming on this client surface under "running" even
     // though their persisted status says otherwise — that's the one client-only

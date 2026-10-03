@@ -16,7 +16,7 @@ import { Alert, AlertAction, AlertTitle } from '@/components/ui/alert';
 import type { ActionKeys, ChatInputFeature } from '@/features/ChatInput';
 import { ChatInputProvider, DesktopChatInput } from '@/features/ChatInput';
 import { type ActionDropdownMenu } from '@/features/ChatInput/ActionBar/components/ActionDropdown';
-import { topicDraftKey } from '@/features/ChatInput/draftStorage';
+import { conversationDraftKey } from '@/features/ChatInput/draftStorage';
 import {
   type SendButtonHandler,
   type SendButtonProps,
@@ -207,12 +207,10 @@ const ChatInput = memo<ChatInputProps>(
     const contextKey = useMemo(() => messageMapKey(context), [context]);
     // Drafts belong to the conversation: an existing topic's draft keys on
     // its topicId so an agent handoff (Continue with {agent}) never strands
-    // the typed text under the previous agent's bucket.
+    // the typed text under the previous agent's bucket. The blank composer
+    // keys on the workspace so an agent pick there keeps the text too.
     const draftKey = useMemo(
-      () =>
-        context.topicId && !context.threadId && !context.groupId
-          ? topicDraftKey(context.topicId)
-          : contextKey,
+      () => conversationDraftKey(context, contextKey),
       [context, contextKey],
     );
     const canRecordVoiceMessage = useCanSendVoiceMessage(context);

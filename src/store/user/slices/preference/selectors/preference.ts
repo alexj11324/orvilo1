@@ -7,8 +7,6 @@ const defaultOpenInApp = (s: UserStore): string | undefined => s.preference.defa
 const topicGroupMode = (s: UserStore) =>
   s.preference.topicGroupMode || DEFAULT_PREFERENCE.topicGroupMode!;
 const topicSortBy = (s: UserStore) => s.preference.topicSortBy || DEFAULT_PREFERENCE.topicSortBy!;
-const topicIncludeCompleted = (s: UserStore): boolean =>
-  s.preference.topicIncludeCompleted ?? false;
 
 const hideSyncAlert = (s: UserStore) => s.preference.hideSyncAlert;
 const showInCollaboration = (s: UserStore): boolean =>
@@ -39,7 +37,6 @@ export const preferenceSelectors = {
   showUploadFileInKnowledgeBaseTip,
   terminalFontFamily,
   topicGroupMode,
-  topicIncludeCompleted,
   topicSortBy,
   useCmdEnterToSend,
 };

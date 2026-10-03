@@ -18,7 +18,6 @@ const mocks = vi.hoisted(() => ({
       ({ data: undefined, isValidating: false }) as never,
   ),
   topicGroupMode: 'byStatus' as string,
-  topicIncludeCompleted: false,
   topicPageSize: 20,
 }));
 
@@ -52,14 +51,6 @@ vi.mock('@/store/global', () => ({
 
 vi.mock('@/store/global/selectors', () => ({
   systemStatusSelectors: { topicPageSize: () => mocks.topicPageSize },
-}));
-
-vi.mock('@/store/user', () => ({
-  useUserStore: (selector: (state: unknown) => unknown) => selector({}),
-}));
-
-vi.mock('@/store/user/selectors', () => ({
-  preferenceSelectors: { topicIncludeCompleted: () => mocks.topicIncludeCompleted },
 }));
 
 describe('chat topic list fetches', () => {
@@ -120,5 +111,21 @@ describe('chat topic list fetches', () => {
     // unbounded fetch must never reach the server.
     expect(args.pageSize).toBeGreaterThan(0);
     expect(args.pageSize).toBeLessThanOrEqual(100);
+  });
+
+  it('excludes only archived conversations — a finished one stays in the feed', () => {
+    // Completed is lifecycle metadata (a finished run), not an implicit
+    // archive: the manual archive action is the only way a row leaves the
+    // sidebar feed.
+    renderHook(() => useFetchChatTopics());
+    const [, sidebarArgs = {}] = mocks.storeFetchTopics.mock.calls.at(-1)!;
+
+    renderHook(() => useWorkspaceConversationFeed());
+    const [, feedArgs = {}] = mocks.storeFetchTopics.mock.calls.at(-1)!;
+
+    for (const args of [sidebarArgs, feedArgs]) {
+      expect(args.excludeStatuses).toEqual(['archived']);
+      expect(args.excludeStatuses).not.toContain('completed');
+    }
   });
 });

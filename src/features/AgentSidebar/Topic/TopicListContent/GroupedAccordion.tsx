@@ -33,7 +33,6 @@ const GroupedAccordion = memo<GroupedAccordionProps>(({ GroupItem }) => {
   const { t } = useTranslation('topic');
   const topicPageSize = useGlobalStore(systemStatusSelectors.topicPageSize);
   const topicSortBy = useUserStore(preferenceSelectors.topicSortBy);
-  const topicIncludeCompleted = useUserStore(preferenceSelectors.topicIncludeCompleted);
   const { topicGroupMode } = useAgentTopicGroupMode();
 
   const [isExpandingPageSize, activeTopicId, hasMore, openAllTopicsDrawer] = useChatStore((s) => [
@@ -44,14 +43,8 @@ const GroupedAccordion = memo<GroupedAccordionProps>(({ GroupItem }) => {
   ]);
 
   const groupSelector = useMemo(
-    () =>
-      topicSelectors.groupedTopicsForSidebar(
-        topicPageSize,
-        topicSortBy,
-        topicGroupMode,
-        topicIncludeCompleted,
-      ),
-    [topicPageSize, topicSortBy, topicGroupMode, topicIncludeCompleted],
+    () => topicSelectors.groupedTopicsForSidebar(topicPageSize, topicSortBy, topicGroupMode),
+    [topicPageSize, topicSortBy, topicGroupMode],
   );
   const groupTopics = useChatStore(groupSelector, isEqual);
 

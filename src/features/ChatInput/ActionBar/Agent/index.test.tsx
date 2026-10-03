@@ -119,11 +119,6 @@ vi.mock('@/store/chat', () => ({
   ),
 }));
 
-vi.mock('@/store/chat/utils/messageMapKey', () => ({
-  messageMapKey: ({ agentId, topicId }: { agentId: string; topicId?: string }) =>
-    `${agentId}_${topicId ?? 'blank'}`,
-}));
-
 vi.mock('@/store/global', () => ({
   useGlobalStore: { getState: () => ({ updateSystemStatus: mocks.updateSystemStatus }) },
 }));
@@ -135,12 +130,6 @@ vi.mock('../../components/SelectorTrigger', () => ({
       {text}
     </span>
   ),
-}));
-
-vi.mock('../../draftStorage', () => ({
-  getDraft: vi.fn(() => undefined),
-  removeDraft: vi.fn(),
-  saveDraft: vi.fn(),
 }));
 
 vi.mock('../../hooks/useAgentId', () => ({
@@ -199,7 +188,7 @@ describe('Agent action', () => {
     expect(typeof options.content.props.onFork).toBe('function');
   });
 
-  it('Continue rebinds the topic in place and navigates to it', async () => {
+  it('Continue rebinds the topic in place without navigating', async () => {
     mocks.chatState.activeTopicId = 'tpc_1';
     const { getByText } = render(<Agent />);
 
@@ -213,7 +202,8 @@ describe('Agent action', () => {
     expect(mocks.chatState.rebindTopicAgent).toHaveBeenCalledWith('tpc_1', 'agt_other');
     expect(mocks.chatState.forkTopicAgent).not.toHaveBeenCalled();
     expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ lastUsedAgentId: 'agt_other' });
-    expect(mocks.navigate).toHaveBeenCalledWith('/agent/agt_other/tpc_1');
+    // The conversation URL is topic-stable — a handoff never navigates containers.
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
   it('Fork clones the topic under the new agent and lands on the fork', async () => {
@@ -230,7 +220,7 @@ describe('Agent action', () => {
     expect(mocks.chatState.forkTopicAgent).toHaveBeenCalledWith('tpc_1', 'agt_other');
     expect(mocks.chatState.rebindTopicAgent).not.toHaveBeenCalled();
     expect(mocks.updateSystemStatus).toHaveBeenCalledWith({ lastUsedAgentId: 'agt_other' });
-    expect(mocks.navigate).toHaveBeenCalledWith('/agent/agt_other/tpc_forked');
+    expect(mocks.navigate).toHaveBeenCalledWith('/chat/tpc_forked');
   });
 
   it('does nothing when the current agent is re-picked', () => {

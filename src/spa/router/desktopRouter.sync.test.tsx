@@ -557,10 +557,10 @@ describe('desktop router shared definition', () => {
     '%s selects the closest conversation segment feedback for each pending boundary',
     (_, createRuntimeRoutes) => {
       for (const [pathname, expectedFallbacks] of [
-        [
-          '/agent/agent-1/topic-1',
-          [RouteSegmentSkeleton, ConversationLayoutSkeleton, ConversationSegmentSkeleton],
-        ],
+        // `/agent/:aid/:topicId` is a redirect to `/chat/:topicId` — the chat
+        // layout's fallbacks still mount while the redirect resolves, but no
+        // page-level Suspense wraps the redirect element.
+        ['/agent/agent-1/topic-1', [RouteSegmentSkeleton, ConversationLayoutSkeleton]],
         ['/group/group-1/topic-1', [RouteSegmentSkeleton, ConversationLayoutSkeleton]],
       ] as const) {
         const matches = matchRoutes(createRuntimeRoutes(pathname), pathname);

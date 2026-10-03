@@ -21,7 +21,6 @@ const FlatMode = memo(() => {
   const { t } = useTranslation('topic');
   const topicPageSize = useGlobalStore(systemStatusSelectors.topicPageSize);
   const topicSortBy = useUserStore(preferenceSelectors.topicSortBy);
-  const topicIncludeCompleted = useUserStore(preferenceSelectors.topicIncludeCompleted);
 
   const [isExpandingPageSize, activeTopicId, hasMore, openAllTopicsDrawer] = useChatStore((s) => [
     topicSelectors.isExpandingPageSize(s),
@@ -31,7 +30,7 @@ const FlatMode = memo(() => {
   ]);
 
   const activeTopicList = useChatStore(
-    topicSelectors.displayTopicsForSidebar(topicPageSize, topicSortBy, topicIncludeCompleted),
+    topicSelectors.displayTopicsForSidebar(topicPageSize, topicSortBy),
     isEqual,
   );
   const renderedTopicIds = useMemo(

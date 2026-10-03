@@ -23,6 +23,52 @@ describe('active conversation coordinate', () => {
     );
   });
 
+  it('resolves the canonical /chat topic route with the store-bound owner as route agent', () => {
+    const coordinate = resolveActiveConversationCoordinate({
+      activeAgentId: 'agent-a',
+      params: { topicId: 'topic-a' },
+      url: '/chat/topic-a?thread=thread-a&mode=single#message-a',
+    });
+
+    expect(coordinate).toMatchObject({
+      agentId: 'agent-a',
+      chatBasePath: '/chat',
+      isConversation: true,
+      routeAgentId: 'agent-a',
+      threadId: 'thread-a',
+      topicId: 'topic-a',
+    });
+    expect(buildActiveConversationUrl(coordinate, 'topic-b', null)).toBe(
+      '/chat/topic-b?mode=single#message-a',
+    );
+  });
+
+  it('keeps the workspace slug on a prefixed /chat route', () => {
+    const coordinate = resolveActiveConversationCoordinate({
+      activeAgentId: 'agent-a',
+      params: { topicId: 'topic-a' },
+      url: '/team/chat/topic-a',
+    });
+
+    expect(coordinate.chatBasePath).toBe('/team/chat');
+    expect(buildActiveConversationUrl(coordinate, 'topic-b', null)).toBe('/team/chat/topic-b');
+  });
+
+  it('treats /chat/new as the blank composer and writes back /chat/new when no topic is bound', () => {
+    const coordinate = resolveActiveConversationCoordinate({
+      params: {},
+      url: '/chat/new',
+    });
+
+    expect(coordinate).toMatchObject({
+      chatBasePath: '/chat',
+      isConversation: true,
+      topicId: null,
+    });
+    expect(buildActiveConversationUrl(coordinate, null, null)).toBe('/chat/new');
+    expect(buildActiveConversationUrl(coordinate, 'topic-a', null)).toBe('/chat/topic-a');
+  });
+
   it('does not interpret an agent subpage as a conversation route', () => {
     const coordinate = resolveActiveConversationCoordinate({
       params: { aid: 'agent-a' },
@@ -87,6 +133,17 @@ describe('active conversation coordinate', () => {
 
     expect(coordinate.groupBasePath).toBeUndefined();
     expect(buildActiveConversationUrl(coordinate, 'topic-b', null)).toBe('/agent/group/topic-b');
+  });
+
+  it('does not treat a non-chat segment named chat as a conversation route', () => {
+    const coordinate = resolveActiveConversationCoordinate({
+      params: {},
+      url: '/settings/chat/profile',
+    });
+
+    expect(coordinate.isConversation).toBe(false);
+    expect(coordinate.topicId).toBeNull();
+    expect(coordinate.routeAgentId).toBeUndefined();
   });
 
   it('ignores non-agent routes even when another segment is named agent', () => {

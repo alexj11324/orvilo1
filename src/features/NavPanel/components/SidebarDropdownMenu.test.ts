@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
+import type * as OrviloPlatform from '@/platform';
 import { electronSystemService } from '@/services/electron/system';
 
 import SidebarContextMenu from './SidebarContextMenu';
@@ -75,6 +76,21 @@ describe('SidebarDropdownMenu', () => {
 vi.mock('@/services/electron/system', () => ({
   electronSystemService: { closePopupContextMenu: vi.fn(), popupContextMenu: vi.fn() },
 }));
+// HostPort — the native popup moved behind getHostPort().menu (WD-02); bridge
+// the same service spies so the assertions keep characterizing the routing.
+vi.mock('@/platform', async (importOriginal) => {
+  const actual = await importOriginal<typeof OrviloPlatform>();
+  return {
+    ...actual,
+    getHostPort: () => ({
+      ...actual.getHostPort(),
+      menu: {
+        closePopupContextMenu: () => electronSystemService.closePopupContextMenu(),
+        popupContextMenu: (...args: any[]) => electronSystemService.popupContextMenu(...args),
+      },
+    }),
+  };
+});
 beforeEach(() => {
   vi.clearAllMocks();
   delete window.orviloEnv;

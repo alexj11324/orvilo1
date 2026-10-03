@@ -1044,7 +1044,6 @@ export class AiAgentService {
         externalToolMounts: toolSurface.externalTools,
         toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
-        effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
         // Skill content, mounted-tool usage guidance and eval env prompts all
         // ride the ACP system-context channel — the retired loop consumed them
         // as live tool definitions / `evalContext` during operation prep.
@@ -1062,8 +1061,14 @@ export class AiAgentService {
         parentOperationId,
         pinnedHeterogeneousTopicModel: turn.pinnedHeterogeneousTopicModel,
         requestTrigger: requestTriggerMetadata.trigger,
-        requestedDeviceId: turn.effectiveRequestedDeviceId,
+        // The caller's raw per-request device id — admission treats it as the
+        // explicit request (subject to request authorization), NOT the pin.
+        requestedDeviceId,
         runAttachments,
+        // The topic's durable device pin — the session binding admission
+        // consults first (invalid → DEVICE_BINDING_INVALID, never silently
+        // re-resolved onto another device).
+        sessionBoundDeviceId: turn.topicBoundDeviceId,
         selfMessageIds,
         skipTaskVerification,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,

@@ -50,6 +50,31 @@
    （`errorData.code` + `deviceId`/`repairCandidates`/`retryable`/`scope`/
    `workspaceId`/`operationId`/`bindingRevision`）下发，不嵌在 detail 文案里。
 
+## 客户端调度统一入口不变式（FIX-C）
+
+`agentDispatcher.ts` 的 `selectRuntimeType` 是客户端唯一的路由决策点，
+任何修改必须保持：
+
+1. **全表面收敛**。`send`/`resume`/`regenerate`/`continue`/subtask dispatch/
+   `cancel`/`reconnect` 全部经由同一个 `selectRuntimeType` 结果分发；
+   它永远**不**返回 `'hetero'`——`'hetero'` 仅作为传输 / 事件标记
+   （设备侧 ingest 归因）存在，不是路由结果。
+2. **网络状态不参与授权**。`RuntimeSelectionContext` 不含
+   `deviceGatewayConnected`；socket 断连 / 设备不可达 → `errorData` 通道
+   的类型化 blocked 结果（如 `DEVICE_REQUIRED`，`DEVICE_NOT_CONNECTED`/
+   `DEVICE_OFFLINE` 见契约变更请求），绝不改走本地 IPC。
+3. **拒绝 ≠ 换传输**。服务端 admission 拒绝永远是 blocked 结果，
+   不会 "被拒 → 回落本地 IPC"。
+4. **IPC 只是带身份证明的传输**。`executeHeterogeneousAgent` 与
+   `transports/hetero/*` 保留为已文档化的 seam（仅当未来出现显式开关的
+   offline 模式时才允许启用）；它们携带经服务端核验的执行身份 + 设备
+   授权 + 同一 generation + 共享持久化生命周期 —— 不是第二个业务调度器。
+   当前没有任何产品入口可达这些符号。
+5. **旧数据不复活旧路径**。持久化的 `parentRuntime:'hetero'` 一律
+   coerce 为 `'gateway'`；`heterogeneousProvider` 绑定一律解析为
+   `'gateway'`—— 存量 hetero 会话在 web 接管或桌面重连时走同一个
+   operationId/deviceId/generation，不派生第二执行。
+
 ## 不做什么
 
 - 不新建 Prime gateway / 调度器 / 第二套权限引擎；复用 TaskDispatch/TaskRunner、

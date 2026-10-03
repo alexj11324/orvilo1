@@ -61,14 +61,17 @@ export interface NonHeteroSubAgentDispatchContext {
  * fallback that previously lived in `callAgent` and `#executeDirectMentionRoute`.
  *
  * Runtime routing rules (same as top-level `selectRuntimeType`):
- *   `parentRuntime` wins → otherwise hetero → gateway → client
+ *   `parentRuntime` wins → gateway → client. `selectRuntimeType` never
+ *   returns `'hetero'` (FIX-C) — a stale `parentRuntime: 'hetero'` marker
+ *   coerces to `gateway`, so every branch below stays on admitted transports.
  *
  * Context semantics by runtime:
  *   - client: `agentId` = parent agent (for message key), `subAgentId` = target
  *   - gateway: `agentId` = target agent (gateway runs this agent), `subAgentId` = target
  *
  * Explicitly excluded:
- *   - `hetero` runtime → throws (handled by the heterogeneous pipeline)
+ *   - `hetero` runtime → unreachable after FIX-C; the throw below is a
+ *     defensive guard only (the renderer-IPC pipeline it referenced is retired)
  *   - group orchestration → not routed here (callers guard this upstream)
  */
 export async function dispatchNonHeteroSubAgent(

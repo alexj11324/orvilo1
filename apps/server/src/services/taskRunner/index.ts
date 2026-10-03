@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { TaskIdentifier as TaskSkillIdentifier } from '@orvilo/builtin-skills';
 import { AcceptanceEvidenceIdentifier } from '@orvilo/builtin-tool-acceptance-evidence';
 import { BriefIdentifier } from '@orvilo/builtin-tool-brief';
+import { TaskIdentifier as TaskToolIdentifier } from '@orvilo/builtin-tool-task';
 import { INBOX_SESSION_ID } from '@orvilo/const';
 import type {
   ExecAgentResult,
@@ -15,6 +16,7 @@ import type {
   TaskTopicIntegration,
   WorkingDirConfig,
 } from '@orvilo/types';
+import { executionParkedReason, isAutomationRunTrigger } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 
@@ -234,6 +236,48 @@ export class TaskRunnerService {
       throw new TRPCError({ code: 'NOT_FOUND', message: 'Task not found' });
     }
     let task: TaskItem = resolvedTask;
+    if (
+      intent === 'fresh_occurrence' &&
+      (!isAutomationRunTrigger(trigger) ||
+        continueTopicId ||
+        sourceContractId ||
+        replanApprovalId ||
+        delegation ||
+        workspaceOverride ||
+        integrationSeed ||
+        parentOperationId ||
+        replaceReservationId)
+    ) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'fresh_occurrence is restricted to a new authorized automation trigger.',
+      });
+    }
+    if (
+      isAutomationRunTrigger(trigger) &&
+      !parentOperationId &&
+      !replaceReservationId &&
+      task.automationMode !== trigger
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Automation trigger does not match the published task mode.',
+      });
+    }
+
+    if (
+      isAutomationRunTrigger(trigger) &&
+      !parentOperationId &&
+      !replaceReservationId &&
+      (executionParkedReason(task) ||
+        task.workflowCategory === 'done' ||
+        task.workflowCategory === 'canceled')
+    ) {
+      throw new TRPCError({
+        code: 'PRECONDITION_FAILED',
+        message: 'Automation is paused or no longer active.',
+      });
+    }
 
     // Settlement/corrective runs (integration merges, delivery-review fixes,
     // reservation takeovers) continue work an earlier dispatch already
@@ -358,6 +402,25 @@ export class TaskRunnerService {
       // prepare() re-reads and locks the Task. Continue only with that
       // authoritative assignee/revision snapshot, never the earlier resolve.
       task = preparedDispatch!.task;
+      const occurrenceDefinition = preparedDispatch!.dispatch.automationOccurrence?.definition;
+      if (occurrenceDefinition) {
+        if (occurrenceDefinition.assigneeAgentId !== task.assigneeAgentId) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Automation execution identity changed.',
+          });
+        }
+        task = {
+          ...task,
+          instruction: occurrenceDefinition.instruction,
+          automationMode: occurrenceDefinition.automationMode ?? task.automationMode,
+          schedulePattern: occurrenceDefinition.schedulePattern ?? null,
+          scheduleTimezone: occurrenceDefinition.scheduleTimezone ?? null,
+          heartbeatInterval: occurrenceDefinition.heartbeatInterval ?? null,
+          config: occurrenceDefinition.config,
+          editorData: occurrenceDefinition.editorData,
+        };
+      }
 
       // A delegated run executes as the grant's agent — the task's stored
       // assignee and the inbox fallback are never substitutes for the
@@ -497,7 +560,12 @@ export class TaskRunnerService {
           message: `sourceContractId "${sourceContractId}" does not name a contract of this task.`,
         });
       }
-      const runIntent: TaskRunIntent = continueTopicId ? 'continue' : (intent ?? 'repair');
+      const runIntent: TaskRunIntent = continueTopicId
+        ? 'continue'
+        : (intent ??
+          (preparedDispatch!.dispatch.automationOccurrence && !internalSettlement
+            ? 'fresh_occurrence'
+            : 'repair'));
 
       // Constraint drift vs the source contract's version pins. Older
       // contracts missing a pin count as drifted — an unverifiable pin is
@@ -518,6 +586,26 @@ export class TaskRunnerService {
             `Task constraints changed since contract revision ${priorContract!.revision ?? '?'} was adopted. ` +
             'Retry with intent "repair" to re-run the frozen contract, or intent "authorized_replan" with a replanApprovalId to adopt the edits.',
         });
+      }
+
+      if ((runIntent === 'repair' || runIntent === 'continue') && priorContract?.occurrence) {
+        const definition = priorContract.occurrence.definition;
+        if (definition.assigneeAgentId !== task.assigneeAgentId) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'Frozen automation execution identity is no longer authorized.',
+          });
+        }
+        task = {
+          ...task,
+          instruction: definition.instruction,
+          automationMode: definition.automationMode ?? task.automationMode,
+          schedulePattern: definition.schedulePattern ?? null,
+          scheduleTimezone: definition.scheduleTimezone ?? null,
+          heartbeatInterval: definition.heartbeatInterval ?? null,
+          config: definition.config,
+          editorData: definition.editorData,
+        };
       }
 
       // authorized_replan consumes a task-scoped action approval — the
@@ -650,6 +738,81 @@ export class TaskRunnerService {
         },
         this.workspaceId,
       );
+      // Frozen contract content for `continue`/`repair`: instruction, verify
+      // gate and dependency receipts re-render from the immutable source
+      // contract, so editing the Task mid-flight can never silently rewrite
+      // an in-flight or repaired attempt. Only an authorized replan rebuilds
+      // constraints from the live task (new contract revision, approved).
+      const inheritedContractContent =
+        continuedTopic?.contract?.content ??
+        (runIntent === 'fresh_occurrence'
+          ? preparedDispatch!.dispatch.automationOccurrence?.content
+          : runIntent !== 'authorized_replan'
+            ? priorContract?.content
+            : undefined);
+      const {
+        acceptanceEnabled,
+        contractContent,
+        fileIds: attachmentFileIds,
+        goalLoop,
+        prompt: basePrompt,
+      } = await buildTaskPrompt(
+        task,
+        {
+          briefModel: this.briefModel,
+          db: this.db,
+          taskModel: this.taskModel,
+          taskTopicModel: this.taskTopicModel,
+          userId: this.userId,
+          workspaceId: this.workspaceId,
+        },
+        extraPrompt,
+        {
+          contractContent: inheritedContractContent,
+          ...(runIntent === 'fresh_occurrence'
+            ? {
+                occurrence: preparedDispatch!.dispatch.automationOccurrence ?? undefined,
+                independentOccurrence: true,
+              }
+            : priorContract?.occurrence
+              ? { occurrence: priorContract.occurrence }
+              : {}),
+        },
+      );
+
+      if (runIntent === 'fresh_occurrence') {
+        await this.taskDispatch.freezeAutomationContent(
+          preparedDispatch!,
+          contractContent,
+          attachmentFileIds,
+        );
+      }
+
+      const pinnedDeviceId = (task.config as { automationDeviceId?: string } | null)
+        ?.automationDeviceId;
+      if (pinnedDeviceId) {
+        const executionAgent = await this.agentModel.getAgentConfig(executingAgentId);
+        const agency = executionAgent?.agencyConfig;
+        if (
+          !executionAgent ||
+          (agency?.executionTargetSelectionPolicy === 'fixed' &&
+            (agency.executionTarget !== 'device' || agency.boundDeviceId !== pinnedDeviceId))
+        ) {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'The automation Device conflicts with the current Agent execution policy.',
+          });
+        }
+        const executor = agency?.heterogeneousProvider as
+          { type?: string; engine?: string } | undefined;
+        if (executor?.type === 'native' || executor?.engine === 'prime') {
+          throw new TRPCError({
+            code: 'PRECONDITION_FAILED',
+            message: 'EXECUTOR_UNSUPPORTED: Prime execution on the bound Device is not available.',
+          });
+        }
+      }
+
       // Workspace provisioning (CAID isolation): a fresh run on a
       // workspace-bound task gets its own git worktree on the bound device —
       // or, when no device exists and the run resolves to the cloud sandbox,
@@ -675,33 +838,7 @@ export class TaskRunnerService {
         }
       }
 
-      // Frozen contract content for `continue`/`repair`: instruction, verify
-      // gate and dependency receipts re-render from the immutable source
-      // contract, so editing the Task mid-flight can never silently rewrite
-      // an in-flight or repaired attempt. Only an authorized replan rebuilds
-      // constraints from the live task (new contract revision, approved).
-      const inheritedContractContent =
-        continuedTopic?.contract?.content ??
-        (runIntent !== 'authorized_replan' ? priorContract?.content : undefined);
-      const {
-        acceptanceEnabled,
-        contractContent,
-        fileIds: attachmentFileIds,
-        goalLoop,
-        prompt,
-      } = await buildTaskPrompt(
-        task,
-        {
-          briefModel: this.briefModel,
-          db: this.db,
-          taskModel: this.taskModel,
-          taskTopicModel: this.taskTopicModel,
-          userId: this.userId,
-          workspaceId: this.workspaceId,
-        },
-        [extraPrompt, provisioned?.prompt].filter(Boolean).join('\n\n') || undefined,
-        { contractContent: inheritedContractContent },
-      );
+      const prompt = [basePrompt, provisioned?.prompt].filter(Boolean).join('\n\n');
 
       const agentRef = executingAgentId;
       const isSlug = !agentRef.startsWith('agt_');
@@ -759,6 +896,11 @@ export class TaskRunnerService {
           : 'auto'
       ) as 'agent' | 'auto';
       const pluginIds = [TaskSkillIdentifier];
+      if (
+        preparedDispatch!.dispatch.automationOccurrence?.input ||
+        priorContract?.occurrence?.input
+      )
+        pluginIds.push(TaskToolIdentifier);
       // Mount BriefIdentifier (createBrief + requestCheckpoint) only in the
       // legacy 'agent' path; in 'auto' the agent must not also call
       // createBrief or we'd double up.
@@ -818,7 +960,11 @@ export class TaskRunnerService {
         contractId: randomUUID(),
         contractRevision: (priorContract?.revision ?? 0) + 1,
         dispatch: preparedDispatch!.dispatch,
-        sourceContractId: priorContract?.contractId,
+        sourceContractId: runIntent === 'fresh_occurrence' ? undefined : priorContract?.contractId,
+        occurrence:
+          runIntent === 'fresh_occurrence'
+            ? (preparedDispatch!.dispatch.automationOccurrence ?? undefined)
+            : priorContract?.occurrence,
         environment: environmentSnapshot,
         goalLoop,
         grantId: delegation?.grantId,
@@ -832,7 +978,13 @@ export class TaskRunnerService {
       // absent — the run never silently ignores an edit.
       const contractResult: NonNullable<RunTaskResult['contract']> = {
         constraintEdits:
-          runIntent === 'authorized_replan' ? 'adopted' : constraintDrift ? 'pending' : 'none',
+          runIntent === 'authorized_replan'
+            ? 'adopted'
+            : runIntent === 'fresh_occurrence'
+              ? 'none'
+              : constraintDrift
+                ? 'pending'
+                : 'none',
         contractId: executionContract.contractId,
         intent: runIntent,
         revision: executionContract.revision,
@@ -862,6 +1014,9 @@ export class TaskRunnerService {
         // dispatch instead of executing without them. Sourced from the
         // persisted contract so admission and the contract cannot diverge.
         requiredToolIds: executionContract.tools,
+        ...(typeof taskConfig.automationDeviceId === 'string'
+          ? { deviceId: taskConfig.automationDeviceId }
+          : {}),
         ...(typeof taskConfig.model === 'string' && { model: taskConfig.model }),
         ...(typeof taskConfig.provider === 'string' && { provider: taskConfig.provider }),
         skipTaskVerification,
@@ -924,10 +1079,7 @@ export class TaskRunnerService {
                 executionGeneration: preparedDispatch!.dispatch.generation,
                 lastAssistantContent: event.lastAssistantContent,
                 operationId: event.operationId,
-                reason:
-                  event.reason === 'max_steps' || event.reason === 'cost_limit'
-                    ? 'done'
-                    : event.reason || 'done',
+                reason: event.reason || 'done',
                 topicId: event.topicId,
               };
               if (!registrationComplete) {

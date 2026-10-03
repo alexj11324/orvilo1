@@ -15,12 +15,14 @@ export const taskRunIdempotencyKey = {
     `backlog-intake:task:${input.taskId}:generation:${input.executionGeneration + 1}`,
 
   automationTick: (input: {
-    executionGeneration: number;
     kind: 'heartbeat' | 'schedule';
     taskId: string;
-    tickToken?: string;
-  }): string =>
-    `${input.kind}:tick:${input.tickToken ?? `task:${input.taskId}:generation:${input.executionGeneration + 1}`}`,
+    tickToken: string;
+  }): string => {
+    if (!input.tickToken.trim())
+      throw new Error('Automation tick requires a durable plan identity');
+    return `${input.kind}:tick:${input.tickToken}`;
+  },
 
   dependencyCascade: (input: {
     completedTaskIds: string[];

@@ -129,6 +129,18 @@ describe('TaskTopicModel', () => {
         seq: 1,
       });
       await topicModel.updateStatus(task.id, 'tpc_continue_fenced', 'completed');
+      await serverDB
+        .update(taskTopics)
+        .set({ stopReason: 'done', handoff: { summary: 'Prior successful output' } })
+        .where(eq(taskTopics.topicId, 'tpc_continue_fenced'));
+      expect(
+        await topicModel.markResultReady(
+          task.id,
+          'tpc_continue_fenced',
+          'operation-old',
+          'succeeded',
+        ),
+      ).toBe(true);
       await topicModel.startRun(task.id, 'tpc_continue_fenced', {
         dispatch: {
           fence: 2,
@@ -142,6 +154,14 @@ describe('TaskTopicModel', () => {
         operationId: 'operation-new',
         seq: 1,
       });
+      await serverDB
+        .update(taskDispatches)
+        .set({ phase: 'running' })
+        .where(eq(taskDispatches.id, 'dispatch-topic-new'));
+      await serverDB
+        .update(tasks)
+        .set({ currentTopicId: 'tpc_continue_fenced' })
+        .where(eq(tasks.id, task.id));
 
       await expect(
         topicModel.settleHistoricalRun(
@@ -158,6 +178,32 @@ describe('TaskTopicModel', () => {
         executionGeneration: 2,
         operationId: 'operation-new',
         status: 'running',
+        resultReadyAt: null,
+        resultOutcome: null,
+        stopReason: null,
+        handoff: null,
+      });
+      await topicModel.settleIfRunning(
+        task.id,
+        'tpc_continue_fenced',
+        'operation-new',
+        'failed',
+        'error',
+      );
+      expect(
+        await topicModel.markResultReady(
+          task.id,
+          'tpc_continue_fenced',
+          'operation-old',
+          'succeeded',
+        ),
+      ).toBe(false);
+      expect(
+        await topicModel.markResultReady(task.id, 'tpc_continue_fenced', 'operation-new', 'failed'),
+      ).toBe(true);
+      await expect(topicModel.findByTopicId('tpc_continue_fenced')).resolves.toMatchObject({
+        resultOutcome: 'failed',
+        stopReason: 'error',
       });
     });
 

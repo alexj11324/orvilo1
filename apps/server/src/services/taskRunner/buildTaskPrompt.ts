@@ -1,5 +1,6 @@
 import { buildTaskRunPrompt, type TaskRunPromptGoalLoop } from '@orvilo/prompts';
 import type {
+  AutomationOccurrenceSnapshot,
   TaskDependencyReceipt,
   TaskExecutionContractContent,
   TaskItem,
@@ -22,6 +23,8 @@ import { extractFileIdsFromEditorData } from '@/server/services/file/extractFile
 import { resolveAttachmentMetadata } from '@/server/services/file/resolveAttachments';
 import { resolveTaskAttemptBudget } from '@/server/services/goal/recoveryPolicy';
 import { resolveTaskAcceptance } from '@/server/services/verify/taskAcceptance';
+
+import { renderAutomationInput } from './automationInput';
 
 /** Cap on unresolved checks carried into the next round's prompt. */
 const MAX_GOAL_FAILED_CHECKS = 8;
@@ -215,13 +218,15 @@ export async function buildTaskPrompt(
      * never silently rewrite an in-flight attempt's prompt.
      */
     contractContent?: TaskExecutionContractContent;
+    occurrence?: AutomationOccurrenceSnapshot;
+    independentOccurrence?: boolean;
   },
 ): Promise<BuiltTaskPrompt> {
   const { briefModel, db, taskModel, taskTopicModel, userId, workspaceId } = deps;
   const inherited = opts?.contractContent;
 
   const [topics, briefs, comments, subtasks, liveDependencies, documents] = await Promise.all([
-    task.totalTopics && task.totalTopics > 0
+    !opts?.independentOccurrence && task.totalTopics && task.totalTopics > 0
       ? taskTopicModel.findWithHandoff(task.id, 4).catch(() => [])
       : Promise.resolve([]),
     briefModel.findByTaskId(task.id).catch(() => []),
@@ -264,7 +269,7 @@ export async function buildTaskPrompt(
   );
   const fileMetadata = await resolveAttachmentMetadata({
     db,
-    fileIds: allFileIds,
+    fileIds: opts?.occurrence?.fileIds ?? allFileIds,
     signUrls: false,
     userId,
     workspaceId,
@@ -486,7 +491,9 @@ export async function buildTaskPrompt(
         };
       }),
     },
-    extraPrompt,
+    extraPrompt:
+      [extraPrompt, renderAutomationInput(opts?.occurrence)].filter(Boolean).join('\n\n') ||
+      undefined,
     parentTask: parentTaskContext,
     task: {
       assigneeAgentId: task.assigneeAgentId,
@@ -566,7 +573,7 @@ export async function buildTaskPrompt(
   return {
     acceptanceEnabled: verifyEnabled,
     contractContent,
-    fileIds: allFileIds,
+    fileIds: opts?.occurrence?.fileIds ?? allFileIds,
     ...(goalLoop ? { goalLoop } : {}),
     prompt,
   };

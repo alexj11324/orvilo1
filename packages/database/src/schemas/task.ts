@@ -1,15 +1,19 @@
 import type {
   AgentTier,
+  AutomationOccurrenceSnapshot,
+  AutomationRunResult,
   BriefArtifacts,
   BriefMetadata,
   TaskActivityLogPayload,
   TaskActivityLogType,
   TaskAssignmentMode,
+  TaskAutomationMode,
   TaskCreationSubjectKind,
   TaskCreationSubjectSnapshot,
   TaskDispatchOrigin,
   TaskDispatchPhase,
   TaskDispatchSettlementGrant,
+  TaskEventDispatchEvidence,
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
   TaskHumanLock,
@@ -199,7 +203,7 @@ export const tasks = pgTable(
     dueDate: date('due_date', { mode: 'string' }),
 
     // Automation mode (mutually exclusive with each other; null = no automation)
-    automationMode: text('automation_mode').$type<'heartbeat' | 'schedule'>(),
+    automationMode: text('automation_mode').$type<TaskAutomationMode>(),
 
     // Heartbeat
     heartbeatInterval: integer('heartbeat_interval'), // seconds, null = no heartbeat configured
@@ -331,6 +335,10 @@ export const taskDispatches = pgTable(
     sourceDispatchId: text('source_dispatch_id'),
     /** Server-verified settlement evidence recorded at claim. */
     settlementGrant: jsonb('settlement_grant').$type<TaskDispatchSettlementGrant>(),
+    /** Immutable definition/input for this idempotent automation occurrence. */
+    automationOccurrence: jsonb('automation_occurrence').$type<AutomationOccurrenceSnapshot>(),
+    /** Persisted admission evidence; never supplied by the business payload. */
+    eventEvidence: jsonb('event_evidence').$type<TaskEventDispatchEvidence>(),
     leaseOwner: text('lease_owner'),
     leaseExpiresAt: timestamptz('lease_expires_at'),
     waitingReason: text('waiting_reason'),
@@ -510,6 +518,10 @@ export const taskTopics = pgTable(
      * than re-deriving constraints from mutable task config.
      */
     contract: jsonb('contract').$type<TaskExecutionContract>(),
+    /** Raw terminal reason, persisted with topic settlement for output recovery. */
+    stopReason: text('stop_reason'),
+    resultReadyAt: timestamptz('result_ready_at'),
+    resultOutcome: text('result_outcome').$type<AutomationRunResult['status']>(),
 
     // What triggered this run: 'manual' (ad-hoc run-now / agent tool call),
     // 'schedule' (cron tick) or 'heartbeat' (interval tick). Null for legacy
@@ -723,3 +735,44 @@ export const taskActivities = pgTable(
 
 export type NewTaskActivity = typeof taskActivities.$inferInsert;
 export type TaskActivityItem = typeof taskActivities.$inferSelect;
+
+/** Durable automation outputs; retrying delivery never retries the Agent. */
+export const automationResultDeliveries = pgTable(
+  'automation_result_deliveries',
+  {
+    id: text('id').primaryKey().notNull(),
+    taskId: text('task_id')
+      .references(() => tasks.id, { onDelete: 'cascade' })
+      .notNull(),
+    userId: text('user_id')
+      .references(() => users.id, { onDelete: 'cascade' })
+      .notNull(),
+    workspaceId: text('workspace_id').references(() => workspaces.id, { onDelete: 'cascade' }),
+    topicId: text('topic_id').references(() => topics.id, { onDelete: 'set null' }),
+    operationId: text('operation_id').notNull(),
+    destinationId: text('destination_id').notNull(),
+    endpoint: text('endpoint'),
+    credentialId: text('credential_id'),
+    payload: jsonb('payload').$type<AutomationRunResult>().notNull(),
+    status: text('status')
+      .$type<'pending' | 'delivering' | 'delivered' | 'failed' | 'unknown'>()
+      .default('pending')
+      .notNull(),
+    attempts: integer('attempts').default(0).notNull(),
+    nextAttemptAt: timestamptz('next_attempt_at').notNull().defaultNow(),
+    leaseToken: text('lease_token'),
+    leaseExpiresAt: timestamptz('lease_expires_at'),
+    httpStatus: integer('http_status'),
+    error: text('error'),
+    deliveredAt: timestamptz('delivered_at'),
+    ...timestamps,
+  },
+  (t) => [
+    uniqueIndex('automation_result_deliveries_run_destination_unique').on(
+      t.userId,
+      t.operationId,
+      t.destinationId,
+    ),
+    index('automation_result_deliveries_due').on(t.status, t.nextAttemptAt),
+  ],
+);

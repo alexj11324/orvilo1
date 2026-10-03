@@ -32,6 +32,12 @@ export async function register() {
       .catch((err) => {
         console.error('[Instrumentation] Failed to start task-reminder loop:', err);
       });
+
+    void import('@/server/services/taskScheduler/recovery')
+      .then(({ startLocalHeartbeatRecoveryLoop }) => startLocalHeartbeatRecoveryLoop())
+      .catch(() => {
+        console.error('[Instrumentation] Failed to start heartbeat recovery loop');
+      });
   }
 
   if (process.env.NODE_ENV !== 'production' && !process.env.ENABLE_TELEMETRY_IN_DEV) {

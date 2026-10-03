@@ -548,6 +548,28 @@ export const driveTaskFromVerify = async (
       return;
     }
 
+    if (op.topicId) {
+      const topicModel = new TaskTopicModel(db, userId, workspaceId);
+      await topicModel.markResultReady(
+        taskOperation.taskId,
+        op.topicId,
+        operationId,
+        outcome === 'passed' ? 'succeeded' : outcome === 'failed' ? 'failed' : 'unknown',
+      );
+      const { AutomationResultDeliveryService } = await import('../automationResultDelivery');
+      try {
+        await new AutomationResultDeliveryService(db, userId, workspaceId).enqueueSettledResult({
+          operationId,
+          taskId: taskOperation.taskId,
+          taskIdentifier: currentTask.identifier,
+          topicId: op.topicId,
+          reason: outcome === 'passed' ? 'done' : 'error',
+        });
+      } catch (error) {
+        log('automation result outbox unavailable after verify: %O', error);
+      }
+    }
+
     // Deferred creator callback: verify-bound runs defer
     // the taskCallback from `onTopicComplete` to HERE so the creator only sees the
     // result once verify has accepted (passed) or rejected (failed) the delivery —

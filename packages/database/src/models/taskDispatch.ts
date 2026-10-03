@@ -1,19 +1,24 @@
 import type {
   AgentTier,
+  AutomationOccurrenceSnapshot,
   OrviloAgentAgencyConfig,
   ProjectOrchestrationPolicy,
   TaskDispatchOrigin,
   TaskDispatchPhase,
   TaskDispatchSettlementGrant,
+  TaskEventDispatchEvidence,
+  TaskExecutionContractContent,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
   TaskRunTrigger,
 } from '@orvilo/types';
+import { executionParkedReason } from '@orvilo/types';
 import {
   and,
   asc,
   desc,
   eq,
+  gt,
   inArray,
   isNotNull,
   isNull,
@@ -29,12 +34,14 @@ import {
 import { agents } from '../schemas/agent';
 import { goals } from '../schemas/goal';
 import { goalNodes } from '../schemas/goalGraph';
+import { mcpEventInbox, mcpEventTriggerRuns } from '../schemas/mcpEvents';
 import { projectAgents, projects } from '../schemas/project';
 import type { TaskDispatchItem, TaskTopicItem } from '../schemas/task';
 import { taskDispatches, tasks, taskTopics } from '../schemas/task';
 import { teams } from '../schemas/team';
 import { topics } from '../schemas/topic';
 import type { OrviloDatabase, Transaction } from '../type';
+import { snapshotAutomationDefinition } from '../utils/automationOccurrence';
 import { idGenerator } from '../utils/idGenerator';
 import { LinearSyncModel } from './linearSync';
 import { normalizeProjectOrchestrationPolicy } from './projectOrchestrationPolicy';
@@ -66,6 +73,7 @@ const PROVISIONABLE_PHASES: TaskDispatchPhase[] = ['requested', 'claimed'];
 /** Column projection shared by the resume-sweep candidate finders. */
 const resumeCandidateColumns = () => ({
   dispatchId: taskDispatches.id,
+  eventEvidence: taskDispatches.eventEvidence,
   fence: taskDispatches.fence,
   generation: taskDispatches.generation,
   idempotencyKey: taskDispatches.idempotencyKey,
@@ -142,24 +150,7 @@ export type EventDispatchEvidenceCode =
  * are all re-verified under the same task lock that mints the dispatch —
  * verify association, never marker presence.
  */
-export interface EventDispatchEvidence {
-  /** Upstream dispatch ids the event names as its cause, when carried. */
-  causationIds?: string[];
-  eventId: string;
-  /** Stable occurrence key — must equal the claim's idempotency key. */
-  idempotencyKey: string;
-  /** Inbox row the delivery was claimed under (`mcp_event_inbox.id`). */
-  inboxRef: string;
-  sourceId: string;
-  subscriptionId: string;
-  tenantId: string;
-  triggerId: string;
-  triggerRevision: number;
-  /** Durable fan-out row (`mcp_event_trigger_runs.id`). */
-  triggerRunId: string;
-  userId: string;
-  workspaceId: string;
-}
+export type EventDispatchEvidence = TaskEventDispatchEvidence;
 
 /**
  * An `event` claim whose cited evidence no longer verifies — stale trigger
@@ -181,6 +172,7 @@ export interface RequestTaskDispatchInput {
   dispatchId?: string;
   /** Server-verified admission evidence for `trigger: 'event'` rows. */
   eventEvidence?: EventDispatchEvidence;
+  expectedDefinitionVersionId?: string;
   idempotencyKey: string;
   /** Raw actor identity persisted separately from the `trigger:actor`
    *  `requestedBy` audit string (SA05-B). */
@@ -247,6 +239,7 @@ export interface TaskPlanningDispatchCandidate {
  */
 export interface TaskDispatchResumeCandidate {
   dispatchId: string;
+  eventEvidence?: TaskEventDispatchEvidence | null;
   fence: number;
   generation: number;
   idempotencyKey: string;
@@ -517,10 +510,9 @@ export class TaskDispatchModel {
    * Discover durable start intents that never reached provisioning — a
    * `requested` row no worker ever claimed, or a `claimed` row whose worker
    * lease lapsed before the environment started. Planner intents are owned
-   * by their dedicated sweep and excluded here. Event intents stay
-   * discoverable so the sweep can retire them: they cannot be re-driven
-   * without the event's admission evidence, so the only convergence is
-   * `requestStop`.
+   * by their dedicated sweep and excluded here. Event intents are re-driven
+   * with their stored evidence, re-verified at the shared admission boundary.
+   * Legacy rows without evidence are retired rather than reconstructed.
    */
   static async findStaleStartCandidates(
     db: OrviloDatabase,
@@ -552,9 +544,8 @@ export class TaskDispatchModel {
    * Discover parked `waiting` dispatches whose recorded reason a
    * re-evaluation may clear — capacity/budget ceilings, a newly assigned
    * agent, a resumed admission flag, a retryable prepare failure. Reasons
-   * owned by another sweep (`goal_*`), evidence-bound intents (`event:*`),
-   * planner intents, and terminal-coded waits are skipped: none of them can
-   * resume from a generic re-drive.
+   * owned by another sweep (`goal_*`), event intents without stored evidence,
+   * planner intents, and terminal-coded waits are skipped.
    */
   static async findWaitingResumeCandidates(
     db: OrviloDatabase,
@@ -574,7 +565,10 @@ export class TaskDispatchModel {
           eq(taskDispatches.phase, 'waiting'),
           lt(taskDispatches.updatedAt, staleBefore),
           or(isNull(taskDispatches.leaseExpiresAt), lt(taskDispatches.leaseExpiresAt, now)),
-          notLike(taskDispatches.requestedBy, 'event:%'),
+          or(
+            notLike(taskDispatches.requestedBy, 'event:%'),
+            isNotNull(taskDispatches.eventEvidence),
+          ),
           notLike(taskDispatches.requestedBy, 'orchestrator:planning:%'),
           or(
             isNull(taskDispatches.waitingReason),
@@ -816,6 +810,15 @@ export class TaskDispatchModel {
         .limit(1);
       if (existing) {
         this.assertIdempotencyTarget(existing, input.taskId);
+        if (input.trigger === 'event') {
+          const invalid = await this.verifyEventEvidence(
+            tx,
+            task,
+            existing.eventEvidence ?? input.eventEvidence,
+            existing.id,
+          );
+          if (invalid) throw invalid;
+        }
         let resumedWaitingReason: string | null | undefined;
         if (
           existing.phase === 'waiting' &&
@@ -890,6 +893,15 @@ export class TaskDispatchModel {
         return { dispatch: existing, state: 'existing' as const, task };
       }
 
+      if (
+        input.expectedDefinitionVersionId &&
+        snapshotAutomationDefinition(task).definitionVersionId !== input.expectedDefinitionVersionId
+      ) {
+        throw new TaskDispatchIdempotencyConflictError(
+          'Automation definition changed before occurrence publication',
+        );
+      }
+
       const [active] = await tx
         .select()
         .from(taskDispatches)
@@ -898,7 +910,11 @@ export class TaskDispatchModel {
         )
         .limit(1)
         .for('update');
-      if (active?.phase === 'waiting') {
+      if (
+        active?.phase === 'waiting' &&
+        !active.automationOccurrence &&
+        !['event', 'schedule', 'heartbeat'].includes(input.trigger)
+      ) {
         const requestedTrigger = active.requestedBy.split(':', 1)[0];
         const activeTrigger = (
           ['event', 'goal', 'heartbeat', 'manual', 'orchestrator', 'schedule'] as const
@@ -962,6 +978,54 @@ export class TaskDispatchModel {
         if (evidenceStale) throw evidenceStale;
       }
 
+      let automationOccurrence: AutomationOccurrenceSnapshot | undefined;
+      if (input.trigger === 'event') {
+        const evidence = input.eventEvidence!;
+        const [savedRun] = await tx
+          .select()
+          .from(mcpEventTriggerRuns)
+          .where(eq(mcpEventTriggerRuns.id, evidence.triggerRunId))
+          .limit(1);
+        const [inbox] = await tx
+          .select()
+          .from(mcpEventInbox)
+          .where(eq(mcpEventInbox.id, evidence.inboxRef))
+          .limit(1);
+        if (!inbox || !savedRun)
+          throw new TaskDispatchEventEvidenceError('invalid-event', 'Event input missing');
+        automationOccurrence = savedRun.automationOccurrence ?? {
+          definition: snapshotAutomationDefinition(task),
+          occurrenceId: savedRun.id,
+          input: {
+            data: inbox.delivery.event.data,
+            eventId: inbox.eventId,
+            eventType: inbox.delivery.event.name,
+            inputHash: inbox.payloadHash,
+            inputRef: inbox.id,
+            receivedAt: new Date(inbox.receivedAt).toISOString(),
+            source: inbox.connectorId,
+          },
+        };
+        await tx
+          .update(mcpEventTriggerRuns)
+          .set({ automationOccurrence })
+          .where(eq(mcpEventTriggerRuns.id, savedRun.id));
+      } else if (input.trigger === 'schedule' || input.trigger === 'heartbeat') {
+        automationOccurrence = {
+          definition: snapshotAutomationDefinition(task),
+          occurrenceId: input.idempotencyKey,
+        };
+      }
+      if (
+        automationOccurrence &&
+        automationOccurrence.definition.assigneeAgentId !== task.assigneeAgentId
+      ) {
+        throw new TaskDispatchEventEvidenceError(
+          'revoked',
+          'Automation execution identity changed',
+        );
+      }
+
       const waitingReason =
         (await this.projectDispatchWaitingReason(tx, task, input.trigger)) ??
         (await this.goalDispatchWaitingReason(tx, task, input.trigger));
@@ -970,6 +1034,8 @@ export class TaskDispatchModel {
         .insert(taskDispatches)
         .values({
           agentId: task.assigneeAgentId,
+          automationOccurrence: automationOccurrence ?? null,
+          eventEvidence: input.eventEvidence ?? null,
           generation,
           id: input.dispatchId ?? idGenerator('taskDispatches'),
           idempotencyKey: input.idempotencyKey,
@@ -994,6 +1060,45 @@ export class TaskDispatchModel {
       await tx.update(tasks).set({ executionGeneration: generation }).where(eq(tasks.id, task.id));
 
       return { dispatch, state: 'created' as const, task };
+    });
+  }
+
+  /** First prompt freeze wins; retries cannot replace input or policy. */
+  async freezeAutomationContent(input: {
+    dispatchId: string;
+    owner: string;
+    fence: number;
+    content: TaskExecutionContractContent;
+    fileIds: string[];
+  }): Promise<AutomationOccurrenceSnapshot | null> {
+    return this.db.transaction(async (tx) => {
+      const [dispatch] = await tx
+        .select()
+        .from(taskDispatches)
+        .where(
+          and(
+            eq(taskDispatches.id, input.dispatchId),
+            this.scopeCondition(),
+            eq(taskDispatches.leaseOwner, input.owner),
+            eq(taskDispatches.fence, input.fence),
+            inArray(taskDispatches.phase, ['claimed', 'provisioning']),
+            gt(taskDispatches.leaseExpiresAt, new Date()),
+          ),
+        )
+        .for('update')
+        .limit(1);
+      if (!dispatch?.automationOccurrence) return null;
+      if (dispatch.automationOccurrence.content) return dispatch.automationOccurrence;
+      const snapshot = {
+        ...dispatch.automationOccurrence,
+        content: input.content,
+        fileIds: input.fileIds,
+      };
+      await tx
+        .update(taskDispatches)
+        .set({ automationOccurrence: snapshot })
+        .where(eq(taskDispatches.id, dispatch.id));
+      return snapshot;
     });
   }
 
@@ -1029,8 +1134,9 @@ export class TaskDispatchModel {
         task &&
         task.workspaceId === (this.workspaceId ?? null) &&
         task.executionGeneration === dispatch.generation &&
-        task.requirementRevision === dispatch.requirementRevision &&
-        task.policyRevision === dispatch.policyRevision &&
+        (Boolean(dispatch.automationOccurrence) ||
+          (task.requirementRevision === dispatch.requirementRevision &&
+            task.policyRevision === dispatch.policyRevision)) &&
         matchesDispatchAssignee(task, dispatch);
       if (!isCurrent) {
         await tx
@@ -1253,11 +1359,21 @@ export class TaskDispatchModel {
           task &&
           task.workspaceId === (this.workspaceId ?? null) &&
           task.executionGeneration === dispatch.generation &&
-          task.requirementRevision === dispatch.requirementRevision &&
-          task.policyRevision === dispatch.policyRevision &&
+          (Boolean(dispatch.automationOccurrence) ||
+            (task.requirementRevision === dispatch.requirementRevision &&
+              task.policyRevision === dispatch.policyRevision)) &&
           matchesDispatchAssignee(task, dispatch),
         );
         const requestedTrigger = dispatch.requestedBy.split(':', 1)[0];
+        if (requestedTrigger === 'event' && task) {
+          const invalid = await this.verifyEventEvidence(
+            tx,
+            task,
+            dispatch.eventEvidence ?? undefined,
+            dispatch.id,
+          );
+          if (invalid) throw invalid;
+        }
         const automatedTrigger = ['event', 'heartbeat', 'orchestrator', 'schedule'].includes(
           requestedTrigger,
         )
@@ -1266,10 +1382,20 @@ export class TaskDispatchModel {
               'event' | 'heartbeat' | 'orchestrator' | 'schedule'
             >)
           : null;
-        const policyWaitingReason =
-          currentContract && task && automatedTrigger
-            ? await this.projectDispatchWaitingReason(tx, task, automatedTrigger, dispatch.id)
+        const automationWaitingReason =
+          task &&
+          ['event', 'heartbeat', 'schedule'].includes(requestedTrigger) &&
+          (executionParkedReason(task) ||
+            task.automationMode !== requestedTrigger ||
+            task.workflowCategory === 'done' ||
+            task.workflowCategory === 'canceled')
+            ? 'automation_inactive'
             : null;
+        const policyWaitingReason =
+          automationWaitingReason ??
+          (currentContract && task && automatedTrigger
+            ? await this.projectDispatchWaitingReason(tx, task, automatedTrigger, dispatch.id)
+            : null);
         const goalWaitingReason =
           currentContract && task && requestedTrigger !== 'manual'
             ? await this.goalDispatchWaitingReason(tx, task, requestedTrigger as TaskRunTrigger)
@@ -1490,10 +1616,17 @@ export class TaskDispatchModel {
     tx: Transaction,
     task: TaskItem,
     evidence: EventDispatchEvidence | undefined,
+    existingDispatchId?: string,
   ): Promise<TaskDispatchEventEvidenceError | null> {
     const denied = (code: EventDispatchEvidenceCode, message: string) =>
       new TaskDispatchEventEvidenceError(code, message);
     if (!evidence) return denied('invalid-event', 'Event admission evidence missing');
+    if (
+      task.automationMode !== 'event' ||
+      executionParkedReason(task.context) ||
+      ['done', 'canceled'].includes(task.workflowCategory)
+    )
+      return denied('admission-held', 'Event automation is paused or terminal');
     const now = Date.now();
     const result = await tx.execute<{
       binding_expires: string | null;
@@ -1509,6 +1642,7 @@ export class TaskDispatchModel {
       member_role: string | null;
       member_suspended: Date | null;
       run_status: string | null;
+      run_dispatch: string | null;
       task_creator: string | null;
       task_deleted: Date | null;
       trigger_enabled: boolean | null;
@@ -1519,7 +1653,7 @@ export class TaskDispatchModel {
       trigger_user: string | null;
       trigger_workspace: string | null;
     }>(sql`
-      SELECT run.status AS run_status,
+      SELECT run.status AS run_status, run.dispatch_id AS run_dispatch,
              t.revision AS trigger_now,
              t.enabled AS trigger_enabled,
              t.task_id AS trigger_task,
@@ -1562,7 +1696,14 @@ export class TaskDispatchModel {
       LIMIT 1`);
     const row = result.rows[0];
     if (!row) return denied('invalid-event', 'Event admission receipt not found');
-    if (row.run_status !== 'pending') {
+    if (
+      row.run_status !== 'pending' &&
+      !(
+        existingDispatchId &&
+        row.run_status === 'accepted' &&
+        row.run_dispatch === existingDispatchId
+      )
+    ) {
       return denied('invalid-event', 'Event admission receipt already settled');
     }
     if (
@@ -1579,10 +1720,9 @@ export class TaskDispatchModel {
     }
     if (row.trigger_enabled !== true) return denied('revoked', 'Event trigger disabled');
     if (
-      row.inbox_status !== 'processing' ||
       row.inbox_event !== evidence.eventId ||
-      !row.lease_until ||
-      Number(row.lease_until) <= now
+      (!existingDispatchId &&
+        (row.inbox_status !== 'processing' || !row.lease_until || Number(row.lease_until) <= now))
     ) {
       return denied('invalid-event', 'Event inbox claim no longer held');
     }
@@ -2215,6 +2355,7 @@ export class TaskDispatchModel {
   }): Promise<boolean> {
     const [owner] = await this.db
       .select({
+        occurrence: taskDispatches.automationOccurrence,
         dispatchAgentId: taskDispatches.agentId,
         dispatchFence: taskDispatches.fence,
         dispatchGeneration: taskDispatches.generation,
@@ -2247,8 +2388,9 @@ export class TaskDispatchModel {
       owner.dispatchPolicyRevision === input.policyRevision &&
       owner.dispatchRequirementRevision === input.requirementRevision &&
       owner.taskGeneration === input.generation &&
-      owner.taskPolicyRevision === input.policyRevision &&
-      owner.taskRequirementRevision === input.requirementRevision &&
+      (owner.occurrence ||
+        (owner.taskPolicyRevision === input.policyRevision &&
+          owner.taskRequirementRevision === input.requirementRevision)) &&
       (owner.taskAgentId === owner.dispatchAgentId ||
         (owner.dispatchAgentId !== null &&
           owner.dispatchRequestedBy.startsWith('manual:') &&
@@ -2296,8 +2438,9 @@ export class TaskDispatchModel {
       const currentGeneration = task.executionGeneration === dispatch.generation;
       const currentContract =
         currentGeneration &&
-        task.requirementRevision === dispatch.requirementRevision &&
-        task.policyRevision === dispatch.policyRevision &&
+        (Boolean(dispatch.automationOccurrence) ||
+          (task.requirementRevision === dispatch.requirementRevision &&
+            task.policyRevision === dispatch.policyRevision)) &&
         matchesDispatchAssignee(task, dispatch);
 
       if (['canceled', 'failed', 'succeeded'].includes(dispatch.phase)) {

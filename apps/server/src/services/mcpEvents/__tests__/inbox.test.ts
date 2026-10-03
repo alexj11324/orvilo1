@@ -90,6 +90,32 @@ describe('SQL inbox binding and lifecycle fences', () => {
     ).toBe(0);
   });
 
+  it('enforces a source queue bound under concurrent receipts while acknowledging duplicates', async () => {
+    const limited = new SqlMcpEventInbox(database, { maxPending: 1 });
+    const other = {
+      ...input,
+      event: { ...input.event, eventId: 'evt-b' },
+      rawBody: Buffer.from(JSON.stringify({ ...input.event, eventId: 'evt-b' })),
+    };
+    expect(await Promise.all([limited.accept(input), limited.accept(other)])).toEqual([
+      'accepted',
+      'overloaded',
+    ]);
+    expect(await limited.accept(input)).toBe('duplicate');
+    expect((await database.query('SELECT event_id FROM mcp_event_inbox')).rows).toEqual([
+      { event_id: input.event.eventId },
+    ]);
+    const [claimed] = await limited.claim(10, 100, 1);
+    await limited.settle(claimed.id, claimed.leaseToken!, 11, { status: 'completed' });
+    expect(await limited.accept(other)).toBe('accepted');
+  });
+
+  it('requires a real transaction for bounded ingress instead of using an unsafe count/insert race', async () => {
+    const unsafe = new SqlMcpEventInbox({ query: database.query.bind(database) });
+    await expect(unsafe.accept(input)).rejects.toThrow('Transactional inbox storage required');
+    expect((await database.query('SELECT id FROM mcp_event_inbox')).rows).toEqual([]);
+  });
+
   it('serializes renewal claims and rejects late lifecycle writes', async () => {
     const lease = await bindings.claimRefresh(scope, binding.id, 10, 100);
     expect(lease?.revision).toBe(2);
@@ -124,6 +150,18 @@ describe('SQL inbox binding and lifecycle fences', () => {
       await bindings.verifyPending('opaque-a', 'remote-b', 'challenge-b', 'other-challenge', 2),
     ).toBe(false);
     expect((await bindings.get(scope, binding.id))?.remoteSubscriptionId).toBe('remote-a');
+  });
+
+  it('renews only the current live lease and never revives expired ownership', async () => {
+    await inbox.accept(input);
+    const [delivery] = await inbox.claim(10, 20, 1);
+    expect(await inbox.renew(delivery.id, 'foreign-token', 15, 20)).toBe(false);
+    expect(await inbox.renew(delivery.id, delivery.leaseToken!, 20, 20)).toBe(true);
+    expect(await inbox.claim(30, 20, 1)).toEqual([]);
+    expect(await inbox.renew(delivery.id, delivery.leaseToken!, 40, 20)).toBe(false);
+    const [replacement] = await inbox.claim(40, 20, 1);
+    expect(await inbox.renew(delivery.id, delivery.leaseToken!, 41, 20)).toBe(false);
+    expect(await inbox.renew(replacement.id, replacement.leaseToken!, 41, 20)).toBe(true);
   });
 
   it('fences an expired acknowledgement even before another worker claims it', async () => {

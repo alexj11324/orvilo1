@@ -1,4 +1,5 @@
 import type {
+  TaskAutomationMode,
   TaskDetailActivityAuthor,
   TaskDetailData,
   TaskDetailSubtask,
@@ -297,7 +298,7 @@ export class TaskDetailSliceActionImpl {
   createTask = async (params: {
     assigneeAgentId?: string;
     assigneeUserId?: string;
-    automationMode?: 'heartbeat' | 'schedule';
+    automationMode?: TaskAutomationMode;
     config?: Record<string, unknown>;
     createdByAgentId?: string;
     description?: string;

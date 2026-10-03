@@ -6,6 +6,12 @@ import { TaskDependencyError } from '@/database/models/taskDependency';
 import { createTaskRuntime, taskRuntime } from '../task';
 
 const verifyMocks = vi.hoisted(() => ({ createCriteriaFromDrafts: vi.fn() }));
+const automationInputMocks = vi.hoisted(() => ({ findByTaskId: vi.fn() }));
+vi.mock('@/database/models/taskTopic', () => ({
+  TaskTopicModel: vi.fn().mockImplementation(function () {
+    return { findByTaskId: automationInputMocks.findByTaskId };
+  }),
+}));
 const deletionMocks = vi.hoisted(() => ({
   cleanupTaskWorktrees: vi.fn(),
   snapshotTaskWorktrees: vi.fn(),
@@ -111,6 +117,169 @@ describe('taskRuntime.factory', () => {
 });
 
 describe('createTaskRuntime', () => {
+  describe('readAutomationInput', () => {
+    const makeRuntime = (overrides: Record<string, unknown> = {}) => {
+      const findById = vi.fn().mockResolvedValue({ id: 'task-1', content: 'Mutable definition' });
+      const deps = {
+        agentModel: {} as any,
+        db: {} as any,
+        operationId: 'operation-1',
+        taskCaller: {} as any,
+        taskId: 'task-1',
+        taskModel: { findById } as any,
+        taskService: {} as any,
+        topicId: 'topic-1',
+        userId: 'user-1',
+        workspaceId: 'workspace-1',
+        ...overrides,
+      };
+      return { findById, runtime: createTaskRuntime(deps) };
+    };
+
+    const frozenInput = (data: unknown) => ({
+      contract: {
+        occurrence: {
+          input: { data, inputHash: 'sha256:frozen-hash', inputRef: 'inbox:frozen-ref' },
+        },
+      },
+      operationId: 'operation-1',
+      taskId: 'task-1',
+      topicId: 'topic-1',
+    });
+
+    beforeEach(() => {
+      automationInputMocks.findByTaskId.mockReset();
+      automationInputMocks.findByTaskId.mockResolvedValue([
+        frozenInput({ marker: 'FROZEN-UNIQUE' }),
+      ]);
+    });
+
+    it('reads the frozen input only through the trusted task/topic/operation context', async () => {
+      const { runtime, findById } = makeRuntime();
+      const result = await runtime.readAutomationInput({});
+      expect(result.success).toBe(true);
+      expect(findById).toHaveBeenCalledWith('task-1');
+      expect(automationInputMocks.findByTaskId).toHaveBeenCalledWith('task-1');
+      expect(JSON.parse(result.content)).toEqual({
+        chunk: JSON.stringify({ marker: 'FROZEN-UNIQUE' }),
+        inputHash: 'sha256:frozen-hash',
+        inputRef: 'inbox:frozen-ref',
+        nextOffset: null,
+        totalCharacters: JSON.stringify({ marker: 'FROZEN-UNIQUE' }).length,
+        untrusted: true,
+      });
+    });
+
+    it.each(['db', 'userId', 'taskId', 'topicId', 'operationId'])(
+      'rejects missing trusted %s context',
+      async (key) => {
+        const { runtime } = makeRuntime({ [key]: undefined });
+        const result = await runtime.readAutomationInput({});
+        expect(result).toEqual({
+          content: 'No authorized automation run context.',
+          success: false,
+        });
+        expect(automationInputMocks.findByTaskId).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects a task that the scoped task model cannot read', async () => {
+      const { runtime, findById } = makeRuntime();
+      findById.mockResolvedValueOnce(undefined);
+      expect(await runtime.readAutomationInput({})).toEqual({
+        content: 'No authorized automation run context.',
+        success: false,
+      });
+      expect(automationInputMocks.findByTaskId).not.toHaveBeenCalled();
+    });
+
+    it.each([
+      { operationId: 'another-operation', topicId: 'topic-1' },
+      { operationId: 'operation-1', topicId: 'another-topic' },
+    ])('rejects a nonmatching run context %j', async (context) => {
+      const { runtime } = makeRuntime(context);
+      expect(await runtime.readAutomationInput({})).toEqual({
+        content: 'This run has no automation input.',
+        success: false,
+      });
+    });
+
+    it('does not accept arbitrary refs, URLs or operation overrides supplied in tool arguments', async () => {
+      const { runtime } = makeRuntime();
+      const result = await runtime.readAutomationInput({
+        inputRef: 'inbox:another-tenant',
+        operationId: 'another-operation',
+        taskId: 'another-task',
+        url: 'https://external.invalid/private-input',
+      } as any);
+      expect(result.success).toBe(true);
+      expect(JSON.parse(result.content)).toMatchObject({
+        chunk: JSON.stringify({ marker: 'FROZEN-UNIQUE' }),
+        inputHash: 'sha256:frozen-hash',
+        inputRef: 'inbox:frozen-ref',
+      });
+      expect(automationInputMocks.findByTaskId).toHaveBeenCalledExactlyOnceWith('task-1');
+    });
+
+    it('does not let tool arguments provide absent trusted operation context', async () => {
+      const { runtime } = makeRuntime({ operationId: undefined });
+      const result = await runtime.readAutomationInput({ operationId: 'operation-1' } as any);
+      expect(result.success).toBe(false);
+      expect(automationInputMocks.findByTaskId).not.toHaveBeenCalled();
+    });
+
+    it('reads a payload over 24000 characters in bounded chunks with unchanged snapshot identity', async () => {
+      const data = { marker: 'FROZEN-LARGE', report: 'x'.repeat(25000) };
+      const serialized = JSON.stringify(data);
+      automationInputMocks.findByTaskId.mockResolvedValue([frozenInput(data)]);
+      const { runtime } = makeRuntime();
+      const first = JSON.parse((await runtime.readAutomationInput({})).content);
+      expect(first).toMatchObject({ nextOffset: 16000, totalCharacters: serialized.length });
+      expect(first.chunk).toHaveLength(16000);
+      const second = JSON.parse(
+        (await runtime.readAutomationInput({ offset: first.nextOffset })).content,
+      );
+      expect(second.nextOffset).toBeNull();
+      expect(second.chunk.length).toBeLessThanOrEqual(16000);
+      expect(first.chunk + second.chunk).toBe(serialized);
+      for (const chunk of [first, second]) {
+        expect(chunk).toMatchObject({
+          inputHash: 'sha256:frozen-hash',
+          inputRef: 'inbox:frozen-ref',
+          untrusted: true,
+        });
+      }
+    });
+
+    it.each([
+      { limit: 16001 },
+      { limit: 0 },
+      { limit: -1 },
+      { limit: 2.5 },
+      { offset: -1 },
+      { offset: 0.5 },
+      { offset: Number.NaN },
+    ])('rejects an invalid chunk range %j', async (args) => {
+      const { runtime } = makeRuntime();
+      expect(await runtime.readAutomationInput(args)).toEqual({
+        content: 'Invalid input chunk range.',
+        success: false,
+      });
+    });
+
+    it('supports a smaller requested chunk and terminates past the end of the snapshot', async () => {
+      const { runtime } = makeRuntime();
+      const first = JSON.parse((await runtime.readAutomationInput({ limit: 4 })).content);
+      expect(first.chunk).toBe('{"ma');
+      expect(first.nextOffset).toBe(4);
+      const end = JSON.parse(
+        (await runtime.readAutomationInput({ offset: first.totalCharacters + 1 })).content,
+      );
+      expect(end.chunk).toBe('');
+      expect(end.nextOffset).toBeNull();
+    });
+  });
+
   describe('task comments', () => {
     it('adds a comment to the current task with agent attribution', async () => {
       const taskCaller = {

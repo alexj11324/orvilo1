@@ -1,5 +1,6 @@
 import type { TaskRunPromptGoalLoop } from '@orvilo/prompts';
 import type {
+  AutomationOccurrenceSnapshot,
   TaskExecutionContract,
   TaskExecutionContractContent,
   TaskExecutionEnvironmentSnapshot,
@@ -40,6 +41,7 @@ export interface BuildTaskExecutionContractInput {
   } | null;
   /** Run intent this contract was minted under. */
   intent?: TaskRunIntent;
+  occurrence?: AutomationOccurrenceSnapshot;
   /** Server-derived replan evidence (`authorized_replan` only). */
   replan?: TaskExecutionContract['replan'];
   /** Contract this attempt's content descends from, when one exists. */
@@ -60,6 +62,7 @@ export function buildTaskExecutionContract(
 ): TaskExecutionContract {
   const contract: TaskExecutionContract = {
     acceptance: { enabled: input.acceptanceEnabled },
+    ...(input.occurrence ? { occurrence: input.occurrence } : {}),
     ...(input.content ? { content: input.content } : {}),
     ...(input.contractId ? { contractId: input.contractId } : {}),
     ...(input.contractRevision != null ? { revision: input.contractRevision } : {}),

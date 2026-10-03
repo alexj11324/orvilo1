@@ -1594,7 +1594,7 @@ describe('spawnAgent', () => {
     }
   });
 
-  it('mounts mcpServers on session/new for standard-ACP agents', async () => {
+  it('supplies required ACP HTTP headers when mounting standard-ACP tools', async () => {
     const fake = createStandardAcpProc();
     nextFakeProc = fake.proc;
     const killSpy = vi.spyOn(process, 'kill').mockImplementation(() => true);
@@ -1602,7 +1602,7 @@ describe('spawnAgent', () => {
     try {
       const { spawnAgent } = await import('./spawnAgent');
       const handle = await spawnAgent({
-        agentType: 'claude-code',
+        agentType: 'opencode',
         mcpServers: [{ name: 'orvilo_cc', type: 'http', url: 'http://127.0.0.1:9999/op' }],
         operationId: 'op-mcp',
         prompt: 'hi',
@@ -1614,7 +1614,9 @@ describe('spawnAgent', () => {
 
       expect(
         fake.requests.find(({ method }) => method === 'session/new')?.params?.mcpServers,
-      ).toEqual([{ name: 'orvilo_cc', type: 'http', url: 'http://127.0.0.1:9999/op' }]);
+      ).toEqual([
+        { name: 'orvilo_cc', type: 'http', url: 'http://127.0.0.1:9999/op', headers: [] },
+      ]);
     } finally {
       killSpy.mockRestore();
     }

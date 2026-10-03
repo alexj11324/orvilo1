@@ -45,6 +45,7 @@ import { merge } from '@/utils/merge';
 import { agentOperations } from '../schemas/agentOperations';
 import { executionGrants } from '../schemas/executionGrant';
 import { documents } from '../schemas/file';
+import { mcpEventTriggers } from '../schemas/mcpEvents';
 import type {
   NewTaskActivity,
   NewTaskComment,
@@ -410,6 +411,7 @@ const RUNNABLE_AUTOMATION = and(
       ne(tasks.schedulePattern, ''),
     ),
     and(eq(tasks.automationMode, 'heartbeat'), gt(tasks.heartbeatInterval, 0)),
+    eq(tasks.automationMode, 'event'),
   ),
 )!;
 
@@ -1985,7 +1987,23 @@ export class TaskModel {
 
     if (statuses?.length) {
       const statusesPredicate = predicateForLegacyStatuses(statuses);
-      if (statusesPredicate) conditions.push(statusesPredicate);
+      if (statusesPredicate) {
+        if (options.automated) {
+          const eventEnabled = sql`exists (select 1 from ${mcpEventTriggers} where ${mcpEventTriggers.taskId} = ${tasks.id} and ${mcpEventTriggers.tenantId} = ${tasks.workspaceId} and ${mcpEventTriggers.enabled}) AND NOT ${isParked}`;
+          const eventStatus = or(
+            statuses.some((status) => ['backlog', 'running', 'scheduled'].includes(status))
+              ? eventEnabled
+              : undefined,
+            statuses.includes('paused') ? sql`NOT (${eventEnabled})` : undefined,
+          );
+          conditions.push(
+            or(
+              and(ne(tasks.automationMode, 'event'), statusesPredicate),
+              and(eq(tasks.automationMode, 'event'), eventStatus ?? sql`false`),
+            )!,
+          );
+        } else conditions.push(statusesPredicate);
+      }
     }
     if (priorities?.length) conditions.push(inArray(tasks.priority, priorities));
     if (after) {

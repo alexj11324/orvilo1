@@ -349,6 +349,11 @@ describe('MCP Events durable acceptance', () => {
     });
     // The SQL transport boundary is delayed; the receiver and inbox are real.
     const delayedInbox = new SqlMcpEventInbox({
+      async transaction(work) {
+        reached();
+        await gate;
+        return database.transaction(work);
+      },
       async query<T>(sql: string, parameters?: unknown[]) {
         reached();
         await gate;

@@ -29,14 +29,21 @@ export type TaskDispatchResumeOutcome =
   | { dispatchId: string; outcome: 'stopped'; reason: string }
   | { dispatchId: string; outcome: 'waiting'; reason: string };
 
-const RESUMABLE_TRIGGERS = ['goal', 'heartbeat', 'manual', 'orchestrator', 'schedule'] as const;
+const RESUMABLE_TRIGGERS = [
+  'event',
+  'goal',
+  'heartbeat',
+  'manual',
+  'orchestrator',
+  'schedule',
+] as const;
 
 /**
  * The trigger prefix persisted in `requestedBy` (`${trigger}:${actor}`). A
  * stale row is re-driven under its original trigger so policy and goal gates
- * see the same requester class the intent was minted with. `event` rows are
- * never re-driven: their admission evidence belongs to the event delivery
- * that minted them and a sweep cannot mint a replacement.
+ * see the same requester class the intent was minted with. Events reuse their
+ * server-persisted evidence; request() revalidates live permission and binding
+ * before resuming, without minting a replacement occurrence.
  */
 const resumeTrigger = (requestedBy: string): TaskRunTrigger | null => {
   const prefix = requestedBy.split(':', 1)[0];
@@ -62,7 +69,7 @@ export const processTaskDispatchResume = async (input: {
   const stopReason =
     candidate.recoveryAttempts >= MAX_RESUME_ATTEMPTS
       ? 'resume_attempts_exhausted'
-      : !trigger
+      : !trigger || (trigger === 'event' && !candidate.eventEvidence)
         ? 'resume_unsupported_trigger'
         : null;
   if (stopReason || !trigger) {
@@ -88,6 +95,7 @@ export const processTaskDispatchResume = async (input: {
 
   try {
     await new TaskRunnerService(db, candidate.userId, candidate.workspaceId ?? undefined).runTask({
+      ...(candidate.eventEvidence ? { eventEvidence: candidate.eventEvidence } : {}),
       idempotencyKey: candidate.idempotencyKey,
       planRevision: candidate.planRevision ?? undefined,
       requestedBy: candidate.requestedBy,

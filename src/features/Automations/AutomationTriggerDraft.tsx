@@ -21,6 +21,7 @@ import {
   formatScheduleDescription,
   nextHeartbeatFiring,
   nextScheduleFiring,
+  normalizeHeartbeatInterval,
 } from '../AgentTasks/AgentTaskDetail/scheduler/helpers';
 import SchedulerForm, {
   type SchedulerFormChange,
@@ -34,7 +35,7 @@ const DEFAULT_PATTERN = '0 9 * * *';
 /** The pre-create trigger draft — persisted as schedule or heartbeat columns. */
 export interface TriggerDraft {
   heartbeatInterval?: number | null;
-  kind: 'heartbeat' | 'schedule';
+  kind: 'event' | 'heartbeat' | 'schedule';
   maxExecutions?: number | null;
   pattern?: string | null;
   timezone?: string | null;
@@ -54,6 +55,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 interface AutomationTriggerDraftProps {
+  disabled?: boolean;
   /** Null → trigger editor collapsed ("manual only"). */
   draft: TriggerDraft | null;
   onChange: (draft: TriggerDraft | null) => void;
@@ -64,23 +66,22 @@ interface AutomationTriggerDraftProps {
  * schedule/heartbeat tabs and next-run preview, but bound to local state
  * instead of a persisted task.
  */
-const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onChange }) => {
+const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>((props) => {
+  const { draft, disabled, onChange } = props;
   const { t } = useTranslation(['chat', 'automation']);
   const enabled = !!draft;
   const kind = draft?.kind ?? 'schedule';
 
-  const [intervalValue, setIntervalValue] = useState<number>(1);
-  const [intervalUnit, setIntervalUnit] = useState<IntervalUnit>('hours');
-
-  const heartbeatSeconds =
-    kind === 'heartbeat'
-      ? intervalUnit === 'hours'
-        ? intervalValue * 3600
-        : Math.max(MIN_MINUTES, intervalValue) * 60
-      : null;
+  const storedSeconds = draft?.heartbeatInterval ?? 3600;
+  const defaultUnit = storedSeconds % 3600 === 0 ? 'hours' : 'minutes';
+  const [selectedUnit, setSelectedUnit] = useState<IntervalUnit>();
+  const intervalUnit = selectedUnit ?? defaultUnit;
+  const intervalValue = storedSeconds / (intervalUnit === 'hours' ? 3600 : 60);
+  const heartbeatSeconds = kind === 'heartbeat' ? storedSeconds : null;
 
   const summary = useMemo(() => {
     if (!draft) return null;
+    if (draft.kind === 'event') return t('events.title', { ns: 'automation' });
     if (draft.kind === 'schedule' && draft.pattern) {
       return formatScheduleDescription(draft.pattern, t);
     }
@@ -106,18 +107,27 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
 
   const setKind = useCallback(
     (next: string) => {
+      if (next === 'event') {
+        onChange({ kind: 'event' });
+        return;
+      }
       const nextKind = next === 'heartbeat' ? 'heartbeat' : 'schedule';
-      const heartbeatInterval =
-        intervalUnit === 'hours' ? intervalValue * 3600 : intervalValue * 60;
+      const heartbeatInterval = normalizeHeartbeatInterval(intervalValue, intervalUnit);
       if (!draft) {
         onChange(
           nextKind === 'schedule'
-            ? { kind: 'schedule', pattern: DEFAULT_PATTERN }
+            ? { kind: 'schedule', pattern: DEFAULT_PATTERN, timezone: dayjs.tz.guess() }
             : { heartbeatInterval, kind: 'heartbeat' },
         );
         return;
       }
-      onChange({ ...draft, heartbeatInterval, kind: nextKind });
+      onChange({
+        ...draft,
+        heartbeatInterval,
+        kind: nextKind,
+        pattern: draft.pattern ?? DEFAULT_PATTERN,
+        timezone: draft.timezone ?? dayjs.tz.guess(),
+      });
     },
     [draft, intervalUnit, intervalValue, onChange],
   );
@@ -143,7 +153,7 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
   );
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-4" inert={disabled}>
       <div className="flex items-center gap-3">
         <div className="flex flex-col flex-1 gap-0.5">
           <div className="font-medium">{t('trigger.section', { ns: 'automation' })}</div>
@@ -153,6 +163,7 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
         </div>
         <Switch
           checked={enabled}
+          disabled={disabled}
           onCheckedChange={(checked) =>
             onChange(
               checked
@@ -177,21 +188,28 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
         <>
           <Tabs value={kind} onValueChange={setKind}>
             <TabsList className="flex w-full">
-              <TabsTrigger className="flex-1" value="schedule">
+              <TabsTrigger className="flex-1" disabled={disabled} value="schedule">
                 <div className="flex items-center gap-1.5 justify-center">
                   <CalendarDays size={14} />
                   <span>{t('taskSchedule.schedulerTab', { ns: 'chat' })}</span>
                 </div>
               </TabsTrigger>
-              <TabsTrigger className="flex-1" value="heartbeat">
+              <TabsTrigger className="flex-1" disabled={disabled} value="heartbeat">
                 <div className="flex items-center gap-1.5 justify-center">
                   <RefreshCw size={14} />
                   <span>{t('taskSchedule.intervalTab', { ns: 'chat' })}</span>
                 </div>
               </TabsTrigger>
+              <TabsTrigger className="flex-1" disabled={disabled} value="event">
+                {t('events.event', { ns: 'automation' })}
+              </TabsTrigger>
             </TabsList>
           </Tabs>
-          {kind === 'schedule' ? (
+          {kind === 'event' ? (
+            <p className="text-sm text-muted-foreground">
+              {t('create.eventDraftHint', { ns: 'automation' })}
+            </p>
+          ) : kind === 'schedule' ? (
             <SchedulerForm
               maxExecutions={draft?.maxExecutions ?? null}
               pattern={draft?.pattern ?? DEFAULT_PATTERN}
@@ -208,14 +226,14 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
                   {t('taskSchedule.every', { ns: 'chat' })}
                 </div>
                 <NumberField
+                  disabled={disabled}
                   min={intervalUnit === 'minutes' ? MIN_MINUTES : 1}
                   style={{ width: 100 }}
                   value={intervalValue}
                   onValueChange={(val) => {
                     const n = typeof val === 'number' ? val : Number(val);
                     if (Number.isNaN(n) || n <= 0) return;
-                    setIntervalValue(n);
-                    handleHeartbeatChange(intervalUnit === 'hours' ? n * 3600 : n * 60);
+                    handleHeartbeatChange(normalizeHeartbeatInterval(n, intervalUnit));
                   }}
                 >
                   <NumberFieldGroup>
@@ -223,6 +241,7 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
                   </NumberFieldGroup>
                 </NumberField>
                 <Select
+                  disabled={disabled}
                   value={intervalUnit}
                   items={[
                     { label: t('taskSchedule.minutes', { ns: 'chat' }), value: 'minutes' },
@@ -231,8 +250,8 @@ const AutomationTriggerDraft = memo<AutomationTriggerDraftProps>(({ draft, onCha
                   onValueChange={(u) => {
                     if (!u) return;
                     const unit = u as IntervalUnit;
-                    setIntervalUnit(unit);
-                    const seconds = unit === 'hours' ? intervalValue * 3600 : intervalValue * 60;
+                    setSelectedUnit(unit);
+                    const seconds = normalizeHeartbeatInterval(intervalValue, unit);
                     handleHeartbeatChange(seconds);
                   }}
                 >

@@ -607,6 +607,26 @@ describe('GatewayConnectionCtr', () => {
   // ─── Tool Call Routing ───
 
   describe('tool call routing', () => {
+    it('returns readiness evidence through the gateway without launching Prime', async () => {
+      const client = await connectAndOpen();
+      client.simulateToolCallRequest(
+        'checkAutomationReadiness',
+        { agentType: 'native' },
+        'readiness',
+      );
+      await vi.waitFor(() => expect(client.sendToolCallResponse).toHaveBeenCalled());
+      const response = client.sendToolCallResponse.mock.calls.at(-1)![0];
+      expect(response.requestId).toBe('readiness');
+      expect(response.result.success).toBe(true);
+      expect(JSON.parse(response.result.content)).toMatchObject({
+        authenticated: 'unknown',
+        executor: 'prime',
+        unattended: false,
+        blockers: ['EXECUTOR_UNSUPPORTED'],
+      });
+      expect(response.result.state).toEqual(JSON.parse(response.result.content));
+    });
+
     async function connectAndOpen() {
       ctr.afterFirstFrame();
       await vi.advanceTimersByTimeAsync(0);

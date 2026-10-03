@@ -1,6 +1,7 @@
 import type { TaskAutomationMode, TaskStatus, TaskWorkflowCategory } from '@orvilo/types';
 
 export const TaskApiName = {
+  readAutomationInput: 'readAutomationInput',
   /** Add a comment to a task */
   addTaskComment: 'addTaskComment',
 

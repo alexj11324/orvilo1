@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import debug from 'debug';
 
 import type { ScheduleNextTopicParams, TaskSchedulerImpl } from './type';
@@ -11,8 +13,8 @@ export type TaskExecutionCallback = (
 ) => Promise<void>;
 
 /**
- * Local task scheduler using setTimeout
- * For local development without QStash
+ * Local wake-up optimization. Persisted scheduler tokens are recovered by
+ * recoverLocalHeartbeatSchedules after a restart or callback interruption.
  */
 export class LocalTaskScheduler implements TaskSchedulerImpl {
   private executionCallback: TaskExecutionCallback | null = null;
@@ -24,11 +26,19 @@ export class LocalTaskScheduler implements TaskSchedulerImpl {
 
   async scheduleNextTopic(params: ScheduleNextTopicParams): Promise<string> {
     const { taskId, userId, delay = 0, tickToken } = params;
-    const scheduleId = `local-task-${taskId}-${Date.now()}`;
+    const scheduleId = tickToken
+      ? `local-task-${taskId}-${createHash('sha256').update(`${userId}:${tickToken}`).digest('hex')}`
+      : `local-task-${taskId}-${Date.now()}`;
+    if (this.pendingSchedules.has(scheduleId)) return scheduleId;
 
     log('Scheduling next topic for task %s (delay: %ds)', taskId, delay);
 
-    const timer = setTimeout(async () => {
+    const dueAt = Date.now() + Math.max(0, delay * 1000);
+    const wake = async () => {
+      if (Date.now() < dueAt) {
+        arm();
+        return;
+      }
       this.pendingSchedules.delete(scheduleId);
 
       if (!this.executionCallback) {
@@ -46,9 +56,18 @@ export class LocalTaskScheduler implements TaskSchedulerImpl {
       } catch (error) {
         log('Failed to execute next topic for task %s: %O', taskId, error);
       }
-    }, delay * 1000);
-
-    this.pendingSchedules.set(scheduleId, timer);
+    };
+    const arm = () => {
+      // Node clamps larger delays to 1ms. Chunk long intervals instead of
+      // accidentally executing a restored future occurrence immediately.
+      const timer = setTimeout(
+        () => void wake(),
+        Math.min(2_147_483_647, Math.max(0, dueAt - Date.now())),
+      );
+      this.pendingSchedules.set(scheduleId, timer);
+      timer.unref?.();
+    };
+    arm();
     return scheduleId;
   }
 
@@ -59,5 +78,11 @@ export class LocalTaskScheduler implements TaskSchedulerImpl {
       this.pendingSchedules.delete(scheduleId);
       log('Canceled schedule %s', scheduleId);
     }
+  }
+
+  /** Process shutdown/HMR cleanup; persistent tokens remain recoverable. */
+  dispose(): void {
+    for (const timer of this.pendingSchedules.values()) clearTimeout(timer);
+    this.pendingSchedules.clear();
   }
 }

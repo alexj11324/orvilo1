@@ -194,6 +194,16 @@ describe('TaskResultBridgeService.deliver', () => {
     expect(execAgent).not.toHaveBeenCalled();
   });
 
+  it('does not render budget exhaustion as task completion', async () => {
+    await new TaskResultBridgeService(db, TEST_USER).deliver({
+      ...baseParams,
+      reason: 'cost_limit',
+    });
+
+    expect(createMsg.mock.calls[0][0].metadata.taskCallback.reason).toBe('interrupted');
+    expect(createMsg.mock.calls[0][0].content).toContain('interrupted');
+  });
+
   it('does not wake the creator when the origin topic was deleted', async () => {
     tryReserve.mockResolvedValue(null);
 

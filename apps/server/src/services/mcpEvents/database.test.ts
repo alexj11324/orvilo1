@@ -24,6 +24,20 @@ describe('MCP Events production SQL adapter', () => {
     expect(result.rows).toEqual([{ first: payload, repeated: payload, tenth: 'ten' }]);
   });
 
+  it('exposes the existing database transaction and rolls back failed admission to the inbox', async () => {
+    const database = new PGlite();
+    databases.push(database);
+    const adapter = createMcpEventsSql(drizzle(database));
+    await adapter.query('CREATE TABLE quota_test (id text)');
+    await expect(
+      adapter.transaction!(async (transaction) => {
+        await transaction.query('INSERT INTO quota_test VALUES ($1)', ['receipt']);
+        throw new Error('commit interrupted');
+      }),
+    ).rejects.toThrow('commit interrupted');
+    expect((await adapter.query('SELECT * FROM quota_test')).rows).toEqual([]);
+  });
+
   it('rejects missing parameters before executing a statement', async () => {
     const database = new PGlite();
     databases.push(database);

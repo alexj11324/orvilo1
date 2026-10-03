@@ -222,6 +222,7 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       topicId: 'topic-1',
     });
     (service as any).taskTopicModel.updateHandoffContent = vi.fn().mockResolvedValue(undefined);
+    (service as any).taskTopicModel.markResultReady = vi.fn().mockResolvedValue(true);
     (service as any).briefModel.create = createBrief;
     (service as any).briefModel.hasUnresolvedUrgentByTask = vi.fn().mockResolvedValue(false);
     // The error branch resolves the user's locale for brief copy.
@@ -262,6 +263,83 @@ describe('TaskLifecycleService.onTopicComplete', () => {
   afterEach(() => {
     mockBrandingUrl.subscription = undefined;
     vi.restoreAllMocks();
+  });
+
+  it('does not publish a result until handoff and integration have both finished', async () => {
+    findById.mockResolvedValue(baseTask({ automationMode: 'event' }));
+    const topic = {
+      contract: { occurrence: { occurrenceId: 'event-1' } },
+      handoff: { summary: '' },
+      integration: { state: 'integrating' },
+      status: 'completed',
+      topicId: 'topic-1',
+    };
+    (service as any).taskTopicModel.findByTopicId.mockResolvedValue(topic);
+    let finishIntegration!: () => void;
+    let integrating = false;
+    const gate = new Promise<void>((resolve) => {
+      finishIntegration = resolve;
+    });
+    integrateOnComplete.mockImplementationOnce(async () => {
+      integrating = true;
+      await gate;
+      topic.integration.state = 'integrated';
+      return 'settled';
+    });
+    (service as any).generateHandoff = vi.fn(async () => {
+      topic.handoff.summary = 'Analyzed UNIQUE-REPORT-784';
+    });
+    const ready = vi.fn(async () => {
+      expect(topic.integration.state).toBe('integrated');
+      expect(topic.handoff.summary).toContain('UNIQUE-REPORT-784');
+      return true;
+    });
+    (service as any).taskTopicModel.markResultReady = ready;
+    const persist = vi.fn(async () => undefined);
+    (service as any).persistAutomationResult = persist;
+    const completion = service.onTopicComplete({
+      taskId: 'task-1',
+      taskIdentifier: 'TASK-1',
+      topicId: 'topic-1',
+      operationId: 'op-1',
+      reason: 'done',
+      runTrigger: 'event',
+      lastAssistantContent: 'Analyze report',
+    });
+    await vi.waitFor(() => expect(integrating).toBe(true));
+    expect(ready).not.toHaveBeenCalled();
+    expect(persist).not.toHaveBeenCalled();
+    finishIntegration();
+    await completion;
+    expect(ready).toHaveBeenCalledWith('task-1', 'topic-1', 'op-1', 'succeeded');
+    expect(persist).toHaveBeenCalledOnce();
+  });
+
+  it('records a first manual automation test run without a prior occurrence', async () => {
+    findById.mockResolvedValue(baseTask({ automationMode: 'schedule' }));
+    (service as any).taskTopicModel.findByTopicId.mockResolvedValue({
+      status: 'completed',
+      topicId: 'topic-1',
+      contract: undefined,
+    });
+    const persist = vi
+      .spyOn(service as any, 'persistAutomationResult')
+      .mockResolvedValue(undefined);
+    await service.onTopicComplete({
+      taskId: 'task-1',
+      taskIdentifier: 'TASK-1',
+      topicId: 'topic-1',
+      operationId: 'op-1',
+      reason: 'done',
+      runTrigger: 'manual',
+    });
+    expect((service as any).taskTopicModel.markResultReady).toHaveBeenCalledWith(
+      'task-1',
+      'topic-1',
+      'op-1',
+      'succeeded',
+    );
+    expect(persist).toHaveBeenCalledOnce();
   });
 
   describe('reopened prerequisite during completion', () => {
@@ -449,25 +527,36 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       });
     });
 
-    it.each(['max_steps', 'cost_limit'])('%s is a successful task completion', async (reason) => {
-      const task = baseTask({ automationMode: null });
-      findById.mockResolvedValue(task);
+    it.each(['max_steps', 'cost_limit', 'timeout'])(
+      '%s fails the run and preserves the raw stop reason',
+      async (reason) => {
+        const task = baseTask({ automationMode: null });
+        findById.mockResolvedValue(task);
 
-      await service.onTopicComplete({
-        operationId: 'op-1',
-        reason,
-        taskId: 'task-1',
-        taskIdentifier: 'TASK-1',
-        topicId: 'topic-1',
-      });
+        await service.onTopicComplete({
+          operationId: 'op-1',
+          reason,
+          taskId: 'task-1',
+          taskIdentifier: 'TASK-1',
+          topicId: 'topic-1',
+        });
 
-      expect(updateTopicStatus).toHaveBeenCalledWith('task-1', 'topic-1', 'op-1', 'completed');
-      expect(updateStatus).toHaveBeenCalledWith(
-        'task-1',
-        'completed',
-        expect.objectContaining({ error: null, workflowCategory: 'done' }),
-      );
-    });
+        expect(updateTopicStatus).toHaveBeenCalledWith(
+          'task-1',
+          'topic-1',
+          'op-1',
+          'failed',
+          reason,
+        );
+        expect(updateStatus).toHaveBeenCalledWith(
+          'task-1',
+          'paused',
+          expect.objectContaining({ error: expect.stringContaining(reason) }),
+        );
+        expect(updateStatus).not.toHaveBeenCalledWith('task-1', 'completed', expect.anything());
+        expect(lastCreatedBrief().metadata).toMatchObject({ error: { code: reason } });
+      },
+    );
 
     it('persists the run last message independently of handoff summary', async () => {
       const task = baseTask({ automationMode: 'heartbeat' });
@@ -525,6 +614,43 @@ describe('TaskLifecycleService.onTopicComplete', () => {
       });
 
       expect(updateStatus).toHaveBeenCalledWith('task-1', 'scheduled', { error: null });
+    });
+
+    it('two different event runs both succeed and return the definition to waiting', async () => {
+      const task = baseTask({ automationMode: 'event' });
+      findById.mockResolvedValue(task);
+      updateStatus.mockImplementation(async (_id, status, extra) => {
+        Object.assign(task, { status }, extra);
+        return task;
+      });
+      for (const sequence of [1, 2]) {
+        task.status = 'running';
+        await service.onTopicComplete({
+          operationId: `event-op-${sequence}`,
+          reason: 'done',
+          runTrigger: 'event',
+          taskId: task.id,
+          taskIdentifier: task.identifier,
+          topicId: `event-topic-${sequence}`,
+        });
+        expect(task.status).toBe('scheduled');
+      }
+      expect(updateTopicStatus).toHaveBeenCalledWith(
+        task.id,
+        'event-topic-1',
+        'event-op-1',
+        'completed',
+        'done',
+      );
+      expect(updateTopicStatus).toHaveBeenCalledWith(
+        task.id,
+        'event-topic-2',
+        'event-op-2',
+        'completed',
+        'done',
+      );
+      expect(updateStatus).not.toHaveBeenCalledWith(task.id, 'completed', expect.anything());
+      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
     });
 
     it('schedule-mode task under maxExecutions still parks at "scheduled"', async () => {
@@ -805,7 +931,13 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         topicId: 'topic-old',
       });
 
-      expect(updateTopicStatus).toHaveBeenCalledWith('task-1', 'topic-old', 'op-old', 'completed');
+      expect(updateTopicStatus).toHaveBeenCalledWith(
+        'task-1',
+        'topic-old',
+        'op-old',
+        'completed',
+        'done',
+      );
       expect(integrateOnComplete).not.toHaveBeenCalled();
       expect(updateStatus).not.toHaveBeenCalled();
     });
@@ -1167,6 +1299,45 @@ describe('TaskLifecycleService.onTopicComplete', () => {
         'task-1',
         expect.objectContaining({ scheduler: { consecutiveFailures: 2 } }),
       );
+    });
+
+    it('three consecutive event failures pause only at the fuse threshold', async () => {
+      const task = baseTask({
+        automationMode: 'event',
+        context: { scheduler: { consecutiveFailures: 0 } } as any,
+      });
+      findById.mockResolvedValue(task);
+      updateStatus.mockImplementation(async (_id, status, extra) => {
+        Object.assign(task, { status }, extra);
+        return task;
+      });
+      updateContext.mockImplementation(async (_id, patch: any) => {
+        const previous = task.context as any;
+        task.context = {
+          ...previous,
+          ...patch,
+          scheduler: { ...previous.scheduler, ...patch.scheduler },
+          lifecycle: { ...previous.lifecycle, ...patch.lifecycle },
+        };
+        return task;
+      });
+      for (const sequence of [1, 2, 3]) {
+        task.status = 'running';
+        await service.onTopicComplete({
+          errorMessage: `event-failure-${sequence}`,
+          operationId: `event-op-${sequence}`,
+          reason: 'error',
+          runTrigger: 'event',
+          taskId: task.id,
+          taskIdentifier: task.identifier,
+          topicId: `event-topic-${sequence}`,
+        });
+        expect(task.status).toBe(sequence < 3 ? 'scheduled' : 'paused');
+        expect((task.context as any).scheduler.consecutiveFailures).toBe(sequence);
+      }
+      expect((task.context as any).lifecycle.lastPauseReason).toContain('3');
+      expect(fakeScheduler.scheduleNextTopic).not.toHaveBeenCalled();
+      expect(runTaskMock).not.toHaveBeenCalled();
     });
 
     it('scheduled run fails AT fuse → pauses for human attention', async () => {

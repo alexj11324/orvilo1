@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import type {
+  AutomationRunResult,
   BriefDecision,
   TaskExecutionContract,
   TaskExecutionEnvironmentSnapshot,
@@ -191,6 +192,10 @@ export class TaskTopicModel {
       environmentSnapshot: params.environmentSnapshot,
       executionGeneration: params.dispatch.generation,
       operationId: params.operationId,
+      resultReadyAt: null,
+      resultOutcome: null,
+      stopReason: null,
+      handoff: null,
       planRevision: params.dispatch.planRevision,
       policyRevision: params.dispatch.policyRevision,
       requirementRevision: params.dispatch.requirementRevision,
@@ -214,6 +219,10 @@ export class TaskTopicModel {
       .onConflictDoUpdate({
         set: {
           ...run,
+          resultReadyAt: sql`CASE WHEN ${taskTopics.operationId} IS DISTINCT FROM ${params.operationId} THEN NULL ELSE ${taskTopics.resultReadyAt} END`,
+          resultOutcome: sql`CASE WHEN ${taskTopics.operationId} IS DISTINCT FROM ${params.operationId} THEN NULL ELSE ${taskTopics.resultOutcome} END`,
+          stopReason: sql`CASE WHEN ${taskTopics.operationId} IS DISTINCT FROM ${params.operationId} THEN NULL ELSE ${taskTopics.stopReason} END`,
+          handoff: sql`CASE WHEN ${taskTopics.operationId} IS DISTINCT FROM ${params.operationId} THEN NULL ELSE ${taskTopics.handoff} END`,
           ...(params.integration === undefined ? {} : { integration: params.integration }),
         },
         target: [taskTopics.taskId, taskTopics.topicId],
@@ -611,11 +620,35 @@ export class TaskTopicModel {
    * lets two copies both run the lifecycle side effects. Restricting the
    * transition to the still-running row makes the status write the claim.
    */
+  async markResultReady(
+    taskId: string,
+    topicId: string,
+    operationId: string,
+    outcome: AutomationRunResult['status'],
+  ): Promise<boolean> {
+    const rows = await this.db
+      .update(taskTopics)
+      .set({ resultReadyAt: new Date(), resultOutcome: outcome })
+      .where(
+        and(
+          eq(taskTopics.taskId, taskId),
+          eq(taskTopics.topicId, topicId),
+          eq(taskTopics.operationId, operationId),
+          this.ownership(),
+          inArray(taskTopics.status, ['completed', 'failed', 'canceled', 'timeout']),
+          isNull(taskTopics.resultReadyAt),
+        ),
+      )
+      .returning({ id: taskTopics.id });
+    return rows.length > 0;
+  }
+
   async settleIfRunning(
     taskId: string,
     topicId: string,
     operationId: string,
     status: 'canceled' | 'completed' | 'failed',
+    stopReason?: string,
   ): Promise<string | null> {
     const now = new Date();
     const reservationPrefix = `completion:${operationId}:`;
@@ -624,7 +657,7 @@ export class TaskTopicModel {
     const claimed = await this.db.transaction(async (tx) => {
       const settled = await tx
         .update(taskTopics)
-        .set({ runState: runStateForStatus(status), status })
+        .set({ runState: runStateForStatus(status), status, ...(stopReason ? { stopReason } : {}) })
         .where(
           and(
             eq(taskTopics.taskId, taskId),

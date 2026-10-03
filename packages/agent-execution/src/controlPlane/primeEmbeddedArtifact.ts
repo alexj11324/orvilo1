@@ -18,7 +18,21 @@ import { readFile, stat } from 'node:fs/promises';
 import { isNonEmptyString, isRecord } from '@orvilo/utils/object';
 
 import type { ControlResult } from './contracts';
+import { HARNESS_PROTOCOL_VERSION } from './harnessProtocol';
 import type { PrimeEmbeddedRuntimeOptions } from './primeEmbeddedRuntime';
+
+/**
+ * The vendored upstream runner identity hosts enforce: any artifact, manifest
+ * or session pin claiming different provenance fails admission. Defined here
+ * (not in the runtime) so a device-side host can pin it without importing the
+ * embedded supervisor stack.
+ */
+export const PRIME_EMBEDDED_PIN = {
+  commit: '7d442aafa985f9342134fac16c2ef41f03fb45c1',
+  version: '0.9.8',
+  license: 'MIT',
+  protocol: HARNESS_PROTOCOL_VERSION,
+} as const;
 
 /** The `dist/runner.manifest.json` schema `scripts/build.mjs` writes. */
 export interface EmbeddedArtifactManifest {

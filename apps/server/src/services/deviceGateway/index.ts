@@ -9,6 +9,7 @@ import {
   type DeviceTransportErrorCode,
   GatewayHttpClient,
   type GatewayMcpParams,
+  type PrimeRunDescriptor,
 } from '@orvilo/device-gateway-client';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import type { ClaudeCodeQuotaSnapshot } from '@orvilo/heterogeneous-agents/quota';
@@ -1724,6 +1725,8 @@ export class DeviceGateway {
     imageList?: Array<{ id?: string; url: string }>;
     jwt: string;
     operationId: string;
+    /** Prime device-run descriptor — present iff the resolved adapter is Prime. */
+    prime?: PrimeRunDescriptor;
     prompt: string;
     resumeFallbackSystemContext?: string;
     resumeSessionId?: string;

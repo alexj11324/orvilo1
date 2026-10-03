@@ -282,7 +282,15 @@ const toBrokerEvent = (event: InferenceEvent): BrokerStreamEvent => {
   if (event.type === 'text') return { text: event.text, type: 'text' };
   if (event.type === 'usage')
     return { inputTokens: event.inputTokens, outputTokens: event.outputTokens, type: 'usage' };
-  return { code: event.error.code, message: event.error.message, type: 'error' };
+  if (event.type === 'error')
+    return { code: event.error.code, message: event.error.message, type: 'error' };
+  // v2 variants (thinking/toolcall_*) have no producer until the runner
+  // unseal — guard loudly rather than fabricating a text event.
+  return {
+    code: 'unexpected_event',
+    message: `unexpected broker event type: ${event.type}`,
+    type: 'error',
+  };
 };
 
 /**

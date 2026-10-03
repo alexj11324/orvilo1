@@ -246,7 +246,12 @@ describe('embedded inference bridge composition', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const bridge = result.value;
-    expect(bridge.initModel).toEqual({ id: MODEL_ID, maxOutputTokens: 8192 });
+    expect(bridge.initModel).toEqual({
+      contextWindow: 32768,
+      id: MODEL_ID,
+      input: ['text'],
+      maxOutputTokens: 8192,
+    });
 
     const wrong = bridge.buildInferenceRequest({
       request: sanitizedRequest('other-model'),

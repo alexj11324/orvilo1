@@ -7,7 +7,11 @@ import type {
   ProviderBinding,
   TrustedProviderBackend,
 } from '@orvilo/agent-execution/controlPlane';
-import { CONTROL_PLANE_VERSION, createInferenceBroker } from '@orvilo/agent-execution/controlPlane';
+import {
+  CONTROL_PLANE_VERSION,
+  createInferenceBroker,
+  toInferenceMessage,
+} from '@orvilo/agent-execution/controlPlane';
 import type { HarnessInitModel } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import type { BuildInferenceRequest } from '@orvilo/agent-execution/controlPlane/server';
 import type { ProviderBindingConfig } from '@orvilo/types';
@@ -164,10 +168,14 @@ export async function createEmbeddedInferenceBridge(
         bindingRevision: pinned.revision,
         fence: { ...session.fence },
         maxOutputTokens: request.maxOutputTokens,
-        messages: request.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: request.messages.map(toInferenceMessage),
         modelRoute: request.modelRoute,
+        providerOptions: request.providerOptions,
         requestId: request.requestId,
         schemaVersion: CONTROL_PLANE_VERSION,
+        serviceTier: request.serviceTier,
+        thinkingLevel: request.thinkingLevel,
+        tools: request.tools,
       },
     };
   };
@@ -178,7 +186,15 @@ export async function createEmbeddedInferenceBridge(
       buildInferenceRequest,
       claim,
       inferenceBroker: createInferenceBroker({ authority, backend, now: deps.now }),
-      initModel: { id: capability.modelRoute, maxOutputTokens: capability.maxOutputTokens },
+      initModel: {
+        id: capability.modelRoute,
+        input: capability.images ? ['text', 'image'] : ['text'],
+        maxOutputTokens: capability.maxOutputTokens,
+        ...(typeof capability.contextWindow === 'number'
+          ? { contextWindow: capability.contextWindow }
+          : {}),
+        ...(typeof capability.reasoning === 'boolean' ? { reasoning: capability.reasoning } : {}),
+      },
     },
   };
 }

@@ -130,7 +130,33 @@ export interface RuntimeSession {
 
 export type RuntimeEvent =
   | { type: 'text'; sessionId: string; text: string }
+  | { type: 'thinking'; sessionId: string; text: string }
   | { type: 'turn-ended'; sessionId: string; reason: 'end_turn' | 'gate' | 'budget' | 'cancelled' }
+  | {
+      /** A tool call entered execution inside the runtime's session. */
+      args: unknown;
+      sessionId: string;
+      toolCallId: string;
+      toolName: string;
+      type: 'tool_call';
+    }
+  | {
+      /** In-flight partial result while a tool call executes. */
+      partialResult: unknown;
+      sessionId: string;
+      toolCallId: string;
+      toolName: string;
+      type: 'tool_progress';
+    }
+  | {
+      /** A tool call finished executing inside the runtime's session. */
+      isError: boolean;
+      result: unknown;
+      sessionId: string;
+      toolCallId: string;
+      toolName: string;
+      type: 'tool_result';
+    }
   | {
       type: 'usage';
       sessionId: string;
@@ -170,19 +196,96 @@ export interface ExecutionRuntime {
   }) => Promise<ControlResult<RuntimeSession>>;
 }
 
+export interface InferenceTextContent {
+  text: string;
+  type: 'text';
+}
+
+export interface InferenceThinkingContent {
+  thinking: string;
+  type: 'thinking';
+}
+
+export interface InferenceImageContent {
+  data: string;
+  mimeType: string;
+  type: 'image';
+}
+
+export interface InferenceToolCall {
+  arguments: Record<string, unknown>;
+  id: string;
+  name: string;
+  type?: 'toolCall';
+}
+
+export type InferenceContentBlock =
+  | InferenceTextContent
+  | InferenceThinkingContent
+  | InferenceImageContent
+  | (InferenceToolCall & { type: 'toolCall' });
+
+/** Plain string (most messages) or upstream content blocks — mirrors pi-ai. */
+export type InferenceMessageContent = string | InferenceContentBlock[];
+
+export type InferenceMessage =
+  | { content: InferenceMessageContent; role: 'system' | 'user' }
+  | { content: InferenceMessageContent; role: 'assistant' }
+  | {
+      content: InferenceMessageContent;
+      isError?: boolean;
+      role: 'tool';
+      toolCallId: string;
+      toolName?: string;
+    };
+
+/**
+ * Copy a wire message into the contract shape preserving the discriminated
+ * union — `tool` messages keep `toolCallId`/`toolName`/`isError`.
+ */
+export const toInferenceMessage = (message: InferenceMessage): InferenceMessage => {
+  if (message.role === 'tool') {
+    return {
+      content: message.content,
+      isError: message.isError,
+      role: 'tool',
+      toolCallId: message.toolCallId,
+      toolName: message.toolName,
+    };
+  }
+  return { content: message.content, role: message.role };
+};
+
+/** A tool schema the model may call (upstream `Tool` minus executor). */
+export interface InferenceToolDefinition {
+  description?: string;
+  name: string;
+  parameters: unknown;
+}
+
 /** Provider credentials and endpoint selection stay in the trusted broker. */
 export interface InferenceRequest {
   bindingRevision: number;
   fence: ExecutionFence;
   maxOutputTokens: number;
-  messages: { role: 'system' | 'user' | 'assistant'; content: string }[];
+  messages: InferenceMessage[];
   modelRoute: string;
+  /** Provider options the binding granted (opaque pass-through). */
+  providerOptions?: Record<string, unknown>;
   requestId: string;
   schemaVersion: typeof CONTROL_PLANE_VERSION;
+  serviceTier?: string;
+  thinkingLevel?: string;
+  /** Tool definitions the model may call. */
+  tools?: InferenceToolDefinition[];
 }
 
 export type InferenceEvent =
   | { type: 'text'; text: string }
+  | { text: string; type: 'thinking' }
+  | { index?: number; name?: string; toolCallId?: string; type: 'toolcall_start' }
+  | { argumentsDelta: string; index?: number; toolCallId?: string; type: 'toolcall_delta' }
+  | { index?: number; toolCall: InferenceToolCall; type: 'toolcall_end' }
   | { type: 'usage'; inputTokens: number; outputTokens: number }
   | { type: 'error'; error: ControlError };
 
@@ -221,9 +324,13 @@ export interface ProviderBindingRequest {
 }
 
 export interface ProviderModelCapability {
+  /** Context window in tokens, when the provider catalog declares it. */
+  contextWindow?: number;
   images: boolean;
   maxOutputTokens: number;
   modelRoute: string;
+  /** True when the provider catalog declares reasoning support for the route. */
+  reasoning?: boolean;
   text: boolean;
   tools: boolean;
 }

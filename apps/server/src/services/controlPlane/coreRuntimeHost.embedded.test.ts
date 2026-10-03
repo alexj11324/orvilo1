@@ -20,6 +20,7 @@ import type {
   ProviderModelCapability,
   TrustedProviderBackend,
 } from '@orvilo/agent-execution/controlPlane';
+import { HARNESS_PROTOCOL_VERSION } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import type {
   DockerSupervisorOptions,
   EmbeddedArtifactManifest,
@@ -182,7 +183,7 @@ const fakeSupervisor = (init: {
 const harnessAck = (params: unknown) => ({
   capabilities: { cancel: true, prompt: true, requests: [], stream: true, tools: [] },
   pin: isRecord(params) ? params.pin : undefined,
-  protocolVersion: 1,
+  protocolVersion: HARNESS_PROTOCOL_VERSION,
   sessionId: RUNNER_SESSION,
 });
 

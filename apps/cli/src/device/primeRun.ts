@@ -26,12 +26,17 @@
  * server's history-carrying fallback) and finished with
  * `resumeSessionInvalidated` so the persisted session pointer clears.
  */
-import { existsSync, mkdirSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
 import { setTimeout as sleep } from 'node:timers/promises';
 import { fileURLToPath } from 'node:url';
 
+import {
+  createPrimeStreamState,
+  mapHarnessSessionEvent,
+  type PrimeStreamState,
+} from '@orvilo/agent-execution/controlPlane/primeStreamMapping';
 import { openPrimeDeviceRun, type PrimeDeviceRun } from '@orvilo/device-prime-host';
 import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
 
@@ -56,6 +61,8 @@ interface PrimeRunOperation {
   ingester: CoalescingBatchIngester;
   operationId: string;
   settled: boolean;
+  /** Per-turn cumulative tool/stream bookkeeping for the ledger mapping. */
+  streamState: PrimeStreamState;
   usage?: { inputTokens: number; outputTokens: number };
   /** Woken once when the session dies mid-op — races the prompt request. */
   waiters: Array<() => void>;
@@ -170,6 +177,14 @@ const startSessionPump = (session: PrimeRunSession, logger?: PrimeRunLogger): vo
             op.usage = { inputTokens: event.inputTokens, outputTokens: event.outputTokens };
             break;
           }
+          case 'thinking':
+          case 'tool_call':
+          case 'tool_progress':
+          case 'tool_result': {
+            for (const emission of mapHarnessSessionEvent(op.streamState, event))
+              op.ingester.push(makeEvent(op.operationId, emission.type, emission.data));
+            break;
+          }
           case 'tool-violation': {
             op.ingester.push(
               makeEvent(op.operationId, 'error', {
@@ -281,6 +296,7 @@ const runOperationOnSession = async (
     ingester,
     operationId,
     settled: false,
+    streamState: createPrimeStreamState(),
     waiters: [],
   };
 
@@ -375,6 +391,22 @@ const runOperationOnSession = async (
  * `resumeSessionId` matching a live session reuses its runner instead of
  * spawning; a dead session takes the explicit rebuild path.
  */
+const PRIME_STATE_ROOT = path.join(os.homedir(), '.orvilo', 'prime-state');
+
+/** Locate the stateDir that persisted `<dir>/sessions/<sessionId>.jsonl`. */
+const findPersistedSessionDir = (sessionId: string): string | undefined => {
+  try {
+    for (const entry of readdirSync(PRIME_STATE_ROOT, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue;
+      const dir = path.join(PRIME_STATE_ROOT, entry.name);
+      if (existsSync(path.join(dir, 'sessions', `${sessionId}.jsonl`))) return dir;
+    }
+  } catch {
+    // prime-state root absent — nothing persisted on this device.
+  }
+  return undefined;
+};
+
 export const admitPrimeDeviceRun = async (
   params: SpawnHeteroAgentRunParams,
   workDir: string,
@@ -405,7 +437,7 @@ export const admitPrimeDeviceRun = async (
 
   let session = resumeSessionId ? primeSessions.get(resumeSessionId) : undefined;
   if (session?.run.closed) session = undefined;
-  const resumeOutcome: PrimeRunOpInput['resumeOutcome'] = !resumeSessionId
+  let resumeOutcome: PrimeRunOpInput['resumeOutcome'] = !resumeSessionId
     ? 'fresh'
     : session
       ? 'resumed'
@@ -425,7 +457,14 @@ export const admitPrimeDeviceRun = async (
         status: 'rejected',
       };
 
-    const stateDir = path.join(os.homedir(), '.orvilo', 'prime-state', operationId);
+    // Persistent sessions: a dead session's jsonl survives under its original
+    // operation's stateDir (`<stateDir>/sessions/<id>.jsonl`). On rebuild,
+    // reopen it there so the new runner resumes the real upstream session;
+    // when nothing persisted, the op gets its own fresh stateDir.
+    const resumedStateDir =
+      resumeOutcome === 'rebuilt' ? findPersistedSessionDir(resumeSessionId!) : undefined;
+    const stateDir =
+      resumedStateDir ?? path.join(os.homedir(), '.orvilo', 'prime-state', operationId);
     mkdirSync(stateDir, { recursive: true });
 
     const opened = await openPrimeDeviceRun({
@@ -438,11 +477,19 @@ export const admitPrimeDeviceRun = async (
         log: (msg) => logger?.info?.(msg),
       },
       operationId,
+      resumeSessionId: resumedStateDir ? resumeSessionId : undefined,
       stateDir,
       workspace: workDir,
     });
     if (!opened.ok)
       return { reason: opened.error?.message ?? 'prime run open failed', status: 'rejected' };
+    // The ack's sessionId is the truth oracle: echoing the requested id means
+    // the runner reopened the persisted session — a real resume, so the
+    // fallback system context does not get re-injected into live history.
+    if (resumeOutcome === 'rebuilt' && opened.value.activation.sessionId === resumeSessionId) {
+      resumeOutcome = 'resumed';
+      logger?.info?.(`prime session ${resumeSessionId} resumed from disk (op=${operationId})`);
+    }
     session = { chain: Promise.resolve(), run: opened.value };
     primeSessions.set(opened.value.activation.sessionId, session);
     startSessionPump(session, logger);

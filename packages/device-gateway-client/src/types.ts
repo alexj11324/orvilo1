@@ -249,8 +249,21 @@ export interface PrimeRunDescriptor {
     /** Milliseconds a run may continue without a lease renewal signal. */
     ttlMs: number;
   };
-  /** Model identity pinned into `harness.init` — the issued binding's route. */
-  model: { id: string; maxOutputTokens: number };
+  /**
+   * Model identity pinned into `harness.init` — the issued binding's route
+   * plus the capability metadata the runner needs to shape upstream
+   * behaviour (thinking clamp, image blocks, context budget). `input`,
+   * `reasoning` and `contextWindow` are present only when the provider
+   * catalog declares them. Optional fields keep older servers/devices
+   * wire-compatible.
+   */
+  model: {
+    contextWindow?: number;
+    id: string;
+    input?: string[];
+    maxOutputTokens: number;
+    reasoning?: boolean;
+  };
   subject: RunSubject;
 }
 

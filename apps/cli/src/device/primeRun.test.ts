@@ -42,9 +42,17 @@ vi.mock('../utils/TrpcIngestSink', () => ({
     };
   }),
 }));
+const { pushedEvents } = vi.hoisted(() => ({
+  pushedEvents: [] as Array<{ data: any; type: string }>,
+}));
 vi.mock('../utils/CoalescingBatchIngester', () => ({
   CoalescingBatchIngester: vi.fn().mockImplementation(function () {
-    return { drain: async () => undefined, push: vi.fn() };
+    return {
+      drain: async () => undefined,
+      push: (event: { data: any; type: string }) => {
+        pushedEvents.push({ data: event.data, type: event.type });
+      },
+    };
   }),
 }));
 vi.mock('../api/client', () => ({ createLambdaClient: vi.fn(() => ({})) }));
@@ -141,6 +149,7 @@ describe('admitPrimeDeviceRun', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     finishCalls.length = 0;
+    pushedEvents.length = 0;
   });
   afterEach(() => vi.clearAllMocks());
 
@@ -276,6 +285,55 @@ describe('admitPrimeDeviceRun', () => {
 
     expect(finishCalls[0].result).toBe('cancelled');
     expect(finishCalls[0].error?.message).toContain('lease lapsed');
+  });
+
+  it('maps v2 thinking/tool harness events onto hetero-parity ingest', async () => {
+    const run = makeFakeRun('sess-1');
+    run.runImpl.prompt.mockImplementation(async (_text: string) => {
+      run.push({ kind: 'thinking', text: 'pondering' });
+      run.push({
+        args: { code: 'print(1)' },
+        kind: 'tool_call',
+        toolCallId: 'call_1',
+        toolName: 'ipython',
+      });
+      run.push({
+        kind: 'tool_progress',
+        partialResult: { content: [{ text: 'partial', type: 'text' }] },
+        toolCallId: 'call_1',
+        toolName: 'ipython',
+      });
+      run.push({
+        isError: false,
+        kind: 'tool_result',
+        result: { content: [{ text: '1', type: 'text' }] },
+        toolCallId: 'call_1',
+        toolName: 'ipython',
+      });
+      return { ok: true, value: { stopReason: 'end_turn' } };
+    });
+    openPrimeDeviceRunMock.mockResolvedValue({ ok: true, value: run.run });
+
+    await admitPrimeDeviceRun(params({ operationId: 'op-1' }), '/tmp/work');
+    await waitPrimeSessionIdle('sess-1');
+
+    const types = pushedEvents.map((e) => `${e.type}:${e.data?.chunkType ?? ''}`);
+    expect(types).toEqual(
+      expect.arrayContaining([
+        'stream_chunk:reasoning',
+        'stream_chunk:tools_calling',
+        'tool_start:',
+        'stream_chunk:tool_state',
+        'tool_result:',
+        'tool_end:',
+      ]),
+    );
+    const toolsCalling = pushedEvents.find((e) => e.data?.chunkType === 'tools_calling');
+    expect(toolsCalling?.data.toolsCalling).toEqual([
+      expect.objectContaining({ apiName: 'ipython', id: 'call_1', identifier: 'orvilo' }),
+    ]);
+    const toolEnd = pushedEvents.find((e) => e.type === 'tool_end');
+    expect(toolEnd?.data).toMatchObject({ isSuccess: true, toolCallId: 'call_1' });
   });
 
   it('keeps a live admitted run untouched when the session stays healthy', async () => {

@@ -118,20 +118,67 @@ pump in `apps/cli/src/device/primeRun.ts` maps `HarnessSessionEvent`s per op
 never reaches the mapper: it remains a fail-closed error at each call site for
 calls outside the negotiated surface.
 
-## SDK surface enabled vs deferred
+## SDK surface — deferred items, wired (follow-up)
 
-Enabled: default builtin toolset, persistent sessions + resume, real
-resource loader (skills/AGENTS.md context), MCP manager (user/global servers +
-persistent connection store), settings manager (telemetry pinned off, default
-thinking level), `getActiveToolNames` capability advertisement, stream
-`reasoning`/`serviceTier`/`thinkingBudgets` provider options.
+Owner's follow-up: 「有哪些没有做的，全部做了」 — every previously deferred item
+is now wired end-to-end or has an explicitly-named structural blocker.
 
-Deferred (conscious, reported): `sessionStartEvent` (no host contract
-consumer), `thinkingBudgets` beyond the provider-options passthrough (no UI
-surface), `autonomous` continuation policy (host owns turn lifecycle; no
-contract field), RLM/`subagentRuntimeHost` (a real sub-agent host surface would
-invent wire contracts the ledger has no vocabulary for — needs its own
-package).
+- **RLM / `subagentRuntimeHost`** — wired. `packages/prime-harness/src/rlmHost.ts`
+  `PrimeRlmFamily` registers the in-process sub-agent tree: children spawn via
+  upstream's `createSubagentRuntime` mirroring, persist under the device
+  stateDir (`<agentDir>/rlm/<childId>`), capped by `init.rlm.maxDepth` (host
+  producers pin `2`), semantic-parented via `rlmParentAgent`/`rlmParentNodeId`
+  to the op, heartbeat via `AgentCronJobStore.forSessionArtifacts()` +
+  `AgentCronScheduler` (`DEFAULT_HEARTBEAT_SCHEDULE`, `session.promptHeartbeat`).
+  `agentMessageController`/`agentObserveController` ride the family —
+  `sendAgentMessage` steers any child mid-turn (`streamingBehavior:'steer'`).
+  Ledger: `rlm_child_update` → wire `subagent_update`; `primeStreamMapping`
+  stamps the hetero `SubagentEventContext` vocabulary
+  (`parentToolCallId = childId`, `spawnMetadata{description,prompt,
+subagentType:'rlm'}` first-sight) so tool/thinking/text activity routes into
+  the child's own Thread — the same rows hetero sub-agents land on.
+- **`autonomous`** — contract field + full passthrough wired
+  (`HarnessInitAutonomousConfig` → `harness.init.autonomous` → session
+  `autonomous`). No producer today writes a policy: the host keeps turn
+  lifecycle; the unblocking producer would be a binding/agencyConfig field —
+  the contract already carries it the moment one exists.
+- **`sessionStartEvent`** — wired honestly: `{type:'session_start',
+reason:'startup'|'resume', previousSessionFile?}` (upstream's shape carries
+  no identity slot — `device/op/agent/run` identity rides `harness.init`
+  params + `agentDir` to extensions; a custom identity payload would need an
+  Orvilo extension-event contract upstream doesn't define).
+- **`thinkingBudgets`** — completed surface: `HarnessInitParams.thinkingLevel`
+  → session `thinkingLevel` → `reasoning_effort`; producers resolve the
+  binding's `selection.effort` (`thinkingLevelForEffort`: `ultra`→`max`,
+  `default`→unset). The binding editor's effort selector already renders for
+  all runtimes — the pin now flows for reasoning-capable Prime models.
+- **Remaining knobs** — `includeCompactSkill:true` (upstream default, pinned),
+  `prewarmIpythonKernel:true` (first-tool latency), `includeGoals:true` +
+  `initialGoal` (task `name` → `goal.objective` on both embedded + device
+  producers), `executionMode:'rpc'` pinned, `serializedRefine:true` (RPC turn
+  chain is serial), `allowedToolNames`/`initialActiveToolNames` from
+  `init.toolPolicy` (host-pinnable subset; defaults to upstream when absent),
+  `serviceTier` passthrough, `scopedModels` — consciously NOT added: a
+  single-`orvilo-broker` ModelRegistry makes model scoping structurally
+  meaningless (no second model surface to scope); naming it would fabricate a
+  knob. Unblock: a multi-model registry contract.
+- **`acp-mcp.ts` ACP bridge** — upstream-wired, inert in `rpc` mode, NOT
+  releasable as-is inside the broker-egress boundary. The bridge generates
+  `mcp_list_tools_<srv>`/`mcp_call_<srv>` per caller-declared
+  `AcpMcpServerConfig` (`http` url+headers / `stdio` command+env), executed
+  inside the ipython kernel. Servers arrive only via
+  `AgentSession.replaceAcpMcpServers(servers, ownerId)` — driven by the ACP
+  client transport under `executionMode:'acp'`; under `'rpc'` nothing calls
+  it, so the generated set is empty. Releasing it would carry caller-chosen
+  endpoints AND header/env credentials straight out of the kernel — exactly
+  the surface the sanitization boundary strips. Unblocking contract: a
+  host-issued ACP-server allowlist (signed server entries on `harness.init` or
+  a dedicated forward method) — does not exist yet.
+
+Enabled (restated): default builtin toolset, persistent sessions + resume,
+real resource loader, MCP manager, settings manager (telemetry pinned off),
+`getActiveToolNames` advertisement, `reasoning`/`serviceTier` provider
+options.
 
 ## Runnable builtins in the shipped image
 

@@ -41,11 +41,15 @@ import {
   HARNESS_ABORT_METHOD,
   HARNESS_EVENT_NOTIFICATION,
   HARNESS_INIT_METHOD,
+  HARNESS_LIST_SESSIONS_METHOD,
   HARNESS_PROMPT_METHOD,
   HARNESS_PROTOCOL_VERSION,
+  HARNESS_RESUME_METHOD,
   isHarnessEventParams,
   isHarnessInitAck,
+  isHarnessListSessionsResult,
   isHarnessPromptResult,
+  isHarnessResumeResult,
 } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import { HarnessTransport } from '@orvilo/agent-execution/controlPlane/harnessTransport';
 import {
@@ -138,6 +142,9 @@ export interface PrimeDeviceRun {
   /** True once the bounded lease lapsed — lets the driver report a
    * lease-kill honestly instead of a generic runner exit. */
   readonly leaseLapsed: boolean;
+  /** `session.list` — upstream session ids persisted under the runner's
+   * stateDir (the resumable set). */
+  listSessions: () => Promise<ControlResult<{ sessions: string[] }>>;
   /** Events pushed by the runner but not yet consumed by an `events`
    * iterator — a driver draining after prompt completion waits for 0. */
   pendingEvents: () => number;
@@ -149,6 +156,11 @@ export interface PrimeDeviceRun {
   reactivate: (credential: string) => Promise<ControlResult<void>>;
   /** Re-arm the bounded side-effect lease (control-side liveness signal). */
   renewLease: () => void;
+  /** `session.resume` — reopen a persisted upstream session mid-life
+   * (distinct from restart resume via `resumeSessionId` on init). */
+  resume: (
+    resumeSessionId: string,
+  ) => Promise<ControlResult<{ resumed: boolean; sessionId: string }>>;
 }
 
 const pinOf = (descriptor: PrimeRunDescriptor) => ({
@@ -305,6 +317,9 @@ export const openPrimeDeviceRun = async (
     ack = await transport.request(
       HARNESS_INIT_METHOD,
       {
+        // Host-pinnable policy slice travels on the descriptor; the
+        // handshake identity fields stay host-derived below.
+        ...descriptor.init,
         controlPlaneVersion: CONTROL_PLANE_VERSION,
         model: descriptor.model,
         pin: pinOf(descriptor),
@@ -435,6 +450,37 @@ export const openPrimeDeviceRun = async (
         return { ok: true, value: result };
       } catch (error) {
         return failure('policy_denied', `Device runner prompt failed: ${errorMessage(error)}`);
+      }
+    },
+    listSessions: async () => {
+      try {
+        const result = await transport.request(
+          HARNESS_LIST_SESSIONS_METHOD,
+          { sessionId },
+          { timeoutMs: 10_000 },
+        );
+        if (!isHarnessListSessionsResult(result))
+          return failure('policy_denied', 'Device runner session list is invalid');
+        return { ok: true, value: result };
+      } catch (error) {
+        return failure(
+          'policy_denied',
+          `Device runner session list failed: ${errorMessage(error)}`,
+        );
+      }
+    },
+    resume: async (resumeSessionId) => {
+      try {
+        const result = await transport.request(
+          HARNESS_RESUME_METHOD,
+          { sessionId, resumeSessionId },
+          { timeoutMs: 30_000 },
+        );
+        if (!isHarnessResumeResult(result))
+          return failure('policy_denied', 'Device runner resume result is invalid');
+        return { ok: true, value: result };
+      } catch (error) {
+        return failure('policy_denied', `Device runner resume failed: ${errorMessage(error)}`);
       }
     },
     abort: async () => {

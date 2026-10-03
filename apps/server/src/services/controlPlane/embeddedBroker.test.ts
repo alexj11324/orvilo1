@@ -106,6 +106,7 @@ const bindConfig = (
   endpointUrl: string,
   secretReference: string,
   overrides?: {
+    effort?: ProviderBindingConfig['selection']['effort'];
     runtime?: ProviderBindingConfig['selection']['runtime'];
     target?: ProviderBindingConfig['selection']['target'];
   },
@@ -118,7 +119,7 @@ const bindConfig = (
   provider: 'mock',
   secretReference,
   selection: {
-    effort: 'default',
+    effort: overrides?.effort ?? 'default',
     mode: 'default',
     runtime: overrides?.runtime ?? 'orvilo',
     speed: 'default',
@@ -220,11 +221,14 @@ afterAll(async () => {
   );
 });
 
-const seed = async () => {
+const seed = async (overrides?: Parameters<typeof bindConfig>[2]) => {
   const run = await createCanonicalRunFixture(db);
   binding = run;
   const cred = await createCredential(run.userId, { PROVIDER_KEY: 'env-secret-7' });
-  const row = await insertBinding(run.userId, bindConfig(endpoint(), `credential:${cred.id}`));
+  const row = await insertBinding(
+    run.userId,
+    bindConfig(endpoint(), `credential:${cred.id}`, overrides),
+  );
   return { cred, row, run };
 };
 
@@ -274,6 +278,22 @@ describe('embedded inference bridge composition', () => {
       requestId: 'req-1',
       schemaVersion: CONTROL_PLANE_VERSION,
     });
+  });
+
+  // The binding's effort pin is the session's thinkingLevel — the spec §7.3
+  // surface upstream clamps to model capability runner-side.
+  it('maps selection.effort onto initPolicy.thinkingLevel', async () => {
+    await seed({ effort: 'high' });
+    const result = await createEmbeddedInferenceBridge({ binding: binding!, database: db });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.initPolicy).toEqual({ thinkingLevel: 'high' });
+  });
+
+  it('maps ultra effort onto the upstream ceiling and omits default', async () => {
+    await seed({ effort: 'ultra' });
+    const ultra = await createEmbeddedInferenceBridge({ binding: binding!, database: db });
+    expect(ultra.ok && ultra.value.initPolicy).toEqual({ thinkingLevel: 'max' });
   });
 });
 

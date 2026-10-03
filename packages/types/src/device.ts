@@ -23,6 +23,62 @@ export interface DeviceUnavailableErrorData {
   workspaceId?: string;
 }
 
+/**
+ * Stable machine-readable codes unified execution admission can refuse with.
+ * The UI must branch on `code` — never parse the human `detail` text, and
+ * never see the code embedded inside prose. `DISPATCH_ADMISSION_PERSIST_FAILED`
+ * means the durable admission/intent record could not be written, so the run
+ * was deliberately NOT spawned (a persisting run identity is part of admission
+ * itself, not an afterthought).
+ */
+export type DeviceAdmissionErrorCode =
+  /** The sender lacks device execution authorization entirely. */
+  | 'DEVICE_ACCESS_DENIED'
+  /** Another writer bound this conversation to a different device mid-admission. */
+  | 'DEVICE_BINDING_CONFLICT'
+  /** Bound device was deleted, revoked, or became incompatible — explicit repair. */
+  | 'DEVICE_BINDING_INVALID'
+  /** The device inventory could not be authoritatively read — no 0/1/N judgment. */
+  | 'DEVICE_INVENTORY_INCOMPLETE'
+  /** The device could not be addressed at all. */
+  | 'DEVICE_NOT_FOUND'
+  /** The request named a device outside the principal's authorized set. */
+  | 'DEVICE_REQUEST_UNAUTHORIZED'
+  /** Zero legitimate candidates. */
+  | 'DEVICE_REQUIRED'
+  /** Multiple candidates, no applicable default — the user must choose. */
+  | 'DEVICE_SELECTION_REQUIRED'
+  /** The durable admission record could not be persisted — no spawn happened. */
+  | 'DISPATCH_ADMISSION_PERSIST_FAILED'
+  /** A stored non-device intent exists (explicit opt-out) — pending until repick. */
+  | 'EXECUTION_TARGET_NONE';
+
+/**
+ * Structured admission outcome — the same contract surface for every
+ * admission refusal, dispatched through the existing `errorData` channel
+ * (spread into `error.body` by the finalizer). Consumed by the structured
+ * repair UI: `repairCandidates` names the devices an explicit repair may
+ * select; `deviceId` names the conflicting/invalid/persisted binding.
+ */
+export interface DeviceAdmissionErrorData {
+  /** The binding-generation revision the refusal was raised against. */
+  bindingRevision?: number;
+  /** Stable machine-readable admission code. */
+  code: DeviceAdmissionErrorCode;
+  /** The conflicting, invalid, or persisted binding this error names. */
+  deviceId?: string;
+  /** The server-generated operation the admission covered (safe to echo). */
+  operationId?: string;
+  /** Device ids an explicit repair may pick (same scope). */
+  repairCandidates?: string[];
+  /** Safe to reconsider by a later explicit action or retry. */
+  retryable: boolean;
+  /** Principal pool in which the admission was evaluated. */
+  scope: 'personal' | 'workspace';
+  /** Workspace principal, present only for workspace-scoped dispatch. */
+  workspaceId?: string;
+}
+
 export type ProjectSkillScope = 'device' | 'project';
 export type ProjectSkillSource = '.agents/skills' | '.claude/skills';
 

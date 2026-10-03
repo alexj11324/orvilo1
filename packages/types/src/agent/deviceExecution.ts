@@ -23,6 +23,46 @@ import type { HeterogeneousAgentType } from './heterogeneousAgent';
 export type RunSubject =
   { kind: 'conversation'; topicId: string } | { dispatchId: string; kind: 'task'; taskId: string };
 
+// ─── Dispatch execution identity ────────────────────────────────────────────
+
+/**
+ * The canonical execution identity persisted on the operation row as
+ * `metadata.executionPlan` before any spawn (FIX-A / plan §5.3): every
+ * surface — web observing a desktop-started run, cancel, status, resume —
+ * addresses the SAME operation/device/generation instead of re-deriving a
+ * device or guessing a harness. `harnessId` records the adapter the run was
+ * resolved onto (evidence, not a configurable setting); `executionGeneration`
+ * is the fence stale callbacks must not overwrite.
+ */
+export interface DispatchExecutionIdentity {
+  agentId: string;
+  /** The admitted execution host; absent only on embedded/sandbox channels. */
+  deviceId?: string;
+  executionGeneration: number;
+  harnessId: HarnessAdapterId;
+  modelRoute?: { model?: string; provider?: string };
+  operationId: string;
+  /**
+   * How the execution host was admitted (resolution provenance). `blocked`
+   * appears only on the in-memory plan before dispatch — a persisted
+   * admission identity is always a channel.
+   */
+  resolution?: {
+    kind: 'blocked' | 'device' | 'embedded' | 'sandbox';
+    reason?: DeviceResolutionReason;
+  };
+  /**
+   * A {@link RunSubject} with `dispatchId` optional — automation dispatches
+   * minted before the registry record carry taskId only. Conversation
+   * subjects still carry no task identity at all.
+   */
+  subject:
+    | { kind: 'conversation'; topicId: string }
+    | { dispatchId?: string; kind: 'task'; taskId: string };
+  /** The working-directory binding the run launches inside, when scoped. */
+  workingDirectoryBinding?: string;
+}
+
 // ─── Harness adapter map ────────────────────────────────────────────────────
 
 /**

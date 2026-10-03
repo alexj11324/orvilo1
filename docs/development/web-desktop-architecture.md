@@ -27,6 +27,29 @@
 6. Host 动作（"在 Finder 显示"" 打开本机 Terminal"）与 Device 动作（" 在设备 B
    打开终端 "）分开；远程资源不得流入本机原生 API。
 
+## 执行准入不变式（FIX-A）
+
+`dispatchHeteroAgent` 的持久化语义，任何修改必须保持：
+
+1. **绑定是一行内的三字段一致写**。`bindTopicDeviceAtomically` 单次 UPDATE
+   同时写 `metadata.boundDeviceId`（历史顶层字段，现有读取方依赖）与
+   `metadata.executionConfig.{boundDeviceId,executionTarget:'device'}`（规范
+   形式）。CAS 仅在两个 pin 都为空时成立；CAS 输的一方回读胜者并返回
+   `{outcome:'occupied', boundDeviceId:<winner>}`，调用方据此判
+   `DEVICE_BINDING_CONFLICT`，绝不覆盖既有绑定。
+2. **绑定存在即带意图**。`executionTarget` 未设置但绑定了设备（或命中
+   workspace /fixed 策略）的会话不再短路成 `EXECUTION_TARGET_NONE`，
+   必须进入正常解析链路。
+3. **`auto` 不清除会话 pin**。`sessionBoundDeviceId` 在任何 target 模式下
+   都参与解析。
+4. **Admission 持久化 = 准入闸**。admission 记录与
+   `metadata.executionPlan`（`DispatchExecutionIdentity`）在同一事务内落账；
+   写失败 → 结构化 `DISPATCH_ADMISSION_PERSIST_FAILED` blocked 结果，运行
+   **不启动**—— 绝不派生任何表面都无法寻址的执行。
+5. **拒绝是结构化的**。所有准入拒绝通过 `DeviceAdmissionErrorData`
+   （`errorData.code` + `deviceId`/`repairCandidates`/`retryable`/`scope`/
+   `workspaceId`/`operationId`/`bindingRevision`）下发，不嵌在 detail 文案里。
+
 ## 不做什么
 
 - 不新建 Prime gateway / 调度器 / 第二套权限引擎；复用 TaskDispatch/TaskRunner、

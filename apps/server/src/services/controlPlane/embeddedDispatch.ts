@@ -413,6 +413,11 @@ export const composeEmbeddedRunHost = async (
       docker: {
         executable: environment.executable ?? DEFAULT_EXECUTABLE,
         imageId,
+        // The runner idles at ~200 MiB (17 MB bundle + agent bootstrap) and
+        // allocates inference buffers per turn — the 256 MiB supervisor
+        // default leaves bursts no headroom and the cgroup OOM-kill surfaces
+        // as an intermittent "harness startup failed".
+        memoryMiB: 768,
         supervisorId: environment.supervisorId ?? DEFAULT_SUPERVISOR_ID,
         workspace: directories.workspace,
       },

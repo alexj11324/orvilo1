@@ -317,6 +317,12 @@ jobs:
           E2E_REPORTS: '0'
           HEADLESS: 'true'
 
+      # Server-side errors (embedded dispatch, docker runner) never reach the
+      # Cucumber output — surface the tail on failure instead of a black box.
+      - name: Dump E2E server log on failure
+        if: failure()
+        run: tail -n 400 /tmp/orvilo-e2e-server.log || true
+
       - name: Upload E2E test artifacts
         if: always()
         uses: actions/upload-artifact@v6

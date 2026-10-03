@@ -18,6 +18,7 @@ packages:
   - '../../packages/device-sandbox'
   - '../../packages/device-gateway-client'
   - '../../packages/device-identity'
+  - '../../packages/device-prime-host'
   - '../../packages/local-file-shell'
   - '../../packages/tool-runtime'
   - '../../packages/prompts'

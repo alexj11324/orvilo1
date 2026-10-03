@@ -13,7 +13,7 @@
     "man"
   ],
   "scripts": {
-    "build": "bun scripts/ensureWorkspaceLinks.ts && tsdown",
+    "build": "bun scripts/ensureWorkspaceLinks.ts && tsdown && bun scripts/stagePrimeRunner.ts",
     "cli:link": "bun link",
     "cli:unlink": "bun unlink",
     "dev": "ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts",
@@ -33,6 +33,7 @@
     "@orvilo/device-control": "workspace:*",
     "@orvilo/device-gateway-client": "workspace:*",
     "@orvilo/device-identity": "workspace:*",
+    "@orvilo/device-prime-host": "workspace:*",
     "@orvilo/eval-rubric": "workspace:*",
     "@orvilo/heterogeneous-agents": "workspace:*",
     "@orvilo/html-artifact": "workspace:*",

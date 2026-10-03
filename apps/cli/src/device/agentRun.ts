@@ -1,5 +1,6 @@
 import { execFileSync, spawn } from 'node:child_process';
 
+import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 import {
   buildHeteroExecStdinPayload,
   HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV,
@@ -7,10 +8,12 @@ import {
 } from '@orvilo/heterogeneous-agents/protocol';
 import { resolveHeteroSpawnCwd } from '@orvilo/heterogeneous-agents/workingDirectory';
 import type { AcpBuiltinToolSpec } from '@orvilo/types';
+import { resolveHarnessAdapter } from '@orvilo/types';
 import { sleep } from '@orvilo/utils/sleep';
 
 import { getTask, removeTask, saveTask, type TaskEntry } from '../daemon/taskRegistry';
 import { cancelAgentRun, getAgentRun, registerAgentRun } from './agentRunRegistry';
+import { admitPrimeDeviceRun } from './primeRun';
 
 /** Liveness probe for a detached run — the wrapper pid is a process-group leader. */
 function isProcessGroupAlive(pid: number): boolean {
@@ -147,6 +150,13 @@ export interface SpawnHeteroAgentRunParams {
    * sandbox) share the same env contract.
    */
   operationJwt?: string;
+  /**
+   * Prime device-run descriptor — present iff the resolved harness adapter
+   * is Prime (`type:'orvilo'` after the transitional embedded fence flips).
+   * Swaps the launcher to the in-daemon `openPrimeDeviceRun` host instead of
+   * the `orvilo hetero exec` wrapper; admission/kill lifecycle is unchanged.
+   */
+  prime?: PrimeRunDescriptor;
   prompt: string;
   /** System context used only by the automatic retry without native resume. */
   resumeFallbackSystemContext?: string;
@@ -288,6 +298,19 @@ async function admitHeteroAgentRun(
   // inner spawnAgent preflight owns cwd classification and reports the
   // structured working_directory_not_found error through heteroFinish.
   const spawnCwd = resolveHeteroSpawnCwd(workDir);
+
+  // Prime launcher swap: a descriptor on the dispatch means the resolved
+  // harness adapter is Prime — the device hosts it in-daemon
+  // (`openPrimeDeviceRun`) instead of shelling to `orvilo hetero exec`.
+  // Everything else in this lifecycle (registry, supersede, kill) is shared.
+  if (params.prime !== undefined) {
+    if (resolveHarnessAdapter(agentType) !== 'prime')
+      return {
+        reason: `prime descriptor on a non-prime agent type: ${agentType}`,
+        status: 'rejected',
+      };
+    return admitPrimeDeviceRun(params, workDir, logger);
+  }
 
   // Server-ingest mode (--topic + --operation-id): events are batch-POSTed to
   // the server, not rendered. `--input-json -` reads the prompt from stdin.

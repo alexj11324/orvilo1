@@ -5,6 +5,7 @@ import { existsSync } from 'node:fs';
 import { access, appendFile, mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 
+import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 import type {
   ClaudeCodeQuotaSnapshot,
   CodexQuotaSnapshot,
@@ -2329,6 +2330,13 @@ export default class HeterogeneousAgentCtr {
     /** Image attachments (signed URLs) appended as image content blocks. */
     imageList?: HeteroExecImageRef[];
     jwt: string;
+    /**
+     * Prime device-run descriptor: when present, the dispatch's resolved
+     * harness is Prime (type 'orvilo') and this host launches `orvilo prime
+     * exec` instead of `hetero exec` — same child-process supervision, same
+     * kill contract. Carries the artifact pin + bound broker credential.
+     */
+    prime?: PrimeRunDescriptor;
     operationId: string;
     /**
      * The operation-scoped token from the dispatch (carries `hetero:tool:exec`
@@ -2365,6 +2373,7 @@ export default class HeterogeneousAgentCtr {
       operationId,
       operationJwt,
       onChildSpawned,
+      prime,
       prompt,
       resumeFallbackSystemContext,
       resumeSessionId,
@@ -2392,32 +2401,58 @@ export default class HeterogeneousAgentCtr {
     const rawDumpDir =
       this.shouldTraceCliOutput && workDirUsable ? this.resolveTraceRootDir(workDir) : undefined;
 
-    const args = [
-      'hetero',
-      'exec',
-      '--type',
-      agentType,
-      '--operation-id',
-      operationId,
-      '--topic',
-      topicId,
-      '--render',
-      'none',
-      '--input-json',
-      '-',
-      '--cwd',
-      workDir,
-      ...(resumeSessionId ? ['--resume', resumeSessionId] : []),
-      ...(rawDumpDir ? ['--raw-dump', rawDumpDir] : []),
-      ...(extraArgs ?? []),
-    ];
+    // Prime launcher swap: the resolved adapter is Prime when the dispatch
+    // carries a descriptor — `orvilo prime exec` hosts the run instead of
+    // `hetero exec`. Everything else in this function (spawn, env, process
+    // group, registration, kill) is the shared device lifecycle.
+    const args = prime
+      ? [
+          'prime',
+          'exec',
+          '--operation-id',
+          operationId,
+          '--topic',
+          topicId,
+          '--cwd',
+          workDir,
+          '--input-json',
+          '-',
+          ...(workspaceId ? ['--workspace', workspaceId] : []),
+          ...(assistantMessageId ? ['--assistant-message-id', assistantMessageId] : []),
+          ...(runGeneration != null ? ['--run-generation', String(runGeneration)] : []),
+        ]
+      : [
+          'hetero',
+          'exec',
+          '--type',
+          agentType,
+          '--operation-id',
+          operationId,
+          '--topic',
+          topicId,
+          '--render',
+          'none',
+          '--input-json',
+          '-',
+          '--cwd',
+          workDir,
+          ...(resumeSessionId ? ['--resume', resumeSessionId] : []),
+          ...(rawDumpDir ? ['--raw-dump', rawDumpDir] : []),
+          ...(extraArgs ?? []),
+        ];
 
-    const stdinPayload = buildHeteroExecStdinPayload({
-      imageList,
-      prompt,
-      resumeFallbackSystemContext,
-      systemContext,
-    });
+    const stdinPayload = prime
+      ? JSON.stringify({
+          descriptor: prime,
+          prompt,
+          ...(systemContext ? { systemContext } : {}),
+        })
+      : buildHeteroExecStdinPayload({
+          imageList,
+          prompt,
+          resumeFallbackSystemContext,
+          systemContext,
+        });
     const cliScript = resolveCliScript();
     if (!existsSync(cliScript)) {
       return Promise.resolve({

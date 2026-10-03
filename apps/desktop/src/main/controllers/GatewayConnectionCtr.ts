@@ -349,6 +349,9 @@ export default class GatewayConnectionCtr extends ControllerModule {
         // tool callbacks (`hetero:tool:exec`) even though `jwt` above was
         // swapped for this device's user token (see the comment above).
         operationJwt: request.jwt,
+        // Prime adapter: when the dispatch carries a descriptor the host
+        // launches `orvilo prime exec` — the resolved device executes the run.
+        prime: request.prime,
         prompt: request.prompt,
         resumeFallbackSystemContext: request.resumeFallbackSystemContext,
         resumeSessionId: request.resumeSessionId,

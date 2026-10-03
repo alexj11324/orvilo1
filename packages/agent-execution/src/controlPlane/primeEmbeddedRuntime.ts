@@ -49,13 +49,12 @@ import {
 import type { HarnessChannel } from './harnessTransport';
 import type { ProcessTreeSupervisor } from './isolation';
 import { sanitizedRuntimeEnvironment, verifiedIsolation } from './isolation';
+import { PRIME_EMBEDDED_PIN } from './primeEmbeddedArtifact';
 
-export const PRIME_EMBEDDED_PIN = {
-  commit: '7d442aafa985f9342134fac16c2ef41f03fb45c1',
-  version: '0.9.8',
-  license: 'MIT',
-  protocol: HARNESS_PROTOCOL_VERSION,
-} as const;
+// Lives in primeEmbeddedArtifact.ts so device-side hosts pin the same
+// upstream identity without importing the supervisor stack; re-exported here
+// to keep the existing './primeEmbeddedRuntime' import sites working.
+export { PRIME_EMBEDDED_PIN };
 
 /**
  * Host-side seam for turning a runner-issued sanitized request into a trusted

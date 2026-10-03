@@ -189,6 +189,26 @@ const config = {
       JSON.stringify({ name: cliPkg.name, type: 'module', version: cliPkg.version }),
     );
     console.info('✅ CLI bundle copied to resources/bin/orvilo-cli.js');
+
+    // Prime harness artifact — `orvilo prime exec` resolves `runner.mjs` as a
+    // sibling of the bundle (`Resources/bin/runner.mjs` when packaged). The
+    // CLI build already produced + staged it into apps/cli/dist/; ship it
+    // alongside so the device host never reaches for a dev-repo path. The
+    // manifest records the verified artifact identity at packaging time.
+    for (const artifact of ['runner.mjs', 'runner.manifest.json']) {
+      const src = path.resolve(__dirname, '../cli/dist', artifact);
+      const present = await fs.stat(src).then(
+        () => true,
+        () => false,
+      );
+      if (!present) {
+        console.warn(
+          `⚠️ ${artifact} missing from the CLI build — device Prime execution will refuse to launch on packaged installs`,
+        );
+        continue;
+      }
+      await fs.copyFile(src, path.resolve(__dirname, 'resources/bin', artifact));
+    }
   },
   /**
    * AfterPack hook for copying Liquid Glass Assets.car on macOS 26+.

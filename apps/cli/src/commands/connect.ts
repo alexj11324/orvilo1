@@ -45,6 +45,7 @@ import {
 } from '../daemon/manager';
 import { listTasks } from '../daemon/taskRegistry';
 import { spawnHeteroAgentRun } from '../device/agentRun';
+import { renewDevicePrimeRuns } from '../device/primeRun';
 import {
   mintWorkspaceConnectToken,
   registerDevice,
@@ -920,6 +921,13 @@ function bindGatewayClientHandlers(
     }
   });
 
+  // Gateway liveness is the lease renewal source for in-daemon Prime runs:
+  // each heartbeat ack re-arms every live run's bounded side-effect lease,
+  // so a device that loses the gateway stops them on schedule.
+  client.on('heartbeat_ack', () => {
+    renewDevicePrimeRuns();
+  });
+
   // Handle gateway-dispatched agent runs (heterogeneous agents, e.g. Claude
   // Code). Mirrors the desktop app: spawn `orvilo hetero exec`, which owns the full
   // execution + server-ingest pipeline. Ack with the spawn outcome — `accepted`
@@ -945,6 +953,7 @@ function bindGatewayClientHandlers(
           // substitution like the desktop does) — forwarded under the explicit
           // key so the exec-side env contract matches the other two hosts.
           operationJwt: request.jwt,
+          prime: request.prime,
           prompt: request.prompt,
           resumeFallbackSystemContext: request.resumeFallbackSystemContext,
           resumeSessionId: request.resumeSessionId,

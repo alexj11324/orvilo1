@@ -136,7 +136,7 @@ const buildSession = async (init: HarnessInitParams, sessionId: string): Promise
   });
 
   const { session } = await createAgentSession({
-    agentDir: '/tmp/agent',
+    agentDir: isNonEmptyString(init.stateDir) ? init.stateDir : '/tmp/agent',
     authStorage,
     customTools: [],
     cwd: init.workspace,

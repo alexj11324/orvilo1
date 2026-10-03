@@ -23,6 +23,7 @@ import { registerMessageCommand } from './commands/message';
 import { registerMigrateCommand } from './commands/migrate';
 import { registerNotifyCommand } from './commands/notify';
 import { registerPluginCommand } from './commands/plugin';
+import { registerPrimeCommand } from './commands/primeExec';
 import { registerProjectCommand } from './commands/project';
 import { registerSearchCommand } from './commands/search';
 import { registerSessionGroupCommand } from './commands/session-group';
@@ -96,6 +97,7 @@ export function createProgram() {
   registerNotifyCommand(program);
   registerProjectCommand(program);
   registerPluginCommand(program);
+  registerPrimeCommand(program);
   registerWorkspaceCommand(program);
   registerUserCommand(program);
   registerVerifyCommand(program);

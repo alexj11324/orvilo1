@@ -461,19 +461,24 @@ describe('selectRuntimeType', () => {
 
     it("never returns 'hetero' for any routing outcome (FIX-C invariant)", () => {
       const contexts: Parameters<typeof selectRuntimeType>[0][] = [
-        {},
+        { isGatewayMode: false },
         { isGatewayMode: true },
         { isGatewayMode: false },
-        { heterogeneousProvider: heteroProvider },
-        { heterogeneousProvider: remoteHeteroProvider },
-        { executionTarget: 'local', heterogeneousProvider: heteroProvider },
+        { heterogeneousProvider: heteroProvider, isGatewayMode: false },
+        { heterogeneousProvider: remoteHeteroProvider, isGatewayMode: false },
         {
           executionTarget: 'local',
           heterogeneousProvider: heteroProvider,
+          isGatewayMode: false,
+        },
+        {
+          executionTarget: 'local',
+          heterogeneousProvider: heteroProvider,
+          isGatewayMode: false,
           isWorkspaceAgent: true,
           workspaceScoped: false,
         },
-        { parentRuntime: 'hetero' },
+        { isGatewayMode: false, parentRuntime: 'hetero' },
       ];
       for (const isDesktop of [false, true]) {
         for (const ctx of contexts) {

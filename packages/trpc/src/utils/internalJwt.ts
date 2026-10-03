@@ -13,16 +13,28 @@ export const HETERO_OPERATION_JWT_AUDIENCE = 'urn:orvilo:hetero-operation';
 export const HETERO_OPERATION_JWT_PURPOSE = 'hetero-operation';
 
 export type HeteroOperationCapability =
-  'hetero:finish' | 'hetero:ingest' | 'hetero:intervention:read' | 'hetero:tool:exec';
+  | 'hetero:finish'
+  | 'hetero:ingest'
+  | 'hetero:intervention:read'
+  | 'hetero:tool:exec'
+  | 'prime:infer';
 
 export interface HeteroOperationJwtClaims {
   aud: typeof HETERO_OPERATION_JWT_AUDIENCE;
   capabilities: HeteroOperationCapability[];
+  /**
+   * The resolved Device the run executes on — bound at admission so a
+   * credential minted for device A is never usable as device B (the
+   * device-execution contract's cross-device bound credential).
+   */
+  device_id?: string;
   exp: number;
   iat: number;
   iss: typeof HETERO_OPERATION_JWT_ISSUER;
   jti: string;
   model?: string;
+  /** Model route the `prime:infer` capability is bound to. */
+  model_route?: string;
   operation_id: string;
   provider_id?: string;
   purpose: typeof HETERO_OPERATION_JWT_PURPOSE;
@@ -135,7 +147,11 @@ export const signUserJWT = async (
  */
 export const signHeteroOperationJWT = async (params: {
   capabilities: HeteroOperationCapability[];
+  /** Resolved device binding — required for `prime:infer` credentials. */
+  deviceId?: string;
   model?: string;
+  /** Issued model route — bounds `prime:infer` to the issued binding's route. */
+  modelRoute?: string;
   operationId: string;
   providerId?: string;
   userId: string;
@@ -145,7 +161,9 @@ export const signHeteroOperationJWT = async (params: {
 
   return new SignJWT({
     capabilities: params.capabilities,
+    ...(params.deviceId ? { device_id: params.deviceId } : {}),
     ...(params.model ? { model: params.model } : {}),
+    ...(params.modelRoute ? { model_route: params.modelRoute } : {}),
     operation_id: params.operationId,
     ...(params.providerId ? { provider_id: params.providerId } : {}),
     purpose: HETERO_OPERATION_JWT_PURPOSE,
@@ -193,9 +211,12 @@ export const validateHeteroOperationClaims = (
         'hetero:finish',
         'hetero:intervention:read',
         'hetero:tool:exec',
+        'prime:infer',
       ].includes(capability as string),
     ) ||
+    (payload.device_id !== undefined && typeof payload.device_id !== 'string') ||
     (payload.model !== undefined && typeof payload.model !== 'string') ||
+    (payload.model_route !== undefined && typeof payload.model_route !== 'string') ||
     (payload.provider_id !== undefined && typeof payload.provider_id !== 'string') ||
     (payload.workspace_id !== undefined && typeof payload.workspace_id !== 'string')
   ) {

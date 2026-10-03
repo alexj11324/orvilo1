@@ -86,18 +86,6 @@ export const resolveHeteroDispatchErrorType = (raw?: string): ErrorType => {
 export const supportsCloudHeterogeneousSandbox = (type: HeterogeneousAgentType): boolean =>
   type === 'orvilo' || type === 'claude-code' || type === 'codex';
 
-/**
- * TRANSITIONAL embedded fence — see the `heteroDispatch` fork for the full
- * story. A builtin `'orvilo'` plan keeps routing off the device gateway
- * (into the embedded/sandbox fork) until the device-side Prime adapter
- * ships — docs/development/device-execution-contract.md §transitional-fence.
- * The package that admits the adapter must delete this predicate together
- * with the flip-pin test (`execAgent.device.test.ts` — the device-routing
- * suite asserts `'orvilo'` stays fenced until then).
- */
-export const orviloDeviceFencedToEmbedded = (type: HeterogeneousAgentType): boolean =>
-  type === 'orvilo';
-
 export const getHeterogeneousAgentTitle = (type: HeterogeneousAgentType): string =>
   getHeterogeneousAgentConfig(type)?.title ??
   BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.find((config) => config.type === type)?.title ??

@@ -5,11 +5,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
-import { orviloDeviceFencedToEmbedded } from '../helpers/heteroErrors';
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
 
 const {
+  mockComposeDevicePrimeRun,
   mockDeviceFindByDeviceId,
   mockDeviceFindWorkspaceDeviceById,
   mockDispatchAgentRun,
@@ -22,6 +22,7 @@ const {
   mockSpawnHeteroSandbox,
   realDispatchRef,
 } = vi.hoisted(() => ({
+  mockComposeDevicePrimeRun: vi.fn(),
   mockDeviceFindByDeviceId: vi.fn(),
   mockDeviceFindWorkspaceDeviceById: vi.fn(),
   mockDispatchAgentRun: vi.fn(),
@@ -73,6 +74,20 @@ vi.mock('@/database/models/message', () => ({
     };
   }),
 }));
+
+const mockPrimeDescriptor = {
+  artifact: {
+    bytes: 1234,
+    commit: '7d442aafa985f9342134fac16c2ef41f03fb45c1',
+    license: 'MIT',
+    sha256: '0'.repeat(64),
+    version: '0.9.8',
+  },
+  broker: { credential: 'op-jwt' },
+  lease: { ttlMs: 300_000 },
+  model: { id: 'gpt-4', maxOutputTokens: 4096 },
+  subject: { kind: 'conversation', topicId: 'topic-1' },
+};
 
 const baseAgentConfig = {
   // An external-agent binding: device/sandbox routing is exercised on
@@ -240,6 +255,14 @@ vi.mock('@/server/services/providerBinding/execution', () => ({
   resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
 }));
 
+// Composition is the control-plane half of the device-Prime contract — these
+// tests pin ROUTING (a device-resolved orvilo plan reaches the gateway with a
+// prime descriptor), not the descriptor's contents, so composition is stubbed
+// at its module seam.
+vi.mock('@/server/services/controlPlane/devicePrimeDispatch', () => ({
+  composeDevicePrimeRun: mockComposeDevicePrimeRun,
+}));
+
 vi.mock('@/server/services/deviceGateway', () => ({
   deviceGateway: {
     dispatchAgentRun: mockDispatchAgentRun,
@@ -313,6 +336,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
     mockDeviceFindByDeviceId.mockResolvedValue(undefined);
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
+    mockComposeDevicePrimeRun.mockResolvedValue({
+      ok: true,
+      value: { descriptor: mockPrimeDescriptor },
+    });
 
     service = new AiAgentService(mockDb, userId);
   });
@@ -663,22 +690,12 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     });
   });
 
-  // TRANSITIONAL — device-execution-contract.md §transitional-fence. The
-  // device-side Prime adapter ships in a follow-up; until it does, builtin
-  // orvilo plans that resolve to a device stay fenced to the embedded fork
-  // (pre-cutover they ran that path silently — refusing them outright would
-  // break normal chat mid-cutover). The package that admits the adapter
-  // must DELETE this describe and the `orviloDeviceFencedToEmbedded`
-  // predicate: these assertions are the flip pin and fail as soon as the
-  // fence comes down.
-  describe('transitional embedded fence (orvilo device plans → embedded fork)', () => {
-    it('pins the fence predicate — orvilo fenced, external types unfenced', () => {
-      expect(orviloDeviceFencedToEmbedded('orvilo')).toBe(true);
-      expect(orviloDeviceFencedToEmbedded('claude-code')).toBe(false);
-      expect(orviloDeviceFencedToEmbedded('codex')).toBe(false);
-    });
-
-    it('keeps a device-resolved orvilo run off the device gateway', async () => {
+  // The transitional embedded fence (device-execution-contract.md
+  // §transitional-fence) is down: a builtin orvilo plan that resolves to a
+  // device now composes a Prime descriptor and dispatches to the bound device
+  // like every other adapter — the device runs the Prime harness itself.
+  describe('device-resolved orvilo runs dispatch Prime (fence removed)', () => {
+    it('sends the composed prime descriptor to the bound device', async () => {
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'device',
@@ -687,15 +704,39 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
 
       const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
 
-      // Fenced: the resolved deviceId never reaches the device gateway, and
-      // no engine CLI is spawned either (orvilo wraps no CLI anymore).
-      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockComposeDevicePrimeRun).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ deviceId: 'device-001' }),
+      );
+      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceId: 'device-001',
+          prime: mockPrimeDescriptor,
+        }),
+      );
+      // No embedded fork, no engine CLI spawn.
       expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
-      // The run lands on the embedded fork and reaches CHAT admission (the
-      // stubbed host-open's sentinel error surfaces) — identical routing to a
-      // sandbox-plan chat run. The device path never fires.
-      expect(mockOpenEmbeddedChatDispatchHost).toHaveBeenCalledTimes(1);
-      expect(result).toMatchObject({ error: 'chat host stubbed by fence test' });
+      expect(result).toMatchObject({ autoStarted: true, success: true });
+    });
+
+    it('surfaces the compose failure instead of routing embedded', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'orvilo' },
+      });
+      mockComposeDevicePrimeRun.mockResolvedValueOnce({
+        error: { code: 'provider_disabled', message: 'no backend' },
+        ok: false,
+      });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        error: 'provider_disabled',
+        success: false,
+      });
     });
   });
 });

@@ -11,9 +11,13 @@ adapter (`orvilo` → Prime). The shared resolution contract lives in
 [docs/development/device-execution-contract.md](./device-execution-contract.md)
 — the repo source of truth for selectable vs runnable devices, the
 resolution priority chain, and the `DEVICE_*` admission errors. The
-device-side Prime adapter is packaged separately; until it ships, a device
-hosting the builtin agent refuses loudly instead of spawning a
-wrong-family executable.
+device-side Prime adapter is packaged separately; until it ships a
+**transitional embedded fence** keeps orvilo device plans on the
+embedded/sandbox fork — pre-cutover device-bound orvilo configs ran that
+path silently, so refusing them outright would break normal chat
+mid-cutover. The fence is marked in code, pinned by a flip test, and the
+resolved deviceId is still recorded on the run's operation row (see the
+dispatch section).
 
 This document records the data-model, UI, and dispatch changes plus the
 known boundary that remains open.
@@ -87,13 +91,22 @@ embedded dispatch always queries `target:'sandbox'`.
 ## Dispatch — device first, then the non-device fork
 
 `heteroDispatch` resolves the execution plan identically for every agent
-type: the device branch is gated by `heteroPlan.kind !== 'sandbox'` —
-`type:'orvilo'` no longer bypasses it. A device-bound orvilo run goes to
-the device, which refuses loudly until the device-side Prime adapter is
-packaged. An unbound plan still fails at the `No bound device` fence,
-unchanged.
+type. The device branch is gated by
+`heteroPlan.kind !== 'sandbox' && !orviloDeviceFencedToEmbedded(type)` —
+external types take the device route unconditionally; **`'orvilo'` stays
+fenced off the device gateway** (the transitional embedded fence:
+`orviloDeviceFencedToEmbedded` in `helpers/heteroErrors.ts`, marked
+TRANSITIONAL, pinned by the flip test in `execAgent.device.test.ts` —
+the package that ships the device-side Prime adapter deletes both).
+Resolution still runs for orvilo: a plan that resolves to a concrete
+device writes `{deviceResolution: {deviceId, fence:
+'transitional-embedded'}}` onto the run's `agent_operations.metadata` so
+the audit trail shows which device execution WOULD target once the
+adapter lands. For external types, an unbound plan still fails at the
+`No bound device` fence, unchanged.
 
-A non-device (`sandbox`) plan for `orvilo` reaches the embedded fork:
+A fenced orvilo plan — sandbox or device-resolved alike — reaches the
+embedded fork:
 
 - `resolveEmbeddedDispatchRoute` returns a canonical context only for
   real task dispatches (`operationTaskId` + `taskRunner`-written
@@ -103,9 +116,9 @@ A non-device (`sandbox`) plan for `orvilo` reaches the embedded fork:
 - **Chat runs have no canonical task context**, so they hit the honest
   boundary `EMBEDDED_CHAT_NOT_ADMITTED` and fail loudly through
   `finalizeHeteroDispatchError` — they never fall back to the retired
-  engine→CLI spawn path. See "Open boundary" below. (The sandbox plan is
-  reachable only through an explicit sandbox `executionTarget`; default
-  unbound runs fail earlier at the device fence.)
+  engine→CLI spawn path. See "Open boundary" below. (The embedded fork
+  is now the only orvilo route: sandbox-plan runs land here directly and
+  device-resolved plans are fenced into it.)
 
 ## Open boundary — chat admission to the embedded host
 

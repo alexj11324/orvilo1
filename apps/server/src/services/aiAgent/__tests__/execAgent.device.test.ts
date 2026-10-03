@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
+import { orviloDeviceFencedToEmbedded } from '../helpers/heteroErrors';
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
 
@@ -643,6 +644,40 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
           metadata: expect.not.objectContaining({ aegis: expect.anything() }),
         }),
       );
+    });
+  });
+
+  // TRANSITIONAL — device-execution-contract.md §transitional-fence. The
+  // device-side Prime adapter ships in a follow-up; until it does, builtin
+  // orvilo plans that resolve to a device stay fenced to the embedded fork
+  // (pre-cutover they ran that path silently — refusing them outright would
+  // break normal chat mid-cutover). The package that admits the adapter
+  // must DELETE this describe and the `orviloDeviceFencedToEmbedded`
+  // predicate: these assertions are the flip pin and fail as soon as the
+  // fence comes down.
+  describe('transitional embedded fence (orvilo device plans → embedded fork)', () => {
+    it('pins the fence predicate — orvilo fenced, external types unfenced', () => {
+      expect(orviloDeviceFencedToEmbedded('orvilo')).toBe(true);
+      expect(orviloDeviceFencedToEmbedded('claude-code')).toBe(false);
+      expect(orviloDeviceFencedToEmbedded('codex')).toBe(false);
+    });
+
+    it('keeps a device-resolved orvilo run off the device gateway', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'orvilo' },
+      });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      // Fenced: the resolved deviceId never reaches the device gateway, and
+      // no engine CLI is spawned either (orvilo wraps no CLI anymore).
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      // The run surfaces the embedded-admission boundary for a context the
+      // embedded host does not admit yet — identical to a sandbox-plan run.
+      expect(result).toMatchObject({ error: 'EMBEDDED_CHAT_NOT_ADMITTED' });
     });
   });
 });

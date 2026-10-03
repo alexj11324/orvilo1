@@ -73,6 +73,7 @@ import type { MarketService } from '@/server/services/market';
 import {
   getHeterogeneousAgentTitle,
   humanizeHeteroDispatchError,
+  orviloDeviceFencedToEmbedded,
   resolveHeteroDispatchErrorType,
   supportsCloudHeterogeneousSandbox,
 } from '../helpers/heteroErrors';
@@ -1240,12 +1241,40 @@ export const dispatchHeteroAgent = async (
 
     const heteroPlan = deviceHeteroPlan!;
 
-    // Device-first for every harness: the shared execution plan resolves a
-    // device for ALL agent types — builtin orvilo included (the device picks
-    // its harness adapter: orvilo→Prime — see
-    // docs/development/device-execution-contract.md). Only a plan that
-    // resolves to no device reaches the embedded/sandbox fork below.
-    if (heteroPlan.kind !== 'sandbox') {
+    // Device-first for every external harness: the shared execution plan
+    // resolves a device for all types and the device picks its harness
+    // adapter (orvilo→Prime — docs/development/device-execution-contract.md).
+    //
+    // TRANSITIONAL EMBEDDED FENCE (contract doc §transitional-fence): the
+    // device-side Prime adapter is packaged in a follow-up, so until it
+    // ships a builtin orvilo plan that resolves to a device keeps routing
+    // to the embedded/sandbox fork below — pre-cutover device-bound orvilo
+    // configs already ran that path silently, and refusing them outright
+    // would break normal chat mid-cutover. Resolution still runs
+    // server-side: when the plan resolves a concrete device the resolved
+    // deviceId is recorded on the op row so the run's audit trail shows
+    // which device execution WOULD target once the adapter lands.
+    // `orviloDeviceFencedToEmbedded` is the flip: the package that admits
+    // the adapter deletes it together with the flip-pin test in
+    // execAgent.device.test.ts.
+    if (heteroPlan.kind === 'device' && orviloDeviceFencedToEmbedded(heteroType)) {
+      try {
+        await deps.db
+          .update(agentOperations)
+          .set({
+            metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
+              deviceResolution: {
+                deviceId: heteroPlan.deviceId,
+                fence: 'transitional-embedded',
+              },
+            })}::jsonb`,
+          })
+          .where(eq(agentOperations.id, operationId));
+      } catch (err) {
+        log('execAgent: failed to record fenced device resolution op=%s: %O', operationId, err);
+      }
+    }
+    if (heteroPlan.kind !== 'sandbox' && !orviloDeviceFencedToEmbedded(heteroType)) {
       const dispatchDeviceId = heteroPlan.kind === 'device' ? heteroPlan.deviceId : undefined;
       if (!dispatchDeviceId) {
         log('execAgent: hetero executionTarget=device but no boundDeviceId set');
@@ -1477,9 +1506,10 @@ export const dispatchHeteroAgent = async (
         log('execAgent: failed to patch runningOperation with device info: %O', err);
       }
     } else {
-      // Non-device plan for an own-agent type: the canonical embedded host
-      // runs Prime here — `orvilo` is our own runtime. ACP/hetero kinds keep
-      // the unchanged sandbox path below.
+      // Non-device plan — or a device plan fenced here by the TRANSITIONAL
+      // embedded fence above — for an own-agent type: the canonical
+      // embedded host runs Prime (`orvilo` is our own runtime). ACP/hetero
+      // kinds keep the unchanged sandbox path below.
       const embeddedRoute = await resolveEmbeddedDispatchRoute(deps, {
         appContext,
         heteroType,

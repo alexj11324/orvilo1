@@ -10,9 +10,11 @@
  * `CanonicalCoreRuntimeHost` with `embedded` filled and drives the run
  * in-process. `orvilo`'s harness is fixed to Prime — like `codex` always
  * runs the codex CLI, there is no flag gating which engine an own-agent
- * type uses; only the resolved device plan decides whether Prime runs on
- * this embedded host or on a real device (device-side adapter packaged
- * separately — see docs/development/device-execution-contract.md).
+ * type uses. While the device-side Prime adapter is being packaged a
+ * TRANSITIONAL fence keeps device-resolved orvilo plans here too — every
+ * orvilo plan (sandbox or device) reaches this fork until the adapter
+ * ships and the fence flips (device-execution-contract.md
+ * §transitional-fence).
  *
  * The host's prompt stream is translated back into the shared
  * `AgentStreamEvent` → `heteroIngest` / `heteroFinish` producer path, so the
@@ -87,8 +89,9 @@ const errorMessage = (error: unknown): string =>
 /**
  * Canonical run context extracted off `ExecRunContext.appContext` — the
  * typed result of `resolveEmbeddedDispatchRoute`. Present only when the run
- * is a real task dispatch (`taskRunner` writes these fields); chat runs and
- * device-planned runs never reach this predicate's sandbox branch.
+ * is a real task dispatch (`taskRunner` writes these fields); chat runs
+ * have no task context, and external types never resolve an own-agent
+ * route.
  */
 export interface EmbeddedDispatchContext {
   dispatchFence: number;
@@ -111,10 +114,11 @@ export interface EmbeddedDispatchRouteInput {
 }
 
 /**
- * The embedded route admits every own-agent task dispatch on the sandbox
- * plan and returns its canonical context fully typed so the seam needs no
- * narrowing. Everything else — ACP/hetero kinds, chat runs, device-planned
- * runs — gets `null` and keeps the existing dispatch path byte-identical.
+ * The embedded route admits every own-agent task dispatch reaching this
+ * fork (sandbox plans, plus device plans held here by the transitional
+ * fence) and returns its canonical context fully typed so the seam needs
+ * no narrowing. Everything else — ACP/hetero kinds, chat runs — gets
+ * `null` and keeps the existing dispatch path byte-identical.
  */
 export const resolveEmbeddedDispatchRoute = async (
   deps: { userId: string },

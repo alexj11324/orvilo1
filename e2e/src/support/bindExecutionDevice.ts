@@ -9,9 +9,12 @@
  * a `devices` row plus `executionTarget: 'device'` + `boundDeviceId` on the
  * agent's `agency_config` — so dispatch resolves the real device path.
  *
- * The builtin `type:'orvilo'` agent takes this device path exactly like an
- * external agent — device-first resolution is the execution contract, and
- * the device picks the harness adapter (orvilo → Prime).
+ * The builtin `type:'orvilo'` agent resolves this device like every other
+ * agent — resolution still runs server-side and the run records the
+ * resolved deviceId — but its execution is fenced to the embedded fork
+ * (device-execution-contract.md §transitional-fence) until the device-side
+ * Prime adapter ships. The fake gateway device stays seeded so external
+ * hetero journeys keep exercising the real device path.
  *
  * Both scopes are bound (personal/unfiled and workspace copy) because the
  * inbox agent mints per-scope at first use.

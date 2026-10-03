@@ -479,11 +479,12 @@ export const executeHeterogeneousAgent = async (
     persistedHeterogeneousProvider,
   );
   if (heterogeneousProvider.type === 'orvilo') {
-    // The builtin Orvilo agent's harness is fixed to Prime and executes on a
-    // resolved device like every agent — but the device-side Prime adapter
-    // is not packaged yet (see
-    // docs/development/device-execution-contract.md). Fail loudly rather
-    // than resolving a wrong-family local executable.
+    // TRANSITIONAL backstop: orvilo execution stays server-side on the
+    // embedded fork while the device-side Prime adapter is packaged — the
+    // dispatcher's fence keeps device-resolved orvilo plans off the device
+    // gateway, so a local executor should never see an orvilo run. Fail
+    // loudly rather than resolving a wrong-family local executable (see
+    // docs/development/device-execution-contract.md §transitional-fence).
     throw new Error(
       "The builtin Orvilo agent's Prime adapter is not packaged for device execution yet.",
     );

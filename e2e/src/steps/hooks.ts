@@ -3,6 +3,7 @@ import type { Cookie } from 'playwright';
 
 import { clearMockLLMWorkerState } from '../mocks/llm/registry';
 import { bindTestUserExecutionDevice } from '../support/bindExecutionDevice';
+import { seedOrviloProviderBinding } from '../support/seedOrviloProviderBinding';
 import { createTestSession, seedTestUser } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
@@ -112,6 +113,15 @@ Before(async function (this: CustomWorld, { pickle }) {
       await bindTestUserExecutionDevice(this.browserContext.request);
     } catch (error) {
       console.warn('[e2e] execution-device binding failed:', error);
+    }
+
+    // Embedded Prime admission requires a resolving provider binding — the
+    // seeded orvilo+sandbox row points at the mock LLM so send-dependent
+    // journeys exercise the real infer path.
+    try {
+      await seedOrviloProviderBinding();
+    } catch (error) {
+      console.warn('[e2e] provider-binding seed failed:', error);
     }
   }
 });

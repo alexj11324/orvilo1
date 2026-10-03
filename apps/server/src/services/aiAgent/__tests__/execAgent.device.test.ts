@@ -18,6 +18,7 @@ const {
   mockGetHeterogeneousResumeSessionId,
   mockMessageCreate,
   mockMessageUpdate,
+  mockOpenEmbeddedChatDispatchHost,
   mockSpawnHeteroSandbox,
   realDispatchRef,
 } = vi.hoisted(() => ({
@@ -29,6 +30,7 @@ const {
   mockGetHeterogeneousResumeSessionId: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockMessageUpdate: vi.fn(),
+  mockOpenEmbeddedChatDispatchHost: vi.fn(),
   mockSpawnHeteroSandbox: vi.fn(),
   // The unmocked dispatch, captured by the factory below; the mock delegates
   // to it so tests observe the call AND the real routing pipeline runs.
@@ -213,6 +215,14 @@ vi.mock('../pipeline/heteroDispatch', async (importOriginal) => {
   return { ...actual, dispatchHeteroAgent: mockDispatchHeteroAgent };
 });
 
+// The host-open is stubbed (its admission re-proof needs a real `deps.db`);
+// `resolveEmbeddedChatDispatchRoute` stays real so routing into the embedded
+// chat host is genuinely exercised.
+vi.mock('@/server/services/controlPlane/embeddedChatDispatch', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, openEmbeddedChatDispatchHost: mockOpenEmbeddedChatDispatchHost };
+});
+
 vi.mock('@/server/services/heterogeneousAgent', () => ({
   HeterogeneousAgentService: vi.fn().mockImplementation(function () {
     return {
@@ -294,6 +304,12 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     mockDispatchAgentRun.mockResolvedValue({ success: true });
     mockExecuteToolCall.mockResolvedValue({ success: true });
     mockSpawnHeteroSandbox.mockResolvedValue(undefined);
+    // Deny with a sentinel — proves the run reached embedded chat admission
+    // without driving `openEmbeddedChatDispatchHost`'s `deps.db` re-proof.
+    mockOpenEmbeddedChatDispatchHost.mockResolvedValue({
+      error: { code: 'stale_fence', message: 'chat host stubbed by fence test', retryable: false },
+      ok: false,
+    });
     mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
     mockDeviceFindByDeviceId.mockResolvedValue(undefined);
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
@@ -675,9 +691,11 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       // no engine CLI is spawned either (orvilo wraps no CLI anymore).
       expect(mockDispatchAgentRun).not.toHaveBeenCalled();
       expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
-      // The run surfaces the embedded-admission boundary for a context the
-      // embedded host does not admit yet — identical to a sandbox-plan run.
-      expect(result).toMatchObject({ error: 'EMBEDDED_CHAT_NOT_ADMITTED' });
+      // The run lands on the embedded fork and reaches CHAT admission (the
+      // stubbed host-open's sentinel error surfaces) — identical routing to a
+      // sandbox-plan chat run. The device path never fires.
+      expect(mockOpenEmbeddedChatDispatchHost).toHaveBeenCalledTimes(1);
+      expect(result).toMatchObject({ error: 'chat host stubbed by fence test' });
     });
   });
 });

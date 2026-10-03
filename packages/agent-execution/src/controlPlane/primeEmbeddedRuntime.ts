@@ -25,7 +25,7 @@ import type {
   RuntimeEvent,
   RuntimeSession,
 } from './contracts';
-import { CONTROL_PLANE_VERSION } from './contracts';
+import { CONTROL_PLANE_VERSION, toInferenceMessage } from './contracts';
 import type {
   HarnessInitModel,
   HarnessSessionEvent,
@@ -49,13 +49,12 @@ import {
 import type { HarnessChannel } from './harnessTransport';
 import type { ProcessTreeSupervisor } from './isolation';
 import { sanitizedRuntimeEnvironment, verifiedIsolation } from './isolation';
+import { PRIME_EMBEDDED_PIN } from './primeEmbeddedArtifact';
 
-export const PRIME_EMBEDDED_PIN = {
-  commit: '7d442aafa985f9342134fac16c2ef41f03fb45c1',
-  version: '0.9.8',
-  license: 'MIT',
-  protocol: HARNESS_PROTOCOL_VERSION,
-} as const;
+// Lives in primeEmbeddedArtifact.ts so device-side hosts pin the same
+// upstream identity without importing the supervisor stack; re-exported here
+// to keep the existing './primeEmbeddedRuntime' import sites working.
+export { PRIME_EMBEDDED_PIN };
 
 /**
  * Host-side seam for turning a runner-issued sanitized request into a trusted
@@ -145,8 +144,9 @@ const RUNTIME_ID = 'prime-embedded' as const;
 const PROMPT_TIMEOUT_MS = 24 * 60 * 60 * 1000;
 
 /**
- * First-party runtime. Sessions come from the runner's init handshake; resume
- * stays 'none' in v1 (in-memory SessionManager — nothing to reload).
+ * First-party runtime. Sessions come from the runner's init handshake and
+ * persist under the runner stateDir; resume stays 'none' — `start()` has no
+ * resume-session slot, so advertising it would lie.
  */
 export class PrimeEmbeddedRuntime implements ExecutionRuntime {
   private readonly sessions = new Map<string, Entry>();
@@ -185,6 +185,9 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       !record(input.fence) ||
       fenceKeys.some((key) => {
         const value = input.fence[key];
+        // `taskId` is the only nullable fence slot: a conversation-subject
+        // run has no task id — `null` is the contract, not a placeholder.
+        if (key === 'taskId' && value === null) return false;
         return typeof value === 'number'
           ? !Number.isSafeInteger(value) || value < 0
           : typeof value !== 'string' || !value;
@@ -229,8 +232,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         !isHarnessInitAck(ack) ||
         ack.pin.commit !== PRIME_EMBEDDED_PIN.commit ||
         ack.pin.version !== PRIME_EMBEDDED_PIN.version ||
-        ack.pin.license !== PRIME_EMBEDDED_PIN.license ||
-        ack.capabilities.tools.length !== 0
+        ack.pin.license !== PRIME_EMBEDDED_PIN.license
       ) {
         transport.close();
         const cleanup = await this.terminate(isolation);
@@ -301,9 +303,13 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
     session: RuntimeSession;
     sessionPath?: string;
   }): Promise<ControlResult<RuntimeSession>> {
+    // The runner persists sessions and answers `session.resume` — but resume
+    // here is a start()-level decision the host contract does not yet carry
+    // (ExecutionRuntime.start has no resumeSessionId slot). Resume is
+    // exercised on the device path, whose host owns harness.init.
     return failure(
       'unsupported_capability',
-      'Embedded harness v1 keeps sessions in memory; resume lands with durable sessions',
+      'Embedded runtime start does not carry a resume target',
     );
   }
 
@@ -496,12 +502,48 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         });
         return;
       }
+      case 'thinking': {
+        push({ type: 'thinking', sessionId, text: event.text });
+        return;
+      }
+      case 'tool_call': {
+        push({
+          type: 'tool_call',
+          sessionId,
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          args: event.args,
+        });
+        return;
+      }
+      case 'tool_progress': {
+        push({
+          type: 'tool_progress',
+          sessionId,
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          partialResult: event.partialResult,
+        });
+        return;
+      }
+      case 'tool_result': {
+        push({
+          type: 'tool_result',
+          sessionId,
+          toolCallId: event.toolCallId,
+          toolName: event.toolName,
+          result: event.result,
+          isError: event.isError,
+        });
+        return;
+      }
       case 'tool-violation': {
-        // Tools are fail-closed in v1: a tool execution the runner reports means
-        // upstream escaped the empty allowlist — terminate rather than flatten.
+        // Tools are negotiated now — a violation event means the runner
+        // flagged a tool execution outside the declared surface. That remains
+        // fail-closed: terminate rather than flatten it into text.
         const denied = failure(
           'unsupported_capability',
-          `Embedded harness reported tool execution (${event.event}: ${event.toolName})`,
+          `Embedded harness reported tool execution outside the negotiated surface (${event.event}: ${event.toolName})`,
         );
         if (!denied.ok) finish({ type: 'error', sessionId, error: denied.error });
         return;
@@ -581,10 +623,14 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         bindingRevision: 0,
         fence: { ...entry.session.fence },
         maxOutputTokens: request.maxOutputTokens,
-        messages: request.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: request.messages.map(toInferenceMessage),
         modelRoute: request.modelRoute,
+        providerOptions: request.providerOptions,
         requestId: request.requestId,
         schemaVersion: CONTROL_PLANE_VERSION,
+        serviceTier: request.serviceTier,
+        thinkingLevel: request.thinkingLevel,
+        tools: request.tools,
       },
     };
   }
@@ -625,19 +671,23 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
           return;
         }
         // The broker stream contract is InferenceEvent; the wire contract is
-        // BrokerStreamEvent, whose error shape is flat ({code, message}). The
-        // runner drops error events in any other shape, so translate here —
+        // BrokerStreamEvent. Two shapes differ: error is flat on the wire
+        // ({code, message}) and thinking streams as thinking_delta. The
+        // runner drops events in any other shape, so translate here —
         // a missed error event leaves the runner's infer pump hung.
+        const value = step.value;
         entry.transport.notify(BROKER_EVENT_NOTIFICATION, {
           requestId,
           event:
-            step.value.type === 'error'
+            value.type === 'error'
               ? {
                   type: 'error',
-                  code: step.value.error.code,
-                  message: step.value.error.message,
+                  code: value.error.code,
+                  message: value.error.message,
                 }
-              : step.value,
+              : value.type === 'thinking'
+                ? { type: 'thinking_delta', text: value.text }
+                : value,
         });
       }
       if (entry.stopping || !entry.brokerStreams?.has(requestId)) return;

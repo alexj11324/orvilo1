@@ -2,10 +2,19 @@ import { z } from 'zod';
 
 /** Structured context for an unavailable logical device. */
 export interface DeviceUnavailableErrorData {
-  /** Stable machine-readable availability code. */
-  code: 'DEVICE_NOT_FOUND';
+  /**
+   * Stable machine-readable availability code. `DEVICE_NOT_FOUND` means the
+   * device could not be addressed at all; `DEVICE_BINDING_INVALID` is the
+   * device-execution contract's explicit-repair outcome — the bound device
+   * was deleted, revoked, or is no longer authorized, and the caller must
+   * rebind rather than silently retry another host.
+   */
+  code: 'DEVICE_BINDING_INVALID' | 'DEVICE_NOT_FOUND';
   /** Logical device requested by the failed dispatch. */
   deviceId: string;
+  /** When `DEVICE_BINDING_INVALID`: device ids the caller may explicitly
+   * repair onto (other selectable devices in the same scope). */
+  repairCandidates?: string[];
   /** Availability failures are safe for an outer caller to reconsider. */
   retryable: true;
   /** Principal pool in which presence was checked. */

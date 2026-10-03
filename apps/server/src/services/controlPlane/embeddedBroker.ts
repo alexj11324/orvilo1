@@ -7,10 +7,14 @@ import type {
   ProviderBinding,
   TrustedProviderBackend,
 } from '@orvilo/agent-execution/controlPlane';
-import { CONTROL_PLANE_VERSION, createInferenceBroker } from '@orvilo/agent-execution/controlPlane';
+import {
+  CONTROL_PLANE_VERSION,
+  createInferenceBroker,
+  toInferenceMessage,
+} from '@orvilo/agent-execution/controlPlane';
 import type { HarnessInitModel } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import type { BuildInferenceRequest } from '@orvilo/agent-execution/controlPlane/server';
-import type { OrviloEngineKind, ProviderBindingConfig } from '@orvilo/types';
+import type { ProviderBindingConfig } from '@orvilo/types';
 
 import type { OrviloDatabase } from '@/database/type';
 
@@ -41,7 +45,6 @@ export interface EmbeddedInferenceBridgeDeps {
   /** Canonically registered run — the only scope the bridge may serve. */
   binding: CanonicalRunBinding;
   database: OrviloDatabase;
-  engine?: OrviloEngineKind | string | null;
   issueExecution?: IssueBindingExecutionForClaim;
   now?: () => number;
   /** Test seams — replace binding resolution and issuance. */
@@ -96,7 +99,7 @@ export async function createEmbeddedInferenceBridge(
   const issue = deps.issueExecution ?? issueBindingExecution;
   const runAuthority = deps.runAuthority ?? new CanonicalRunAuthority(deps.database);
 
-  const row = await resolve(deps.database, deps.binding.userId, deps.engine ?? null, target);
+  const row = await resolve(deps.database, deps.binding.userId, target);
   if (!row) return failure('unauthorized', 'No provider binding resolves in this run scope');
 
   const claim: BindingExecutionClaim = {
@@ -165,10 +168,14 @@ export async function createEmbeddedInferenceBridge(
         bindingRevision: pinned.revision,
         fence: { ...session.fence },
         maxOutputTokens: request.maxOutputTokens,
-        messages: request.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: request.messages.map(toInferenceMessage),
         modelRoute: request.modelRoute,
+        providerOptions: request.providerOptions,
         requestId: request.requestId,
         schemaVersion: CONTROL_PLANE_VERSION,
+        serviceTier: request.serviceTier,
+        thinkingLevel: request.thinkingLevel,
+        tools: request.tools,
       },
     };
   };
@@ -179,7 +186,15 @@ export async function createEmbeddedInferenceBridge(
       buildInferenceRequest,
       claim,
       inferenceBroker: createInferenceBroker({ authority, backend, now: deps.now }),
-      initModel: { id: capability.modelRoute, maxOutputTokens: capability.maxOutputTokens },
+      initModel: {
+        id: capability.modelRoute,
+        input: capability.images ? ['text', 'image'] : ['text'],
+        maxOutputTokens: capability.maxOutputTokens,
+        ...(typeof capability.contextWindow === 'number'
+          ? { contextWindow: capability.contextWindow }
+          : {}),
+        ...(typeof capability.reasoning === 'boolean' ? { reasoning: capability.reasoning } : {}),
+      },
     },
   };
 }

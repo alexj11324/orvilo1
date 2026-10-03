@@ -1,3 +1,4 @@
+import type { RunSubject } from '@orvilo/types';
 import { and, eq } from 'drizzle-orm';
 
 import { executionGrants } from '../schemas/executionGrant';
@@ -24,11 +25,19 @@ export interface RuntimeRunBinding {
   runtimeOwnerId: string;
   runtimeRegistrationId: string;
   stateRevision: number;
-  taskId: string;
+  /** The run's explicit subject — task or conversation (device-execution-contract). */
+  subject: RunSubject;
   topicId: string;
   userId: string;
   workspaceId: string;
 }
+
+/** Task-only models never admit a conversation subject — no placeholder
+ * stands in for a real task id. */
+export const subjectTaskId = (binding: RuntimeRunBinding): string =>
+  binding.subject.kind === 'task'
+    ? binding.subject.taskId
+    : fail('Run subject is not a task execution');
 export interface HandoffIntent {
   id: string;
   leaseMs: number;
@@ -64,7 +73,7 @@ export class TaskExecutionControlModel {
     const [task] = await tx
       .select()
       .from(tasks)
-      .where(and(eq(tasks.id, b.taskId), eq(tasks.workspaceId, this.workspaceId)))
+      .where(and(eq(tasks.id, subjectTaskId(b)), eq(tasks.workspaceId, this.workspaceId)))
       .for('update', { noWait: true })
       .limit(1);
     const [dispatch] = await tx
@@ -82,7 +91,7 @@ export class TaskExecutionControlModel {
       task.deletedAt ||
       task.status !== 'running' ||
       task.currentTopicId !== b.topicId ||
-      dispatch.taskId !== b.taskId ||
+      dispatch.taskId !== subjectTaskId(b) ||
       dispatch.phase !== 'running' ||
       dispatch.operationId !== b.operationId ||
       dispatch.fence !== b.dispatchFence ||
@@ -109,7 +118,7 @@ export class TaskExecutionControlModel {
       .from(taskTopics)
       .where(
         and(
-          eq(taskTopics.taskId, b.taskId),
+          eq(taskTopics.taskId, subjectTaskId(b)),
           eq(taskTopics.topicId, b.topicId),
           eq(taskTopics.workspaceId, this.workspaceId),
         ),
@@ -129,7 +138,7 @@ export class TaskExecutionControlModel {
       .limit(1);
     if (
       !grant ||
-      grant.taskId !== b.taskId ||
+      grant.taskId !== subjectTaskId(b) ||
       grant.agentId !== dispatch.agentId ||
       grant.delegationSubjectType !== 'user' ||
       grant.delegationSubjectId !== this.userId ||
@@ -302,7 +311,7 @@ export class TaskExecutionControlModel {
       const [task] = await tx
         .select()
         .from(tasks)
-        .where(and(eq(tasks.id, binding.taskId), eq(tasks.workspaceId, this.workspaceId)))
+        .where(and(eq(tasks.id, subjectTaskId(binding)), eq(tasks.workspaceId, this.workspaceId)))
         .for('update', { noWait: true })
         .limit(1);
       const [dispatch] = await tx
@@ -321,7 +330,7 @@ export class TaskExecutionControlModel {
         .from(taskTopics)
         .where(
           and(
-            eq(taskTopics.taskId, binding.taskId),
+            eq(taskTopics.taskId, subjectTaskId(binding)),
             eq(taskTopics.topicId, binding.topicId),
             eq(taskTopics.workspaceId, this.workspaceId),
           ),
@@ -334,7 +343,7 @@ export class TaskExecutionControlModel {
         task.currentTopicId !== binding.topicId ||
         task.executionGeneration !== binding.generation ||
         !dispatch ||
-        dispatch.taskId !== binding.taskId ||
+        dispatch.taskId !== subjectTaskId(binding) ||
         dispatch.operationId !== binding.operationId ||
         dispatch.generation !== binding.generation ||
         !topic ||
@@ -400,7 +409,7 @@ export class TaskExecutionControlModel {
       .from(taskTopics)
       .where(
         and(
-          eq(taskTopics.taskId, binding.taskId),
+          eq(taskTopics.taskId, subjectTaskId(binding)),
           eq(taskTopics.topicId, binding.topicId),
           eq(taskTopics.workspaceId, this.workspaceId),
         ),
@@ -462,7 +471,7 @@ export class TaskExecutionControlModel {
         if (
           existing.workspaceId !== this.workspaceId ||
           existing.userId !== this.userId ||
-          existing.taskId !== binding.taskId ||
+          existing.taskId !== subjectTaskId(binding) ||
           existingTopic?.topicId !== binding.topicId ||
           r.sourceEpoch !== binding.executionEpoch ||
           r.source.registrationId !== binding.runtimeRegistrationId ||
@@ -498,7 +507,7 @@ export class TaskExecutionControlModel {
         .insert(taskExecutionHandoffs)
         .values({
           id: intent.id,
-          taskId: binding.taskId,
+          taskId: subjectTaskId(binding),
           taskTopicId: topic.id,
           workspaceId: this.workspaceId,
           userId: this.userId,
@@ -553,7 +562,7 @@ export class TaskExecutionControlModel {
     const b: RuntimeRunBinding = {
       workspaceId: this.workspaceId,
       userId: this.userId,
-      taskId: topic.taskId,
+      subject: { dispatchId: r.dispatchId, kind: 'task', taskId: topic.taskId },
       topicId: topic.topicId,
       dispatchId: r.dispatchId,
       dispatchFence: r.dispatchFence,

@@ -193,6 +193,9 @@ describe('AiAgentService.execAgent - disableTools', () => {
       success: true,
     });
     mockGetAgentConfig.mockResolvedValue({
+      // Mount-capable external binding — the builtin orvilo agent is
+      // embedded-only (mounts no tools).
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
       chatConfig: {},
       id: 'agent-1',
       model: 'gpt-4',

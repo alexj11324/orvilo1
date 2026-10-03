@@ -8,6 +8,7 @@ import * as ResourcePermissionModelModule from '@/database/models/resourcePermis
 import * as ResourceTransferRequestModelModule from '@/database/models/resourceTransferRequest';
 import { TRANSFER_REQUEST_ALREADY_PENDING } from '@/database/models/resourceTransferRequest';
 import * as UserModelModule from '@/database/models/user';
+import type * as WorkspaceModule from '@/database/models/workspace';
 import * as AgentGroupRepoModule from '@/database/repositories/agentGroup';
 import * as ChatGroupServiceModule from '@/server/services/agentGroup';
 import { EditLockService } from '@/server/services/editLock';
@@ -28,7 +29,7 @@ vi.mock('@/server/services/resourceEvents', () => ({ publishResourceEvent: vi.fn
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModule>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 // Both read the DB directly; `mockCtx.serverDB` is a bare object.
@@ -591,6 +592,44 @@ describe('agentGroupRouter', () => {
         'agent-2',
       ]);
       expect(result).toEqual(mockResult);
+    });
+  });
+
+  describe('member input — retired heterogeneousProvider fields refused', () => {
+    // Contract §migration: group member creates funnel through the same
+    // `agencyConfig` column — the schema rejects retired `engine`/`adapterType`
+    // writes here too, not only on the single-agent endpoints.
+    it('rejects batchCreateAgentsInGroup carrying a retired engine write', async () => {
+      const caller = agentGroupRouter.createCaller(mockCtx);
+
+      await expect(
+        caller.batchCreateAgentsInGroup({
+          agents: [
+            {
+              agencyConfig: { heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' } },
+              title: 'member',
+            } as any,
+          ],
+          groupId: 'group-1',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect(agentModelMock.batchCreate).not.toHaveBeenCalled();
+    });
+
+    it('rejects createGroupWithMembers carrying a retired adapterType write', async () => {
+      const caller = agentGroupRouter.createCaller(mockCtx);
+
+      await expect(
+        caller.createGroupWithMembers({
+          groupConfig: { title: 'Group' },
+          members: [
+            {
+              agencyConfig: { heterogeneousProvider: { adapterType: 'cli', type: 'orvilo' } },
+              title: 'member',
+            } as any,
+          ],
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
     });
   });
 

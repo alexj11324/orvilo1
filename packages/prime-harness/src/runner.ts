@@ -1,33 +1,48 @@
 /**
  * `@orvilo/prime-harness` runner — container PID 1.
  *
- * Boots an upstream `createAgentSession` with every ambient capability sealed:
- * in-memory empty AuthStorage (zero credentials), in-memory SessionManager,
- * in-memory SettingsManager with telemetry off, an EmptyResourceLoader (the
- * workspace mount is untrusted — nothing scans it), an effectively-empty
- * McpManager, `noTools: 'all'`, and a ModelRegistry whose ONLY provider is
- * `orvilo-broker` (all inference exits through the host's broker over the
- * ndjson link — there is no other path out).
+ * Boots an upstream `createAgentSession` at upstream parity: the default
+ * toolset (`initialActiveToolNames` = `['ipython']` plus whatever
+ * extension/acp-mcp tools the resource loader surfaces), a real
+ * `DefaultResourceLoader` scanning the device-supplied workspace, a
+ * persistent `SessionManager` under the device-supplied stateDir (real
+ * resume via `session.resume`/`resumeSessionId`), a persistent
+ * `SettingsManager` with telemetry disabled, a real `McpManager` fed by the
+ * managed settings file under `agentDir`, and the upstream thinking-level
+ * resolution (saved session → settings default → DEFAULT_THINKING_LEVEL,
+ * clamped to `model.reasoning`).
+ *
+ * What stays sealed — the credential architecture, not the capability:
+ * in-memory `AuthStorage` (zero credentials), a `ModelRegistry` whose ONLY
+ * provider is `orvilo-broker` (all inference exits through the host's broker
+ * over the ndjson link — there is no other path out), telemetry off.
  *
  * Protocol channel: stdin/stdout carry ndjson JSON-RPC frames only. Every
  * diagnostic — ours or a stray upstream `console.log` — goes to stderr so it
  * can never corrupt the wire.
  */
 
+import { existsSync, readdirSync } from 'node:fs';
+import path from 'node:path';
+
 import type { Model } from '@earendil-works/pi-ai';
 import type { AgentSession } from '@earendil-works/pi-coding-agent';
 import {
   AuthStorage,
   createAgentSession,
+  DefaultResourceLoader,
   ModelRegistry,
   SessionManager,
   SettingsManager,
 } from '@earendil-works/pi-coding-agent';
-import {
-  type McpConnectionStoreLike,
-  McpManager,
-} from '@earendil-works/pi-coding-agent/core/mcp/mcp-manager.js';
-import type { HarnessInitParams } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
+import { getSessionsDir } from '@earendil-works/pi-coding-agent/config.js';
+import { McpConnectionStore } from '@earendil-works/pi-coding-agent/core/mcp/connection-store.js';
+import { McpManager } from '@earendil-works/pi-coding-agent/core/mcp/mcp-manager.js';
+import { getDefaultSessionDir } from '@earendil-works/pi-coding-agent/core/session-manager.js';
+import type {
+  HarnessInitParams,
+  HarnessResumeParams,
+} from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import {
   BROKER_CANCEL_METHOD,
   BROKER_EVENT_NOTIFICATION,
@@ -35,14 +50,15 @@ import {
   HARNESS_ABORT_METHOD,
   HARNESS_EVENT_NOTIFICATION,
   HARNESS_INIT_METHOD,
+  HARNESS_LIST_SESSIONS_METHOD,
   HARNESS_PROMPT_METHOD,
   HARNESS_PROTOCOL_VERSION,
+  HARNESS_RESUME_METHOD,
 } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import { isNonEmptyString, isRecord } from '@orvilo/utils/object';
 
 import type { BrokerBridge } from './broker';
 import { createBrokerBridge } from './broker';
-import { EmptyResourceLoader } from './emptyResourceLoader';
 import { mapAgentSessionEvent, mapStopReason } from './events';
 import { RunnerLink } from './ndjson';
 
@@ -54,9 +70,11 @@ const RUNNER_PIN = {
 } as const;
 
 /**
- * The runner presents the host-pinned route from `harness.init` upstream — the
- * model.id on the wire is the route the run's issued binding actually granted,
- * not a placeholder. baseUrl/api/provider stay inert: no egress exists.
+ * The runner presents the host-pinned route from `harness.init` upstream —
+ * `model.id` is the route the run's issued binding actually granted, and
+ * reasoning/input/contextWindow/maxTokens pass through from the same
+ * `HarnessInitModel` the host resolved off `ProviderModelCapability`.
+ * baseUrl/api/provider stay inert: no egress exists.
  */
 const brokerModel = (init: HarnessInitParams['model']): Model => ({
   id: init.id,
@@ -64,22 +82,17 @@ const brokerModel = (init: HarnessInitParams['model']): Model => ({
   api: 'orvilo-broker',
   provider: 'orvilo-broker',
   baseUrl: 'orvilo-broker://local',
-  reasoning: false,
-  input: ['text'],
+  reasoning: init.reasoning === true,
+  input:
+    Array.isArray(init.input) && init.input.every((m) => m === 'text' || m === 'image')
+      ? init.input
+      : ['text'],
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-  contextWindow: 128_000,
+  contextWindow:
+    typeof init.contextWindow === 'number' && Number.isSafeInteger(init.contextWindow)
+      ? init.contextWindow
+      : 128_000,
   maxTokens: init.maxOutputTokens,
-});
-
-/** In-memory MCP connection store — keeps the manager away from the fs. */
-const emptyConnectionStore = (): McpConnectionStoreLike => ({
-  load: () => {},
-  records: () => [],
-  get: () => undefined,
-  remove: () => {},
-  upsert: () => {},
-  queueVerifyResult: () => undefined,
-  flush: () => Promise.resolve(),
 });
 
 // stdout is the protocol channel — anything else must go to stderr.
@@ -92,13 +105,20 @@ const link = new RunnerLink({ input: process.stdin, output: process.stdout });
 interface RunnerSession {
   aborting: boolean;
   bridge: BrokerBridge;
+  /** The upstream session id — reported in the init/resume ack. */
   id: string;
+  init: HarnessInitParams;
   promptInFlight: Promise<void> | undefined;
+  resumed: boolean;
   session: AgentSession;
   unsubscribe: () => void;
 }
 
 let current: RunnerSession | undefined;
+
+/** `<agentDir>/sessions/<sessionId>.jsonl` — the file a resume reopens. */
+const sessionFilePath = (sessionDir: string, sessionId: string): string =>
+  path.join(sessionDir, `${sessionId}.jsonl`);
 
 const isInitParams = (params: unknown): params is HarnessInitParams =>
   isRecord(params) &&
@@ -110,59 +130,128 @@ const isInitParams = (params: unknown): params is HarnessInitParams =>
   isNonEmptyString(params.model.id) &&
   typeof params.model.maxOutputTokens === 'number' &&
   Number.isSafeInteger(params.model.maxOutputTokens) &&
-  params.model.maxOutputTokens >= 1;
+  params.model.maxOutputTokens >= 1 &&
+  (params.stateDir === undefined || typeof params.stateDir === 'string') &&
+  (params.resumeSessionId === undefined || typeof params.resumeSessionId === 'string');
 
-const buildSession = async (init: HarnessInitParams, sessionId: string): Promise<RunnerSession> => {
+/**
+ * Build the upstream session. When `resumeSessionId` names an existing
+ * `<sessionDir>/<id>.jsonl`, the manager reopens it — the upstream session
+ * restores its messages/model/thinking level and the run reports the same
+ * session id back in the ack (the host detects resumed-vs-rebuilt by
+ * comparing the acked id against the id it asked for).
+ */
+const buildSession = async (
+  init: HarnessInitParams,
+  resumeSessionId?: string,
+): Promise<RunnerSession> => {
+  const agentDir = isNonEmptyString(init.stateDir)
+    ? init.stateDir
+    : path.join(init.workspace, '.prime', 'agent');
+  const sessionDir = getDefaultSessionDir(init.workspace, agentDir);
+
   const authStorage = AuthStorage.inMemory({});
   const modelRegistry = ModelRegistry.inMemory(authStorage);
 
   const model = brokerModel(init.model);
-  const bridge = createBrokerBridge(link, sessionId);
-  modelRegistry.registerProvider('orvilo-broker', {
-    api: 'orvilo-broker',
-    baseUrl: 'orvilo-broker://local',
-    apiKey: 'embedded',
-    streamSimple: bridge.streamSimple,
-    models: [model],
-  });
+  const sessionManager = (() => {
+    if (isNonEmptyString(resumeSessionId)) {
+      const file = sessionFilePath(sessionDir, resumeSessionId);
+      if (existsSync(file)) return SessionManager.open(file, sessionDir, init.workspace);
+    }
+    return SessionManager.create(init.workspace, sessionDir);
+  })();
 
-  const settingsManager = SettingsManager.inMemory({ telemetry: { enabled: false } });
-  const sessionManager = SessionManager.inMemory(init.workspace);
+  // Persistent settings under agentDir — telemetry stays sealed through the
+  // persisted settings file, exactly as upstream records it.
+  const settingsManager = SettingsManager.create(init.workspace, agentDir);
+  settingsManager.setTelemetryEnabled(false);
+
+  // Real MCP manager fed by the managed settings file under agentDir — the
+  // Orvilo-managed path; the connection store persists under the same dir.
   const mcpManager = new McpManager({
     authStorage,
-    connectionStore: emptyConnectionStore(),
-    getUserServers: () => undefined,
-    noBackgroundVerification: true,
+    connectionStore: McpConnectionStore.open(path.join(agentDir, 'mcp-connections.json')),
+    getUserServers: () => settingsManager.getGlobalMcpServers(),
+  });
+
+  const resourceLoader = new DefaultResourceLoader({
+    cwd: init.workspace,
+    agentDir,
+    settingsManager,
+    extraBuiltinSkillOverrides: () => mcpManager.getDisabledBuiltinSkillOverrides(),
+  });
+  await resourceLoader.reload();
+
+  // Bridge the model registry to mcpManager exactly as upstream does.
+  modelRegistry.setOnOAuthProvidersReset(() => mcpManager.registerAllProviders());
+
+  // The ONLY provider is orvilo-broker — `streamSimple` is the broker bridge,
+  // so all inference exits through the host over the stdio wire (zero-credential
+  // AuthStorage stays sealed; `apiKey` is the upstream-required non-empty
+  // sentinel, never a real credential). The provider must be registered before
+  // createAgentSession runs but the upstream session id only exists after, so
+  // the bridge reads it through a cell filled in once the session exists —
+  // resolution happens per-pump inside streamSimple.
+  const sessionId = { current: '' };
+  const bridge = createBrokerBridge(link, () => sessionId.current);
+  modelRegistry.registerProvider('orvilo-broker', {
+    api: 'orvilo-broker',
+    apiKey: 'embedded',
+    baseUrl: 'orvilo-broker://local',
+    models: [model],
+    streamSimple: bridge.streamSimple,
   });
 
   const { session } = await createAgentSession({
-    agentDir: '/tmp/agent',
+    agentDir,
     authStorage,
-    customTools: [],
     cwd: init.workspace,
     mcpManager,
     model,
     modelRegistry,
-    noTools: 'all',
-    resourceLoader: new EmptyResourceLoader(),
+    resourceLoader,
     sessionManager,
     settingsManager,
-    thinkingLevel: 'off',
-    tools: [],
+    // thinkingLevel intentionally omitted — upstream resolves saved-session →
+    // settings default → DEFAULT_THINKING_LEVEL, then clamps to model.reasoning.
+    // tools/noTools/customTools intentionally omitted — upstream default
+    // initialActiveToolNames ('ipython') plus extension/acp-mcp surface.
   });
+
+  sessionId.current = session.sessionId;
 
   return {
     aborting: false,
     bridge,
-    id: sessionId,
+    id: sessionId.current,
+    init,
     promptInFlight: undefined,
+    // Reopening an existing file preserves the upstream session id — the
+    // acked id matching resumeSessionId is exactly "really resumed".
+    resumed: sessionId.current === resumeSessionId,
     session,
     unsubscribe: session.subscribe((event) => {
       const wire = mapAgentSessionEvent(event);
-      if (wire) link.notify(HARNESS_EVENT_NOTIFICATION, { sessionId, event: wire });
+      if (wire)
+        link.notify(HARNESS_EVENT_NOTIFICATION, { sessionId: sessionId.current, event: wire });
     }),
   };
 };
+
+const teardown = (entry: RunnerSession | undefined): void => {
+  if (!entry) return;
+  entry.unsubscribe();
+  entry.bridge.abortAll();
+  void entry.session
+    .disposeAsync()
+    .catch((error) => console.error('session dispose failed', error));
+};
+
+const isResumeParams = (params: unknown): params is HarnessResumeParams =>
+  isRecord(params) &&
+  isNonEmptyString(params.sessionId) &&
+  isNonEmptyString(params.resumeSessionId);
 
 const handleRequest = async (
   id: number | string,
@@ -179,9 +268,8 @@ const handleRequest = async (
         link.respondError(id, -32603, 'Session already initialized');
         return;
       }
-      const sessionId = `embedded-${Date.now().toString(36)}`;
       try {
-        current = await buildSession(params, sessionId);
+        current = await buildSession(params, params.resumeSessionId);
       } catch (error) {
         console.error('createAgentSession failed', error);
         link.respondError(id, -32603, 'Failed to create agent session');
@@ -189,16 +277,51 @@ const handleRequest = async (
       }
       link.respond(id, {
         protocolVersion: HARNESS_PROTOCOL_VERSION,
-        sessionId,
+        sessionId: current.id,
         pin: { ...RUNNER_PIN },
         capabilities: {
           prompt: true,
           stream: true,
           cancel: true,
-          tools: [],
+          tools: current.session.getActiveToolNames(),
           requests: [BROKER_INFER_METHOD, BROKER_CANCEL_METHOD],
         },
       });
+      return;
+    }
+    case HARNESS_RESUME_METHOD: {
+      const entry = current;
+      if (!entry || !isResumeParams(params) || params.sessionId !== entry.id) {
+        link.respondError(id, -32602, 'Invalid session.resume params');
+        return;
+      }
+      try {
+        const next = await buildSession(entry.init, params.resumeSessionId);
+        teardown(entry);
+        current = next;
+        link.respond(id, { sessionId: next.id, resumed: next.resumed });
+      } catch (error) {
+        console.error('session.resume failed', error);
+        link.respondError(id, -32603, 'Failed to resume agent session');
+      }
+      return;
+    }
+    case HARNESS_LIST_SESSIONS_METHOD: {
+      const entry = current;
+      if (!entry || !isRecord(params) || params.sessionId !== entry.id) {
+        link.respondError(id, -32602, 'Invalid session.list params');
+        return;
+      }
+      const agentDir = isNonEmptyString(entry.init.stateDir)
+        ? entry.init.stateDir
+        : path.join(entry.init.workspace, '.prime', 'agent');
+      const sessionsDir = getSessionsDir(agentDir);
+      const sessions = existsSync(sessionsDir)
+        ? readdirSync(sessionsDir)
+            .filter((name) => name.endsWith('.jsonl'))
+            .map((name) => name.slice(0, -'.jsonl'.length))
+        : [];
+      link.respond(id, { sessions });
       return;
     }
     case HARNESS_PROMPT_METHOD: {

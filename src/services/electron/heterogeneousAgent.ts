@@ -8,7 +8,6 @@ import type {
   HeterogeneousAgentModelCatalog,
   HeteroSessionImportMessage,
   ListHeterogeneousAgentModelsParams,
-  OrviloEngineKind,
 } from '@orvilo/types';
 
 import { ensureElectronIpc } from '@/utils/electron/ipc';
@@ -28,13 +27,6 @@ class HeterogeneousAgentService {
     cwd?: string;
     env?: Record<string, string>;
     initialModel?: string;
-    /**
-     * Builtin Orvilo engine selection (provider `type: 'orvilo'` runs — the
-     * `agentType` sent here is already the engine's CLI family). Selects the
-     * ACP transport family — `claude-sdk` → claude-code via
-     * `claude-agent-acp`, `codex-app-server` → codex via `codex-acp`.
-     */
-    orviloEngine?: OrviloEngineKind;
     providerBinding?: HeterogeneousProviderBindingReference;
     resumeSessionId?: string;
     useClaudeCodeSdk?: boolean;

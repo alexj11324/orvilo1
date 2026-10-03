@@ -24,6 +24,7 @@ import type {
   ProviderModelCapability,
   TrustedProviderBackend,
 } from '@orvilo/agent-execution/controlPlane';
+import { HARNESS_PROTOCOL_VERSION } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import type {
   DockerSupervisorOptions,
   EmbeddedArtifactManifest,
@@ -233,7 +234,7 @@ const fakeSupervisor = (init: {
 const harnessAck = (params: unknown) => ({
   capabilities: { cancel: true, prompt: true, requests: [], stream: true, tools: [] },
   pin: isRecord(params) ? params.pin : undefined,
-  protocolVersion: 1,
+  protocolVersion: HARNESS_PROTOCOL_VERSION,
   sessionId: RUNNER_SESSION,
 });
 
@@ -267,7 +268,11 @@ const fakeBackend = (hooks?: { between?: () => Promise<void> }): TrustedProvider
  * `broker.event` back as the runner's `harness.event` notifications, and
  * answers `end_turn` when the broker stream ends (or reports an error).
  */
-const promptDrivingSupervisor = () => {
+const promptDrivingSupervisor = (options?: {
+  /** Extra `harness.event` notifications emitted after the broker stream
+   * ends — stands in for the runner executing a tool itself. */
+  harnessEvents?: (wire: RunnerWire, sessionId: string) => void;
+}) => {
   const order: string[] = [];
   const supervisor = fakeSupervisor({
     supervisorId: 'sup-embedded-test',
@@ -326,7 +331,12 @@ const promptDrivingSupervisor = () => {
           endTurn();
           return;
         }
-        if (event.type === 'end') endTurn();
+        if (event.type === 'end') {
+          // Runner-executed tool activity lands inside the turn, before the
+          // prompt response — emit before `endTurn` so the host pump sees it.
+          options?.harnessEvents?.(wire, sessionId);
+          endTurn();
+        }
       });
       void wire.reverseRequest('broker.infer', {
         request: {
@@ -545,7 +555,8 @@ const seedBinding = async (userId: string) => {
     .insert(providerBindings)
     .values({
       config: {
-        enabled: false,
+        // Armed — `enabled` gates both binding resolution and issuance.
+        enabled: true,
         endpoint: 'https://provider.example.test/',
         model: MODEL_ID,
         name: 'Embedded dispatch fixture',
@@ -599,7 +610,7 @@ const openInput = (
   model: MODEL_ID,
   operationId: run.operationId,
   provider: 'mock',
-  taskId: run.taskId,
+  subject: { dispatchId: run.dispatchId, kind: 'task' as const, taskId: run.taskId },
   topicId: run.topicId,
 });
 
@@ -616,7 +627,7 @@ describe('resolveEmbeddedDispatchRoute', () => {
       dispatchFence: 2,
       dispatchId: 'd-1',
       executionGeneration: 1,
-      taskId: 'task-1',
+      subject: { dispatchId: 'd-1', kind: 'task', taskId: 'task-1' },
     });
     // ACP/hetero kinds never match — their path is byte-identical.
     expect(
@@ -689,6 +700,32 @@ describe('openEmbeddedDispatchHost', () => {
       .from(executionGrants)
       .where(eq(executionGrants.taskId, run.taskId));
     expect(grants).toHaveLength(1);
+    await prepared.value.host.shutdown().catch(() => {});
+  });
+
+  it('composes the container supervisor with the calibrated memory budget', async () => {
+    const run = await seedEmbeddedRun();
+    await seedBinding(run.userId);
+    const { artifact, root } = await fixtureDirectories();
+    const { supervisor } = promptDrivingSupervisor();
+    let supervised: DockerSupervisorOptions | undefined;
+    const prepared = await openEmbeddedDispatchHost(
+      { database: db, userId: run.userId },
+      openInput(
+        run,
+        environmentFor(root, artifact, {
+          supervisor: (options) => {
+            supervised = options;
+            return supervisor.factory(options);
+          },
+        }),
+      ),
+    );
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+    // The runner idles at ~200 MiB; the supervisor default (256) OOM-kills it
+    // intermittently under stream/queue allocation bursts.
+    expect(supervised?.memoryMiB).toBe(768);
     await prepared.value.host.shutdown().catch(() => {});
   });
 
@@ -822,5 +859,74 @@ describe('driveEmbeddedCanonicalRun', () => {
     expect(assistant?.content).toBe('hello ');
     expect(assistant?.error).toBeTruthy();
     expect(supervisor.state.terminated.length).toBeGreaterThan(0);
+  }, 30_000);
+
+  it('surfaces runner tool/thinking activity to the ledger like hetero', async () => {
+    const run = await seedEmbeddedRun();
+    await seedBinding(run.userId);
+    const { artifact, root } = await fixtureDirectories();
+    const { supervisor } = promptDrivingSupervisor({
+      harnessEvents: (wire, sessionId) => {
+        wire.notify('harness.event', {
+          event: { kind: 'thinking', text: 'pondering' },
+          sessionId,
+        });
+        wire.notify('harness.event', {
+          event: {
+            args: { code: 'print(1)' },
+            kind: 'tool_call',
+            toolCallId: 'call_1',
+            toolName: 'ipython',
+          },
+          sessionId,
+        });
+        wire.notify('harness.event', {
+          event: {
+            isError: false,
+            kind: 'tool_result',
+            result: { content: [{ text: '1', type: 'text' }] },
+            toolCallId: 'call_1',
+            toolName: 'ipython',
+          },
+          sessionId,
+        });
+      },
+    });
+    const prepared = await openEmbeddedDispatchHost(
+      { database: db, userId: run.userId },
+      openInput(run, environmentFor(root, artifact, { supervisor: supervisor.factory })),
+    );
+    expect(prepared.ok).toBe(true);
+    if (!prepared.ok) return;
+
+    await driveEmbeddedCanonicalRun(
+      { database: db, userId: run.userId, workspaceId: run.workspaceId },
+      prepared.value,
+      {
+        agentType: 'claude-code',
+        assistantMessageId: run.assistantMessageId,
+        operationId: run.operationId,
+        prompt: 'run the tool',
+        topicId: run.topicId,
+      },
+    );
+
+    // tools_calling populated the assistant message's tool rows — the same
+    // persistence a hetero ToolCallPayload lands on for chat rendering.
+    const [assistant] = await db
+      .select({ reasoning: messages.reasoning, tools: messages.tools })
+      .from(messages)
+      .where(eq(messages.id, run.assistantMessageId));
+    expect(assistant?.tools).toEqual([
+      expect.objectContaining({ apiName: 'ipython', id: 'call_1', identifier: 'orvilo' }),
+    ]);
+    expect(assistant?.reasoning).toBeTruthy();
+
+    const toolRows = await db
+      .select({ content: messages.content, role: messages.role })
+      .from(messages)
+      .where(eq(messages.topicId, run.topicId));
+    const toolMessage = toolRows.find((row) => row.role === 'tool');
+    expect(toolMessage?.content).toBe('1');
   }, 30_000);
 });

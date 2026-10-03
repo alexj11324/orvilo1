@@ -22,7 +22,7 @@ import {
   ScanSearch,
   TerminalIcon,
 } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -415,6 +415,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
 
     const {
       data: devices,
+      error: devicesError,
       isLoading: loadingDevices,
       isValidating: fetchingDevices,
       mutate: refetchDevices,
@@ -424,7 +425,11 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       () => (devices ?? []).filter((d) => !restrictToWorkspaceDevices || d.scope === 'workspace'),
       [devices, restrictToWorkspaceDevices],
     );
-    const onlineDevices = listedDevices.filter((d) => d.online);
+    // The connect flow obeys the same 0/1/N device rules as the execution
+    // contract: with exactly one legal candidate (desktop counts as its own
+    // "This device" candidate) the flow auto-resolves it instead of showing a
+    // one-row picker. Loading/failed inventory never counts as 0 or 1.
+    const deviceInventoryComplete = !loadingDevices && !fetchingDevices && !devicesError;
 
     const deviceLabel = useCallback(
       (device: DeviceListItem) => device.friendlyName || device.hostname || device.deviceId,
@@ -462,6 +467,19 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       },
       [scan],
     );
+
+    // 1-candidate rule: exactly one legal connect target resolves at flow
+    // admission rather than rendering a one-row picker — desktop is its own
+    // "This device" candidate, so this fires only when (isDesktop ? 1 : 0) +
+    // listedDevices.length totals 1.
+    const autoResolvedTargetRef = useRef(false);
+    useEffect(() => {
+      if (autoResolvedTargetRef.current || step !== 0 || !deviceInventoryComplete) return;
+      const candidates = (isDesktop ? 1 : 0) + listedDevices.length;
+      if (candidates !== 1) return;
+      autoResolvedTargetRef.current = true;
+      pickTarget(isDesktop ? { kind: 'local' } : { device: listedDevices[0], kind: 'device' });
+    }, [deviceInventoryComplete, listedDevices, pickTarget, step]);
 
     const rescan = useCallback(() => {
       if (!target) return;
@@ -633,7 +651,10 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         hasDevices: listedDevices.length > 0,
         isFetching: isRefreshing,
       });
-      const showEmpty = !isDesktop && !isRefreshing && onlineDevices.length === 0;
+      // Offline devices stay legal candidates (they cannot start yet, but
+      // they are not "no device"), so the empty state only covers a truly
+      // empty inventory — matching the contract's zero-device rule.
+      const showEmpty = !isDesktop && !isRefreshing && listedDevices.length === 0;
 
       return (
         <div className="flex flex-col gap-4" style={{ paddingBlock: '16px 8px' }}>

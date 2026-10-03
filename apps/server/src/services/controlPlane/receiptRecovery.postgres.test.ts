@@ -27,7 +27,7 @@ import * as schema from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 
 import { CanonicalRunAuthority } from './canonicalRun';
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 import {
   CanonicalSessionSnapshots,
   CORE_SESSION_SNAPSHOT_CANDIDATE_SQL,
@@ -76,7 +76,7 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
     const content = 'durable action before lost acknowledgement';
     const commitment: Commitment = {
       id: randomUUID(),
-      taskId: binding.taskId,
+      taskId: fixtureTaskId(binding),
       actionKinds: ['file.write'],
       postconditions: [
         { verifierId: 'file.sha256', expected: createHash('sha256').update(content).digest('hex') },
@@ -271,7 +271,7 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
       await db
         .update(schema.tasks)
         .set({ policyRevision: setup.binding.policyRevision + 1 })
-        .where(eq(schema.tasks.id, setup.binding.taskId));
+        .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
       expect(await setup.recovery().recover(setup.request)).toMatchObject({ ok: false });
       const row = (
         await pool.query(
@@ -291,7 +291,7 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
       id: setup.binding.operationId,
       userId: setup.binding.userId,
       workspaceId: setup.binding.workspaceId,
-      taskId: setup.binding.taskId,
+      taskId: fixtureTaskId(setup.binding),
       topicId: setup.binding.topicId,
       status: 'running',
     });
@@ -473,7 +473,7 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
           await db
             .update(schema.tasks)
             .set({ isDeleted: true, deletedAt: new Date() })
-            .where(eq(schema.tasks.id, setup.binding.taskId));
+            .where(eq(schema.tasks.id, fixtureTaskId(setup.binding)));
         if (change === 'dependency') {
           const [prerequisite] = await db
             .insert(schema.tasks)
@@ -487,7 +487,7 @@ describe.runIf(!!databaseUrl)('real PostgreSQL receipt recovery after server res
             })
             .returning();
           await db.insert(schema.taskDependencies).values({
-            taskId: setup.binding.taskId,
+            taskId: fixtureTaskId(setup.binding),
             dependsOnId: prerequisite.id,
             workspaceId: setup.binding.workspaceId,
             userId: setup.binding.userId,

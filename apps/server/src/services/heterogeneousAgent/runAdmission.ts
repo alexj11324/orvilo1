@@ -147,6 +147,25 @@ export const resolveRemoteCancelState = (result: {
   return result.success ? 'confirmed' : 'unknown';
 };
 
+/**
+ * Whether a recorded device admission still authorizes broker access for
+ * `deviceId`. `pending` admits too: the ledger writes that state BEFORE the
+ * gateway call returns, so under await-ack semantics the device's own
+ * `/activate` can land while the record is still pending. The credential
+ * only exists inside the delivered request, so a pending admission plus a
+ * valid op JWT already proves this device received the run — bounded by the
+ * device identity and the credential's TTL.
+ */
+export const isDeviceAdmissionLive = (
+  admission: RemoteRunAdmission | undefined,
+  deviceId: string,
+): boolean =>
+  admission?.channel === 'agent_run_request' &&
+  admission.deviceId === deviceId &&
+  (admission.state === 'running' ||
+    admission.state === 'acknowledged' ||
+    admission.state === 'pending');
+
 /** Defensive parse of `metadata.remoteAdmission` — tolerates absent/partial rows. */
 export const readRemoteRunAdmission = (metadata: unknown): RemoteRunAdmission | undefined => {
   const record = (metadata as Record<string, unknown> | null | undefined)?.[

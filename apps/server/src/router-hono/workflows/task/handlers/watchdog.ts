@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
+import { sweepDevicePrimeRunReconcile } from '@/server/services/devicePrimeReconcile';
 import { sweepMcpEventSubscriptions } from '@/server/services/mcpEvents/maintenance';
 import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
 import { sweepTaskBacklogIntake } from '@/server/services/taskBacklogIntake';
@@ -72,6 +73,16 @@ export async function watchdog(c: Context) {
       eventInbox = { status: 'unavailable' };
       console.error('[task/watchdog] MCP event inbox sweep unavailable');
     }
+    // Post-ack device rejections never reach the server — the reconcile sweep
+    // is the only convergence path for stranded prime runs (conversation
+    // subjects have no dispatch row for the task sweeps to see).
+    let primeReconcile: unknown;
+    try {
+      primeReconcile = await sweepDevicePrimeRunReconcile({ db });
+    } catch {
+      primeReconcile = { status: 'unavailable' };
+      console.error('[task/watchdog] device prime reconcile unavailable');
+    }
     const abandonedDispatches =
       cancellationOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length +
       dispatchRecoveryOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length;
@@ -111,6 +122,7 @@ export async function watchdog(c: Context) {
       intakeStarted,
       intakeWaiting,
       orphanedTasksParked,
+      primeReconcile,
       cancellationRetries,
       dispatchRecoveryRetries,
       resumeRetries,

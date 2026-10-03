@@ -2,7 +2,6 @@ import { GroupBotSquareIcon } from '@lobehub/ui/icons';
 import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { Command } from 'cmdk';
-import { Bot } from 'lucide-react';
 import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -29,15 +28,6 @@ const AskAIMenu = memo(() => {
   const heading = search.trim()
     ? t('cmdk.askAIHeading', { query: `"${search.trim()}"` })
     : t('cmdk.askAIHeadingEmpty');
-
-  const handleAgentBuilder = () => {
-    const trimmedSearch = search.trim();
-    closeCommandMenu(); // Close immediately
-    if (trimmedSearch) {
-      // Use sendAsAgent to create a blank agent and open agent builder
-      useHomeStore.getState().sendAsAgent({ message: trimmedSearch });
-    }
-  };
 
   const handleGroupBuilder = () => {
     const trimmedSearch = search.trim();
@@ -66,12 +56,9 @@ const AskAIMenu = memo(() => {
           <div className={styles.itemLabel}>Orvilo AI</div>
         </div>
       </Command.Item>
-      <Command.Item value="agent-builder" onSelect={handleAgentBuilder}>
-        <Bot className={styles.icon} />
-        <div className={styles.itemContent}>
-          <div className={styles.itemLabel}>{t('agentBuilder.title', { ns: 'chat' })}</div>
-        </div>
-      </Command.Item>
+      {/* The Agent Builder purpose-wizard door is retired (device-execution
+          contract): agent creation is one-click from the sidebar, no LLM
+          call, no Builder. Group creation keeps its description flow. */}
       <Command.Item value="group-builder" onSelect={handleGroupBuilder}>
         <GroupBotSquareIcon className={styles.icon} />
         <div className={styles.itemContent}>

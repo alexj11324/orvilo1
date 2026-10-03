@@ -221,6 +221,9 @@ describe('AiAgentService.execAgent - connector/plugin overlap', () => {
       success: true,
     });
     mockGetAgentConfig.mockResolvedValue({
+      // Mount-capable external binding — builtin 'orvilo' (embedded Prime)
+      // mounts no tool surface.
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
       chatConfig: {},
       id: 'agent-1',
       model: 'gpt-4',

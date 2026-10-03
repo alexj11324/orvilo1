@@ -144,8 +144,11 @@ vi.mock('model-bank', async (importOriginal) => {
   };
 });
 
-// Helper to create a base agent config
+// Helper to create a base agent config — mount-capable external binding:
+// the builtin orvilo agent is embedded-only (mounts no tools), so the
+// builtin tool surface is exercised on claude-code.
 const createBaseAgentConfig = (overrides: Record<string, any> = {}) => ({
+  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
   chatConfig: {},
   id: 'agent-1',
   model: 'gpt-4',

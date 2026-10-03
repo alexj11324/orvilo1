@@ -115,6 +115,22 @@ export interface ResolveExecutionTargetOptions {
   workspaceScoped?: boolean;
 }
 
+/**
+ * Stored `executionTarget` spellings a row may legitimately carry today.
+ * Anything outside this set is a retired wrapper-era value (`'embedded'`,
+ * etc.) handled by the migration rule inside `resolveExecutionTarget` —
+ * `'sandbox'` itself stays live (the cloud-sandbox target still exists for
+ * heterogeneous harnesses, and the transitional embedded fence carries
+ * builtin-orvilo rows), so it does not migrate here.
+ */
+const KNOWN_EXECUTION_TARGET_SPELLINGS: ReadonlySet<string> = new Set([
+  'auto',
+  'device',
+  'local',
+  'none',
+  'sandbox',
+]);
+
 /** Whether a heterogeneous provider can run in Orvilo's cloud sandbox. */
 export const isHeterogeneousSandboxExecutionAvailable = (type: string | undefined): boolean =>
   type !== 'amp' &&
@@ -209,6 +225,14 @@ export const resolveExecutionTarget = (
     return 'device';
   }
   const effective = stored ?? 'none';
+  // Migration (contract §migration): a stored spelling outside the live set —
+  // `'embedded'` and other retired wrapper-era values — maps onto a real device
+  // only when an explicit binding proves one. Without a provable node the row
+  // waits for explicit config (`none`, a pending state) instead of executing
+  // wherever the old model silently placed it.
+  if (typeof stored === 'string' && !KNOWN_EXECUTION_TARGET_SPELLINGS.has(stored)) {
+    return agencyConfig?.boundDeviceId ? 'device' : 'none';
+  }
   if (
     !clientAvailable &&
     (isHetero || deviceRoutingAvailable) &&
@@ -224,13 +248,14 @@ export const resolveExecutionTarget = (
   // Bot trigger: a `local` target can't run in-process from the cloud bot
   // server, so it has to reach a real device. If the user pinned a specific
   // machine (the switcher persists that desktop's own `deviceId` as
-  // `boundDeviceId` for a `local` pick), honour it as `device` — `auto` would
-  // ignore the binding and could grab a different online device, or go
-  // ambiguous with several. Only an UNBOUND `local` auto-activates. Runs
-  // before the no-client `local`→`none` coercion so a gateway-less host still
-  // honours the pin / the auto-activation policy instead of dropping to chat.
+  // `boundDeviceId` for a `local` pick), honour it as `device`. An UNBOUND
+  // `local` stays `local` so the plan resolves unrouted — a migrated row
+  // without a stored deviceId is unresolved by contract and must not guess
+  // whichever device happens to be online (contract §migration). Runs before
+  // the no-client `local`→`none` coercion so the unrouted state — not plain
+  // chat — is what the caller sees.
   if (trigger === RequestTrigger.Bot && effective === 'local') {
-    return agencyConfig?.boundDeviceId ? 'device' : 'auto';
+    return agencyConfig?.boundDeviceId ? 'device' : 'local';
   }
   // A `local` target only exists where in-process execution is real. Anywhere
   // else it degrades to `none` (a pending selection) — never silently to the
@@ -501,12 +526,20 @@ export const resolveExecutionPlan = (params: ResolveExecutionPlanParams): Execut
   // a stale binding left over from a previous `device` selection can't pin the
   // run. An explicit `requestedDeviceId` still wins everywhere.
   const isPlatformTask = isRemoteHeterogeneousType(agencyConfig?.heterogeneousProvider?.type ?? '');
+  // A `local` target binds only the device identity the row explicitly stored —
+  // never the machine running this resolution. A migrated row without a stored
+  // `boundDeviceId` is unresolved: binding `localDeviceId` would silently
+  // execute on whatever host happens to render it, which the contract forbids
+  // (§migration — no guessing the current machine). Platform-task `local` keeps
+  // its own semantic — the locally registered runtime IS the provable node.
   const boundDeviceId =
     effectiveRequestedDeviceId ||
     (target === 'local'
       ? isFixedSelection
         ? agencyConfig?.boundDeviceId
-        : localDeviceId || (isPlatformTask ? undefined : agencyConfig?.boundDeviceId)
+        : isPlatformTask
+          ? localDeviceId
+          : agencyConfig?.boundDeviceId
       : target === 'auto'
         ? undefined
         : agencyConfig?.boundDeviceId);

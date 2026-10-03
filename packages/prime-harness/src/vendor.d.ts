@@ -106,9 +106,12 @@ declare module '@earendil-works/pi-ai' {
   }
   export interface SimpleStreamOptions {
     maxTokens?: number;
+    reasoning?: string;
+    serviceTier?: string;
     sessionId?: string;
     signal?: AbortSignal;
     temperature?: number;
+    thinkingBudgets?: unknown;
   }
 
   export type AssistantMessageEvent =
@@ -172,8 +175,10 @@ declare module '@earendil-works/pi-coding-agent' {
   export interface AgentSession {
     abort: () => Promise<void>;
     disposeAsync: () => Promise<void>;
+    getActiveToolNames: () => string[];
     prompt: (text: string) => Promise<void>;
     promptAndWait: (text: string) => Promise<void>;
+    readonly sessionId: string;
     subscribe: (listener: (event: AgentSessionEvent) => void) => () => void;
   }
 
@@ -186,11 +191,20 @@ declare module '@earendil-works/pi-coding-agent' {
 
   export interface SessionManager {}
   export const SessionManager: {
+    create: (cwd: string, sessionDir?: string) => SessionManager;
     inMemory: (cwd?: string, sessionDir?: string) => SessionManager;
+    open: (path: string, sessionDir?: string, cwdOverride?: string) => SessionManager;
   };
 
-  export interface SettingsManager {}
+  /** Opaque to the runner — owned by the settings file under agentDir. */
+  export type McpServerConfig = Record<string, unknown>;
+
+  export interface SettingsManager {
+    getGlobalMcpServers: () => Record<string, McpServerConfig> | undefined;
+    setTelemetryEnabled: (enabled: boolean) => void;
+  }
   export const SettingsManager: {
+    create: (cwd: string, agentDir?: string) => SettingsManager;
     inMemory: (settings?: Record<string, unknown>) => SettingsManager;
   };
 
@@ -206,11 +220,31 @@ declare module '@earendil-works/pi-coding-agent' {
   export class McpManager {
     constructor(options: {
       authStorage: AuthStorage;
-      getUserServers?: () => Record<string, unknown> | undefined;
+      getUserServers?: () => Record<string, McpServerConfig> | undefined;
       noBackgroundVerification?: boolean;
       connectionStore?: McpConnectionStoreLike;
     });
     dispose(): void;
+    getDisabledBuiltinSkillOverrides(): string[];
+    registerAllProviders(): void;
+  }
+
+  export class DefaultResourceLoader implements ResourceLoader {
+    constructor(options: {
+      cwd: string;
+      agentDir: string;
+      settingsManager?: SettingsManager;
+      extraBuiltinSkillOverrides?: () => string[];
+    });
+    extendResources(paths: unknown): void;
+    getAgentsFiles(): { agentsFiles: Array<{ path: string; content: string }> };
+    getAppendSystemPrompt(): string[];
+    getExtensions(): LoadExtensionsResult;
+    getPrompts(): { prompts: unknown[]; diagnostics: unknown[] };
+    getSkills(): { skills: unknown[]; diagnostics: unknown[] };
+    getSystemPrompt(): string | undefined;
+    getThemes(): { themes: unknown[]; diagnostics: unknown[] };
+    reload(): Promise<void>;
   }
 
   export interface StreamSimpleFn {
@@ -226,6 +260,7 @@ declare module '@earendil-works/pi-coding-agent' {
 
   export class ModelRegistry {
     static inMemory(authStorage: AuthStorage): ModelRegistry;
+    setOnOAuthProvidersReset(listener: () => void): void;
     registerProvider(
       providerName: string,
       config: {
@@ -290,4 +325,19 @@ declare module '@earendil-works/pi-coding-agent' {
 declare module '@earendil-works/pi-coding-agent/core/mcp/mcp-manager.js' {
   export type { McpConnectionStoreLike } from '@earendil-works/pi-coding-agent';
   export { McpManager } from '@earendil-works/pi-coding-agent';
+}
+
+declare module '@earendil-works/pi-coding-agent/core/mcp/connection-store.js' {
+  import type { McpConnectionStoreLike } from '@earendil-works/pi-coding-agent';
+
+  export const McpConnectionStore: { open: (path: string) => McpConnectionStoreLike };
+}
+
+declare module '@earendil-works/pi-coding-agent/core/session-manager.js' {
+  export function getDefaultSessionDir(cwd: string, agentDir?: string): string;
+}
+
+declare module '@earendil-works/pi-coding-agent/config.js' {
+  export function getAgentDir(): string;
+  export function getSessionsDir(agentDir?: string): string;
 }

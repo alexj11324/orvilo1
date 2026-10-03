@@ -52,6 +52,7 @@ import { after } from '@/server/utils/scheduleAfterResponse';
 import { TransferErrorCode } from '@/types/transferError';
 
 import { isWorkspaceNonOwner } from './_helpers/assertWorkspaceRowManageable';
+import { refuseRetiredAgencyConfigFields } from './_helpers/refuseRetiredAgencyConfigFields';
 import {
   getResourceConfigAccess,
   redactAgentConfig,
@@ -153,7 +154,8 @@ const agentMemberInputSchema = z
     title: z.string().nullish(),
     virtual: z.boolean().nullish(),
   })
-  .partial();
+  .partial()
+  .superRefine(refuseRetiredAgencyConfigFields);
 
 const agentGroupProcedure = wsCompatProcedure.use(serverDatabase).use(async (opts) => {
   const { ctx } = opts;

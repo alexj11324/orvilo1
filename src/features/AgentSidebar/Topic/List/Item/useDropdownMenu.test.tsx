@@ -69,12 +69,12 @@ vi.mock('@/store/agent', () => ({
 vi.mock('@/store/chat', () => ({
   useChatStore: (selector: (state: Record<string, unknown>) => unknown) =>
     selector({
+      archiveTopic: vi.fn(),
       autoRenameTopicTitle: vi.fn(),
       duplicateTopic: vi.fn(),
       favoriteTopic: vi.fn(),
-      markTopicCompleted: vi.fn(),
       removeTopic: vi.fn(),
-      unmarkTopicCompleted: vi.fn(),
+      unarchiveTopic: vi.fn(),
       updateTopicTitle: vi.fn(),
     }),
 }));
@@ -139,7 +139,7 @@ describe('useTopicItemDropdownMenu', () => {
     const items = result.current.dropdownMenu();
 
     expect(items.map((item) => (item && 'key' in item ? item.key : 'divider'))).toEqual([
-      'markCompleted',
+      'archive',
       'favorite',
       'divider',
       'autoRename',
@@ -174,7 +174,7 @@ describe('useTopicItemDropdownMenu', () => {
     const items = result.current.dropdownMenu();
 
     for (const key of [
-      'markCompleted',
+      'archive',
       'favorite',
       'autoRename',
       'rename',

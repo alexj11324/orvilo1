@@ -66,21 +66,21 @@ export const useDropdownMenu = ({
     autoRenameTopicTitle,
     duplicateTopic,
     favoriteTopic,
-    markTopicCompleted,
+    archiveTopic,
     removeTopic,
-    unmarkTopicCompleted,
+    unarchiveTopic,
     updateTopicTitle,
   ] = useChatStore((s) => [
     s.autoRenameTopicTitle,
     s.duplicateTopic,
     s.favoriteTopic,
-    s.markTopicCompleted,
+    s.archiveTopic,
     s.removeTopic,
-    s.unmarkTopicCompleted,
+    s.unarchiveTopic,
     s.updateTopicTitle,
   ]);
 
-  const isCompleted = status === 'completed';
+  const isArchived = status === 'archived';
   const handleOpenShareModal = useCallback(() => {
     void openShareModal({ context: { threadId: null, topicId } });
   }, [topicId]);
@@ -90,19 +90,19 @@ export const useDropdownMenu = ({
       [
         {
           disabled: !canEditTopic,
-          icon: createElement(isCompleted ? ArchiveRestore : Archive),
-          key: 'markCompleted',
-          label: isCompleted
-            ? t('actions.unmarkCompleted', { ns: 'topic' })
-            : t('actions.markCompleted', { ns: 'topic' }),
+          icon: createElement(isArchived ? ArchiveRestore : Archive),
+          key: 'archive',
+          label: isArchived
+            ? t('actions.unarchive', { ns: 'topic' })
+            : t('actions.archive', { ns: 'topic' }),
           onClick: () => {
-            if (isCompleted) {
-              unmarkTopicCompleted(topicId);
+            if (isArchived) {
+              unarchiveTopic(topicId);
             } else {
-              markTopicCompleted(topicId);
+              archiveTopic(topicId);
             }
           },
-          sfSymbol: isCompleted ? 'tray.and.arrow.up' : 'archivebox',
+          sfSymbol: isArchived ? 'tray.and.arrow.up' : 'archivebox',
         },
         {
           type: 'divider' as const,
@@ -261,8 +261,8 @@ export const useDropdownMenu = ({
       favoriteTopic,
       fav,
       handleOpenShareModal,
-      isCompleted,
-      markTopicCompleted,
+      isArchived,
+      archiveTopic,
       navigate,
       onClose,
       onDelete,
@@ -271,7 +271,7 @@ export const useDropdownMenu = ({
       t,
       topicId,
       topicTitle,
-      unmarkTopicCompleted,
+      unarchiveTopic,
       updateTopicTitle,
     ],
   );

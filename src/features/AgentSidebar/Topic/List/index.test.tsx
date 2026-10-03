@@ -104,15 +104,12 @@ vi.mock('@/store/global/selectors', () => ({
 }));
 
 vi.mock('@/store/user', () => ({
-  useUserStore: (
-    selector: (state: { topicIncludeCompleted: boolean; topicSortBy: string }) => unknown,
-  ) => selector({ topicIncludeCompleted: false, topicSortBy: 'updatedAt' }),
+  useUserStore: (selector: (state: { topicSortBy: string }) => unknown) =>
+    selector({ topicSortBy: 'updatedAt' }),
 }));
 
 vi.mock('@/store/user/selectors', () => ({
   preferenceSelectors: {
-    topicIncludeCompleted: (state: { topicIncludeCompleted: boolean }) =>
-      state.topicIncludeCompleted,
     topicSortBy: (state: { topicSortBy: string }) => state.topicSortBy,
   },
 }));

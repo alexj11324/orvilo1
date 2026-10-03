@@ -10,14 +10,11 @@ import type { TopicGroupMode, TopicSortBy } from '@/types/topic';
 export const useTopicFilterDropdownMenu = (): DropdownItem[] => {
   const { t } = useTranslation('topic');
 
-  const [topicGroupMode, topicSortBy, topicIncludeCompleted, updatePreference] = useUserStore(
-    (s) => [
-      preferenceSelectors.topicGroupMode(s),
-      preferenceSelectors.topicSortBy(s),
-      preferenceSelectors.topicIncludeCompleted(s),
-      s.updatePreference,
-    ],
-  );
+  const [topicGroupMode, topicSortBy, updatePreference] = useUserStore((s) => [
+    preferenceSelectors.topicGroupMode(s),
+    preferenceSelectors.topicSortBy(s),
+    s.updatePreference,
+  ]);
 
   return useMemo(() => {
     const groupModes: TopicGroupMode[] = ['byTime', 'byProject', 'flat'];
@@ -51,22 +48,6 @@ export const useTopicFilterDropdownMenu = (): DropdownItem[] => {
         label: t('filter.sort'),
         type: 'group' as const,
       },
-      { type: 'divider' as const },
-      {
-        children: [
-          {
-            icon: topicIncludeCompleted ? <LucideCheck /> : <div />,
-            key: 'showCompleted',
-            label: t('filter.showCompleted'),
-            onClick: () => {
-              updatePreference({ topicIncludeCompleted: !topicIncludeCompleted });
-            },
-          },
-        ],
-        key: 'filter',
-        label: t('filter.filter'),
-        type: 'group' as const,
-      },
     ];
-  }, [topicGroupMode, topicSortBy, topicIncludeCompleted, updatePreference, t]);
+  }, [topicGroupMode, topicSortBy, updatePreference, t]);
 };

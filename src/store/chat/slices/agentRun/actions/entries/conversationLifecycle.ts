@@ -272,7 +272,7 @@ export class ConversationLifecycleActionImpl {
    * Read the active topic-list filter from `topicDataMap` so it can be
    * forwarded to `sendMessageInServer`. Without this, the server returns
    * an unfiltered list which `internal_updateTopics` then writes back over
-   * the filtered sidebar — completed/cron topics reappear until the next
+   * the filtered sidebar — archived/cron topics reappear until the next
    * SWR revalidation.
    */
   #getTopicFilter = (

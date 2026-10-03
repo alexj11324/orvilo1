@@ -13,9 +13,8 @@ export const useTopicFilterDropdownMenu = (): (() => DropdownItem[]) => {
   const { t } = useTranslation('topic');
   const { topicGroupMode, updateTopicGroupMode } = useAgentTopicGroupMode();
 
-  const [topicSortBy, topicIncludeCompleted, updatePreference] = useUserStore((s) => [
+  const [topicSortBy, updatePreference] = useUserStore((s) => [
     preferenceSelectors.topicSortBy(s),
-    preferenceSelectors.topicIncludeCompleted(s),
     s.updatePreference,
   ]);
 
@@ -51,29 +50,6 @@ export const useTopicFilterDropdownMenu = (): (() => DropdownItem[]) => {
         label: t('filter.sort'),
         type: 'group' as const,
       },
-      { type: 'divider' as const },
-      {
-        children: [
-          {
-            icon: topicIncludeCompleted ? <LucideCheck /> : <div />,
-            key: 'showCompleted',
-            label: t('filter.showCompleted'),
-            onClick: () => {
-              updatePreference({ topicIncludeCompleted: !topicIncludeCompleted });
-            },
-          },
-        ],
-        key: 'filter',
-        label: t('filter.filter'),
-        type: 'group' as const,
-      },
     ];
-  }, [
-    topicGroupMode,
-    topicSortBy,
-    topicIncludeCompleted,
-    updatePreference,
-    updateTopicGroupMode,
-    t,
-  ]);
+  }, [topicGroupMode, topicSortBy, updatePreference, updateTopicGroupMode, t]);
 };

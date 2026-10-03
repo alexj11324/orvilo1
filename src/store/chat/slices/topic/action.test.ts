@@ -602,7 +602,7 @@ describe('topic action', () => {
     // Unique ids: updateTopicStatus registers a TTL-bounded pending status-write
     // in a private map that beforeEach's state reset can't clear, so a shared id
     // would bleed status onto other tests' fetched-topic fixtures.
-    it('stamps completedAt when archiving (status: completed)', async () => {
+    it('stamps completedAt on the completed transition', async () => {
       const { result } = renderHook(() => useChatStore());
       const topicId = 'update-status-completed-topic';
 
@@ -612,8 +612,8 @@ describe('topic action', () => {
         await result.current.updateTopicStatus({ status: 'completed', topicId });
       });
 
-      // "Archive" persists the completion timestamp alongside the status so the
-      // bulk/stale archive matches the single-item markTopicCompleted.
+      // Bulk/stale completions persist the completion timestamp alongside the
+      // status so they match the single-item markTopicCompleted.
       expect(updateSpy).toHaveBeenCalledWith(topicId, {
         completedAt: expect.any(Date),
         status: 'completed',
@@ -633,14 +633,80 @@ describe('topic action', () => {
       // Agent-run status writes must stay a pure status update — no completedAt.
       expect(updateSpy).toHaveBeenCalledWith(topicId, { status: 'running' });
     });
+
+    it('writes the optimistic status into the bucket that actually holds the topic', async () => {
+      // The sidebar feed lives in the workspace bucket, not the agent bucket
+      // scope params would derive — a status write keyed on the active pair
+      // lands nowhere and the row keeps its stale status (the pin only wins
+      // over refetches, it never inserts).
+      const { result } = renderHook(() => useChatStore());
+      const topicId = 'update-status-bucket-topic';
+      const agentId = 'agent-owner';
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: agentId,
+          topicDataMap: {
+            [WORKSPACE_TOPIC_MAP_KEY]: {
+              currentPage: 0,
+              hasMore: false,
+              items: [{ id: topicId, status: 'active', title: 'Feed row' } as ChatTopic],
+              pageSize: 20,
+              total: 1,
+            },
+          },
+        });
+      });
+      vi.spyOn(topicService, 'updateTopic').mockResolvedValue(undefined as any);
+      vi.spyOn(result.current, 'refreshTopic').mockResolvedValue(undefined);
+
+      await act(async () => {
+        await result.current.updateTopicStatus({ status: 'archived', topicId });
+      });
+
+      const row = useChatStore
+        .getState()
+        .topicDataMap[WORKSPACE_TOPIC_MAP_KEY].items.find((t) => t.id === topicId);
+      expect(row?.status).toBe('archived');
+    });
+  });
+
+  describe('archiveTopic', () => {
+    it('persists status: archived — a distinct state, not completed', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const topicId = 'archive-topic';
+
+      const updateSpy = vi.spyOn(topicService, 'updateTopic').mockResolvedValue(undefined as any);
+
+      await act(async () => {
+        await result.current.archiveTopic(topicId);
+      });
+
+      // Archiving is the user's explicit hide and must not be conflated with
+      // completion: no completedAt stamp, own status value.
+      expect(updateSpy).toHaveBeenCalledWith(topicId, { status: 'archived' });
+    });
+
+    it('unarchiveTopic restores status: active', async () => {
+      const { result } = renderHook(() => useChatStore());
+      const topicId = 'unarchive-topic';
+
+      const updateSpy = vi.spyOn(topicService, 'updateTopic').mockResolvedValue(undefined as any);
+
+      await act(async () => {
+        await result.current.unarchiveTopic(topicId);
+      });
+
+      expect(updateSpy).toHaveBeenCalledWith(topicId, { status: 'active' });
+    });
   });
   describe('useFetchTopicDetail', () => {
-    // Regression: an archived (completed) topic is excluded from the sidebar
-    // list fetch, so the active topic vanished from topicDataMap and the
-    // header degraded to the "new topic" placeholder. The by-id detail fetch
-    // caches the row in topicDetailMap, which currentActiveTopic falls back to.
+    // Regression: an archived topic is excluded from the sidebar list fetch,
+    // so the active topic vanished from topicDataMap and the header degraded
+    // to the "new topic" placeholder. The by-id detail fetch caches the row in
+    // topicDetailMap, which currentActiveTopic falls back to.
     it('caches the fetched topic in topicDetailMap', async () => {
-      const archived = { id: 'archived-topic', status: 'completed', title: 'Archived Topic' };
+      const archived = { id: 'archived-topic', status: 'archived', title: 'Archived Topic' };
       (topicService.getTopicDetail as Mock).mockResolvedValue(archived);
 
       const { result } = renderHook(() => useChatStore().useFetchTopicDetail('archived-topic'));
@@ -1233,7 +1299,7 @@ describe('topic action', () => {
           topicDataMap: {
             [topicMapKey({ agentId })]: {
               currentPage: 1,
-              excludeStatuses: ['completed', 'archived'],
+              excludeStatuses: ['completed'],
               hasMore: true,
               isInbox: false,
               items: currentTopics,
@@ -1251,7 +1317,7 @@ describe('topic action', () => {
 
       const useFetchTopics = useChatStore.getState().useFetchTopics;
       const swrResponse = renderHook(() =>
-        useFetchTopics(true, { agentId, excludeStatuses: ['completed'], pageSize }),
+        useFetchTopics(true, { agentId, excludeStatuses: ['archived'], pageSize }),
       );
 
       await waitFor(() => {
@@ -1263,7 +1329,7 @@ describe('topic action', () => {
 
         expect(topicData).toMatchObject({
           currentPage: 0,
-          excludeStatuses: ['completed'],
+          excludeStatuses: ['archived'],
           hasMore: false,
           total: 20,
         });

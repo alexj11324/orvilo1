@@ -18,18 +18,11 @@ const ToggleGroups = memo(() => {
   const { t } = useTranslation('topic');
   const topicPageSize = useGlobalStore(systemStatusSelectors.topicPageSize);
   const topicSortBy = useUserStore(preferenceSelectors.topicSortBy);
-  const topicIncludeCompleted = useUserStore(preferenceSelectors.topicIncludeCompleted);
   const { topicGroupMode } = useAgentTopicGroupMode();
 
   const groupSelector = useMemo(
-    () =>
-      topicSelectors.groupedTopicsForSidebar(
-        topicPageSize,
-        topicSortBy,
-        topicGroupMode,
-        topicIncludeCompleted,
-      ),
-    [topicPageSize, topicSortBy, topicGroupMode, topicIncludeCompleted],
+    () => topicSelectors.groupedTopicsForSidebar(topicPageSize, topicSortBy, topicGroupMode),
+    [topicPageSize, topicSortBy, topicGroupMode],
   );
   const groupTopics = useChatStore(groupSelector, isEqual);
 

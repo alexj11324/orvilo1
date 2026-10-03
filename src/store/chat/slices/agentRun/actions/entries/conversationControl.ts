@@ -19,6 +19,7 @@ import {
 } from '@/services/aiAgent';
 import { getAgentStoreState } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
+import { agentByIdSelectors } from '@/store/agent/selectors/agentByIdSelectors';
 import { displayMessageSelectors } from '@/store/chat/selectors';
 import {
   type AgentRuntimeType,
@@ -31,6 +32,7 @@ import type { Operation } from '@/store/chat/slices/operation/types';
 import { AI_RUNTIME_OPERATION_TYPES } from '@/store/chat/slices/operation/types';
 import { type ChatStore } from '@/store/chat/store';
 import { messageMapKey } from '@/store/chat/utils/messageMapKey';
+import { getElectronStoreState } from '@/store/electron';
 import { type StoreSetter } from '@/store/types';
 import { useUserStore } from '@/store/user';
 
@@ -201,15 +203,23 @@ export class ConversationControlActionImpl {
     const agentConfig = context.agentId
       ? agentSelectors.getAgentConfigById(context.agentId)(getAgentStoreState())
       : undefined;
+    const agentWorkspaceId = context.agentId
+      ? agentByIdSelectors.getAgentById(context.agentId)(getAgentStoreState())?.workspaceId
+      : undefined;
     const agencyConfig = getTopicAgencyConfig(agentConfig?.agencyConfig, context.topicId);
     try {
       return (
         selectRuntimeType({
           boundDeviceId: agencyConfig?.boundDeviceId,
+          // Resume must take the same transport the original send resolved —
+          // a desktop `local` run admitted through the gateway resumes through
+          // it; a disconnected socket resumes the IPC-local lifecycle.
+          deviceGatewayConnected: getElectronStoreState().gatewayConnectionStatus === 'connected',
           executionTarget: agencyConfig?.executionTarget,
           heterogeneousProvider: agencyConfig?.heterogeneousProvider,
           isGatewayMode: this.#get().isGatewayModeEnabled(context.agentId),
           isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
+          isWorkspaceAgent: !!agentWorkspaceId,
         }) === 'gateway'
       );
     } catch {

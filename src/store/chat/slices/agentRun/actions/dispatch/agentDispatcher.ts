@@ -77,14 +77,24 @@ export interface RuntimeSelectionContext {
   /** Device bound by the execution switcher. Used when desktop `local` syncs to web. */
   boundDeviceId?: string;
   /**
+   * Whether this desktop's device-gateway socket is currently connected — the
+   * server can reach this machine as a registered execution device. Read
+   * synchronously from the electron store by callers (`getElectronStoreState()`)
+   * so resume paths without async affordance get the same answer. Web surfaces
+   * never set it — a browser has no device socket.
+   */
+  deviceGatewayConnected?: boolean;
+  /**
    * Per-agent execution device choice from the composer's Execution Device
    * switcher. Only meaningful when `heterogeneousProvider` is a local CLI
    * (claude-code / codex). Controls the desktop fork:
    *   - `'device'` / `'sandbox'` → route through Gateway so the server can
    *     dispatch to an `orvilo connect` device or spawn a sandbox.
-   *   - `'local'` / `undefined`  → keep today's default (desktop → `hetero`
-   *     in-process spawn, web → `gateway` sandbox unless a desktop-local
-   *     boundDeviceId is available, in which case the server dispatches to it.
+   *   - `'local'`  → desktop prefers `gateway` when its device socket is
+   *     connected (server dispatches back onto this machine — unified
+   *     admission + ledger lifecycle); falls back to `hetero` in-process
+   *     spawn only when the socket is down, and on workspace agents.
+   *   - `undefined` → resolves to `none` / `auto` per resolveExecutionTarget.
    */
   executionTarget?: DeviceExecutionTarget;
   /** Per-agent heterogeneous provider config (desktop only — takes priority over gateway). */
@@ -136,7 +146,11 @@ interface SelectRuntimeTypeOptions {
  * resume, continue, sub-agent dispatch, …) so adding a new entry point does
  * not require re-deriving the routing rules.
  *
- * Priority: `parentRuntime` > `hetero` (desktop only) > `gateway` > `client`.
+ * Priority: `parentRuntime` > `hetero` (desktop IPC fallback only) >
+ * `gateway` > `client`. `local`-intent hetero routes to `gateway` whenever
+ * the device socket can carry the run back to this desktop — the SAME final
+ * execution context (server admission → device → ingest) for send, resume,
+ * cancel and subtask alike; IPC `hetero` is the degraded local-only path.
  */
 export const selectRuntimeType = (
   ctx: RuntimeSelectionContext,
@@ -195,14 +209,22 @@ export const selectRuntimeType = (
   if (ctx.heterogeneousProvider && isRemoteHeterogeneousType(ctx.heterogeneousProvider.type)) {
     return 'gateway';
   }
-  // Local CLI hetero (Amp / Claude Code / Codex) — route by the resolved execution
-  // target (shared resolution with the server / the device switcher UI):
-  // `device` / `sandbox` need server-side dispatch; `local` runs in-process on
-  // the desktop. Unset targets resolve to the pending `none` state on every
-  // client — the viewer's platform never picks an execution host — and an
-  // unbound `local` on a client without local execution also stays pending.
-  // A desktop `local` selection synced with boundDeviceId resolves to `device`
-  // dispatch when viewed from another client.
+  // Local CLI hetero (Amp / Claude Code / Codex) — route by the resolved
+  // execution target (shared resolution with the server / the device switcher
+  // UI). `device` / `sandbox` need server-side dispatch. `local` on a desktop
+  // now prefers the GATEWAY transport when this machine's device socket is
+  // connected: the server dispatches the run back onto this very desktop via
+  // `agent_run_request` → `orvilo hetero exec` → heteroIngest — the same
+  // admission/ledger lifecycle every other surface uses, so a web client
+  // observes the desktop-local run identically (W2-E convergence: `local`
+  // becomes a transport difference, not a private lifecycle). IPC `hetero`
+  // remains only when the gateway cannot reach this machine (socket down —
+  // dispatch would land nowhere) and, for now, on workspace agents, where a
+  // member's personal desktop is not a workspace-authorized device candidate
+  // (documented remainder: workspace runs on unenrolled personal machines
+  // stay in-process until workspace admission covers them).
+  // Unset targets resolve to the pending `none` state on every client — the
+  // viewer's platform never picks an execution host.
   if (ctx.heterogeneousProvider) {
     const target = resolveExecutionTarget(
       {
@@ -217,7 +239,11 @@ export const selectRuntimeType = (
         workspaceScoped: ctx.workspaceScoped,
       },
     );
-    return target === 'local' ? 'hetero' : 'gateway';
+    if (target === 'local' && isDesktop) {
+      const ownDeviceReachable = ctx.deviceGatewayConnected === true;
+      return ownDeviceReachable && !ctx.isWorkspaceAgent ? 'gateway' : 'hetero';
+    }
+    return 'gateway';
   }
   if (ctx.isGatewayMode) return 'gateway';
   return 'client';

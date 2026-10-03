@@ -289,7 +289,9 @@ describe('selectRuntimeType', () => {
       ).toBe('gateway');
     });
 
-    it('keeps hetero when executionTarget = local on desktop', () => {
+    it('keeps hetero when executionTarget = local on desktop with the device socket down', () => {
+      // No device-gateway connection → the server cannot dispatch back onto
+      // this machine, so `local` keeps the in-process IPC transport.
       expect(
         selectRuntimeType(
           {
@@ -300,6 +302,70 @@ describe('selectRuntimeType', () => {
           { isDesktop: true },
         ),
       ).toBe('hetero');
+      expect(
+        selectRuntimeType(
+          {
+            deviceGatewayConnected: false,
+            executionTarget: 'local',
+            heterogeneousProvider: heteroProvider,
+            isGatewayMode: false,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('hetero');
+    });
+
+    it('routes desktop `local` through gateway when the device socket is connected (W2-E)', () => {
+      // Converged path: the server dispatches the run back onto THIS desktop
+      // via agent_run_request → heteroIngest — the same admission + ledger
+      // lifecycle every other surface uses, so web observes the run too.
+      expect(
+        selectRuntimeType(
+          {
+            deviceGatewayConnected: true,
+            executionTarget: 'local',
+            heterogeneousProvider: heteroProvider,
+            isGatewayMode: false,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('gateway');
+    });
+
+    it('keeps IPC `hetero` for a workspace agent even when the socket is connected', () => {
+      // Documented remainder: a member's personal desktop is not a
+      // workspace-authorized device candidate, so workspace `local` runs stay
+      // in-process until workspace admission covers member machines.
+      expect(
+        selectRuntimeType(
+          {
+            deviceGatewayConnected: true,
+            executionTarget: 'local',
+            heterogeneousProvider: heteroProvider,
+            isGatewayMode: false,
+            isWorkspaceAgent: true,
+            workspaceScoped: false,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('hetero');
+    });
+
+    it('routes API-mode `local` to gateway when connected — the exec stays on the same desktop', () => {
+      // The provider binding resolves on the desktop either way; gateway
+      // dispatch does not move credentials off the box, it only moves the
+      // admission/ledger hop server-side.
+      expect(
+        selectRuntimeType(
+          {
+            deviceGatewayConnected: true,
+            executionTarget: 'local',
+            heterogeneousProvider: apiHeteroProvider,
+            isGatewayMode: false,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('gateway');
     });
 
     it('falls back to gateway when executionTarget = local on web (sandbox or bound device)', () => {

@@ -25,6 +25,11 @@ const MOBILE_UNSUPPORTED_SHARED_PATHS = [
   'agent/:aid/self-evolving/:domainId/rules/:lessonId',
   'agent/:aid/self-evolving/new',
   'agent/:aid/self-learning/*',
+  // Canonical `/chat` conversation URLs are desktop-only — mobile keeps its
+  // own `agent/:aid(/:topicId)` chat routes; mapping them over is follow-up.
+  'chat',
+  'chat/:topicId',
+  'chat/new',
   // The automations console is desktop-only.
   'automations',
   'automations/:taskId',

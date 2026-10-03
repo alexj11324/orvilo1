@@ -58,6 +58,22 @@ describe('active conversation navigation', () => {
     unsubscribe();
   });
 
+  it('keeps the store→URL write-back alive on a /chat route with no route agent', () => {
+    const coordinate = resolveActiveConversationCoordinate({
+      activeAgentId: 'agent-a',
+      params: { topicId: 'topic-a' },
+      url: '/chat/topic-a?mode=single',
+    });
+    const navigate = vi.fn();
+    projectActiveConversationCoordinate(coordinate);
+    const unsubscribe = subscribeActiveConversationNavigation(() => coordinate, navigate);
+
+    useChatStore.setState({ activeThreadId: undefined, activeTopicId: 'topic-b' }, false);
+
+    expect(navigate).toHaveBeenCalledWith('/chat/topic-b?mode=single', { replace: true });
+    unsubscribe();
+  });
+
   it('does not convert a global topic change into navigation from an agent subpage', () => {
     const coordinate = resolveActiveConversationCoordinate({
       params: { aid: 'agent-a' },

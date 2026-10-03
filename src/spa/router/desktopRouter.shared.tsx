@@ -21,13 +21,14 @@ import {
   Suspense,
 } from 'react';
 import type { RouteObject } from 'react-router';
-import { Navigate, useParams } from 'react-router';
+import { Navigate, useLocation, useParams } from 'react-router';
 
 import {
   BusinessDesktopRoutesWithMainLayout,
   BusinessDesktopRoutesWithoutMainLayout,
   BusinessResourceRoutes,
 } from '@/business/client/BusinessDesktopRoutes';
+import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import BrandTextLoading from '@/components/Loading/BrandTextLoading';
 import ConversationLayoutSkeleton from '@/components/Skeleton/Conversation/Layout';
 import ConversationSegmentSkeleton from '@/components/Skeleton/Conversation/Segment';
@@ -71,6 +72,7 @@ import {
 } from '@/routes/(main)/group/features/routeMeta';
 import AppShellSkeleton, { APP_SHELL_FALLBACK_ID } from '@/spa/BootShell/AppShellSkeleton';
 import { loadRouteWithBuiltinToolSurfaces } from '@/spa/initialize/toolSurfaces';
+import { legacyAgentTopicTarget } from '@/spa/router/legacyAgentTopic';
 import { NoRouteSkeleton, routeMeta, type RouteSkeletonProps } from '@/spa/router/routeMeta';
 import {
   leafChildRoute,
@@ -113,6 +115,41 @@ const agentChatElement = dynamicElement(
   'Desktop > Chat',
   { fallback: delayed(<ConversationSegmentSkeleton />), preloadId: 'agent' },
 );
+
+const conversationChatElement = dynamicElement(
+  () => loadRouteWithBuiltinToolSurfaces(() => import('@/routes/(main)/chat')),
+  'Desktop > Conversation',
+  { fallback: delayed(<ConversationSegmentSkeleton />), preloadId: 'agent' },
+);
+
+const chatLayoutElement = dynamicLayout(
+  () => import('@/routes/(main)/agent/(chat)/_layout'),
+  'Desktop > Chat > ChatLayout',
+  { fallback: delayed(<ConversationLayoutSkeleton />), preloadId: 'agent' },
+);
+
+/**
+ * `/agent/:aid/:topicId` is the legacy conversation URL — the topic is the
+ * navigation unit now, so deep links redirect to the canonical
+ * `/chat/:topicId`, preserving `?thread=` queries and `#` anchors.
+ */
+const LegacyAgentTopicRedirect = () => {
+  const { topicId } = useParams();
+  const location = useLocation();
+  const activeWorkspaceSlug = useActiveWorkspaceSlug();
+
+  return (
+    <Navigate
+      replace
+      to={legacyAgentTopicTarget({
+        topicId: topicId ?? '',
+        workspaceSlug: activeWorkspaceSlug,
+        search: location.search,
+        hash: location.hash,
+      })}
+    />
+  );
+};
 
 const groupChatElement = dynamicElement(
   () => loadRouteWithBuiltinToolSurfaces(() => import('@/routes/(main)/group')),
@@ -197,16 +234,12 @@ export const sharedMainAreaChildren: RouteObject[] = [
                 index: true,
               },
               {
-                element: agentChatElement,
+                element: <LegacyAgentTopicRedirect />,
                 handle: { meta: agentRouteMeta },
                 path: ':topicId',
               },
             ],
-            element: dynamicLayout(
-              () => import('@/routes/(main)/agent/(chat)/_layout'),
-              'Desktop > Chat > ChatLayout',
-              { fallback: delayed(<ConversationLayoutSkeleton />), preloadId: 'agent' },
-            ),
+            element: chatLayoutElement,
           },
           {
             children: [
@@ -387,6 +420,34 @@ export const sharedMainAreaChildren: RouteObject[] = [
       },
     ],
     path: 'agent',
+  },
+
+  // Canonical conversation routes — the conversation is the navigation unit,
+  // so `/chat/:topicId` keys on the topic alone and the route resolves the
+  // owner agent. `/chat` alone lands on the blank composer (`/chat/new`).
+  {
+    children: [
+      {
+        element: redirectElement('new'),
+        index: true,
+      },
+      {
+        children: [
+          {
+            element: conversationChatElement,
+            handle: { meta: agentRouteMeta },
+            path: 'new',
+          },
+          {
+            element: conversationChatElement,
+            handle: { meta: agentRouteMeta },
+            path: ':topicId',
+          },
+        ],
+        element: chatLayoutElement,
+      },
+    ],
+    path: 'chat',
   },
 
   // Group chat routes

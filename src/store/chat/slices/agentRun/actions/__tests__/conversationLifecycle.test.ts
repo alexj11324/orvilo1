@@ -1199,6 +1199,78 @@ describe('ConversationLifecycle actions', () => {
         ).toBe(false);
       });
 
+      it('stamps the owner agentId on the optimistic minted topic row', async () => {
+        const { result } = renderHook(() => useChatStore());
+        const controller = new AbortController();
+        const agentId = TEST_IDS.SESSION_ID;
+        const topicKey = topicMapKey({ agentId });
+        let resolvePersistence!: (value: any) => void;
+        const persistence = new Promise<any>((resolve) => {
+          resolvePersistence = resolve;
+        });
+
+        act(() => {
+          useChatStore.setState({
+            activeAgentId: agentId,
+            activeTopicId: undefined,
+            topicDataMap: {
+              [topicKey]: {
+                currentPage: 0,
+                hasMore: false,
+                isExpandingPageSize: false,
+                isLoadingMore: false,
+                items: [],
+                pageSize: 20,
+                total: 0,
+              },
+            },
+          });
+        });
+        const sendMessageInServer = vi
+          .spyOn(aiChatService, 'sendMessageInServer')
+          .mockReturnValue(persistence);
+
+        let sendPromise!: ReturnType<typeof result.current.sendMessage>;
+        act(() => {
+          sendPromise = result.current.sendMessage({
+            context: { agentId, threadId: null, topicId: null },
+            message: TEST_CONTENT.USER_MESSAGE,
+            signal: controller.signal,
+          });
+        });
+        await waitFor(() => expect(sendMessageInServer).toHaveBeenCalledOnce());
+
+        // `/chat/:topicId`'s TopicOwnerSync binds `activeAgentId` from
+        // `topic.agentId` — a minted row without it unbinds the conversation
+        // (empty message list, dead send retry) until the server row lands.
+        const optimisticTopic = useChatStore.getState().topicDataMap[topicKey]?.items[0];
+        expect(optimisticTopic?.id).toMatch(/^tpc_/);
+        expect(optimisticTopic?.agentId).toBe(agentId);
+
+        await act(async () => {
+          resolvePersistence({
+            assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
+            isCreateNewTopic: true,
+            messages: [
+              createMockMessage({
+                id: TEST_IDS.USER_MESSAGE_ID,
+                role: 'user',
+                topicId: optimisticTopic!.id,
+              }),
+              createMockMessage({
+                id: TEST_IDS.ASSISTANT_MESSAGE_ID,
+                role: 'assistant',
+                topicId: optimisticTopic!.id,
+              }),
+            ],
+            topicId: optimisticTopic!.id,
+            topics: { items: [{ id: optimisticTopic!.id, title: 'Server Topic' }], total: 1 },
+            userMessageId: TEST_IDS.USER_MESSAGE_ID,
+          });
+          await sendPromise;
+        });
+      });
+
       it('detaches the caller cancellation signal after an unaccepted persistence failure', async () => {
         const { result } = renderHook(() => useChatStore());
         const controller = new AbortController();

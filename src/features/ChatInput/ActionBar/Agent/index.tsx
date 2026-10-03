@@ -1,5 +1,5 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import { AGENT_CHAT_TOPIC_URL, DEFAULT_AVATAR } from '@orvilo/const';
+import { CHAT_TOPIC_URL, DEFAULT_AVATAR } from '@orvilo/const';
 import { agentDisplayName } from '@orvilo/types';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -16,26 +16,11 @@ import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
-import { messageMapKey } from '@/store/chat/utils/messageMapKey';
 import { useGlobalStore } from '@/store/global';
 
 import SelectorTrigger from '../../components/SelectorTrigger';
-import { getDraft, removeDraft, saveDraft } from '../../draftStorage';
 import { useAgentId } from '../../hooks/useAgentId';
 import { useActionBarContext } from '../context';
-
-/**
- * Move the composer draft stored under one conversation key to another so the
- * in-progress text follows the agent switch instead of staying behind under
- * the old agent's bucket.
- */
-const carryDraftToKey = (fromKey: string, toKey: string) => {
-  if (fromKey === toKey) return;
-  const draft = getDraft(fromKey);
-  if (!draft) return;
-  saveDraft(toKey, draft);
-  removeDraft(fromKey);
-};
 
 interface HandoffChoiceContentProps {
   agentName: string;
@@ -101,7 +86,8 @@ HandoffChoiceContent.displayName = 'HandoffChoiceContent';
  *
  * - Blank composer (no topic): picking an agent only re-targets the pending
  *   send — `composerAgentId` becomes the new topic's bound agent on first
- *   message. No navigation; the draft is carried to the new agent's bucket.
+ *   message. No navigation and no draft move: the blank composer's draft keys
+ *   on the workspace, so the typed text stays on screen.
  * - Open topic: picking an agent offers Continue (reassign execution — the
  *   conversation keeps its id and history, drafts stay put since they key on
  *   topicId) or Fork (a new topic seeded from this one, bound to the agent),
@@ -134,19 +120,15 @@ const Agent = memo(() => {
       if (!id || id === agentId) return;
 
       const { activeTopicId, rebindTopicAgent } = useChatStore.getState();
-      const draftInput = (targetAgentId: string) => ({
-        agentId: targetAgentId,
-        topicId: activeTopicId ?? undefined,
-      });
 
       if (!activeTopicId) {
-        // Blank composer: the pick retargets the pending send, no navigation —
-        // carrying the draft keeps the typed text on screen while the draft
-        // key flips to the new agent's bucket. An explicit pick is also one of
-        // the three write points for `lastUsedAgentId` (pick / send / handoff)
-        // — recording it here keeps the next blank composer's default on the
-        // agent the user last chose, never on background list churn.
-        carryDraftToKey(messageMapKey(draftInput(agentId)), messageMapKey(draftInput(id)));
+        // Blank composer: the pick retargets the pending send, no navigation
+        // and no draft carry — the blank composer's draft keys on the
+        // workspace, so the typed text stays under the same key. An explicit
+        // pick is also one of the three write points for `lastUsedAgentId`
+        // (pick / send / handoff) — recording it here keeps the next blank
+        // composer's default on the agent the user last chose, never on
+        // background list churn.
         useChatStore.setState({ composerAgentId: id }, false, 'composerAgent/switch');
         useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
         return;
@@ -166,17 +148,18 @@ const Agent = memo(() => {
             agentName={toName}
             onContinue={async () => {
               // Continue reassigns execution only — the draft keys on the
-              // topic id, so the typed text stays with the conversation.
+              // topic id, so the typed text stays with the conversation, and
+              // the canonical `/chat/:topicId` URL never changes either:
+              // a handoff never navigates containers.
               await rebindTopicAgent(topicId, id);
               useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
               useChatStore.getState().clearPortalStack();
-              workspaceAwareNavigate(AGENT_CHAT_TOPIC_URL(id, topicId));
             }}
             onFork={async () => {
               const newTopicId = await useChatStore.getState().forkTopicAgent(topicId, id);
               useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
               useChatStore.getState().clearPortalStack();
-              workspaceAwareNavigate(AGENT_CHAT_TOPIC_URL(id, newTopicId));
+              workspaceAwareNavigate(CHAT_TOPIC_URL(newTopicId));
             }}
           />
         ),

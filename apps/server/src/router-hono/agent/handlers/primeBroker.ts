@@ -288,7 +288,7 @@ const toBrokerEvent = (event: InferenceEvent): BrokerStreamEvent => {
     case 'toolcall_end': {
       return {
         index: event.index,
-        toolCall: event.toolCall,
+        toolCall: { ...event.toolCall, type: 'toolCall' },
         type: 'toolcall_end',
       };
     }

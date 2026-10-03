@@ -236,6 +236,15 @@ declare module '@earendil-works/pi-coding-agent' {
       settingsManager?: SettingsManager;
       extraBuiltinSkillOverrides?: () => string[];
     });
+    extendResources(paths: unknown): void;
+    getAgentsFiles(): { agentsFiles: Array<{ path: string; content: string }> };
+    getAppendSystemPrompt(): string[];
+    getExtensions(): LoadExtensionsResult;
+    getPrompts(): { prompts: unknown[]; diagnostics: unknown[] };
+    getSkills(): { skills: unknown[]; diagnostics: unknown[] };
+    getSystemPrompt(): string | undefined;
+    getThemes(): { themes: unknown[]; diagnostics: unknown[] };
+    reload(): Promise<void>;
   }
 
   export interface StreamSimpleFn {

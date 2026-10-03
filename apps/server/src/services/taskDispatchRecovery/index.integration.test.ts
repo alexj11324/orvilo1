@@ -8,7 +8,10 @@ import { agentOperations, taskDispatches, workspaces } from '@/database/schemas'
 import type { OrviloDatabase } from '@/database/type';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 import type { CanonicalRunBinding } from '@/server/services/controlPlane/canonicalRun';
-import { createCanonicalRunFixture } from '@/server/services/controlPlane/canonicalRun.test-utils';
+import {
+  createCanonicalRunFixture,
+  fixtureTaskId,
+} from '@/server/services/controlPlane/canonicalRun.test-utils';
 
 import { processTaskDispatchRecovery } from './index';
 
@@ -46,7 +49,7 @@ describe('task dispatch recovery (db)', () => {
       },
       id: binding.operationId,
       status,
-      taskId: binding.taskId,
+      taskId: fixtureTaskId(binding),
       topicId: binding.topicId,
       userId: binding.userId,
       workspaceId: binding.workspaceId,
@@ -61,7 +64,7 @@ describe('task dispatch recovery (db)', () => {
       id: `child-${binding.operationId}`,
       parentOperationId: binding.operationId,
       status,
-      taskId: binding.taskId,
+      taskId: fixtureTaskId(binding),
       topicId: binding.topicId,
       userId: binding.userId,
       workspaceId: binding.workspaceId,

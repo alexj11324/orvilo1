@@ -55,6 +55,8 @@ export class HandoffCoordinator {
     if (!id || !successorOwnerId || successorOwnerId === source.ownerId) {
       return denied('invalid_request', 'Handoff requires an ID and a different successor owner.');
     }
+    if (source.taskId === null)
+      return denied('invalid_request', 'Handoff requires a task run subject.');
     return this.persistence.begin({
       schemaVersion: CONTROL_PLANE_VERSION,
       id,

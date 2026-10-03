@@ -66,7 +66,8 @@ vi.mock('@/database/models/agent', () => ({
       getAgentConfig: vi.fn().mockResolvedValue({
         agencyConfig: {
           // External-agent binding — the builtin orvilo agent is embedded-
-          // only and its chat runs terminate at EMBEDDED_CHAT_NOT_ADMITTED.
+          // only and its chat runs route through the embedded chat
+          // admission (which needs a real database).
           executionTarget: 'sandbox',
           heterogeneousProvider: { type: 'claude-code' },
         },
@@ -90,7 +91,8 @@ vi.mock('@/server/services/agent', () => ({
       getAgentConfig: vi.fn().mockResolvedValue({
         agencyConfig: {
           // External-agent binding — the builtin orvilo agent is embedded-
-          // only and its chat runs terminate at EMBEDDED_CHAT_NOT_ADMITTED.
+          // only and its chat runs route through the embedded chat
+          // admission (which needs a real database).
           executionTarget: 'sandbox',
           heterogeneousProvider: { type: 'claude-code' },
         },

@@ -600,7 +600,7 @@ const openInput = (
   model: MODEL_ID,
   operationId: run.operationId,
   provider: 'mock',
-  taskId: run.taskId,
+  subject: { dispatchId: run.dispatchId, kind: 'task' as const, taskId: run.taskId },
   topicId: run.topicId,
 });
 
@@ -617,7 +617,7 @@ describe('resolveEmbeddedDispatchRoute', () => {
       dispatchFence: 2,
       dispatchId: 'd-1',
       executionGeneration: 1,
-      taskId: 'task-1',
+      subject: { dispatchId: 'd-1', kind: 'task', taskId: 'task-1' },
     });
     // ACP/hetero kinds never match — their path is byte-identical.
     expect(

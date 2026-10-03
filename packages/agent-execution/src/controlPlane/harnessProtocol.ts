@@ -64,6 +64,10 @@ export interface HarnessInitParams {
   /** Source pin echo — the runner must return it verbatim. */
   pin: { commit: string; version: string; license: string };
   protocolVersion: number;
+  /** Host-supplied runner state dir. Optional for embedded parity — the
+   * runner falls back to its local default when the host does not supply
+   * one; device hosts always pass an explicit device-resolved path. */
+  stateDir?: string;
   workspace: string;
 }
 

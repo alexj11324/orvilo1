@@ -1424,7 +1424,10 @@ const AgentStreamEventSchema = z.object({
  * → topic reverse-lookup is unreliable per design decision).
  */
 const HeteroIngestSchema = z.object({
-  agentType: LocalHeterogeneousAgentTypeSchema,
+  // 'orvilo' is deliberately outside LOCAL_HETEROGENEOUS_AGENT_TYPES (no
+  // binary to scan), but a device-hosted Prime run produces ingest under
+  // that honest label — admit it here without widening the scan enum.
+  agentType: z.union([LocalHeterogeneousAgentTypeSchema, z.literal('orvilo')]),
   /** Initial assistant placeholder message id forwarded from the sandbox env var.
    * When present, `loadOrCreateState` uses it directly and skips the DB read of
    * topic.metadata.runningOperation, eliminating the replica-lag race condition. */
@@ -1464,7 +1467,7 @@ const HeteroFinishSchema = z.object({
         .max(64),
     })
     .optional(),
-  agentType: LocalHeterogeneousAgentTypeSchema,
+  agentType: z.union([LocalHeterogeneousAgentTypeSchema, z.literal('orvilo')]),
   /** Initial assistant placeholder forwarded by the producer. Unlike the live
    * ingest path, finish may arrive after gateway session completion has already
    * cleared topic.metadata.runningOperation, so this is the durable fallback

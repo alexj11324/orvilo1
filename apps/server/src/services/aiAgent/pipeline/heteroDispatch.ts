@@ -1,5 +1,6 @@
 import { LOADING_FLAT } from '@orvilo/const';
 import type { OrviloDatabase } from '@orvilo/database';
+import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import {
@@ -27,6 +28,7 @@ import {
   ChatErrorType,
   getWorkingDirEffectivePath,
   isAegisMethodPackEnabled,
+  resolveHarnessAdapter,
   resolveHeteroAgentSystemContext,
 } from '@orvilo/types';
 import { nanoid } from '@orvilo/utils';
@@ -47,6 +49,7 @@ import {
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import { hookDispatcher } from '@/server/services/agentExecution/hooks';
 import type { AgentHook } from '@/server/services/agentExecution/hooks/types';
+import { composeDevicePrimeRun } from '@/server/services/controlPlane/devicePrimeDispatch';
 import {
   openEmbeddedChatDispatchHost,
   resolveEmbeddedChatDispatchRoute,
@@ -77,7 +80,6 @@ import type { MarketService } from '@/server/services/market';
 import {
   getHeterogeneousAgentTitle,
   humanizeHeteroDispatchError,
-  orviloDeviceFencedToEmbedded,
   resolveHeteroDispatchErrorType,
   supportsCloudHeterogeneousSandbox,
 } from '../helpers/heteroErrors';
@@ -1248,37 +1250,10 @@ export const dispatchHeteroAgent = async (
     // Device-first for every external harness: the shared execution plan
     // resolves a device for all types and the device picks its harness
     // adapter (orvilo→Prime — docs/development/device-execution-contract.md).
-    //
-    // TRANSITIONAL EMBEDDED FENCE (contract doc §transitional-fence): the
-    // device-side Prime adapter is packaged in a follow-up, so until it
-    // ships a builtin orvilo plan that resolves to a device keeps routing
-    // to the embedded/sandbox fork below — pre-cutover device-bound orvilo
-    // configs already ran that path silently, and refusing them outright
-    // would break normal chat mid-cutover. Resolution still runs
-    // server-side: when the plan resolves a concrete device the resolved
-    // deviceId is recorded on the op row so the run's audit trail shows
-    // which device execution WOULD target once the adapter lands.
-    // `orviloDeviceFencedToEmbedded` is the flip: the package that admits
-    // the adapter deletes it together with the flip-pin test in
-    // execAgent.device.test.ts.
-    if (heteroPlan.kind === 'device' && orviloDeviceFencedToEmbedded(heteroType)) {
-      try {
-        await deps.db
-          .update(agentOperations)
-          .set({
-            metadata: sql`coalesce(${agentOperations.metadata}, '{}'::jsonb) || ${JSON.stringify({
-              deviceResolution: {
-                deviceId: heteroPlan.deviceId,
-                fence: 'transitional-embedded',
-              },
-            })}::jsonb`,
-          })
-          .where(eq(agentOperations.id, operationId));
-      } catch (err) {
-        log('execAgent: failed to record fenced device resolution op=%s: %O', operationId, err);
-      }
-    }
-    if (heteroPlan.kind !== 'sandbox' && !orviloDeviceFencedToEmbedded(heteroType)) {
+    // The transitional embedded fence is gone: a builtin orvilo plan that
+    // resolves a device composes a Prime run descriptor below and dispatches
+    // to the device gateway like every other adapter.
+    if (heteroPlan.kind !== 'sandbox') {
       const dispatchDeviceId = heteroPlan.kind === 'device' ? heteroPlan.deviceId : undefined;
       if (!dispatchDeviceId) {
         log('execAgent: hetero executionTarget=device but no boundDeviceId set');
@@ -1396,6 +1371,56 @@ export const dispatchHeteroAgent = async (
         operationId,
       });
 
+      // Prime adapter (type 'orvilo' once the transitional embedded fence
+      // flips): compose the device-run descriptor — artifact pin, bound
+      // broker credential, lease, subject — and register the canonical run
+      // under device ownership for task subjects. ACP adapters skip this.
+      let primeDescriptor: PrimeRunDescriptor | undefined;
+      if (resolveHarnessAdapter(heteroType) === 'prime') {
+        const deviceEmbeddedRoute = await resolveEmbeddedDispatchRoute(deps, {
+          appContext,
+          heteroType,
+          operationTaskId,
+        });
+        const composed = await composeDevicePrimeRun(
+          { database: deps.db, userId: deps.userId, workspaceId: deps.workspaceId },
+          {
+            deviceId: dispatchDeviceId,
+            model: ctx.model,
+            operationId,
+            task: deviceEmbeddedRoute ?? undefined,
+            topicId,
+          },
+        );
+        if (!composed.ok) {
+          const message = composed.error?.message ?? 'Prime device run is unavailable';
+          log('execAgent: prime device composition failed op=%s: %s', operationId, message);
+          await finalizeHeteroDispatchError(deps, {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            detail: message,
+            message: 'Prime device dispatch is unavailable',
+            operationId,
+            topicId,
+          });
+          return {
+            agentId: resolvedAgentId,
+            assistantMessageId,
+            autoStarted: false,
+            createdAt: new Date().toISOString(),
+            error: composed.error?.code ?? 'PRIME_DEVICE_UNAVAILABLE',
+            message: 'Prime device dispatch is unavailable',
+            operationId,
+            status: 'error',
+            success: false,
+            timestamp: new Date().toISOString(),
+            topicId,
+            userMessageId: userMessageId ?? parentMessageId ?? '',
+          };
+        }
+        primeDescriptor = composed.value.descriptor;
+      }
+
       const result = authorizationError
         ? {
             error: 'DEVICE_NOT_FOUND',
@@ -1405,6 +1430,7 @@ export const dispatchHeteroAgent = async (
           }
         : await deviceGateway.dispatchAgentRun({
             ...heteroParams,
+            prime: primeDescriptor,
             args: heteroExecArgs,
             cwd: deviceCwd,
             deviceId: dispatchDeviceId,

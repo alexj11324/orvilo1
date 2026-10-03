@@ -1,7 +1,9 @@
 import { Hono } from 'hono';
 
 import { finalizeAbandoned } from './handlers/finalizeAbandoned';
+import { primeBrokerActivate, primeBrokerCancel, primeBrokerInfer } from './handlers/primeBroker';
 import { toolResult } from './handlers/toolResult';
+import { primeOperationAuth } from './middlewares/primeOperationAuth';
 import { serviceTokenAuth } from './middlewares/serviceTokenAuth';
 
 /**
@@ -26,5 +28,12 @@ app.get('/finalize-abandoned', (c) =>
     timestamp: new Date().toISOString(),
   }),
 );
+
+// POST /api/agent/prime-broker/{activate,infer,cancel} — remote broker surface
+// for device-side Prime runs. Auth is the bound operation credential
+// (`prime:infer` + device/model/operation claims), never a raw provider key.
+app.post('/prime-broker/activate', primeOperationAuth(), primeBrokerActivate);
+app.post('/prime-broker/infer', primeOperationAuth(), primeBrokerInfer);
+app.post('/prime-broker/cancel', primeOperationAuth(), primeBrokerCancel);
 
 export default app;

@@ -13,9 +13,9 @@ import { ACP_MCP_MOUNT_AGENT_TYPES } from './acpRuntime';
  * is transport-capable and mount-incapable. Remote platform types and the
  * non-standard adapters (cursor/devin/droid/grok/trae) are in neither set.
  *
- * The builtin `'orvilo'` agent runs on the embedded Prime harness, which
- * mounts no tools (`noTools: 'all'` on the runner session) — it is never in
- * the mount-capable set.
+ * The builtin `'orvilo'` agent's fixed Prime adapter mounts no tools
+ * (`noTools: 'all'` on the runner session) — it is never in the
+ * mount-capable set.
  */
 export const canMountBuiltinToolSurface = (
   binding: { type?: string | null } | null | undefined,

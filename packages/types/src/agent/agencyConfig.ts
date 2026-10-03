@@ -228,9 +228,10 @@ export const resolveHeteroAgentSystemContext = (
  *   `executionTarget` is `local`, or on a machine connected via `orvilo connect`
  *   when it is `device`. `platformAgentId` selects the named platform agent.
  *
- * - **Builtin** (`orvilo`): a managed session on the embedded Prime harness,
- *   dispatched server-side through the canonical embedded control plane.
- *   `command`/`args`/`env` do not apply — Prime runs no local binary.
+ * - **Builtin** (`orvilo`): the Prime harness, fixed — resolves a device
+ *   like every agent type (docs/development/device-execution-contract.md)
+ *   and runs Prime's own NDJSON protocol there, not a CLI binary, so
+ *   `command`/`args`/`env` do not apply.
  */
 export interface HeterogeneousProviderConfig {
   /** Credential-free API binding used when `authMode` is `api`. */

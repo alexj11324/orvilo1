@@ -1,4 +1,5 @@
 import type { DeviceListItem } from '@orvilo/types';
+import { shouldShowDeviceSelector } from '@orvilo/types';
 import { useMemo } from 'react';
 
 import { groupExecutionTargetDevices } from '@/features/ExecutionTargetPicker';
@@ -97,10 +98,14 @@ export const useDeviceSelectorState = ({
     permissionsLoaded,
     runnableDevices,
     selectableDevices,
-    showDeviceSelector:
-      permissionsLoaded &&
-      deviceInventoryComplete &&
-      canSelectDevice &&
-      selectableDevices.length > 1,
+    // The contract formula verbatim — shared with every resolution surface
+    // (packages/types/src/agent/deviceExecution.ts). Hiding the picker never
+    // unbinds the device.
+    showDeviceSelector: shouldShowDeviceSelector({
+      canSelectDevice,
+      deviceInventoryComplete,
+      permissionsLoaded,
+      selectableDeviceCount: selectableDevices.length,
+    }),
   };
 };

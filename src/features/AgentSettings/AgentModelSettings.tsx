@@ -15,13 +15,15 @@ import {
   normalizeHeterogeneousProviderConfig,
 } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
-import { Brain } from 'lucide-react';
+import { TriangleAlertIcon } from 'lucide-react';
 import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
 import type { SelectOptions } from '@/components/SelectOptions';
 import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/components/SelectOptions';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Button } from '@/components/ui/button';
 import {
   Combobox,
   ComboboxContent,
@@ -40,6 +42,8 @@ import { resolveModelSwitchSelection } from '@/features/ChatInput/ControlBar/Het
 import { useModelCatalog } from '@/features/ChatInput/ControlBar/HeteroModel/useModelCatalog';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
+import { buildServerDefaultModelOptions } from '@/features/HeterogeneousAgent/modelPicker';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { resolveTargetDeviceId } from '@/helpers/agentWorkingDirectory';
 import { resolveExecutionTarget } from '@/helpers/executionTarget';
 import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
@@ -47,6 +51,7 @@ import { useEffectiveWorkingDirectory } from '@/hooks/useEffectiveWorkingDirecto
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
+import { useAiInfraStore } from '@/store/aiInfra';
 import { useElectronStore } from '@/store/electron';
 import { useFetchProviderBindings, useProviderBindingStore } from '@/store/providerBinding';
 
@@ -66,6 +71,7 @@ interface AgentModelSettingsProps {
  */
 const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   const { t } = useTranslation(['setting', 'chat']);
+  const navigate = useWorkspaceAwareNavigate();
   const { allowed: canEdit } = usePermission('edit_own_content');
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
@@ -104,6 +110,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   // 'sandbox') — the same rows `resolveOrviloProviderBinding` may resolve.
   const bindings = useProviderBindingStore((s) => s.bindings);
   useFetchProviderBindings();
+  const builtinAiModelList = useAiInfraStore((s) => s.builtinAiModelList);
 
   const primeModelOptions = useMemo<SelectOptions>(() => {
     if (!builtinEngine) return [];
@@ -119,8 +126,13 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
         routes.add(binding.model);
       }
     }
-    return [...routes].map((route) => ({ label: route, title: route, value: route }));
-  }, [bindings, builtinEngine]);
+    // Human-readable model labels via the model-bank catalog (displayName);
+    // the raw binding route stays in the option value + ModelItemRender's id.
+    return buildServerDefaultModelOptions(
+      [...routes].map((model) => ({ model })),
+      builtinAiModelList,
+    );
+  }, [bindings, builtinEngine, builtinAiModelList]);
 
   const model =
     capability?.model?.resolve(provider) ??
@@ -250,10 +262,10 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   }
 
   return (
-    <SettingsGroup icon={Brain} title={t('agentEngine.model.groupTitle')}>
+    <SettingsGroup title={t('settingAgent.modelSettings.title')}>
       {builtinEngine ? (
-        <SettingsRow label={t('agentEngine.model.label')}>
-          {primeModelOptions.length > 0 ? (
+        primeModelOptions.length > 0 ? (
+          <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
             <Select
               disabled={!canEdit}
               items={selectItems(primeModelOptions)}
@@ -264,23 +276,38 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
               }}
             >
               <SelectTrigger className={settingsStyles.select}>
-                <SelectValue placeholder={t('agentEngine.model.label')} />
+                <SelectValue placeholder={t('settingAgent.modelSettings.modelLabel')} />
               </SelectTrigger>
               <SelectContent>
                 <SelectOptionItems options={primeModelOptions} />
               </SelectContent>
             </Select>
-          ) : (
-            <div className={settingsStyles.hint}>{t('agentEngine.model.noPrimeBinding')}</div>
-          )}
-          {primeModelOptions.length > 0 ? (
-            <div className={settingsStyles.hint}>{t('agentEngine.model.primeHint')}</div>
-          ) : null}
-        </SettingsRow>
+            <div className={settingsStyles.hint}>{t('settingAgent.modelSettings.primeHint')}</div>
+          </SettingsRow>
+        ) : (
+          <SettingsRow>
+            <Alert variant="warning">
+              <TriangleAlertIcon />
+              <AlertTitle>{t('settingAgent.modelSettings.noBindingTitle')}</AlertTitle>
+              <AlertDescription>
+                <div className="flex flex-col items-start gap-2">
+                  <span>{t('settingAgent.modelSettings.noBindingDesc')}</span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate('/settings/provider')}
+                  >
+                    {t('settingAgent.modelSettings.bindAction')}
+                  </Button>
+                </div>
+              </AlertDescription>
+            </Alert>
+          </SettingsRow>
+        )
       ) : null}
 
       {capability?.model?.source === 'static' ? (
-        <SettingsRow label={t('agentEngine.model.label')}>
+        <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
           <Select
             disabled={!canEdit}
             items={selectItems(modelOptions)}
@@ -300,7 +327,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
       ) : null}
 
       {isCatalogModel ? (
-        <SettingsRow label={t('agentEngine.model.label')}>
+        <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
           <Combobox
             disabled={!canEdit || catalog.isLoading}
             items={flattenSelectOptions(catalogModelOptions).map((o) => o.value)}
@@ -316,7 +343,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
             <ComboboxInput className={settingsStyles.select} />
             <ComboboxContent>
               <ComboboxEmpty>
-                {catalog.isLoading ? t('agentEngine.model.catalogPending') : null}
+                {catalog.isLoading ? t('settingAgent.modelSettings.catalogPending') : null}
               </ComboboxEmpty>
               <ComboboxList>
                 {(v) => {
@@ -333,15 +360,19 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
             </ComboboxContent>
           </Combobox>
           {!catalogTargetReady ? (
-            <div className={settingsStyles.hint}>{t('agentEngine.model.catalogPending')}</div>
+            <div className={settingsStyles.hint}>
+              {t('settingAgent.modelSettings.catalogPending')}
+            </div>
           ) : catalog.error ? (
-            <div className={settingsStyles.hint}>{t('agentEngine.model.catalogError')}</div>
+            <div className={settingsStyles.hint}>
+              {t('settingAgent.modelSettings.catalogError')}
+            </div>
           ) : null}
         </SettingsRow>
       ) : null}
 
       {capability?.effort && effort !== undefined ? (
-        <SettingsRow label={t('agentEngine.effort.label')}>
+        <SettingsRow label={t('settingAgent.modelSettings.effortLabel')}>
           <Select
             disabled={!canEdit}
             items={selectItems(effortOptions)}
@@ -366,7 +397,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
       ) : null}
 
       {capability?.mode && mode !== undefined ? (
-        <SettingsRow label={t('agentEngine.mode.label')}>
+        <SettingsRow label={t('settingAgent.modelSettings.modeLabel')}>
           <Select
             disabled={!canEdit}
             items={selectItems(modeOptions)}
@@ -391,7 +422,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
       ) : null}
 
       {speedSupported ? (
-        <SettingsRow label={t('agentEngine.speed.label')}>
+        <SettingsRow label={t('settingAgent.modelSettings.speedLabel')}>
           <Select
             disabled={!canEdit}
             items={selectItems(speedOptions)}

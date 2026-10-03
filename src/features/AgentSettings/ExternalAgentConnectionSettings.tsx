@@ -10,7 +10,7 @@ import {
 } from '@orvilo/heterogeneous-agents';
 import type { HeterogeneousApiConfig, HeterogeneousAuthMode } from '@orvilo/types';
 import isEqual from 'fast-deep-equal';
-import { CableIcon, CheckCircle2, MonitorSmartphone, RefreshCw, XCircle } from 'lucide-react';
+import { CheckCircle2, RefreshCw, XCircle } from 'lucide-react';
 import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
@@ -319,10 +319,7 @@ const ExternalAgentConnectionSettings = memo<ExternalAgentConnectionSettingsProp
     const remote = isRemoteHeterogeneousType(provider.type);
 
     return (
-      <SettingsGroup
-        icon={remote ? MonitorSmartphone : CableIcon}
-        title={t('platformAgentConfig.title')}
-      >
+      <SettingsGroup title={t('platformAgentConfig.title')}>
         {remote ? (
           <RemoteConnectionRows
             agentId={agentId}

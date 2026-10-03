@@ -23,6 +23,8 @@ const mocks = vi.hoisted(() => ({
   loadGroups: vi.fn(),
   addGroup: vi.fn(),
   switchToGroup: vi.fn(),
+  removeAgent: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
@@ -65,6 +67,7 @@ vi.mock('@/store/home', () => ({
       addGroup: mocks.addGroup,
       refreshAgentList: mocks.refreshAgentList,
       switchToGroup: mocks.switchToGroup,
+      removeAgent: mocks.removeAgent,
     }),
 }));
 
@@ -72,7 +75,9 @@ vi.mock('react-i18next', () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));
 
-vi.mock('@/components/toast', () => ({ toast: { error: vi.fn() } }));
+vi.mock('@/components/toast', () => ({
+  toast: { error: vi.fn(), success: mocks.toastSuccess },
+}));
 
 describe('useCreateMenuItems.createAgent', () => {
   beforeEach(() => {
@@ -120,6 +125,18 @@ describe('useCreateMenuItems.createAgent', () => {
 
     expect(mocks.navigate).toHaveBeenCalledWith('/settings/agents/agent-9');
     expect(mocks.openNewConversation).not.toHaveBeenCalled();
+  });
+
+  it('announces the create with a delete-undo action', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent();
+
+    expect(mocks.toastSuccess).toHaveBeenCalledTimes(1);
+    const [options] = mocks.toastSuccess.mock.calls[0];
+    expect(options.title).toBe('agentCreated');
+    expect(options.actions).toHaveLength(1);
+    options.actions[0].onClick();
+    expect(mocks.removeAgent).toHaveBeenCalledWith('agent-9');
   });
 
   it('forwards groupId and visibility without minting anything extra', async () => {

@@ -47,6 +47,10 @@ export class CanonicalVerifyCompletion {
   ): Promise<CanonicalCompletionOutcome> {
     const binding = structuredClone(input);
     const deny = (reason: string): CanonicalCompletionOutcome => ({ state: 'denied', reason });
+    // Verify settlement is task-only — a conversation subject has no task
+    // contract to reconcile (no placeholder taskId may reach this path).
+    if (binding.subject.kind !== 'task') return deny('run_subject_not_task');
+    const taskId = binding.subject.taskId;
     if (!evidence?.mappings.length) return deny('receipt_mapping_unavailable');
     const captured = { ...evidence, mappings: structuredClone(evidence.mappings) };
     const preflight = await this.validate(binding, captured);
@@ -58,7 +62,7 @@ export class CanonicalVerifyCompletion {
     const [task] = await this.db
       .select()
       .from(tasks)
-      .where(and(eq(tasks.id, binding.taskId), eq(tasks.workspaceId, binding.workspaceId)))
+      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
       .limit(1);
     if (!task) return deny('task_missing_after_reconciliation');
     // Recurring tasks may rearm as scheduled; a void settlement return is not
@@ -75,6 +79,8 @@ export class CanonicalVerifyCompletion {
     binding: CanonicalRunBinding,
     evidence: CanonicalCompletionEvidence,
   ): Promise<boolean> {
+    if (binding.subject.kind !== 'task') return false;
+    const taskId = binding.subject.taskId;
     await db
       .select({ id: taskDispatches.id })
       .from(taskDispatches)
@@ -88,7 +94,7 @@ export class CanonicalVerifyCompletion {
     await db
       .select({ id: tasks.id })
       .from(tasks)
-      .where(and(eq(tasks.id, binding.taskId), eq(tasks.workspaceId, binding.workspaceId)))
+      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
       .for('update');
     const [grant] = await db
       .select()
@@ -102,7 +108,7 @@ export class CanonicalVerifyCompletion {
       .for('update');
     if (
       !grant ||
-      grant.taskId !== binding.taskId ||
+      grant.taskId !== taskId ||
       grant.delegationSubjectType !== 'user' ||
       grant.delegationSubjectId !== binding.userId ||
       grant.status !== 'active' ||
@@ -114,7 +120,7 @@ export class CanonicalVerifyCompletion {
     await db
       .select({ id: taskTopics.id })
       .from(taskTopics)
-      .where(and(eq(taskTopics.taskId, binding.taskId), eq(taskTopics.topicId, binding.topicId)))
+      .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, binding.topicId)))
       .for('update');
     const [member] = await db
       .select()
@@ -152,7 +158,7 @@ export class CanonicalVerifyCompletion {
     if (await new CanonicalVerifyCompletion(db).validate(binding, evidence)) return false;
     try {
       await new AgentDelegationService(db, binding.userId, binding.workspaceId).assertMayCommit({
-        taskId: binding.taskId,
+        taskId,
         topicId: binding.topicId,
         grantId: binding.grantId,
         epoch: binding.executionEpoch,
@@ -172,11 +178,13 @@ export class CanonicalVerifyCompletion {
     binding: CanonicalRunBinding,
     evidence: CanonicalCompletionEvidence,
   ): Promise<string | undefined> {
+    if (binding.subject.kind !== 'task') return 'run_subject_not_task';
+    const taskId = binding.subject.taskId;
     const mappings = structuredClone(evidence.mappings);
     const [liveTask] = await this.db
       .select({ id: tasks.id, isDeleted: tasks.isDeleted, deletedAt: tasks.deletedAt })
       .from(tasks)
-      .where(and(eq(tasks.id, binding.taskId), eq(tasks.workspaceId, binding.workspaceId)))
+      .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
       .limit(1);
     const [liveTopic] = await this.db
       .select({ id: topics.id, isDeleted: topics.isDeleted, deletedAt: topics.deletedAt })
@@ -198,7 +206,7 @@ export class CanonicalVerifyCompletion {
       .from(taskTopics)
       .where(
         and(
-          eq(taskTopics.taskId, binding.taskId),
+          eq(taskTopics.taskId, taskId),
           eq(taskTopics.topicId, binding.topicId),
           eq(taskTopics.workspaceId, binding.workspaceId),
         ),
@@ -224,7 +232,7 @@ export class CanonicalVerifyCompletion {
         operationId: binding.operationId,
         policyRevision: binding.policyRevision,
         requirementRevision: topic.requirementRevision,
-        taskId: binding.taskId,
+        taskId,
       }))
     )
       return 'dispatch_contract_changed';
@@ -280,7 +288,7 @@ export class CanonicalVerifyCompletion {
         receipt.requestDigest !== mapping.requestDigest ||
         receipt.fence.tenantId !== binding.workspaceId ||
         receipt.fence.principalId !== binding.userId ||
-        receipt.fence.taskId !== binding.taskId ||
+        receipt.fence.taskId !== taskId ||
         receipt.fence.grantId !== binding.grantId ||
         receipt.fence.epoch !== binding.executionEpoch ||
         receipt.fence.ownerId !== binding.runtimeOwnerId ||

@@ -23,7 +23,7 @@ import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/s
 
 import { CanonicalVerifyCompletion } from './canonicalCompletion';
 import type { CanonicalRunBinding } from './canonicalRun';
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 
 describe('canonical completion admission', () => {
   let db: OrviloDatabase;
@@ -35,7 +35,7 @@ describe('canonical completion admission', () => {
       id: binding.operationId,
       userId: binding.userId,
       workspaceId: binding.workspaceId,
-      taskId: binding.taskId,
+      taskId: fixtureTaskId(binding),
       topicId: binding.topicId,
       status: 'done',
     });
@@ -68,7 +68,10 @@ describe('canonical completion admission', () => {
       state: 'denied',
       reason: 'verification_not_passed',
     });
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, binding.taskId));
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, fixtureTaskId(binding)));
     expect(task.status).toBe('running');
   });
   it('rejects a persisted passed run without a confirmed nonempty criterion plan', async () => {
@@ -156,7 +159,7 @@ describe('canonical completion admission', () => {
       fence: {
         tenantId: binding.workspaceId,
         principalId: binding.userId,
-        taskId: binding.taskId,
+        taskId: fixtureTaskId(binding),
         grantId: binding.grantId,
         ownerId: binding.runtimeOwnerId,
         leaseId: binding.runtimeLeaseId,
@@ -179,10 +182,13 @@ describe('canonical completion admission', () => {
   }
 
   async function commit(mapped: Awaited<ReturnType<typeof acceptedEvidence>>) {
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, binding.taskId));
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, fixtureTaskId(binding)));
     const adapter = new CanonicalVerifyCompletion(db);
     return new TaskModel(db, binding.userId, binding.workspaceId).updateStatusForExecutionContract(
-      binding.taskId,
+      fixtureTaskId(binding),
       'completed',
       {
         assigneeAgentId: task.assigneeAgentId,
@@ -217,9 +223,14 @@ describe('canonical completion admission', () => {
           .set({ executionEpoch: binding.executionEpoch + 1 })
           .where(eq(taskTopics.topicId, binding.topicId));
       expect(await commit(mapped)).toBeNull();
-      expect((await db.select().from(tasks).where(eq(tasks.id, binding.taskId)))[0].status).toBe(
-        'running',
-      );
+      expect(
+        (
+          await db
+            .select()
+            .from(tasks)
+            .where(eq(tasks.id, fixtureTaskId(binding)))
+        )[0].status,
+      ).toBe('running');
     },
   );
   it('invokes the actual Verify convergence for a passed mapped completed run', async () => {
@@ -285,7 +296,7 @@ describe('canonical completion admission', () => {
           runReservationId: `completion:${binding.operationId}:test`,
           runReservationExpiresAt: new Date(Date.now() + 60_000),
         })
-        .where(eq(tasks.id, binding.taskId));
+        .where(eq(tasks.id, fixtureTaskId(binding)));
       if (revoked)
         await db
           .update(executionGrants)

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
+import { orviloDeviceFencedToEmbedded } from '../helpers/heteroErrors';
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
 
@@ -17,6 +18,7 @@ const {
   mockGetHeterogeneousResumeSessionId,
   mockMessageCreate,
   mockMessageUpdate,
+  mockOpenEmbeddedChatDispatchHost,
   mockSpawnHeteroSandbox,
   realDispatchRef,
 } = vi.hoisted(() => ({
@@ -28,6 +30,7 @@ const {
   mockGetHeterogeneousResumeSessionId: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockMessageUpdate: vi.fn(),
+  mockOpenEmbeddedChatDispatchHost: vi.fn(),
   mockSpawnHeteroSandbox: vi.fn(),
   // The unmocked dispatch, captured by the factory below; the mock delegates
   // to it so tests observe the call AND the real routing pipeline runs.
@@ -72,6 +75,11 @@ vi.mock('@/database/models/message', () => ({
 }));
 
 const baseAgentConfig = {
+  // An external-agent binding: device/sandbox routing is exercised on
+  // claude-code — the builtin orvilo agent's harness is fixed to Prime
+  // (docs/development/device-execution-contract.md); device-first routing
+  // applies to it equally, so these cases pin the external CLI adapter.
+  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
   chatConfig: {},
   files: [],
   id: 'agent-1',
@@ -207,6 +215,14 @@ vi.mock('../pipeline/heteroDispatch', async (importOriginal) => {
   return { ...actual, dispatchHeteroAgent: mockDispatchHeteroAgent };
 });
 
+// The host-open is stubbed (its admission re-proof needs a real `deps.db`);
+// `resolveEmbeddedChatDispatchRoute` stays real so routing into the embedded
+// chat host is genuinely exercised.
+vi.mock('@/server/services/controlPlane/embeddedChatDispatch', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, openEmbeddedChatDispatchHost: mockOpenEmbeddedChatDispatchHost };
+});
+
 vi.mock('@/server/services/heterogeneousAgent', () => ({
   HeterogeneousAgentService: vi.fn().mockImplementation(function () {
     return {
@@ -220,7 +236,8 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
 }));
 
 vi.mock('@/server/services/providerBinding/execution', () => ({
-  resolveOrviloProviderBinding: vi.fn().mockResolvedValue({ status: 'none' }),
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/server/services/deviceGateway', () => ({
@@ -287,6 +304,12 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     mockDispatchAgentRun.mockResolvedValue({ success: true });
     mockExecuteToolCall.mockResolvedValue({ success: true });
     mockSpawnHeteroSandbox.mockResolvedValue(undefined);
+    // Deny with a sentinel — proves the run reached embedded chat admission
+    // without driving `openEmbeddedChatDispatchHost`'s `deps.db` re-proof.
+    mockOpenEmbeddedChatDispatchHost.mockResolvedValue({
+      error: { code: 'stale_fence', message: 'chat host stubbed by fence test', retryable: false },
+      ok: false,
+    });
     mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
     mockDeviceFindByDeviceId.mockResolvedValue(undefined);
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
@@ -306,7 +329,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       return {
         getAgentConfig: vi.fn().mockResolvedValue({
           ...baseAgentConfig,
-          agencyConfig,
+          agencyConfig: {
+            heterogeneousProvider: { type: 'claude-code' },
+            ...agencyConfig,
+          },
         }),
       } as any;
     });
@@ -634,6 +660,42 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
           metadata: expect.not.objectContaining({ aegis: expect.anything() }),
         }),
       );
+    });
+  });
+
+  // TRANSITIONAL — device-execution-contract.md §transitional-fence. The
+  // device-side Prime adapter ships in a follow-up; until it does, builtin
+  // orvilo plans that resolve to a device stay fenced to the embedded fork
+  // (pre-cutover they ran that path silently — refusing them outright would
+  // break normal chat mid-cutover). The package that admits the adapter
+  // must DELETE this describe and the `orviloDeviceFencedToEmbedded`
+  // predicate: these assertions are the flip pin and fail as soon as the
+  // fence comes down.
+  describe('transitional embedded fence (orvilo device plans → embedded fork)', () => {
+    it('pins the fence predicate — orvilo fenced, external types unfenced', () => {
+      expect(orviloDeviceFencedToEmbedded('orvilo')).toBe(true);
+      expect(orviloDeviceFencedToEmbedded('claude-code')).toBe(false);
+      expect(orviloDeviceFencedToEmbedded('codex')).toBe(false);
+    });
+
+    it('keeps a device-resolved orvilo run off the device gateway', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'orvilo' },
+      });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      // Fenced: the resolved deviceId never reaches the device gateway, and
+      // no engine CLI is spawned either (orvilo wraps no CLI anymore).
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      // The run lands on the embedded fork and reaches CHAT admission (the
+      // stubbed host-open's sentinel error surfaces) — identical routing to a
+      // sandbox-plan chat run. The device path never fires.
+      expect(mockOpenEmbeddedChatDispatchHost).toHaveBeenCalledTimes(1);
+      expect(result).toMatchObject({ error: 'chat host stubbed by fence test' });
     });
   });
 });

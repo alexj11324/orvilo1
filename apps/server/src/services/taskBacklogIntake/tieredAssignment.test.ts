@@ -230,7 +230,15 @@ describe('pickTieredAgent', () => {
         sortOrder: 1,
         tier: 'low',
       }),
-      rosterEntry({ agentId: 'capable', sortOrder: 2, tier: 'low' }),
+      // Mount-capable external binding — the builtin orvilo agent is
+      // embedded-only (mounts no tools), so capability is pinned to a
+      // real ACP family type instead of the default binding.
+      rosterEntry({
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        agentId: 'capable',
+        sortOrder: 2,
+        tier: 'low',
+      }),
     ];
 
     it('skips mount-incapable agents — including pi, transport-capable but silent-dropping mcpServers', () => {
@@ -349,7 +357,12 @@ describe('resolveBacklogIntakeAssignment', () => {
         agentId: 'agent-devin',
         tier: 'low',
       }),
-      rosterEntry({ agentId: 'agent-claude', sortOrder: 1, tier: 'low' }),
+      rosterEntry({
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        agentId: 'agent-claude',
+        sortOrder: 1,
+        tier: 'low',
+      }),
     ]);
 
     await expect(
@@ -392,6 +405,13 @@ describe('resolveBacklogIntakeAssignment', () => {
 
   it('leaves a mount-capable kept assignee unblocked — the pre-tiering path', async () => {
     mocks.taskRequiresBuiltinToolMount.mockResolvedValue(true);
+    // The kept assignee's binding must be mount-capable — the default
+    // synthesized binding is 'orvilo', which is embedded-only post-cutover
+    // and mounts no tools.
+    mocks.findUsableAgentExecutionBinding.mockResolvedValue({
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      model: null,
+    });
 
     const result = await resolveBacklogIntakeAssignment({
       candidate: candidate(),

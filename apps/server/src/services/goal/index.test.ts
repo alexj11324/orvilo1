@@ -890,8 +890,18 @@ describe('GoalService', () => {
 
   it('hands the goal and its unfinished tasks to a new agent', async () => {
     await serverDB.insert(agents).values([
-      { id: 'agt_old', slug: 'agt-old', userId },
-      { id: 'agt_new', slug: 'agt-new', userId },
+      {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'agt_old',
+        slug: 'agt-old',
+        userId,
+      },
+      {
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        id: 'agt_new',
+        slug: 'agt-new',
+        userId,
+      },
     ]);
     const service = new GoalService(serverDB, userId);
     const taskModel = new TaskModel(serverDB, userId);
@@ -971,7 +981,12 @@ describe('GoalService', () => {
 
   it('restarts unfinished tasks under a new agent and cancels the stale runs they hold', async () => {
     const cancelSpy = vi.spyOn(TaskService.prototype, 'cancelTopic').mockResolvedValue();
-    await serverDB.insert(agents).values({ id: 'agt_restart', slug: 'agt-restart', userId });
+    await serverDB.insert(agents).values({
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      id: 'agt_restart',
+      slug: 'agt-restart',
+      userId,
+    });
     const service = new GoalService(serverDB, userId);
     const taskModel = new TaskModel(serverDB, userId);
     const graph = await service.create({ tasks: ['Stuck task'], title: 'Restartable' });
@@ -1504,9 +1519,12 @@ describe('GoalService', () => {
   it('files a goal the agent created under that agent, not its owner', async () => {
     // `/goal` is an agent making the call. `agentId` alone cannot say so — the
     // creation modal sets it too, and there the author is the person.
-    await serverDB
-      .insert(agents)
-      .values({ id: 'agt_goal_author', slug: 'agt-goal-author', userId });
+    await serverDB.insert(agents).values({
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      id: 'agt_goal_author',
+      slug: 'agt-goal-author',
+      userId,
+    });
     const service = new GoalService(serverDB, userId);
 
     const graph = await service.create({
@@ -1525,7 +1543,12 @@ describe('GoalService', () => {
 
   it('still files a goal the user created under the user, even on an agent page', async () => {
     // The modal passes `agentId` for assignment; the author is the person.
-    await serverDB.insert(agents).values({ id: 'agt_assignee', slug: 'agt-assignee', userId });
+    await serverDB.insert(agents).values({
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      id: 'agt_assignee',
+      slug: 'agt-assignee',
+      userId,
+    });
     const service = new GoalService(serverDB, userId);
 
     const graph = await service.create({
@@ -1600,7 +1623,12 @@ describe('GoalService', () => {
   it('gates every responsible task with a Task-scoped Acceptance requirement', async () => {
     const service = new GoalService(serverDB, userId);
     const agentId = 'goal-work-verifier-agent';
-    await serverDB.insert(agents).values({ id: agentId, title: 'Goal worker', userId });
+    await serverDB.insert(agents).values({
+      agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+      id: agentId,
+      title: 'Goal worker',
+      userId,
+    });
     const graph = await service.create({
       agentId,
       requirement: 'Generate data, then train and evaluate a model.',

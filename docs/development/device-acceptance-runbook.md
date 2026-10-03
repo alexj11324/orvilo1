@@ -190,12 +190,22 @@ JWT mints the connect token at startup).
 The device package's terminal-state contract — what acceptance re-verifies:
 
 - **Session continuity** — `resumeSessionId` reuses a live same-device
-  session (`run.reactivate` with the fresh broker credential); a dead session
-  is an explicit rebuild (fresh runner + `resumeFallbackSystemContext`, the
-  ingest finish carries `resumeSessionInvalidated: true`). An op whose runner
-  stream closes mid-turn settles `cancelled` with an honest abort reason
-  ("device lease lapsed — prime run stopped" vs "prime runner terminated") —
-  never `done`, never a `running` zombie.
+  session (`run.reactivate` with the fresh broker credential, which also
+  rotates the broker-bridge credential every later `/infer` carries); a dead
+  session is an explicit rebuild (fresh runner +
+  `resumeFallbackSystemContext`, the ingest finish carries
+  `resumeSessionInvalidated: true`). A resumed turn that settles `error`
+  invalidates the pointer the same way and closes the local session — the
+  next turn rebuilds instead of trapping the topic on a broken session.
+  An op whose runner stream closes mid-turn settles `cancelled` with an
+  honest abort reason ("device lease lapsed — prime run stopped" vs
+  "prime runner terminated") — never `done`, never a `running` zombie.
+- **Binding-invalid contract** — `resolveDeviceDispatchAuthorizationFailure`
+  re-checks the registry in BOTH scopes: a workspace dispatch whose device
+  row vanished, or a personal-scope conversation dispatch whose device left
+  the user's own registry, gets `DEVICE_BINDING_INVALID` + `repairCandidates`
+  (other selectable devices in the SAME scope, cap 8). `DEVICE_NOT_FOUND` is
+  reserved for transports that could not address a device at all.
 - **Admission liveness** — `isDeviceAdmissionLive` treats `pending` as live:
   the ledger writes `pending` BEFORE the gateway call returns, so under
   await-ack semantics the device's `/activate` legitimately races the ack.

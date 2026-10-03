@@ -203,6 +203,65 @@ describe('admitPrimeDeviceRun', () => {
     expect(second.runImpl.prompt).toHaveBeenCalledWith(expect.stringContaining('history-fallback'));
   });
 
+  it('invalidates the session pointer when a resumed op settles error', async () => {
+    // ROOT CAUSE: only `rebuilt` cleared the pointer — an errored resumed op
+    // left the topic TRAPPED on the same broken session forever.
+    const first = makeFakeRun('sess-1');
+    const second = makeFakeRun('sess-2');
+    openPrimeDeviceRunMock
+      .mockResolvedValueOnce({ ok: true, value: first.run })
+      .mockResolvedValueOnce({ ok: true, value: second.run });
+
+    await admitPrimeDeviceRun(params({ operationId: 'op-1' }), '/tmp/work');
+    await waitPrimeSessionIdle('sess-1');
+
+    // The resumed turn fails (e.g. its bound credential got 403s).
+    first.runImpl.prompt.mockResolvedValue({ ok: true, value: { stopReason: 'error' } });
+    await expect(
+      admitPrimeDeviceRun(params({ operationId: 'op-2', resumeSessionId: 'sess-1' }), '/tmp/work'),
+    ).resolves.toEqual({ status: 'accepted' });
+    await waitPrimeSessionIdle('sess-1');
+
+    // Pointer invalidated like the rebuilt path + the session is dead locally.
+    const errored = finishCalls.at(-1);
+    expect(errored?.result).toBe('error');
+    expect(errored?.resumeSessionInvalidated).toBe(true);
+    expect(first.runImpl.kill).toHaveBeenCalled();
+
+    // The next turn must NOT resume the trapped session — it rebuilds.
+    await expect(
+      admitPrimeDeviceRun(params({ operationId: 'op-3', resumeSessionId: 'sess-1' }), '/tmp/work'),
+    ).resolves.toEqual({ status: 'accepted' });
+    await waitPrimeSessionIdle('sess-2');
+    expect(openPrimeDeviceRunMock).toHaveBeenCalledTimes(2);
+    expect(second.runImpl.reactivate).not.toHaveBeenCalled();
+    expect(finishCalls.at(-1)?.sessionId).toBe('sess-2');
+  });
+
+  it('drops the session when reactivation is refused', async () => {
+    const first = makeFakeRun('sess-1');
+    const second = makeFakeRun('sess-2');
+    openPrimeDeviceRunMock
+      .mockResolvedValueOnce({ ok: true, value: first.run })
+      .mockResolvedValueOnce({ ok: true, value: second.run });
+
+    await admitPrimeDeviceRun(params({ operationId: 'op-1' }), '/tmp/work');
+    await waitPrimeSessionIdle('sess-1');
+
+    first.runImpl.reactivate.mockResolvedValue({ ok: false, error: { message: 'refused' } });
+    await expect(
+      admitPrimeDeviceRun(params({ operationId: 'op-2', resumeSessionId: 'sess-1' }), '/tmp/work'),
+    ).resolves.toMatchObject({ reason: 'refused', status: 'rejected' });
+    expect(first.runImpl.kill).toHaveBeenCalled();
+
+    // The refused session is dropped — a later resume rebuilds honestly.
+    await expect(
+      admitPrimeDeviceRun(params({ operationId: 'op-3', resumeSessionId: 'sess-1' }), '/tmp/work'),
+    ).resolves.toEqual({ status: 'accepted' });
+    await waitPrimeSessionIdle('sess-2');
+    expect(openPrimeDeviceRunMock).toHaveBeenCalledTimes(2);
+  });
+
   it('settles a killed op cancelled, never done', async () => {
     const run = makeFakeRun('sess-1');
     // Prompt never resolves — the kill arrives mid-turn.

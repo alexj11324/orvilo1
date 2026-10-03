@@ -55,7 +55,11 @@ import {
 } from '@orvilo/agent-execution/controlPlane/primeEmbeddedArtifact';
 import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 
-import { createBrokerReverseHandler, type PrimeDeviceHostLog } from './brokerBridge';
+import {
+  type BrokerBridgeOptions,
+  createBrokerReverseHandler,
+  type PrimeDeviceHostLog,
+} from './brokerBridge';
 
 /** Same unbounded prompt window as the embedded host — a run can stream for
  * many minutes; cancel/abort is the real bound, not a socket timeout. */
@@ -322,8 +326,10 @@ export const openPrimeDeviceRun = async (
 
   // The bridge answers runner-issued broker.* requests; a runner can only
   // emit them once a session exists, so the handler installs after init with
-  // the real sessionId as the per-request fallback.
-  const brokerHandler = createBrokerReverseHandler({
+  // the real sessionId as the per-request fallback. The credential holder is
+  // read per-pump so `reactivate` can rotate it to the resuming operation's
+  // own bound credential — the descriptor's dies with its operation.
+  const brokerBridgeOptions: BrokerBridgeOptions = {
     credential: descriptor.broker.credential,
     endpoint: options.brokerUrl.replace(/\/$/, ''),
     fetchImpl,
@@ -332,7 +338,8 @@ export const openPrimeDeviceRun = async (
       transport.notify('broker.event', { event, requestId });
     },
     sessionId: ack.sessionId,
-  });
+  };
+  const brokerHandler = createBrokerReverseHandler(brokerBridgeOptions);
   transport.setReverseHandler((method, params) => brokerHandler(method, params));
 
   const activation: PrimeDeviceRunActivation = {
@@ -400,7 +407,14 @@ export const openPrimeDeviceRun = async (
       return leaseLapsed;
     },
     pendingEvents: () => eventQueue.length,
-    reactivate: (credential) => postActivation(credential),
+    reactivate: async (credential) => {
+      const activated = await postActivation(credential);
+      if (!activated.ok) return activated;
+      // The session outlives the original operation — broker.infer calls from
+      // here on must carry the NEW operation's bound credential.
+      brokerBridgeOptions.credential = credential;
+      return activated;
+    },
     prompt: async (text) => {
       try {
         const result = await transport.request(

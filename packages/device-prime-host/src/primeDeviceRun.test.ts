@@ -327,4 +327,56 @@ describe('openPrimeDeviceRun', () => {
     const abortFrame = runner.inbound.find((frame) => frame.method === 'session.abort');
     expect(abortFrame).toBeTruthy();
   });
+
+  // ROOT CAUSE: the bridge captured the op's bound credential at open; a
+  // resumed turn's `/infer` then presented the DEAD op's credential → 403.
+  // `reactivate` must rotate the credential every later pump carries.
+  it('rotates the bridge credential to the resuming op on reactivate', async () => {
+    const { artifact, dir } = await stage();
+    const runner = fakeRunner();
+    const auths: Array<{ authorization?: string; url: string }> = [];
+    const fetchImpl = (async (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input);
+      auths.push({
+        authorization: (init?.headers as Record<string, string> | undefined)?.authorization,
+        url,
+      });
+      if (url.endsWith('/activate')) return new Response('{}', { status: 200 });
+      return new Response(`${JSON.stringify({ event: { type: 'end' }, requestId: 'infer-r' })}\n`, {
+        status: 200,
+      });
+    }) as typeof fetch;
+    const opened = await openPrimeDeviceRun({
+      artifact,
+      brokerUrl: 'https://server.test/api/agent/prime-broker',
+      descriptor: descriptor(),
+      executable: '/usr/bin/node',
+      fetchImpl,
+      log: noopLog,
+      operationId: 'op-7',
+      spawnImpl: (() => runner.child) as unknown as typeof spawn,
+      stateDir: `${dir}/state`,
+      workspace: dir,
+    });
+    expect(opened.ok).toBe(true);
+    if (!opened.ok) return;
+    const run = opened.value;
+    try {
+      // A new operation resumes the session under its own bound credential.
+      await expect(run.reactivate('op-2-jwt')).resolves.toMatchObject({ ok: true });
+      runner.emit({
+        id: 8,
+        jsonrpc: '2.0',
+        method: 'broker.infer',
+        params: { request: { requestId: 'infer-r' }, sessionId: 'sess-1' },
+      });
+      await new Promise((resolve) => setTimeout(resolve, 50));
+      const infer = auths.find((call) => call.url.endsWith('/infer'));
+      expect(infer?.authorization).toBe('Bearer op-2-jwt');
+      const reactivations = auths.filter((call) => call.url.endsWith('/activate'));
+      expect(reactivations.at(-1)?.authorization).toBe('Bearer op-2-jwt');
+    } finally {
+      await run.kill();
+    }
+  });
 });

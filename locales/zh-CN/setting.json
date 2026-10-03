@@ -486,6 +486,8 @@
   "group.security": "安全、权限与审计",
   "group.subscription": "套餐",
   "group.system": "系统",
+  "group.thisDevice": "此应用·此设备",
+
   "group.tools": "工具、技能与连接器",
   "group.usageAndCost": "用量与成本",
   "groupTab.chat": "对话",

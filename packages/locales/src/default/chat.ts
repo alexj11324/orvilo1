@@ -658,6 +658,9 @@ export default {
   'heteroAgent.executionTarget.reconnect': 'Reconnect',
   'heteroAgent.executionTarget.reconnectFailed':
     'Could not reconnect this device. Make sure the desktop app is running, then try again.',
+  'heteroAgent.executionTarget.bindingInvalid': 'Rebind device',
+  'heteroAgent.executionTarget.bindingInvalidBanner':
+    'The bound device ({{device}}) is no longer available — pick a device below to rebind.',
   'heteroAgent.executionTarget.personalGroup': 'Private Devices',
   'heteroAgent.executionTarget.sandbox': 'Cloud Sandbox',
   'heteroAgent.executionTarget.sandboxDesc': 'Run in an ephemeral cloud sandbox',

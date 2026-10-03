@@ -121,3 +121,34 @@
 
 - 主窗 `sandbox:false` + `nodeIntegration` 隐式默认 —— 收紧需要 preload 改造评估，WD-07 前复核。
 - `src/platform` 未覆盖的宿主面（`shortcut.global`、`os.openPermissionSettings`、devtools、remoteServer、completionSound、binary-probe、browserWebview、rendererOta、desktopExportService、auv）仍是 native-shell 内部实现，WD-06 归口进导入门禁 allowlist。
+
+## 7. WD-05 进展登记（`refactor/wd-05-ui-routes`）
+
+### 设置作用域标注
+
+- `SettingsCapability` 新增 `scope?: 'user'|'workspace'|'host'|'device'` 字段 —— 标注而非新注册表（同一 `SETTINGS_CAPABILITIES`，纯上下文不变）。
+- host：Proxy、SystemTools；device：Devices；workspace：Usage、Plans、Credits、Billing、Creds；user：其余全部。
+- `useCategory` 新增 `ThisDevice` 分组：Proxy + SystemTools 从 Agent 组移入「此应用・此设备」组；空组沿用既有 `filter` 自动消失，Web 渲染不受影响。
+- `SettingsContent` 深链门禁此前已落在组件挂载前（`isSettingsTabAvailable` → `NotFound`，退役别名 → `redirectTo`）—— 验证合规，无改动。
+
+### 命令面板收编到注册表
+
+- `contextCommands` 每条 settings 命令标注 `settingsTab`，`buildContextCommands` 逐项过 `isSettingsTabAvailable(tab, capabilityContext)` —— 命令面板与路由共用同一门禁，不再各写一份 `isDesktop` / `enableBusinessFeatures`。
+- 退役的 `common` 别名不再作为深链目标：profile 命令改指 `/settings/appearance`。
+
+### 执行目标 selector
+
+- `HeteroDeviceSwitcher` 新增绑定失效检测：绑定的 `deviceId` 不在合法候选行中 → chip 变 `buttonWarning` 样式 + 标签 `Rebind device`，popover 顶部显示 `bindingInvalidBanner`（命名失效设备）。修复路径 = 用户显式选设备重绑，无静默换绑。0/1/N 规则、离线行可见不可选、固定策略只读 chip 此前已合规，无改动。
+
+### 宿主动作的资源身份
+
+- `Conversation/WorkingSidebar/Files`：`isRemote` 语义从「有 deviceId」改为「deviceId ≠ 本机 gateway deviceId」（`useElectronStore.gatewayDeviceInfo`）。本机设备上运行的远端会话恢复 reveal-in-Finder /open-in-app；Web 上 gateway id 恒不解析，任何 deviceId 仍是远端 —— 双端语义同时正确。
+- `Portal/LocalFile`：`canOpenExternal` 已是 `isDesktop ? !deviceId && !sandboxTopicId : true` —— desktop 仅本机资源可外开，web 恒走自身下载。合规，无改动。
+
+### 宿主专属泄漏修复
+
+- `Version.tsx`：运行时 `getElectronIpc()` 探测改为编译期 `isDesktop`；新增 `enableBusinessFeatures`（部署形态）门禁 —— `showManualUpgrade = !enableBusinessFeatures`。Hosted SaaS Web 不再渲染「检查更新」；自托管 + Desktop 保留 OTA 路径。
+
+### 遗留（登记给后续包）
+
+- Automation 无 device 绑定字段（schema 层不存在 `deviceId`）→「运行于 <device>」需 WD-03 落数据后由 WD-07 补 UI，不在 WD-05 范围。

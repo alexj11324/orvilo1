@@ -78,6 +78,14 @@ const styles = createStaticStyles(({ css }) => ({
     text-overflow: ellipsis;
     white-space: nowrap;
   `,
+  buttonWarning: css`
+    color: ${cssVar.colorWarningText};
+
+    &:hover {
+      color: ${cssVar.colorWarningText};
+      background: ${cssVar.colorWarningBg};
+    }
+  `,
   buttonReadonly: css`
     cursor: default;
 
@@ -648,6 +656,20 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     ? [...privateDevices, ...workspaceDevices]
     : [...personalOnlyDevices];
   const hasNoDevices = deviceRows.length === 0;
+
+  // A stored binding that names a device outside this agent's legal pool is
+  // invalid — deleted, scope-revoked, or re-homed. The contract forbids a
+  // silent re-bind (resolveExecutionDevice blocks with DEVICE_BINDING_INVALID),
+  // so surface an explicit repair state: clicking a device row below IS the
+  // authorized repair write. An unfinished or failed inventory is never read
+  // as an invalid binding.
+  const bindingInvalid =
+    canShowExecutionTargetSelector &&
+    executionTarget === 'device' &&
+    boundDeviceId !== undefined &&
+    !isLoading &&
+    devices !== undefined &&
+    !deviceRows.some((d) => d.deviceId === boundDeviceId);
   // On web with no device, the prominent download card below replaces the small
   // header link — avoid showing the same CTA twice. Workspace agents get the
   // enroll hint instead: downloading the desktop app wouldn't help until the
@@ -684,11 +706,13 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     }
   } else if (chipExecutionTarget === 'device') {
     chipIcon = <ExecutionTargetIcon devicePlatform={boundDevice?.platform} target={'device'} />;
-    chipLabel = canShowExecutionTargetSelector
-      ? (boundDevice?.friendlyName ??
-        boundDevice?.hostname ??
-        t('heteroAgent.executionTarget.unknownDevice'))
-      : t('heteroAgent.executionTarget.workspaceGroup');
+    chipLabel = bindingInvalid
+      ? t('heteroAgent.executionTarget.bindingInvalid')
+      : canShowExecutionTargetSelector
+        ? (boundDevice?.friendlyName ??
+          boundDevice?.hostname ??
+          t('heteroAgent.executionTarget.unknownDevice'))
+        : t('heteroAgent.executionTarget.workspaceGroup');
   }
 
   const isActive = (target: DeviceExecutionTarget, deviceId?: string) => {
@@ -789,6 +813,11 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
           </a>
         )}
       </div>
+      {bindingInvalid ? (
+        <div className={styles.empty}>
+          {t('heteroAgent.executionTarget.bindingInvalidBanner', { device: boundDeviceId })}
+        </div>
+      ) : null}
       {isHetero ? null : (
         <OptionRow
           active={isActive('none')}
@@ -969,7 +998,13 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   );
 
   const chip = (
-    <div className={cx(styles.button, !canShowExecutionTargetSelector && styles.buttonReadonly)}>
+    <div
+      className={cx(
+        styles.button,
+        !canShowExecutionTargetSelector && styles.buttonReadonly,
+        bindingInvalid && styles.buttonWarning,
+      )}
+    >
       {chipIcon}
       <span className={styles.buttonLabel}>{chipLabel}</span>
       {canShowExecutionTargetSelector ? (

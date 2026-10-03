@@ -44,6 +44,7 @@ import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 import { localFileService } from '@/services/electron/localFileService';
 import { projectFileService } from '@/services/projectFile';
 import { useChatStore } from '@/store/chat';
+import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
 import { copyToClipboard } from '@/utils/clipboard';
 
@@ -234,7 +235,15 @@ FilesSearchBar.displayName = 'FilesSearchBar';
 
 const Files = memo<FilesProps>(({ deviceId, workingDirectory }) => {
   const { t } = useTranslation('chat');
-  const isRemote = !!deviceId;
+  // "Remote" for host actions (reveal-in-Finder, open-in-app) means "the files
+  // live on a device other than THIS host". A topic bound to this machine's
+  // own gateway deviceId is still local for host purposes — the contract's
+  // resource-identity rule only forbids taking a foreign device's paths to the
+  // local shell, never local ones. On web the gateway id never resolves, so
+  // any deviceId stays remote.
+  useElectronStore((s) => s.useFetchGatewayDeviceInfo)();
+  const localGatewayDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
+  const isRemote = !!deviceId && deviceId !== localGatewayDeviceId;
   const { data, isLoading } = useProjectFiles(deviceId, workingDirectory);
   const { data: gitFiles } = useGitWorkingTreeFiles(
     deviceId,

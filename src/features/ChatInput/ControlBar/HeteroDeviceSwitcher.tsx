@@ -17,6 +17,7 @@ import {
 import { memo, type ReactNode, useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AsyncError from '@/components/AsyncError';
 import InstantSwitch from '@/components/InstantSwitch';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -26,6 +27,7 @@ import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatIn
 import { useLocalSandboxCapability } from '@/features/ChatInput/hooks/useLocalSandboxCapability';
 import { useSelectExecutionTarget } from '@/features/ChatInput/hooks/useSelectExecutionTarget';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
+import { useDeviceSelectorState } from '@/features/DeviceManager/useDeviceSelectorState';
 import {
   ExecutionTargetDeviceStatus,
   ExecutionTargetIcon,
@@ -388,7 +390,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   const { t } = useTranslation('chat');
   const [open, setOpen] = useState(false);
   const navigate = useWorkspaceAwareNavigate();
-  const { canUseResource } = useChatInputResourceAccess();
+  const { canUseResource, isAccessLoading } = useChatInputResourceAccess();
 
   const agentWorkspaceId = useAgentStore((s) => s.agentMap[agentId]?.workspaceId);
   const isWorkspaceAgent = Boolean(agentWorkspaceId);
@@ -404,7 +406,6 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     workspaceScoped,
   } = useTopicAgencyConfig(agentId);
   const canShowExecutionTarget = canUseResource && canDisplayExecutionTarget;
-  const canShowExecutionTargetSelector = canShowExecutionTarget && canSelectExecutionTarget;
 
   const heteroType = agencyConfig?.heterogeneousProvider?.type;
   const boundDeviceId = agencyConfig?.boundDeviceId;
@@ -474,9 +475,46 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   // A read-only member receives the safe target type but not `boundDeviceId`.
   // Use the stored type for the summary so a fixed, bound `local` target is
   // described as a workspace device instead of being client-coerced to sandbox.
-  const chipExecutionTarget = canShowExecutionTargetSelector
+  const chipExecutionTarget = canSelectExecutionTarget
     ? executionTarget
     : (agencyConfig?.executionTarget ?? executionTarget);
+
+  // ONE shared derivation with the agent-settings page: the same
+  // `useDeviceSelectorState` (which feeds `shouldShowDeviceSelector`) decides
+  // whether the picker may open — no local formula that could drift from it.
+  // The candidate pool it judges against is `executionTargetDeviceCandidates`:
+  // workspace scope includes the caller's private enrollments, and a failed or
+  // unfinished inventory resolves `pending` — never 0 candidates.
+  const {
+    bindingState: deviceBindingState,
+    deviceInventoryComplete,
+    deviceInventoryError,
+    selectableDevices,
+    showDeviceSelector,
+  } = useDeviceSelectorState({
+    boundDeviceId,
+    canSelectDevice: canSelectExecutionTarget,
+    permissionsLoaded: !isWorkspacePreferenceLoading && !isAccessLoading,
+    scope: isWorkspaceAgent ? 'workspace' : 'personal',
+  });
+
+  // A stored binding that names a device outside this agent's legal pool is
+  // invalid — deleted, scope-revoked, or re-homed. The contract forbids a
+  // silent re-bind (resolveExecutionDevice blocks with DEVICE_BINDING_INVALID),
+  // so surface an explicit repair state: clicking a device row below IS the
+  // authorized repair write.
+  const bindingInvalid = executionTarget === 'device' && deviceBindingState === 'invalid';
+
+  // `showDeviceSelector` is the shared contract formula verbatim: picker only
+  // past >1 candidates. The popover doubles as the repair and inventory-error
+  // surface, though, so it stays reachable past the formula — for a broken
+  // binding the banner says what picking a row means, and for a failed
+  // inventory the only content is the retry affordance. A member without
+  // select permission always gets the read-only chip.
+  const canShowExecutionTargetSelector =
+    canShowExecutionTarget &&
+    canSelectExecutionTarget &&
+    (showDeviceSelector || bindingInvalid || Boolean(deviceInventoryError));
 
   // Device-only CLIs cannot fall back to the cloud sandbox. When a web/legacy
   // config has no usable device target, open the picker once so `none` is an
@@ -582,44 +620,19 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     [selectExecutionTarget, executionTarget, boundDeviceId, localSandboxEnabled],
   );
 
-  // Auto-default to THIS desktop's local execution on first open, for both
-  // personal and workspace agents (workspace behaviour used to be a hostname
-  // lookup against the workspace device pool — see — but with
-  // per-user overrides that lookup is unnecessary: `useSelectExecutionTarget`
-  // resolves `'local'` to this desktop's personal gateway `deviceId` and, for
-  // a workspace agent, persists it into `users.preference.agentDeviceOverrides`,
-  // so it never touches other members' choices).
-  //
-  // Fires only when the effective (merged) target and bound device are both
-  // unset — an explicit prior selection, mine or (for personal) shared,
-  // is preserved. Waits for the workspace preference fetch to settle first:
-  // before it returns, an existing per-user override looks unset and the
-  // default would clobber it.
-  useEffect(() => {
-    if (!isDesktop) return;
-    if (!canShowExecutionTargetSelector) return;
-    if (isWorkspacePreferenceLoading) return;
-    if (agencyConfig?.executionTarget !== undefined) return;
-    if (agencyConfig?.boundDeviceId !== undefined) return;
-    if (!currentDeviceId) return;
-    // `silent`: this is a mount-time default, so a rejected write must not
-    // surface a save-failure toast on an agent the user only opened.
-    void selectExecutionTarget('local', undefined, { silent: true });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    agencyConfig?.executionTarget,
-    agencyConfig?.boundDeviceId,
-    currentDeviceId,
-    canShowExecutionTargetSelector,
-    isWorkspacePreferenceLoading,
-  ]);
+  // No mount-time write: a binding is created ONLY by an explicit user choice
+  // or the server's atomic first-bind at admission. Opening this composer (or
+  // re-rendering under StrictMode / after a refresh) must produce zero
+  // `selectExecutionTarget` calls — an implicit 'local' write used to live
+  // here and silently committed a target for agents the user merely opened.
 
   if (!canShowExecutionTarget) return null;
 
+  // The read-only "runs on" summary resolves the bound device's name from the
+  // same inventory the picker uses — hiding the selector never hides where a
+  // run executes.
   const boundDevice =
-    canShowExecutionTargetSelector && executionTarget === 'device'
-      ? devices?.find((d) => d.deviceId === boundDeviceId)
-      : undefined;
+    executionTarget === 'device' ? devices?.find((d) => d.deviceId === boundDeviceId) : undefined;
 
   // The picker splits by whether the caller is inside a workspace agent:
   //
@@ -640,10 +653,11 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   //
   // Naming — Personal is reserved for the account-tier concept; workspace
   // groupings say Private/Workspace (私人/工作区) instead.
-  const { personal, privateWorkspace, workspace } = groupExecutionTargetDevices(devices);
-  const privateDevices = isWorkspaceAgent ? privateWorkspace : [];
-  const workspaceDevices = isWorkspaceAgent ? workspace : [];
-  const personalOnlyDevices = isWorkspaceAgent ? [] : personal;
+  const {
+    personal: personalOnlyDevices,
+    privateWorkspace: privateDevices,
+    workspace: workspaceDevices,
+  } = groupExecutionTargetDevices(selectableDevices);
   // Workspace agents always render the Private / Workspace group split (even
   // when one side is empty — the labels tell the user which pool they're
   // looking at). Personal mode stays flat.
@@ -651,31 +665,22 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
 
   // Empty-state accounting must use the rows the CURRENT agent can actually
   // pick (post scope filtering) — a workspace agent whose members only have
-  // personal devices would otherwise render neither devices nor an empty state.
-  const deviceRows = isWorkspaceAgent
-    ? [...privateDevices, ...workspaceDevices]
-    : [...personalOnlyDevices];
-  const hasNoDevices = deviceRows.length === 0;
+  // personal devices would otherwise render neither devices nor an empty
+  // state. `selectableDevices` IS the shared candidate pool (private +
+  // shared workspace devices included), so chat judges the same set the
+  // settings page and the admission contract do.
+  const deviceRows = selectableDevices;
+  // A failed or unfinished inventory is not "zero candidates" — the empty
+  // states only appear once the query settled without error.
+  const hasNoDevices = deviceInventoryComplete && deviceRows.length === 0;
+  const devicesLoading = isLoading && deviceRows.length === 0;
 
-  // A stored binding that names a device outside this agent's legal pool is
-  // invalid — deleted, scope-revoked, or re-homed. The contract forbids a
-  // silent re-bind (resolveExecutionDevice blocks with DEVICE_BINDING_INVALID),
-  // so surface an explicit repair state: clicking a device row below IS the
-  // authorized repair write. An unfinished or failed inventory is never read
-  // as an invalid binding.
-  const bindingInvalid =
-    canShowExecutionTargetSelector &&
-    executionTarget === 'device' &&
-    boundDeviceId !== undefined &&
-    !isLoading &&
-    devices !== undefined &&
-    !deviceRows.some((d) => d.deviceId === boundDeviceId);
   // On web with no device, the prominent download card below replaces the small
   // header link — avoid showing the same CTA twice. Workspace agents get the
   // enroll hint instead: downloading the desktop app wouldn't help until the
   // machine is enrolled into the workspace pool.
-  const showWebDownloadCard = !isDesktop && !isWorkspaceAgent && hasNoDevices && !isLoading;
-  const showWorkspaceEnrollHint = isWorkspaceAgent && hasNoDevices && !isLoading;
+  const showWebDownloadCard = !isDesktop && !isWorkspaceAgent && hasNoDevices;
+  const showWorkspaceEnrollHint = isWorkspaceAgent && hasNoDevices;
 
   // Compute chip
   let chipIcon: ReactNode = <ExecutionTargetIcon target={'sandbox'} />;
@@ -706,13 +711,12 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     }
   } else if (chipExecutionTarget === 'device') {
     chipIcon = <ExecutionTargetIcon devicePlatform={boundDevice?.platform} target={'device'} />;
+    // Selector hidden ≠ device hidden: a bound run still names where it runs.
     chipLabel = bindingInvalid
       ? t('heteroAgent.executionTarget.bindingInvalid')
-      : canShowExecutionTargetSelector
-        ? (boundDevice?.friendlyName ??
-          boundDevice?.hostname ??
-          t('heteroAgent.executionTarget.unknownDevice'))
-        : t('heteroAgent.executionTarget.workspaceGroup');
+      : (boundDevice?.friendlyName ??
+        boundDevice?.hostname ??
+        t('heteroAgent.executionTarget.unknownDevice'));
   }
 
   const isActive = (target: DeviceExecutionTarget, deviceId?: string) => {
@@ -951,7 +955,14 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
           </div>
         )
       ) : null}
-      {hasNoDevices && isLoading ? (
+      {deviceInventoryError ? (
+        <AsyncError
+          error={deviceInventoryError}
+          variant={'inline'}
+          onRetry={() => void refreshDevices()}
+        />
+      ) : null}
+      {devicesLoading ? (
         <div className={styles.empty}>{t('heteroAgent.executionTarget.loading')}</div>
       ) : null}
       {/* Workspace agent with no workspace device: personal machines are
@@ -991,7 +1002,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
           </span>
         </a>
       ) : null}
-      {hasNoDevices && !isLoading && isDesktop && !isWorkspaceAgent ? (
+      {hasNoDevices && isDesktop && !isWorkspaceAgent ? (
         <div className={styles.empty}>{t('heteroAgent.executionTarget.noDevices')}</div>
       ) : null}
     </div>

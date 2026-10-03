@@ -670,6 +670,19 @@ export default {
   'heteroAgent.executionTarget.downloadDesktopTitle': 'Get the desktop app',
   'heteroAgent.executionTarget.title': 'Device',
   'heteroAgent.executionTarget.unknownDevice': 'Unknown device',
+  'deviceAdmission.bindingChanged':
+    'The device binding changed while repairing — nothing was written.',
+  'deviceAdmission.connect': 'Connect a device',
+  'deviceAdmission.operation': 'Run: {{id}}',
+  'deviceAdmission.repairDesc':
+    'Pick the device this conversation runs on. The broken binding is only replaced by the device you choose — the old device\u0027s session is never reused.',
+  'deviceAdmission.repairFailed': 'Could not repair the device binding — try again.',
+  'deviceAdmission.repairTo': 'Repair binding to {{device}}',
+  'deviceAdmission.repaired': 'Device binding repaired.',
+  'deviceAdmission.requestAuthorization': 'Manage device access',
+  'deviceAdmission.retryInventory': 'Retry device lookup',
+  'deviceAdmission.title': 'This run could not start on a device',
+  'deviceAdmission.viewRunStatus': 'View run status',
   'hideForYou':
     "Direct message content is hidden. Please enable 'Show Direct Message Content' in settings to view.",
   'history.title': 'The Agent will keep only the latest {{count}} messages.',

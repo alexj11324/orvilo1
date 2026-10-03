@@ -86,3 +86,33 @@ entry ─┐            ├─ HostPort（宿主动作：窗口/更新/原生对
 
 回滚只退回兼容控制界面；绑定 B 的任务绝不改到 A 或后端。旧客户端缺新协议
 能力时 fail closed 并提示升级。
+
+## 候选集与修复语义（FIX-B）
+
+- **唯一候选集**。`executionTargetDeviceCandidates(devices, scope)`
+  （`src/helpers/executionTarget.ts`）是所有页面判断设备绑定合法性的唯一
+  池：personal → 个人设备；workspace → `privateWorkspace + workspace`
+  （本人私有注册对注册者合法，绝不能被任何页面剔除）。UI 分组可以分桶，
+  候选成员资格不允许分叉。离线 ≠ 移除 —— 离线设备仍是候选，只拦截启动。
+- **选择器公式共享**。聊天输入条与设置页读取同一个 `useDeviceSelectorState`
+  → `shouldShowDeviceSelector`：`permissionsLoaded && deviceInventoryComplete
+&& canSelectDevice && selectableDevices.length > 1`。0 候选 → 连接 / 阻断
+  提示（绝不出选择器，绝不静默回落）；1 候选 → 无下拉，但仍展示只读
+  "runs on: <device>" 摘要；>1 → 仅 `canSelectDevice` 时可选。
+- **挂载不写入**。组合器挂载 / 重渲染 / StrictMode / 刷新产生零次
+  `selectExecutionTarget` 写入 —— 绑定只能由显式用户选择或服务端原子
+  first-bind 创建。设备清单查询失败 / 未完成 = `pending`，绝非 0 候选。
+- **结构化准入错误 → 唯一动作**。`error.body` 原样携带 `code`，UI 只分支
+  `code`、绝不解析 detail 文案：INVENTORY_INCOMPLETE → 重试清单查询；
+  REQUIRED / NOT_FOUND (无候选) → 连接设备；ACCESS_DENIED /
+  REQUEST_UNAUTHORIZED → 设备授权页；BINDING_INVALID / BINDING_CONFLICT /
+  SELECTION_REQUIRED / EXECUTION_TARGET_NONE / NOT_FOUND (有候选) → 修复
+  （选择器限定 `repairCandidates`，单候选 = 单个 "修复绑定到 X" 按钮）；
+  DISPATCH_ADMISSION_PERSIST_FAILED → 查看运行状态。
+- **修复写 = 校验后写**。修复写入与服务端 first-bind CAS 同形的绑定三元组
+  （`executionConfig.boundDeviceId` + `executionTarget:'device'` + 顶层
+  `boundDeviceId`），并清空 `heteroSession*`—— 修复后的下一次运行必须
+  在新设备上建全新执行会话，绝不复用另一台设备的原生会话 id。服务端
+  尚无专用修复 CAS（已作为契约变更请求提出），客户端以
+  `getTopicDetail` 重读 + `expectedBoundDeviceId` 校验近似 CAS，期间绑定
+  被并发改写则拒绝落笔。

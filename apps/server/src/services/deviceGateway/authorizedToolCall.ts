@@ -30,8 +30,8 @@ export const executeAuthorizedDeviceToolCall = async (
   );
   if (errorData) {
     return {
-      content: 'The workspace device is no longer registered or visible for this run.',
-      error: 'DEVICE_NOT_FOUND',
+      content: 'The device is no longer registered or visible for this run.',
+      error: errorData.code,
       errorData,
       success: false,
     };

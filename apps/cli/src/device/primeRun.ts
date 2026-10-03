@@ -343,6 +343,13 @@ const runOperationOnSession = async (
     }
   }
 
+  // A resumed turn that errors indicts the session itself — the persisted
+  // pointer would trap every later turn on the same broken session, so the
+  // op invalidates it like a rebuild and the local session closes: queued
+  // and future turns rebuild instead of resuming a dead runner.
+  const resumeSessionInvalidated =
+    input.resumeOutcome === 'rebuilt' || (input.resumeOutcome === 'resumed' && result === 'error');
+
   ingester.push(makeEvent(operationId, 'stream_end', { usage: op.usage }));
   ingester.push(makeEvent(operationId, 'agent_runtime_end', {}));
   await settleOperation(
@@ -351,8 +358,12 @@ const runOperationOnSession = async (
     sink,
     result,
     finishError,
-    input.resumeOutcome === 'rebuilt' ? true : undefined,
+    resumeSessionInvalidated ? true : undefined,
   );
+  if (input.resumeOutcome === 'resumed' && result === 'error') {
+    primeSessions.delete(session.run.activation.sessionId);
+    void session.run.kill();
+  }
   return result;
 };
 
@@ -440,13 +451,20 @@ export const admitPrimeDeviceRun = async (
       .catch(() => undefined);
   } else {
     // The server records activation evidence per operation — a resumed turn
-    // re-activates the shared session under THIS op's bound credential.
+    // re-activates the shared session under THIS op's bound credential (which
+    // also rotates the bridge credential /infer carries).
     const reactivated = await session.run.reactivate(descriptor.broker.credential);
-    if (!reactivated.ok)
+    if (!reactivated.ok) {
+      // The control plane refused this op on that session — the pointer must
+      // not survive to trap the next turn, and the local session is dead to
+      // us: drop it so the next resume takes the rebuild path.
+      primeSessions.delete(resumeSessionId!);
+      void session.run.kill();
       return {
         reason: reactivated.error?.message ?? 'prime session re-activation failed',
         status: 'rejected',
       };
+    }
   }
   const run = session.run;
 

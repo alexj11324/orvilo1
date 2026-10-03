@@ -30,7 +30,6 @@ import { existsSync } from 'node:fs';
 import { mkdir, mkdtemp, readFile, realpath } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import type {
   ControlError,
@@ -179,45 +178,38 @@ export interface EmbeddedDispatchHost {
   initModelId: string;
 }
 
-/** The built runner bundle, resolved lazily and repo-relative from this file.
- * A plain dirname join, never `new URL(literal, import.meta.url)` — bundlers
- * trace that form into the module graph and the unbuilt `dist/` breaks the
- * web-app build; only the flag-on dispatch path ever evaluates this.
- * `import.meta.dirname` is unavailable under turbopack dev (and stripped
- * bundles) — fall back through `import.meta.url`, then cwd-relative repo
- * roots (monorepo root when run via root scripts, `apps/server` under
- * `pnpm --filter`). */
-const moduleDir = (): string | undefined => {
-  if (import.meta.dirname) return import.meta.dirname;
-  try {
-    return path.dirname(fileURLToPath(import.meta.url));
-  } catch {
-    return undefined;
-  }
-};
-
-const defaultRunnerArtifact = () => {
-  const dir = moduleDir();
+/** The built runner bundle, resolved lazily.
+ *
+ * `import.meta.dirname` is the honest base under real ESM (vitest, tsx, plain
+ * node), but bundled server builds either leave it undefined or repoint it at
+ * the output chunk directory — never `new URL(literal, import.meta.url)`,
+ * which bundlers trace into the module graph and breaks the web-app build on
+ * the unbuilt `dist/`. Resolution is therefore candidate-based: an explicit
+ * `ORVILO_PRIME_EMBEDDED_ARTIFACT` first (deployments pin it like the image
+ * id), then the source-relative join when it exists on disk, then the
+ * checkout the server process runs from (`next start`/`next dev` cwd is the
+ * repo root). The last fallback is still returned so a missing bundle fails
+ * `policy_denied` on a meaningful path instead of a crashed resolution. */
+export const defaultRunnerArtifact = (): string => {
+  const fromEnv = process.env.ORVILO_PRIME_EMBEDDED_ARTIFACT;
+  if (fromEnv) return fromEnv;
   const candidates = [
-    ...(dir
-      ? [
-          path.join(
-            dir,
-            '..',
-            '..',
-            '..',
-            '..',
-            '..',
-            'packages',
-            'prime-harness',
-            'dist',
-            'runner.mjs',
-          ),
-        ]
-      : []),
-    path.resolve(process.cwd(), 'packages', 'prime-harness', 'dist', 'runner.mjs'),
-    path.resolve(process.cwd(), '..', '..', 'packages', 'prime-harness', 'dist', 'runner.mjs'),
-  ];
+    typeof import.meta.dirname === 'string'
+      ? path.join(
+          import.meta.dirname,
+          '..',
+          '..',
+          '..',
+          '..',
+          '..',
+          'packages',
+          'prime-harness',
+          'dist',
+          'runner.mjs',
+        )
+      : undefined,
+    path.resolve('packages', 'prime-harness', 'dist', 'runner.mjs'),
+  ].filter((candidate): candidate is string => typeof candidate === 'string');
   return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
 };
 
@@ -421,6 +413,11 @@ export const composeEmbeddedRunHost = async (
       docker: {
         executable: environment.executable ?? DEFAULT_EXECUTABLE,
         imageId,
+        // The runner idles at ~200 MiB (17 MB bundle + agent bootstrap) and
+        // allocates inference buffers per turn — the 256 MiB supervisor
+        // default leaves bursts no headroom and the cgroup OOM-kill surfaces
+        // as an intermittent "harness startup failed".
+        memoryMiB: 768,
         supervisorId: environment.supervisorId ?? DEFAULT_SUPERVISOR_ID,
         workspace: directories.workspace,
       },

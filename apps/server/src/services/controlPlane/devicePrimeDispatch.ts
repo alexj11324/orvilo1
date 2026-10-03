@@ -18,10 +18,8 @@
  * endpoint applies the conversation-scoped authority for those.
  */
 import { randomUUID } from 'node:crypto';
-import { existsSync } from 'node:fs';
 import { readFile } from 'node:fs/promises';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 import type { ControlError, ControlResult } from '@orvilo/agent-execution/controlPlane';
 import type { EmbeddedArtifactManifest } from '@orvilo/agent-execution/controlPlane/server';
@@ -44,6 +42,7 @@ import {
 import type { CanonicalRunBinding } from './canonicalRun';
 import { deviceRuntimeOwnerId } from './deviceRunBinding';
 import type { EmbeddedDispatchContext } from './embeddedDispatch';
+import { defaultRunnerArtifact } from './embeddedDispatch';
 
 /** Mirrors the embedded grant window — same run length, different owner. */
 const DEVICE_RUN_GRANT_TTL_MS = 6 * 60 * 60 * 1000;
@@ -62,55 +61,12 @@ const failure = (code: ControlError['code'], message: string): ControlResult<nev
 const errorMessage = (error: unknown): string =>
   error instanceof Error ? error.message : String(error);
 
-/**
- * `import.meta.dirname` is unavailable under turbopack dev (and stripped
- * bundles) — fall back through `import.meta.url`, then cwd-relative repo
- * roots (monorepo root when run via root scripts, `apps/server` under
- * `pnpm --filter`).
- */
-const moduleDir = (): string | undefined => {
-  if (import.meta.dirname) return import.meta.dirname;
-  try {
-    return path.dirname(fileURLToPath(import.meta.url));
-  } catch {
-    return undefined;
-  }
-};
-
-/** Same artifact location as embeddedDispatch's `defaultRunnerArtifact` —
- * kept repo-relative lazily so bundlers never trace the unbuilt dist. */
-const defaultRunnerManifest = () => {
-  const dir = moduleDir();
-  const candidates = [
-    ...(dir
-      ? [
-          path.join(
-            dir,
-            '..',
-            '..',
-            '..',
-            '..',
-            '..',
-            'packages',
-            'prime-harness',
-            'dist',
-            'runner.manifest.json',
-          ),
-        ]
-      : []),
-    path.resolve(process.cwd(), 'packages', 'prime-harness', 'dist', 'runner.manifest.json'),
-    path.resolve(
-      process.cwd(),
-      '..',
-      '..',
-      'packages',
-      'prime-harness',
-      'dist',
-      'runner.manifest.json',
-    ),
-  ];
-  return candidates.find((candidate) => existsSync(candidate)) ?? candidates[0];
-};
+/** The manifest ships beside `runner.mjs`, so it resolves through the same
+ * candidate chain as `defaultRunnerArtifact` — including the
+ * `ORVILO_PRIME_EMBEDDED_ARTIFACT` override and bundled-runtime fallbacks,
+ * which a bare `import.meta.dirname` join cannot survive. */
+const defaultRunnerManifest = () =>
+  path.join(path.dirname(defaultRunnerArtifact()), 'runner.manifest.json');
 
 export interface ComposeDevicePrimeRunInput {
   deviceId: string;

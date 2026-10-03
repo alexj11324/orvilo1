@@ -31,6 +31,17 @@ interface ChatOperationMetadata extends Record<string, unknown> {
 function fail(message: string): never {
   throw new Error(message);
 }
+
+const isChatRunBinding = (binding: RuntimeRunBinding): binding is ChatRunBinding =>
+  typeof (binding as ChatRunBinding).chatAgentId === 'string' &&
+  ((binding as ChatRunBinding).chatWorkspaceId === null ||
+    typeof (binding as ChatRunBinding).chatWorkspaceId === 'string') &&
+  Number.isFinite((binding as ChatRunBinding).runExpiresAt);
+
+const assertChatRunBinding = (binding: RuntimeRunBinding): ChatRunBinding => {
+  if (!isChatRunBinding(binding)) fail('Chat run binding is missing its chat execution context');
+  return binding;
+};
 const bounded = (value: number) => Number.isSafeInteger(value) && value > 0 && value <= 300_000;
 
 /**
@@ -143,7 +154,8 @@ export class ChatExecutionControlModel {
   }
 
   /** Renew only the exact live owner; bounded by the run window, never past it. */
-  async renew(binding: ChatRunBinding, leaseMs: number) {
+  async renew(runBinding: RuntimeRunBinding, leaseMs: number) {
+    const binding = assertChatRunBinding(runBinding);
     if (!bounded(leaseMs)) fail('Invalid runtime lease');
     return this.db.transaction(async (tx) => {
       const { operation } = await this.load(tx, binding);
@@ -163,7 +175,8 @@ export class ChatExecutionControlModel {
     });
   }
 
-  async register(binding: ChatRunBinding, leaseMs: number) {
+  async register(runBinding: RuntimeRunBinding, leaseMs: number) {
+    const binding = assertChatRunBinding(runBinding);
     if (
       !bounded(leaseMs) ||
       !binding.runtimeRegistrationId ||
@@ -199,7 +212,8 @@ export class ChatExecutionControlModel {
     });
   }
 
-  async activate(binding: ChatRunBinding, identity: RuntimeIdentity) {
+  async activate(runBinding: RuntimeRunBinding, identity: RuntimeIdentity) {
+    const binding = assertChatRunBinding(runBinding);
     if (!identity.treeId || !identity.supervisorId || !identity.sessionId)
       fail('Missing runtime identity');
     return this.db.transaction(async (tx) => {
@@ -238,7 +252,8 @@ export class ChatExecutionControlModel {
    * logs once its dispatch fence has advanced; the run is already durably
    * finished at that point.
    */
-  async stop(binding: ChatRunBinding) {
+  async stop(runBinding: RuntimeRunBinding) {
+    const binding = assertChatRunBinding(runBinding);
     if (binding.workspaceId !== this.tenantId || binding.userId !== this.userId)
       fail('Foreign stop scope');
     return this.db.transaction(async (tx) => {
@@ -269,7 +284,8 @@ export class ChatExecutionControlModel {
     });
   }
 
-  async readControl(binding: ChatRunBinding) {
+  async readControl(runBinding: RuntimeRunBinding) {
+    const binding = assertChatRunBinding(runBinding);
     if (binding.workspaceId !== this.tenantId || binding.userId !== this.userId) return undefined;
     const [operation] = await this.db
       .select({ metadata: agentOperations.metadata })
@@ -291,7 +307,7 @@ export class ChatExecutionControlModel {
   }
 
   /** Chat runs are single-registration: the handoff family is unreachable. */
-  async beginHandoff(_binding: ChatRunBinding, _intent: HandoffIntent): Promise<never> {
+  async beginHandoff(_binding: RuntimeRunBinding, _intent: HandoffIntent): Promise<never> {
     return fail('Chat runs do not admit handoffs');
   }
 

@@ -34,6 +34,12 @@ const denied = (message: string): ControlResult<never> => ({
   error: { code: 'stale_fence', message, retryable: false },
 });
 
+const isCanonicalChatRunBinding = (input: CanonicalRunBinding): input is CanonicalChatRunBinding =>
+  typeof (input as CanonicalChatRunBinding).chatAgentId === 'string' &&
+  ((input as CanonicalChatRunBinding).chatWorkspaceId === null ||
+    typeof (input as CanonicalChatRunBinding).chatWorkspaceId === 'string') &&
+  Number.isFinite((input as CanonicalChatRunBinding).runExpiresAt);
+
 /**
  * The chat-parallel of `CanonicalRunAuthority`: the same row-lock admission
  * discipline over the chat execution record. Locks are held through the
@@ -47,7 +53,7 @@ export class CanonicalChatRunAuthority {
   constructor(private readonly db: OrviloDatabase) {}
 
   async withRun<T>(
-    input: CanonicalChatRunBinding,
+    input: CanonicalRunBinding,
     run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
   ): Promise<ControlResult<T>> {
     return this.withState(input, run, false);
@@ -55,7 +61,7 @@ export class CanonicalChatRunAuthority {
 
   /** Serializable canonical observation; concurrent edits cause retry rather than mixed state. */
   async withSnapshot<T>(
-    input: CanonicalChatRunBinding,
+    input: CanonicalRunBinding,
     run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
   ): Promise<ControlResult<T>> {
     return this.withState(input, run, false, true);
@@ -63,18 +69,20 @@ export class CanonicalChatRunAuthority {
 
   /** Startup may inspect a registering owner; it never admits mutations. */
   async withRegistration<T>(
-    input: CanonicalChatRunBinding,
+    input: CanonicalRunBinding,
     run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
   ): Promise<ControlResult<T>> {
     return this.withState(input, run, true);
   }
 
   private async withState<T>(
-    input: CanonicalChatRunBinding,
+    input: CanonicalRunBinding,
     run: (snapshot: CanonicalRunSnapshot, transaction: OrviloDatabase) => Promise<T>,
     startup: boolean,
     serializable = false,
   ): Promise<ControlResult<T>> {
+    if (!isCanonicalChatRunBinding(input))
+      return denied('Chat run binding is missing its chat execution context');
     const binding = structuredClone(input);
     return this.db
       .transaction(

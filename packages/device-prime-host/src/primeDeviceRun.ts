@@ -189,7 +189,7 @@ export const openPrimeDeviceRun = async (
       cwd: options.workspace,
       detached: true,
       env,
-      stdio: ['pipe', 'pipe', 'pipe'],
+      stdio: 'pipe',
     },
   );
   if (!child.stdin || !child.stdout)

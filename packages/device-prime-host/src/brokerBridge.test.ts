@@ -62,7 +62,7 @@ describe('createBrokerReverseHandler', () => {
   });
 
   it('reports error+end when the broker answers a non-2xx', async () => {
-    const sent: Array<{ event: { type: string }; requestId: string }> = [];
+    const sent: Array<{ event: unknown; requestId: string }> = [];
     const handler = createBrokerReverseHandler({
       credential: 'op-jwt',
       endpoint: 'https://server.test/api/agent/prime-broker',
@@ -73,8 +73,8 @@ describe('createBrokerReverseHandler', () => {
     });
     handler('broker.infer', { request: { requestId: 'infer-3' }, sessionId: 'sess-1' });
     await vi.waitFor(() => expect(sent.length).toBe(2));
-    expect(sent[0]?.event.type).toBe('error');
-    expect(sent[1]?.event.type).toBe('end');
+    expect(sent[0]?.event).toMatchObject({ type: 'error' });
+    expect(sent[1]?.event).toMatchObject({ type: 'end' });
   });
 
   it('rejects malformed params and ignores unknown methods', () => {

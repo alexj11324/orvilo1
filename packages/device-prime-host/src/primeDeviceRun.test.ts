@@ -59,7 +59,7 @@ const fakeRunner = (): FakeRunner => {
     stdout,
     stderr,
     kill: () => {
-      (child as ChildProcess).killed = true;
+      Object.assign(child, { killed: true });
       setImmediate(() => emitter.emit('exit', 137, 'SIGKILL'));
       return true;
     },

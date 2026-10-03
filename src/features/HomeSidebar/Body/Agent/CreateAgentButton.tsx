@@ -30,7 +30,6 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
     createGroupChatMenuItem,
     createGroupFromDescriptionMenuItem,
     isMutatingAgent,
-    openCreateModal,
   } = useCreateMenuItems();
 
   const isCustomGroup = Boolean(groupId) && groupId !== SessionDefaultGroup.Default;
@@ -78,11 +77,9 @@ const CreateAgentButton = memo<CreateAgentButtonProps>(({ groupId, className, vi
 
   const handleClick = () => {
     if (!canCreate) return;
-    if (openCreateModal) {
-      openCreateModal('agent', menuOptions);
-    } else {
-      createAgent(menuOptions);
-    }
+    // One-click create: no purpose modal, no Agent Builder — the new agent
+    // opens a blank conversation with itself selected (chat origin).
+    void createAgent(menuOptions);
   };
 
   return (

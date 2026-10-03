@@ -1,5 +1,6 @@
 // @vitest-environment node
 import { DEFAULT_INBOX_AVATAR, DEFAULT_INBOX_TITLE, INBOX_SESSION_ID } from '@orvilo/const';
+import type { OrviloAgentAgencyConfig } from '@orvilo/types';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
@@ -1434,6 +1435,93 @@ describe('AgentModel', () => {
 
       expect(result?.model).toBe('claude-code');
     });
+
+    it('migration — a model switch preserves instructions, memory and device binding', async () => {
+      // Contract §migration: switching models never batch-clears the rest of
+      // the config surface. Pin the whole row so a future wipe regression
+      // can't hide behind a passing {model, provider} write.
+      const seededAgencyConfig: OrviloAgentAgencyConfig = {
+        boundDeviceId: 'device-a',
+        executionTarget: 'device',
+        heterogeneousProvider: { command: 'claude', type: 'claude-code' },
+      };
+      const agent = await serverDB
+        .insert(agents)
+        .values({
+          agencyConfig: seededAgencyConfig,
+          chatConfig: { historyCount: 8 },
+          editorData: { memory: 'user prefers terse replies' },
+          model: 'gpt-4',
+          params: { frequency_penalty: 0.2 },
+          profile: { artworkStyle: 'anime' },
+          provider: 'openai',
+          systemRole: 'You are a careful reviewer.',
+          title: 'Instructions Agent',
+          userId,
+        })
+        .returning()
+        .then((res) => res[0]);
+
+      await agentModel.updateConfig(agent.id, {
+        model: 'claude-sonnet-4-5',
+        provider: 'anthropic',
+      });
+
+      const result = await serverDB.query.agents.findFirst({
+        where: eq(agents.id, agent.id),
+      });
+
+      expect(result?.model).toBe('claude-sonnet-4-5');
+      expect(result?.provider).toBe('anthropic');
+      expect(result?.systemRole).toBe('You are a careful reviewer.');
+      expect(result?.chatConfig).toEqual({ historyCount: 8 });
+      expect(result?.editorData).toEqual({ memory: 'user prefers terse replies' });
+      expect(result?.params).toEqual({ frequency_penalty: 0.2 });
+      expect(result?.profile).toEqual({ artworkStyle: 'anime' });
+      expect(result?.agencyConfig).toEqual(seededAgencyConfig);
+    });
+
+    it.each(['updateConfig', 'create'] as const)(
+      'migration — strips retired heterogeneousProvider fields on %s',
+      async (writePath) => {
+        const legacyAgencyConfig = {
+          boundDeviceId: 'device-a',
+          heterogeneousProvider: {
+            adapterType: 'cli',
+            command: 'claude',
+            engine: 'claude-sdk',
+            type: 'orvilo',
+          },
+        };
+
+        const agent =
+          writePath === 'create'
+            ? await agentModel.create({
+                agencyConfig: legacyAgencyConfig as any,
+                title: 'legacy row',
+              })
+            : await serverDB
+                .insert(agents)
+                .values({ title: 'legacy row', userId })
+                .returning()
+                .then(async (res) => {
+                  await agentModel.updateConfig(res[0].id, {
+                    agencyConfig: legacyAgencyConfig,
+                  } as any);
+                  return serverDB.query.agents.findFirst({
+                    where: eq(agents.id, res[0].id),
+                  });
+                });
+
+        const provider = (agent as any)?.agencyConfig?.heterogeneousProvider;
+        expect(provider?.type).toBe('orvilo');
+        expect(provider?.command).toBe('claude');
+        // The retired fields are meaningless to every reader — they are
+        // dropped at the write chokepoint rather than carried forward.
+        expect('engine' in provider).toBe(false);
+        expect('adapterType' in provider).toBe(false);
+      },
+    );
   });
 
   describe('create', () => {

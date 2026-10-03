@@ -609,10 +609,11 @@ const AgentViewAllPage = memo(() => {
 
 AgentViewAllPage.displayName = 'AgentViewAllPage';
 
-// The create menu prefers the wizard modal (`openCreateModal`) over blind
-// blank-agent creation, and that modal lives in AgentModalContext — normally
-// mounted by the Home layout, which this standalone route is NOT inside. Wrap
-// the page so the "+" menu opens the same create wizard as the sidebar.
+// The group-description create modal (`openCreateModal('group')`) lives in
+// AgentModalContext — normally mounted by the Home layout, which this
+// standalone route is NOT inside. Wrap the page so the "+" menu's group entry
+// opens the same modal as the sidebar. Agent creation itself is one-click
+// now (device-execution contract) and needs no modal.
 const AgentViewAllPageWithModals = () => (
   <AgentModalProvider>
     <AgentViewAllPage />

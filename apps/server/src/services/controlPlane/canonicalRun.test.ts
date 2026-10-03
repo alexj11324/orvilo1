@@ -19,7 +19,7 @@ import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/s
 import { AgentDelegationService } from '@/server/services/agentDelegation/executionGrants';
 
 import { CanonicalRunAuthority, type CanonicalRunBinding } from './canonicalRun';
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 
 // Real canonical schema and grant service. No mock authority or SQL query replacements.
 describe('canonical bounded run admission', () => {
@@ -41,7 +41,9 @@ describe('canonical bounded run admission', () => {
     const first = await run();
     expect(first).toMatchObject({
       ok: true,
-      value: { fence: { epoch: 1, leaseId: binding.runtimeLeaseId, taskId: binding.taskId } },
+      value: {
+        fence: { epoch: 1, leaseId: binding.runtimeLeaseId, taskId: fixtureTaskId(binding) },
+      },
     });
     expect(await run()).toEqual(first);
   });
@@ -89,7 +91,7 @@ describe('canonical bounded run admission', () => {
         await db
           .update(tasks)
           .set({ policyRevision: binding.policyRevision + 1 })
-          .where(eq(tasks.id, binding.taskId));
+          .where(eq(tasks.id, fixtureTaskId(binding)));
       if (change === 'deletedMember')
         await db
           .update(workspaceMembers)
@@ -192,7 +194,7 @@ describe('canonical bounded run admission', () => {
   it('fences legacy epoch, commit and startRun writers while a handoff holds admission', async () => {
     const model = new TaskExecutionControlModel(db, binding.userId, binding.workspaceId);
     await model.beginHandoff(binding, {
-      id: `handoff-${binding.taskId}`,
+      id: `handoff-${fixtureTaskId(binding)}`,
       successorOwnerId: 'next-owner',
       successorRegistrationId: 'next-registration',
       successorLeaseId: 'next-lease',
@@ -202,21 +204,21 @@ describe('canonical bounded run admission', () => {
     await expect(
       grants.claimExecutionEpoch({
         grantId: binding.grantId,
-        taskId: binding.taskId,
+        taskId: fixtureTaskId(binding),
         topicId: binding.topicId,
       }),
     ).rejects.toThrow();
     await expect(
       grants.assertMayCommit({
         grantId: binding.grantId,
-        taskId: binding.taskId,
+        taskId: fixtureTaskId(binding),
         topicId: binding.topicId,
         epoch: binding.executionEpoch,
       }),
     ).rejects.toThrow();
     await expect(
       new TaskTopicModel(db, binding.userId, binding.workspaceId).startRun(
-        binding.taskId,
+        fixtureTaskId(binding),
         binding.topicId,
         {
           operationId: binding.operationId,

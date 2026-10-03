@@ -3,6 +3,7 @@ import { INBOX_SESSION_ID, isHeterogeneousAgentModelId } from '@orvilo/const';
 import type { AgentRankItem, AgentTopicShareSubject, OrviloAgentAgencyConfig } from '@orvilo/types';
 import {
   DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
+  normalizeAgencyConfigForWrite,
   pruneWorkingDirByDeviceDeletes,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -1025,7 +1026,12 @@ export class AgentModel {
    */
   create = async (input: Partial<AgentItem>): Promise<AgentItem> => {
     const config = this.stripReservedSlug(input);
-    const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(config.agencyConfig);
+    // Retired provider fields (`engine`, `adapterType`) are stripped at this
+    // write chokepoint — the request schema refuses them from clients, and
+    // internal callers must not carry them forward either (contract §migration).
+    const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(
+      normalizeAgencyConfigForWrite(config.agencyConfig),
+    );
 
     await this.assertWorkspaceDeviceBinding(this.workspaceId ?? null, agencyConfig);
     await this.assertFixedExecutionTarget(this.workspaceId ?? null, agencyConfig);
@@ -1056,7 +1062,9 @@ export class AgentModel {
 
     const normalizedConfigs = configs.map((config) => ({
       ...this.stripReservedSlug(config),
-      agencyConfig: this.withWorkspaceSelectionPolicyDefaults(config.agencyConfig),
+      agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
+        normalizeAgencyConfigForWrite(config.agencyConfig),
+      ),
     }));
 
     await Promise.all(
@@ -1332,6 +1340,13 @@ export class AgentModel {
     if (!input || Object.keys(input).length === 0) return;
 
     const data = this.stripImmutableFields(input);
+
+    // Same retired-field normalization as `create`: the request schema refuses
+    // them from clients; internal callers reaching the model get them stripped
+    // (the retired value is meaningless to every reader — contract §migration).
+    if (data.agencyConfig) {
+      data.agencyConfig = normalizeAgencyConfigForWrite(data.agencyConfig);
+    }
 
     const agent = await this.db.query.agents.findFirst({
       where: and(eq(agents.id, agentId), this.ownership()),

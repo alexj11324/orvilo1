@@ -12,6 +12,7 @@ import { ResourcePermissionModel } from '@/database/models/resourcePermission';
 import { SessionModel } from '@/database/models/session';
 import { TaskModel } from '@/database/models/task';
 import { UserModel } from '@/database/models/user';
+import type * as WorkspaceModule from '@/database/models/workspace';
 import { WorkspaceUserSettingsModel } from '@/database/models/workspaceUserSettings';
 import { DEFAULT_RESOURCE_ACCESS_LEVELS } from '@/database/schemas';
 import { AgentService } from '@/server/services/agent';
@@ -35,7 +36,7 @@ vi.mock('@/server/services/resourceEvents', () => ({ publishResourceEvent: vi.fn
 // Workspace membership is verified for real — callers carrying workspaceId
 // resolve through this model seam, so tests stub an active member row.
 vi.mock('@/database/models/workspace', async (importOriginal) => ({
-  ...(await importOriginal<typeof import('@/database/models/workspace')>()),
+  ...(await importOriginal<typeof WorkspaceModule>()),
   getActiveWorkspaceMembershipRole: vi.fn().mockResolvedValue('member'),
 }));
 vi.mock('../_helpers/workspaceAgentGuard', () => ({
@@ -1053,6 +1054,77 @@ describe('agentRouter', () => {
 
         expect(publishResourceEventMock).not.toHaveBeenCalled();
       });
+    });
+  });
+
+  describe('retired heterogeneousProvider fields — schema refuses new writes', () => {
+    // Contract §migration: `engine`/`adapterType` are retired with the Prime
+    // cutover — the request schema rejects them outright instead of accepting
+    // and silently stripping, so stale clients surface the refusal loudly.
+    const retiredAgencyConfig = {
+      heterogeneousProvider: { engine: 'claude-sdk', type: 'orvilo' },
+    };
+
+    it.each(['engine', 'adapterType'] as const)(
+      'rejects updateAgentConfig carrying %s',
+      async (field) => {
+        agentServiceMock.updateAgentConfig = vi.fn();
+        const caller = agentRouter.createCaller(mockCtx);
+
+        await expect(
+          caller.updateAgentConfig({
+            agentId: 'agent-1',
+            value: {
+              agencyConfig: { heterogeneousProvider: { [field]: 'claude-sdk', type: 'orvilo' } },
+            },
+          }),
+        ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+        await expect(
+          caller.updateAgentConfig({
+            agentId: 'agent-1',
+            value: {
+              agencyConfig: { heterogeneousProvider: { [field]: 'claude-sdk', type: 'orvilo' } },
+            },
+          }),
+        ).rejects.toThrow(/retired/);
+        expect(agentServiceMock.updateAgentConfig).not.toHaveBeenCalled();
+      },
+    );
+
+    it('rejects createAgent carrying a retired engine write', async () => {
+      const caller = agentRouter.createCaller(mockCtx);
+
+      await expect(
+        caller.createAgent({ config: { agencyConfig: retiredAgencyConfig } as any }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    });
+
+    it('rejects createAgentOnly carrying a retired adapterType write', async () => {
+      const caller = agentRouter.createCaller(mockCtx);
+
+      await expect(
+        caller.createAgentOnly({
+          config: {
+            agencyConfig: { heterogeneousProvider: { adapterType: 'cli', type: 'orvilo' } },
+          },
+          groupId: 'group-1',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    });
+
+    it('accepts a clean heterogeneousProvider write', async () => {
+      agentServiceMock.updateAgentConfig = vi.fn().mockResolvedValue({ id: 'agent-1' });
+      const value = {
+        agencyConfig: {
+          boundDeviceId: 'device-1',
+          heterogeneousProvider: { type: 'orvilo' },
+        },
+      };
+
+      const caller = agentRouter.createCaller(mockCtx);
+      await caller.updateAgentConfig({ agentId: 'agent-1', value });
+
+      expect(agentServiceMock.updateAgentConfig).toHaveBeenCalledWith('agent-1', value);
     });
   });
 

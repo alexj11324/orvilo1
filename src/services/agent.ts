@@ -71,6 +71,14 @@ const normalizeMarketAgentModel = (config?: PartialDeep<AgentItem>): PartialDeep
 };
 
 export interface CreateAgentParams {
+  /**
+   * Client-generated key identifying one create intent. The store action
+   * dedupes in-flight calls on it, so a double-click or a UI retry carrying
+   * the same key returns the in-flight result instead of minting a twin
+   * (docs/development/device-execution-contract.md — create flow). A genuine
+   * retry after a failure generates a fresh key — the server creates again.
+   */
+  clientRequestId?: string;
   config?: PartialDeep<AgentItem>;
   groupId?: string;
   /**

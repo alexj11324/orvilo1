@@ -9,6 +9,7 @@ import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
 import AgentList from '@/features/Home/AgentSelect/AgentList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
@@ -126,11 +127,9 @@ const Agent = memo(() => {
         // and no draft carry — the blank composer's draft keys on the
         // workspace, so the typed text stays under the same key. An explicit
         // pick is also one of the three write points for `lastUsedAgentId`
-        // (pick / send / handoff) — recording it here keeps the next blank
-        // composer's default on the agent the user last chose, never on
-        // background list churn.
-        useChatStore.setState({ composerAgentId: id }, false, 'composerAgent/switch');
-        useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
+        // (pick / send / handoff) — the shared explicit-select action keeps
+        // the next blank composer's default on the agent the user last chose.
+        selectAgentForConversation(id);
         return;
       }
 

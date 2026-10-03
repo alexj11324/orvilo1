@@ -9,7 +9,6 @@ import { getChatGroupStoreState } from '@/store/agentGroup';
 import { getAiInfraStoreState } from '@/store/aiInfra';
 import { aiModelSelectors, aiProviderSelectors } from '@/store/aiInfra/selectors';
 import { useChatStore } from '@/store/chat';
-import { useGlobalStore } from '@/store/global';
 import { useGroupProfileStore } from '@/store/groupProfile';
 import { type HomeStore } from '@/store/home/store';
 import { type StoreSetter } from '@/store/types';
@@ -123,100 +122,6 @@ export class HomeInputActionImpl {
 
   clearInputMode = (): void => {
     this.#set({ inputActiveMode: null }, false, n('clearInputMode'));
-  };
-
-  sendAsAgent = async ({
-    contextSelections,
-    editorData,
-    groupId,
-    message,
-    pageSelections,
-    visibility,
-    workspaceSlug,
-  }: SendMessageWithEditorParams): Promise<string> => {
-    this.#set({ homeInputLoading: true }, false, n('sendAsAgent/start'));
-
-    try {
-      const agentState = getAgentStoreState();
-
-      // 1. Get model/provider config from inbox agent
-      const inboxAgentId = builtinAgentSelectors.inboxAgentId(agentState);
-      const inboxConfig = inboxAgentId
-        ? agentSelectors.getAgentConfigById(inboxAgentId)(agentState)
-        : null;
-      const model = inboxConfig?.model;
-      const provider = inboxConfig?.provider;
-
-      // 2. Create new Agent with inherited model/provider
-      const result = await agentState.createAgent({
-        config: {
-          model,
-          provider,
-          systemRole: message,
-          title: markdownToTxt(message ?? '').slice(0, 50) || 'New Agent',
-        },
-        groupId,
-        visibility,
-      });
-
-      // Sync the editing target into the chat store BEFORE the builder message
-      // is sent. Gateway mode reads `chatStore.activeAgentId` at send time to
-      // forward `editingAgentId` (see gateway.ts executeGatewayAgent), and the
-      // AgentBuilder tool `onAfterCall` reads it to refresh the correct agent's
-      // config. Setting it here — instead of waiting for AgentBuilderProvider's
-      // mount effect — removes the create-time race where the first tool call
-      // could target / refresh the wrong agent (left profile not refreshed).
-      if (result.agentId) {
-        useChatStore.setState(
-          { activeAgentId: result.agentId },
-          false,
-          'sendAsAgent/syncEditingAgentId',
-        );
-      }
-
-      if (message.trim()) {
-        useGlobalStore.getState().toggleAgentBuilderPanel(true);
-      }
-
-      // 3. Navigate to the agent's settings page (the profile surface's home
-      // under Settings → Agents — the route redirects there anyway).
-      stableWorkspaceAwareNavigate(`/settings/agents/${result.agentId}`);
-
-      // 4. Refresh agent list
-      this.#get().refreshAgentList();
-
-      // 5. Send the initial builder message
-      if (result.agentId) {
-        const { sendMessage } = useChatStore.getState();
-        // Ensure agentBuilder is loaded before reading its id — the host
-        // AgentBuilder component's useInitBuiltinAgent only fires after this
-        // navigation completes, which would otherwise race with sendMessage.
-        const agentBuilderId = await ensureBuiltinAgentHydrated(BUILTIN_AGENT_SLUGS.agentBuilder);
-
-        if (agentBuilderId) {
-          await syncBuiltinAgentModel(agentBuilderId, model, provider);
-
-          await sendMessage({
-            context: {
-              agentId: agentBuilderId,
-              scope: 'agent_builder',
-              ...(workspaceSlug ? { workspaceSlug } : {}),
-            },
-            contextSelections,
-            editorData,
-            message,
-            pageSelections,
-          });
-        }
-      }
-
-      // 6. Clear mode
-      this.#set({ inputActiveMode: null }, false, n('sendAsAgent/clearMode'));
-
-      return result.agentId!;
-    } finally {
-      this.#set({ homeInputLoading: false }, false, n('sendAsAgent/end'));
-    }
   };
 
   sendAsGroup = async ({

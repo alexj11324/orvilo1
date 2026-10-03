@@ -263,7 +263,7 @@ describe('embedded acceptance: dispatch routing (unconditional)', () => {
       dispatchFence: appContext.dispatchFence,
       dispatchId: appContext.dispatchId,
       executionGeneration: appContext.executionGeneration,
-      taskId: 'task-1',
+      subject: { dispatchId: appContext.dispatchId, kind: 'task', taskId: 'task-1' },
     });
 
     // Heterogeneous / ACP kinds never reach the embedded composition.
@@ -316,7 +316,7 @@ describe.skipIf(!RUNNER_UP)(
             executionGeneration: run.executionGeneration,
             model: MODEL_ID,
             operationId: run.operationId,
-            taskId: run.taskId,
+            subject: { dispatchId: run.dispatchId, kind: 'task', taskId: run.taskId },
             topicId: run.topicId,
           },
         );

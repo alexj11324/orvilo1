@@ -43,25 +43,203 @@ const log = debug('orvilo-server:execution-admission');
 
 // ─── Candidate inventory ─────────────────────────────────────────────────────
 
+/**
+ * The operation a candidate is being judged for. `agent-run` is dispatch —
+ * registration as an execution device IS the capability contract and the
+ * device-side admission (PrimeRunDescriptor digest+pin) verifies the adapter
+ * at launch, so the server verdict is `verified` with `delegated` marked.
+ * `device-tool-call` / `device-operation` need per-device evidence — the
+ * device must advertise the tool/operation in its live `supportedTools`.
+ */
+export type AdmissionRequiredOperation =
+  | { adapter?: string | null; kind: 'agent-run'; minAdapterVersion?: string }
+  | { kind: 'device-tool-call'; toolName: string }
+  | { kind: 'device-operation'; operation: string };
+
+/**
+ * The caller's grant context. `devicePermissions` is a caller-computed
+ * execute/view map (e.g. from a device-grants table): a device granted only
+ * 'view' never enters an EXECUTION candidate set at all. `permissionsReady:
+ * false` means the grant context could not be evaluated — the inventory
+ * reports `permissions-unready`, distinguishable from a failed query and
+ * from a genuinely empty set.
+ */
+export interface AdmissionCandidatePolicy {
+  devicePermissions?: Readonly<Record<string, 'execute' | 'view'>>;
+  permissionsReady?: boolean;
+}
+
+/**
+ * `pending` is a real verdict — "we could not verify this" — never recorded
+ * as `capabilityOk: true`. Verification is bounded (one probe per candidate,
+ * no retry loop); an unverifiable capability stays pending rather than
+ * faking readiness.
+ */
+export type AdmissionVerificationStatus = 'pending' | 'verified' | 'incompatible';
+
+/**
+ * The execution-candidate row — the SAME shape the resolver consumes
+ * (`DeviceCandidate`) plus the evidence trail: how capability/version were
+ * verified, who owns/authorized the row, and which grant rides it. Owner and
+ * routing identity ride the candidate — nothing downstream may infer them
+ * from `resolution.reason`.
+ */
+export interface AdmissionDeviceCandidate extends DeviceCandidate {
+  /** The real capability verdict behind `capabilityOk`. */
+  capabilityStatus: AdmissionVerificationStatus;
+  /**
+   * The principal + registry the row was authorized under — the device
+   * owner in a personal scope, the enrolling member + workspace for a
+   * workspace row, the agent owner's registry for a verified stored binding.
+   */
+  owner: { userId: string; workspaceId: string | null };
+  /** The grant this candidate carries — only 'execute' rows ever appear. */
+  permission: 'execute';
+  requiredOperation?: AdmissionRequiredOperation;
+  /** Which authorized source produced the row — registry list vs verified reference. */
+  scopeSource: 'referenced' | 'registry' | 'transient';
+  verification: {
+    /** The adapter family the verdict covers (from the required operation). */
+    adapter?: string | null;
+    checkedAt: string;
+    /**
+     * `true` when the verdict rests on the registration contract and the
+     * device-side admission check at launch — a connected heartbeat never
+     * proves runner availability, so the server delegates the
+     * adapter/version proof to the device that actually starts the run.
+     */
+    delegated?: boolean;
+    mode: 'live-probe' | 'registry' | 'none';
+    /** e.g. 'gateway:systemInfo' | 'registry:row' */
+    source?: string;
+  };
+  /** The real protocol/version verdict behind `versionOk`. */
+  versionStatus: AdmissionVerificationStatus;
+}
+
+/**
+ * Why the candidate set has the shape it does — `query-error`,
+ * `permissions-unready` and `pagination-incomplete` all stay distinguishable
+ * from a GENUINELY empty authorized set and from a set the caller never asked
+ * for. (`inventoryComplete` is the derived bool the resolver consumes.)
+ */
+export type DeviceInventoryState =
+  | 'complete'
+  | 'empty'
+  | 'not-requested'
+  | 'pagination-incomplete'
+  | 'permissions-unready'
+  | 'query-failed';
+
 export interface DeviceCandidateInventory {
-  candidates: DeviceCandidate[];
+  candidates: AdmissionDeviceCandidate[];
   /**
    * `false` when the registry query failed — the set is partial and must never
    * be read as 0/1 candidates or auto-bound from.
    */
   inventoryComplete: boolean;
+  inventoryState: DeviceInventoryState;
 }
+
+/**
+ * One bounded capability/version verdict for one device. Registry evidence
+ * (the enrollment row) plus optional live-probe evidence (`supportedTools`
+ * from `queryDeviceSystemInfo`) — never a fabricated `true`.
+ */
+const verifyCandidate = (params: {
+  deviceId: string;
+  /** The operation the candidate must be able to run. */
+  requiredOperation?: AdmissionRequiredOperation;
+  scopeSource: AdmissionDeviceCandidate['scopeSource'];
+  /** Live evidence from a `queryDeviceSystemInfo` probe, when collected. */
+  systemInfo?: { supportedTools?: string[] };
+  owner: { userId: string; workspaceId: string | null };
+  isLocalMachine: boolean;
+  online: boolean;
+}): AdmissionDeviceCandidate => {
+  const { requiredOperation } = params;
+  const checkedAt = new Date().toISOString();
+
+  let capabilityStatus: AdmissionVerificationStatus;
+  let versionStatus: AdmissionVerificationStatus;
+  let verification: AdmissionDeviceCandidate['verification'];
+
+  if (!requiredOperation || requiredOperation.kind === 'agent-run') {
+    // Agent-run contract: a registry-authorized (or verified-referenced) row
+    // IS the capability evidence — the device enrolled as an execution host
+    // and its own admission verifies the adapter/artifact at launch
+    // (PrimeRunDescriptor). An explicit minAdapterVersion cannot be proven
+    // from any stored signal yet — honest pending, never assumed.
+    capabilityStatus = 'verified';
+    versionStatus = requiredOperation?.minAdapterVersion ? 'pending' : 'verified';
+    verification = {
+      adapter: requiredOperation?.adapter ?? undefined,
+      checkedAt,
+      delegated: true,
+      mode: 'registry',
+      source: params.scopeSource === 'referenced' ? 'registry:verified-reference' : 'registry:row',
+    };
+  } else {
+    // Tool/operation requirements need real per-device evidence — the live
+    // supportedTools probe. Advertised → verified; advertised-and-absent →
+    // incompatible; no probe or older client without the field → pending.
+    const required =
+      requiredOperation.kind === 'device-tool-call'
+        ? requiredOperation.toolName
+        : requiredOperation.operation;
+    const supported = params.systemInfo?.supportedTools;
+    if (Array.isArray(supported)) {
+      capabilityStatus = supported.includes(required) ? 'verified' : 'incompatible';
+      verification = {
+        checkedAt,
+        mode: 'live-probe',
+        source: 'gateway:systemInfo',
+      };
+    } else {
+      capabilityStatus = 'pending';
+      verification = {
+        checkedAt,
+        mode: 'none',
+        source: params.systemInfo ? 'gateway:systemInfo (no supportedTools)' : undefined,
+      };
+    }
+    versionStatus = capabilityStatus === 'verified' ? 'verified' : 'pending';
+  }
+
+  return {
+    capabilityOk: capabilityStatus === 'verified',
+    capabilityStatus,
+    deviceId: params.deviceId,
+    isLocalMachine: params.isLocalMachine,
+    online: params.online,
+    owner: params.owner,
+    permission: 'execute',
+    requiredOperation,
+    scopeOk: true,
+    scopeSource: params.scopeSource,
+    verification,
+    versionOk: versionStatus === 'verified',
+    versionStatus,
+  };
+};
 
 /**
  * The authorized execution candidates for this principal + scope, built the
  * same way `getScopedOnlineDevices` builds the settings/picker list: registry
  * rows merged with live gateway presence (workspace scope keeps only rows the
- * registry knows — a gateway-only connection is never executable).
+ * registry knows — a gateway-only connection is never executable). Settings,
+ * the chat picker and this admission query all run the SAME permission rule,
+ * so every surface returns the identical candidate id set — UI grouping may
+ * change display order, never membership.
  *
  * Scope IS the authorization: a workspace run only sees that workspace's
  * registered devices, a personal run only the caller's own. Capability and
- * version checks are `true` until devices report per-agent capabilities — the
- * honest answer today is "no probe exists", not a fabricated rejection.
+ * version are no longer assumed — each row carries a real verdict
+ * (`capabilityStatus` / `versionStatus` + `verification` evidence). For
+ * `agent-run` the registry contract verifies, delegated to device-side
+ * admission at launch; a tool/operation requirement probes live
+ * `supportedTools` once per candidate — unknown is `pending`, never `true`,
+ * and never `runnable`.
  */
 export const listAuthorizedDeviceCandidates = async (
   serverDB: OrviloDatabase,
@@ -74,6 +252,13 @@ export const listAuthorizedDeviceCandidates = async (
      */
     agentOwnerId?: string;
     localDeviceId?: string;
+    /** The caller's grant context — see {@link AdmissionCandidatePolicy}. */
+    policy?: AdmissionCandidatePolicy;
+    /**
+     * Live system-info probe used for tool/operation requirements. Defaults to
+     * `deviceGateway.queryDeviceSystemInfo` — injectable for tests.
+     */
+    probeSystemInfo?: (deviceId: string) => Promise<{ supportedTools?: string[] } | undefined>;
     /**
      * Devices the resolution inputs name (stored binding, session pin, member
      * pick, request, caller's own machine). A referenced id that is not in the
@@ -88,11 +273,26 @@ export const listAuthorizedDeviceCandidates = async (
       /** Also probe the agent owner's personal registry (stored bindings). */
       ownerRegistry?: boolean;
     }>;
+    /** What the candidate set must be able to run — see {@link AdmissionRequiredOperation}. */
+    requiredOperation?: AdmissionRequiredOperation;
   },
 ): Promise<DeviceCandidateInventory> => {
   const deviceModel = new DeviceModel(serverDB, userId, workspaceId);
   const localDeviceId = options?.localDeviceId;
   const scope: 'personal' | 'workspace' = workspaceId ? 'workspace' : 'personal';
+  const requiredOperation = options?.requiredOperation ?? { kind: 'agent-run' };
+  const devicePermissions = options?.policy?.devicePermissions;
+
+  // The grant context must be READY before any candidacy is computed — a
+  // caller whose permissions failed to load gets 'permissions-unready', not a
+  // partial set that accidentally grants execution.
+  if (options?.policy && options.policy.permissionsReady === false) {
+    return {
+      candidates: [],
+      inventoryComplete: false,
+      inventoryState: 'permissions-unready',
+    };
+  }
 
   let inventoryComplete = true;
   const [rows, online] = await Promise.all([
@@ -111,38 +311,69 @@ export const listAuthorizedDeviceCandidates = async (
     // dispatch then fails honestly at the gateway).
     deviceGateway.queryDeviceList(userId, workspaceId),
   ]);
-  if (!inventoryComplete) return { candidates: [], inventoryComplete };
+  if (!inventoryComplete)
+    return { candidates: [], inventoryComplete, inventoryState: 'query-failed' };
 
-  const registeredDeviceIds = new Set(rows.map((device) => device.deviceId));
+  // A device granted only 'view' never enters an EXECUTION candidate set —
+  // the grant is membership, not a flag the resolver might skip.
+  const executableRows = devicePermissions
+    ? rows.filter((row) => devicePermissions[row.deviceId] !== 'view')
+    : rows;
+
+  // One bounded probe per ONLINE candidate, only when the required operation
+  // needs live evidence. Probe budget is capped — beyond it a device is
+  // 'pending', never assumed ready.
+  const probeNeeded = requiredOperation.kind !== 'agent-run';
+  const probeSystemInfo =
+    options?.probeSystemInfo ??
+    ((deviceId: string) => deviceGateway.queryDeviceSystemInfo(userId, deviceId, workspaceId));
+  const PROBE_BUDGET = 8;
+  const probedInfo = new Map<string, { supportedTools?: string[] } | undefined>();
+
+  const registeredDeviceIds = new Set(executableRows.map((device) => device.deviceId));
   const authorizedOnline = filterAuthorizedDevicePresence(registeredDeviceIds, online, scope);
   const liveById = new Map(authorizedOnline.map((d) => [d.deviceId, d]));
+  if (probeNeeded) {
+    const toProbe = authorizedOnline.slice(0, PROBE_BUDGET).map((d) => d.deviceId);
+    await Promise.all(
+      toProbe.map(async (deviceId) => {
+        probedInfo.set(deviceId, await probeSystemInfo(deviceId).catch(() => undefined));
+      }),
+    );
+  }
+
   const seen = new Set<string>();
-  const fromDb = rows.map((row): DeviceCandidate => {
+  const fromDb = executableRows.map((row): AdmissionDeviceCandidate => {
     seen.add(row.deviceId);
     const live = liveById.get(row.deviceId);
-    return {
-      capabilityOk: true,
+    return verifyCandidate({
       deviceId: row.deviceId,
       isLocalMachine: row.deviceId === localDeviceId,
       online: !!live,
-      scopeOk: true,
-      versionOk: true,
-    };
+      owner: { userId: row.userId, workspaceId: row.workspaceId ?? null },
+      requiredOperation,
+      scopeSource: 'registry',
+      systemInfo: probedInfo.get(row.deviceId),
+    });
   });
   // Personal clients register immediately before opening their socket, but a
   // short race can still expose the live connection first — keep the same
   // gateway-transient compatibility window `getScopedOnlineDevices` allows
-  // (personal scope only; workspace rows ARE the authorization).
+  // (personal scope only; workspace rows ARE the authorization). A transient
+  // row under a 'view' grant stays excluded — presence is not a grant.
   const transient = authorizedOnline
-    .filter((d) => !seen.has(d.deviceId))
-    .map((d): DeviceCandidate => ({
-      capabilityOk: true,
-      deviceId: d.deviceId,
-      isLocalMachine: d.deviceId === localDeviceId,
-      online: true,
-      scopeOk: true,
-      versionOk: true,
-    }));
+    .filter((d) => !seen.has(d.deviceId) && devicePermissions?.[d.deviceId] !== 'view')
+    .map((d): AdmissionDeviceCandidate =>
+      verifyCandidate({
+        deviceId: d.deviceId,
+        isLocalMachine: d.deviceId === localDeviceId,
+        online: true,
+        owner: { userId, workspaceId: workspaceId ?? null },
+        requiredOperation,
+        scopeSource: 'transient',
+        systemInfo: probedInfo.get(d.deviceId),
+      }),
+    );
   const candidates = [...fromDb, ...transient];
   for (const device of candidates) seen.add(device.deviceId);
 
@@ -158,23 +389,33 @@ export const listAuthorizedDeviceCandidates = async (
       : undefined;
   for (const ref of options?.referencedDevices ?? []) {
     if (!ref?.deviceId || seen.has(ref.deviceId)) continue;
+    // A 'view'-granted reference never enters the execution set either.
+    if (devicePermissions?.[ref.deviceId] === 'view') continue;
     try {
-      const verified =
+      const verifiedRow =
         (await deviceModel.findByDeviceId(ref.deviceId)) ??
         (workspaceId ? await deviceModel.findWorkspaceDeviceById(ref.deviceId) : undefined) ??
         (ref.ownerRegistry && ownerModel
           ? await ownerModel.findByDeviceId(ref.deviceId)
           : undefined);
-      if (!verified) continue;
+      if (!verifiedRow) continue;
       seen.add(ref.deviceId);
-      candidates.push({
-        capabilityOk: true,
-        deviceId: ref.deviceId,
-        isLocalMachine: ref.deviceId === localDeviceId,
-        online: !!liveById.get(ref.deviceId),
-        scopeOk: true,
-        versionOk: true,
-      });
+      const isOnline = !!liveById.get(ref.deviceId);
+      // Probe a referenced device that needs live evidence and is online.
+      if (probeNeeded && isOnline && !probedInfo.has(ref.deviceId)) {
+        probedInfo.set(ref.deviceId, await probeSystemInfo(ref.deviceId).catch(() => undefined));
+      }
+      candidates.push(
+        verifyCandidate({
+          deviceId: ref.deviceId,
+          isLocalMachine: ref.deviceId === localDeviceId,
+          online: isOnline,
+          owner: { userId: verifiedRow.userId, workspaceId: verifiedRow.workspaceId ?? null },
+          requiredOperation,
+          scopeSource: 'referenced',
+          systemInfo: probedInfo.get(ref.deviceId),
+        }),
+      );
     } catch (err) {
       // A failed probe only skips THIS reference — it never shrinks the set
       // built from the authoritative list (that failure is inventoryComplete).
@@ -182,7 +423,11 @@ export const listAuthorizedDeviceCandidates = async (
     }
   }
 
-  return { candidates, inventoryComplete };
+  return {
+    candidates,
+    inventoryComplete,
+    inventoryState: candidates.length === 0 ? 'empty' : 'complete',
+  };
 };
 
 // ─── Unified admission ───────────────────────────────────────────────────────
@@ -195,7 +440,7 @@ export const listAuthorizedDeviceCandidates = async (
  */
 export type HeteroExecutionPlan =
   | {
-      candidate: DeviceCandidate;
+      candidate: AdmissionDeviceCandidate;
       deviceId: string;
       kind: 'device';
       reason: DeviceResolutionReason;
@@ -241,7 +486,20 @@ export interface ResolveHeteroExecutionPlanParams {
   localDeviceId?: string;
   /** The caller's resolved `agentDeviceOverrides[agentId]` — undefined when absent. */
   memberDeviceOverride?: AgentDeviceOverride | null;
+  /**
+   * The caller's grant context for candidate construction — view-only
+   * grants never enter the execution set; an unready grant context makes
+   * the whole inventory 'permissions-unready' (never an accidental set).
+   */
+  policy?: AdmissionCandidatePolicy;
   requestTrigger?: RequestTrigger;
+  /**
+   * The operation the run needs — defaults to `{kind:'agent-run'}`: the
+   * registry contract verifies, adapter/version delegated to device-side
+   * admission at launch. A tool/operation requirement probes each online
+   * candidate's advertised `supportedTools`.
+   */
+  requiredOperation?: AdmissionRequiredOperation;
   /**
    * Whether this agent family may execute in the cloud sandbox at all
    * (`supportsCloudHeterogeneousSandbox` for local CLI kinds).
@@ -332,6 +590,8 @@ export const resolveHeteroExecutionPlan = async (
     {
       agentOwnerId: params.agentOwnerId,
       localDeviceId: params.localDeviceId,
+      policy: params.policy,
+      requiredOperation: params.requiredOperation ?? { kind: 'agent-run' },
       referencedDevices: [
         // Stored bindings resolve in the owner's registry — the agent's
         // configured host is a prior authorization act.
@@ -402,14 +662,22 @@ export const resolveHeteroExecutionPlan = async (
     const candidate = candidates.find((d) => d.deviceId === resolution.deviceId);
     return {
       // Resolver only returns selectable ids — the lookup cannot miss; guard
-      // anyway so a future contract change never reads undefined.
+      // anyway so a future contract change never reads undefined. The
+      // fallback row still reports the honest pending verdict — never a
+      // fabricated verified.
       candidate: candidate ?? {
-        capabilityOk: true,
+        capabilityOk: false,
+        capabilityStatus: 'pending',
         deviceId: resolution.deviceId,
         isLocalMachine: resolution.deviceId === params.localDeviceId,
         online: false,
+        owner: { userId: params.userId, workspaceId: params.workspaceId ?? null },
+        permission: 'execute',
         scopeOk: true,
-        versionOk: true,
+        scopeSource: 'registry',
+        verification: { checkedAt: new Date().toISOString(), mode: 'none' },
+        versionOk: false,
+        versionStatus: 'pending',
       },
       deviceId: resolution.deviceId,
       kind: 'device',

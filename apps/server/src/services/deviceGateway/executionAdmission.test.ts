@@ -1,9 +1,23 @@
+import { isRunnableDevice, isSelectableDevice } from '@orvilo/types';
 import { jsonb, pgTable, text } from 'drizzle-orm/pg-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { bindTopicDeviceAtomically, resolveHeteroExecutionPlan } from './executionAdmission';
+import {
+  bindTopicDeviceAtomically,
+  listAuthorizedDeviceCandidates,
+  resolveHeteroExecutionPlan,
+} from './executionAdmission';
+import { getScopedOnlineDevices } from './scopedDevices';
 
-const { queryDeviceList, queryPersonal, queryWorkspaceDevices } = vi.hoisted(() => ({
+const {
+  queryDeviceList,
+  queryPersonal,
+  queryWorkspaceDevices,
+  findByDeviceId,
+  findWorkspaceDeviceById,
+} = vi.hoisted(() => ({
+  findByDeviceId: vi.fn(),
+  findWorkspaceDeviceById: vi.fn(),
   queryDeviceList: vi.fn(),
   queryPersonal: vi.fn(),
   queryWorkspaceDevices: vi.fn(),
@@ -11,6 +25,8 @@ const { queryDeviceList, queryPersonal, queryWorkspaceDevices } = vi.hoisted(() 
 
 vi.mock('@/database/models/device', () => ({
   DeviceModel: class DeviceModelMock {
+    findByDeviceId = findByDeviceId;
+    findWorkspaceDeviceById = findWorkspaceDeviceById;
     queryPersonal = queryPersonal;
     queryWorkspaceDevices = queryWorkspaceDevices;
   },
@@ -31,7 +47,27 @@ vi.mock('./index', () => ({
 
 const db = {} as never;
 
-const deviceRows = (...ids: string[]) => ids.map((deviceId) => ({ deviceId }));
+const deviceRows = (...ids: string[]) =>
+  ids.map((deviceId) => ({
+    deviceId,
+    friendlyName: null,
+    hostname: `${deviceId}.local`,
+    lastSeenAt: new Date('2026-01-01T00:00:00.000Z'),
+    platform: 'darwin',
+    userId: 'user-1',
+    workspaceId: null,
+  }));
+
+const onlineAttachments = (...ids: string[]) =>
+  ids.map((deviceId) => ({
+    channels: [],
+    deviceId,
+    hostname: `${deviceId}.local`,
+    lastSeen: '2026-01-02T00:00:00.000Z',
+    online: true,
+    platform: 'darwin',
+    scope: 'personal',
+  }));
 
 const baseParams = {
   canUseDevice: true,
@@ -45,6 +81,8 @@ beforeEach(() => {
   queryPersonal.mockReset().mockResolvedValue(deviceRows('dev-a', 'dev-b'));
   queryWorkspaceDevices.mockReset().mockResolvedValue(deviceRows('dev-ws'));
   queryDeviceList.mockReset().mockResolvedValue([]);
+  findByDeviceId.mockReset().mockResolvedValue(undefined);
+  findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
 });
 
 describe('resolveHeteroExecutionPlan', () => {
@@ -388,5 +426,205 @@ describe('bindTopicDeviceAtomically (conditional first-bind CAS)', () => {
         userId: 'user-1',
       }),
     ).rejects.toThrow('deadlock');
+  });
+});
+
+describe('listAuthorizedDeviceCandidates (F06 — capability/version never assumed)', () => {
+  it('settings/picker and admission return the IDENTICAL candidate id set — personal + workspace', async () => {
+    // Personal scope: registry rows + one gateway-transient device.
+    queryPersonal.mockResolvedValue(deviceRows('dev-a', 'dev-b'));
+    queryDeviceList.mockResolvedValue(onlineAttachments('dev-a', 'dev-transient'));
+
+    const picker = await getScopedOnlineDevices(db, 'user-1', undefined);
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
+
+    expect(new Set(inventory.candidates.map((c) => c.deviceId))).toEqual(
+      new Set(picker.map((d) => d.deviceId)),
+    );
+
+    // Workspace scope: shared + caller-enrolled rows are one membership rule.
+    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws-shared', 'dev-ws-mine'));
+    queryDeviceList.mockResolvedValue(onlineAttachments('dev-ws-shared', 'dev-ws-ghost'));
+
+    const wsPicker = await getScopedOnlineDevices(db, 'user-1', 'ws-1');
+    const wsInventory = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1');
+
+    // The gateway-only 'dev-ws-ghost' is excluded by BOTH surfaces — a
+    // workspace row IS the authorization, presence is not membership.
+    expect(new Set(wsInventory.candidates.map((c) => c.deviceId))).toEqual(
+      new Set(wsPicker.map((d) => d.deviceId)),
+    );
+    expect(wsInventory.candidates.map((c) => c.deviceId)).toEqual(
+      expect.arrayContaining(['dev-ws-shared', 'dev-ws-mine']),
+    );
+    expect(wsInventory.candidates.some((c) => c.deviceId === 'dev-ws-ghost')).toBe(false);
+  });
+
+  it('a view-only grant never enters execution candidates — registry, transient or referenced', async () => {
+    queryPersonal.mockResolvedValue(deviceRows('dev-a', 'dev-view'));
+    queryDeviceList.mockResolvedValue(onlineAttachments('dev-a', 'dev-view-transient'));
+    findByDeviceId.mockResolvedValue(deviceRows('dev-view-ref')[0]);
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      policy: {
+        devicePermissions: {
+          'dev-view': 'view',
+          'dev-view-ref': 'view',
+          'dev-view-transient': 'view',
+        },
+      },
+      referencedDevices: [{ deviceId: 'dev-view-ref' }],
+    });
+
+    expect(inventory.candidates.map((c) => c.deviceId)).toEqual(['dev-a']);
+    expect(inventory.candidates.every((c) => c.permission === 'execute')).toBe(true);
+  });
+
+  it('a device that lacks the required tool is incompatible — never selectable, never runnable', async () => {
+    queryDeviceList.mockResolvedValue(onlineAttachments('dev-a', 'dev-b'));
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      probeSystemInfo: async (deviceId) =>
+        deviceId === 'dev-a'
+          ? { supportedTools: ['mcp.call', 'files.read'] }
+          : { supportedTools: ['files.read'] },
+      requiredOperation: { kind: 'device-tool-call', toolName: 'mcp.call' },
+    });
+
+    const capable = inventory.candidates.find((c) => c.deviceId === 'dev-a')!;
+    const incapable = inventory.candidates.find((c) => c.deviceId === 'dev-b')!;
+
+    expect(capable).toMatchObject({
+      capabilityOk: true,
+      capabilityStatus: 'verified',
+      verification: { mode: 'live-probe' },
+    });
+    expect(isRunnableDevice(capable)).toBe(true);
+
+    expect(incapable).toMatchObject({
+      capabilityOk: false,
+      capabilityStatus: 'incompatible',
+    });
+    expect(isSelectableDevice(incapable)).toBe(false);
+    expect(isRunnableDevice(incapable)).toBe(false);
+  });
+
+  it('an unknown capability is pending verification — never recorded true, never runnable', async () => {
+    queryDeviceList.mockResolvedValue(onlineAttachments('dev-b'));
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      // Older client: answers the probe but advertises no supportedTools.
+      probeSystemInfo: async () => ({ arch: 'arm64' }) as never,
+      requiredOperation: { kind: 'device-operation', operation: 'filesystem.write' },
+    });
+
+    const candidate = inventory.candidates.find((c) => c.deviceId === 'dev-b')!;
+    expect(candidate.capabilityStatus).toBe('pending');
+    expect(candidate.capabilityOk).toBe(false);
+    expect(candidate.versionOk).toBe(false);
+    expect(isSelectableDevice(candidate)).toBe(false);
+    expect(isRunnableDevice(candidate)).toBe(false);
+  });
+
+  it('agent-run verifies via the registry contract; an explicit minAdapterVersion stays pending', async () => {
+    const defaultOp = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
+    expect(
+      defaultOp.candidates.every(
+        (c) => c.capabilityStatus === 'verified' && c.verification?.delegated === true,
+      ),
+    ).toBe(true);
+
+    const versioned = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      requiredOperation: { adapter: 'claude-code', kind: 'agent-run', minAdapterVersion: '2.0.0' },
+    });
+    for (const candidate of versioned.candidates) {
+      expect(candidate.versionStatus).toBe('pending');
+      expect(candidate.versionOk).toBe(false);
+      expect(isSelectableDevice(candidate)).toBe(false);
+      expect(isRunnableDevice(candidate)).toBe(false);
+    }
+  });
+
+  it('online only gates runnable — an offline verified device stays selectable', async () => {
+    queryDeviceList.mockResolvedValue(onlineAttachments('dev-a'));
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
+    const offline = inventory.candidates.find((c) => c.deviceId === 'dev-b')!;
+
+    expect(offline.online).toBe(false);
+    expect(isSelectableDevice(offline)).toBe(true);
+    expect(isRunnableDevice(offline)).toBe(false);
+  });
+
+  it('permissions-unready, query-failed, empty and complete stay distinguishable', async () => {
+    const unready = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      policy: { permissionsReady: false },
+    });
+    expect(unready).toEqual({
+      candidates: [],
+      inventoryComplete: false,
+      inventoryState: 'permissions-unready',
+    });
+
+    queryPersonal.mockRejectedValue(new Error('db down'));
+    const failed = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
+    expect(failed.inventoryState).toBe('query-failed');
+    expect(failed.inventoryComplete).toBe(false);
+
+    queryPersonal.mockResolvedValue([]);
+    const empty = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
+    expect(empty).toEqual({
+      candidates: [],
+      inventoryComplete: true,
+      inventoryState: 'empty',
+    });
+
+    queryPersonal.mockResolvedValue(deviceRows('dev-a'));
+    const complete = await listAuthorizedDeviceCandidates(db, 'user-1', undefined);
+    expect(complete.inventoryState).toBe('complete');
+  });
+
+  it('a referenced device verified in a registry joins; an unverifiable reference stays out', async () => {
+    findByDeviceId.mockImplementation(async (deviceId: string) =>
+      deviceId === 'dev-ref' ? deviceRows('dev-ref')[0] : undefined,
+    );
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', undefined, {
+      referencedDevices: [{ deviceId: 'dev-ref' }, { deviceId: 'dev-phantom' }],
+    });
+
+    const referenced = inventory.candidates.find((c) => c.deviceId === 'dev-ref')!;
+    expect(referenced.scopeSource).toBe('referenced');
+    expect(referenced.owner).toEqual({ userId: 'user-1', workspaceId: null });
+    expect(inventory.candidates.some((c) => c.deviceId === 'dev-phantom')).toBe(false);
+  });
+
+  it('a resolved plan carries the verified registry-delegated candidate — never a fabricated row', async () => {
+    const plan = await resolveHeteroExecutionPlan(db, {
+      ...baseParams,
+      explicitDeviceId: 'dev-a',
+    });
+
+    expect(plan.kind).toBe('device');
+    if (plan.kind === 'device') {
+      expect(plan.candidate.deviceId).toBe('dev-a');
+      expect(plan.candidate.capabilityStatus).toBe('verified');
+      expect(plan.candidate.verification).toMatchObject({
+        delegated: true,
+        mode: 'registry',
+      });
+    }
+  });
+
+  it('an explicit request for a device that cannot prove the operation is blocked — never dispatched', async () => {
+    const plan = await resolveHeteroExecutionPlan(db, {
+      ...baseParams,
+      explicitDeviceId: 'dev-a',
+      requiredOperation: { kind: 'device-tool-call', toolName: 'mcp.call' },
+    });
+
+    // capabilityStatus stays 'pending' under a failed/absent probe → the
+    // candidate is not selectable → the request resolves to a block, not a run.
+    expect(plan.kind).toBe('blocked');
   });
 });

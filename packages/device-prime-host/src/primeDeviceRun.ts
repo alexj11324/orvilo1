@@ -28,7 +28,7 @@
  * process group owned by the device host (`treeId = device-pg-<pgid>`); it
  * does NOT claim container isolation it did not verify.
  */
-import type { ChildProcess } from 'node:child_process';
+import type { ChildProcess, SpawnOptions } from 'node:child_process';
 import { spawn } from 'node:child_process';
 
 import type { ControlError, ControlResult } from '@orvilo/agent-execution/controlPlane/contracts';
@@ -175,7 +175,14 @@ export const openPrimeDeviceRun = async (
       verified.error?.message ?? 'Runner artifact verification failed',
     );
 
-  const spawnImpl = options.spawnImpl ?? spawn;
+  // Normalize the spawn seam to ONE signature — `typeof spawn` is an overload
+  // set and resolvers differ on which member a `{stdio:'pipe'}` options literal
+  // matches (repo-wide tsgo read `child` as `never` where scoped tsc passed).
+  const spawnImpl: (
+    command: string,
+    args: readonly string[],
+    options: SpawnOptions,
+  ) => ChildProcess = options.spawnImpl ?? spawn;
   const env: Record<string, string> = {
     HOME: options.stateDir,
     PATH: process.env.PATH ?? '',

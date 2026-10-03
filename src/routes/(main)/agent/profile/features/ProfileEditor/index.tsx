@@ -7,6 +7,7 @@ import isEqual from 'fast-deep-equal';
 import React, { memo } from 'react';
 
 import AgentAccessSettings from '@/features/AgentSettings/AgentAccessSettings';
+import AgentAdvancedSettings from '@/features/AgentSettings/AgentAdvancedSettings';
 import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
 import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
 import AgentModelSettings from '@/features/AgentSettings/AgentModelSettings';
@@ -68,6 +69,7 @@ const ProfileEditor = memo(() => {
               {isRemoteHetero ? null : <AgentModelSettings agentId={agentId} />}
               <AgentDeviceSettings agentId={agentId} />
               <AgentAccessSettings agentId={agentId} />
+              <AgentAdvancedSettings agentId={agentId} />
             </>
           ) : (
             <>
@@ -75,6 +77,7 @@ const ProfileEditor = memo(() => {
               <AgentModelSettings agentId={agentId} />
               <AgentDeviceSettings agentId={agentId} />
               <AgentAccessSettings agentId={agentId} />
+              <AgentAdvancedSettings agentId={agentId} />
             </>
           )}
         </div>

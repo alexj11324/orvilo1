@@ -66,16 +66,17 @@ interface CreateAgentOptions {
  * Used by the home sidebar create menus.
  */
 export const useCreateMenuItems = () => {
-  const { t } = useTranslation('chat');
+  const { t } = useTranslation(['chat', 'common']);
   const navigate = useWorkspaceAwareNavigate();
   const groupTemplates = useGroupTemplates();
   const { allowed: canCreate } = usePermission('create_content');
 
   const [storeCreateAgent] = useAgentStore((s) => [s.createAgent]);
-  const [addGroup, refreshAgentList, switchToGroup] = useHomeStore((s) => [
+  const [addGroup, refreshAgentList, switchToGroup, removeAgent] = useHomeStore((s) => [
     s.addGroup,
     s.refreshAgentList,
     s.switchToGroup,
+    s.removeAgent,
   ]);
   const [createGroup, loadGroups] = useAgentGroupStore((s) => [s.createGroup, s.loadGroups]);
 
@@ -142,6 +143,18 @@ export const useCreateMenuItems = () => {
         visibility: options?.visibility,
       });
 
+      toast.success({
+        actions: [
+          {
+            label: t('common:undo'),
+            onClick: () => {
+              void removeAgent(result.agentId);
+            },
+          },
+        ],
+        title: t('agentCreated', { name: 'Orvilo AI' }),
+      });
+
       if (options?.origin === 'settings') {
         navigate(`/settings/agents/${result.agentId}`);
       } else {
@@ -149,7 +162,7 @@ export const useCreateMenuItems = () => {
       }
       options?.onSuccess?.();
     },
-    [canCreate, mutateAgent, navigate],
+    [canCreate, mutateAgent, navigate, removeAgent, t],
   );
 
   /**

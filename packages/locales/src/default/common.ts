@@ -567,6 +567,7 @@ export default {
   'regenerate': 'Regenerate',
   'releaseNotes': 'Version Details',
   'rename': 'Rename',
+  'undo': 'Undo',
   'reset': 'Reset',
   'resourceUnavailable': 'This resource is unavailable or you no longer have access',
   'restoreToInput': 'Restore to input',

@@ -1,6 +1,6 @@
 import { PreviewCard } from '@base-ui/react/preview-card';
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
-import { agentDisplayName, type ChatTopicMetadata, type ChatTopicStatus } from '@orvilo/types';
+import { type ChatTopicMetadata, type ChatTopicStatus } from '@orvilo/types';
 import { formatElapsedClockTime } from '@orvilo/utils';
 import {
   getTopicMetadataWorkingDirectoryEffectivePath,
@@ -160,9 +160,10 @@ RunningElapsedTime.displayName = 'RunningElapsedTime';
 
 interface TopicItemProps {
   /**
-   * Agent the topic is bound to (`ChatTopic.agentId`). Rendered as a weak
-   * second line only when it differs from the room's agent — cross-bound
-   * residue right after a handoff, or a group/mixed list entry.
+   * Agent the topic is bound to (`ChatTopic.agentId`). Drives the row's
+   * agent-scoped reads — deep link, runtime buckets, message prefetch — not a
+   * visible attribution: the bound agent shows in the composer's agent
+   * picker, so the row carries no agent name.
    */
   agentId?: string | null;
   fav?: boolean;
@@ -315,38 +316,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       </div>
     ) : undefined;
 
-    // Weak second line per the topic-centric model — the bound agent is
-    // metadata, not navigation, so it only earns a line when it differs from
-    // the room's agent (a topic already sits under its owner's list).
-    const boundAgentName = useAgentStore((s) =>
-      topicAgentId && topicAgentId !== s.activeAgentId
-        ? agentDisplayName(agentSelectors.getAgentMetaById(topicAgentId)(s), '')
-        : '',
-    );
-    const boundAgentNode = boundAgentName ? (
-      <div className="flex items-center gap-1.5" style={{ overflow: 'hidden' }}>
-        <span
-          aria-hidden
-          style={{
-            width: 5,
-            height: 5,
-            borderRadius: '50%',
-            background: cssVar.colorTextQuaternary,
-            flex: 'none',
-          }}
-        />
-        <div className="truncate text-[12px]" style={{ color: cssVar.colorTextDescription }}>
-          {boundAgentName}
-        </div>
-      </div>
-    ) : undefined;
-    const descriptionNode =
-      boundAgentNode || workingDirectoryNode ? (
-        <>
-          {boundAgentNode}
-          {workingDirectoryNode}
-        </>
-      ) : undefined;
+    const descriptionNode = workingDirectoryNode;
 
     // Surface the unread dot right away during the masked tail instead of a
     // blank icon gap until markTopicUnread's persisted 'unread' lands. Skipped

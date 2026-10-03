@@ -78,7 +78,7 @@ const AgentHeader = memo(() => {
             zIndex: 4,
           }}
         >
-          <Avatar avatar={meta.avatar} shape={'square'} size={72} />
+          <Avatar avatar={meta.avatar} name={personalName || role} shape={'square'} size={72} />
         </div>
       </div>
       {/* Identity Section — display only. Editing all three fields happens in a

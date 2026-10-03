@@ -213,11 +213,13 @@ The device package's terminal-state contract — what acceptance re-verifies:
   contract code `DEVICE_BINDING_INVALID` plus `repairCandidates` (other
   workspace devices, cap 8), so callers can render the explicit-repair path
   instead of a bare "not found".
-- **Runner resolution** — `defaultRunnerManifest`/`defaultRunnerArtifact`/
-  `resolvePrimeRunnerArtifact` fall back from `import.meta.dirname` to
-  `fileURLToPath(import.meta.url)` and cwd-relative candidates, so bundlers
-  that don't define `import.meta.dirname` (e.g. turbopack dev) still resolve
-  the shipped runner.
+- **Runner resolution** — `defaultRunnerArtifact` resolves through an
+  env-override + `import.meta.dirname`-guarded + cwd-candidate chain (and
+  `defaultRunnerManifest` derives through it), while
+  `resolvePrimeRunnerArtifact` (CLI) and `embeddedAcceptance`'s REPO_ROOT
+  carry the same fallback — so bundlers that don't define
+  `import.meta.dirname` (e.g. turbopack dev) still resolve the shipped
+  runner.
 
 ## Known residuals
 

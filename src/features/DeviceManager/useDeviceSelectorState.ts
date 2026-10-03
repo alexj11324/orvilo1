@@ -2,7 +2,7 @@ import type { DeviceListItem } from '@orvilo/types';
 import { shouldShowDeviceSelector } from '@orvilo/types';
 import { useMemo } from 'react';
 
-import { groupExecutionTargetDevices } from '@/features/ExecutionTargetPicker';
+import { executionTargetDeviceCandidates } from '@/helpers/executionTarget';
 
 import { useDeviceList } from './useDeviceList';
 
@@ -74,8 +74,12 @@ export const useDeviceSelectorState = ({
   const deviceInventoryComplete = !isLoading && !error;
 
   const { selectableDevices, runnableDevices } = useMemo(() => {
-    const { personal, workspace } = groupExecutionTargetDevices(devices);
-    const selectable = scope === 'workspace' ? workspace : personal;
+    // ONE candidate set shared with the chat switcher, connect flow and the
+    // blocked-run repair UI: workspace scope includes the caller's private
+    // enrollments (`visibility === 'private'`), which are legal for their
+    // enroller — a surface that dropped them computed a different pool than
+    // the admission contract resolves against.
+    const selectable = executionTargetDeviceCandidates(devices, scope);
     return {
       runnableDevices: selectable.filter((device) => device.online),
       selectableDevices: selectable,

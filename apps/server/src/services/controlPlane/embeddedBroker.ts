@@ -12,7 +12,11 @@ import {
   createInferenceBroker,
   toInferenceMessage,
 } from '@orvilo/agent-execution/controlPlane';
-import type { HarnessInitModel } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
+import type {
+  HarnessInitModel,
+  HarnessInitPolicy,
+} from '@orvilo/agent-execution/controlPlane/harnessProtocol';
+import { thinkingLevelForEffort } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import type { BuildInferenceRequest } from '@orvilo/agent-execution/controlPlane/server';
 import type { ProviderBindingConfig } from '@orvilo/types';
 
@@ -38,6 +42,9 @@ export interface EmbeddedInferenceBridge {
   inferenceBroker: InferenceBroker;
   /** Model identity pinned into `harness.init` — runner-visible, never secret. */
   initModel: HarnessInitModel;
+  /** Binding-derived init policy — the selection effort pin mapped to the
+   * session's upstream thinking level. */
+  initPolicy?: HarnessInitPolicy;
 }
 
 export interface EmbeddedInferenceBridgeDeps {
@@ -194,6 +201,11 @@ export async function createEmbeddedInferenceBridge(
           ? { contextWindow: capability.contextWindow }
           : {}),
         ...(typeof capability.reasoning === 'boolean' ? { reasoning: capability.reasoning } : {}),
+      },
+      initPolicy: {
+        ...(thinkingLevelForEffort(row.config?.selection?.effort)
+          ? { thinkingLevel: thinkingLevelForEffort(row.config?.selection?.effort) }
+          : {}),
       },
     },
   };

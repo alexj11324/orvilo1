@@ -20,7 +20,7 @@ import type { HarnessSessionEvent } from './harnessProtocol';
 /** Emitted pair; each call site stamps operationId/stepIndex/timestamp. */
 export interface PrimeStreamEmission {
   data: Record<string, unknown>;
-  type: 'stream_chunk' | 'tool_start' | 'tool_result' | 'tool_end';
+  type: 'error' | 'stream_chunk' | 'tool_start' | 'tool_result' | 'tool_end';
 }
 
 /**
@@ -31,6 +31,9 @@ export interface PrimeStreamEmission {
  */
 export interface PrimeStreamState {
   completedToolResultIds: Set<string>;
+  /** RLM child ids already introduced to the ledger — spawnMetadata rides
+   * the FIRST event for a child only (hetero `spawnMetadata` parity). */
+  seenSubagents: Set<string>;
   toolCalls: ChatToolPayload[];
   toolPayloadById: Map<string, ChatToolPayload>;
   toolStateSeqById: Map<string, number>;
@@ -38,10 +41,113 @@ export interface PrimeStreamState {
 
 export const createPrimeStreamState = (): PrimeStreamState => ({
   completedToolResultIds: new Set(),
+  seenSubagents: new Set(),
   toolCalls: [],
   toolPayloadById: new Map(),
   toolStateSeqById: new Map(),
 });
+
+export interface SubagentContextInput {
+  childId: string;
+  name?: string;
+  parentId?: string;
+}
+
+/** Structural minimum of the wire/embedded child-lifecycle snapshot. */
+interface SubagentSnapshotInput {
+  answerPreview?: string;
+  error?: string;
+  id: string;
+  label?: string;
+  parentId?: string;
+  progressNote?: string;
+  prompt?: string;
+  sessionName?: string;
+}
+
+/**
+ * `subagent_update` → ledger emissions. The lifecycle snapshot itself rides
+ * the `subagent` context (the ledger lazy-creates the subagent Thread off
+ * the first sighted parentToolCallId + spawnMetadata). Content the snapshot
+ * carries — progress notes, answer previews, errors — surfaces as reasoning
+ * / error chunks inside that Thread so nothing is dropped on the floor of
+ * an unknown chunkType.
+ */
+const mapSubagentUpdate = (
+  state: PrimeStreamState,
+  child: SubagentSnapshotInput,
+  scope?: SubagentContextInput,
+): PrimeStreamEmission[] => {
+  const subagent = subagentContext(
+    state,
+    scope ?? {
+      childId: child.id,
+      name: child.sessionName ?? child.label,
+      parentId: child.parentId,
+    },
+    { prompt: child.prompt },
+  );
+  const emissions: PrimeStreamEmission[] = [
+    {
+      data: {
+        chunkType: 'subagent_update',
+        snapshot: child,
+        ...(subagent ? { subagent } : {}),
+      },
+      type: 'stream_chunk',
+    },
+  ];
+  const note = child.progressNote ?? child.answerPreview;
+  if (typeof note === 'string' && note.length > 0) {
+    emissions.push({
+      data: {
+        chunkType: 'reasoning',
+        reasoning: note,
+        ...(subagent ? { subagent } : {}),
+      },
+      type: 'stream_chunk',
+    });
+  }
+  if (typeof child.error === 'string' && child.error.length > 0) {
+    emissions.push({
+      data: {
+        message: child.error,
+        ...(subagent ? { subagent } : {}),
+      },
+      type: 'error',
+    });
+  }
+  return emissions;
+};
+
+/**
+ * `HarnessSubagentContext` → hetero `SubagentEventContext`: the RLM child
+ * node id plays `parentToolCallId`'s Thread-routing role (the spawn's
+ * stable key). `spawnMetadata` appears exactly once per child — the first
+ * sighted event carries it; `prompt` is only known on the subagent_update
+ * admission event, never on later tool/thinking events.
+ */
+export const subagentContext = (
+  state: PrimeStreamState,
+  input: SubagentContextInput | undefined,
+  spawn?: { prompt?: string },
+): Record<string, unknown> | undefined => {
+  if (!input) return undefined;
+  const first = !state.seenSubagents.has(input.childId);
+  state.seenSubagents.add(input.childId);
+  return {
+    parentToolCallId: input.childId,
+    ...(first
+      ? {
+          spawnMetadata: {
+            description: input.name,
+            prompt: spawn?.prompt,
+            subagentType: 'rlm',
+          },
+        }
+      : {}),
+  };
+};
 
 const toToolPayload = (toolCallId: string, toolName: string, args: unknown): ChatToolPayload => ({
   apiName: toolName,
@@ -97,18 +203,31 @@ const mapToolCall = (
     args: unknown;
     toolCallId: string;
     toolName: string;
+    subagent?: SubagentContextInput;
   },
 ): PrimeStreamEmission[] => {
   if (state.completedToolResultIds.has(event.toolCallId)) return [];
   const tool = toToolPayload(event.toolCallId, event.toolName, event.args);
   if (!state.toolPayloadById.has(event.toolCallId)) state.toolCalls.push(tool);
   state.toolPayloadById.set(event.toolCallId, tool);
+  const subagent = subagentContext(state, event.subagent);
   return [
     {
-      data: { chunkType: 'tools_calling', toolsCalling: [...state.toolCalls] },
+      data: {
+        chunkType: 'tools_calling',
+        toolsCalling: [...state.toolCalls],
+        ...(subagent ? { subagent } : {}),
+      },
       type: 'stream_chunk',
     },
-    { data: { toolCalling: tool, toolCallId: event.toolCallId }, type: 'tool_start' },
+    {
+      data: {
+        toolCalling: tool,
+        toolCallId: event.toolCallId,
+        ...(subagent ? { subagent } : {}),
+      },
+      type: 'tool_start',
+    },
   ];
 };
 
@@ -117,11 +236,13 @@ const mapToolProgress = (
   event: {
     partialResult: unknown;
     toolCallId: string;
+    subagent?: SubagentContextInput;
   },
 ): PrimeStreamEmission[] => {
   const normalized = normalizeToolContent(event.partialResult);
   const seq = (state.toolStateSeqById.get(event.toolCallId) ?? 0) + 1;
   state.toolStateSeqById.set(event.toolCallId, seq);
+  const subagent = subagentContext(state, event.subagent);
   return [
     {
       data: {
@@ -130,6 +251,7 @@ const mapToolProgress = (
         snapshotMode: 'replace',
         snapshotSeq: seq,
         toolCallId: event.toolCallId,
+        ...(subagent ? { subagent } : {}),
       },
       type: 'stream_chunk',
     },
@@ -142,12 +264,14 @@ const mapToolResult = (
     isError: boolean;
     result: unknown;
     toolCallId: string;
+    subagent?: SubagentContextInput;
   },
 ): PrimeStreamEmission[] => {
   if (state.completedToolResultIds.has(event.toolCallId)) return [];
   state.completedToolResultIds.add(event.toolCallId);
   const normalized = normalizeToolContent(event.result);
   const toolCalling = state.toolPayloadById.get(event.toolCallId);
+  const subagent = subagentContext(state, event.subagent);
   return [
     {
       data: {
@@ -155,6 +279,7 @@ const mapToolResult = (
         isError: event.isError,
         toolCallId: event.toolCallId,
         ...(normalized.pluginState ? { state: normalized.pluginState } : {}),
+        ...(subagent ? { subagent } : {}),
       },
       type: 'tool_result',
     },
@@ -168,6 +293,7 @@ const mapToolResult = (
           ...(normalized.pluginState ? { state: normalized.pluginState } : {}),
         },
         toolCallId: event.toolCallId,
+        ...(subagent ? { subagent } : {}),
       },
       type: 'tool_end',
     },
@@ -185,7 +311,20 @@ export const mapHarnessSessionEvent = (
 ): PrimeStreamEmission[] => {
   switch (event.kind) {
     case 'thinking': {
-      return [{ data: { chunkType: 'reasoning', reasoning: event.text }, type: 'stream_chunk' }];
+      const subagent = subagentContext(state, event.subagent);
+      return [
+        {
+          data: {
+            chunkType: 'reasoning',
+            reasoning: event.text,
+            ...(subagent ? { subagent } : {}),
+          },
+          type: 'stream_chunk',
+        },
+      ];
+    }
+    case 'subagent_update': {
+      return mapSubagentUpdate(state, event.child, event.subagent);
     }
     case 'tool_call': {
       return mapToolCall(state, event);
@@ -209,7 +348,20 @@ export const mapRuntimeEvent = (
 ): PrimeStreamEmission[] => {
   switch (event.type) {
     case 'thinking': {
-      return [{ data: { chunkType: 'reasoning', reasoning: event.text }, type: 'stream_chunk' }];
+      const subagent = subagentContext(state, event.subagent);
+      return [
+        {
+          data: {
+            chunkType: 'reasoning',
+            reasoning: event.text,
+            ...(subagent ? { subagent } : {}),
+          },
+          type: 'stream_chunk',
+        },
+      ];
+    }
+    case 'subagent_update': {
+      return mapSubagentUpdate(state, event.child, event.subagent);
     }
     case 'tool_call': {
       return mapToolCall(state, event);

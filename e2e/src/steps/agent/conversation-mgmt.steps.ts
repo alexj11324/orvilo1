@@ -180,11 +180,20 @@ Given('用户有多个对话历史', { timeout: 300_000 }, async function (this:
     await this.page.keyboard.press('Enter');
   };
 
+  // The new-topic button opens the blank composer at `/chat/new`. The click
+  // can still land while the row is mid-re-render after the settled poll, so
+  // retry it once when the first navigation never fires.
   await addTopicButton.click();
-  // The new-topic button opens the blank composer at `/chat/new`.
-  await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
-    timeout: 30_000,
-  });
+  try {
+    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
+      timeout: 30_000,
+    });
+  } catch {
+    await addTopicButton.click();
+    await this.page.waitForURL((url) => url.pathname === `${agentPath}/new`, {
+      timeout: 30_000,
+    });
+  }
   await expect(this.page.locator('.message-wrapper')).toHaveCount(0, { timeout: 30_000 });
   await sendSecondMessage();
 

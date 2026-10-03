@@ -49,3 +49,9 @@ sweep lands.
 topic open → `topic_<topicId>`; blank composer → `topic_new` (workspace);
 thread/group contexts keep their existing key. `carryDraftToKey` was removed
 — no flow moves drafts between keys anymore.
+
+## Contract pins
+
+The regression suite pinning this contract — feed semantics, `lastUsedAgentId`
+write points, routing, handoff persistence, send-path and mobile bounds —
+is indexed in [conversation-first-contract.md](./conversation-first-contract.md).

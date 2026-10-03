@@ -48,6 +48,31 @@ describe('topicSelectors', () => {
       const topics = topicSelectors.currentTopics(state);
       expect(topics).toEqual(topicItems);
     });
+
+    it('returns topics owned by different agents without filtering on the active agent', () => {
+      // Conversation identity is the navigation unit: every workspace topic
+      // appears in the one feed whatever agent owns it — a row's `agentId`
+      // stays on the item as weak metadata, never a filter.
+      const crossAgentItems = [
+        { agentId: 'agent-a', id: 'topic-a', title: 'Owned by A' },
+        { agentId: 'agent-b', id: 'topic-b', title: 'Owned by B' },
+        { agentId: 'agent-c', id: 'topic-c', title: 'Owned by C' },
+      ] as any;
+      const state = merge(initialStore, {
+        activeAgentId: 'agent-a',
+        topicDataMap: {
+          [WORKSPACE_TOPIC_MAP_KEY]: {
+            items: crossAgentItems,
+            total: crossAgentItems.length,
+            currentPage: 0,
+            hasMore: false,
+            pageSize: 20,
+          },
+        },
+      });
+
+      expect(topicSelectors.currentTopics(state)).toEqual(crossAgentItems);
+    });
   });
 
   describe('reasoning + hetero pins', () => {

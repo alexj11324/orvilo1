@@ -21,6 +21,7 @@ import type { ChatTopicMetadata, HeterogeneousProviderConfig } from '@orvilo/typ
 import { ThreadStatus } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as OrviloPlatform from '@/platform';
 import { useAiInfraStore } from '@/store/aiInfra';
 import { useChatStore } from '@/store/chat/store';
 
@@ -134,6 +135,26 @@ vi.mock('@/services/electron/desktopNotification', () => ({
     showNotification: (...args: any[]) => mockShowNotification(...args),
   },
 }));
+// HostPort — the notification path moved behind the port (WD-02); bridge the
+// same desktopFlag + spies so this suite keeps characterizing the desktop
+// notification gating without depending on the runtime host injection.
+vi.mock('@/platform', async (importOriginal) => {
+  const actual = await importOriginal<typeof OrviloPlatform>();
+  return {
+    ...actual,
+    getHostPort: () => ({
+      ...actual.getHostPort(),
+      notification: {
+        setBadgeCount: (...args: any[]) => mockSetBadgeCount(...args),
+        show: (...args: any[]) => mockShowNotification(...args),
+      },
+    }),
+    hasHostCapability: (capability: string) =>
+      capability === 'notification.native'
+        ? desktopFlag.value
+        : actual.hasHostCapability(capability as never),
+  };
+});
 vi.mock('@/services/electron/completionSound', () => ({
   completionSoundService: {
     getNotificationSoundFile: (...args: any[]) => mockGetNotificationSoundFile(...args),

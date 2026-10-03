@@ -118,9 +118,10 @@ const ProfileEditor = memo(() => {
     isHeterogeneous &&
     !!heterogeneousProvider &&
     isRemoteHeterogeneousType(heterogeneousProvider.type);
-  // The builtin Orvilo harness shares the local-CLI status card (engine binary
-  // detection, command override) but has no Cloud tab — the cloud runner only
-  // wraps the claude-code CLI.
+  // The builtin Orvilo agent's harness is fixed to Prime — it has no CLI
+  // binary to detect and no command override, so the local-CLI status card
+  // does not apply. Its device picker follows the shared showDeviceSelector
+  // rule (docs/development/device-execution-contract.md).
   const isBuiltinEngine =
     isHeterogeneous && !!heterogeneousProvider && isBuiltinEngineType(heterogeneousProvider.type);
   const showCloudHeterogeneousTab = heterogeneousProvider?.type === 'claude-code';
@@ -229,9 +230,10 @@ const ProfileEditor = memo(() => {
           className={cn('flex flex-col gap-2', styles.configStack)}
           style={{ paddingBlock: isRemoteHetero ? '8px 0' : undefined }}
         >
-          {/* Engine: harness / builtin engine / per-harness model + effort /
-              execution target. Also the upgrade surface for legacy agents —
-              the first pick materializes `agencyConfig.heterogeneousProvider`. */}
+          {/* Agent config: harness + model/effort + execution target for
+              external agents; fixed Prime binding for the builtin. Also the
+              upgrade surface for legacy agents — the first pick
+              materializes `agencyConfig.heterogeneousProvider`. */}
           <EngineConfigCard agentId={agentId} />
           {isRemoteHetero && heterogeneousProvider ? (
             // Remote platform agents (openclaw / hermes): show device config panel
@@ -239,25 +241,7 @@ const ProfileEditor = memo(() => {
               provider={heterogeneousProvider}
               onBoundDeviceChange={updateBoundDeviceId}
             />
-          ) : isBuiltinEngine && heterogeneousProvider ? (
-            // Builtin Orvilo harness: engine-CLI detection + command override,
-            // no cloud/desktop tab split.
-            <HeterogeneousAgentStatusCard
-              apiModeAvailable={apiModeAvailable}
-              apiModeWorkspaceBlocked={isWorkspaceAgent}
-              provider={heterogeneousProvider}
-              serverDefaultAvailable={serverDefaultAvailable}
-              serverDefaultLoading={serverCapabilityEnabled && serverCapability.isLoading}
-              serverDefaultModels={serverDefaultModels}
-              serverDefaultUnavailableReason={serverDefaultUnavailableReason}
-              onApiConfigChange={updateHeterogeneousApiConfig}
-              onAuthModeChange={updateHeterogeneousAuthMode}
-              onCommandChange={updateHeterogeneousCommand}
-              onServerDefaultRetry={() => {
-                void serverCapability.mutate();
-              }}
-            />
-          ) : isHeterogeneous && heterogeneousProvider ? (
+          ) : isHeterogeneous && heterogeneousProvider && !isBuiltinEngine ? (
             // Local CLI agents: Claude Code supports cloud config; Codex is desktop-only for now.
             <Tabs defaultValue={isDesktop || !showCloudHeterogeneousTab ? 'desktop' : 'cloud'}>
               <TabsList>
@@ -297,7 +281,10 @@ const ProfileEditor = memo(() => {
             </div>
           )}
           {isHeterogeneous ? (
-            <WorkspaceAgentDevicePolicy agentId={agentId} showDevicePicker={!isRemoteHetero} />
+            <WorkspaceAgentDevicePolicy
+              agentId={agentId}
+              showDevicePicker={!isRemoteHetero && !isBuiltinEngine}
+            />
           ) : null}
         </div>
       </div>

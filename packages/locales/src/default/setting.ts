@@ -554,16 +554,11 @@ export default {
   'platformAgentConfig.redetect': 'Re-detect',
   'platformAgentConfig.selectDevice': 'Select a device',
 
-  // Agent engine settings (harness / builtin engine / model / effort / target)
+  // Agent engine settings (harness / model / effort / target)
   'agentEngine.title': 'Engine',
   'agentEngine.harness.label': 'Harness',
   'agentEngine.harness.localGroup': 'Local CLI',
   'agentEngine.harness.remoteGroup': 'Platform agent',
-  'agentEngine.engine.label': 'Engine',
-  'agentEngine.engine.claudeSdk': 'Claude Code',
-  'agentEngine.engine.codexAppServer': 'Codex',
-  'agentEngine.engine.limitedCapabilities':
-    'This engine cannot ask questions during a run or use Orvilo builtin tools yet.',
   'agentEngine.model.label': 'Model',
   'agentEngine.legacy.description':
     'This agent still uses its existing chat runtime. Its execution path will not change until you migrate it.',
@@ -575,9 +570,10 @@ export default {
   'agentEngine.effort.label': 'Reasoning effort',
   'agentEngine.mode.label': 'Mode',
   'agentEngine.speed.label': 'Speed',
+  'agentEngine.model.noPrimeBinding':
+    'No enabled Orvilo binding found — add one under Settings → Provider Bindings.',
+  'agentEngine.model.primeHint': 'Model routes come from your enabled Orvilo provider bindings.',
   'agentEngine.target.label': 'Run on',
-  'agentEngine.target.orviloHint':
-    'Orvilo runs the engine CLI on the selected machine — the target must have it installed.',
 
   'checking': 'Checking...',
 

@@ -69,8 +69,8 @@ vi.mock('@/server/services/agent', () => ({
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
         agencyConfig: {
-          // External-agent binding — the builtin orvilo agent is embedded-
-          // only and its chat runs terminate at EMBEDDED_CHAT_NOT_ADMITTED.
+          // External-agent binding — the builtin orvilo agent's harness is
+          // fixed to Prime; routing is exercised on the external adapter.
           executionTarget: 'sandbox',
           heterogeneousProvider: { type: 'claude-code' },
         },

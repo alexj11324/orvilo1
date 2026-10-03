@@ -9,10 +9,12 @@ import type { PartialDeep } from 'type-fest';
 export const ORVILO_HETEROGENEOUS_TYPE = 'orvilo' satisfies BuiltinHeterogeneousAgentType;
 
 /**
- * The builtin Orvilo agent is bound to the embedded Prime harness — fixed,
- * never a selectable engine. There is no engine→CLI-family indirection left
- * to resolve: the only helpers this module still owns are the builtin-type
- * predicate and the harness-switch patch builder.
+ * The builtin Orvilo agent's harness is fixed to Prime — never a selectable
+ * engine — and it resolves a device like every other agent type
+ * (docs/development/device-execution-contract.md). There is no
+ * engine→CLI-family indirection left to resolve: the only helpers this
+ * module still owns are the builtin-type predicate and the harness-switch
+ * patch builder.
  */
 export const isBuiltinEngineType = (
   type: string | undefined,

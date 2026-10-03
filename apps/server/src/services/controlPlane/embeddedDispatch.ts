@@ -1,15 +1,18 @@
 /**
  * Phase 5a — dispatch routing for the Prime embedded harness.
  *
- * The seam sits inside `dispatchHeteroAgent`'s sandbox branch: when a run is
- * (a) our own agent (`heteroType === 'orvilo'` — the discriminator
- * `resolveExecutionBinding` synthesizes; ACP/hetero kinds never match), (b)
- * carrying canonical task context (a task dispatch id + fence + generation on
- * `appContext`, present only on real task dispatches — chat runs can't), and
- * (c) the dispatch composes `CanonicalCoreRuntimeHost` with `embedded`
- * filled and drives the run in-process. `orvilo` is Orvilo's own engine —
- * it always runs the embedded Prime harness, like `codex` always runs the
- * codex CLI; there is no flag gating which engine an own-agent type uses.
+ * The seam sits inside `dispatchHeteroAgent`'s non-device (sandbox) branch:
+ * when a run is (a) our own agent (`heteroType === 'orvilo'` — the
+ * discriminator `resolveExecutionBinding` synthesizes; ACP/hetero kinds
+ * never match), (b) carrying canonical task context (a task dispatch id +
+ * fence + generation on `appContext`, present only on real task dispatches
+ * — chat runs can't), and (c) the dispatch composes
+ * `CanonicalCoreRuntimeHost` with `embedded` filled and drives the run
+ * in-process. `orvilo`'s harness is fixed to Prime — like `codex` always
+ * runs the codex CLI, there is no flag gating which engine an own-agent
+ * type uses; only the resolved device plan decides whether Prime runs on
+ * this embedded host or on a real device (device-side adapter packaged
+ * separately — see docs/development/device-execution-contract.md).
  *
  * The host's prompt stream is translated back into the shared
  * `AgentStreamEvent` → `heteroIngest` / `heteroFinish` producer path, so the

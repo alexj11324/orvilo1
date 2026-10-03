@@ -73,8 +73,9 @@ vi.mock('@/database/models/message', () => ({
 
 const baseAgentConfig = {
   // An external-agent binding: device/sandbox routing is exercised on
-  // claude-code — the builtin orvilo agent is embedded-only and its runs
-  // terminate at the EMBEDDED_CHAT_NOT_ADMITTED boundary.
+  // claude-code — the builtin orvilo agent's harness is fixed to Prime
+  // (docs/development/device-execution-contract.md); device-first routing
+  // applies to it equally, so these cases pin the external CLI adapter.
   agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
   chatConfig: {},
   files: [],

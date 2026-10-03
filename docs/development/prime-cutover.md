@@ -1,9 +1,19 @@
 # Prime execution-architecture cutover
 
-The builtin Orvilo agent is **bound to the embedded Prime harness — fixed**.
-It is not a wrapper over Claude Code / Codex CLI engines, and no engine or
-harness selector exists for it anywhere. Claude Code and Codex remain
-first-class **external** agents and are untouched by this cutover.
+The builtin Orvilo agent's harness is **fixed to Prime**. It is not a
+wrapper over Claude Code / Codex CLI engines, and no engine or harness
+selector exists for it anywhere. Claude Code and Codex remain first-class
+**external** agents and are untouched by this cutover.
+
+`type:'orvilo'` does **not** bypass Device resolution: like every agent
+type, a run resolves a device first and the device picks the harness
+adapter (`orvilo` → Prime). The shared resolution contract lives in
+[docs/development/device-execution-contract.md](./device-execution-contract.md)
+— the repo source of truth for selectable vs runnable devices, the
+resolution priority chain, and the `DEVICE_*` admission errors. The
+device-side Prime adapter is packaged separately; until it ships, a device
+hosting the builtin agent refuses loudly instead of spawning a
+wrong-family executable.
 
 This document records the data-model, UI, and dispatch changes plus the
 known boundary that remains open.
@@ -61,22 +71,29 @@ embedded dispatch always queries `target:'sandbox'`.
 
 ## Settings UI (EngineConfigCard)
 
-- Builtin (orvilo) rows render a fixed `Orvilo` harness label — no harness
-  select, no engine select. External agents keep their own config.
+- Builtin (orvilo) renders no Harness/Engine row and no execution-target
+  row — the contract forbids them. External agents keep their own config.
 - The model picker lists the model routes of the user's enabled
   `runtime:'orvilo'` + `target:'sandbox'` provider bindings
   (`useProviderBindingStore`); it is Prime's inference backend
   (`broker.infer` `modelRoute`), not an agent/harness concept. With no
   bindings configured the picker shows a hint to create one.
-- Execution target is a static `Embedded` label for builtin agents
-  (`builtin = embedded-only` — see below); the device picker stays for
-  external types.
+- The device picker follows the shared `showDeviceSelector` rule
+  (permissions loaded && inventory complete && canSelectDevice &&
+  > 1 selectable candidate); it is wired against the device-resolution
+  > contract separately.
 - Effort/mode/speed selects route through `applyHeteroSelection`.
 
-## Dispatch — task path and the chat boundary
+## Dispatch — device first, then the non-device fork
 
-`heteroDispatch` admits **every** `type:'orvilo'` plan — regardless of
-`executionTarget` — into the embedded fork:
+`heteroDispatch` resolves the execution plan identically for every agent
+type: the device branch is gated by `heteroPlan.kind !== 'sandbox'` —
+`type:'orvilo'` no longer bypasses it. A device-bound orvilo run goes to
+the device, which refuses loudly until the device-side Prime adapter is
+packaged. An unbound plan still fails at the `No bound device` fence,
+unchanged.
+
+A non-device (`sandbox`) plan for `orvilo` reaches the embedded fork:
 
 - `resolveEmbeddedDispatchRoute` returns a canonical context only for
   real task dispatches (`operationTaskId` + `taskRunner`-written
@@ -86,16 +103,11 @@ embedded dispatch always queries `target:'sandbox'`.
 - **Chat runs have no canonical task context**, so they hit the honest
   boundary `EMBEDDED_CHAT_NOT_ADMITTED` and fail loudly through
   `finalizeHeteroDispatchError` — they never fall back to the retired
-  engine→CLI spawn path. See "Open boundary" below.
-- The device branch is gated by `heteroPlan.kind !== 'sandbox' &&
-heteroType !== 'orvilo'`, so an orvilo plan can never reach
-  `spawnHeteroSandbox`/device even when a stale `executionTarget` says
-  local/device. **Builtin = embedded-only**: local builtin execution via
-  a pinned on-device runner is not wired; there is nothing to point the
-  device picker at, so the UI hides it for builtin agents and dispatch
-  ignores it.
+  engine→CLI spawn path. See "Open boundary" below. (The sandbox plan is
+  reachable only through an explicit sandbox `executionTarget`; default
+  unbound runs fail earlier at the device fence.)
 
-## Open boundary — chat admission to embedded Prime
+## Open boundary — chat admission to the embedded host
 
 `CanonicalCoreRuntimeHost` / `CanonicalRunAuthority` /
 `TaskExecutionControlModel` / `executionGrants` are row-locked to
@@ -103,9 +115,11 @@ task-shaped rows (`createGrant` requires `task:{id,projectId,workspaceId}`),
 and `agent_operations` / `topics` carry no execution-control columns. A
 chat-scoped admission needs a control-plane expansion (the deferred item
 the dispatch doc names): either chat-shaped canonical rows or a
-chat-scoped grant contract. Until that lands, orvilo chat runs fail at
-`EMBEDDED_CHAT_NOT_ADMITTED` rather than executing on the retired engine
-path.
+chat-scoped grant contract — with an explicit `RunSubject`
+(`{kind:'conversation',topicId}` | `{kind:'task',taskId,dispatchId}`) so a
+conversation id can never stand in for a task id. Until that lands, orvilo
+chat runs on the embedded host fail at `EMBEDDED_CHAT_NOT_ADMITTED`
+rather than executing on the retired engine path.
 
 ## Non-negotiables preserved
 

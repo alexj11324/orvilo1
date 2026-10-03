@@ -12,9 +12,9 @@ import type { AgentConfigWithId } from '@/server/services/agent';
  * Since the Lobe model loop is retired, every agent run resolves to an ACP
  * execution binding — an explicit `agencyConfig.heterogeneousProvider` when
  * configured, a legacy heterogeneous `model` id (`'claude-code'`, `'codex'`,
- * …) when set, otherwise the builtin `'orvilo'` agent, whose runtime is the
- * embedded Prime harness (the dispatch layer routes it to the canonical
- * embedded control plane).
+ * …) when set, otherwise the builtin `'orvilo'` agent, whose harness is
+ * fixed to Prime and resolves a device like every other type
+ * (docs/development/device-execution-contract.md).
  * The binding is resolved per run; downstream device/sandbox dispatch in
  * `pipeline/heteroDispatch` validates the target environment, pins it to the
  * run, and rejects targets it cannot safely execute on.

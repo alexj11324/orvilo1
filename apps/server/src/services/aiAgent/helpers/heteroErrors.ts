@@ -79,9 +79,9 @@ export const resolveHeteroDispatchErrorType = (raw?: string): ErrorType => {
 /**
  * Whether the type can run server-side in the cloud. `claude-code`/`codex`
  * spawn their CLI inside the cloud sandbox; the builtin `'orvilo'` agent's
- * runtime is the embedded Prime harness hosted by the control plane — it
- * counts as cloud-capable, but the dispatch seam routes it to embedded
- * instead of a sandbox spawn.
+ * Prime harness runs on the embedded control-plane host — it counts as
+ * cloud-capable, but the dispatch seam routes a sandbox plan to the
+ * embedded host instead of a sandbox spawn.
  */
 export const supportsCloudHeterogeneousSandbox = (type: HeterogeneousAgentType): boolean =>
   type === 'orvilo' || type === 'claude-code' || type === 'codex';

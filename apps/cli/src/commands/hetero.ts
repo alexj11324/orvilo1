@@ -51,9 +51,11 @@ import { createOperationTokenRenewal } from '../utils/OperationTokenRenewal';
 import { createLocalTraceStore } from '../utils/traceStore';
 import { TrpcIngestSink } from '../utils/TrpcIngestSink';
 
-// `orvilo` is the builtin managed agent bound to the embedded Prime harness —
-// there is no `orvilo` binary and no local/device execution contract, so it
-// is deliberately not a spawnable `--type` here.
+// `orvilo` is the builtin agent bound to the Prime harness — the fixed
+// type→adapter map resolves it to 'prime' (see
+// docs/development/device-execution-contract.md). The device-side Prime
+// adapter is packaged separately, so `orvilo` stays unspawnable here until
+// that adapter lands — there is no `orvilo` binary.
 export const SUPPORTED_AGENT_TYPES = new Set<string>(LOCAL_HETEROGENEOUS_AGENT_TYPES);
 const SUPPORTED_AGENT_TITLES = HETEROGENEOUS_AGENT_CONFIGS.map(({ title }) => title).join(' / ');
 const SUPPORTED_AGENT_COMMANDS = HETEROGENEOUS_AGENT_CONFIGS.map(
@@ -408,7 +410,7 @@ class RawStreamDump {
 const exec = async (options: ExecOptions): Promise<void> => {
   if (isBuiltinHeterogeneousType(options.type)) {
     log.error(
-      `Unsupported --type "${options.type}". The builtin Orvilo agent runs on Orvilo's embedded Prime runtime and cannot be executed by this CLI.`,
+      `Unsupported --type "${options.type}". The builtin Orvilo agent's Prime adapter is not packaged for this CLI yet — its harness is fixed and never resolves to a CLI binary.`,
     );
     process.exit(2);
   }

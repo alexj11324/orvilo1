@@ -38,7 +38,7 @@ const log = debug('orvilo-server:hetero-agent-service');
 /**
  * Producer identity carried on ingest/finish calls. Covers every hetero
  * producer surface — external CLI agents (local + remote families) and the
- * builtin `'orvilo'` type, which produces through embedded Prime dispatch.
+ * builtin `'orvilo'` type, which produces through the Prime adapter.
  */
 export type HeterogeneousAgentType = AnyHeterogeneousAgentType;
 

@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef } from 'react';
 
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
-import { desktopTrayService } from '@/services/electron/tray';
+import { getHostPort } from '@/platform';
 import { useElectronStore } from '@/store/electron';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/slices/agentList/selectors';
@@ -28,8 +28,8 @@ export const useTrayMenuSync = () => {
     if (signature === lastSnapshotRef.current) return;
     lastSnapshotRef.current = signature;
 
-    void desktopTrayService
-      .updateNavigationSnapshot(snapshot)
+    void getHostPort()
+      .tray.updateNavigationSnapshot(snapshot)
       .catch((error) => console.error('Failed to synchronize tray menu:', error));
   }, [snapshot]);
 };

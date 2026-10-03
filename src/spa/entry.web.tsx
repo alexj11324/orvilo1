@@ -6,6 +6,7 @@ import { RouterProvider } from 'react-router/dom';
 import BootErrorBoundary from '@/components/BootErrorBoundary';
 import NextThemeProvider from '@/layout/GlobalProvider/NextThemeProvider';
 import { bootTiming } from '@/libs/bootTiming';
+import { createWebHostPort, registerHostPort } from '@/platform';
 import { createAppRouter } from '@/utils/router';
 
 import BootShell from './BootShell';
@@ -14,6 +15,10 @@ import { startAppInitialization } from './initialize/bootstrap';
 import { desktopRoutes } from './router/desktopRouter.config';
 import { createSPARoot } from './runtime';
 
+// Composition root: inject the browser host before any product code can ask
+// for a shell capability. Never import the desktop adapter here — the web
+// bundle must not reach Electron services.
+registerHostPort(createWebHostPort());
 bootTiming.mark('bundle-eval');
 startAppInitialization();
 

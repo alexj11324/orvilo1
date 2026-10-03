@@ -9,6 +9,7 @@ import { memo, Suspense, useCallback } from 'react';
 
 import BubblesLoading from '@/components/BubblesLoading';
 import SafeBoundary from '@/components/ErrorBoundary';
+import { getHostPort } from '@/platform';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
@@ -121,13 +122,11 @@ const MessageItem = memo<MessageItemProps>(
         if (!message) return;
 
         if (isDesktop) {
-          const { electronSystemService } = await import('@/services/electron/system');
-
           // Get selected text for context menu features like Look Up and Search
           const selection = window.getSelection();
           const selectionText = selection?.toString() || '';
 
-          electronSystemService.showContextMenu('chat', {
+          getHostPort().menu.showContextMenu('chat', {
             content: message.content,
             hasError: !!message.error,
             messageId: id,

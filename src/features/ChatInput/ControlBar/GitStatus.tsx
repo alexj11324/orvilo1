@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 
 import RingLoadingIcon from '@/components/RingLoading';
 import { toast } from '@/components/toast';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { gitService } from '@/services/git';
 import {
   deviceSelectors,
@@ -191,7 +191,7 @@ const GitStatus = memo<GitStatusProps>(
 
     const handleOpenPr = useCallback(() => {
       if (prData?.pullRequest?.url) {
-        void electronSystemService.openExternalLink(prData.pullRequest.url);
+        void getHostPort().openExternal(prData.pullRequest.url);
       }
     }, [prData?.pullRequest?.url]);
 

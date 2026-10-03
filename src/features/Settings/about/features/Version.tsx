@@ -1,7 +1,8 @@
 import { BRANDING_NAME } from '@orvilo/business-const';
-import { getElectronIpc, type UpdaterState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
+import { isDesktop } from '@orvilo/const';
+import { type UpdaterState, useWatchBroadcast } from '@orvilo/electron-client-ipc';
 import { createStaticStyles } from 'antd-style';
-import { memo, useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { ProductLogo } from '@/components/Branding';
@@ -11,9 +12,13 @@ import { Spinner } from '@/components/ui/spinner';
 import { CHANGELOG_URL, MANUAL_UPGRADE_URL, OFFICIAL_SITE } from '@/const/url';
 import { CURRENT_VERSION } from '@/const/version';
 import { useNewVersion } from '@/features/User/UserPanel/useNewVersion';
-import { autoUpdateService } from '@/services/electron/autoUpdate';
+import { getHostPort, hostResultOr } from '@/platform';
 import { useGlobalStore } from '@/store/global';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
+import {
+  featureFlagsSelectors,
+  serverConfigSelectors,
+  useServerConfigStore,
+} from '@/store/serverConfig';
 import {
   advanceDevDockClickSequence,
   INITIAL_DEV_DOCK_CLICK_SEQUENCE,
@@ -54,20 +59,23 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
   } = useCheckLatestVersion(enableCheckUpdates);
 
   const showServerVersion = serverVersion && serverVersion !== CURRENT_VERSION;
-  const isDesktop = useMemo(() => !!getElectronIpc(), []);
+  // Hosted deployments upgrade themselves server-side; the manual upstream-sync
+  // link is only meaningful for a self-hosted install the operator must bump.
+  const enableBusinessFeatures = useServerConfigStore(serverConfigSelectors.enableBusinessFeatures);
+  const showManualUpgrade = !enableBusinessFeatures;
 
   const [updaterState, setUpdaterState] = useState<UpdaterState>({ stage: 'idle' });
   const [buildChannel, setBuildChannel] = useState<string | null>(null);
 
   useEffect(() => {
     if (!isDesktop) return;
-    autoUpdateService.getUpdaterState().then(setUpdaterState);
-  }, [isDesktop]);
-
-  useEffect(() => {
-    if (!isDesktop) return;
-    autoUpdateService.getBuildChannel().then(setBuildChannel);
-  }, [isDesktop]);
+    getHostPort()
+      .updater.getUpdaterState()
+      .then((state) => setUpdaterState(hostResultOr(state, { stage: 'idle' })));
+    getHostPort()
+      .updater.getBuildChannel()
+      .then((channel) => setBuildChannel(hostResultOr(channel, null)));
+  }, []);
 
   useWatchBroadcast('updaterStateChanged', (state: UpdaterState) => {
     setUpdaterState(state);
@@ -85,7 +93,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   const renderUpdateButton = () => {
     if (!isDesktop) {
-      if (hasNewVersion) {
+      if (hasNewVersion && showManualUpgrade) {
         return (
           <a href={MANUAL_UPGRADE_URL} rel="noreferrer" style={{ flex: 1 }} target="_blank">
             <Button className={mobile ? 'w-full' : ''} variant="default">
@@ -147,7 +155,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
           <Button
             className={mobile ? 'w-full' : ''}
             variant="default"
-            onClick={() => void autoUpdateService.installNow()}
+            onClick={() => void getHostPort().updater.installUpdateNow()}
           >
             {t('restartToUpdate')}
           </Button>
@@ -165,7 +173,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
           <Button
             className={mobile ? 'w-full' : ''}
             variant="outline"
-            onClick={() => void autoUpdateService.checkUpdate()}
+            onClick={() => void getHostPort().updater.checkUpdate()}
           >
             {t('checkForUpdates')}
           </Button>

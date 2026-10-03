@@ -20,8 +20,8 @@ import { Input } from '@/components/ui/input';
 import DirIcon from '@/features/ChatInput/ControlBar/DirIcon';
 import { openAddWorkingDirModal } from '@/features/WorkingDirectory';
 import { createWorkspaceLambdaClient, lambdaQuery } from '@/libs/trpc/client';
+import { getHostPort, hostResultOr } from '@/platform';
 import { deviceService } from '@/services/device';
-import { electronSystemService } from '@/services/electron/system';
 import { nextWorkingDirs } from '@/store/device';
 
 import { refreshDeviceList } from './const';
@@ -143,10 +143,13 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
   };
 
   const handleBrowse = async () => {
-    const result = await electronSystemService.selectFolder({
-      defaultPath: cwd.trim() || undefined,
-      title: t('devices.edit.defaultCwd'),
-    });
+    const result = hostResultOr(
+      await getHostPort().dialog.selectFolder({
+        defaultPath: cwd.trim() || undefined,
+        title: t('devices.edit.defaultCwd'),
+      }),
+      undefined,
+    );
     if (result?.path) {
       setCwd(result.path);
       commitCwd(result.path, result.repoType);
@@ -163,9 +166,12 @@ const DeviceDetailPanel = memo<DeviceDetailPanelProps>(({ device, isCurrent, onC
   const handleAddRecent = async () => {
     // Browse this machine natively; other devices use the shared remote browser.
     if (canBrowse) {
-      const result = await electronSystemService.selectFolder({
-        title: t('devices.detail.addDir'),
-      });
+      const result = hostResultOr(
+        await getHostPort().dialog.selectFolder({
+          title: t('devices.detail.addDir'),
+        }),
+        undefined,
+      );
       if (result?.path) addRecent({ path: result.path, repoType: result.repoType });
       return;
     }

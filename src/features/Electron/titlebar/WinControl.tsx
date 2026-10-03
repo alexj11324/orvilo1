@@ -6,7 +6,7 @@ import { memo, useEffect, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort, hostResultOr } from '@/platform';
 import { electronStylish } from '@/styles/electron';
 
 export const WINDOW_CONTROL_WIDTH = 112;
@@ -44,8 +44,8 @@ const WinControl = memo(() => {
     let mounted = true;
 
     const syncWindowState = async () => {
-      const nextState = await electronSystemService.isWindowMaximized();
-      if (mounted) setIsMaximized(nextState);
+      const nextState = await getHostPort().window.isMaximized();
+      if (mounted) setIsMaximized(hostResultOr(nextState, false));
     };
 
     void syncWindowState();
@@ -61,22 +61,22 @@ const WinControl = memo(() => {
         icon: MinusIcon,
         key: 'minimize',
         label: t('window.minimize'),
-        onClick: () => void electronSystemService.minimizeWindow(),
+        onClick: () => void getHostPort().window.minimize(),
       },
       {
         icon: isMaximized ? Minimize2Icon : Maximize2Icon,
         key: 'maximize',
         label: t(isMaximized ? 'window.restore' : 'window.maximize'),
         onClick: async () => {
-          await electronSystemService.maximizeWindow();
-          setIsMaximized(await electronSystemService.isWindowMaximized());
+          await getHostPort().window.maximize();
+          setIsMaximized(hostResultOr(await getHostPort().window.isMaximized(), false));
         },
       },
       {
         icon: XIcon,
         key: 'close',
         label: t('window.close'),
-        onClick: () => void electronSystemService.closeWindow(),
+        onClick: () => void getHostPort().window.close(),
       },
     ],
     [isMaximized, t],

@@ -166,7 +166,8 @@
       "stylelint --fix --allow-empty-input",
       "eslint --fix",
       "prettier --parser=typescript --write",
-      "tsx scripts/ci/checkNativeControls.mjs"
+      "tsx scripts/ci/checkNativeControls.mjs",
+      "tsx scripts/ci/checkHostDeviceBoundaries.mjs"
     ],
     "*.{yml,yaml}": [
       "eslint --fix"

@@ -43,8 +43,9 @@ vi.mock('@/store/electron', () => ({
   getElectronStoreState: () => electronState,
 }));
 
-vi.mock('@/services/electron/system', () => ({
-  electronSystemService: { openExternalLink },
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getHostPort: () => ({ openExternal: openExternalLink }),
 }));
 
 const importDesktopActions = async () => {

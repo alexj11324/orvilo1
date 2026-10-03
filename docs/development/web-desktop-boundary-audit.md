@@ -90,3 +90,93 @@
 - CAS 首绑（两入口并发绑定）属服务端 admission 持久层 → WD-03；纯函数 resolver 无状态，不在此测试。
 - 仓库 `isDesktop` 在 `src/` 约 494 处 / 194 文件 —— 绝大多数合法外壳用法（inventory 口径），WD-05/WD-06 建立清单 + 门禁防新增违规。
 - PR #426（draft，自动化绑定）范围重叠 → 集成阶段对齐其契约，不重复 outbox / 回执。
+
+## 6. WD-02 进展登记（PR #435，`refactor/wd-host-adapters`）
+
+### HostPort 适配层落地
+
+- `src/platform/host.ts` — `HostPort` 契约：子端口 `window / menu / updater / tray / dialog / notification / shell / openExternal`；`HostResult<T>`（值或 `HOST_UNSUPPORTED`，禁用 optional-function + 静默 no-op）；`hasHostCapability` / `registerHostPort` / `setHostPortForTesting`；未注册时回落到 fail-closed 的 unsupported host。
+- `src/platform/web.ts` — 浏览器宿主：`file.pickAttachment`（瞬态 DOM `<input type=file>`）+ `link.openExternal`（`window.open` noopener）；其余返回 `HOST_UNSUPPORTED`。Web 无 preload 可启动。
+- `src/platform/desktop.ts` — Electron 宿主，委托既有 `electronSystemService`/`autoUpdateService`/`desktopTrayService`/`desktopSettingsService`/`desktopNotificationService`/`electronOpenInAppService`/`gatewayConnectionService`；不经 barrel 导出，web 依赖图不可达。
+- 入口：`entry.web/mobile` 注册 web host；`entry.desktop/popup` 注册 desktop host。
+
+### 调用点迁移（仅此一批有现成实现，不搭空接口）
+
+窗口（WinControl/TabBar/NavigationBar/PinOnTopButton）、原生菜单（`libs/contextMenu` 路由 + LoginStep/InputEditor/Messages）、更新（Version/advanced/UpdateNotification）、托盘快照、桌面通知（`desktopNotification.ts`/ 通知设置预览）、文件夹选择（WorkingDirectoryPicker/DeviceDetailPanel）、全部 `openExternalLink`（\~12 文件 —— web 上由抛错改为 `window.open`）。
+
+`shell.openInApp` 收 `HostLocalResourceRef{deviceId,path}`：desktop 适配器先经 `gatewayConnectionService.getDeviceInfo()` 证明本机身份，不匹配即 `RESOURCE_OUT_OF_SCOPE` —— B 的路径不会再被拿去开 A 的 Finder（§6.1 场景）。
+
+### Preload / IPC 安全校验（§8 要求）
+
+| 项                      | 结论                                                                                                     | 证据                                                                                                                                                                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| contextIsolation        | ✅ 主窗 + webview 均强制                                                                                 | `Browser.ts:206,268`                                                                                                                                                                                                            |
+| nodeIntegration         | ✅ webview 显式 `false`；主窗走默认关                                                                    | `Browser.ts:269`                                                                                                                                                                                                                |
+| sandbox                 | ⚠️ 主窗 `false`（preload 桥接需要）；✅ webview 强制 `true`                                              | `Browser.ts:208,271`                                                                                                                                                                                                            |
+| window\.open            | ✅ 一律 deny，外链走 `shell.openExternal`                                                                | `Browser.ts:319-334`                                                                                                                                                                                                            |
+| will-attach-webview     | ✅ partition 白名单 + 协议白名单 + 剥 preload                                                            | `Browser.ts:247-272`                                                                                                                                                                                                            |
+| IPC sender/frame/origin | ⚠️→✅ **本 PR 修**：原 `IpcHandler` 不校验 sender；`webviewTag` 场景下嵌入 guest 理论上可触达 shell 通道 | 修复：`isAppShellSender`（`hostWebContents === null`）收口于 `utils/ipc/base.ts` 的 chokepoint，并补齐 4 处裸 `ipcMain.*`（`retry-connection`、`desktop:get-bootstrap-identity`、`desktop:boot-profile-ready`、`stream:start`） |
+
+### 遗留（登记给后续包）
+
+- 主窗 `sandbox:false` + `nodeIntegration` 隐式默认 —— 收紧需要 preload 改造评估，WD-07 前复核。
+- `src/platform` 未覆盖的宿主面（`shortcut.global`、`os.openPermissionSettings`、devtools、remoteServer、completionSound、binary-probe、browserWebview、rendererOta、desktopExportService、auv）仍是 native-shell 内部实现，WD-06 归口进导入门禁 allowlist。
+
+## 7. WD-05 进展登记（`refactor/wd-05-ui-routes`）
+
+### 设置作用域标注
+
+- `SettingsCapability` 新增 `scope?: 'user'|'workspace'|'host'|'device'` 字段 —— 标注而非新注册表（同一 `SETTINGS_CAPABILITIES`，纯上下文不变）。
+- host：Proxy、SystemTools；device：Devices；workspace：Usage、Plans、Credits、Billing、Creds；user：其余全部。
+- `useCategory` 新增 `ThisDevice` 分组：Proxy + SystemTools 从 Agent 组移入「此应用・此设备」组；空组沿用既有 `filter` 自动消失，Web 渲染不受影响。
+- `SettingsContent` 深链门禁此前已落在组件挂载前（`isSettingsTabAvailable` → `NotFound`，退役别名 → `redirectTo`）—— 验证合规，无改动。
+
+### 命令面板收编到注册表
+
+- `contextCommands` 每条 settings 命令标注 `settingsTab`，`buildContextCommands` 逐项过 `isSettingsTabAvailable(tab, capabilityContext)` —— 命令面板与路由共用同一门禁，不再各写一份 `isDesktop` / `enableBusinessFeatures`。
+- 退役的 `common` 别名不再作为深链目标：profile 命令改指 `/settings/appearance`。
+
+### 执行目标 selector
+
+- `HeteroDeviceSwitcher` 新增绑定失效检测：绑定的 `deviceId` 不在合法候选行中 → chip 变 `buttonWarning` 样式 + 标签 `Rebind device`，popover 顶部显示 `bindingInvalidBanner`（命名失效设备）。修复路径 = 用户显式选设备重绑，无静默换绑。0/1/N 规则、离线行可见不可选、固定策略只读 chip 此前已合规，无改动。
+
+### 宿主动作的资源身份
+
+- `Conversation/WorkingSidebar/Files`：`isRemote` 语义从「有 deviceId」改为「deviceId ≠ 本机 gateway deviceId」（`useElectronStore.gatewayDeviceInfo`）。本机设备上运行的远端会话恢复 reveal-in-Finder /open-in-app；Web 上 gateway id 恒不解析，任何 deviceId 仍是远端 —— 双端语义同时正确。
+- `Portal/LocalFile`：`canOpenExternal` 已是 `isDesktop ? !deviceId && !sandboxTopicId : true` —— desktop 仅本机资源可外开，web 恒走自身下载。合规，无改动。
+
+### 宿主专属泄漏修复
+
+- `Version.tsx`：运行时 `getElectronIpc()` 探测改为编译期 `isDesktop`；新增 `enableBusinessFeatures`（部署形态）门禁 —— `showManualUpgrade = !enableBusinessFeatures`。Hosted SaaS Web 不再渲染「检查更新」；自托管 + Desktop 保留 OTA 路径。
+
+### 遗留（登记给后续包）
+
+- Automation 无 device 绑定字段（schema 层不存在 `deviceId`）→「运行于 <device>」需 WD-03 落数据后由 WD-07 补 UI，不在 WD-05 范围。
+
+## 8. WD-06 边界门禁登记（`refactor/wd-06-build-gates`）
+
+### 门禁
+
+- `scripts/ci/checkHostDeviceBoundaries.mjs`：真实导入图（静态 + dynamic import + re-export，regex 提取 + tsconfig 别名 / 工作区解析），五类规则：
+  - `shared-to-native`：共享产品面（src/features|components|store|services|…，adapter 层除外）直连 electron/app-desktop/exec builtin 的**跨界边**；
+  - `web-closure`：web/mobile/popup/auth 入口闭包可达的 native/exec 种子（`node:child_process` 等），按种子 allowlist；
+  - `server-cli`：apps/server、apps/cli 直连 apps/desktop/electron 实现；
+  - `types-purity`：packages/types、app-config 引入 builtin 或爬进 src//apps；
+  - `isdesktop-census`：`isDesktop`/`__ELECTRON__` 在 adapter 根之外的逐文件计数封顶（只缩不增）。
+- 实测：9445 文件扫描～1.6s（纯 Node，无依赖），CI job `Host Device Boundaries` 已接入 test.yml + Required Quality Gate required 列表。
+
+### isDesktop 普查（冻结基线）
+
+- 共享 `src/`：**465 处使用 / 182 文件**（非 adapter 根）。allowlist `hostDeviceBoundariesAllowlist.json` 逐文件记 `isDesktopMax` 封顶 + owner（wd-02..wd-05）+ 退出预期；adapter 根（`src/spa`、`src/platform`、`src/services/electron`、`*.desktop.*`）不计入违规。
+- 另：跳过文件（`*.test.*`、`__tests__`、`e2e`）不参与普查。
+
+### 现有跨界边（allowlist 登记的债务）
+
+- `src/libs/mcp/client.ts → node:child_process`（stdio spawn；owner wd-04 —— 设备作用域传输改造后消失）
+- `src/libs/debug-file-logger.ts → node:fs`（desktop-only 日志；owner wd-02 —— 移入 host adapter）
+- `packages/app-config/src/routes/settings.ts → src/store/global/initialState`（契约包爬 store 取 `SettingsTabs`；owner wd-05 —— 枚举下沉契约层）
+- web 闭包种子：`node:child_process` / `node:fs` / `node:os` / `node:process`（spawn、tempFileManager、otel node、agent-execution 等经共享服务导入可达；owner wd-03/wd-04 —— 执行图按设备隔离后消失）
+
+### 附带修复
+
+- `test.yml` `skip-duplicate-actions` 加 `cancel_others: 'false'`：此前 PR 运行会把同 SHA 的 push 属主运行判为 "重复" 并取消，Required Quality Gate 因此 fail-closed（#435/#437 连续两轮命中）。修复提交在 `refactor/wd-contract`（9e1fb797d）随栈传递。

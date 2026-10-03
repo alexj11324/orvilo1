@@ -4,7 +4,7 @@ import { ExternalLinkIcon } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { useServerConfigStore } from '@/store/serverConfig';
 import { serverConfigSelectors } from '@/store/serverConfig/selectors';
 import { useUserStore } from '@/store/user';
@@ -23,7 +23,7 @@ const EmailRow = () => {
 
   const openAccountsPortal = () => {
     if (isDesktop) {
-      void electronSystemService.openExternalLink(accountsUrl);
+      void getHostPort().openExternal(accountsUrl);
       return;
     }
     window.open(accountsUrl, '_blank', 'noopener,noreferrer');

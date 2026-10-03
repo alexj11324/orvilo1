@@ -12,6 +12,7 @@ import { HttpsProxyAgent } from 'https-proxy-agent';
 
 import { defaultProxySettings } from '@/const/store';
 import { appendVercelCookie } from '@/utils/http-headers';
+import { isAppShellSender } from '@/utils/ipc/base';
 import { describeJwtClaims } from '@/utils/jwt-claims';
 import { createLogger } from '@/utils/logger';
 import { setDesktopUserAgentHeader } from '@/utils/user-agent';
@@ -56,6 +57,10 @@ export default class RemoteServerSyncCtr extends ControllerModule {
    * Handle IPC calls for streaming requests
    */
   private handleStreamRequest = async (event: IpcMainEvent, args: ProxyTRPCStreamRequestParams) => {
+    if (!isAppShellSender(event.sender)) {
+      logger.warn(`[StreamProxy] Rejected stream:start from embedded guest sender`);
+      return;
+    }
     const { requestId } = args;
     const logPrefix = `[StreamProxy ${args.method} ${args.urlPath}][${requestId}]`;
     logger.debug(`${logPrefix} Received stream:start IPC call`);

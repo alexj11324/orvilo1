@@ -12,7 +12,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { usePermission } from '@/hooks/usePermission';
 import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
 import { lambdaClient } from '@/libs/trpc/client';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { omitPersonalTeamItems } from '@/services/recent';
 import { workAttentionService } from '@/services/workAttention';
 import { useAgentStore } from '@/store/agent';
@@ -145,7 +145,7 @@ export const useCommandMenu = () => {
   const handleExternalLink = useCallback(
     async (url: string) => {
       if (isDesktop) {
-        await electronSystemService.openExternalLink(url);
+        await getHostPort().openExternal(url);
       } else {
         window.open(url, '_blank', 'noopener,noreferrer');
       }

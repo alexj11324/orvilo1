@@ -1,11 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { electronSystemService } from '@/services/electron/system';
-
 import { openTerminalLink } from './links';
 
-vi.mock('@/services/electron/system', () => ({
-  electronSystemService: { openExternalLink: vi.fn().mockResolvedValue(undefined) },
+const { openExternal } = vi.hoisted(() => ({
+  openExternal: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getHostPort: () => ({ openExternal }),
 }));
 
 beforeEach(() => {
@@ -16,9 +19,7 @@ describe('openTerminalLink', () => {
   it('hands http(s) links to the system browser', () => {
     openTerminalLink('https://orvilo.aspectlylabs.com/docs?a=1#x');
 
-    expect(electronSystemService.openExternalLink).toHaveBeenCalledWith(
-      'https://orvilo.aspectlylabs.com/docs?a=1#x',
-    );
+    expect(openExternal).toHaveBeenCalledWith('https://orvilo.aspectlylabs.com/docs?a=1#x');
   });
 
   it.each(['file:///etc/passwd', 'vscode://x', 'javascript:alert(1)', 'mailto:a@b.com'])(
@@ -26,13 +27,13 @@ describe('openTerminalLink', () => {
     (uri) => {
       openTerminalLink(uri);
 
-      expect(electronSystemService.openExternalLink).not.toHaveBeenCalled();
+      expect(openExternal).not.toHaveBeenCalled();
     },
   );
 
   it('ignores text that is not a URL at all', () => {
     openTerminalLink('not a link');
 
-    expect(electronSystemService.openExternalLink).not.toHaveBeenCalled();
+    expect(openExternal).not.toHaveBeenCalled();
   });
 });

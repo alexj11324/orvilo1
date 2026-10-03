@@ -948,6 +948,8 @@
   "heteroAgent.codexQuota.totalEarned_other": "累计获得 {{count}} 次",
   "heteroAgent.executionTarget.auto": "自动",
   "heteroAgent.executionTarget.autoDesc": "自动使用在线设备，有多台时择一使用",
+  "heteroAgent.executionTarget.bindingInvalid": "重新绑定设备",
+  "heteroAgent.executionTarget.bindingInvalidBanner": "原绑定设备（{{device}}）已不可用 —— 请在下方选择设备重新绑定。",
   "heteroAgent.executionTarget.downloadDesktop": "下载桌面端",
   "heteroAgent.executionTarget.downloadDesktopDesc": "让 Agent 直接连接你的电脑",
   "heteroAgent.executionTarget.downloadDesktopTitle": "下载桌面端",

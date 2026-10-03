@@ -3,9 +3,10 @@ import {
   setContextMenuInterceptor,
   showContextMenu as showWebContextMenu,
 } from '@lobehub/ui';
+import { isHostUnsupportedResult } from '@orvilo/types';
 import debug from 'debug';
 
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 
 import { canGoNative } from './canGoNative';
 import { isDarwinDesktop } from './platform';
@@ -26,11 +27,12 @@ const runNativePopup = (
 
   log('opening native context menu with %d item(s)', template.length);
 
-  electronSystemService
-    .popupContextMenu({ items: template })
+  getHostPort()
+    .menu.popupContextMenu({ items: template })
     .then((result) => {
       if (token !== popupToken) return;
       activeMenu = null;
+      if (isHostUnsupportedResult(result)) return;
       const handler = result.clickedId ? handlers.get(result.clickedId) : undefined;
       handlers.clear();
       handler?.();
@@ -68,7 +70,7 @@ const routeShow = (
 const routeClose = (closeWeb: () => void) => {
   if (activeMenu === 'native') {
     activeMenu = null;
-    void electronSystemService.closePopupContextMenu();
+    void getHostPort().menu.closePopupContextMenu();
     return;
   }
 

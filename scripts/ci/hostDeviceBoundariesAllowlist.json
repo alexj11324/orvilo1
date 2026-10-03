@@ -1,0 +1,1127 @@
+{
+  "$comment": "Reviewable exemptions for scripts/ci/checkHostDeviceBoundaries.mjs (WD-06). Every entry carries the owning work package, a reason, and an exit expectation. `rules` exempt a direct crossing edge; `isDesktopMax` is a shrinking cap on isDesktop/__ELECTRON__ usages in that file — regressions fail; `seed:` entries own a banned module that is transitively reachable from the web entries today.",
+  "files": {
+    "src/app/spa/[variants]/[[...path]]/route.ts": {
+      "owner": "wd-02",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/business/client/hooks/useHeteroAgentCloudConfig.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/components/Analytics/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/components/AsyncError/recoverAuthentication.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/components/HtmlPreview/PreviewDrawer.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/components/NProgress/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/components/Skeleton/NavPanel/SideBar.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/AgentDocumentPage/Header/useMenu.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/AgentDocumentPage/RightPanel/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/AgentSidebar/Topic/List/Item/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/features/AgentSidebar/Topic/List/Item/useDropdownMenu.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/AgentSidebar/Topic/TopicListContent/ByProjectMode/GroupItem.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/AgentSidebar/Topic/useDropdownMenu.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Billboard/actions.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ChatInput/ControlBar/HeteroControlBar/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/ChatInput/ControlBar/HeteroDeviceSwitcher.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 11
+    },
+    "src/features/ChatInput/ControlBar/WorkingDirectoryPicker.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/ChatInput/ControlBar/WorkingDirectorySection.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ChatInput/ControlBar/useMigrateDeviceRecents.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ChatInput/ControlBar/useRepoType.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ChatInput/ControlBar/useWorkspaceSurface.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ChatInput/InputEditor/ActionTag/useSlashActionItems.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/ChatInput/InputEditor/LocalFileTag/LocalFileTag.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/ChatInput/InputEditor/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ChatInput/hooks/useLocalSandboxCapability.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ChatInput/hooks/useSelectExecutionTarget.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ChatTerminal/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/CommandMenu/analytics.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/CommandMenu/useCommandMenu.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ConnectAgent/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/features/Conversation/Error/OllamaSetupGuide/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/Error/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/Conversation/Markdown/plugins/Link/Render/InternalEntityLink.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/Markdown/plugins/Link/Render/LinkChip.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/Markdown/plugins/LocalFileLink/Render.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/Messages/EditedFilesCard/useOpenEditedFile.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/Conversation/Messages/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/WorkingSidebar/Browser/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/features/Conversation/WorkingSidebar/Browser/useBrowserSidebarState.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/WorkingSidebar/Files/useGitWorkingTreeFiles.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/WorkingSidebar/Files/useProjectFiles.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/WorkingSidebar/ResourcesSection/SkillsGroup.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Conversation/WorkingSidebar/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/features/Conversation/useLocalPathReference.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/DailyBrief/BriefActionLink.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/DesktopLayoutContainer/cssVariables.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/DesktopLayoutContainer/style.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/DesktopOnboarding/steps/LoginStep.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 5
+    },
+    "src/features/DevDock/actions.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/DevDock/registerBuiltinItems.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/DevDock/widgets/MemoryPopover/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/DevDock/widgets/RoutePathWidget.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/DeviceManager/DeviceDetailPanel.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/DeviceManager/DeviceManager.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/DeviceManager/useDeviceList.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/EditorCanvas/InternalEditor.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/Electron/HeterogeneousAgent/StatusGuide/GuideActions.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Electron/HeterogeneousAgent/StatusGuide/states/AuthRequiredState.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/features/Electron/TabHost/useTabPreviewCapture.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Electron/groupRouteScope.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Electron/system/useWatchThemeUpdate.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Electron/titlebar/TabBar/hooks/useTabPreview.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/GlobalApprovalNotification/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/LocalFile/useLocalFileActions.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/NavPanel/ToggleLeftPanelButton.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/NavPanel/components/NavPanelDraggable.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/OllamaSetupGuide/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Onboarding/DesktopAuthGate.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Onboarding/finishOnboarding.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Onboarding/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/OpenInAppButton/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/PageEditor/Copilot/TopicSelector/useDropdownMenu.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/PageEditor/Header/useMenu.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/PageEditor/store/action.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/PluginDevModal/MCPManifestForm/MCPTypeSelect.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/PluginDevModal/MCPManifestForm/QuickImportSection.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/PluginDevModal/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Portal/LocalFile/Body.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 5
+    },
+    "src/features/Portal/LocalFile/Header.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Portal/LocalFile/TabStrip.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Portal/TaskDetail/Header.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ProfileEditor/AgentTool.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/ReUIShell/SidebarShell.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/ReUIShell/WorkspaceSwitcher.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Recommendations/actions/heteroAgent.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 1
+    },
+    "src/features/Recommendations/actions/types.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 1
+    },
+    "src/features/Recommendations/hooks/useEligibleActions.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Recommendations/hooks/useHeteroDetections.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Reviews/ConnectGitHubButton.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Reviews/useGitHubConnection.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/features/RouteMeta/RouteMetaBridge.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/Settings/about/features/Version.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/Settings/advanced/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/Settings/apikey/features/ApiKey.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/appearance/features/Desktop.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/Settings/appearance/features/Font/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 5
+    },
+    "src/features/Settings/common/features/Common/Common.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/connector/features/McpPresetItem.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/connector/features/useGitHubMcpConnect.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/devices/OsPermissionsPanel.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/Settings/hooks/useCategory.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/hooks/useSettingsCapability.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/hotkey/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/labs/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/memory/features/ManageMemoryButton.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/profile/features/EmailRow.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/Settings/profile/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/SettingsSearch/items.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 14
+    },
+    "src/features/SettingsSearch/useSettingsSearch.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/SkillsList/useProjectSkillResolver.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/features/User/UserAvatar.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/User/UserPanel/PanelContent.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/User/UserPanel/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/User/UserPanel/useMenu.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/features/WorkspaceSetting/LinearImport/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/features/WorkspaceSetting/hooks/useCategory.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/helpers/effectiveWorkingDirectory.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/helpers/localSandbox.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/helpers/parserPlaceholder/index.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/helpers/skillFilters.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/helpers/toolAvailability.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/helpers/toolFilters.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/helpers/workingDirectoryPath.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/hooks/useAppOrigin.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/hooks/useCreateHeteroAgent.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/hooks/useEffectiveWorkingDirectory.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/hooks/useHotkeys/chatScope.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/hooks/useSignOut.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/hooks/useUserAvatar.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/layout/AuthProvider/MarketAuth/MarketAuthProvider.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 9
+    },
+    "src/layout/AuthProvider/MarketAuth/oidc.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/layout/AuthProvider/index.vite.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/layout/SPAGlobalProvider/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 5
+    },
+    "src/libs/analytics/client.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/libs/bootMetrics/finalize.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/libs/next/workbenchNavigation.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/libs/swr/useCacheScope.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/_layout/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/agent/_layout/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/agent/features/Conversation/Header/HeaderActions/useMenu.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/routes/(main)/agent/features/Conversation/Header/TerminalPanelToggle/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/agent/features/Conversation/HeterogeneousChatInput/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/agent/profile/features/Header/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/agent/profile/features/ProfileEditor/EngineConfigCard.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/routes/(main)/agent/profile/features/ProfileEditor/HeterogeneousAgentStatusCard.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/agent/profile/features/ProfileEditor/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/routes/(main)/group/_layout/GroupIdSync.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/group/_layout/Sidebar/Topic/List/Item/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/routes/(main)/group/_layout/Sidebar/Topic/List/Item/useDropdownMenu.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/routes/(main)/group/_layout/index.tsx": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/services/chat/mecha/contextEngineering.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/services/global.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/services/hashFile/index.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/services/mcp.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/services/projectFile.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/services/targetRequiredError.ts": {
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/agent/selectors/agentByIdSelectors.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/agent/selectors/chatConfigByIdSelectors.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/agent/selectors/selectors.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/agent/slices/agent/action.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/chat/slices/agentRun/actions/dispatch/agentDispatcher.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 5
+    },
+    "src/store/chat/slices/agentRun/actions/entries/conversationLifecycle.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 5
+    },
+    "src/store/chat/slices/agentRun/actions/lifecycle/buildRunLifecycle.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/chat/slices/agentRun/actions/transports/client/streamingExecutor.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/store/chat/slices/agentRun/actions/transports/gateway/gateway.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/chat/slices/topic/selectors.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/chat/utils/index.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/chat/utils/topicWorkingDirGit.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/store/device/gitHooks.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/electron/actions/gateway.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 3
+    },
+    "src/store/electron/actions/settings.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 4
+    },
+    "src/store/electron/actions/sync.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/global/actions/general.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 7
+    },
+    "src/store/tool/slices/builtin/executors/orvilo-agent-documents.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/tool/slices/builtin/executors/worktreeDetection.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/tool/slices/connector/action.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/user/slices/common/action.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/store/user/slices/settings/selectors/general.ts": {
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/styles/antdOverride.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/utils/navigation.ts": {
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "isDesktopMax": 2
+    },
+    "src/libs/mcp/client.ts": {
+      "owner": "wd-04",
+      "reason": "stdio MCP spawn in shared libs — gated at call sites on isDesktop today; wd-04 moves spawn behind the device-scoped transport so web never links the exec path.",
+      "exit": "spawn moved behind device adapter; builtin import disappears",
+      "rules": ["shared-to-native"]
+    },
+    "src/libs/debug-file-logger.ts": {
+      "owner": "wd-02",
+      "reason": "debug file logger writes via node:fs under desktop — host-only adapter should own it.",
+      "exit": "logger moves to the desktop adapter / host port",
+      "rules": ["shared-to-native"]
+    },
+    "packages/app-config/src/routes/settings.ts": {
+      "owner": "wd-05",
+      "reason": "SettingsTabs enum imported from src/store/global/initialState — contract package climbing into app store code.",
+      "exit": "SettingsTabs type moves to a contract location (packages/types or local)",
+      "rules": ["types-purity"]
+    },
+    "seed:builtin:node:child_process": {
+      "owner": "wd-04",
+      "reason": "stdio spawn + dep-checkers reachable from web entries via service imports; dies when wd-04 isolates the exec graph",
+      "exit": "seed leaves the web entry closure",
+      "rules": ["web-closure"]
+    },
+    "seed:builtin:node:fs": {
+      "owner": "wd-04",
+      "reason": "fs users (tempFileManager, file logger, locomoto/locomo converter, file-store) reachable transitively; dies when device services isolate",
+      "exit": "seed leaves the web entry closure",
+      "rules": ["web-closure"]
+    },
+    "seed:builtin:node:os": {
+      "owner": "wd-04",
+      "reason": "os usage in spawn/embedded dispatch path; same exit",
+      "exit": "seed leaves the web entry closure",
+      "rules": ["web-closure"]
+    },
+    "seed:builtin:node:process": {
+      "owner": "wd-04",
+      "reason": "otel node adapter + process env reads reachable; exit = node-only subtree split",
+      "exit": "seed leaves the web entry closure",
+      "rules": ["web-closure"]
+    }
+  }
+}

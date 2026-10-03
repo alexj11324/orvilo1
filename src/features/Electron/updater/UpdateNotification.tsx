@@ -10,7 +10,7 @@ import { useTranslation } from 'react-i18next';
 import { createModal, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button as BaseButton } from '@/components/ui/button';
-import { autoUpdateService } from '@/services/electron/autoUpdate';
+import { getHostPort } from '@/platform';
 import { rendererOtaService } from '@/services/electron/rendererOta';
 import { useUserStore } from '@/store/user';
 import { userGeneralSettingsSelectors } from '@/store/user/selectors';
@@ -105,7 +105,7 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
       <div className="flex gap-2 justify-end">
         <BaseButton
           onClick={() => {
-            autoUpdateService.installLater();
+            void getHostPort().updater.installUpdateLater();
             close();
           }}
         >
@@ -116,7 +116,7 @@ const UpdateDetailContent = memo<UpdateDetailContentProps>(({ updateInfo }) => {
           variant={'default'}
           onClick={() => {
             setIsInstalling(true);
-            autoUpdateService.installNow();
+            void getHostPort().updater.installUpdateNow();
           }}
         >
           {tElectron('updater.restartAndInstall')}
@@ -222,7 +222,7 @@ export const UpdateNotification: React.FC = () => {
           size={'sm'}
           variant={'ghost'}
           onClick={() => {
-            autoUpdateService.installLater();
+            void getHostPort().updater.installUpdateLater();
           }}
         >
           {tElectron('updater.later')}
@@ -233,7 +233,7 @@ export const UpdateNotification: React.FC = () => {
           variant={'default'}
           onClick={() => {
             setIsInstalling(true);
-            autoUpdateService.installNow();
+            void getHostPort().updater.installUpdateNow();
           }}
         >
           {tElectron('updater.upgradeNow')}

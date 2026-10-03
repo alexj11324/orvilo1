@@ -94,11 +94,17 @@ vi.mock('@/services/electron/remoteServer', () => ({
   },
 }));
 
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getHostPort: () => ({
+    menu: { showContextMenu: vi.fn() },
+    openExternal: vi.fn(),
+  }),
+}));
+
 vi.mock('@/services/electron/system', () => ({
   electronSystemService: {
     hasLegacyLocalDb: vi.fn().mockResolvedValue(false),
-    openExternalLink: vi.fn(),
-    showContextMenu: vi.fn(),
   },
 }));
 

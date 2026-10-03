@@ -788,6 +788,7 @@ export default {
   'group.security': 'Security & access',
   'group.tools': 'Tools & connectors',
   'group.usageAndCost': 'Usage & cost',
+  'group.thisDevice': 'This app & device',
 
   'group.developer': 'Developer',
   'group.profile': 'Account',

@@ -160,7 +160,8 @@ export type CreateServicesResult<T extends readonly IpcServiceConstructor[]> = {
  * pages (BrowserSidebar webviews, future embedded views) off shell IPC while
  * leaving BrowserWindow / WebContentsView senders working.
  */
-export const isAppShellSender = (sender: WebContents): boolean => !sender.hostWebContents;
+export const isAppShellSender = (sender: WebContents | undefined): boolean =>
+  !!sender && !sender.hostWebContents;
 
 export function getIpcContext() {
   return ipcContextStorage.getStore();

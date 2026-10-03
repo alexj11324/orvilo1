@@ -250,6 +250,36 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
 
+  # Pure Node import-graph gate: shared product code must not reach native
+  # impls, the web entry closure must not pull exec builtins, server/CLI must
+  # not reach apps/desktop. See scripts/ci/checkHostDeviceBoundaries.mjs.
+  host-device-boundaries:
+    needs: [check-duplicate-run, changes]
+    if: needs.check-duplicate-run.outputs.should_skip != 'true' && needs.changes.outputs.code == 'true'
+    name: Host Device Boundaries
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        env:
+          REF_SHA: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || github.sha }}
+          REPOSITORY: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name || github.repository }}
+        run: |
+          git init .
+          git remote add origin "https://github.com/${REPOSITORY}.git"
+          git fetch --no-tags --depth=1 origin "${REF_SHA}"
+          git checkout --force FETCH_HEAD
+
+      - name: Check host/device import boundaries
+        run: |
+          node scripts/ci/checkHostDeviceBoundaries.mjs
+          node --test scripts/ci/checkHostDeviceBoundaries.test.mjs
+
+      - name: Fail fast — cancel sibling jobs
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: gh api -X POST "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/cancel" || true
+
   # Package tests - all packages in single job to save runner resources
 
       - name: Fail fast — cancel sibling jobs
@@ -744,6 +774,7 @@ jobs:
       - typecheck
       - slimming-boundary
       - native-controls
+      - host-device-boundaries
       - test-packages
       - test-app
       - test-windows-shell
@@ -843,6 +874,7 @@ jobs:
             typecheck
             slimming-boundary
             native-controls
+            host-device-boundaries
             test-packages
             test-app
             test-windows-shell
@@ -855,7 +887,7 @@ jobs:
           # A job skipped because its area filter did not match is a pass —
           # any other non-success keeps the gate red.
           declare -A area_of=(
-            [typecheck]=code [slimming-boundary]=code [native-controls]=code [test-packages]=packages [test-app]=app
+            [typecheck]=code [slimming-boundary]=code [native-controls]=code [host-device-boundaries]=code [test-packages]=packages [test-app]=app
             [merge-app-coverage]=app [test-windows-shell]=windows_shell
             [test-desktop]=desktop [test-server]=server
             [merge-server-coverage]=server [test-database]=database

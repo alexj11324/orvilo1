@@ -152,3 +152,31 @@
 ### 遗留（登记给后续包）
 
 - Automation 无 device 绑定字段（schema 层不存在 `deviceId`）→「运行于 <device>」需 WD-03 落数据后由 WD-07 补 UI，不在 WD-05 范围。
+
+## 8. WD-06 边界门禁登记（`refactor/wd-06-build-gates`）
+
+### 门禁
+
+- `scripts/ci/checkHostDeviceBoundaries.mjs`：真实导入图（静态 + dynamic import + re-export，regex 提取 + tsconfig 别名 / 工作区解析），五类规则：
+  - `shared-to-native`：共享产品面（src/features|components|store|services|…，adapter 层除外）直连 electron/app-desktop/exec builtin 的**跨界边**；
+  - `web-closure`：web/mobile/popup/auth 入口闭包可达的 native/exec 种子（`node:child_process` 等），按种子 allowlist；
+  - `server-cli`：apps/server、apps/cli 直连 apps/desktop/electron 实现；
+  - `types-purity`：packages/types、app-config 引入 builtin 或爬进 src//apps；
+  - `isdesktop-census`：`isDesktop`/`__ELECTRON__` 在 adapter 根之外的逐文件计数封顶（只缩不增）。
+- 实测：9445 文件扫描～1.6s（纯 Node，无依赖），CI job `Host Device Boundaries` 已接入 test.yml + Required Quality Gate required 列表。
+
+### isDesktop 普查（冻结基线）
+
+- 共享 `src/`：**465 处使用 / 182 文件**（非 adapter 根）。allowlist `hostDeviceBoundariesAllowlist.json` 逐文件记 `isDesktopMax` 封顶 + owner（wd-02..wd-05）+ 退出预期；adapter 根（`src/spa`、`src/platform`、`src/services/electron`、`*.desktop.*`）不计入违规。
+- 另：跳过文件（`*.test.*`、`__tests__`、`e2e`）不参与普查。
+
+### 现有跨界边（allowlist 登记的债务）
+
+- `src/libs/mcp/client.ts → node:child_process`（stdio spawn；owner wd-04 —— 设备作用域传输改造后消失）
+- `src/libs/debug-file-logger.ts → node:fs`（desktop-only 日志；owner wd-02 —— 移入 host adapter）
+- `packages/app-config/src/routes/settings.ts → src/store/global/initialState`（契约包爬 store 取 `SettingsTabs`；owner wd-05 —— 枚举下沉契约层）
+- web 闭包种子：`node:child_process` / `node:fs` / `node:os` / `node:process`（spawn、tempFileManager、otel node、agent-execution 等经共享服务导入可达；owner wd-03/wd-04 —— 执行图按设备隔离后消失）
+
+### 附带修复
+
+- `test.yml` `skip-duplicate-actions` 加 `cancel_others: 'false'`：此前 PR 运行会把同 SHA 的 push 属主运行判为 "重复" 并取消，Required Quality Gate 因此 fail-closed（#435/#437 连续两轮命中）。修复提交在 `refactor/wd-contract`（9e1fb797d）随栈传递。

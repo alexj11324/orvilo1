@@ -93,7 +93,7 @@ export const deriveDeviceRunBinding = async (
     runtimeOwnerId: control.ownerId,
     runtimeRegistrationId: control.registrationId,
     stateRevision: task.domainRevision,
-    taskId: operation.taskId,
+    subject: { dispatchId: dispatch.id, kind: 'task', taskId: operation.taskId },
     topicId: operation.topicId,
     userId: operation.userId,
     workspaceId: task.workspaceId,

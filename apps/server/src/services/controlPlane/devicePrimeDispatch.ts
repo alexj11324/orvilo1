@@ -150,7 +150,11 @@ export const composeDevicePrimeRun = async (
     // Same canonical rows as the embedded prepare: task contract current,
     // dispatch contract current, grant/epoch claimed, device-owned
     // registration written under the task's own workspace.
-    const [task] = await db.select().from(tasks).where(eq(tasks.id, input.task.taskId)).limit(1);
+    const [task] = await db
+      .select()
+      .from(tasks)
+      .where(eq(tasks.id, input.task.subject.taskId))
+      .limit(1);
     if (
       !task ||
       task.domainRevision === null ||
@@ -165,7 +169,7 @@ export const composeDevicePrimeRun = async (
     );
     if (
       !dispatch ||
-      dispatch.taskId !== input.task.taskId ||
+      dispatch.taskId !== input.task.subject.taskId ||
       dispatch.operationId !== input.operationId ||
       dispatch.fence !== input.task.dispatchFence ||
       dispatch.generation !== input.task.executionGeneration ||
@@ -180,7 +184,12 @@ export const composeDevicePrimeRun = async (
         executionGrantId: taskTopics.executionGrantId,
       })
       .from(taskTopics)
-      .where(and(eq(taskTopics.taskId, input.task.taskId), eq(taskTopics.topicId, input.topicId)))
+      .where(
+        and(
+          eq(taskTopics.taskId, input.task.subject.taskId),
+          eq(taskTopics.topicId, input.topicId),
+        ),
+      )
       .limit(1);
     let grantId = runRow?.executionGrantId ?? undefined;
     let executionEpoch = runRow?.executionEpoch ?? undefined;
@@ -194,7 +203,7 @@ export const composeDevicePrimeRun = async (
         });
         executionEpoch = await delegation.claimExecutionEpoch({
           grantId: grant.id,
-          taskId: input.task.taskId,
+          taskId: input.task.subject.taskId,
           topicId: input.topicId,
         });
         grantId = grant.id;
@@ -218,7 +227,7 @@ export const composeDevicePrimeRun = async (
       runtimeOwnerId: deviceRuntimeOwnerId(input.deviceId),
       runtimeRegistrationId: randomUUID(),
       stateRevision: task.domainRevision,
-      taskId: input.task.taskId,
+      subject: input.task.subject,
       topicId: input.topicId,
       userId,
       workspaceId: taskWorkspaceId,
@@ -270,7 +279,7 @@ export const composeDevicePrimeRun = async (
           ? {
               dispatchId: input.task.dispatchId,
               kind: 'task' as const,
-              taskId: input.task.taskId,
+              taskId: input.task.subject.taskId,
             }
           : { kind: 'conversation' as const, topicId: input.topicId },
       },

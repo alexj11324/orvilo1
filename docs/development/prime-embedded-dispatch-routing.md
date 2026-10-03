@@ -73,8 +73,16 @@ engine, 'sandbox', { model, provider })` — the new `match` filter pins the
 5. **Compose.** `CanonicalCoreRuntimeHost.open` with
    `embedded: { artifact, backend, engine, resolveBinding, target:'sandbox',
 verifyArtifact: embeddedArtifactVerifier(manifest) }` plus the supervisor/
-   docker options. The test seam `EmbeddedDispatchEnvironment` substitutes
-   supervisor/backend/artifact/dirs without a Docker daemon.
+   docker options (`memoryMiB: 768` — the runner idles \~200 MiB; the 256 MiB
+   default OOM-kills under allocation bursts). The test seam
+   `EmbeddedDispatchEnvironment` substitutes supervisor/backend/artifact/dirs
+   without a Docker daemon.
+
+Admission transactions (`canonicalRun`/`canonicalChatRun` `withState`) take
+`FOR UPDATE NOWAIT` row locks; a queued next turn collides with the in-flight
+run's per-event authority windows. `withCanonicalAdmissionRetry` retries the
+transaction on transient Postgres contention (`55P03`, `40P01`, `40001`)
+inside a bounded backoff — real denials never retry.
 
 ## 4. Drive — `driveEmbeddedCanonicalRun`
 

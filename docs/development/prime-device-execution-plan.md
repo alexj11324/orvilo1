@@ -1,111 +1,165 @@
 # Prime device execution — implementation plan (work package B)
 
-Status: **blocked on the shared contract** — `docs/development/device-execution-contract.md`
-and the contract types (`selectableDevices` / `runnableDevices`, resolution priority chain,
-`DEVICE_REQUIRED` / `DEVICE_SELECTION_REQUIRED` / `DEVICE_BINDING_INVALID`,
-`ResolvedRunIdentity`) are not yet on `feat/prime-cutover-data-ui` (PR #421 lands the
-engine-retirement cutover only). This doc records the surveyed surfaces and the plan keyed
-to the owner rules; code follows once the contract lands.
+Contract landed: `docs/development/device-execution-contract.md` +
+`packages/types/src/agent/deviceExecution.ts` (RunSubject, adapter map,
+selectable/runnable predicates, DEVICE\_\* codes, priority chain) — all on
+`feat/prime-cutover-data-ui` @ `294170729`. This doc supersedes the earlier
+survey draft; it is the plan reported to the integration lead before the
+launcher swap is written.
 
-## Today's topology (surveyed)
+## Today's seams (surveyed, post-contract head)
 
-- `resolveExecutionPlan` (`src/helpers/executionTarget.ts`) → `ExecutionPlan`
-  `{ kind: 'sandbox' | 'device' | 'device-unrouted' | 'none' }` — the pre-contract resolver.
-- `heteroDispatch.execAgent` (`apps/server/src/services/aiAgent/pipeline/heteroDispatch.ts`):
-  the device branch is gated `heteroPlan.kind !== 'sandbox' && heteroType !== 'orvilo'` —
-  `type:'orvilo'` can never reach `deviceGateway.dispatchAgentRun`. Orvilo task dispatches
-  go to `resolveEmbeddedDispatchRoute` → `openEmbeddedDispatchHost` +
-  `driveEmbeddedCanonicalRun` (in-process `CanonicalCoreRuntimeHost` +
-  `PrimeEmbeddedRuntime` + `DockerProcessTreeSupervisor`). Chat runs fail loudly
-  `EMBEDDED_CHAT_NOT_ADMITTED`.
-- `embeddedDispatch.ts` hardcodes the machine-local assumptions the contract retires:
-  `DEFAULT_EXECUTABLE = '/usr/local/bin/node'`, repo-relative
-  `packages/prime-harness/dist/runner.mjs`, server `tmpdir` run dirs, and the docker image
-  id from `ORVILO_PRIME_EMBEDDED_IMAGE_ID`. `PrimeEmbeddedRuntime` itself is already
-  host-parameterized (artifact / executable / home / temp / runtimeWorkspace / supervisor /
-  connect / authorize / verifyArtifact / initModel) — the hardcoding lives in this env
-  composition, not the runtime.
-- Prime wire protocol (`packages/agent-execution/src/controlPlane/harnessProtocol.ts`):
-  host→runner `harness.init` / `session.prompt` / `session.abort`; runner→host
-  `broker.infer` / `broker.cancel`; notifications `harness.event` / `broker.event`.
-  `HarnessTransport` / `HarnessChannel` is stream-agnostic — reusable over a spawned
-  child's stdio on any device.
-- Device side today (external agents only): `agent_run_request`
-  (`packages/device-gateway-client/src/types.ts`) → CLI `connect.ts` →
-  `spawnHeteroAgentRun` (`apps/cli/src/device/agentRun.ts`) spawning
-  `orvilo hetero exec --type X`, or Desktop `gatewayConnectionSrv` → `GatewayConnectionCtr`
-  → `HeterogeneousAgentImpl.spawnOrviloHeteroExec`. Neither app depends on
-  `@orvilo/agent-execution` or `@orvilo/prime-harness`; nothing device-side knows the
-  NDJSON harness protocol.
-- `agentRun.ts` lifecycle = the reuse skeleton: per-operation serialized admission,
-  dedupe registry (same-op redelivery acks), generation supersede → confirmed-kill
-  (SIGINT → SIGKILL → `waitForProcessGroupExit`), foreign-pid cmdline check. The launcher
-  is the only replaceable seam.
-- `DockerProcessTreeSupervisor` produces the `IsolationEvidence` the runtime's
-  `verifiedIsolation` gate requires — one isolation implementation a device can offer;
-  a bare spawn produces no evidence and the runtime fails closed, which is the desired
-  posture (isolation stays real).
-- Prime runner (`packages/prime-harness/src/runner.ts`) is a single-session in-memory
-  process and hardcodes `agentDir: '/tmp/agent'` — see gaps.
+- `heteroDispatch` is already device-first: `heteroPlan.kind !== 'sandbox'` →
+  `deviceGateway.dispatchAgentRun` for **all** types incl. `orvilo`. The
+  embedded fork only fires on non-device plans (`resolveEmbeddedDispatchRoute`).
+- **The transitional embedded fence** = device-side refusal: `orvilo` is
+  unspawnable on devices today — `apps/cli/src/commands/hetero.ts` refuses
+  `--type orvilo`, `HeterogeneousAgentImpl.startSession` throws
+  "Prime adapter is not packaged for device execution yet", `BinaryCtr`
+  reports no CLI binary. Orvilo runs stay embedded because no device can
+  admit them. The flip commit deletes these refusals + pins a flip test.
+- `agent_run_request` (`packages/device-gateway-client/src/types.ts`) is
+  CLI-shaped: `agentType` + `args` + `prompt`/`cwd`/`env`/`jwt` +
+  `operationId`/`runGeneration`/`idempotencyKey`/`workspaceId`/`ingestWorkspaceId`.
+  It carries no Prime descriptor (model route, broker access, subject,
+  artifact expectation).
+- `HarnessTransport`/`HarnessChannel` (`packages/agent-execution/src/controlPlane/harnessTransport.ts`)
+  is stream-agnostic — reusable over a spawned child's stdio on any device.
+  Wire vocab (`harnessProtocol.ts`): host→runner `harness.init`/`session.prompt`/
+  `session.abort`; runner→host `broker.infer`/`broker.cancel`; notifications
+  `harness.event`/`broker.event`.
+- `PrimeEmbeddedRuntime` is already host-parameterized (artifact / executable /
+  home / temp / runtimeWorkspace / supervisor / connect / authorize /
+  verifyArtifact / initModel). The hardcoding lives in `embeddedDispatch.ts`'s
+  env composition (`/usr/local/bin/node`, repo-relative `runner.mjs`, server
+  tmpdir, `ORVILO_PRIME_EMBEDDED_IMAGE_ID`), not the runtime.
+- Inference bridge (`embeddedBroker.ts` + `createInferenceBroker` +
+  `SqlTrustedProviderBackend` + `CanonicalRunAuthority`) is fully in-process
+  today — a device runner's `broker.infer` has no remote endpoint.
+- `agentRun.ts` lifecycle = the reuse skeleton: per-operation admission Map,
+  dedupe registry (same-op redelivery acks), generation supersede →
+  confirmed-kill (SIGINT → SIGKILL → `waitForProcessGroupExit`), foreign-pid
+  cmdline check. Only the launcher swaps.
+- Prime runner (`packages/prime-harness/src/runner.ts`) is single-session
+  in-memory and hardcodes `agentDir: '/tmp/agent'` — needs a device-supplied
+  state dir (contract: "the device host supplies executable path, state dir,
+  workdir").
+- `ResolvedRunIdentity` is doc-only — no TS type exists; the request fields
+  carry the same data (operationId, agentId, deviceId, harnessId, modelRoute,
+  executionGeneration, subject) rather than minting a competing shared type.
+- `RunSubject` type IS landed; canonical bindings carrying `subject` are on
+  `feat/prime-cutover-chat` @ `0f9982944` (not on this base yet) — leases/
+  auth key on `subject.taskId`, never a synthesized id; `taskId` is null for
+  chat subjects.
 
-## Plan (keyed to owner rules)
+## Plan
 
-1. **Dispatch resolves Device first.** Drop the `heteroType !== 'orvilo'` bypass so
-   orvilo plans flow through the lead's resolution chain (`selectableDevices` /
-   `runnableDevices` / `DEVICE_*` errors). A `device` plan →
-   `deviceGateway.dispatchAgentRun` carrying a harness descriptor; the device host then
-   picks the adapter (orvilo → Prime, codex → Codex, claude-code → Claude Code).
-   The existing embedded fork becomes the "this machine" device implementation —
-   same runtime composition, device-supplied paths instead of repo-relative ones —
-   once the contract defines how the server's own device identity is represented.
-2. **Wire contract for Prime admission.** `AgentRunRequestMessage` needs a harness
-   descriptor (harnessId, artifact manifest/digest expectation, modelRoute + init params,
-   broker endpoint + short-lived bound credential). `operationId` + `runGeneration` +
-   `idempotencyKey` + `cwd` already exist. Descriptor shape should come from the
-   contract's `ResolvedRunIdentity`, not invented here.
-3. **Device-side Prime host** (shared module consumed by CLI `connect.ts` and Desktop
-   `GatewayConnectionCtr`): reuse the `agentRun.ts` lifecycle verbatim — admission map,
-   stale-process cleanup, kill-confirm — with only the launcher swapped: spawn
-   `runner.mjs` under a device-local supervisor via `HarnessTransport` over stdio;
-   `harness.init` (protocolVersion + pin + model + workspace) → `session.prompt`;
-   `session.abort` on cancel; `harness.event` → existing `heteroIngest`; runner→host
-   `broker.infer` / `broker.cancel` → device-side broker bridge to the trusted broker.
-   No parallel gateway/cancel-registry/settle — `cancelHeteroTask(operationId)` maps to
-   `session.abort`; settle stays server-side via `heteroFinish`.
-4. **Ship the artifact.** Bundle `packages/prime-harness` `dist/runner.mjs` +
-   `runner.manifest.json` into CLI and Desktop builds; the device host verifies digest
-   via `embeddedArtifactVerifier(manifest)` before launch and reports verified
-   version + digest + protocol capabilities in its capability report; re-verify per
-   launch. No dev-repo relative paths.
-5. **Isolation stays real.** On Linux devices the Docker supervisor is one valid
-   implementation producing `IsolationEvidence`; devices without it report the
-   capability absent and admission fails closed (or runs under a contract-defined
-   weaker profile) — never a bare spawn presented as isolated.
-6. **Inference creds stay bound.** The `agent_run_request` carries a short-lived
-   credential bound to subject + operation + device + TTL that the device broker
-   bridge uses to reach the trusted broker — no raw API keys in agent config or
-   gateway messages.
-7. **Bounded lease.** The device-side run holds a lease renewed over the gateway
-   channel; losing renewal stops new side-effects (abort prompt + deny further
-   `broker.infer`) then kills the tree per the defined policy.
+### Server side
 
-## Open questions / gaps for the lead
+1. **Wire descriptor** (`device-gateway-client/types.ts`): extend
+   `AgentRunRequestMessage` with optional `prime` —
+   `{ model: { id, maxOutputTokens }, artifact: { commit, version, sha256,
+bytes }, broker: { endpoint, credential, expiresAt }, subject: RunSubject,
+deviceLease: { ttlMs } }`. `agentType` stays `'orvilo'`; the device picks
+   the adapter via `resolveHarnessAdapter(agentType)` → `'prime'`. Optional
+   for wire-compat: old devices ignore it and refuse `orvilo` as today.
+2. **Admission** (`heteroDispatch` device branch): when the plan resolves
+   device + `heteroType === 'orvilo'`, compose the Prime descriptor before
+   `dispatchAgentRun` — resolve provider binding + `issueBindingExecution`
+   (same chain as `embeddedBroker`), mint a short-lived credential bound to
+   `{subject, operationId, deviceId, modelRoute, exp}`, embed the trusted
+   artifact manifest pin (server reads its own packaged `runner.manifest.json`
+   / build-time constant — never a repo-relative runtime path).
+   `subject = {kind:'task', taskId, dispatchId}` for task runs,
+   `{kind:'conversation', topicId}` for chat.
+3. **Remote broker endpoint** (new, `apps/server`): bounded route the
+   device-side bridge calls to answer the runner's `broker.infer` /
+   `broker.cancel` — credential check (subject+operation+device+expiry), then
+   the same authority chain as the embedded bridge (`withRun` canonical locks
+   → `issueBindingExecution` → `createInferenceBroker.infer`), streaming
+   `InferenceEvent`s back. No raw keys ever cross — vault-side resolution
+   stays server-side. (Coordination point with the lead — see gaps.)
 
-- **Contract doc + types absent** — all dispatch wiring waits on the landed
-  resolution chain and `ResolvedRunIdentity`; nothing here mints competing semantics.
-- **`agent_run_request` harness descriptor** — the wire shape for Prime admission
-  (artifact identity, modelRoute, broker endpoint + bound credential) needs a
-  contract-owned shape; extending the message ad hoc would be a competing semantics.
-- **Chat admission** — today chat fails `EMBEDDED_CHAT_NOT_ADMITTED` because the
-  embedded host is task-shaped (CanonicalRunAuthority locks task rows). What device
-  context does a chat run carry under `ResolvedRunIdentity`?
-- **`agentDir: '/tmp/agent'` hardcode** in `runner.ts` — contract says the device host
-  supplies state dir; needs a runner `harness.init` param or spawn arg.
-- **Remote broker bridge** — a device runner's `broker.infer` must reach the trusted
-  broker across machines; contract needs to define the endpoint + credential plumbing
-  (today the bridge is in-process `SqlTrustedProviderBackend`).
-- **Local isolation profile** — embedded dispatch requires a pinned docker image for
-  `IsolationEvidence`; what does "this machine" as a device do when docker is absent?
-- **Package deps** — CLI/Desktop need `@orvilo/agent-execution` (+ bundled
-  `@orvilo/prime-harness` artifact); placement of the shared device-host module should
-  be coordinated with the lead.
+### Device side — new `packages/device-prime-host/`
+
+Shared by `apps/cli` (`connect` daemon) and `apps/desktop` (gateway path);
+deps: `@orvilo/agent-execution` + `@orvilo/device-gateway-client` +
+`@orvilo/types`.
+
+4. **`primeDeviceHost.launch`**: locate the _shipped_ `runner.mjs` +
+   `runner.manifest.json` in the app's resource dir → verify digest via
+   `embeddedArtifactVerifier(manifest)` → spawn under a device-local
+   supervisor with device-supplied `executable`/`home`/`temp`/`workdir` →
+   attach `HarnessTransport` over stdio → `harness.init`
+   `{protocolVersion, pin, model, workspace, stateDir}` → expose
+   `{session, prompt(), abort(), events}` to the lifecycle caller.
+5. **Broker bridge**: reverse-handler for `broker.infer`/`broker.cancel` —
+   POST to the broker endpoint with the bound credential, stream
+   `InferenceEvent`s back into `broker.event`; deny once the device lease
+   lapses. No API keys on device.
+6. **Bounded lease**: renewed over the existing gateway channel; lapsed
+   renewal → `session.abort` + deny further `broker.infer` + kill the tree
+   (the defined policy stops new side-effects — never uncontrolled running).
+7. **Isolation, honest**: Docker supervisor is ONE implementation a device
+   may offer (`DockerProcessTreeSupervisor` + pinned image, reusing
+   `isolation.ts` evidence + `verifiedIsolation`). A device without docker
+   reports `isolation: 'none'` — no bare spawn presented as isolated; server
+   admission policy decides whether none-isolation is admissible (gap below).
+8. **`agentRun.ts` launcher swap** (`spawnHeteroAgentRun`): when
+   `resolveHarnessAdapter(agentType) === 'prime'` → the new host path
+   instead of `orvilo hetero exec`. Admission map, dedupe, generation
+   supersede, kill-confirm, `ORVILO_*` env / ingest sink all unchanged.
+   `harness.event` → mapped `AgentStreamEvent`s → existing heteroIngest;
+   `heteroFinish` stays the sole settle path. No parallel gateway/cancel
+   registry.
+9. **Desktop path**: `HeterogeneousAgentImpl` 'orvilo' refusal → the same
+   host (Electron `ELECTRON_RUN_AS_NODE` executable for the runner spawn,
+   same pattern as existing child spawns).
+10. **Artifact shipping**: `packages/prime-harness` `dist/runner.mjs` +
+    `runner.manifest.json` bundled in the CLI build and Desktop resources
+    (asar-unpacked/extraResources); device loads the manifest from the
+    install dir — no dev-repo relative paths.
+11. **Capability report**: device reports
+    `prime: { version, digest, protocolVersion, isolation }` verified locally
+    at startup (in system-info/hello) and re-verified per launch via
+    `verifyArtifact` — a heartbeat alone never proves runner availability.
+12. **Runner state-dir fix**: `agentDir` comes from `harness.init` (additive
+    `stateDir` field on `HarnessInitParams`, default keeping `/tmp/agent`
+    behavior absent the field) — container paths stay out of device
+    conventions.
+
+### The flip commit (after ≥2-device acceptance passes)
+
+13. Delete the refusal fence: `hetero.ts` `--type orvilo` guard,
+    `HeterogeneousAgentImpl` throw, `BinaryCtr` "no CLI binary" for orvilo →
+    adapter-aware paths; pin a flip test proving an orvilo device plan takes
+    the Prime-adapter path and no device-resolved run reaches the embedded
+    fork.
+
+### Acceptance (owner bar)
+
+- ≥2 independent device **process environments** (e.g. a second `orvilo
+connect` daemon in a Linux container + this machine's daemon — separate
+  processes, separate deviceIds, real files created on the chosen device);
+  control initiates, verify device identity / artifact digest / operation /
+  cancel records. No same-process mock.
+
+## Gaps / questions for the lead
+
+- **Remote broker endpoint + credential minting** — new server surface;
+  proposing the authority chain above (canonical locks + binding issuance,
+  credential bound to subject+operation+device+TTL). If you're minting a
+  device-capability credential for another package, I'll consume yours
+  instead — flag before I write the endpoint.
+- **Non-docker isolation policy** — contract requires honest isolation
+  evidence but doesn't say whether a `none`-isolation device may admit a
+  run. Proposal: fail closed in v1 (device reports capability absent; run
+  blocked with a clear reason) until policy says otherwise.
+- **`stateDir` protocol field** — additive on `harness.init` (protocolVersion
+  stays 1); old runners ignore it → `/tmp/agent` fallback kept server-side.
+- **`agent_run_request.prime` descriptor shape** — drafted above; names
+  follow the contract vocabulary (`modelRoute`, `subject`, `deviceLease`).
+- **Chat subject path** — `agent_run_request.subject` uses the landed
+  `RunSubject`; canonical-side subject lands with `feat/prime-cutover-chat`.
+  Leases/auth key on `subject.taskId` for task runs only — never a
+  synthesized taskId on conversation subjects.

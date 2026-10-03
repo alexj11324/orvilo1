@@ -1,6 +1,7 @@
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
+import { AutomationResultDeliveryService } from '@/server/services/automationResultDelivery';
 import { sweepMcpEventSubscriptions } from '@/server/services/mcpEvents/maintenance';
 import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
 import { sweepTaskBacklogIntake } from '@/server/services/taskBacklogIntake';
@@ -9,6 +10,7 @@ import { sweepTaskDispatchRecovery } from '@/server/services/taskDispatchRecover
 import { sweepTaskDispatchResume } from '@/server/services/taskDispatchResume';
 import { sweepPlanningTaskDispatchStarts } from '@/server/services/taskDispatchStart';
 import { sweepTaskOwnershipInvariants } from '@/server/services/taskOwnership';
+import { recoverLocalHeartbeatSchedules } from '@/server/services/taskScheduler/recovery';
 import { runTaskWatchdog } from '@/server/services/taskWatchdog';
 
 /**
@@ -55,23 +57,45 @@ export async function watchdog(c: Context) {
     // Intake last: cancellations/resume settle stale intents first, so a
     // project autoDispatch pull sees the freed capacity this pass created.
     const intakeOutcomes = await sweepTaskBacklogIntake({ db });
+    let resultOutputs: unknown;
+    let resultOutputsHealthy = true;
+    try {
+      resultOutputs = await eventMaintenanceWithTimeout(() =>
+        AutomationResultDeliveryService.recoverDue(db),
+      );
+    } catch {
+      resultOutputs = { status: 'unavailable' };
+      resultOutputsHealthy = false;
+      console.error('[task/watchdog] Automation result recovery unavailable');
+    }
+    let heartbeatRecovery: unknown;
+    let heartbeatRecoveryHealthy = true;
+    try {
+      heartbeatRecovery = await recoverLocalHeartbeatSchedules(db);
+    } catch {
+      heartbeatRecovery = { status: 'unavailable' };
+      heartbeatRecoveryHealthy = false;
+      console.error('[task/watchdog] Local heartbeat recovery unavailable');
+    }
     // Event ingress has its own durable leases, but shares this maintenance
     // invocation and the core admission boundary with ordinary task dispatch.
     // A missing event migration must not stop cancellation/watchdog recovery.
-    let eventInbox: unknown;
-    let eventSubscriptions: unknown;
-    try {
-      eventSubscriptions = await sweepMcpEventSubscriptions(db);
-    } catch {
-      eventSubscriptions = { status: 'unavailable' };
-      console.error('[task/watchdog] MCP event subscription maintenance unavailable');
-    }
-    try {
-      eventInbox = await sweepMcpEventInbox(db);
-    } catch {
-      eventInbox = { status: 'unavailable' };
-      console.error('[task/watchdog] MCP event inbox sweep unavailable');
-    }
+    const eventOutcomes = await Promise.allSettled([
+      eventMaintenanceWithTimeout(() => sweepMcpEventSubscriptions(db)),
+      eventMaintenanceWithTimeout(() => sweepMcpEventInbox(db)),
+    ]);
+    const [subscriptionsOutcome, inboxOutcome] = eventOutcomes;
+    const eventSubscriptions =
+      subscriptionsOutcome.status === 'fulfilled'
+        ? subscriptionsOutcome.value
+        : { status: 'unavailable' };
+    const eventInbox =
+      inboxOutcome.status === 'fulfilled' ? inboxOutcome.value : { status: 'unavailable' };
+    const eventMaintenanceHealthy = eventOutcomes.every(
+      (outcome) => outcome.status === 'fulfilled',
+    );
+    if (!eventMaintenanceHealthy)
+      console.error('[task/watchdog] MCP event maintenance unavailable or timed out');
     const abandonedDispatches =
       cancellationOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length +
       dispatchRecoveryOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length;
@@ -102,6 +126,9 @@ export async function watchdog(c: Context) {
     return c.json({
       abandonedDispatches,
       eventInbox,
+      heartbeatRecovery,
+      resultOutputs,
+      resultOutputsHealthy,
       eventSubscriptions,
       activeDispatches,
       canceledDispatches,
@@ -121,10 +148,28 @@ export async function watchdog(c: Context) {
       plannedStarts,
       plannedStartWaits,
       recoveredDispatches,
-      success: true,
+      eventMaintenanceHealthy,
+      heartbeatRecoveryHealthy,
+      success: eventMaintenanceHealthy && heartbeatRecoveryHealthy && resultOutputsHealthy,
     });
   } catch (error) {
     console.error('[task/watchdog] Error:', error);
     return c.json({ error: error instanceof Error ? error.message : 'Internal error' }, 500);
+  }
+}
+
+/** Event maintenance must not hold the core recovery response indefinitely. */
+async function eventMaintenanceWithTimeout<T>(work: () => Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  try {
+    return await Promise.race([
+      work(),
+      new Promise<never>((_resolve, reject) => {
+        timer = setTimeout(() => reject(new Error('Event maintenance timeout')), 30_000);
+        timer.unref?.();
+      }),
+    ]);
+  } finally {
+    if (timer) clearTimeout(timer);
   }
 }

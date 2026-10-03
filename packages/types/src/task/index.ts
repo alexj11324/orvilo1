@@ -1,6 +1,7 @@
 import type { BriefArtifacts } from '../brief';
 import type { ChatFileItem } from '../message/ui/chat';
 
+export * from './result';
 export * from './stateModel';
 
 // ── Task type aliases ──
@@ -106,7 +107,7 @@ export type TaskDispatchOrigin = 'caid' | 'external' | 'internal';
  * contract for a new attempt; `authorized_replan` rebuilds constraints from
  * the live task under an approved action grant.
  */
-export type TaskRunIntent = 'authorized_replan' | 'continue' | 'repair';
+export type TaskRunIntent = 'authorized_replan' | 'continue' | 'repair' | 'fresh_occurrence';
 
 /**
  * Verified settlement evidence persisted with an `internal` dispatch —
@@ -231,6 +232,59 @@ export interface TaskExecutionContractContent {
   };
 }
 
+/** A saved automation revision. Embedded on the occurrence; never a second dispatch. */
+export interface AutomationDefinitionSnapshot {
+  assigneeAgentId: string | null;
+  automationMode?: TaskAutomationMode | null;
+  config: TaskItem['config'];
+  definitionVersionId: string;
+  editorData?: unknown;
+  heartbeatInterval?: number | null;
+  instruction: string;
+  policyRevision: number;
+  requirementRevision: number;
+  schedulePattern?: string | null;
+  scheduleTimezone?: string | null;
+}
+
+/** Business data only. This snapshot confers no execution authority. */
+export interface AutomationInputSnapshot {
+  data: unknown;
+  eventId: string;
+  eventType: string;
+  inputHash: string;
+  /** A scoped, persisted inbox id, never an external URL. */
+  inputRef: string;
+  receivedAt: string;
+  source: string;
+}
+
+export interface AutomationOccurrenceSnapshot {
+  /** The prompt's policy, frozen before execution preparation can fail. */
+  content?: TaskExecutionContractContent;
+  definition: AutomationDefinitionSnapshot;
+  fileIds?: string[];
+  input?: AutomationInputSnapshot;
+  /** Stable scheduler identity or durable trigger-run id. */
+  occurrenceId: string;
+}
+
+/** Server evidence stored separately from the occurrence's untrusted business input. */
+export interface TaskEventDispatchEvidence {
+  causationIds?: string[];
+  eventId: string;
+  idempotencyKey: string;
+  inboxRef: string;
+  sourceId: string;
+  subscriptionId: string;
+  tenantId: string;
+  triggerId: string;
+  triggerRevision: number;
+  triggerRunId: string;
+  userId: string;
+  workspaceId: string;
+}
+
 export interface TaskExecutionContract {
   /** Acceptance gate the run must satisfy (required evidence exists). */
   acceptance: { enabled: boolean };
@@ -260,6 +314,8 @@ export interface TaskExecutionContract {
   };
   /** Run intent this contract was minted under (`repair` when absent). */
   intent?: TaskRunIntent;
+  /** Independent automation occurrence and its immutable input. */
+  occurrence?: AutomationOccurrenceSnapshot;
   /**
    * Server-derived approval evidence for an `authorized_replan` contract —
    * the consumed action approval, the recorded approver and which constraint
@@ -350,7 +406,11 @@ export type TaskActivityValue = number | string | TaskAutomationSnapshot | null;
 export type TaskAssignmentKind = 'agent' | 'member' | 'reviewer';
 
 // null = no automation
-export type TaskAutomationMode = 'heartbeat' | 'schedule';
+export type TaskAutomationMode = 'heartbeat' | 'schedule' | 'event';
+
+/** Shared automation classification, including persisted external events. */
+export const isAutomationRunTrigger = (trigger?: TaskRunTrigger): boolean =>
+  trigger === 'schedule' || trigger === 'heartbeat' || trigger === 'event';
 
 /**
  * What triggered a given task run. Threaded from the run entry point

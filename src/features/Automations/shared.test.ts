@@ -9,8 +9,10 @@ import {
   automationStatusesFor,
   automationStatusOf,
   automationTriggerSummary,
+  eventAutomationStatusOf,
   resolveAutomationScope,
   resolveAutomationStatusFilter,
+  runTriggerLabel,
 } from './shared';
 
 // Real i18next instance mirroring the app config (keySeparator: false): the
@@ -26,7 +28,7 @@ beforeAll(async () => {
     nsSeparator: ':',
     resources: {
       en: {
-        automation: { 'trigger.every': 'Every {{interval}}' },
+        automation: { 'trigger.every': 'Every {{interval}}', 'events.title': 'MCP event triggers' },
         chat: {
           'taskSchedule.summary.daily': 'Daily at {{time}}',
           'taskSchedule.unit.hour_one': '{{count}} hr',
@@ -136,5 +138,25 @@ describe('automationStatusesFor', () => {
     // `undefined` is what keeps the store's SWR key on the unfiltered signature
     // instead of an empty status list the server would read as "match nothing".
     expect(automationStatusesFor('all')).toBeUndefined();
+  });
+});
+
+describe('event automation presentation', () => {
+  it('shows an event trigger summary in both list and detail instead of an empty schedule', () => {
+    const t = i18n.getFixedT('en', 'automation');
+    expect(automationTriggerSummary({ ...scheduledTask, automationMode: 'event' }, t)).toBe(
+      'MCP event triggers',
+    );
+    expect(automationDetailTriggerSummary({ ...scheduledDetail, automationMode: 'event' }, t)).toBe(
+      'MCP event triggers',
+    );
+    expect(runTriggerLabel('event')).toBe('event');
+  });
+  it('derives the definition state from its trigger independently from Task execution state', () => {
+    expect(eventAutomationStatusOf({ bindingState: 'active', enabled: true })).toBe('active');
+    expect(eventAutomationStatusOf({ bindingState: 'active', enabled: false })).toBe('paused');
+    expect(eventAutomationStatusOf({ bindingState: 'revoked', enabled: false })).toBe('inactive');
+    expect(eventAutomationStatusOf()).toBe('inactive');
+    expect(automationNextRun({ ...scheduledTask, automationMode: 'event' })).toBeNull();
   });
 });

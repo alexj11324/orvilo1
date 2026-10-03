@@ -658,17 +658,31 @@ describe('TaskModel', () => {
         instruction: 'Keep watching',
       });
       const manual = await model.create({ instruction: 'One-off' });
+      const eventDraft = await model.create({
+        automationMode: 'event',
+        instruction: 'Analyze events',
+      });
 
       const automated = await model.list({ automated: true });
-      expect(automated.total).toBe(2);
-      expect(automated.tasks.map((t) => t.id).sort()).toEqual([cron.id, heartbeat.id].sort());
+      expect(automated.total).toBe(3);
+      expect(automated.tasks.map((t) => t.id).sort()).toEqual(
+        [cron.id, heartbeat.id, eventDraft.id].sort(),
+      );
+      expect(
+        (await model.list({ automated: true, statuses: ['paused'] })).tasks.map((task) => task.id),
+      ).toContain(eventDraft.id);
+      expect(
+        (
+          await model.list({ automated: true, statuses: ['backlog', 'running', 'scheduled'] })
+        ).tasks.map((task) => task.id),
+      ).not.toContain(eventDraft.id);
 
       const notAutomated = await model.list({ automated: false });
       expect(notAutomated.total).toBe(1);
       expect(notAutomated.tasks[0].id).toBe(manual.id);
 
       // Omitting the flag must not narrow anything.
-      expect((await model.list()).total).toBe(3);
+      expect((await model.list()).total).toBe(4);
     });
 
     it('should filter by projectId', async () => {

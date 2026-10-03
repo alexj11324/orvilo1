@@ -5,6 +5,7 @@ import type {
   TaskVerifyConfig,
   TaskWorkflowCategory,
 } from '@orvilo/types';
+import { isAutomationRunTrigger } from '@orvilo/types';
 
 import type { SettlementContext, SettlementPlan, VerifySettlementOutcome } from './types';
 
@@ -112,8 +113,7 @@ export const resolveSettlementPlan = ({
 }: SettlementPlanContext): SettlementPlan => {
   const isAutomation = Boolean(task.automationMode);
   const isAutomationTick =
-    !context?.manualAutomationRun &&
-    (context?.runTrigger === 'schedule' || context?.runTrigger === 'heartbeat');
+    !context?.manualAutomationRun && isAutomationRunTrigger(context?.runTrigger);
   const workflowAfterRun = openWorkflowCategory(task.workflowCategory);
 
   // Issue-level cancel: the whole issue closes — the active run is canceled by

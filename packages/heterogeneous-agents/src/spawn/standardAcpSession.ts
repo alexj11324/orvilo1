@@ -101,7 +101,7 @@ export interface StandardAcpSessionOptions extends AcpAgentSessionOptions {
   /** Model id selected through `session/set_config_option` after session setup. */
   initialModel?: string;
   inputOptions?: BuildAgentInputOptions;
-  /** `session/new` `mcpServers` entries forwarded verbatim (ACP shape). */
+  /** `session/new` `mcpServers` entries (ACP shape). */
   mcpServers?: Record<string, unknown>[];
   onModel?: (model: string) => void;
   /**
@@ -343,7 +343,11 @@ export class StandardAcpSession extends AcpAgentSession<
       this.options.resumeSessionId ? 'session/load' : 'session/new',
       {
         cwd: this.options.cwd,
-        mcpServers: this.options.mcpServers ?? [],
+        mcpServers: (this.options.mcpServers ?? []).map((server) =>
+          (server.type === 'http' || server.type === 'sse') && server.headers === undefined
+            ? { ...server, headers: [] }
+            : server,
+        ),
         ...(this.options.resumeSessionId ? { sessionId: this.options.resumeSessionId } : {}),
         ...(this.sessionConfig.sessionMeta ? { _meta: this.sessionConfig.sessionMeta } : {}),
       },

@@ -6,10 +6,14 @@ import type { McpInboxSql } from './inbox';
 /** Internal SQL templates only. Every numbered value remains a bound parameter. */
 export interface McpEventsDatabase {
   execute: (statement: SQL) => PromiseLike<{ rows: unknown[] }>;
+  transaction?: <T>(work: (database: McpEventsDatabase) => Promise<T>) => Promise<T>;
 }
 
 export function createMcpEventsSql(db: McpEventsDatabase): McpInboxSql {
   return {
+    transaction: db.transaction
+      ? (work) => db.transaction!((database) => work(createMcpEventsSql(database)))
+      : undefined,
     async query<T>(statement: string, parameters: unknown[] = []) {
       const chunks = [];
       let end = 0;

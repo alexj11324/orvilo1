@@ -86,6 +86,7 @@ export class McpEventDispatchAdmissionService implements EventDispatchAdmission 
           userId: request.userId,
           workspaceId: request.workspaceId,
         },
+        intent: 'fresh_occurrence',
         idempotencyKey: request.idempotencyKey,
         requestedBy: request.userId,
         taskId: request.taskId,
@@ -106,7 +107,11 @@ export class McpEventDispatchAdmissionService implements EventDispatchAdmission 
       }
       if (error instanceof TRPCError && error.code === 'CONFLICT') {
         const [existing] = await this.db
-          .select({ id: taskDispatches.id, taskId: taskDispatches.taskId })
+          .select({
+            id: taskDispatches.id,
+            taskId: taskDispatches.taskId,
+            phase: taskDispatches.phase,
+          })
           .from(taskDispatches)
           .where(
             and(
@@ -115,10 +120,13 @@ export class McpEventDispatchAdmissionService implements EventDispatchAdmission 
             ),
           )
           .limit(1);
-        if (existing?.taskId === request.taskId) {
+        if (
+          existing?.taskId === request.taskId &&
+          !['requested', 'claimed', 'provisioning', 'waiting'].includes(existing.phase)
+        ) {
           return { dispatchId: existing.id, status: 'duplicate' };
         }
-        if (existing) return denied('idempotency-conflict');
+        if (existing && existing.taskId !== request.taskId) return denied('idempotency-conflict');
         // The task is busy under another dispatch — the run stays pending
         // and retries once the active claim settles.
         return { reason: 'admission-held', retryable: true, status: 'waiting' };

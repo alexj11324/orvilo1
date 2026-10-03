@@ -14,10 +14,24 @@ const mocks = vi.hoisted(() => ({
   stop: vi.fn(),
   list: vi.fn(),
   save: vi.fn(),
+  updateTask: vi.fn(),
+  readiness: vi.fn(),
+}));
+vi.mock('@/server/services/mcpEvents/readiness', () => ({
+  checkMcpAutomationReadiness: mocks.readiness,
+}));
+vi.mock('@/server/services/task', () => ({
+  TaskService: class {
+    updateTaskWithAssigneeLock = mocks.updateTask;
+  },
+}));
+vi.mock('@/database/utils/automationOccurrence', () => ({
+  snapshotAutomationDefinition: () => ({ definitionVersionId: 'version' }),
 }));
 vi.mock('@/database/models/task', () => ({
   TaskModel: class {
     resolve = mocks.task;
+    findById = mocks.task;
   },
 }));
 vi.mock('@/database/models/connector', () => ({
@@ -79,6 +93,14 @@ const caller = (overrides = {}) =>
   } as any);
 beforeEach(() => {
   vi.clearAllMocks();
+  mocks.updateTask.mockResolvedValue({ id: 'task' });
+  mocks.readiness.mockResolvedValue({
+    canEnable: false,
+    reasons: ['WORKER_UNHEALTHY'],
+    definitionVersionId: 'version',
+    devices: [],
+    triggerRevision: 3,
+  });
   mocks.task.mockResolvedValue({ id: 'task', createdByUserId: 'user' });
   mocks.connector.mockResolvedValue({ id: 'source', userId: 'user' });
   mocks.list.mockResolvedValue([]);
@@ -194,6 +216,107 @@ describe('MCP Events router authorization decisions (auth transport mocked)', ()
       { tenantId: 'workspace', connectorId: 'source' },
       'binding',
     );
+  });
+  it('converts a saved event definition to a paused automation without running it', async () => {
+    await caller().create(input);
+    expect(mocks.updateTask).toHaveBeenCalledWith(
+      'task',
+      { automationMode: 'event', status: 'paused' },
+      { userId: 'user' },
+      expect.anything(),
+    );
+  });
+  it('blocks enable when the observed worker is unhealthy', async () => {
+    mocks.list.mockResolvedValue([
+      { id: 'existing', revision: 3, sourceId: 'source', subscriptionId: 'binding' },
+    ]);
+    mocks.connector.mockResolvedValue({
+      id: 'source',
+      userId: 'user',
+      isEnabled: true,
+      status: 'connected',
+    });
+    const result = await caller().enable({
+      taskId: 'task',
+      triggerRevision: 3,
+      definitionVersionId: 'version',
+    });
+    expect(result.data.enabled).toBe(false);
+    expect(result.data.reasons).toEqual(['WORKER_UNHEALTHY']);
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+  it('arms the checked revision and persists its one-device binding in a transaction', async () => {
+    mocks.list.mockResolvedValue([
+      {
+        id: 'existing',
+        revision: 3,
+        sourceId: 'source',
+        subscriptionId: 'binding',
+        tenantId: 'workspace',
+      },
+    ]);
+    mocks.connector.mockResolvedValue({
+      id: 'source',
+      userId: 'user',
+      isEnabled: true,
+      status: 'connected',
+    });
+    mocks.binding.mockResolvedValue({ state: 'active', revision: 5, expiresAt: null });
+    mocks.readiness.mockResolvedValue({
+      canEnable: true,
+      reasons: [],
+      deviceId: 'device',
+      definitionVersionId: 'version',
+      devices: [{ id: 'device', name: 'Device' }],
+      triggerRevision: 3,
+    });
+    const query = { from: vi.fn(), where: vi.fn(), for: vi.fn().mockResolvedValue([]) };
+    query.from.mockReturnValue(query);
+    query.where.mockReturnValue(query);
+    const db = { select: vi.fn(() => query), transaction: vi.fn() };
+    db.transaction.mockImplementation(async (callback: any) => callback(db));
+    const result = await caller({ serverDB: db }).enable({
+      taskId: 'task',
+      triggerRevision: 3,
+      definitionVersionId: 'version',
+    });
+    expect(result.data.enabled).toBe(true);
+    expect(db.transaction).toHaveBeenCalledOnce();
+    expect(mocks.updateTask).toHaveBeenCalledWith(
+      'task',
+      expect.objectContaining({
+        status: 'scheduled',
+        config: expect.objectContaining({
+          automationDeviceId: 'device',
+          automationEnabledAt: expect.any(String),
+        }),
+      }),
+      { userId: 'user' },
+      expect.anything(),
+    );
+    expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ enabled: true }), 3);
+  });
+  it('refuses stale definition or trigger revisions before readiness', async () => {
+    mocks.list.mockResolvedValue([
+      { id: 'existing', revision: 3, sourceId: 'source', subscriptionId: 'binding' },
+    ]);
+    await expect(
+      caller().enable({ taskId: 'task', triggerRevision: 2, definitionVersionId: 'version' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    await expect(
+      caller().enable({ taskId: 'task', triggerRevision: 3, definitionVersionId: 'old-version' }),
+    ).rejects.toMatchObject({ code: 'CONFLICT' });
+    expect(mocks.readiness).not.toHaveBeenCalled();
+  });
+  it('pauses new occurrences without revoking the subscription or canceling a run', async () => {
+    mocks.list.mockResolvedValue([
+      { id: 'existing', revision: 3, enabled: true, sourceId: 'source', subscriptionId: 'binding' },
+    ]);
+    await caller().pause({ taskId: 'task', triggerRevision: 3 });
+    expect(mocks.save).toHaveBeenCalledWith(expect.objectContaining({ enabled: false }), 3);
+    expect(mocks.revoke).not.toHaveBeenCalled();
+    expect(mocks.stop).not.toHaveBeenCalled();
+    expect(mocks.updateTask).not.toHaveBeenCalled();
   });
   it('redacts remote failure messages', async () => {
     mocks.discover.mockRejectedValue(new Error('Bearer secret-token'));

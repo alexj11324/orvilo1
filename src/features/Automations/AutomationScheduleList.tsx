@@ -7,6 +7,7 @@ import {
   PauseIcon,
   PlayIcon,
   SearchIcon,
+  Settings2Icon,
   Trash2Icon,
   XIcon,
 } from 'lucide-react';
@@ -32,6 +33,7 @@ import { Input } from '@/components/ui/input';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
+import { useMcpEventsStore } from '@/store/mcpEvents';
 import { useTaskStore } from '@/store/task';
 
 import AssigneeUserAvatar from '../AgentTasks/features/AssigneeUserAvatar';
@@ -42,6 +44,7 @@ import {
   automationNextRun,
   automationStatusOf,
   automationTriggerSummary,
+  eventAutomationStatusOf,
   SCHEDULED_TASKS_PAGE_SIZE,
 } from './shared';
 import { useAutomationActions } from './useAutomationActions';
@@ -136,7 +139,16 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
   const { t } = useTranslation('automation');
   const { pause, remove, resume, runNow } = useAutomationActions();
   const { allowed: canEdit } = usePermission('create_content');
-  const status = automationStatusOf(task.status);
+  const useFetchEventTriggers = useMcpEventsStore((s) => s.useFetchEventTriggers);
+  const eventBindings = useFetchEventTriggers(
+    task.automationMode === 'event' ? task.id : undefined,
+  );
+  const status =
+    task.automationMode === 'event'
+      ? eventAutomationStatusOf(eventBindings.data?.data.triggers[0])
+      : automationStatusOf(task.status);
+  const eventStateUnavailable =
+    task.automationMode === 'event' && (!eventBindings.data || eventBindings.error);
   const nextRun = automationNextRun(task);
 
   return (
@@ -151,7 +163,13 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
         <span className={styles.titleText}>{task.name || task.identifier}</span>
       </div>
       <CreatedByCell userId={task.createdByUserId} />
-      <AutomationStatusBadge status={status} />
+      {eventStateUnavailable ? (
+        <span className="text-[12px] text-muted-foreground">
+          {t(eventBindings.error ? 'events.bindingUnavailable' : 'page.loading')}
+        </span>
+      ) : (
+        <AutomationStatusBadge status={status} />
+      )}
       <div className="truncate min-w-0 text-[12px] text-muted-foreground">
         {automationTriggerSummary(task, t)}
       </div>
@@ -172,11 +190,26 @@ const AutomationRow = memo<AutomationRowProps>(({ checked, onCheckedChange, onOp
                 ),
             },
             {
-              icon: createElement(status === 'paused' ? PlayIcon : PauseIcon),
+              icon: createElement(
+                task.automationMode === 'event' && status !== 'active'
+                  ? Settings2Icon
+                  : status === 'paused'
+                    ? PlayIcon
+                    : PauseIcon,
+              ),
               key: 'toggle',
-              label: t(status === 'paused' ? 'actions.resume' : 'actions.pause'),
+              label: t(
+                task.automationMode === 'event' && status !== 'active'
+                  ? 'settings.tab_settings'
+                  : status === 'paused'
+                    ? 'actions.resume'
+                    : 'actions.pause',
+              ),
               onClick: () =>
-                status === 'paused' ? resume(task.identifier) : pause(task.identifier),
+                (status === 'paused' || (task.automationMode === 'event' && status !== 'active')
+                  ? resume(task)
+                  : pause(task)
+                ).catch(() => toast.error(t('actions.update_failed'))),
             },
             { type: 'divider' },
             {
@@ -226,7 +259,8 @@ export interface AutomationScheduleListProps {
 
 /**
  * The scheduled-task surface: search, selection, batch actions and the row
- * menu, with no fetch of its own.
+ * menu. Task rows come from the owner; event rows observe the existing
+ * trigger cache because definition state differs from Task execution state.
  *
  * Both doors into this list — the Tasks page's automations tab and the
  * Automations page — already own the SWR handle that produced `tasks`, so the
@@ -251,7 +285,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
     const { t } = useTranslation('automation');
     const navigate = useWorkspaceAwareNavigate();
     const refreshTaskList = useTaskStore((s) => s.refreshTaskList);
-    const { pause, remove, resume } = useAutomationActions();
+    const { batch } = useAutomationActions();
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState(() => new Set<string>());
 
@@ -286,18 +320,14 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
 
     const handleBatch = useCallback(
       async (action: 'delete' | 'pause' | 'resume') => {
-        const ids = [...selected];
+        const targets = tasks.filter((task) => selected.has(task.identifier));
         try {
-          for (const id of ids) {
-            if (action === 'delete') await remove(id);
-            else if (action === 'pause') await pause(id);
-            else await resume(id);
-          }
+          if ((await batch(action, targets)) === 'settings') return;
           toast.success(
-            t(action === 'delete' ? 'batch.deleted' : 'batch.updated', { count: ids.length }),
+            t(action === 'delete' ? 'batch.deleted' : 'batch.updated', { count: targets.length }),
           );
         } catch {
-          toast.error(t('batch.delete_failed'));
+          toast.error(t(action === 'delete' ? 'batch.delete_failed' : 'batch.update_failed'));
         }
         setSelected(new Set());
         // The ordinary task list shows automated tasks too, so it is stale after
@@ -305,7 +335,7 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
         await refreshTaskList();
         await onRefetch();
       },
-      [selected, remove, pause, resume, refreshTaskList, onRefetch, t],
+      [selected, tasks, batch, refreshTaskList, onRefetch, t],
     );
 
     const openDetail = useCallback(
@@ -339,13 +369,13 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
                 onChange={(e) => setSearch(e.target.value)}
               />
               {search && (
-                <button
-                  aria-label={t('overview.search_automations')}
+                <ActionIcon
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                  icon={XIcon}
+                  size="small"
+                  title={t('overview.search_automations')}
                   onClick={() => setSearch('')}
-                >
-                  <XIcon size={12} />
-                </button>
+                />
               )}
             </div>
             <div className={styles.headerRow}>
@@ -413,7 +443,13 @@ const AutomationScheduleList = memo<AutomationScheduleListProps>(
               {t('batch.selected', { count: selected.size })}
             </div>
             <Button size="sm" onClick={() => handleBatch('resume')}>
-              {t('batch.resume')}
+              {t(
+                tasks.some(
+                  (task) => selected.has(task.identifier) && task.automationMode === 'event',
+                )
+                  ? 'settings.tab_settings'
+                  : 'batch.resume',
+              )}
             </Button>
             <Button size="sm" onClick={() => handleBatch('pause')}>
               {t('batch.pause')}

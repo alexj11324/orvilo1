@@ -90,7 +90,7 @@ type TaskTopicActivityRow = DirectTaskTopicActivityRow &
 export interface CreateTaskInput {
   assigneeAgentId?: string;
   assigneeUserId?: string;
-  automationMode?: 'heartbeat' | 'schedule';
+  automationMode?: 'heartbeat' | 'schedule' | 'event';
   config?: Record<string, unknown>;
   // Runtime-state pockets stored on the task row (tasks.context JSONB). Used at
   // creation to record `context.origin` — the creator conversation pointer.

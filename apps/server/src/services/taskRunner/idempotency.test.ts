@@ -56,21 +56,14 @@ describe('taskRunIdempotencyKey', () => {
     ).toBe('onboarding:topic-1:session:session-1:recommendation:recommendation-1:task:task-1');
   });
 
-  it('keeps automation redeliveries on the same tick and uses generation without a token', () => {
-    expect(
-      taskRunIdempotencyKey.automationTick({
-        executionGeneration: 5,
-        kind: 'heartbeat',
-        taskId: 'task-1',
-        tickToken: 'tick-7',
-      }),
-    ).toBe('heartbeat:tick:tick-7');
-    expect(
-      taskRunIdempotencyKey.automationTick({
-        executionGeneration: 5,
-        kind: 'schedule',
-        taskId: 'task-1',
-      }),
-    ).toBe('schedule:tick:task:task-1:generation:6');
+  it('keeps automation redeliveries on the same durable tick', () => {
+    const input = { kind: 'heartbeat' as const, taskId: 'task-1', tickToken: 'tick-7' };
+    expect(taskRunIdempotencyKey.automationTick(input)).toBe('heartbeat:tick:tick-7');
+    expect(taskRunIdempotencyKey.automationTick({ ...input })).toBe(
+      taskRunIdempotencyKey.automationTick(input),
+    );
+    expect(() => taskRunIdempotencyKey.automationTick({ ...input, tickToken: '' })).toThrow(
+      'durable plan identity',
+    );
   });
 });

@@ -157,6 +157,11 @@ export class McpEventReceiver {
         receivedAt: now,
       });
       if (accepted === 'conflict') return response(409, 'event_id_conflict');
+      if (accepted === 'overloaded')
+        return Response.json(
+          { code: 'receiver_overloaded' },
+          { status: 429, headers: { 'Retry-After': '60' } },
+        );
       return response(202, accepted);
     } catch {
       // Storage/configuration errors remain retryable; never leak payloads or credentials.

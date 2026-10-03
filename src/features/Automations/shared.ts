@@ -79,6 +79,7 @@ export const automationTriggerSummary = (
   t: TFunction<'automation'>,
 ): string => {
   const tChat = asChatT(t);
+  if (task.automationMode === 'event') return t('events.title');
   if (task.automationMode === 'schedule' && task.schedulePattern) {
     return formatScheduleDescription(task.schedulePattern, tChat);
   }
@@ -105,6 +106,17 @@ export const automationNextRun = (task: TaskListItem): Dayjs | null => {
   return null;
 };
 
+/** Trigger state is independent from the execution state projected on its Task. */
+export const eventAutomationStatusOf = (trigger?: {
+  bindingState: string;
+  enabled: boolean;
+}): AutomationStatus =>
+  !trigger || trigger.bindingState !== 'active'
+    ? 'inactive'
+    : trigger.enabled
+      ? 'active'
+      : 'paused';
+
 /** Cordy run duration label: <1m / Xm / Xh Ym. */
 export const runDuration = (
   startIso: string | null | undefined,
@@ -120,11 +132,14 @@ export const runDuration = (
 };
 
 /** Run sources with `run_source.*` locale keys — the literal union keeps `t()` typed. */
-export type RunSource = 'goal' | 'heartbeat' | 'manual' | 'orchestrator' | 'schedule';
+export type RunSource = 'event' | 'goal' | 'heartbeat' | 'manual' | 'orchestrator' | 'schedule';
 
 /** Label of what fired a run — falls back to "Manual" for API/goal sources. */
 export const runTriggerLabel = (trigger: TaskRunTrigger | string | null | undefined): RunSource => {
   switch (trigger) {
+    case 'event': {
+      return 'event';
+    }
     case 'schedule': {
       return 'schedule';
     }
@@ -187,6 +202,7 @@ export const automationDetailTriggerSummary = (
   t: TFunction<'automation'>,
 ): string => {
   const tChat = asChatT(t);
+  if (detail.automationMode === 'event') return t('events.title');
   if (detail.automationMode === 'schedule' && detail.schedule?.pattern) {
     return formatScheduleDescription(detail.schedule.pattern, tChat);
   }

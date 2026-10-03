@@ -4,6 +4,7 @@ import type {
   TaskDispatchOrigin,
   TaskDispatchPhase,
   TaskDispatchSettlementGrant,
+  TaskExecutionContractContent,
   TaskExecutionEnvironmentSnapshot,
   TaskItem,
   TaskRunTrigger,
@@ -226,6 +227,27 @@ export class TaskDispatchService {
       );
     }
     return { dispatch: lease.dispatch, fence: lease.fence, owner, task: currentTask };
+  }
+
+  async freezeAutomationContent(
+    prepared: PreparedTaskDispatch,
+    content: TaskExecutionContractContent,
+    fileIds: string[],
+  ) {
+    const snapshot = await this.model.freezeAutomationContent({
+      dispatchId: prepared.dispatch.id,
+      owner: prepared.owner,
+      fence: prepared.fence,
+      content,
+      fileIds,
+    });
+    if (!snapshot)
+      throw new TaskDispatchConflictError(
+        'Automation occurrence freeze lost its claim',
+        prepared.dispatch.id,
+      );
+    prepared.dispatch.automationOccurrence = snapshot;
+    return snapshot;
   }
 
   async transition(prepared: PreparedTaskDispatch, input: TaskDispatchTransitionInput) {

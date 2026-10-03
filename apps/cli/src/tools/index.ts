@@ -1,3 +1,5 @@
+import { checkAutomationReadinessOnHost } from '@orvilo/heterogeneous-agents/automationReadiness';
+
 import { log } from '../utils/logger';
 import { checkPlatformCapability } from './checkPlatformCapability';
 import { getAgentProfile } from './getAgentProfile';
@@ -14,6 +16,7 @@ import { scanHeterogeneousAgents } from './scanHeterogeneousAgents';
 const methodMap: Record<string, (args: any) => Promise<unknown>> = {
   cancelHeteroTask,
   checkPlatformCapability,
+  checkAutomationReadiness: checkAutomationReadinessOnHost,
   getAgentProfile,
   runHeteroTask,
   scanHeterogeneousAgents,

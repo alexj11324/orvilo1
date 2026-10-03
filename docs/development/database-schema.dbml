@@ -2685,6 +2685,7 @@ table mcp_event_trigger_runs {
   idempotency_key text [not null]
   status text [not null, default: 'pending']
   dispatch_id text
+  automation_occurrence jsonb
   reason text
 
   indexes {
@@ -4096,6 +4097,35 @@ table sessions {
   }
 }
 
+table automation_result_deliveries {
+  id text [pk, not null]
+  task_id text [not null]
+  user_id text [not null]
+  workspace_id text
+  topic_id text
+  operation_id text [not null]
+  destination_id text [not null]
+  endpoint text
+  credential_id text
+  payload jsonb [not null]
+  status text [not null, default: 'pending']
+  attempts integer [not null, default: 0]
+  next_attempt_at "timestamp with time zone" [not null, default: `now()`]
+  lease_token text
+  lease_expires_at "timestamp with time zone"
+  http_status integer
+  error text
+  delivered_at "timestamp with time zone"
+  accessed_at "timestamp with time zone" [not null, default: `now()`]
+  created_at "timestamp with time zone" [not null, default: `now()`]
+  updated_at "timestamp with time zone" [not null, default: `now()`]
+
+  indexes {
+    (user_id, operation_id, destination_id) [name: 'automation_result_deliveries_run_destination_unique', unique]
+    (status, next_attempt_at) [name: 'automation_result_deliveries_due']
+  }
+}
+
 table briefs {
   id text [pk, not null]
   user_id text [not null]
@@ -4221,6 +4251,8 @@ table task_dispatches {
   initiator text
   source_dispatch_id text
   settlement_grant jsonb
+  automation_occurrence jsonb
+  event_evidence jsonb
   lease_owner text
   lease_expires_at "timestamp with time zone"
   waiting_reason text
@@ -4288,6 +4320,9 @@ table task_topics {
   execution_grant_id text
   environment_snapshot jsonb
   contract jsonb
+  stop_reason text
+  result_ready_at "timestamp with time zone"
+  result_outcome text
   trigger text
   handoff jsonb
   integration jsonb

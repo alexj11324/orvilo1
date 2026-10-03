@@ -140,6 +140,172 @@ describe('Task Router Integration', () => {
     otherUserId = undefined;
   });
 
+  describe('automation result outputs', () => {
+    const createAutomation = () =>
+      caller.create({
+        automationMode: 'schedule',
+        instruction: 'Analyze each error report',
+        schedulePattern: '0 * * * *',
+      });
+
+    it('persists destination and credential references without exposing credential ciphertext', async () => {
+      const automation = await createAutomation();
+      const { credentials } = await import('@/database/schemas');
+      await serverDB.insert(credentials).values({
+        id: 'output-cred-1',
+        ownerUserId: userId,
+        key: 'result-hook',
+        name: 'Result hook',
+        type: 'kv-header',
+        payload: 'encrypted-output-fixture',
+      });
+      expect(await caller.listAutomationOutputCredentials({ taskId: automation.data.id })).toEqual([
+        { id: 'output-cred-1', name: 'Result hook', type: 'kv-header' },
+      ]);
+      await caller.updateAutomationOutputs({
+        taskId: automation.data.id,
+        resultWebhooks: [
+          {
+            credentialId: 'output-cred-1',
+            id: 'webhook-1',
+            url: 'https://receiver.example/results',
+          },
+        ],
+      });
+      const updated = await new TaskModel(serverDB, userId).findById(automation.data.id);
+      expect(updated?.config).toMatchObject({
+        resultWebhooks: [
+          {
+            credentialId: 'output-cred-1',
+            id: 'webhook-1',
+            url: 'https://receiver.example/results',
+          },
+        ],
+      });
+      expect(
+        JSON.stringify(await caller.listAutomationResults({ taskId: automation.data.id })),
+      ).not.toContain('encrypted-output-fixture');
+      expect(mockExecAgent).not.toHaveBeenCalled();
+    });
+
+    it('rejects another user credential, reserved inbox identity and secret-bearing endpoints', async () => {
+      const automation = await createAutomation();
+      otherUserId = await createTestUser(serverDB);
+      const { credentials } = await import('@/database/schemas');
+      await serverDB.insert(credentials).values({
+        id: 'output-other-cred',
+        ownerUserId: otherUserId,
+        key: 'result-hook',
+        name: 'Private hook',
+        type: 'kv-header',
+        payload: 'encrypted-private-fixture',
+      });
+      await expect(
+        caller.updateAutomationOutputs({
+          taskId: automation.data.id,
+          resultWebhooks: [
+            {
+              credentialId: 'output-other-cred',
+              id: 'webhook-1',
+              url: 'https://receiver.example/results',
+            },
+          ],
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(
+        caller.updateAutomationOutputs({
+          taskId: automation.data.id,
+          resultWebhooks: [{ id: 'inbox', url: 'https://receiver.example/results' }],
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      await expect(
+        caller.updateAutomationOutputs({
+          taskId: automation.data.id,
+          resultWebhooks: [
+            { id: 'webhook-1', url: 'https://receiver.example/results?token=secret' },
+          ],
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    });
+
+    it('requires acknowledged ambiguity to retry only output without starting another Agent', async () => {
+      const automation = await createAutomation();
+      const { automationResultDeliveries } = await import('@/database/schemas/task');
+      await serverDB.insert(automationResultDeliveries).values({
+        id: 'result-unknown-1',
+        taskId: automation.data.id,
+        userId,
+        operationId: 'result-operation-1',
+        destinationId: 'webhook-1',
+        endpoint: 'https://receiver.example/results',
+        status: 'unknown',
+        payload: {
+          version: 1,
+          completedAt: '2026-10-03T00:00:00Z',
+          evidence: {},
+          identifier: automation.data.identifier,
+          runId: 'result-operation-1',
+          status: 'succeeded',
+          stopReason: 'done',
+          summary: 'Error ERR-784 analyzed',
+          taskId: automation.data.id,
+        },
+      });
+      await expect(caller.retryAutomationResult({ id: 'result-unknown-1' })).rejects.toMatchObject({
+        code: 'PRECONDITION_FAILED',
+      });
+      const broker = vi
+        .spyOn(await import('@/libs/hatchet'), 'enqueueHatchetTask')
+        .mockResolvedValue('queued-output');
+      try {
+        expect(
+          await caller.retryAutomationResult({ id: 'result-unknown-1', acknowledgeUnknown: true }),
+        ).toBe(true);
+      } finally {
+        broker.mockRestore();
+      }
+      expect((await caller.listAutomationResults({ taskId: automation.data.id }))[0].status).toBe(
+        'pending',
+      );
+      expect(mockExecAgent).not.toHaveBeenCalled();
+    });
+
+    it('denies editing another workspace member automation output settings', async () => {
+      otherUserId = await createTestUser(serverDB);
+      const { workspaces, workspaceMembers } = await import('@/database/schemas');
+      const workspaceId = 'automation-output-permission-workspace';
+      await serverDB.insert(workspaces).values({
+        id: workspaceId,
+        name: 'Output test',
+        primaryOwnerId: userId,
+        slug: workspaceId,
+      });
+      await serverDB.insert(workspaceMembers).values([
+        { role: 'owner', userId, workspaceId },
+        { role: 'member', userId: otherUserId, workspaceId },
+      ]);
+      const ownerContext = { ...createTestContext(userId), workspaceId, workspaceRole: 'owner' };
+      const ownerCaller = taskRouter.createCaller(ownerContext);
+      const automation = await ownerCaller.create({
+        automationMode: 'schedule',
+        instruction: 'Workspace errors',
+        schedulePattern: '0 * * * *',
+      });
+      const memberContext = {
+        ...createTestContext(otherUserId),
+        workspaceId,
+        workspaceRole: 'member',
+      };
+      const memberCaller = taskRouter.createCaller(memberContext);
+      await expect(
+        memberCaller.updateAutomationOutputs({
+          taskId: automation.data.id,
+          resultWebhooks: [{ id: 'webhook-1', url: 'https://receiver.example/results' }],
+        }),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+    });
+  });
+
   describe('create + find + detail', () => {
     it('removes a related issue whose stored id predates the task_ prefix', async () => {
       const source = await caller.create({ instruction: 'Source' });

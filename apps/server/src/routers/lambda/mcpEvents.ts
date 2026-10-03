@@ -1,7 +1,9 @@
 import { randomUUID } from 'node:crypto';
 
 import { isLocalOrPrivateUrl } from '@orvilo/utils';
+import { isRecord } from '@orvilo/utils/object';
 import { TRPCError } from '@trpc/server';
+import { and, eq } from 'drizzle-orm';
 import { z } from 'zod';
 
 import {
@@ -11,6 +13,9 @@ import {
 import { ConnectorModel } from '@/database/models/connector';
 import { TaskModel } from '@/database/models/task';
 import { ConnectorMcpConnectionType, ConnectorStatus } from '@/database/schemas';
+import { tasks } from '@/database/schemas/task';
+import type { OrviloDatabase } from '@/database/type';
+import { snapshotAutomationDefinition } from '@/database/utils/automationOccurrence';
 import { appEnv } from '@/envs/app';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -19,9 +24,11 @@ import { createConnectorEventsAdapter } from '@/server/services/mcpEvents/connec
 import { createMcpEventsSql } from '@/server/services/mcpEvents/database';
 import { validMcpEventFilters } from '@/server/services/mcpEvents/filter';
 import { SqlMcpEventBindingRepository } from '@/server/services/mcpEvents/inbox';
+import { checkMcpAutomationReadiness } from '@/server/services/mcpEvents/readiness';
 import { MCP_EVENT_RENEWAL_LEAD_MS } from '@/server/services/mcpEvents/renewalSchedule';
 import { McpEventSubscriptionService } from '@/server/services/mcpEvents/subscription';
 import { SqlMcpEventTriggerRepository } from '@/server/services/mcpEvents/workerRepository';
+import { TaskService } from '@/server/services/task';
 
 import { assertWorkspaceRowManageable } from './_helpers/assertWorkspaceRowManageable';
 
@@ -76,6 +83,11 @@ export const mcpEventsRouter = router({
       if (!task || !connector || connector.agentId) throw new TRPCError({ code: 'NOT_FOUND' });
       assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
       assertWorkspaceRowManageable(ctx, connector.userId, 'connector');
+      if (task.status === 'running' || (task.automationMode && task.automationMode !== 'event'))
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Pause the current automation before changing its trigger type',
+        });
       const scope = { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId };
       const [existing] = await ctx.eventTriggers.list(scope, task.id);
       const previousBinding = existing
@@ -131,6 +143,18 @@ export const mcpEventsRouter = router({
               code: 'CONFLICT',
               message: 'Trigger changed; reload before retrying',
             });
+          const savedTask = await new TaskService(
+            ctx.serverDB,
+            ctx.userId,
+            ctx.workspaceId,
+          ).updateTaskWithAssigneeLock(
+            task.id,
+            { automationMode: 'event', status: 'paused' },
+            { userId: ctx.userId },
+            { expectedDomainRevision: task.domainRevision },
+          );
+          if (!savedTask)
+            throw new TRPCError({ code: 'CONFLICT', message: 'Task changed while saving trigger' });
           return { data: trigger, success: true as const };
         } catch (error) {
           await service.stop(
@@ -157,23 +181,183 @@ export const mcpEventsRouter = router({
           task.id,
         )
       : [];
+    const enriched = await Promise.all(
+      triggers.map(async (trigger) => {
+        const binding = await ctx.eventBindings.get(
+          { tenantId: trigger.tenantId, connectorId: trigger.sourceId },
+          trigger.subscriptionId,
+        );
+        const readiness = await checkMcpAutomationReadiness({
+          db: ctx.serverDB,
+          task,
+          trigger,
+          binding,
+        });
+        return { ...trigger, bindingState: binding?.state ?? 'unavailable', readiness };
+      }),
+    );
     return {
       data: {
-        triggers: await Promise.all(
-          triggers.map(async (trigger) => {
-            const binding = await ctx.eventBindings.get(
-              { tenantId: trigger.tenantId, connectorId: trigger.sourceId },
-              trigger.subscriptionId,
-            );
-            return { ...trigger, bindingState: binding?.state ?? 'unavailable' };
-          }),
-        ),
+        triggers: enriched,
         canCreate: !!ctx.workspaceId,
-        canEnable: false,
+        canEnable: enriched.some((trigger) => trigger.readiness.canEnable),
       },
       success: true as const,
     };
   }),
+
+  readiness: eventProcedure
+    .input(taskInput.extend({ deviceId: z.string().min(1).optional() }))
+    .query(async ({ ctx, input }) => {
+      if (!ctx.workspaceId) throw new TRPCError({ code: 'PRECONDITION_FAILED' });
+      const task = await ctx.eventTaskModel.resolve(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
+      const [trigger] = await ctx.eventTriggers.list(
+        { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId },
+        task.id,
+      );
+      if (!trigger) throw new TRPCError({ code: 'NOT_FOUND' });
+      const binding = await ctx.eventBindings.get(
+        { tenantId: trigger.tenantId, connectorId: trigger.sourceId },
+        trigger.subscriptionId,
+      );
+      return {
+        data: await checkMcpAutomationReadiness({
+          db: ctx.serverDB,
+          task,
+          trigger,
+          binding,
+          deviceId: input.deviceId,
+        }),
+        success: true as const,
+      };
+    }),
+
+  enable: eventWriteProcedure
+    .input(
+      taskInput.extend({
+        triggerRevision: z.number().int().nonnegative(),
+        definitionVersionId: z.string().min(1),
+        deviceId: z.string().min(1).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.workspaceId) throw new TRPCError({ code: 'PRECONDITION_FAILED' });
+      const task = await ctx.eventTaskModel.resolve(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
+      assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
+      const scope = { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId };
+      const [trigger] = await ctx.eventTriggers.list(scope, task.id);
+      if (!trigger) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (
+        trigger.revision !== input.triggerRevision ||
+        snapshotAutomationDefinition(task).definitionVersionId !== input.definitionVersionId
+      )
+        throw new TRPCError({
+          code: 'CONFLICT',
+          message: 'Automation changed; reload before enabling',
+        });
+      const connector = await ctx.connectorModel.findPublicById(trigger.sourceId);
+      if (!connector || !connector.isEnabled || connector.status !== ConnectorStatus.connected)
+        return { data: { enabled: false, reasons: ['CONNECTOR_REVOKED'] }, success: true as const };
+      assertWorkspaceRowManageable(ctx, connector.userId, 'connector');
+      const binding = await ctx.eventBindings.get(
+        { tenantId: trigger.tenantId, connectorId: trigger.sourceId },
+        trigger.subscriptionId,
+      );
+      const readiness = await checkMcpAutomationReadiness({
+        db: ctx.serverDB,
+        task,
+        trigger,
+        binding,
+        deviceId: input.deviceId,
+      });
+      if (!readiness.canEnable)
+        return { data: { enabled: false, ...readiness }, success: true as const };
+      // Probe outside the transaction; lock and recheck definition + subscription when arming it.
+      const updated = await ctx.serverDB.transaction(async (tx) => {
+        const db = tx as OrviloDatabase;
+        await db
+          .select({ id: tasks.id })
+          .from(tasks)
+          .where(and(eq(tasks.id, task.id), eq(tasks.workspaceId, ctx.workspaceId!)))
+          .for('update');
+        const fresh = await new TaskModel(db, ctx.userId, ctx.workspaceId!).findById(task.id);
+        if (
+          !fresh ||
+          snapshotAutomationDefinition(fresh).definitionVersionId !== input.definitionVersionId
+        )
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Automation changed during readiness check',
+          });
+        const sql = createMcpEventsSql(db);
+        const currentBinding = await new SqlMcpEventBindingRepository(sql).get(
+          { tenantId: trigger.tenantId, connectorId: trigger.sourceId },
+          trigger.subscriptionId,
+        );
+        if (
+          !currentBinding ||
+          currentBinding.revision !== binding?.revision ||
+          currentBinding.state !== 'active' ||
+          (currentBinding.expiresAt !== null && currentBinding.expiresAt <= Date.now())
+        )
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Subscription changed during readiness check',
+          });
+        await new TaskService(db, ctx.userId, ctx.workspaceId!).updateTaskWithAssigneeLock(
+          task.id,
+          {
+            status: 'scheduled',
+            config: {
+              ...(isRecord(fresh.config) ? fresh.config : {}),
+              automationDeviceId: readiness.deviceId,
+              automationEnabledAt:
+                trigger.enabled && isRecord(fresh.config)
+                  ? fresh.config.automationEnabledAt
+                  : new Date().toISOString(),
+            },
+          },
+          { userId: ctx.userId },
+          { expectedDomainRevision: fresh.domainRevision },
+        );
+        const enabled = await new SqlMcpEventTriggerRepository(sql).save(
+          { ...trigger, enabled: true },
+          input.triggerRevision,
+        );
+        if (!enabled)
+          throw new TRPCError({
+            code: 'CONFLICT',
+            message: 'Trigger changed during readiness check',
+          });
+        return enabled;
+      });
+      return {
+        data: { enabled: true, trigger: updated, deviceId: readiness.deviceId, reasons: [] },
+        success: true as const,
+      };
+    }),
+
+  pause: eventWriteProcedure
+    .input(taskInput.extend({ triggerRevision: z.number().int().nonnegative() }))
+    .mutation(async ({ ctx, input }) => {
+      if (!ctx.workspaceId) throw new TRPCError({ code: 'PRECONDITION_FAILED' });
+      const task = await ctx.eventTaskModel.resolve(input.taskId);
+      if (!task) throw new TRPCError({ code: 'NOT_FOUND' });
+      assertWorkspaceRowManageable(ctx, task.createdByUserId, 'task');
+      const [trigger] = await ctx.eventTriggers.list(
+        { tenantId: ctx.workspaceId, workspaceId: ctx.workspaceId, userId: ctx.userId },
+        task.id,
+      );
+      if (!trigger) throw new TRPCError({ code: 'NOT_FOUND' });
+      const updated = await ctx.eventTriggers.save(
+        { ...trigger, enabled: false },
+        input.triggerRevision,
+      );
+      if (!updated) throw new TRPCError({ code: 'CONFLICT' });
+      return { data: updated, success: true as const };
+    }),
 
   discover: eventProcedure
     .input(taskInput.extend({ connectorId: z.string().min(1) }))

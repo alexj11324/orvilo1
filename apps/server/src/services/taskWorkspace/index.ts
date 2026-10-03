@@ -170,15 +170,19 @@ export class TaskWorkspaceService {
         const repository = await repositoryModel.findById(resolution.repositoryId);
         if (!repository) return undefined;
 
-        const boundDeviceId = task.assigneeAgentId
-          ? (await this.agentModel.getAgentConfig(task.assigneeAgentId))?.agencyConfig
-              ?.boundDeviceId
-          : undefined;
+        const automationDeviceId = (task.config as { automationDeviceId?: string } | null)
+          ?.automationDeviceId;
+        const boundDeviceId =
+          automationDeviceId ??
+          (task.assigneeAgentId
+            ? (await this.agentModel.getAgentConfig(task.assigneeAgentId))?.agencyConfig
+                ?.boundDeviceId
+            : undefined);
         const checkouts = await repositoryModel.listCheckouts(repository.id);
         const checkout =
           checkouts.find(
             (candidate) => boundDeviceId !== undefined && candidate.deviceId === boundDeviceId,
-          ) ?? (checkouts.length === 1 ? checkouts[0] : undefined);
+          ) ?? (!automationDeviceId && checkouts.length === 1 ? checkouts[0] : undefined);
         if (checkout) {
           return {
             baseBranch: repository.coordinate.defaultBranch ?? undefined,
@@ -211,8 +215,15 @@ export class TaskWorkspaceService {
     task: TaskItem;
   }): Promise<ProvisionedWorkspace | undefined> {
     const { task, seq, dispatchId, generation } = params;
-    const config = await this.resolveWorkspaceConfig(task);
+    let config = await this.resolveWorkspaceConfig(task);
     if (!config) return undefined;
+    const automationDeviceId = (task.config as { automationDeviceId?: string } | null)
+      ?.automationDeviceId;
+    if (automationDeviceId) {
+      if (config.deviceId && config.deviceId !== automationDeviceId)
+        throw new Error('Workspace Device conflicts with the bound automation Device');
+      config = { ...config, deviceId: automationDeviceId };
+    }
 
     if (config.repo && !parseGithubRepo(config.repo)) {
       throw new Error(`Workspace repository is not a valid GitHub coordinate: ${config.repo}`);

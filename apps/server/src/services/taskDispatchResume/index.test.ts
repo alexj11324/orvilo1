@@ -159,6 +159,41 @@ describe('processTaskDispatchResume', () => {
     expect(mocks.runTask).not.toHaveBeenCalled();
   });
 
+  it('re-drives events only with their persisted authorization evidence and original identity', async () => {
+    const eventEvidence = {
+      eventId: 'event-1',
+      inboxRef: 'inbox-1',
+      triggerRunId: 'run-1',
+      tenantId: 'workspace-1',
+      workspaceId: 'workspace-1',
+      userId: 'user-1',
+      triggerId: 'trigger-1',
+      triggerRevision: 2,
+      sourceId: 'source-1',
+      subscriptionId: 'subscription-1',
+      idempotencyKey: 'event:stable-1',
+    };
+    expect(
+      await processTaskDispatchResume({
+        candidate: candidate({
+          eventEvidence,
+          idempotencyKey: eventEvidence.idempotencyKey,
+          requestedBy: 'event:user-1',
+        }),
+        db: {} as never,
+      }),
+    ).toEqual({ dispatchId: 'dispatch-1', outcome: 'resumed' });
+    expect(mocks.runTask).toHaveBeenCalledWith({
+      eventEvidence,
+      idempotencyKey: eventEvidence.idempotencyKey,
+      planRevision: undefined,
+      requestedBy: 'event:user-1',
+      taskId: 'task-1',
+      trigger: 'event',
+    });
+    expect(mocks.requestStop).not.toHaveBeenCalled();
+  });
+
   it('stops intents whose trigger a sweep can never re-drive', async () => {
     await expect(
       processTaskDispatchResume({

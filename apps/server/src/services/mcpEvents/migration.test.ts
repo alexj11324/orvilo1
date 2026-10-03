@@ -72,3 +72,48 @@ it('replays the shipped migration and commits receipts using its real unique ind
     await database.close();
   }
 });
+
+it('replays occurrence and output DDL without losing persisted receipts', async () => {
+  const database = new PGlite();
+  try {
+    await database.exec(`
+      CREATE TABLE users (id text PRIMARY KEY);
+      CREATE TABLE workspaces (id text PRIMARY KEY);
+      CREATE TABLE tasks (id text PRIMARY KEY);
+      CREATE TABLE topics (id text PRIMARY KEY);
+      CREATE TABLE task_topics (id uuid PRIMARY KEY);
+      CREATE TABLE task_dispatches (id text PRIMARY KEY);
+      CREATE TABLE mcp_event_trigger_runs (id text PRIMARY KEY);
+      INSERT INTO users VALUES ('owner'); INSERT INTO tasks VALUES ('automation');
+    `);
+    const migration = await readFile(
+      path.resolve('packages/database/migrations/0203_automation_occurrences_and_outputs.sql'),
+      'utf8',
+    );
+    await database.exec(migration.replaceAll('--> statement-breakpoint', ';'));
+    await database.exec(`INSERT INTO automation_result_deliveries
+      (id,task_id,user_id,operation_id,destination_id,payload)
+      VALUES ('output','automation','owner','operation','inbox','{"status":"succeeded"}'::jsonb)`);
+    await database.exec(migration.replaceAll('--> statement-breakpoint', ';'));
+    expect((await database.query('SELECT id FROM automation_result_deliveries')).rows).toEqual([
+      { id: 'output' },
+    ]);
+    expect(
+      (
+        await database.query(
+          `SELECT column_name FROM information_schema.columns WHERE table_name='task_topics' AND column_name IN ('stop_reason','result_ready_at','result_outcome') ORDER BY column_name`,
+        )
+      ).rows,
+    ).toHaveLength(3);
+    expect(
+      (
+        await database.query(`INSERT INTO automation_result_deliveries
+      (id,task_id,user_id,operation_id,destination_id,payload)
+      VALUES ('duplicate','automation','owner','operation','inbox','{}')
+      ON CONFLICT DO NOTHING RETURNING id`)
+      ).rows,
+    ).toEqual([]);
+  } finally {
+    await database.close();
+  }
+});

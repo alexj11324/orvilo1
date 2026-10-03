@@ -10,6 +10,7 @@ import type {
 /** Uses the application's PostgreSQL connection; query parameters must stay bound. */
 export interface McpInboxSql {
   query: <T>(sql: string, parameters?: unknown[]) => Promise<{ rows: T[] }>;
+  transaction?: <T>(work: (database: McpInboxSql) => Promise<T>) => Promise<T>;
 }
 
 /** Proposed DDL for review, NOT an automatically applied production migration. */
@@ -62,9 +63,55 @@ const fromRow = (row: InboxRow): McpInboxDelivery => ({
 
 /** Durable SQL inbox. It does not invoke tools or start task execution. */
 export class SqlMcpEventInbox implements McpEventInbox {
-  constructor(private readonly database: McpInboxSql) {}
+  constructor(
+    private readonly database: McpInboxSql,
+    private readonly options: { maxPending?: number } = {},
+  ) {}
 
   async accept(input: AcceptedMcpEvent) {
+    const maxPending = this.options.maxPending ?? 1000;
+    if (!Number.isSafeInteger(maxPending) || maxPending < 1 || maxPending > 10_000)
+      throw new Error('Invalid inbox queue bound');
+    if (!this.database.transaction) throw new Error('Transactional inbox storage required');
+    return this.database.transaction(async (database) => {
+      // Lock one source before taking the quota snapshot in a NEW statement.
+      // A count in the INSERT statement's CTE would retain its pre-lock MVCC
+      // snapshot and could overshoot under concurrent webhook delivery.
+      const bound = await database.query<{ id: string }>(
+        `SELECT id FROM mcp_event_bindings WHERE id=$1 AND tenant_id=$2 AND connector_id=$3
+          AND state='active' AND binding->>'schemaId'=$4 AND binding->>'eventName'=$5
+          AND (binding->>'revision')::integer=$6
+          AND ((binding->>'expiresAt') IS NULL OR (binding->>'expiresAt')::bigint > $7)
+          FOR UPDATE`,
+        [
+          input.subscriptionId,
+          input.tenantId,
+          input.connectorId,
+          input.schemaId,
+          input.event.name,
+          input.bindingRevision,
+          input.receivedAt,
+        ],
+      );
+      if (!bound.rows[0]) throw new Error('Inbox binding unavailable');
+      const existing = await database.query<{ id: string }>(
+        `SELECT id FROM mcp_event_inbox WHERE tenant_id=$1 AND subscription_id=$2 AND event_id=$3`,
+        [input.tenantId, input.subscriptionId, input.event.eventId],
+      );
+      if (!existing.rows[0]) {
+        const capacity = await database.query<{ pending: number }>(
+          `SELECT count(*)::integer AS pending FROM mcp_event_inbox
+            WHERE tenant_id=$1 AND subscription_id=$2 AND status IN ('pending','processing')`,
+          [input.tenantId, input.subscriptionId],
+        );
+        if (capacity.rows[0].pending >= maxPending) return 'overloaded' as const;
+      }
+      // Duplicates remain acknowledged even when the queue is at capacity.
+      return new SqlMcpEventInbox(database, this.options).acceptStored(input);
+    });
+  }
+
+  private async acceptStored(input: AcceptedMcpEvent) {
     const { rawBody, ...event } = input;
     const payloadHash = createHash('sha256').update(rawBody).digest('hex');
     const delivery = {
@@ -72,7 +119,7 @@ export class SqlMcpEventInbox implements McpEventInbox {
       payloadHash,
       rawBodyBase64: Buffer.from(rawBody).toString('base64'),
     };
-    // One committed statement also handles concurrent retries without a read/insert race.
+    // Receipt and cursor commit together inside the source's quota transaction.
     const result = await this.database.query<{
       inserted: boolean;
       payload_hash: string;
@@ -148,6 +195,16 @@ export class SqlMcpEventInbox implements McpEventInbox {
       [now, limit, randomUUID(), now + leaseMs, tenantId ?? null],
     );
     return result.rows.map(fromRow);
+  }
+
+  async renew(id: string, leaseToken: string, now: number, leaseMs: number) {
+    if (!Number.isSafeInteger(leaseMs) || leaseMs < 1) throw new Error('Invalid inbox lease');
+    const result = await this.database.query<{ id: string }>(
+      `UPDATE mcp_event_inbox SET lease_until=$4
+      WHERE id=$1 AND status='processing' AND lease_token=$2 AND lease_until > $3 RETURNING id`,
+      [id, leaseToken, now, now + leaseMs],
+    );
+    return result.rows.length === 1;
   }
 
   async settle(

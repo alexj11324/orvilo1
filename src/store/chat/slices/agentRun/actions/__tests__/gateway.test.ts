@@ -1968,7 +1968,11 @@ describe('GatewayActionImpl', () => {
         });
       };
 
-      it('forwards this desktop as both the route and local capability hint', async () => {
+      // Unified admission: the desktop forwards only WHO it is — the server
+      // resolves the actual device (session pin → stored target). Sending
+      // `deviceId` here would be an authorization-gated *explicit request*,
+      // which a fixed-policy or workspace-scoped run must reject.
+      it('forwards this desktop as the local capability hint, not a device pick', async () => {
         mockEnv.isDesktop = true;
         mockRuntime.isLocal = true;
         mockGateway.getDeviceInfo.mockResolvedValue({ deviceId: 'device-local-1' });
@@ -1976,15 +1980,18 @@ describe('GatewayActionImpl', () => {
         await send();
 
         expect(aiAgentService.execAgentTask).toHaveBeenCalledWith(
-          expect.objectContaining({
-            deviceId: 'device-local-1',
-            localDeviceId: 'device-local-1',
-          }),
+          expect.objectContaining({ localDeviceId: 'device-local-1' }),
           expect.anything(),
+        );
+        expect(vi.mocked(aiAgentService.execAgentTask).mock.calls.at(-1)?.[0]).not.toHaveProperty(
+          'deviceId',
         );
       });
 
-      it('uses the Topic device after the Agent default switches to sandbox', async () => {
+      // The topic pin lives in server-side topic metadata — the client only
+      // sends its local capability hint; the server's session-bound slot
+      // resolves 'topic-device' ahead of every other input.
+      it('forwards the local hint while the server resolves the Topic device', async () => {
         mockEnv.isDesktop = true;
         mockGateway.getDeviceInfo.mockResolvedValue({ deviceId: 'this-desktop' });
         mockChatState.topicDetailMap['topic-1'] = {
@@ -1997,8 +2004,11 @@ describe('GatewayActionImpl', () => {
         await send();
 
         expect(aiAgentService.execAgentTask).toHaveBeenCalledWith(
-          expect.objectContaining({ deviceId: 'topic-device', localDeviceId: 'this-desktop' }),
+          expect.objectContaining({ localDeviceId: 'this-desktop' }),
           expect.anything(),
+        );
+        expect(vi.mocked(aiAgentService.execAgentTask).mock.calls.at(-1)?.[0]).not.toHaveProperty(
+          'deviceId',
         );
       });
 
@@ -2060,7 +2070,10 @@ describe('GatewayActionImpl', () => {
         );
       });
 
-      it('uses a workspace member local override instead of the shared remote device', async () => {
+      // A member's `local` override lives in server-side agentDeviceOverrides —
+      // the server resolves it to the caller's own machine via localDeviceId;
+      // sending deviceId would request the shared 'workspace-device' instead.
+      it('forwards this desktop for a workspace member local override', async () => {
         mockEnv.isDesktop = true;
         mockGateway.getDeviceInfo.mockResolvedValue({ deviceId: 'device-local-member' });
         mockAgentStore.state.agentMap['agent-1'] = {
@@ -2077,8 +2090,11 @@ describe('GatewayActionImpl', () => {
         await send();
 
         expect(aiAgentService.execAgentTask).toHaveBeenCalledWith(
-          expect.objectContaining({ deviceId: 'device-local-member' }),
+          expect.objectContaining({ localDeviceId: 'device-local-member' }),
           expect.anything(),
+        );
+        expect(vi.mocked(aiAgentService.execAgentTask).mock.calls.at(-1)?.[0]).not.toHaveProperty(
+          'deviceId',
         );
       });
 

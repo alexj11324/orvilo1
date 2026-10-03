@@ -23,6 +23,8 @@ import type {
 import type { OrviloDatabase } from '@/database/type';
 import { AgentDelegationService } from '@/server/services/agentDelegation/executionGrants';
 
+import { withCanonicalAdmissionRetry } from './canonicalAdmissionRetry';
+
 /** Trusted server registration. Never construct this from a runtime action payload. */
 export interface CanonicalRunBinding {
   dispatchFence: number;
@@ -166,8 +168,8 @@ export class CanonicalRunAuthority {
     // no task rows to lock and no placeholder may stand in for one.
     if (binding.subject.kind !== 'task') return denied('Run subject is not a task execution');
     const taskId = binding.subject.taskId;
-    return this.db
-      .transaction(
+    return withCanonicalAdmissionRetry(() =>
+      this.db.transaction(
         async (tx) => {
           // Task before dispatch matches ownership transitions. NOWAIT prevents a
           // mixed legacy lock order from hanging admission before any side effect.
@@ -355,7 +357,7 @@ export class CanonicalRunAuthority {
           return { ok: true as const, value };
         },
         serializable ? { isolationLevel: 'serializable' } : undefined,
-      )
-      .catch(() => denied('Canonical admission is busy or unavailable'));
+      ),
+    ).catch(() => denied('Canonical admission is busy or unavailable'));
   }
 }

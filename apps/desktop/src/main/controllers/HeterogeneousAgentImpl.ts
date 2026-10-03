@@ -190,8 +190,8 @@ export const redactPromptArgs = (
 interface StartSessionParams {
   /**
    * Agent type key (e.g., 'claude-code'). Defaults to 'claude-code'. The
-   * builtin `'orvilo'` type is refused — it has no local executable; the
-   * builtin agent runs on the embedded Prime harness, never on a device.
+   * builtin `'orvilo'` type is refused until the device-side Prime adapter is
+   * packaged — the fixed adapter map resolves it, never a CLI family.
    */
   agentType?: BuiltinHeterogeneousAgentType | HeterogeneousCliAgentType;
   /** Additional CLI arguments */
@@ -1142,10 +1142,12 @@ export default class HeterogeneousAgentCtr {
     const sessionId = randomUUID();
     const declaredAgentType = params.agentType || 'claude-code';
     if (declaredAgentType === 'orvilo') {
-      // Embedded-only: the builtin agent's Prime harness lives in the server
-      // control plane; no desktop spawn contract exists for it.
+      // The fixed adapter map resolves 'orvilo' → the Prime adapter
+      // (docs/development/device-execution-contract.md); the device-side
+      // Prime adapter is not packaged yet, so refuse loudly rather than
+      // spawning a wrong-family executable.
       throw new Error(
-        "The builtin Orvilo agent runs on Orvilo's embedded Prime runtime and cannot be hosted on a device",
+        "The builtin Orvilo agent's Prime adapter is not packaged for device execution yet",
       );
     }
     const agentType = declaredAgentType as HeterogeneousCliAgentType;

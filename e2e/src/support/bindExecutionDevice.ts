@@ -1,5 +1,5 @@
 /**
- * Binds the E2E fake execution device to the test user's inbox agent.
+ * Binds the E2E fake execution device to the test user's builtin inbox agent.
  *
  * The in-process agent runtime is retired: every web send resolves an
  * execution plan, and a hetero agent without a bound device lands on the
@@ -9,12 +9,9 @@
  * a `devices` row plus `executionTarget: 'device'` + `boundDeviceId` on the
  * agent's `agency_config` — so dispatch resolves the real device path.
  *
- * The seeded agent is stamped `heterogeneousProvider.type:'claude-code'`:
- * the builtin Orvilo agent is embedded-only post-cutover (its plans never
- * take the device path), so e2e reply-producing journeys ride an external
- * ACP type — identical routing to the pre-cutover orvilo→claude-code
- * resolution. The journeys under test exercise agent-agnostic chat UI
- * behaviors, not engine identity.
+ * The builtin `type:'orvilo'` agent takes this device path exactly like an
+ * external agent — device-first resolution is the execution contract, and
+ * the device picks the harness adapter (orvilo → Prime).
  *
  * Both scopes are bound (personal/unfiled and workspace copy) because the
  * inbox agent mints per-scope at first use.
@@ -98,24 +95,12 @@ export const bindTestUserExecutionDevice = async (request: APIRequestContext): P
        on conflict (user_id, device_id) where workspace_id is null do nothing`,
       [TEST_USER.id, E2E_DEVICE_ID],
     );
-    // The builtin agent is embedded-only post-cutover — `type:'orvilo'`
-    // plans can never take the device path, so e2e stamps the fixture agent
-    // as an external ACP type. These journeys exercise agent-agnostic UI
-    // behaviors (send/receive, scroll, message ops); engine identity is not
-    // under test.
     await client.query(
       `update agents
        set agency_config = coalesce(agency_config, '{}'::jsonb) || $1::jsonb,
            updated_at = now()
        where id = any($2)`,
-      [
-        JSON.stringify({
-          boundDeviceId: E2E_DEVICE_ID,
-          executionTarget: 'device',
-          heterogeneousProvider: { type: 'claude-code' },
-        }),
-        agentIds,
-      ],
+      [JSON.stringify({ boundDeviceId: E2E_DEVICE_ID, executionTarget: 'device' }), agentIds],
     );
   } finally {
     await client.end();

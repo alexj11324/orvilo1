@@ -603,7 +603,7 @@ export const dispatchHeteroAgent = async (
     chatGroupId: appContext?.groupId ?? null,
     // Engine provenance: the heterogeneous/ACP dispatch — never the in-process
     // runtime loop — owns this operation. `heteroAgentType` records the agent
-    // family that executes the run ('orvilo' for the embedded Prime harness),
+    // family that executes the run ('orvilo' = the Prime harness adapter),
     // so a trace can prove which runtime drove it.
     executionEngine: 'hetero',
     maxSteps,
@@ -1240,11 +1240,12 @@ export const dispatchHeteroAgent = async (
 
     const heteroPlan = deviceHeteroPlan!;
 
-    // Builtin Orvilo is embedded-only: every stored target resolves to the
-    // embedded fork regardless of plan — a stale device pin degrades to
-    // embedded rather than dispatching to a device that cannot run Prime.
-    // External CLI families keep the unchanged device/sandbox fork.
-    if (heteroPlan.kind !== 'sandbox' && heteroType !== 'orvilo') {
+    // Device-first for every harness: the shared execution plan resolves a
+    // device for ALL agent types — builtin orvilo included (the device picks
+    // its harness adapter: orvilo→Prime — see
+    // docs/development/device-execution-contract.md). Only a plan that
+    // resolves to no device reaches the embedded/sandbox fork below.
+    if (heteroPlan.kind !== 'sandbox') {
       const dispatchDeviceId = heteroPlan.kind === 'device' ? heteroPlan.deviceId : undefined;
       if (!dispatchDeviceId) {
         log('execAgent: hetero executionTarget=device but no boundDeviceId set');
@@ -1476,23 +1477,24 @@ export const dispatchHeteroAgent = async (
         log('execAgent: failed to patch runningOperation with device info: %O', err);
       }
     } else {
-      // Prime embedded harness: own-agent task dispatches always route to the
-      // canonical embedded host — `orvilo` is our own runtime. ACP/hetero
-      // kinds keep the unchanged sandbox path below.
+      // Non-device plan for an own-agent type: the canonical embedded host
+      // runs Prime here — `orvilo` is our own runtime. ACP/hetero kinds keep
+      // the unchanged sandbox path below.
       const embeddedRoute = await resolveEmbeddedDispatchRoute(deps, {
         appContext,
         heteroType,
         operationTaskId,
       });
       if (heteroType === 'orvilo' && !embeddedRoute) {
-        // Honest boundary (see docs/development/prime-cutover.md): chat runs
-        // carry no canonical task-dispatch context — the embedded contract is
-        // task-shaped (CanonicalRunAuthority/TaskExecutionControlModel/claims
-        // all row-lock task rows), so a chat-scoped admission is a
-        // control-plane expansion tracked separately. Fail loudly rather than
-        // silently spawning the retired engine-CLI path.
+        // Honest boundary (see docs/development/prime-cutover.md): a chat run
+        // reaching the embedded host carries no canonical task-dispatch
+        // context — the embedded contract is task-shaped
+        // (CanonicalRunAuthority/TaskExecutionControlModel/claims all
+        // row-lock task rows), so chat-scoped admission is a control-plane
+        // expansion tracked separately. Fail loudly rather than silently
+        // spawning the retired engine-CLI path.
         const message =
-          'The builtin Orvilo agent runs on the embedded Prime harness; chat admission to that runtime is being wired in a follow-up and cannot execute in this build.';
+          'The builtin Orvilo agent runs the Prime harness on the embedded host; chat admission to that host is being wired in a follow-up and cannot execute in this build.';
         log('execAgent: orvilo run lacks embedded dispatch context op=%s', operationId);
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,

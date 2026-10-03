@@ -118,9 +118,10 @@ const ProfileEditor = memo(() => {
     isHeterogeneous &&
     !!heterogeneousProvider &&
     isRemoteHeterogeneousType(heterogeneousProvider.type);
-  // The builtin Orvilo agent is bound to the embedded Prime harness — it has
-  // no CLI binary to detect, no command override, and no device routing, so
-  // neither the local-CLI status card nor the device picker applies.
+  // The builtin Orvilo agent's harness is fixed to Prime — it has no CLI
+  // binary to detect and no command override, so the local-CLI status card
+  // does not apply. Its device picker follows the shared showDeviceSelector
+  // rule (docs/development/device-execution-contract.md).
   const isBuiltinEngine =
     isHeterogeneous && !!heterogeneousProvider && isBuiltinEngineType(heterogeneousProvider.type);
   const showCloudHeterogeneousTab = heterogeneousProvider?.type === 'claude-code';

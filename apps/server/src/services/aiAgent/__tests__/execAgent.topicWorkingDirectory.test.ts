@@ -263,9 +263,8 @@ const SOURCE_PATH = '/repo/orvilo';
 const WORKTREE_PATH = '/repo/orvilo/.worktrees/feat';
 
 const createAgentConfig = (agencyConfig: Record<string, any>) => ({
-  // External-agent binding — the builtin orvilo agent is embedded-only and
-  // its chat runs terminate at EMBEDDED_CHAT_NOT_ADMITTED; device routing is
-  // exercised on claude-code.
+  // External-agent binding — the builtin orvilo agent's harness is fixed to
+  // Prime; device routing is exercised on the external claude-code adapter.
   agencyConfig: { heterogeneousProvider: { type: 'claude-code' }, ...agencyConfig },
   chatConfig: {},
   id: 'agent-1',

@@ -559,8 +559,6 @@ export default {
   'agentEngine.harness.label': 'Harness',
   'agentEngine.harness.localGroup': 'Local CLI',
   'agentEngine.harness.remoteGroup': 'Platform agent',
-  'agentEngine.harness.primeHint':
-    'The builtin Orvilo agent runs on the embedded Prime harness — this is fixed and cannot be swapped.',
   'agentEngine.model.label': 'Model',
   'agentEngine.legacy.description':
     'This agent still uses its existing chat runtime. Its execution path will not change until you migrate it.',
@@ -576,8 +574,6 @@ export default {
     'No enabled Orvilo binding found — add one under Settings → Provider Bindings.',
   'agentEngine.model.primeHint': 'Model routes come from your enabled Orvilo provider bindings.',
   'agentEngine.target.label': 'Run on',
-  'agentEngine.target.primeEmbedded':
-    "Runs on Orvilo's embedded cloud runtime — device execution is not available for the builtin agent.",
 
   'checking': 'Checking...',
 

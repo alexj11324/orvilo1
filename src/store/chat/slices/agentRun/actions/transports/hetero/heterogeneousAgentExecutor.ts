@@ -479,12 +479,13 @@ export const executeHeterogeneousAgent = async (
     persistedHeterogeneousProvider,
   );
   if (heterogeneousProvider.type === 'orvilo') {
-    // The builtin Orvilo agent has no local executable — its Prime harness
-    // runs inside the server control plane (embedded-only). A `local`
-    // execution target can never host it; fail loudly rather than resolving
-    // the retired engine→CLI mapping.
+    // The builtin Orvilo agent's harness is fixed to Prime and executes on a
+    // resolved device like every agent — but the device-side Prime adapter
+    // is not packaged yet (see
+    // docs/development/device-execution-contract.md). Fail loudly rather
+    // than resolving a wrong-family local executable.
     throw new Error(
-      "The builtin Orvilo agent runs on Orvilo's embedded Prime runtime; local execution is not available.",
+      "The builtin Orvilo agent's Prime adapter is not packaged for device execution yet.",
     );
   }
   const adapterType = heterogeneousProvider.type;

@@ -222,14 +222,16 @@ interface EngineConfigCardProps {
 }
 
 /**
- * Per-agent engine settings: which harness runs the agent, per-harness
- * model/effort/mode/speed, and where runs execute. The builtin Orvilo agent
- * is bound to the embedded Prime harness — fixed, with no harness/engine
- * selector and no device picker; its model picker lists the model routes of
- * the user's enabled Orvilo provider bindings (`selection.runtime ===
- * 'orvilo'` + `selection.target === 'sandbox'`), which is the same narrowing
- * `resolveOrviloProviderBinding` applies at dispatch. Everything persists
- * through `agencyConfig.heterogeneousProvider` / `executionTarget` /
+ * Per-agent engine settings: for external agents, which harness runs the
+ * agent, per-harness model/effort/mode/speed, and where runs execute. The
+ * builtin Orvilo agent's harness is fixed to Prime — it renders no
+ * Harness/Engine row and no target row (the device picker follows the
+ * shared showDeviceSelector rule, wired separately); its model picker lists
+ * the model routes of the user's enabled Orvilo provider bindings
+ * (`selection.runtime === 'orvilo'` + `selection.target === 'sandbox'`),
+ * which is the same narrowing `resolveOrviloProviderBinding` applies at
+ * dispatch. Everything persists through
+ * `agencyConfig.heterogeneousProvider` / `executionTarget` /
  * `boundDeviceId` — the legacy `model`/`provider` fields are untouched.
  */
 const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
@@ -531,51 +533,50 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
     void patchProvider(applyHeteroSelection(provider, selection));
   };
 
-  const rows: { content: ReactNode; key: string; label: string }[] = [
-    {
-      content: legacyRuntime ? (
-        <div className="flex flex-col items-start gap-2">
-          <div>{t('agentEngine.legacy.name')}</div>
-          <div className={styles.hint}>{t('agentEngine.legacy.description')}</div>
-          <Button
-            disabled={!canEdit}
-            size="sm"
-            onClick={() => {
-              void patchProvider({ type: 'orvilo' });
-            }}
-          >
-            {t('agentEngine.legacy.migrate')}
-          </Button>
-        </div>
-      ) : builtinEngine ? (
-        <>
-          <HarnessOptionLabel name="Orvilo" type="orvilo" />
-          <div className={styles.hint}>{t('agentEngine.harness.primeHint')}</div>
-        </>
-      ) : (
-        <Select
-          disabled={!canEdit}
-          items={selectItems(harnessOptions)}
-          value={harnessType}
-          onValueChange={(value) => {
-            if (typeof value !== 'string') return;
-            void patchProvider(
-              buildHarnessProviderPatch(provider, value as HeterogeneousAgentType),
-            );
-          }}
-        >
-          <SelectTrigger className={styles.select}>
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectOptionItems options={harnessOptions} />
-          </SelectContent>
-        </Select>
-      ),
-      key: 'harness',
-      label: t('agentEngine.harness.label'),
-    },
-  ];
+  // The builtin agent renders no harness row: its harness is fixed to Prime
+  // and the settings contract forbids a Harness/Engine row on it.
+  const rows: { content: ReactNode; key: string; label: string }[] = builtinEngine
+    ? []
+    : [
+        {
+          content: legacyRuntime ? (
+            <div className="flex flex-col items-start gap-2">
+              <div>{t('agentEngine.legacy.name')}</div>
+              <div className={styles.hint}>{t('agentEngine.legacy.description')}</div>
+              <Button
+                disabled={!canEdit}
+                size="sm"
+                onClick={() => {
+                  void patchProvider({ type: 'orvilo' });
+                }}
+              >
+                {t('agentEngine.legacy.migrate')}
+              </Button>
+            </div>
+          ) : (
+            <Select
+              disabled={!canEdit}
+              items={selectItems(harnessOptions)}
+              value={harnessType}
+              onValueChange={(value) => {
+                if (typeof value !== 'string') return;
+                void patchProvider(
+                  buildHarnessProviderPatch(provider, value as HeterogeneousAgentType),
+                );
+              }}
+            >
+              <SelectTrigger className={styles.select}>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectOptionItems options={harnessOptions} />
+              </SelectContent>
+            </Select>
+          ),
+          key: 'harness',
+          label: t('agentEngine.harness.label'),
+        },
+      ];
 
   if (builtinEngine) {
     rows.push({
@@ -608,11 +609,6 @@ const EngineConfigCard = memo<EngineConfigCardProps>(({ agentId }) => {
       ),
       key: 'model',
       label: t('agentEngine.model.label'),
-    });
-    rows.push({
-      content: <div className={styles.hint}>{t('agentEngine.target.primeEmbedded')}</div>,
-      key: 'target',
-      label: t('agentEngine.target.label'),
     });
   }
 

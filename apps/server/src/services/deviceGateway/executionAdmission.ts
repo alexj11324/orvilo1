@@ -66,10 +66,32 @@ export interface DeviceCandidateInventory {
 export const listAuthorizedDeviceCandidates = async (
   serverDB: OrviloDatabase,
   userId: string,
-  workspaceId?: string,
-  localDeviceId?: string,
+  workspaceId: string | undefined,
+  options?: {
+    /**
+     * The agent owner's user id — the registry where a shared `boundDeviceId`
+     * naturally lives (an author binds their own devices to a public agent).
+     */
+    agentOwnerId?: string;
+    localDeviceId?: string;
+    /**
+     * Devices the resolution inputs name (stored binding, session pin, member
+     * pick, request, caller's own machine). A referenced id that is not in the
+     * scoped registry list is verified individually — caller's personal
+     * registry, the run's workspace registry, and (for stored bindings only)
+     * the agent owner's registry. A referenced device that verifies nowhere is
+     * NOT a candidate — the resolver blocks it honestly instead of trusting a
+     * stale reference.
+     */
+    referencedDevices?: ReadonlyArray<{
+      deviceId?: string | null;
+      /** Also probe the agent owner's personal registry (stored bindings). */
+      ownerRegistry?: boolean;
+    }>;
+  },
 ): Promise<DeviceCandidateInventory> => {
   const deviceModel = new DeviceModel(serverDB, userId, workspaceId);
+  const localDeviceId = options?.localDeviceId;
   const scope: 'personal' | 'workspace' = workspaceId ? 'workspace' : 'personal';
 
   let inventoryComplete = true;
@@ -121,8 +143,46 @@ export const listAuthorizedDeviceCandidates = async (
       scopeOk: true,
       versionOk: true,
     }));
+  const candidates = [...fromDb, ...transient];
+  for (const device of candidates) seen.add(device.deviceId);
 
-  return { candidates: [...fromDb, ...transient], inventoryComplete };
+  // Referenced-device verification: a stored binding, session pin or caller
+  // reference may name a device outside the scoped list — an author's personal
+  // device bound to a public workspace agent, or the caller's own desktop on a
+  // `local` run. It joins the candidate set only when a registry lookup
+  // confirms it exists (the same find-by-id calls dispatch itself trusts); an
+  // unverifiable reference stays unauthorized.
+  const ownerModel =
+    options?.agentOwnerId && options.agentOwnerId !== userId
+      ? new DeviceModel(serverDB, options.agentOwnerId)
+      : undefined;
+  for (const ref of options?.referencedDevices ?? []) {
+    if (!ref?.deviceId || seen.has(ref.deviceId)) continue;
+    try {
+      const verified =
+        (await deviceModel.findByDeviceId(ref.deviceId)) ??
+        (workspaceId ? await deviceModel.findWorkspaceDeviceById(ref.deviceId) : undefined) ??
+        (ref.ownerRegistry && ownerModel
+          ? await ownerModel.findByDeviceId(ref.deviceId)
+          : undefined);
+      if (!verified) continue;
+      seen.add(ref.deviceId);
+      candidates.push({
+        capabilityOk: true,
+        deviceId: ref.deviceId,
+        isLocalMachine: ref.deviceId === localDeviceId,
+        online: !!liveById.get(ref.deviceId),
+        scopeOk: true,
+        versionOk: true,
+      });
+    } catch (err) {
+      // A failed probe only skips THIS reference — it never shrinks the set
+      // built from the authoritative list (that failure is inventoryComplete).
+      log('referenced device probe failed id=%s: %O', ref.deviceId, err);
+    }
+  }
+
+  return { candidates, inventoryComplete };
 };
 
 // ─── Unified admission ───────────────────────────────────────────────────────
@@ -156,6 +216,12 @@ export interface ResolveHeteroExecutionPlanParams {
    * member override resolved, the shared-row default is never consulted.
    */
   agencyConfig?: OrviloAgentAgencyConfig;
+  /**
+   * The agent owner's user id — stored bindings verify against THEIR
+   * personal registry (an author's own device bound to a public workspace
+   * agent stays executable by every authorized member).
+   */
+  agentOwnerId?: string;
   /**
    * External senders (bot/IM/task surfaces without device grants) pass false —
    * they degrade to the sandbox when available and are denied otherwise.
@@ -218,23 +284,29 @@ export const resolveHeteroExecutionPlan = async (
     workspaceScoped: params.workspaceScoped,
   });
 
-  if (target === 'sandbox') return { kind: 'sandbox' };
-
-  if (!params.canUseDevice) {
-    // Device access denied: the only surfaces a denied sender may still reach
-    // are the explicit sandbox grant (share visitors) or a sandbox-capable
-    // family — never a device, never the viewing client's machine.
-    if (params.sandboxExecutionAvailable || params.sandboxFallback) return { kind: 'sandbox' };
-    return {
-      code: 'DEVICE_ACCESS_DENIED',
-      detail: 'This sender is not allowed to run agents on a bound device.',
-      kind: 'blocked',
-    };
-  }
-
+  // An explicit request counts toward device intent ONLY when the run allows
+  // member-initiated requests (mirroring the legacy fixed-policy strip): a
+  // disallowed request is ignored, never a silent override and never an error
+  // — the resolver gates it the same way below.
+  const explicitRequestAllowed = !isFixedPolicy && !params.workspaceScoped;
+  const effectiveExplicitDeviceId = explicitRequestAllowed ? params.explicitDeviceId : undefined;
   const wantsDevice =
-    !!params.explicitDeviceId || target === 'device' || target === 'local' || target === 'auto';
-  if (!wantsDevice) {
+    !!effectiveExplicitDeviceId || target === 'device' || target === 'local' || target === 'auto';
+
+  if (!wantsDevice || !params.canUseDevice) {
+    if (target === 'sandbox') return { kind: 'sandbox' };
+    if (!params.canUseDevice) {
+      // Device access denied: the only surfaces a denied sender may still
+      // reach are the explicit sandbox grant (share visitors) or a
+      // sandbox-capable family — never a device, never the viewing client's
+      // machine.
+      if (params.sandboxExecutionAvailable || params.sandboxFallback) return { kind: 'sandbox' };
+      return {
+        code: 'DEVICE_ACCESS_DENIED',
+        detail: 'This sender is not allowed to run agents on a bound device.',
+        kind: 'blocked',
+      };
+    }
     // Stored 'none' is an explicit opt-out — the run stays pending until the
     // user picks a device or sandbox; it never auto-binds. An UNSET target
     // (no history: never selected, no session pin) still consults the
@@ -255,7 +327,22 @@ export const resolveHeteroExecutionPlan = async (
     serverDB,
     params.userId,
     params.workspaceId,
-    params.localDeviceId,
+    {
+      agentOwnerId: params.agentOwnerId,
+      localDeviceId: params.localDeviceId,
+      referencedDevices: [
+        // Stored bindings resolve in the owner's registry — the agent's
+        // configured host is a prior authorization act.
+        { deviceId: agencyConfig?.boundDeviceId, ownerRegistry: true },
+        { deviceId: params.sessionBoundDeviceId, ownerRegistry: true },
+        { deviceId: params.memberDeviceOverride?.boundDeviceId, ownerRegistry: true },
+        // The caller's own machine and their explicit request verify only
+        // against the caller's + workspace registries — a member cannot
+        // request the author's personal device by id.
+        { deviceId: params.localDeviceId },
+        { deviceId: effectiveExplicitDeviceId },
+      ],
+    },
   );
 
   // A member override that resolved (executionTarget set) fully shadows the
@@ -273,16 +360,22 @@ export const resolveHeteroExecutionPlan = async (
         : undefined
     : undefined;
 
-  // 'local' names the requester's own machine (localDeviceId); when no
-  // requester device is attached (bot/web call) the stored boundDeviceId is
-  // the durable stand-in — the picker stamps the chosen desktop's id there,
-  // which is exactly what the legacy `local`→`device` coercion honoured.
+  // 'local' names the requester's own machine (localDeviceId). A PINNED
+  // policy resolves the pinned `boundDeviceId` instead — the caller's machine
+  // is not a sanctioned stand-in for a fixed contract. Off-desktop
+  // (bot/web call) the stored boundDeviceId is the durable stand-in — the
+  // picker stamps the chosen desktop's id there — EXCEPT for platform task
+  // families (openclaw/hermes), where a stale bound id must not hijack a
+  // `local` intent.
   const agentDefaultDeviceId = memberPicked
     ? undefined
     : target === 'device'
       ? agencyConfig?.boundDeviceId
       : target === 'local'
-        ? (params.localDeviceId ?? agencyConfig?.boundDeviceId)
+        ? isFixedPolicy
+          ? agencyConfig?.boundDeviceId
+          : params.localDeviceId ||
+            (params.isPlatformTask ? undefined : agencyConfig?.boundDeviceId)
         : undefined;
 
   // `auto` explicitly re-picks every run — a leftover binding must not pin it.

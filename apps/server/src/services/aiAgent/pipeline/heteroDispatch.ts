@@ -871,6 +871,7 @@ export const dispatchHeteroAgent = async (
   // embedded/sandbox) consumes THIS plan — there is no second device pick.
   const executionPlan = await resolveHeteroExecutionPlan(deps.db, {
     agencyConfig: agentConfig.agencyConfig,
+    agentOwnerId: agentConfig.userId,
     canUseDevice,
     explicitDeviceId: requestedDeviceId,
     isPlatformTask: isRemoteHetero,
@@ -1172,22 +1173,22 @@ export const dispatchHeteroAgent = async (
     // degrade to — a non-device plan (blocked, or defensively anything else)
     // finalizes here with the contract code surfaced to the caller.
     if (executionPlan.kind !== 'device' || !remoteDeviceId) {
-      const blockedDetail =
-        executionPlan.kind === 'blocked'
-          ? executionPlan.detail
-          : 'No local or connected device is available for this agent.';
       const blockedCode = executionPlan.kind === 'blocked' ? executionPlan.code : 'DEVICE_REQUIRED';
       const denied = blockedCode === 'DEVICE_ACCESS_DENIED';
       log('execAgent: remote hetero dispatch blocked (code=%s)', blockedCode);
       // `repairCandidates` have no structured home yet —
       // `DeviceUnavailableErrorData` only models DEVICE_NOT_FOUND — so the
-      // detail text carries the resolution reason (a shared
-      // DeviceAdmissionErrorData shape is a pending contract request).
+      // contract code rides the detail text (a shared DeviceAdmissionErrorData
+      // shape is a pending contract request). `error` keeps the established
+      // 'No bound device'/'Device access denied' labels for compatibility.
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
         assistantMessageId,
-        detail: blockedDetail,
-        message: denied ? 'Device access denied' : 'No execution device for platform agent',
+        detail:
+          executionPlan.kind === 'blocked'
+            ? `${blockedCode}: ${executionPlan.detail}`
+            : 'No local or connected device is available for this agent.',
+        message: denied ? 'Device access denied' : 'No bound device',
         operationId,
         topicId,
       });
@@ -1196,7 +1197,7 @@ export const dispatchHeteroAgent = async (
         assistantMessageId,
         autoStarted: false,
         createdAt: new Date().toISOString(),
-        error: denied ? 'Device access denied' : 'No execution device',
+        error: denied ? 'Device access denied' : 'No bound device',
         message: denied
           ? 'This sender is not allowed to run agents on a bound device'
           : 'Platform agent requires a local or connected device',
@@ -1420,9 +1421,9 @@ export const dispatchHeteroAgent = async (
         assistantMessageId,
         detail:
           heteroPlan.kind === 'blocked'
-            ? `${heteroPlan.detail} ${pickerHint}`
+            ? `${blockedCode}: ${heteroPlan.detail} ${pickerHint}`
             : `No device bound. ${pickerHint}`,
-        message: denied ? 'Device access denied' : 'No execution device for hetero agent',
+        message: denied ? 'Device access denied' : 'No bound device',
         operationId,
         topicId,
       });
@@ -1431,7 +1432,7 @@ export const dispatchHeteroAgent = async (
         assistantMessageId,
         autoStarted: false,
         createdAt: new Date().toISOString(),
-        error: denied ? 'Device access denied' : 'No execution device',
+        error: denied ? 'Device access denied' : 'No bound device',
         message: denied
           ? 'This sender is not allowed to run agents on a bound device'
           : 'Hetero agent requires an execution device',

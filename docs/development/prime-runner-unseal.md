@@ -1,129 +1,127 @@
 # Prime runner upstream-capability unseal
 
-Owner directive: upstream parity — the Prime runner exposes every capability
-the vendored `@earendil-works/pi-*` stack provides by default, end to end
-(「上游有什么能力，我们就应该有什么能力」). The credential architecture stays
-sealed: zero-credential `AuthStorage`, the single `orvilo-broker` provider as
-the only inference egress, telemetry off, artifact pin verification, and
-bounded leases are unchanged.
+Owner's call, verbatim: 上游有什么能力，我们就应该有什么能力 — complete unseal,
+not selective. The vendored `@earendil-works/pi-*` SDK defaults become the
+device defaults wherever a layer can carry them. What stays sealed is the
+_credential architecture_ — zero-credential `AuthStorage`, a single-provider
+`ModelRegistry` (`orvilo-broker` only), telemetry off, broker-only inference
+egress, artifact pin verification, lease bounds — not capability.
 
-This document tracks the three-layer delivery.
+Shipped in three layers: protocol v2 wire schema (additive) → runner unseal +
+broker passthrough → host/pipeline/ledger/UI surfacing.
 
-## Layer map
+## Layer A — protocol v2 (`harnessProtocol.ts`)
 
-### Layer A — harness protocol v2 + contracts (this PR, additive)
+`HARNESS_PROTOCOL_VERSION = 2`. The v1 wire was structurally text-only; v2 keeps
+the sanitization property (no endpoints, no credentials, no absolute paths on
+the wire) and expands expressiveness:
 
-`packages/agent-execution/src/controlPlane/harnessProtocol.ts` and
-`contracts.ts` gain the shapes the wire needs to carry tools and thinking.
-No behavior change lands here: the shipped runner still speaks the text-only
-subset and no sender produces the new shapes yet.
+- `SanitizedContentBlock` — `text` / `thinking` / `image` / `toolCall` block
+  forms; `SanitizedMessageContent = string | SanitizedContentBlock[]`.
+- `SanitizedInferenceMessage` — `system` / `user` / `assistant` (blocks, incl.
+  `toolCall`) / `tool` (result for a `toolCallId`) roles.
+- `SanitizedInferenceRequest` — `tools` (tool schemas — without definitions on
+  the wire the model could never emit `tool_calls`), `thinkingLevel`,
+  `serviceTier`, `providerOptions` passthrough.
+- `BrokerStreamEvent` — `thinking_delta`, `toolcall_start` / `toolcall_delta` /
+  `toolcall_end`.
+- `HarnessSessionEvent` — `thinking`, `tool_call`, `tool_progress`,
+  `tool_result` (names + args + results). `tool-violation` survives only for
+  calls outside the negotiated tool surface.
+- `HarnessInitModel` — real metadata (`contextWindow`, `input` modalities,
+  `reasoning`) resolved from `ProviderModelCapability`.
+- `HarnessInitParams` — `stateDir`, `resumeSessionId`; forward methods
+  `session.resume` / `session.list`.
 
-- `HARNESS_PROTOCOL_VERSION` bumps `1 → 2`. The runner and the host validate
-  the version at `harness.init`; a v1 runner against a v2 host (or the
-  reverse) fails init honestly instead of silently degrading on the wider
-  wire.
-- `SanitizedInferenceMessage` gains the content-block form
-  (`text` / `thinking` / `image` / `toolCall`, mirroring pi-ai
-  `Message.content`) and the `tool` role (`toolCallId`, `toolName`,
-  `isError`). Plain-string content stays valid.
-- `SanitizedInferenceRequest` gains `tools` (the tool schemas the model may
-  call — without them the model cannot emit `tool_calls`), `thinkingLevel`,
-  `serviceTier`, and an opaque `providerOptions` pass-through for whatever
-  the issued binding grants.
-- `BrokerStreamEvent` gains `toolcall_start` / `toolcall_delta` /
-  `toolcall_end` (index-keyed for parallel calls) and `thinking_delta`.
-- `HarnessSessionEvent` gains `thinking`, `tool_call`, `tool_progress`,
-  `tool_result`. `tool-violation` survives only as the fail-closed invariant
-  for _undeclared_ tools — a tool event outside the negotiated allowlist
-  still means upstream escaped the sandbox.
-- `HarnessInitModel` carries `reasoning`, `input` modalities and
-  `contextWindow`, resolved from `ProviderModelCapability` (which gains
-  `reasoning` + `contextWindow` in `contracts.ts`).
-- `HarnessInitParams.resumeSessionId` plus the `session.resume` /
-  `session.list` forward methods are registered — implemented in layer B.
-- `InferenceMessage`/`InferenceRequest`/`InferenceEvent`/`RuntimeEvent` are
-  widened to parity, and `toInferenceMessage` preserves the discriminated
-  union across the broker seam (the old `.map(({ role, content }))`
-  silently dropped `toolCallId`).
+## Layer B — runner + broker (`packages/prime-harness`)
 
-### Layer B — runner unseal + broker passthrough (PR2)
+- **Tools**: `noTools` / `tools:[]` / `customTools:[]` all dropped — upstream's
+  default `initialActiveToolNames` applies (default `ipython`; extension and
+  ACP-MCP surface rides along). `capabilities.tools` in the init ack is the
+  _actual_ activated list (`getActiveToolNames()`), not a schema constant.
+- **Sessions**: `SessionManager` persists under `<agentDir>/sessions`
+  (`agentDir = init.stateDir ?? <workspace>/.prime/agent`). Init with
+  `resumeSessionId` reopens `<sessionDir>/<id>.jsonl` via `SessionManager.open`
+  — upstream ids are `uuidv7`, preserved across restarts. The ack's `sessionId`
+  echo of the requested id is the truth oracle for "really resumed".
+- **Resources**: real `DefaultResourceLoader` (+ `reload()`) against the device
+  workspace/stateDir — the device workspace is the trust boundary.
+- **MCP**: real `McpManager` — user/global MCP servers come from the real
+  `SettingsManager` under `agentDir`; the connection store persists as
+  `mcp-connections.json`. Orvilo-managed path only — no arbitrary device-side
+  MCP config is minted.
+- **Thinking**: `thinkingLevel` is not pinned `off` — upstream resolves
+  saved-session → settings default → `DEFAULT_THINKING_LEVEL`, then clamps to
+  `model.reasoning` (which now rides `HarnessInitModel.reasoning` from the
+  issued binding's `ProviderModelCapability`).
+- **Broker bridge** (`broker.ts`): carries the v2 block shapes both directions.
+  Upstream content is sequential — at most one text/thinking block open; tool
+  calls own provider `index` keys (falling back to `toolCallId`). A pump that
+  saw `tool_calls` reports `stopReason:'toolUse'`; tool calls are NOT executed
+  host-side — they run inside the runner's agent session on the device.
+- **Events** (`events.ts`): `tool_execution_start/_update/_end` →
+  `tool_call`/`tool_progress`/`tool_result`; `thinking_delta` → `thinking`;
+  `toolcall_*` assistant events stay internal (they reconstruct the assistant
+  message, not ledger rows). `toolUse` stop → error ("Run ended on unexecuted
+  tool calls") — a tool ending up unexecuted is a real anomaly, not a normal
+  end.
 
-`packages/prime-harness` boots the upstream default session:
+## Layer C — contracts (`contracts.ts`)
 
-- `noTools:'all'`/`tools:[]`/`customTools:[]` are dropped → upstream default
-  toolset (the session-level default is `ipython`; bash/edit factories exist
-  upstream but are not wired into the default session set).
-- `EmptyResourceLoader` → `DefaultResourceLoader` on the device workspace +
-  stateDir. The workspace mount on the device is the trust boundary.
-- `SessionManager.inMemory` → persistent `SessionManager` under the device
-  stateDir → real resume: `HarnessInitParams.resumeSessionId` reopens the
-  `<stateDir>/sessions/<id>.jsonl` file via `SessionManager.open`; the ack's
-  `sessionId` reports the true upstream id so the host detects
-  resumed-vs-rebuilt by comparison.
-- `SettingsManager` becomes persistent under `agentDir` with
-  `setTelemetryEnabled(false)` applied (telemetry stays sealed through the
-  persisted settings file).
-- `McpManager` becomes real: `getUserServers → getGlobalMcpServers()`, a
-  persistent `McpConnectionStore` under `agentDir`. Orvilo has no managed
-  MCP registry today, so the managed settings file under the host-owned
-  `agentDir` is the managed path — no arbitrary device-side config is
-  invented.
-- `agentDir` = device stateDir; `thinkingLevel` falls back to the upstream
-  default clamped by `model.reasoning`; `brokerModel.reasoning` /
-  `input` / `contextWindow` become passthroughs of `HarnessInitModel`.
-- `broker.ts` `sanitizeMessages` carries block-form content + `tool` roles
-  both directions and relays `tools`/`thinkingLevel`/`serviceTier`/
-  `providerOptions` to `broker.infer`; `broker.event` `toolcall_*` and
-  `thinking_delta` pump into the upstream `AssistantMessageEventStream`.
-- `events.ts` maps `tool_execution_*` → `tool_call`/`tool_progress`/
-  `tool_result`, `thinking_delta` → `thinking`; `toolUse` stopReason reports
-  an honest `Run ended on unexecuted tool calls` error.
-- `capabilities.tools` in the init ack advertises the actual enabled tool
-  names (`session.getActiveToolNames()`).
-- `session.resume`/`session.list` handlers implemented.
-- Server side: `SqlTrustedProviderBackend` sends `tools` and parses
-  `delta.tool_calls` (+ non-SSE `message.tool_calls`) into `toolcall_*`
-  inference events; `capabilities.tools`/`reasoning` go honest;
-  `primeBroker.isInferBody` accepts the v2 shapes and `toBrokerEvent` relays
-  them.
+`InferenceMessage` / `InferenceRequest` / `InferenceEvent` / `RuntimeEvent`
+mirror the v2 wire richness (blocks, tool_calls, thinking, `toolcall_*`,
+`serviceTier`, `providerOptions`). `RuntimeCapabilities.resume` gains honest
+tiers (`'none' | 'acp-load' | 'session-path' | 'rpc-switch'`) +
+`resume({session, sessionPath?})` — embedded runtime stays `'none'`; the device
+path resumes via `HarnessInitParams.resumeSessionId`.
 
-Deferred consciously: `sessionStartEvent`, `thinkingBudgets` beyond the
-upstream default clamp, `autonomous` policy, and the RLM/subagent runtime
-host surface — none have a host contract consumer in this package; enabling
-them without a consumer invents wire surface. They are candidates for a
-follow-up package once the ledger/UI wants them.
+## Layer D — host/pipeline
 
-### Layer C — host/pipeline/ledger/UI surfacing (PR3)
+- `composeDevicePrimeRun` maps `ProviderModelCapability` → descriptor `model`
+  (`input` = `['text','image']` when `images` capability, `contextWindow`,
+  `reasoning`) → `HarnessInitModel`.
+- `providerBinding/controlPlane.infer` passes `tools` → OpenAI `tools`,
+  `reasoning_effort`, `service_tier`, `providerOptions`; both stream and
+  non-stream paths surface `tool_calls` + `reasoning_content`.
+- `admitPrimeDeviceRun` rebuild branch locates the persisted session
+  (`~/.orvilo/prime-state/*/sessions/<resumeSessionId>.jsonl`) and reuses its
+  stateDir so a restart is a real resume — `resumeOutcome` flips
+  `rebuilt`→`resumed` on the ack-echo oracle.
+- `primeEmbeddedRuntime` drops the `tools.length !== 0` handshake rejection and
+  maps the new harness events onto `RuntimeEvent`.
 
-`primeEmbeddedRuntime` drops the `tools.length !== 0` handshake rejection;
-`primeDeviceRun`/`embeddedDispatch`/`embeddedChatDispatch`/
-`devicePrimeDispatch` consume `ProviderModelCapability.tools/images` and
-advertise real capabilities; tool activity lands on the ledger the same way
-hetero `ToolCallPayload`s do (`stream_chunk{tools_calling}` /
-`tool_state` / `tool_end`); Prime tool calls render in the conversation
-feed at parity with hetero.
+## SDK surface enabled vs deferred
 
-## ipython runtime provisioning (honest capability)
+Enabled: default builtin toolset, persistent sessions + resume, real
+resource loader (skills/AGENTS.md context), MCP manager (user/global servers +
+persistent connection store), settings manager (telemetry pinned off, default
+thinking level), `getActiveToolNames` capability advertisement, stream
+`reasoning`/`serviceTier`/`thinkingBudgets` provider options.
 
-The upstream default toolset is literally `{ipython}` — an IPython kernel
-the SDK provisions lazily on first tool call: it installs `uv` via
-`curl -LsSf astral.sh/uv/install.sh | sh`, then `uv python install`, then
-`uv pip install prime-agent-runtime` (preferring the vendored runtime
-source when present), all under `$PRIME_AGENT_KERNEL_VENV` (default
-`~/.prime/agent/kernel-venv`). The shipped `node:22-bookworm-slim` image
-lacks both python and `curl`; the Dockerfiles gain `curl` so the lazy
-provisioner can run. Whether `uv` can actually reach astral.sh and PyPI
-inside the device sandbox is an acceptance-matrix question — the report
-states which builtins are runnable rather than guessing.
+Deferred (conscious, reported): `sessionStartEvent` (no host contract
+consumer), `thinkingBudgets` beyond the provider-options passthrough (no UI
+surface), `autonomous` continuation policy (host owns turn lifecycle; no
+contract field), RLM/`subagentRuntimeHost` (a real sub-agent host surface would
+invent wire contracts the ledger has no vocabulary for — needs its own
+package).
 
-## Boundaries that did not move
+## Runnable builtins in the shipped image
 
-- All inference still exits through the host broker — `streamSimple` is the
-  only provider path; `broker.infer` carries the widened request shape, the
-  runner still holds zero credentials.
-- `providerOptions`/`serviceTier`/`thinkingLevel` are _pass-throughs_: the
-  host decides what the issued binding grants; the runner forwards what the
-  session negotiated.
-- `session.resume`/`session.list` are forward methods (host → runner); no
-  host-mediated tool execution is introduced — tools execute inside the
-  runner on the device.
+- `ipython` — runnable: the tool self-provisions a `uv` venv + `prime-agent-runtime`
+  kernel lazily on first use; the image now carries `curl` + `ca-certificates`
+  for that bootstrap (needs outbound PyPI access at first run — degrades to a
+  clear tool error, never a silent de-tool).
+- Extension/ACP-MCP tools — conditional: whatever MCP servers the device
+  settings declare, plus extension-registered builtins; the ack's
+  `capabilities.tools` reports the actually-activated set per run.
+- `bash`/`edit` style shell builtins — present in the vendored SDK's builtin
+  catalog but NOT in the default session's active set upstream; we match
+  upstream (not special-casing them in).
+
+## Still sealed — non-negotiable
+
+Zero credentials in `AuthStorage` (`apiKey:'embedded'` is the upstream-required
+non-empty sentinel, never a real credential); `orvilo-broker` is the only
+registered provider (its `streamSimple` IS the broker bridge — all inference
+exits through the host); telemetry off; artifact pin (version + sha256 +
+provenance commit) re-verified at every spawn; leases stay bounded.

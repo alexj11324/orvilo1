@@ -266,7 +266,15 @@ export const composeDevicePrimeRun = async (
         },
         broker: { credential },
         lease: { ttlMs: DEVICE_SIDE_LEASE_TTL_MS },
-        model: { id: capability.modelRoute, maxOutputTokens: capability.maxOutputTokens },
+        model: {
+          id: capability.modelRoute,
+          maxOutputTokens: capability.maxOutputTokens,
+          ...(capability.images === true ? { input: ['text', 'image'] } : { input: ['text'] }),
+          ...(capability.contextWindow !== undefined
+            ? { contextWindow: capability.contextWindow }
+            : {}),
+          ...(capability.reasoning !== undefined ? { reasoning: capability.reasoning } : {}),
+        },
         subject: input.task
           ? {
               dispatchId: input.task.dispatchId,

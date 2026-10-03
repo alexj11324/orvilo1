@@ -103,6 +103,13 @@ export interface PrimeDeviceRunOptions {
   log?: PrimeDeviceHostLog;
   /** Operation id — rides argv for the foreign-pid kill check. */
   operationId: string;
+  /**
+   * Persisted upstream session id to reopen under `<stateDir>/sessions/` —
+   * the restart-resume path: a rebuilt runner reopens the dead session's
+   * jsonl and the init ack echoes the same sessionId when it did. Absent or
+   * unmatched → fresh session (the host reads the ack as the truth oracle).
+   */
+  resumeSessionId?: string;
   /** Test seam — overrides process spawn. */
   spawnImpl?: typeof spawn;
   /** Device-supplied runner state dir — replaces the runner's legacy /tmp/agent default. */
@@ -302,6 +309,7 @@ export const openPrimeDeviceRun = async (
         model: descriptor.model,
         pin: pinOf(descriptor),
         protocolVersion: HARNESS_PROTOCOL_VERSION,
+        resumeSessionId: options.resumeSessionId,
         stateDir: options.stateDir,
         workspace: options.workspace,
       },

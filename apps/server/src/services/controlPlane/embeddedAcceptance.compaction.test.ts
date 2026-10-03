@@ -19,6 +19,10 @@
  * stream, which is exactly what the broker contract looks like to the runner
  * (the shape is identical to what completeSimple emits).
  */
+import { mkdir, mkdtemp } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import { CONTROL_PLANE_VERSION } from '@orvilo/agent-execution/controlPlane';
 import type { BrokerInferParams } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import { HARNESS_PROTOCOL_VERSION } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
@@ -35,12 +39,22 @@ const EXPECTED_PIN = {
   version: '0.9.8',
 } as const;
 
-const initParams = {
-  controlPlaneVersion: CONTROL_PLANE_VERSION,
-  model: { id: 'stub-model-1', maxOutputTokens: 8192 },
-  pin: EXPECTED_PIN,
-  protocolVersion: HARNESS_PROTOCOL_VERSION,
-  workspace: '/workspace',
+// Persistent sessions write under the supplied workspace/stateDir — the
+// runner needs real dirs, not the old inert '/workspace' literal.
+const makeInitParams = async () => {
+  const root = await mkdtemp(path.join(tmpdir(), 'embedded-acc-compaction-'));
+  const workspace = path.join(root, 'workspace');
+  const stateDir = path.join(root, 'agent');
+  await mkdir(workspace, { recursive: true });
+  await mkdir(stateDir, { recursive: true });
+  return {
+    controlPlaneVersion: CONTROL_PLANE_VERSION,
+    model: { id: 'stub-model-1', maxOutputTokens: 8192 },
+    pin: EXPECTED_PIN,
+    protocolVersion: HARNESS_PROTOCOL_VERSION,
+    stateDir,
+    workspace,
+  };
 };
 
 describe('embedded acceptance: resume is fail-closed (v1 deferral)', () => {
@@ -110,7 +124,7 @@ describe.skipIf(!RUNNER_UP)(
             return { error: { code: -32601, message: `unexpected ${method}` } };
           });
 
-          const ack = (await runner.transport.request('harness.init', initParams)) as {
+          const ack = (await runner.transport.request('harness.init', await makeInitParams())) as {
             sessionId: string;
           };
 
@@ -157,7 +171,10 @@ describe.skipIf(!RUNNER_UP)(
             summary ? 'seen' : 'absent',
           );
           expect(summary, 'vendored compaction issued no summarization infer').toBeTruthy();
-          expect(summary?.messages[0].content).toContain('context summarization assistant');
+          const summaryHead = summary?.messages[0].content;
+          expect(typeof summaryHead === 'string' ? summaryHead : '').toContain(
+            'context summarization assistant',
+          );
         } finally {
           runner.transport.close();
           runner.child.kill('SIGKILL');

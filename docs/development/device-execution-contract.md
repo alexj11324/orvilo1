@@ -125,8 +125,19 @@ leases.
 
 ## Prime on-device
 
-Reuse the existing runner (`noTools`/session/inference gaps are unfinished
-work, not the final state): the device host ships the Prime artifact (packaged
+Reuse the existing runner — the upstream-capability unseal (protocol v2 +
+`docs/development/prime-runner-unseal.md`) made the vendored SDK defaults the
+device defaults: builtin tool surface enabled (default `ipython`; bash/edit
+extension-registered when their runtime deps exist — the shipped image only
+guarantees what it ships, the runner reports what it actually activated),
+persistent `SessionManager` under the device `stateDir` (restart = real resume,
+not rebuild — the init ack's `sessionId` echo is the truth oracle), real
+`ResourceLoader`/`McpManager`/`SettingsManager` against the device-supplied
+workspace, thinking level upstream-clamped to the model capability the issued
+binding advertises. Tools execute INSIDE the runner on the device — the broker
+only relays inference traffic (`broker.infer` carries tool schemas +
+`tool_calls`/`tool` results both directions; there is no host-side tool
+round-trip). The device host ships the Prime artifact (packaged
 into Desktop + CLI releases; no reliance on dev relative paths); the device
 reports a verified version + artifact digest + protocol capability, re-checked
 at startup; real isolation is kept (Docker ≠ Device; bare `spawn` on this
@@ -134,6 +145,10 @@ machine is not isolation); reuse the unified ACP boundary (Prime's own NDJSON
 protocol must not pretend to be ACP); reuse the `apps/cli` agentRun lifecycle
 (serial admission per operation, dedup, no duplicate writers); no separate
 Prime gateway / cancel registry / callback settlement.
+
+Still sealed (credential architecture, not capability): zero-credential
+`AuthStorage`, single-provider `ModelRegistry` = `orvilo-broker` only, telemetry
+off, broker-only inference egress, artifact pin verification, lease bounds.
 
 Inference credentials do not determine the device: the broker may be reused,
 but Prime does not have to be on the same machine as the broker. Short-lived

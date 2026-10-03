@@ -17,6 +17,9 @@ describe('mapAgentSessionEvent', () => {
     for (const event of [
       { type: 'message_update', assistantMessageEvent: { type: 'start' } },
       { type: 'message_update', assistantMessageEvent: { type: 'text_end' } },
+      { type: 'message_update', assistantMessageEvent: { type: 'toolcall_start' } },
+      { type: 'message_update', assistantMessageEvent: { type: 'toolcall_delta' } },
+      { type: 'message_update', assistantMessageEvent: { type: 'toolcall_end' } },
       { type: 'message_start', message: { role: 'user' } },
       { type: 'agent_start' },
       { type: 'turn_start' },
@@ -24,6 +27,15 @@ describe('mapAgentSessionEvent', () => {
     ]) {
       expect(mapAgentSessionEvent(event)).toBeNull();
     }
+  });
+
+  it('maps thinking deltas to wire thinking events', () => {
+    expect(
+      mapAgentSessionEvent({
+        type: 'message_update',
+        assistantMessageEvent: { type: 'thinking_delta', delta: 'pondering' },
+      }),
+    ).toEqual({ kind: 'thinking', text: 'pondering' });
   });
 
   it('maps message_end usage to a wire usage event', () => {
@@ -49,26 +61,64 @@ describe('mapAgentSessionEvent', () => {
     });
   });
 
+  it('maps tool_execution_start to a tool_call wire event', () => {
+    expect(
+      mapAgentSessionEvent({
+        type: 'tool_execution_start',
+        toolName: 'ipython',
+        toolCallId: 'call-1',
+        args: { code: '1+1' },
+      }),
+    ).toEqual({
+      kind: 'tool_call',
+      toolCallId: 'call-1',
+      toolName: 'ipython',
+      args: { code: '1+1' },
+    });
+  });
+
+  it('maps tool_execution_update to a tool_progress wire event', () => {
+    expect(
+      mapAgentSessionEvent({
+        type: 'tool_execution_update',
+        toolName: 'ipython',
+        toolCallId: 'call-1',
+        partialResult: { chunk: 'partial' },
+      }),
+    ).toEqual({
+      kind: 'tool_progress',
+      toolCallId: 'call-1',
+      toolName: 'ipython',
+      partialResult: { chunk: 'partial' },
+    });
+  });
+
+  it('maps tool_execution_end to a tool_result wire event', () => {
+    expect(
+      mapAgentSessionEvent({
+        type: 'tool_execution_end',
+        toolName: 'ipython',
+        toolCallId: 'call-1',
+        result: { content: '2' },
+        isError: false,
+      }),
+    ).toEqual({
+      kind: 'tool_result',
+      toolCallId: 'call-1',
+      toolName: 'ipython',
+      result: { content: '2' },
+      isError: false,
+    });
+  });
+
   it.each(['tool_execution_start', 'tool_execution_update', 'tool_execution_end'])(
-    'maps %s to a tool-violation',
+    'maps %s without a toolCallId to the fail-closed tool-violation invariant',
     (type) => {
-      expect(mapAgentSessionEvent({ type, toolName: 'bash', toolCallId: 'tc1' })).toEqual({
+      expect(mapAgentSessionEvent({ type, toolName: 'bash' })).toEqual({
         kind: 'tool-violation',
         toolName: 'bash',
         event: type,
       });
-    },
-  );
-
-  it.each(['toolcall_start', 'toolcall_delta', 'toolcall_end'])(
-    'maps assistant %s content to a tool-violation',
-    (type) => {
-      expect(
-        mapAgentSessionEvent({
-          type: 'message_update',
-          assistantMessageEvent: { type },
-        }),
-      ).toEqual({ kind: 'tool-violation', toolName: 'assistant-message', event: type });
     },
   );
 });
@@ -78,10 +128,7 @@ describe('mapStopReason', () => {
     ['stop', { stopReason: 'end_turn' }],
     ['aborted', { stopReason: 'cancelled' }],
     ['length', { stopReason: 'budget' }],
-    [
-      'toolUse',
-      { stopReason: 'error', error: 'Model requested tool execution with an empty allowlist' },
-    ],
+    ['toolUse', { stopReason: 'error', error: 'Run ended on unexecuted tool calls' }],
     ['error', { stopReason: 'error', error: 'Assistant message ended with an error' }],
     [undefined, { stopReason: 'error', error: 'Unsupported upstream stop reason: none' }],
     ['bogus', { stopReason: 'error', error: 'Unsupported upstream stop reason: bogus' }],

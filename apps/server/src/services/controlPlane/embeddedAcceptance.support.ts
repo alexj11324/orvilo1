@@ -21,7 +21,7 @@ import type { Socket } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PassThrough, type Readable, type Writable } from 'node:stream';
-import { pathToFileURL } from 'node:url';
+import { fileURLToPath, pathToFileURL } from 'node:url';
 
 import { HarnessTransport } from '@orvilo/agent-execution/controlPlane/harnessTransport';
 import type {
@@ -36,7 +36,18 @@ import { isEmbeddedArtifactManifest } from '@orvilo/agent-execution/controlPlane
 
 import type { HostSupervisorPort } from './coreRuntimeHost';
 
-const REPO_ROOT = path.resolve(import.meta.dirname, '../../../../..');
+// `import.meta.dirname` is unavailable under turbopack dev — fall back
+// through `import.meta.url` like the dispatch-path artifact resolvers.
+const MODULE_DIR = (() => {
+  if (import.meta.dirname) return import.meta.dirname;
+  try {
+    return path.dirname(fileURLToPath(import.meta.url));
+  } catch {
+    return process.cwd();
+  }
+})();
+
+const REPO_ROOT = path.resolve(MODULE_DIR, '../../../../..');
 
 export const RUNNER_ARTIFACT = path.join(REPO_ROOT, 'packages/prime-harness/dist/runner.mjs');
 export const RUNNER_MANIFEST = path.join(

@@ -17,10 +17,20 @@
  *    (`agentType: 'orvilo'` — the honest producer label).
  * 3. Lease — the daemon re-arms `run.renewLease()` on each control-side
  *    liveness signal (see `renewDevicePrimeRuns`); lapse kills the run.
+ *
+ * Turn continuity: the runner holds a single in-memory session, so a turn
+ * carrying `resumeSessionId` resumes by REUSING the live session's runner
+ * (`harness.prompt` is serialized per session — one turn at a time). A
+ * resume whose session is dead takes the explicit rebuild path: a fresh
+ * runner + session prompted with `resumeFallbackSystemContext` (the
+ * server's history-carrying fallback) and finished with
+ * `resumeSessionInvalidated` so the persisted session pointer clears.
  */
 import { existsSync, mkdirSync } from 'node:fs';
 import os from 'node:os';
 import path from 'node:path';
+import { setTimeout as sleep } from 'node:timers/promises';
+import { fileURLToPath } from 'node:url';
 
 import { openPrimeDeviceRun, type PrimeDeviceRun } from '@orvilo/device-prime-host';
 import type { AgentStreamEvent } from '@orvilo/heterogeneous-agents/spawn';
@@ -37,8 +47,45 @@ interface PrimeRunLogger {
   info?: (msg: string) => void;
 }
 
+type PrimeRunResult = 'success' | 'error' | 'cancelled';
+
+/** A single device op's view onto a shared runner session. */
+interface PrimeRunOperation {
+  /** Runner death observed while this op was in flight — lease lapse or exit. */
+  abortReason?: string;
+  ingester: CoalescingBatchIngester;
+  operationId: string;
+  settled: boolean;
+  usage?: { inputTokens: number; outputTokens: number };
+  /** Woken once when the session dies mid-op — races the prompt request. */
+  waiters: Array<() => void>;
+}
+
+/**
+ * One live runner process = one Prime session. Turn ops serialize on `chain`
+ * (the runner rejects concurrent prompts) and share the single event pump —
+ * `run.events` is a single-consumer queue, so per-op pumping would let one
+ * op steal another op's events.
+ */
+interface PrimeRunSession {
+  chain: Promise<void>;
+  currentOp?: PrimeRunOperation;
+  run: PrimeDeviceRun;
+}
+
 /** Live Prime runs by operationId — the daemon's renewal surface. */
 const devicePrimeRuns = new Map<string, PrimeDeviceRun>();
+/** Live runner sessions by the session id the server resumes on. */
+const primeSessions = new Map<string, PrimeRunSession>();
+
+/**
+ * Await a session's queued turns — the admission API resolves `accepted` as
+ * soon as the op is queued on the session chain, so drivers/tests that need
+ * the turn's terminal outcome wait here rather than racing the pump.
+ */
+export const waitPrimeSessionIdle = async (sessionId: string): Promise<void> => {
+  await primeSessions.get(sessionId)?.chain;
+};
 
 /** Re-arm every live run's side-effect lease (call on heartbeat ack). */
 export const renewDevicePrimeRuns = (): void => {
@@ -54,20 +101,34 @@ export const renewDevicePrimeRuns = (): void => {
  */
 export const resolvePrimeRunnerArtifact = (): string | null => {
   const override = process.env.ORVILO_PRIME_RUNNER;
+  // `import.meta.dirname` is absent in some runners (bundlers that stub
+  // import.meta, tsx/vitest variants) — fall back through import.meta.url.
+  let bundleDir: string | undefined = import.meta.dirname;
+  if (!bundleDir) {
+    try {
+      bundleDir = path.dirname(fileURLToPath(import.meta.url));
+    } catch {
+      bundleDir = undefined;
+    }
+  }
   const candidates = [
     override,
-    path.resolve(import.meta.dirname, 'runner.mjs'),
-    path.resolve(
-      import.meta.dirname,
-      '..',
-      '..',
-      '..',
-      '..',
-      'packages',
-      'prime-harness',
-      'dist',
-      'runner.mjs',
-    ),
+    ...(bundleDir
+      ? [
+          path.resolve(bundleDir, 'runner.mjs'),
+          path.resolve(
+            bundleDir,
+            '..',
+            '..',
+            '..',
+            '..',
+            'packages',
+            'prime-harness',
+            'dist',
+            'runner.mjs',
+          ),
+        ]
+      : []),
   ];
   for (const candidate of candidates) {
     if (!candidate) continue;
@@ -84,10 +145,224 @@ const makeEvent = (
 ): AgentStreamEvent => ({ data, operationId, stepIndex, timestamp: Date.now(), type });
 
 /**
+ * The session's single event pump: routes `harness.event`s to whichever op
+ * currently owns the session, then — on stream close — settles the in-flight
+ * op as aborted instead of leaving it a `running` zombie or reporting the
+ * kill as a clean `done`.
+ */
+const startSessionPump = (session: PrimeRunSession, logger?: PrimeRunLogger): void => {
+  void (async () => {
+    try {
+      for await (const event of session.run.events) {
+        const op = session.currentOp;
+        if (!op || op.settled) continue;
+        switch (event.kind) {
+          case 'text': {
+            op.ingester.push(
+              makeEvent(op.operationId, 'stream_chunk', {
+                chunkType: 'text',
+                content: event.text,
+              }),
+            );
+            break;
+          }
+          case 'usage': {
+            op.usage = { inputTokens: event.inputTokens, outputTokens: event.outputTokens };
+            break;
+          }
+          case 'tool-violation': {
+            op.ingester.push(
+              makeEvent(op.operationId, 'error', {
+                message: `tool-violation: ${event.toolName} ${event.event}`,
+              }),
+            );
+            break;
+          }
+          case 'error': {
+            op.ingester.push(makeEvent(op.operationId, 'error', { message: event.message }));
+            break;
+          }
+        }
+      }
+    } catch (error) {
+      logger?.error?.(
+        `prime run event pump failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    } finally {
+      primeSessions.delete(session.run.activation.sessionId);
+      const op = session.currentOp;
+      if (op && !op.settled) {
+        op.abortReason = session.run.leaseLapsed
+          ? 'device lease lapsed — prime run stopped'
+          : 'prime runner terminated';
+        for (const wake of op.waiters.splice(0)) wake();
+      }
+      session.currentOp = undefined;
+    }
+  })();
+};
+
+/**
+ * Events of a turn precede the prompt response on the same NDJSON stream, so
+ * once `harness.prompt` resolves every turn event is already queued — the op
+ * waits only for the pump to route the backlog (or the stream to close).
+ */
+const drainTurnEvents = async (session: PrimeRunSession): Promise<void> => {
+  while (!session.run.closed && session.run.pendingEvents() > 0) await sleep(2);
+};
+
+const settleOperation = async (
+  session: PrimeRunSession,
+  op: PrimeRunOperation,
+  sink: TrpcIngestSink,
+  result: PrimeRunResult,
+  finishError?: { message: string; type: string },
+  resumeSessionInvalidated?: boolean,
+): Promise<void> => {
+  if (op.settled) return;
+  op.settled = true;
+  if (session.currentOp === op) session.currentOp = undefined;
+  try {
+    await op.ingester.drain();
+  } finally {
+    await sink
+      .finish({
+        error: finishError,
+        result,
+        resumeSessionInvalidated,
+        sessionId: session.run.activation.sessionId,
+      })
+      .catch(() => undefined);
+    devicePrimeRuns.delete(op.operationId);
+  }
+};
+
+interface PrimeRunOpInput {
+  assistantMessageId?: string;
+  jwt: string;
+  operationId: string;
+  promptText: string;
+  /** Resume provenance for the stream_start event — the turn's honest answer
+   * to "did this op continue the requested session". */
+  resumeOutcome: 'fresh' | 'rebuilt' | 'resumed';
+  resumeSessionId?: string;
+  runGeneration?: number;
+  serverUrl: string;
+  systemContext?: string;
+  topicId: string;
+  workspaceId?: string;
+}
+
+/**
+ * One operation's turn on a session: stream_start → serialized prompt →
+ * drain → stream_end/runtime_end → `heteroFinish`. A runner death mid-turn
+ * aborts the op (`cancelled`, never `done`); a rebuilt resume reports
+ * `resumeSessionInvalidated` so the server clears the dead session pointer.
+ */
+const runOperationOnSession = async (
+  session: PrimeRunSession,
+  input: PrimeRunOpInput,
+): Promise<PrimeRunResult> => {
+  const { operationId } = input;
+  const client = createLambdaClient(
+    { serverUrl: input.serverUrl, token: input.jwt, tokenType: 'jwt' },
+    input.workspaceId,
+  );
+  const sink = new TrpcIngestSink(
+    client,
+    'orvilo',
+    operationId,
+    input.topicId,
+    input.assistantMessageId,
+    input.runGeneration,
+  );
+  const ingester = new CoalescingBatchIngester(sink);
+  const op: PrimeRunOperation = {
+    ingester,
+    operationId,
+    settled: false,
+    waiters: [],
+  };
+
+  if (session.run.closed) {
+    op.ingester.push(makeEvent(operationId, 'stream_end', {}));
+    op.ingester.push(makeEvent(operationId, 'agent_runtime_end', {}));
+    await settleOperation(session, op, sink, 'cancelled', {
+      message: 'prime runner terminated before the operation started',
+      type: 'process_error',
+    });
+    return 'cancelled';
+  }
+
+  session.currentOp = op;
+  ingester.push(
+    makeEvent(operationId, 'stream_start', {
+      provider: 'prime',
+      resumeSessionId: input.resumeSessionId,
+      resumed: input.resumeOutcome === 'resumed',
+      sessionId: session.run.activation.sessionId,
+    }),
+  );
+
+  let promptResult: Awaited<ReturnType<PrimeDeviceRun['prompt']>> | undefined;
+  const aborted = new Promise<'aborted'>((resolve) => {
+    op.waiters.push(() => resolve('aborted'));
+  });
+  const outcome = await Promise.race([
+    session.run.prompt(input.promptText).then((r) => {
+      promptResult = r;
+      return 'prompt' as const;
+    }),
+    aborted,
+  ]);
+  await drainTurnEvents(session);
+
+  let result: PrimeRunResult = 'success';
+  let finishError: { message: string; type: string } | undefined;
+  if (op.abortReason || outcome === 'aborted') {
+    result = 'cancelled';
+    finishError = {
+      message: op.abortReason ?? 'prime runner terminated',
+      type: 'process_error',
+    };
+  } else if (!promptResult?.ok) {
+    result = 'error';
+    finishError = {
+      message: promptResult?.error?.message ?? 'prime prompt failed',
+      type: 'process_error',
+    };
+  } else {
+    const stop = promptResult.value;
+    if (stop.stopReason === 'cancelled') result = 'cancelled';
+    else if (stop.stopReason === 'error' || stop.stopReason === 'budget') {
+      result = 'error';
+      finishError = {
+        message: stop.error ?? `prime run stopped: ${stop.stopReason}`,
+        type: 'process_error',
+      };
+    }
+  }
+
+  ingester.push(makeEvent(operationId, 'stream_end', { usage: op.usage }));
+  ingester.push(makeEvent(operationId, 'agent_runtime_end', {}));
+  await settleOperation(
+    session,
+    op,
+    sink,
+    result,
+    finishError,
+    input.resumeOutcome === 'rebuilt' ? true : undefined,
+  );
+  return result;
+};
+
+/**
  * Admit a Prime device run inside the serialized `agentRun` lifecycle.
  * Resolves `accepted` only after the runner verified, spawned, initialized,
  * and reported its activation — a rejected ack still surfaces the precise
- * refusal (bad digest, refused activation, missing artifact).
+ * refusal (bad digest, refused activation, missing artifact). A
+ * `resumeSessionId` matching a live session reuses its runner instead of
+ * spawning; a dead session takes the explicit rebuild path.
  */
 export const admitPrimeDeviceRun = async (
   params: SpawnHeteroAgentRunParams,
@@ -101,6 +376,8 @@ export const admitPrimeDeviceRun = async (
     jwt,
     operationId,
     prompt,
+    resumeFallbackSystemContext,
+    resumeSessionId,
     runGeneration,
     serverUrl,
     systemContext,
@@ -115,32 +392,63 @@ export const admitPrimeDeviceRun = async (
       status: 'rejected',
     };
 
-  const artifact = resolvePrimeRunnerArtifact();
-  if (!artifact)
-    return {
-      reason: 'prime runner artifact is not present on this device',
-      status: 'rejected',
-    };
+  let session = resumeSessionId ? primeSessions.get(resumeSessionId) : undefined;
+  if (session?.run.closed) session = undefined;
+  const resumeOutcome: PrimeRunOpInput['resumeOutcome'] = !resumeSessionId
+    ? 'fresh'
+    : session
+      ? 'resumed'
+      : 'rebuilt';
+  if (resumeOutcome === 'rebuilt') {
+    primeSessions.delete(resumeSessionId!);
+    logger?.info?.(
+      `prime resume requested for dead session ${resumeSessionId} — explicit rebuild (op=${operationId})`,
+    );
+  }
 
-  const stateDir = path.join(os.homedir(), '.orvilo', 'prime-state', operationId);
-  mkdirSync(stateDir, { recursive: true });
+  if (!session) {
+    const artifact = resolvePrimeRunnerArtifact();
+    if (!artifact)
+      return {
+        reason: 'prime runner artifact is not present on this device',
+        status: 'rejected',
+      };
 
-  const opened = await openPrimeDeviceRun({
-    artifact,
-    brokerUrl: `${serverUrl.replace(/\/$/, '')}/api/agent/prime-broker`,
-    descriptor,
-    executable: process.execPath,
-    log: {
-      error: (msg) => logger?.error?.(msg),
-      log: (msg) => logger?.info?.(msg),
-    },
-    operationId,
-    stateDir,
-    workspace: workDir,
-  });
-  if (!opened.ok)
-    return { reason: opened.error?.message ?? 'prime run open failed', status: 'rejected' };
-  const run = opened.value;
+    const stateDir = path.join(os.homedir(), '.orvilo', 'prime-state', operationId);
+    mkdirSync(stateDir, { recursive: true });
+
+    const opened = await openPrimeDeviceRun({
+      artifact,
+      brokerUrl: `${serverUrl.replace(/\/$/, '')}/api/agent/prime-broker`,
+      descriptor,
+      executable: process.execPath,
+      log: {
+        error: (msg) => logger?.error?.(msg),
+        log: (msg) => logger?.info?.(msg),
+      },
+      operationId,
+      stateDir,
+      workspace: workDir,
+    });
+    if (!opened.ok)
+      return { reason: opened.error?.message ?? 'prime run open failed', status: 'rejected' };
+    session = { chain: Promise.resolve(), run: opened.value };
+    primeSessions.set(opened.value.activation.sessionId, session);
+    startSessionPump(session, logger);
+    opened.value.leaseExpired
+      .then(() => logger?.error?.(`prime run lease lapsed (op=${operationId}) — run killed`))
+      .catch(() => undefined);
+  } else {
+    // The server records activation evidence per operation — a resumed turn
+    // re-activates the shared session under THIS op's bound credential.
+    const reactivated = await session.run.reactivate(descriptor.broker.credential);
+    if (!reactivated.ok)
+      return {
+        reason: reactivated.error?.message ?? 'prime session re-activation failed',
+        status: 'rejected',
+      };
+  }
+  const run = session.run;
 
   registerAgentRun(operationId, run.child);
   devicePrimeRuns.set(operationId, run);
@@ -157,34 +465,44 @@ export const admitPrimeDeviceRun = async (
       workspaceId,
     });
   }
-  run.leaseExpired
-    .then(() => logger?.error?.(`prime run lease lapsed (op=${operationId}) — run killed`))
-    .catch(() => undefined);
 
-  void drivePrimeRun({
+  // Queue the turn onto the session — the runner rejects concurrent prompts,
+  // so resumed ops run strictly after the in-flight turn.
+  const opInput: PrimeRunOpInput = {
     assistantMessageId,
+    jwt,
     operationId,
-    prompt,
-    run,
+    promptText: [
+      resumeOutcome === 'rebuilt' ? (resumeFallbackSystemContext ?? systemContext) : systemContext,
+      prompt,
+    ]
+      .filter(Boolean)
+      .join('\n\n'),
+    resumeOutcome,
+    resumeSessionId,
     runGeneration,
     serverUrl,
     systemContext,
     topicId,
     workspaceId,
-    jwt,
-  }).catch((error) =>
-    logger?.error?.(
-      `prime run driver failed (op=${operationId}): ${error instanceof Error ? error.message : String(error)}`,
-    ),
-  );
+  };
+  const current = session;
+  session.chain = session.chain
+    .then(async () => {
+      await runOperationOnSession(current, opInput);
+    })
+    .catch((error) =>
+      logger?.error?.(
+        `prime run driver failed (op=${operationId}): ${error instanceof Error ? error.message : String(error)}`,
+      ),
+    );
 
   return { status: 'accepted' };
 };
 
 /**
- * Pump `harness.event` into the standard ingest pipeline, drive the single
- * prompt to completion, then report through `heteroFinish` — identical
- * accounting to the wrapper CLI path.
+ * One-shot driver used by `orvilo prime exec` (an already-opened run, no
+ * resume): the same serialized op path the adapter uses internally.
  */
 export const drivePrimeRun = async (input: {
   assistantMessageId?: string;
@@ -197,106 +515,20 @@ export const drivePrimeRun = async (input: {
   systemContext?: string;
   topicId: string;
   workspaceId?: string;
-}): Promise<'success' | 'error' | 'cancelled'> => {
-  const {
-    assistantMessageId,
-    jwt,
-    operationId,
-    prompt,
-    run,
-    runGeneration,
-    serverUrl,
-    systemContext,
-    topicId,
-    workspaceId,
-  } = input;
-
-  const client = createLambdaClient({ serverUrl, token: jwt, tokenType: 'jwt' }, workspaceId);
-  const sink = new TrpcIngestSink(
-    client,
-    'orvilo',
-    operationId,
-    topicId,
-    assistantMessageId,
-    runGeneration,
-  );
-  const ingester = new CoalescingBatchIngester(sink);
-
-  let result: 'success' | 'error' | 'cancelled' = 'success';
-  let finishError: { message: string; type: string } | undefined;
-  let usage: { inputTokens: number; outputTokens: number } | undefined;
-
-  const finish = async () => {
-    try {
-      await ingester.drain();
-    } finally {
-      await sink
-        .finish({
-          error: finishError,
-          result,
-          sessionId: run.activation.sessionId,
-        })
-        .catch(() => undefined);
-      devicePrimeRuns.delete(operationId);
-    }
-  };
-
-  ingester.push(
-    makeEvent(operationId, 'stream_start', {
-      provider: 'prime',
-      sessionId: run.activation.sessionId,
-    }),
-  );
-  const pumpEvents = (async () => {
-    for await (const event of run.events) {
-      switch (event.kind) {
-        case 'text': {
-          ingester.push(
-            makeEvent(operationId, 'stream_chunk', { chunkType: 'text', content: event.text }),
-          );
-          break;
-        }
-        case 'usage': {
-          usage = { inputTokens: event.inputTokens, outputTokens: event.outputTokens };
-          break;
-        }
-        case 'tool-violation': {
-          ingester.push(
-            makeEvent(operationId, 'error', {
-              message: `tool-violation: ${event.toolName} ${event.event}`,
-            }),
-          );
-          break;
-        }
-        case 'error': {
-          ingester.push(makeEvent(operationId, 'error', { message: event.message }));
-          break;
-        }
-      }
-    }
-  })();
-
-  const promptResult = await run.prompt([systemContext, prompt].filter(Boolean).join('\n\n'));
-  if (!promptResult.ok) {
-    result = 'error';
-    finishError = {
-      message: promptResult.error?.message ?? 'prime prompt failed',
-      type: 'process_error',
-    };
-  } else {
-    const stop = promptResult.value;
-    if (stop.stopReason === 'cancelled') result = 'cancelled';
-    else if (stop.stopReason === 'error' || stop.stopReason === 'budget') {
-      result = 'error';
-      finishError = {
-        message: stop.error ?? `prime run stopped: ${stop.stopReason}`,
-        type: 'process_error',
-      };
-    }
-  }
-  await pumpEvents;
-  ingester.push(makeEvent(operationId, 'stream_end', { usage }));
-  ingester.push(makeEvent(operationId, 'agent_runtime_end', {}));
-  await finish();
-  return result;
+}): Promise<PrimeRunResult> => {
+  const session: PrimeRunSession = { chain: Promise.resolve(), run: input.run };
+  primeSessions.set(input.run.activation.sessionId, session);
+  startSessionPump(session);
+  return runOperationOnSession(session, {
+    assistantMessageId: input.assistantMessageId,
+    jwt: input.jwt,
+    operationId: input.operationId,
+    promptText: [input.systemContext, input.prompt].filter(Boolean).join('\n\n'),
+    resumeOutcome: 'fresh',
+    runGeneration: input.runGeneration,
+    serverUrl: input.serverUrl,
+    systemContext: input.systemContext,
+    topicId: input.topicId,
+    workspaceId: input.workspaceId,
+  });
 };

@@ -185,6 +185,42 @@ device-c-docker` — distinct deviceId + isolated fs/volume = a genuinely
 independent environment. Workspace enrollment works the same way (the admin
 JWT mints the connect token at startup).
 
+## Runtime truth semantics (post-acceptance fixes)
+
+The device package's terminal-state contract — what acceptance re-verifies:
+
+- **Session continuity** — `resumeSessionId` reuses a live same-device
+  session (`run.reactivate` with the fresh broker credential); a dead session
+  is an explicit rebuild (fresh runner + `resumeFallbackSystemContext`, the
+  ingest finish carries `resumeSessionInvalidated: true`). An op whose runner
+  stream closes mid-turn settles `cancelled` with an honest abort reason
+  ("device lease lapsed — prime run stopped" vs "prime runner terminated") —
+  never `done`, never a `running` zombie.
+- **Admission liveness** — `isDeviceAdmissionLive` treats `pending` as live:
+  the ledger writes `pending` BEFORE the gateway call returns, so under
+  await-ack semantics the device's `/activate` legitimately races the ack.
+  The bound credential only exists inside the delivered request, so a pending
+  admission plus a valid op JWT already proves device delivery.
+- **Reject→settle reconcile** — `sweepDevicePrimeRunReconcile` runs in the
+  task watchdog and covers what enqueue-ack swallows: a `prime` admission
+  (`remoteAdmission.harness`) still `pending`/`acknowledged` past
+  `activateDeadlineMs` (default 120s) settles `error` with
+  `DEVICE_PRIME_NO_ACTIVATION` + ledger `unknown`; an activated conversation
+  run whose producer went stale (`updatedAt` past the 5-min stale bound)
+  settles `interrupted`. Task-subject runs stay with
+  `sweepTaskDispatchRecovery`'s richer convergence.
+- **Invalid binding** — `resolveDeviceDispatchAuthorizationFailure` emits the
+  contract code `DEVICE_BINDING_INVALID` plus `repairCandidates` (other
+  workspace devices, cap 8), so callers can render the explicit-repair path
+  instead of a bare "not found".
+- **Runner resolution** — `defaultRunnerArtifact` resolves through an
+  env-override + `import.meta.dirname`-guarded + cwd-candidate chain (and
+  `defaultRunnerManifest` derives through it), while
+  `resolvePrimeRunnerArtifact` (CLI) and `embeddedAcceptance`'s REPO_ROOT
+  carry the same fallback — so bundlers that don't define
+  `import.meta.dirname` (e.g. turbopack dev) still resolve the shipped
+  runner.
+
 ## Known residuals
 
 - Real cross-machine acceptance still wants one physical second host; the
@@ -193,3 +229,9 @@ JWT mints the connect token at startup).
   staging deployments need `ORVILO_SERVER_URL`/`--gateway` aligned.
 - `prime exec` stdout is reserved for the ingest stream; diagnostics go to
   stderr/log (`connect logs`).
+- Prime runner tools are pinned `noTools: 'all'` pending the owner's §7
+  capability work — a shipped gap, tracked outside this package.
+- Hetero (non-prime) device-exec conversation runs share the same latent
+  zombie risk the reconcile sweep closes for prime; the sweep keys on
+  `harness === 'prime'` deliberately — widening it needs the hetero settle
+  funnel's own audit.

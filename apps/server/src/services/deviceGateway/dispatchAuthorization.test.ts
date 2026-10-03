@@ -1,12 +1,16 @@
 import type { OrviloDatabase } from '@orvilo/database';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const mocks = vi.hoisted(() => ({ findWorkspaceDeviceById: vi.fn() }));
+const mocks = vi.hoisted(() => ({
+  findWorkspaceDeviceById: vi.fn(),
+  queryWorkspaceDevices: vi.fn(async () => [] as Array<{ deviceId: string }>),
+}));
 
 vi.mock('@/database/models/device', () => ({
   DeviceModel: vi.fn().mockImplementation(function () {
     return {
       findWorkspaceDeviceById: mocks.findWorkspaceDeviceById,
+      queryWorkspaceDevices: mocks.queryWorkspaceDevices,
     };
   }),
 }));
@@ -36,7 +40,7 @@ describe('resolveDeviceDispatchAuthorizationFailure', () => {
   });
 
   /** @example Unshare revokes a previously selected target before its next tool call. */
-  it('returns structured failure after the workspace row is removed', async () => {
+  it('returns the binding-invalid contract after the workspace row is removed', async () => {
     // ROOT CAUSE:
     //
     // Target discovery was checked once, but a later tool call reused activeDeviceId directly.
@@ -47,11 +51,33 @@ describe('resolveDeviceDispatchAuthorizationFailure', () => {
     await expect(
       resolveDeviceDispatchAuthorizationFailure(serverDB, 'user-1', 'device-1', 'workspace-1'),
     ).resolves.toEqual({
-      code: 'DEVICE_NOT_FOUND',
+      code: 'DEVICE_BINDING_INVALID',
       deviceId: 'device-1',
+      repairCandidates: [],
       retryable: true,
       scope: 'workspace',
       workspaceId: 'workspace-1',
     });
+  });
+
+  /** @example The contract's explicit-repair path carries the other selectable devices. */
+  it('surfaces repair candidates so callers can render the repair path', async () => {
+    mocks.findWorkspaceDeviceById.mockResolvedValue(undefined);
+    mocks.queryWorkspaceDevices.mockResolvedValue([
+      { deviceId: 'device-1' },
+      { deviceId: 'device-2' },
+      { deviceId: 'device-3' },
+    ]);
+
+    const result = await resolveDeviceDispatchAuthorizationFailure(
+      serverDB,
+      'user-1',
+      'device-1',
+      'workspace-1',
+    );
+
+    // The invalidated binding itself is not a repair option.
+    expect(result?.code).toBe('DEVICE_BINDING_INVALID');
+    expect(result?.repairCandidates).toEqual(['device-2', 'device-3']);
   });
 });

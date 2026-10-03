@@ -101,7 +101,7 @@ export interface EmbeddedDispatchContext {
   dispatchFence: number;
   dispatchId: string;
   executionGeneration: number;
-  taskId: string;
+  subject: { dispatchId: string; kind: 'task'; taskId: string };
 }
 
 export interface EmbeddedDispatchRouteInput {
@@ -140,7 +140,7 @@ export const resolveEmbeddedDispatchRoute = async (
     dispatchFence,
     dispatchId,
     executionGeneration,
-    taskId: input.operationTaskId,
+    subject: { dispatchId, kind: 'task', taskId: input.operationTaskId },
   };
 };
 
@@ -209,7 +209,7 @@ export const openEmbeddedDispatchHost = async (
 
   // The task row is the tenant source of truth: the canonical workspace is
   // the task's own workspace, not the caller's ambient scope.
-  const [task] = await db.select().from(tasks).where(eq(tasks.id, input.taskId)).limit(1);
+  const [task] = await db.select().from(tasks).where(eq(tasks.id, input.subject.taskId)).limit(1);
   if (
     !task ||
     task.domainRevision === null ||
@@ -223,7 +223,7 @@ export const openEmbeddedDispatchHost = async (
   const dispatch = await new TaskDispatchModel(db, workspaceId).findById(input.dispatchId);
   if (
     !dispatch ||
-    dispatch.taskId !== input.taskId ||
+    dispatch.taskId !== input.subject.taskId ||
     dispatch.operationId !== input.operationId ||
     dispatch.fence !== input.dispatchFence ||
     dispatch.generation !== input.executionGeneration ||
@@ -243,7 +243,7 @@ export const openEmbeddedDispatchHost = async (
       executionGrantId: taskTopics.executionGrantId,
     })
     .from(taskTopics)
-    .where(and(eq(taskTopics.taskId, input.taskId), eq(taskTopics.topicId, input.topicId)))
+    .where(and(eq(taskTopics.taskId, input.subject.taskId), eq(taskTopics.topicId, input.topicId)))
     .limit(1);
   let grantId = runRow?.executionGrantId ?? undefined;
   let executionEpoch = runRow?.executionEpoch ?? undefined;
@@ -257,7 +257,7 @@ export const openEmbeddedDispatchHost = async (
       });
       executionEpoch = await delegation.claimExecutionEpoch({
         grantId: grant.id,
-        taskId: input.taskId,
+        taskId: input.subject.taskId,
         topicId: input.topicId,
       });
       grantId = grant.id;
@@ -281,7 +281,7 @@ export const openEmbeddedDispatchHost = async (
     runtimeOwnerId: RUNTIME_OWNER_ID,
     runtimeRegistrationId: randomUUID(),
     stateRevision: task.domainRevision,
-    taskId: input.taskId,
+    subject: input.subject,
     topicId: input.topicId,
     userId,
     workspaceId,

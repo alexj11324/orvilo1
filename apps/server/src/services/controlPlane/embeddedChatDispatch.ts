@@ -8,7 +8,8 @@
  *
  *  - `agent_operations` is the chat execution record — `operationId` stands in
  *    for `dispatchId`/`grantId`, `generation`/`executionEpoch` are 1,
- *    `dispatchFence` is 0, `taskId` maps to the topic id;
+ *    `dispatchFence` is 0, and `subject` is `{kind:'conversation',topicId}`
+ *    (a conversation id never stands in for a task id);
  *  - `topics` supplies the tenant (`chatWorkspaceId`, nullable — personal
  *    chats run under the synthetic `personal:<userId>` tenant) and the
  *    deletion tombstone;
@@ -177,7 +178,7 @@ export const openEmbeddedChatDispatchHost = async (
     runtimeOwnerId: RUNTIME_OWNER_ID,
     runtimeRegistrationId: randomUUID(),
     stateRevision: 0,
-    taskId: input.topicId,
+    subject: { kind: 'conversation', topicId: input.topicId },
     topicId: input.topicId,
     userId,
     workspaceId: chatWorkspaceId ?? `personal:${userId}`,

@@ -288,7 +288,7 @@ export class CanonicalCoreRuntimeHost {
         .update(
           JSON.stringify([
             options.binding.workspaceId,
-            options.binding.taskId,
+            options.binding.subject,
             options.binding.runtimeRegistrationId,
           ]),
         )
@@ -486,7 +486,9 @@ export class CanonicalCoreRuntimeHost {
     const commitment = this.commitments.get(request.commitmentId);
     if (
       !commitment ||
-      commitment.taskId !== this.journal.binding.taskId ||
+      // File commitments are task-scoped — a conversation subject approves none.
+      this.journal.binding.subject.kind !== 'task' ||
+      commitment.taskId !== this.journal.binding.subject.taskId ||
       request.action.kind !== 'file.write'
     )
       return failure('No approved file commitment');

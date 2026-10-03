@@ -16,7 +16,7 @@ import { TaskExecutionControlModel } from '@/database/models/taskExecutionContro
 import { taskDispatches, workspaces } from '@/database/schemas';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 import { CanonicalCoreRuntimeHost } from './coreRuntimeHost';
 
 const command = promisify(execFile);
@@ -52,7 +52,7 @@ it.skipIf(!process.env.CORE_DOCKER_IMAGE || process.env.TEST_SERVER_DB !== '1')(
       },
       fileCommitments: ['source', 'successor'].map((content) => ({
         id: content,
-        taskId: binding.taskId,
+        taskId: fixtureTaskId(binding),
         actionKinds: ['file.write' as const],
         postconditions: [
           {

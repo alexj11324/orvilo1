@@ -1,4 +1,5 @@
 import type { ControlResult, ExecutionFence } from '@orvilo/agent-execution';
+import type { RunSubject } from '@orvilo/types';
 import { and, eq } from 'drizzle-orm';
 
 import type {
@@ -35,7 +36,8 @@ export interface CanonicalRunBinding {
   runtimeOwnerId: string;
   runtimeRegistrationId: string;
   stateRevision: number;
-  taskId: string;
+  /** The run's explicit subject — task or conversation (device-execution-contract). */
+  subject: RunSubject;
   topicId: string;
   userId: string;
   workspaceId: string;
@@ -160,6 +162,10 @@ export class CanonicalRunAuthority {
     serializable = false,
   ): Promise<ControlResult<T>> {
     const binding = structuredClone(input);
+    // This authority admits task subjects only — a conversation subject has
+    // no task rows to lock and no placeholder may stand in for one.
+    if (binding.subject.kind !== 'task') return denied('Run subject is not a task execution');
+    const taskId = binding.subject.taskId;
     return this.db
       .transaction(
         async (tx) => {
@@ -168,7 +174,7 @@ export class CanonicalRunAuthority {
           const [task] = await tx
             .select()
             .from(tasks)
-            .where(and(eq(tasks.id, binding.taskId), eq(tasks.workspaceId, binding.workspaceId)))
+            .where(and(eq(tasks.id, taskId), eq(tasks.workspaceId, binding.workspaceId)))
             .for('update', { noWait: true })
             .limit(1);
           const [dispatch] = await tx
@@ -184,7 +190,7 @@ export class CanonicalRunAuthority {
             .limit(1);
           if (
             !dispatch ||
-            dispatch.taskId !== binding.taskId ||
+            dispatch.taskId !== taskId ||
             dispatch.operationId !== binding.operationId ||
             dispatch.phase !== 'running' ||
             dispatch.fence !== binding.dispatchFence ||
@@ -221,7 +227,7 @@ export class CanonicalRunAuthority {
             .limit(1);
           if (
             !grant ||
-            grant.taskId !== binding.taskId ||
+            grant.taskId !== taskId ||
             grant.agentId !== dispatch.agentId ||
             grant.delegationSubjectType !== 'user' ||
             grant.delegationSubjectId !== binding.userId ||
@@ -234,9 +240,7 @@ export class CanonicalRunAuthority {
           const [topic] = await tx
             .select()
             .from(taskTopics)
-            .where(
-              and(eq(taskTopics.taskId, binding.taskId), eq(taskTopics.topicId, binding.topicId)),
-            )
+            .where(and(eq(taskTopics.taskId, taskId), eq(taskTopics.topicId, binding.topicId)))
             .for('update', { noWait: true })
             .limit(1);
           if (
@@ -299,7 +303,7 @@ export class CanonicalRunAuthority {
               binding.userId,
               binding.workspaceId,
             ).assertMayCommit({
-              taskId: binding.taskId,
+              taskId,
               topicId: binding.topicId,
               grantId: binding.grantId,
               epoch: binding.executionEpoch,
@@ -329,7 +333,7 @@ export class CanonicalRunAuthority {
               fence: {
                 tenantId: binding.workspaceId,
                 principalId: binding.userId,
-                taskId: binding.taskId,
+                taskId,
                 grantId: binding.grantId,
                 ownerId: binding.runtimeOwnerId,
                 leaseId: binding.runtimeLeaseId,

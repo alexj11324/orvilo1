@@ -25,7 +25,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
 import type { CanonicalRunBinding } from './canonicalRun';
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 import { createEmbeddedInferenceBridge } from './embeddedBroker';
 
 const db: OrviloDatabase = await getTestDB();
@@ -149,7 +149,7 @@ const fenceFor = (b: CanonicalRunBinding): ExecutionFence => ({
   policyRevision: b.policyRevision,
   principalId: b.userId,
   stateRevision: b.stateRevision,
-  taskId: b.taskId,
+  taskId: fixtureTaskId(b),
   tenantId: b.workspaceId,
 });
 

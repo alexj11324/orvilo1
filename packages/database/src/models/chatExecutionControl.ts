@@ -11,9 +11,11 @@ import type { HandoffIntent, RuntimeIdentity, RuntimeRunBinding } from './taskEx
  * Chat-scoped run binding: the `agent_operations` row is the chat-parallel
  * execution record — it plays the dispatch, grant and run-row roles at once.
  * `operationId` stands in for `dispatchId`/`grantId`, `generation`/`epoch` are
- * 1, `dispatchFence` is 0, `taskId` maps to the topic id, and `workspaceId` is
- * the run tenant (`chatWorkspaceId ?? 'personal:<userId>'` — never null, so a
- * personal run cannot collide with a workspace-scoped fence). Chat runs carry
+ * 1, `dispatchFence` is 0, and `workspaceId` is the run tenant
+ * (`chatWorkspaceId ?? 'personal:<userId>'` — never null, so a
+ * personal run cannot collide with a workspace-scoped fence). The run's
+ * `subject` is `{kind:'conversation',topicId}` — a conversation id never
+ * stands in for a task id (device-execution-contract). Chat runs carry
  * no grant row; `runExpiresAt` is the bounded window the server minted at
  * admission, the chat parallel of a delegated grant's expiry.
  */
@@ -33,6 +35,8 @@ function fail(message: string): never {
 }
 
 const isChatRunBinding = (binding: RuntimeRunBinding): binding is ChatRunBinding =>
+  binding.subject.kind === 'conversation' &&
+  binding.subject.topicId === binding.topicId &&
   typeof (binding as ChatRunBinding).chatAgentId === 'string' &&
   ((binding as ChatRunBinding).chatWorkspaceId === null ||
     typeof (binding as ChatRunBinding).chatWorkspaceId === 'string') &&

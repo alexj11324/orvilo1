@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import type { RunSubject } from '@orvilo/types';
 import { sql } from 'drizzle-orm';
 
 import { ChatExecutionControlModel } from '@/database/models/chatExecutionControl';
@@ -101,7 +102,7 @@ export async function createCanonicalRunFixture(
   const binding: CanonicalRunBinding = {
     workspaceId: workspace.id,
     userId,
-    taskId: task.id,
+    subject: { dispatchId, kind: 'task', taskId: task.id },
     dispatchId,
     dispatchFence: 2,
     generation: 1,
@@ -127,6 +128,11 @@ export async function createCanonicalRunFixture(
     });
   return binding;
 }
+
+/** Fixture bindings built here are task-shaped — narrow the explicit subject
+ * for task-side reads (a conversation subject has no task id to return). */
+export const fixtureTaskId = (binding: { subject: RunSubject }): string =>
+  binding.subject.kind === 'task' ? binding.subject.taskId : 'unreachable';
 
 /**
  * The chat-parallel of `createCanonicalRunFixture`: a live `agent_operations`
@@ -177,7 +183,7 @@ export async function createCanonicalChatRunFixture(
     runtimeOwnerId: 'registered-chat-host',
     runtimeRegistrationId: randomUUID(),
     stateRevision: 0,
-    taskId: topicId,
+    subject: { kind: 'conversation', topicId },
     topicId,
     userId,
     workspaceId: chatWorkspaceId ?? `personal:${userId}`,

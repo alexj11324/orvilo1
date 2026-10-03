@@ -185,6 +185,9 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
       !record(input.fence) ||
       fenceKeys.some((key) => {
         const value = input.fence[key];
+        // `taskId` is the only nullable fence slot: a conversation-subject
+        // run has no task id — `null` is the contract, not a placeholder.
+        if (key === 'taskId' && value === null) return false;
         return typeof value === 'number'
           ? !Number.isSafeInteger(value) || value < 0
           : typeof value !== 'string' || !value;

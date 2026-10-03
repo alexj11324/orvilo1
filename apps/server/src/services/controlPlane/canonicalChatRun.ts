@@ -13,9 +13,12 @@ import type { CanonicalRunBinding, CanonicalRunSnapshot } from './canonicalRun';
  * the same Prime embedded host as task dispatches. The `agent_operations`
  * row is the chat-parallel execution record — `operationId` stands in for
  * `dispatchId`/`grantId`, `generation`/`executionEpoch` are 1, `dispatchFence`
- * is 0, `taskId` maps to the topic id, and `workspaceId` is the run tenant
- * (`chatWorkspaceId ?? 'personal:<userId>'`). Chat runs carry no grant row;
- * `runExpiresAt` is the bounded window the server mints at admission.
+ * is 0, and `workspaceId` is the run tenant
+ * (`chatWorkspaceId ?? 'personal:<userId>'`). Its `subject` is
+ * `{kind:'conversation',topicId}` — a conversation id never stands in for a
+ * task id, so the emitted fence's `taskId` is `null`
+ * (device-execution-contract). Chat runs carry no grant row; `runExpiresAt`
+ * is the bounded window the server mints at admission.
  */
 export interface CanonicalChatRunBinding extends CanonicalRunBinding {
   chatAgentId: string;
@@ -35,6 +38,8 @@ const denied = (message: string): ControlResult<never> => ({
 });
 
 const isCanonicalChatRunBinding = (input: CanonicalRunBinding): input is CanonicalChatRunBinding =>
+  input.subject.kind === 'conversation' &&
+  input.subject.topicId === input.topicId &&
   typeof (input as CanonicalChatRunBinding).chatAgentId === 'string' &&
   ((input as CanonicalChatRunBinding).chatWorkspaceId === null ||
     typeof (input as CanonicalChatRunBinding).chatWorkspaceId === 'string') &&
@@ -167,7 +172,7 @@ export class CanonicalChatRunAuthority {
               fence: {
                 tenantId: binding.workspaceId,
                 principalId: binding.userId,
-                taskId: binding.taskId,
+                taskId: null,
                 grantId: binding.grantId,
                 ownerId: binding.runtimeOwnerId,
                 leaseId: binding.runtimeLeaseId,

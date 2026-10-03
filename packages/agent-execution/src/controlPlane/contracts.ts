@@ -9,7 +9,13 @@ export interface ExecutionFence {
   policyRevision: number;
   principalId: string;
   stateRevision: number;
-  taskId: string;
+  /**
+   * The fenced task subject id — `null` when the run's subject is a
+   * conversation (RunSubject {kind:'conversation'}): a conversation id is
+   * never a task id, so no placeholder leaks into task authorization or
+   * device leases (docs/development/device-execution-contract.md).
+   */
+  taskId: string | null;
   tenantId: string;
 }
 

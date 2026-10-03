@@ -49,7 +49,7 @@ describe('canonical chat run admission', () => {
       leaseId: binding.runtimeLeaseId,
       ownerId: binding.runtimeOwnerId,
       principalId: binding.userId,
-      taskId: binding.taskId,
+      taskId: null,
       tenantId: binding.workspaceId,
     });
     // Chat runs carry no grant row — no delegated actions are issued.

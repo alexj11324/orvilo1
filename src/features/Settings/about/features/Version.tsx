@@ -11,7 +11,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { CHANGELOG_URL, MANUAL_UPGRADE_URL, OFFICIAL_SITE } from '@/const/url';
 import { CURRENT_VERSION } from '@/const/version';
 import { useNewVersion } from '@/features/User/UserPanel/useNewVersion';
-import { autoUpdateService } from '@/services/electron/autoUpdate';
+import { getHostPort, hostResultOr } from '@/platform';
 import { useGlobalStore } from '@/store/global';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import {
@@ -61,12 +61,16 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
 
   useEffect(() => {
     if (!isDesktop) return;
-    autoUpdateService.getUpdaterState().then(setUpdaterState);
+    getHostPort()
+      .updater.getUpdaterState()
+      .then((state) => setUpdaterState(hostResultOr(state, { stage: 'idle' })));
   }, [isDesktop]);
 
   useEffect(() => {
     if (!isDesktop) return;
-    autoUpdateService.getBuildChannel().then(setBuildChannel);
+    getHostPort()
+      .updater.getBuildChannel()
+      .then((channel) => setBuildChannel(hostResultOr(channel, null)));
   }, [isDesktop]);
 
   useWatchBroadcast('updaterStateChanged', (state: UpdaterState) => {
@@ -147,7 +151,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
           <Button
             className={mobile ? 'w-full' : ''}
             variant="default"
-            onClick={() => void autoUpdateService.installNow()}
+            onClick={() => void getHostPort().updater.installUpdateNow()}
           >
             {t('restartToUpdate')}
           </Button>
@@ -165,7 +169,7 @@ const Version = memo<{ mobile?: boolean }>(({ mobile }) => {
           <Button
             className={mobile ? 'w-full' : ''}
             variant="outline"
-            onClick={() => void autoUpdateService.checkUpdate()}
+            onClick={() => void getHostPort().updater.checkUpdate()}
           >
             {t('checkForUpdates')}
           </Button>

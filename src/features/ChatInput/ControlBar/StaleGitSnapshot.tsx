@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 
 import { gitChipStyles } from './gitChipStyles';
 import { resolveStaleSnapshot } from './staleSnapshot';
@@ -84,7 +84,7 @@ const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
 
     const handleOpenPr = useCallback(() => {
       if (pullRequest?.url) {
-        void electronSystemService.openExternalLink(pullRequest.url);
+        void getHostPort().openExternal(pullRequest.url);
       }
     }, [pullRequest?.url]);
 

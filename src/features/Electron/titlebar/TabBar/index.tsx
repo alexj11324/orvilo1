@@ -26,7 +26,7 @@ import { buildWorkspaceAwarePath } from '@/features/Workspace/workspaceAwarePath
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useRegisterDesktopTabHotkeys } from '@/hooks/useHotkeys/desktopTabScope';
 import { usePermission } from '@/hooks/usePermission';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { useElectronStore } from '@/store/electron';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
@@ -219,7 +219,7 @@ const TabBar = () => {
     if (tabs.length > 1 && activeTabId) {
       handleClose(activeTabId);
     } else {
-      void electronSystemService.closeWindow();
+      void getHostPort().window.close();
     }
   });
 

@@ -2,6 +2,7 @@ import {
   COMPLETION_BUILTIN_SOUNDS,
   type CompletionSoundSettings,
 } from '@orvilo/electron-client-ipc';
+import { isHostUnsupportedResult } from '@orvilo/types';
 import { CircleAlert, Play } from 'lucide-react';
 import { createElement, useCallback, useEffect, useId, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -23,8 +24,8 @@ import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
+import { getHostPort } from '@/platform';
 import { completionSoundService } from '@/services/electron/completionSound';
-import { desktopNotificationService } from '@/services/electron/desktopNotification';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 const IMPORTED = 'imported';
@@ -65,7 +66,7 @@ export const DesktopNotificationSettings = () => {
 
   const previewBanner = () =>
     report(async () => {
-      const result = await desktopNotificationService.showNotification({
+      const result = await getHostPort().notification.show({
         body: t('completionSound.banner.previewBody'),
         // Settings is open, so the window has focus and the banner would be skipped.
         force: true,
@@ -74,7 +75,12 @@ export const DesktopNotificationSettings = () => {
       });
       // A refused banner resolves instead of throwing, so an undelivered preview would
       // otherwise look like a dead button.
-      if (!result?.success) throw new Error(result?.error ?? result?.reason ?? 'not delivered');
+      if (isHostUnsupportedResult(result) || !result?.success)
+        throw new Error(
+          isHostUnsupportedResult(result)
+            ? result.code
+            : (result?.error ?? result?.reason ?? 'not delivered'),
+        );
     });
 
   return (

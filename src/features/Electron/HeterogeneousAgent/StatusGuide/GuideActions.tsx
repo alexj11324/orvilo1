@@ -2,7 +2,7 @@ import { isDesktop } from '@orvilo/const';
 import { ExternalLink, RotateCcw, Settings2 } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 
 interface GuideActionsProps {
   docsUrl?: string;
@@ -49,7 +49,7 @@ const GuideActions = ({
           variant="default"
           onClick={() => {
             const openLink = isDesktop
-              ? electronSystemService.openExternalLink(docsUrl)
+              ? getHostPort().openExternal(docsUrl)
               : Promise.resolve(window.open(docsUrl, '_blank', 'noopener,noreferrer'));
 
             openLink.catch(console.error);

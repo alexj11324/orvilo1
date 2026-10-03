@@ -32,8 +32,8 @@ import {
   getWorkingDirectoryPathString,
 } from '@/helpers/workingDirectoryPath';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
+import { getHostPort, hostResultOr } from '@/platform';
 import { deviceService } from '@/services/device';
-import { electronSystemService } from '@/services/electron/system';
 import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -206,10 +206,13 @@ const ChooseLocalFolderRow = memo<{ defaultPath?: string; onPick: (entry: Folder
   ({ defaultPath, onPick }) => {
     const { t } = useTranslation('device');
     const handleClick = async () => {
-      const result = await electronSystemService.selectFolder({
-        defaultPath: defaultPath || undefined,
-        title: t('workingDirectory.selectFolder'),
-      });
+      const result = hostResultOr(
+        await getHostPort().dialog.selectFolder({
+          defaultPath: defaultPath || undefined,
+          title: t('workingDirectory.selectFolder'),
+        }),
+        undefined,
+      );
       if (result) onPick({ path: result.path, repoType: result.repoType });
     };
     return (

@@ -23,6 +23,7 @@ import { useEnterToSend } from '@/hooks/useEnterToSend';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 import { usePermission } from '@/hooks/usePermission';
 import { useSingleton } from '@/hooks/useSingleton';
+import { getHostPort } from '@/platform';
 import { aiChatService } from '@/services/aiChat';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors } from '@/store/agent/selectors';
@@ -602,11 +603,10 @@ const InputEditor = memo<{
         onContextMenu={async ({ event: e, editor }) => {
           if (isDesktop) {
             e.preventDefault();
-            const { electronSystemService } = await import('@/services/electron/system');
 
             const selectionText = editor.getSelectionDocument('markdown') as unknown as string;
 
-            await electronSystemService.showContextMenu('editor', {
+            await getHostPort().menu.showContextMenu('editor', {
               selectionText: selectionText || undefined,
             });
           }

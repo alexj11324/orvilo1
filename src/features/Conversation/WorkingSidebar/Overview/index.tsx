@@ -40,7 +40,7 @@ import BranchSwitcher from '@/features/ChatInput/ControlBar/BranchSwitcher';
 import WorktreeSwitcher from '@/features/ChatInput/ControlBar/WorktreeSwitcher';
 import { getAllWorkSummaries } from '@/features/Conversation/store/slices/data/workSummaries';
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { gitService } from '@/services/git';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
@@ -407,7 +407,7 @@ const Overview = memo<OverviewProps>(
                         }
                         onClick={
                           pullRequest.url
-                            ? () => void electronSystemService.openExternalLink(pullRequest.url)
+                            ? () => void getHostPort().openExternal(pullRequest.url)
                             : undefined
                         }
                       />

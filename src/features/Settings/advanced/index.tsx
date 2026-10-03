@@ -21,7 +21,7 @@ import { Switch } from '@/components/ui/switch';
 import { FORM_STYLE } from '@/const/layoutTokens';
 import SettingHeader from '@/features/Settings/features/SettingHeader';
 import { SettingsSearchAnchor } from '@/features/SettingsSearch/anchor';
-import { autoUpdateService } from '@/services/electron/autoUpdate';
+import { getHostPort, hostResultOr } from '@/platform';
 import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { settingsSelectors } from '@/store/user/selectors';
@@ -59,15 +59,15 @@ const Page = memo(() => {
 
   useEffect(() => {
     if (!isDesktop) return;
-    autoUpdateService
-      .getUpdateChannel()
-      .then(setChannel)
+    getHostPort()
+      .updater.getUpdateChannel()
+      .then((value) => setChannel(hostResultOr(value, 'stable')))
       .catch(() => {});
   }, []);
 
   const handleChannelChange = useCallback((value: UpdateChannelValue) => {
     setChannel(value);
-    autoUpdateService.setUpdateChannel(value);
+    void getHostPort().updater.setUpdateChannel(value);
   }, []);
 
   const handleGatewayModeChange = useCallback(

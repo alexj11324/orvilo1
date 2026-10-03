@@ -54,6 +54,11 @@ export class IpcHandler {
     this.registeredChannels.add(channel);
 
     ipcMain.handle(channel, async (event: IpcMainInvokeEvent, ...args: any[]) => {
+      if (!isAppShellSender(event.sender)) {
+        console.warn(`Rejected IPC method ${channel} from embedded guest sender`);
+        return toIpcErrorEnvelope(new Error('IPC channel is not reachable from embedded content'));
+      }
+
       const context: IpcContext = {
         event,
         sender: event.sender,
@@ -147,6 +152,15 @@ export function createServices<T extends readonly IpcServiceConstructor[]>(
 export type CreateServicesResult<T extends readonly IpcServiceConstructor[]> = {
   [K in T[number] as K['groupName']]: InstanceType<K>;
 };
+
+/**
+ * App IPC channels exist for the shell renderers this process creates — never
+ * for guest content embedded inside them. A `<webview>` guest's
+ * `hostWebContents` points at the embedder, so this single check keeps remote
+ * pages (BrowserSidebar webviews, future embedded views) off shell IPC while
+ * leaving BrowserWindow / WebContentsView senders working.
+ */
+export const isAppShellSender = (sender: WebContents): boolean => !sender.hostWebContents;
 
 export function getIpcContext() {
   return ipcContextStorage.getStore();

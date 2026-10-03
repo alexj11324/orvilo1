@@ -3,13 +3,13 @@ import {
   AGENT_CHAT_URL,
   GROUP_CHAT_TOPIC_URL,
   GROUP_CHAT_URL,
-  isDesktop,
 } from '@orvilo/const';
 import type { DesktopNotificationSender } from '@orvilo/electron-client-ipc';
 import type { ConversationContext } from '@orvilo/types';
-import { agentDisplayName } from '@orvilo/types';
+import { agentDisplayName, isHostUnsupportedResult } from '@orvilo/types';
 import { t } from 'i18next';
 
+import { getHostPort, hasHostCapability } from '@/platform';
 import { getAgentStoreState } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
 import type { ChatStore } from '@/store/chat/store';
@@ -144,10 +144,9 @@ export const notifyDesktopHumanApprovalRequired = async (
   get: () => ChatStore,
   context: DesktopNotificationContext,
 ): Promise<void> => {
-  if (!isDesktop) return;
+  if (!hasHostCapability('notification.native')) return;
 
   try {
-    const { desktopNotificationService } = await import('@/services/electron/desktopNotification');
     const title = resolveNotificationTitle(
       get,
       context,
@@ -158,8 +157,8 @@ export const notifyDesktopHumanApprovalRequired = async (
     const sender = await buildNotificationSender(context);
 
     await Promise.allSettled([
-      desktopNotificationService.setBadgeCount(1),
-      desktopNotificationService.showNotification({
+      getHostPort().notification.setBadgeCount(1),
+      getHostPort().notification.show({
         body: t('desktopNotification.humanApprovalRequired.body', { ns: 'chat' }),
         force: true,
         navigate,
@@ -197,10 +196,9 @@ export const notifyDesktopAgentCompleted = async (
   get: () => ChatStore,
   { context, content, badge }: AgentCompletedNotificationOptions,
 ): Promise<void> => {
-  if (!isDesktop) return;
+  if (!hasHostCapability('notification.native')) return;
 
   try {
-    const { desktopNotificationService } = await import('@/services/electron/desktopNotification');
     const { completionSoundService } = await import('@/services/electron/completionSound');
     const fallback = t('notification.finishChatGeneration', { ns: 'electron' });
     const navigate = resolveNotificationNavigate(context);
@@ -209,13 +207,13 @@ export const notifyDesktopAgentCompleted = async (
       completionSoundService.getNotificationSoundFile(),
     ]);
 
-    if (badge) void desktopNotificationService.setBadgeCount(1);
+    if (badge) void getHostPort().notification.setBadgeCount(1);
 
     // The main process owns the window-focus decision, so it also decides which of the two
     // sounds fires: a delivered banner carries the system sound, and only a banner that was
     // skipped (or failed) hands the completion chime back to the renderer. Asking here
     // instead of checking focus twice is what keeps them from doubling up.
-    const result = await desktopNotificationService.showNotification({
+    const result = await getHostPort().notification.show({
       body: buildNotificationBody(content, fallback),
       navigate,
       sender,
@@ -223,7 +221,7 @@ export const notifyDesktopAgentCompleted = async (
       title: resolveNotificationTitle(get, context, fallback),
     });
 
-    if (result?.success && !result.skipped) return;
+    if (isHostUnsupportedResult(result) || (result?.success && !result.skipped)) return;
 
     try {
       await completionSoundService.play();

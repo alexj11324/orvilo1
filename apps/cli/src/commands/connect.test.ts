@@ -1,6 +1,8 @@
-import { mkdir, mkdtemp, rm, symlink, writeFile } from 'node:fs/promises';
+import { execFile } from 'node:child_process';
+import { mkdir, mkdtemp, realpath, rm, symlink, writeFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { promisify } from 'node:util';
 
 import { GatewayClient } from '@orvilo/device-gateway-client';
 import { Command } from 'commander';
@@ -537,6 +539,22 @@ describe('connect command', () => {
     await symlink(realWorktree, aliasCwd);
     try {
       vi.stubEnv('HOME', home);
+      // The claim-token path verifies against the repo's git-common-dir
+      // claims registry — the fixture must be a real repo carrying this
+      // host's registered claim for the canonical worktree path, otherwise
+      // the handler refuses at 'no registry' before ever reaching the
+      // live-writer check this test exists to cover.
+      await promisify(execFile)('git', ['init', '-q'], { cwd: realWorktree });
+      const claimsFile = path.join(realWorktree, '.git', 'orvilo-worktree-claims.json');
+      await writeFile(
+        claimsFile,
+        JSON.stringify({
+          [await realpath(realWorktree)]: {
+            claimToken: 'tok-1',
+            registeredAt: '2026-01-01T00:00:00.000Z',
+          },
+        }),
+      );
       const registryDir = path.join(home, '.orvilo');
       await mkdir(registryDir, { recursive: true });
       await writeFile(

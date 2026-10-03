@@ -163,3 +163,72 @@ connect` daemon in a Linux container + this machine's daemon — separate
   `RunSubject`; canonical-side subject lands with `feat/prime-cutover-chat`.
   Leases/auth key on `subject.taskId` for task runs only — never a
   synthesized taskId on conversation subjects.
+
+## Landed implementation (this branch)
+
+- **`agent_run_request.prime`** — `PrimeRunDescriptor` on
+  `packages/device-gateway-client/src/types.ts` + `http.ts`: artifact pin
+  (commit/version/license/sha256/bytes), bound broker credential, lease TTL,
+  model route, `RunSubject`. Server mints it in
+  `services/controlPlane/devicePrimeDispatch.ts`: resolves + issues the
+  provider binding, reads the runner manifest, registers the canonical run
+  under owner `orvilo-device:<deviceId>` (task subjects,
+  `deviceRunBinding.ts`), signs an op JWT with `prime:infer` capability +
+  `device_id`/`model_route` claims (`internalJwt.ts`). A run with no
+  workspace scope fails closed before dispatch.
+- **Remote broker surface** — `router-hono/agent/handlers/primeBroker.ts`
+  mounted under `primeOperationAuth()` (Bearer → `prime:infer` + `device_id`
+  - `model_route`): `/activate`, `/infer`, `/cancel`. Task subjects resolve
+    through the canonical binding and the `TaskExecutionControlModel` lease;
+    conversation subjects through the op's live `agent_run_request` admission
+    (narrower fence, bounded by op liveness + credential TTL — flagged in the
+    file header). Inference streams NDJSON `{event,requestId}` lines through
+    `SqlTrustedProviderBackend` + `createInferenceBroker`.
+- **Device host** — new `packages/device-prime-host/` (light closure: utils +
+  device-gateway-client + link'd agent-execution). `openPrimeDeviceRun`
+  verifies the shipped `runner.mjs` digest + manifest + `PRIME_EMBEDDED_PIN`,
+  spawns `<executable> runner.mjs --operation-id <op>` detached, opens
+  `HarnessTransport` over stdio, sends `harness.init` with device-supplied
+  `stateDir` + `workspace`, pins the ack, POSTs `/activate`, and answers
+  `broker.infer`/`broker.cancel` via `createBrokerReverseHandler` (NDJSON
+  pump → `broker.event` notifications). Bounded lease: `renewLease` on
+  heartbeat_ack; lapse kills the process group — no new side-effects.
+  Isolation is honest: `treeId=device-pg-<pgid>` — a bare spawn claims no
+  container isolation.
+- **Launcher swap** — `agentRun.ts` keeps admission/dedupe/kill lifecycle;
+  `prime` descriptor presence routes to `admitPrimeDeviceRun`
+  (`device/primeRun.ts`), which resolves `runner.mjs` from the packaged
+  sibling (`import.meta.dirname`, dist or Resources/bin), an
+  `ORVILO_PRIME_RUNNER` override, or the dev-repo path. Non-prime adapter
+  types with a descriptor are rejected.
+- **Shipping artifacts** — `apps/cli` build stages `runner.mjs` +
+  `runner.manifest.json` next to `dist/index.js` (`stagePrimeRunner.ts`,
+  building the harness/vendored prime when absent); electron-builder copies
+  both into `resources/bin` for the packaged CLI. `orvilo prime exec` is the
+  one-shot device entry (`--input-json` carries descriptor+prompt); Desktop
+  `HeterogeneousAgentImpl` spawns it for prime runs, `GatewayConnectionCtr`
+  forwards `request.prime`.
+- **Runner** — `agentDir` honors `harness.init.stateDir` instead of the
+  hardcoded `/tmp/agent` (old runners keep the default when the field is
+  absent; protocolVersion unchanged).
+- **Ingest** — `TrpcIngestSink`/`aiAgent` ingest schemas accept
+  `agentType:'orvilo'`; runs authenticate with `ORVILO_OPERATION_JWT`.
+- **Fence flip** — `orviloDeviceFencedToEmbedded` deleted
+  (`heteroErrors.ts`, the `heteroDispatch` device-branch gate, and the
+  flip-pin describe in `execAgent.device.test.ts`); a device-resolved orvilo
+  plan composes the descriptor and dispatches through the gateway like every
+  other adapter. Interactive desktop `startSession`/`hetero exec` refusals
+  stay — prime runs use `prime exec` / the connect-daemon path, not ACP.
+- **Pin provenance** — `PRIME_EMBEDDED_PIN` moved to
+  `primeEmbeddedArtifact.ts` (re-exported from `primeEmbeddedRuntime`) so
+  device hosts pin the same upstream identity without the supervisor stack;
+  `controlPlane/contracts` + `controlPlane/primeEmbeddedArtifact` added to
+  the package exports map.
+
+### Verification status
+
+`bun run check` clean (37 files, 329 tests); scoped `tsc` clean on
+apps/server diffs, apps/cli diffs, apps/desktop, device-prime-host,
+device-gateway-client. The ≥2 independent device **process environments**
+acceptance still needs a second real device — local evidence can cover two
+independent processes but not a second machine; flagged for the lead.

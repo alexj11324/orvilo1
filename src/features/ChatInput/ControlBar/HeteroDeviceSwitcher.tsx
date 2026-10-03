@@ -1026,14 +1026,20 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     </div>
   );
 
-  // Locked: reaching here with the chip visible means the author fixed the
-  // execution target in the Agent Profile (a member without use access never
-  // renders the chip at all), so name the environment and say why it's pinned
-  // instead of leaving an inert label.
+  // Locked: the selector is hidden either because the author fixed the target
+  // in the Agent Profile (`canSelectExecutionTarget` off) or because there is
+  // simply nothing else to pick (≤1 candidate / inventory still resolving).
+  // Name the environment and say the right reason — a 1-candidate state was
+  // never "fixed in settings".
   if (!canShowExecutionTargetSelector)
     return (
       <SimpleTooltip
-        title={formatLockedControlTooltip(chipLabel, t('heteroAgent.executionTarget.fixedTip'))}
+        title={formatLockedControlTooltip(
+          chipLabel,
+          canSelectExecutionTarget
+            ? t('heteroAgent.executionTarget.readOnlyTip')
+            : t('heteroAgent.executionTarget.fixedTip'),
+        )}
       >
         {chip}
       </SimpleTooltip>

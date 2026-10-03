@@ -8,7 +8,9 @@ import {
   resolveRepairCandidates,
 } from './deviceAdmission';
 
-const buildBody = (overrides: Partial<DeviceAdmissionErrorData> & { code: string }): unknown => ({
+const buildBody = (
+  overrides: Omit<Partial<DeviceAdmissionErrorData>, 'code'> & { code: string },
+): unknown => ({
   detail: 'Human readable sentence — never parsed.',
   retryable: false,
   scope: 'personal',
@@ -47,8 +49,9 @@ describe('isDeviceAdmissionErrorBody', () => {
 });
 
 describe('resolveDeviceAdmissionAction — ONE true action per code', () => {
-  const actionFor = (overrides: Partial<DeviceAdmissionErrorData> & { code: string }) =>
-    resolveDeviceAdmissionAction(buildBody(overrides) as DeviceAdmissionErrorData);
+  const actionFor = (
+    overrides: Omit<Partial<DeviceAdmissionErrorData>, 'code'> & { code: string },
+  ) => resolveDeviceAdmissionAction(buildBody(overrides) as DeviceAdmissionErrorData);
 
   it('DEVICE_INVENTORY_INCOMPLETE → retry the inventory query', () => {
     expect(actionFor({ code: 'DEVICE_INVENTORY_INCOMPLETE' })).toBe('retry-inventory');

@@ -988,6 +988,7 @@
   "heteroAgent.executionTarget.onlineConnections_one": "在线 · {{count}} 个连接",
   "heteroAgent.executionTarget.onlineConnections_other": "在线 · {{count}} 个连接",
   "heteroAgent.executionTarget.personalGroup": "私人设备",
+  "heteroAgent.executionTarget.readOnlyTip": "此运行在此设备上执行。",
   "heteroAgent.executionTarget.reconnect": "重新连接",
   "heteroAgent.executionTarget.reconnectFailed": "无法重新连接此设备。请确认桌面端正在运行，然后重试。",
   "heteroAgent.executionTarget.sandbox": "云端沙箱",

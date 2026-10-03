@@ -73,6 +73,15 @@ export const AGENT_CHAT_URL = (agentId: string, mobile?: boolean) => {
   return `/agent/${agentId}`;
 };
 
+// Canonical conversation routes — the conversation is the navigation unit,
+// so the URL keys on the topic alone. The topic's owner agent is resolved
+// by the route, never by the URL. Legacy `/agent/:agentId/:topicId` links
+// still work: the route redirects them here.
+export const CHAT_TOPIC_URL = (topicId: string) => `/chat/${topicId}`;
+
+// The blank composer — a conversation that does not exist yet.
+export const CHAT_NEW_URL = '/chat/new';
+
 export const AGENT_CHAT_TOPIC_URL = (agentId: string, topicId: string, mobile?: boolean) => {
   if (mobile) return urlJoin('/agent', agentId, topicId);
   return urlJoin('/agent', agentId, topicId);

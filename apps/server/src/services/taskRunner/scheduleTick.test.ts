@@ -105,7 +105,15 @@ describe('runScheduleTick', () => {
   });
 
   it('skips terminal / paused tasks before checking maxExecutions', async () => {
-    mockSelectTask.mockResolvedValue([baseTask({ status: 'paused' })]);
+    // `status` is retired — a pause lives on the parked marker now.
+    mockSelectTask.mockResolvedValue([
+      baseTask({
+        context: {
+          execution: { parked: { at: '2026-05-02T00:00:00.000Z' } },
+          scheduler: { scheduleStartedAt: new Date('2026-05-01T00:00:00Z').toISOString() },
+        },
+      }),
+    ]);
 
     const outcome = await runScheduleTick(taskId, userId);
 

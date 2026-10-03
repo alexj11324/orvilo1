@@ -1121,6 +1121,11 @@ export class ConversationLifecycleActionImpl {
           optimistic: true,
           type: 'addTopic',
           value: {
+            // The owner agent belongs on the row itself — `/chat/:topicId`'s
+            // TopicOwnerSync binds `activeAgentId` from `topic.agentId`, and
+            // without it the conversation's context loses its agent segment
+            // until the server row arrives.
+            agentId: topicListAgentId,
             id: mintedTopicId,
             ...newTopicModelSnapshot,
             ...(operationContext.groupId ? {} : { sessionId: operationContext.agentId }),

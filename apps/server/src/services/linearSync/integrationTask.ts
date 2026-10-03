@@ -284,6 +284,10 @@ export class LinearIntegrationTaskService {
   /** Public-only lookup: private tasks are intentionally indistinguishable from missing tasks. */
   findPublicTask = (taskId: string) => this.taskModel.findById(taskId);
 
+  /** Canonical execution truth — the retired `tasks.status` recomputed from dispatch rows. */
+  isTaskExecutionLive = async (taskId: string) =>
+    (await this.taskModel.derivedStatusByIds([taskId]))[taskId] === 'running';
+
   updatePublicTask = async (
     taskId: string,
     patch: Parameters<TaskModel['update']>[1],
@@ -303,7 +307,11 @@ export class LinearIntegrationTaskService {
       return this.taskModel.update(taskId, patch, mutation);
     }
     const task = await this.taskModel.findById(taskId);
-    if (!task || task.status !== 'running' || patch.assigneeAgentId === task.assigneeAgentId) {
+    if (
+      !task ||
+      !(await this.isTaskExecutionLive(taskId)) ||
+      patch.assigneeAgentId === task.assigneeAgentId
+    ) {
       return this.taskModel.update(taskId, patch, mutation);
     }
     return transferTaskExecutionOwnership({

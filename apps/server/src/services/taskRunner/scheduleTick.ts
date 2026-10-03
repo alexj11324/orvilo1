@@ -1,3 +1,4 @@
+import { deriveLegacyTaskStatus } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import debug from 'debug';
 import { and, eq } from 'drizzle-orm';
@@ -67,11 +68,12 @@ export async function runScheduleTick(
     log('skip task=%s reason=no-pattern', taskId);
     return { ran: false, reason: 'no-pattern' };
   }
-  if (isTerminal(task.status)) {
-    log('skip task=%s reason=terminal (status=%s)', taskId, task.status);
+  const taskStatus = deriveLegacyTaskStatus(task);
+  if (isTerminal(taskStatus)) {
+    log('skip task=%s reason=terminal (status=%s)', taskId, taskStatus);
     return { ran: false, reason: 'terminal' };
   }
-  if (task.status === 'paused') {
+  if (taskStatus === 'paused') {
     log('skip task=%s reason=paused', taskId);
     return { ran: false, reason: 'paused' };
   }

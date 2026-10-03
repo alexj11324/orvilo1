@@ -52,9 +52,12 @@ export const useChatRouteSync = (options: ChatRouteSyncOptions = {}) => {
       (state) => state.activeTopicId,
       (state) => {
         const { aid, topicId } = paramsRef.current;
+        // Conversation-stable routes (`/chat`) carry no agent segment — the
+        // custom path builders don't need one; the agent-scoped defaults do,
+        // so they only resolve when an agent id exists.
         const routeAgentId = aid || useChatStore.getState().activeAgentId;
 
-        if (!routeAgentId || state === topicId) return;
+        if (state === topicId) return;
 
         if (state === undefined && topicId) {
           useChatStore.setState(
@@ -69,8 +72,11 @@ export const useChatRouteSync = (options: ChatRouteSyncOptions = {}) => {
         nextSearchParams.delete('topic');
 
         const nextPath = state
-          ? options.getTopicPath?.(routeAgentId, state) || AGENT_CHAT_TOPIC_URL(routeAgentId, state)
-          : options.getConversationPath?.(routeAgentId) || AGENT_CHAT_URL(routeAgentId);
+          ? (options.getTopicPath?.(routeAgentId ?? '', state) ??
+            (routeAgentId ? AGENT_CHAT_TOPIC_URL(routeAgentId, state) : undefined))
+          : (options.getConversationPath?.(routeAgentId ?? '') ??
+            (routeAgentId ? AGENT_CHAT_URL(routeAgentId) : undefined));
+        if (!nextPath) return;
         const nextUrl = `${nextPath}${getSearchSuffix(nextSearchParams)}${locationRef.current.hash}`;
         const currentUrl = `${locationRef.current.pathname}${locationRef.current.search}${locationRef.current.hash}`;
 

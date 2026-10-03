@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import type { Commitment, ControlResult, DurableReceipt } from '@orvilo/agent-execution';
 import { and, eq, inArray, sql } from 'drizzle-orm';
 
+import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
 import {
   acceptances,
   taskDependencies,
@@ -206,7 +207,7 @@ export class CanonicalSessionSnapshots {
       ? await tx
           .select({
             id: tasks.id,
-            status: tasks.status,
+            status: sql<string>`${legacyStatusExpr}`,
             domainRevision: tasks.domainRevision,
             requirementRevision: tasks.requirementRevision,
             policyRevision: tasks.policyRevision,

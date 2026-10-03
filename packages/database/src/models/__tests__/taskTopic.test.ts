@@ -29,6 +29,22 @@ const createTopic = async (id: string, uid = userId) => {
 const getTopic = async (id: string) =>
   (await serverDB.select().from(topics).where(eq(topics.id, id)).limit(1))[0];
 
+// `tasks.status` is retired — a live run is an active dispatch row, not a
+// status write.
+const armRunningDispatch = async (taskId: string) => {
+  await serverDB.insert(taskDispatches).values({
+    generation: 1,
+    id: `disp_${taskId}_running`,
+    idempotencyKey: `idem_${taskId}_running`,
+    phase: 'running',
+    policyRevision: 1,
+    requestedBy: 'task-topic-test',
+    requirementRevision: 1,
+    taskId,
+    taskRevision: 1,
+  });
+};
+
 beforeEach(async () => {
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
@@ -416,7 +432,7 @@ describe('TaskTopicModel', () => {
       await createTopic('tpc_settle_once');
       await topicModel.add(task.id, 'tpc_settle_once', { operationId: 'op-settle', seq: 1 });
       await taskModel.updateCurrentTopic(task.id, 'tpc_settle_once');
-      await taskModel.updateStatus(task.id, 'running');
+      await armRunningDispatch(task.id);
 
       const results = await Promise.allSettled([
         topicModel.settleIfRunning(task.id, 'tpc_settle_once', 'op-settle', 'completed'),
@@ -440,7 +456,7 @@ describe('TaskTopicModel', () => {
         seq: 1,
       });
       await taskModel.updateCurrentTopic(task.id, 'tpc_settle_reclaim');
-      await taskModel.updateStatus(task.id, 'running');
+      await armRunningDispatch(task.id);
 
       const first = await topicModel.settleIfRunning(
         task.id,
@@ -474,7 +490,7 @@ describe('TaskTopicModel', () => {
         seq: 1,
       });
       await taskModel.updateCurrentTopic(task.id, 'tpc_settle_paused');
-      await taskModel.updateStatus(task.id, 'running');
+      await armRunningDispatch(task.id);
       await topicModel.settleIfRunning(task.id, 'tpc_settle_paused', 'op-paused', 'completed');
       await taskModel.updateStatus(task.id, 'paused');
       await serverDB
@@ -495,7 +511,7 @@ describe('TaskTopicModel', () => {
       await createTopic('tpc_current_generation');
       await topicModel.add(task.id, 'tpc_old_generation', { operationId: 'op-old', seq: 1 });
       await taskModel.updateCurrentTopic(task.id, 'tpc_current_generation');
-      await taskModel.updateStatus(task.id, 'running');
+      await armRunningDispatch(task.id);
 
       await expect(
         topicModel.settleIfRunning(task.id, 'tpc_old_generation', 'op-old', 'completed'),

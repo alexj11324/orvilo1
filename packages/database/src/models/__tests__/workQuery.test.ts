@@ -2,6 +2,7 @@
 import {
   applyDelegatedFilter,
   applyNoProjectFilter,
+  type TaskDispatchPhase,
   WORK_QUERY_MAX_IN_VALUES,
   type WorkQueryPredicate,
 } from '@orvilo/types';
@@ -69,6 +70,21 @@ const createTask = async (owner: string, values: Partial<typeof tasks.$inferInse
   const model = new TaskModel(serverDB, owner, workspaceId);
   return model.create({ instruction: values.instruction ?? 'Do the work', ...values });
 };
+
+// `tasks.status` is retired — a live run is an active dispatch row.
+const runDispatchFor = async (taskId: string, phase: TaskDispatchPhase = 'running') =>
+  serverDB.insert(taskDispatches).values({
+    generation: 1,
+    id: `wq-disp_${taskId}_${phase}`,
+    idempotencyKey: `wq:${taskId}:${phase}`,
+    phase,
+    policyRevision: 1,
+    requestedBy: `user:${userId}`,
+    requirementRevision: 1,
+    taskId,
+    taskRevision: 1,
+    workspaceId,
+  });
 
 describe('applyWorkQueryLayout', () => {
   it('defaults a list to server status groups and keeps an explicit none flat', () => {
@@ -919,7 +935,12 @@ describe('WorkQueryModel', () => {
     ).rejects.toMatchObject({ code: 'INVALID_QUERY' });
 
     for (let index = 0; index < 26; index += 1) {
-      await createTask(userId, { name: `Lane ${index}`, priority: 1, status: 'scheduled' });
+      await createTask(userId, {
+        automationMode: 'schedule',
+        context: { scheduler: { tickToken: `tick-${index}` } },
+        name: `Lane ${index}`,
+        priority: 1,
+      });
     }
     const laned = await model.queryTasks({
       limit: 100,
@@ -999,21 +1020,21 @@ describe('WorkQueryModel', () => {
     const parent = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Parent running',
-      status: 'running',
     });
     const child = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Child in review',
       parentTaskId: parent.id,
-      status: 'running',
       workflowCategory: 'in_review',
       workflowStateId: 'linear-state-review',
     });
     const extraRunning = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Another running',
-      status: 'running',
     });
+    for (const running of [parent.id, child.id, extraRunning.id]) {
+      await runDispatchFor(running);
+    }
     await serverDB
       .update(tasksTable)
       .set({ updatedAt: stamp })
@@ -2159,7 +2180,6 @@ describe('executionState projection', () => {
     const runWaiting = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Run waiting',
-      status: 'running',
     });
     await serverDB.insert(taskTopics).values({
       runState: 'waiting',
@@ -2167,17 +2187,22 @@ describe('executionState projection', () => {
       taskId: runWaiting.id,
       userId,
     });
-    // No execution rows — legacy `status` is the fallback projection.
+    // A stale `tasks.status` value has no execution rows — the retired column
+    // must not resurrect an execution state.
     const legacyRunning = await createTask(userId, {
       assigneeUserId: userId,
-      name: 'Legacy running',
+      name: 'Stale running',
       status: 'running',
     });
+    const dispatchRunning = await createTask(userId, {
+      assigneeUserId: userId,
+      name: 'Dispatch running',
+    });
+    await runDispatchFor(dispatchRunning.id);
     // Never ran — the projection is NULL.
     const neverRan = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Backlog',
-      status: 'backlog',
     });
 
     const model = new WorkQueryModel(serverDB, userId, workspaceId);
@@ -2207,15 +2232,15 @@ describe('executionState projection', () => {
       runWaiting.id,
     ]);
     await expect(idsOf({ field: 'executionState', op: 'eq', value: 'running' })).resolves.toEqual([
-      legacyRunning.id,
+      dispatchRunning.id,
     ]);
     await expect(
       idsOf({ field: 'executionState', op: 'isNull', value: undefined }),
-    ).resolves.toEqual([neverRan.id]);
+    ).resolves.toEqual([legacyRunning.id, neverRan.id].sort());
     // notIn is NULL-inclusive: a never-ran task is "not running".
     await expect(
       idsOf({ field: 'executionState', op: 'notIn', value: ['running'] }),
-    ).resolves.toEqual([dispatchFailed.id, neverRan.id, runWaiting.id].sort());
+    ).resolves.toEqual([dispatchFailed.id, legacyRunning.id, neverRan.id, runWaiting.id].sort());
   });
 
   it('normalizes a stored v1 status query onto workflow/execution before compiling', async () => {
@@ -2229,9 +2254,9 @@ describe('executionState projection', () => {
     const legacyRunning = await createTask(userId, {
       assigneeUserId: userId,
       name: 'Running',
-      status: 'running',
       workflowCategory: 'in_progress',
     });
+    await runDispatchFor(legacyRunning.id);
     const model = new WorkQueryModel(serverDB, userId, workspaceId);
     const result = await model.queryTasks({
       limit: 50,

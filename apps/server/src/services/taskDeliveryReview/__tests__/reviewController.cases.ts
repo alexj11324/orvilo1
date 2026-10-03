@@ -202,7 +202,7 @@ function setup(
       ),
       sql: (strings: TemplateStringsArray, ...params: unknown[]) => ({ params, strings }),
     },
-    '@/database/schemas/task': { tasks: {} },
+    '@/database/schemas/task': { taskDispatches: {}, tasks: {} },
     '@/database/models/agent': {
       AgentModel: class {
         async getAgentConfig() {
@@ -212,6 +212,10 @@ function setup(
     },
     '@/database/models/task': {
       TaskModel: class {
+        async derivedStatusByIds(ids: string[]) {
+          const fresh = { ...task, ...options.freshTask };
+          return Object.fromEntries(ids.map((id) => [id, fresh.status]));
+        }
         async findById() {
           return structuredClone({ ...task, ...options.freshTask });
         }

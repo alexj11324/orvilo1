@@ -14,7 +14,9 @@ const migrations = readMigrationFiles({
 // additions alongside the event/handoff tables) plus 0198_sudden_magma, which
 // restores the ai_providers/ai_models tables retired by the P30 drop, plus
 // 0199_dispatch_recovery_bounds (task_dispatches.recovery_attempts), plus
-// 0200_project_agent_tiers (project_agents.tier, task_dispatches.tier).
+// 0200_project_agent_tiers (project_agents.tier, task_dispatches.tier), plus
+// 0201_retire_task_status_parked_backfill (parked-marker/workflow convergence),
+// plus 0202_pr_delivery_gate_workflow_category (gate trigger rebind).
 const additions = migrations.slice(197);
 const db = new PGlite({ extensions: { vector } });
 const applyAdditions = async () => {
@@ -39,7 +41,7 @@ describe('provider and experience forward migrations', () => {
   });
 
   it('rolls back a failed upgrade without deleting existing memories', async () => {
-    expect(additions).toHaveLength(4);
+    expect(additions).toHaveLength(6);
     await db.exec('BEGIN');
     await applyAdditions();
     await expect(

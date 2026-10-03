@@ -61,7 +61,12 @@ describe('task on-topic-complete webhook', () => {
         }),
       )
       .mockReturnValueOnce(
-        query({ currentTopicId: null, identifier: 'TASK-1', status: 'running', workspaceId: null }),
+        query({
+          currentTopicId: null,
+          executionLive: true,
+          identifier: 'TASK-1',
+          workspaceId: null,
+        }),
       )
       .mockReturnValueOnce(query(undefined));
     getServerDBMock.mockResolvedValue({ select });
@@ -88,8 +93,8 @@ describe('task on-topic-complete webhook', () => {
       .mockReturnValueOnce(
         query({
           currentTopicId: 'topic-1',
+          executionLive: true,
           identifier: 'TASK-1',
-          status: 'running',
           workspaceId: null,
         }),
       )
@@ -118,8 +123,8 @@ describe('task on-topic-complete webhook', () => {
       .mockReturnValueOnce(
         query({
           currentTopicId: 'topic-new',
+          executionLive: false,
           identifier: 'TASK-1',
-          status: 'running',
           workspaceId: null,
         }),
       )
@@ -167,8 +172,8 @@ describe('task on-topic-complete webhook', () => {
       .mockReturnValueOnce(
         query({
           currentTopicId: 'topic-1',
+          executionLive: true,
           identifier: 'TASK-1',
-          status: 'running',
           workspaceId: null,
         }),
       )

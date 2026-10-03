@@ -456,11 +456,12 @@ export class ChatTopicActionImpl {
   };
 
   /**
-   * Rebind a topic to a different agent mid-conversation (the topic-centric
-   * agent switch). Records the handoff in `metadata.agentHandoffs` so the
-   * message stream can render the separator marker, then moves the topic row
-   * under the new owner's container. Callers navigate to the new agent's room
-   * — the topic lives with its bound agent.
+   * Continue a conversation under a different agent (the topic-centric agent
+   * switch / handoff). Only the topic's execution assignment changes — the
+   * conversation keeps its id, its history, and its place in the feed; the
+   * messages stay stamped with the agent that produced them (the execution
+   * segments). Records the boundary in `metadata.agentHandoffs` so the stream
+   * can render the handoff marker. Callers navigate to the new agent's room.
    */
   rebindTopicAgent = async (topicId: string, toAgentId: string): Promise<void> => {
     const topic = topicSelectors.getTopicById(topicId)(this.#get());
@@ -481,10 +482,10 @@ export class ChatTopicActionImpl {
       containerKey,
     });
 
-    // Persistence goes through the move mutation, not updateTopic: only it
-    // writes `topics.agent_id` AND re-parents the topic's messages/threads —
-    // the conversation context the spec requires to travel with the switch.
-    await topicService.batchMoveTopics([topicId], toAgentId);
+    // Persistence goes through updateTopic, not the move mutation: only the
+    // topic row's owner column flips — its messages/threads are never
+    // re-parented, so earlier segments stay attributed to their agent.
+    await topicService.updateTopic(topicId, { agentId: toAgentId });
     await this.#get().refreshTopic(containerKey);
 
     // If the handoff write fails the switch still happened — it only loses
@@ -493,6 +494,20 @@ export class ChatTopicActionImpl {
     await this.#get()
       .updateTopicMetadata(topicId, { agentHandoffs })
       .catch(() => undefined);
+  };
+
+  /**
+   * Fork a conversation to a different agent: a brand-new topic is seeded
+   * from this conversation's messages and bound to the target agent — the
+   * original conversation is untouched. Returns the new topic id so the
+   * caller can land the user on it.
+   */
+  forkTopicAgent = async (topicId: string, toAgentId: string): Promise<string> => {
+    const newTopicId = await topicService.cloneTopic(topicId, undefined, toAgentId);
+    // Reconcile the workspace feed — the fork lands there immediately once
+    // the server page confirms it.
+    await this.#get().refreshTopic(WORKSPACE_TOPIC_MAP_KEY);
+    return newTopicId;
   };
 
   updateTopicMetadata = async (id: string, metadata: Partial<ChatTopicMetadata>): Promise<void> => {

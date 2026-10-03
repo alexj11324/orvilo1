@@ -81,8 +81,7 @@ describe('useTopicNavigation', () => {
     });
 
     expect(focusTopicPopupMock).toHaveBeenCalledWith('topic-in-popup');
-    expect(pushMock).toHaveBeenCalledWith('/agent/agent-1/topic-in-popup');
-    expect(switchTopicMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith('/chat/topic-in-popup');
     expect(toggleMobileTopicMock).toHaveBeenCalledWith(false);
   });
 
@@ -97,12 +96,11 @@ describe('useTopicNavigation', () => {
     });
 
     expect(focusTopicPopupMock).toHaveBeenCalledWith('topic-2');
-    expect(pushMock).toHaveBeenCalledWith('/agent/agent-1/topic-2');
-    expect(switchTopicMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith('/chat/topic-2');
     expect(toggleMobileTopicMock).toHaveBeenCalledWith(false);
   });
 
-  it('switches the main window topic after focusing the popup on the base route', async () => {
+  it('navigates to the canonical topic URL after focusing the popup on the base route', async () => {
     pathnameMock.mockReturnValue('/agent/agent-1');
     focusTopicPopupMock.mockResolvedValue(true);
 
@@ -113,7 +111,7 @@ describe('useTopicNavigation', () => {
     });
 
     expect(focusTopicPopupMock).toHaveBeenCalledWith('topic-3');
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith('/chat/topic-3');
     expect(switchTopicMock).toHaveBeenCalledWith('topic-3');
     expect(toggleMobileTopicMock).toHaveBeenCalledWith(false);
   });
@@ -132,7 +130,7 @@ describe('useTopicNavigation', () => {
       await result.current.navigateToTopic('topic-2');
     });
 
-    expect(pushMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith('/chat/topic-2');
     expect(switchTopicMock).toHaveBeenCalledWith('topic-2');
     expect(toggleMobileTopicMock).toHaveBeenCalledWith(false);
   });
@@ -151,8 +149,8 @@ describe('useTopicNavigation', () => {
       await result.current.navigateToTopic('topic-2');
     });
 
-    expect(pushMock).toHaveBeenCalledWith('/agent/agent-1/topic-2');
-    expect(switchTopicMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith('/chat/topic-2');
+    expect(switchTopicMock).toHaveBeenCalledWith('topic-2');
     expect(toggleMobileTopicMock).toHaveBeenCalledWith(false);
   });
 
@@ -170,8 +168,8 @@ describe('useTopicNavigation', () => {
       await result.current.navigateToTopic('topic-click');
     });
 
-    expect(pushMock).toHaveBeenCalledWith('/agent/agent-1/topic-click');
-    expect(switchTopicMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith('/chat/topic-click');
+    expect(switchTopicMock).toHaveBeenCalledWith('topic-click');
   });
 
   it('routes back to chat from a workspace-prefixed profile sub-route', async () => {
@@ -187,8 +185,8 @@ describe('useTopicNavigation', () => {
       await result.current.navigateToTopic('topic-workspace');
     });
 
-    expect(pushMock).toHaveBeenCalledWith('/agent/agent-1/topic-workspace');
-    expect(switchTopicMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith('/team/chat/topic-workspace');
+    expect(switchTopicMock).toHaveBeenCalledWith('topic-workspace');
     expect(toggleMobileTopicMock).toHaveBeenCalledWith(false);
   });
 
@@ -204,8 +202,8 @@ describe('useTopicNavigation', () => {
       await result.current.navigateToTopic('topic-prefixed');
     });
 
-    expect(pushMock).toHaveBeenCalledWith('/orvilo/agent/agent-1/topic-prefixed');
-    expect(switchTopicMock).not.toHaveBeenCalled();
+    expect(pushMock).toHaveBeenCalledWith('/orvilo/chat/topic-prefixed');
+    expect(switchTopicMock).toHaveBeenCalledWith('topic-prefixed');
     expect(toggleMobileTopicMock).toHaveBeenCalledWith(false);
   });
 });

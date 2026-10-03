@@ -1,8 +1,9 @@
 import type { TaskRunTrigger } from '@orvilo/types';
 import debug from 'debug';
-import { and, eq } from 'drizzle-orm';
+import { and, eq, sql } from 'drizzle-orm';
 import type { Context } from 'hono';
 
+import { hasActiveExecution } from '@/database/models/taskExecutionSql';
 import { agentOperations, taskDispatches, tasks, taskTopics } from '@/database/schemas';
 import { getServerDB } from '@/database/server';
 import { TaskLifecycleService } from '@/server/services/taskLifecycle';
@@ -104,8 +105,8 @@ export async function onTopicComplete(c: Context) {
     const [taskRow] = await db
       .select({
         currentTopicId: tasks.currentTopicId,
+        executionLive: sql<boolean>`${hasActiveExecution}`,
         identifier: tasks.identifier,
-        status: tasks.status,
         workspaceId: tasks.workspaceId,
       })
       .from(tasks)
@@ -144,7 +145,7 @@ export async function onTopicComplete(c: Context) {
       .limit(1);
     if (!registeredTopic) {
       if (
-        taskRow.status === 'running' &&
+        taskRow.executionLive &&
         (!taskRow.currentTopicId || taskRow.currentTopicId === topicId)
       ) {
         return c.json({ error: 'Task run registration is still in progress' }, 503);

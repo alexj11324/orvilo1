@@ -74,7 +74,10 @@ export class TaskRecoveryCoordinator {
     // is one another advance has claimed — leave it to that one.
     const taskModel = new TaskModel(this.db, this.userId, this.workspaceId);
     const current = await taskModel.findById(task.id);
-    if (!current || current.status === 'running') {
+    const currentStatus = current
+      ? (await taskModel.derivedStatusByIds([task.id]))[task.id]
+      : undefined;
+    if (!current || currentStatus === 'running') {
       log('task %s recovery was already claimed by another advance', task.identifier);
       return { outcome: 'already-running' };
     }
@@ -82,18 +85,14 @@ export class TaskRecoveryCoordinator {
     // claim may take. The tick read the Task before it decided; claiming whatever it
     // holds now would swap somebody's completion, cancellation or explicit failure to
     // `running` and start a paid run over their decision.
-    if (current.status !== 'paused') {
-      log(
-        'task %s moved to %s before the claim; leaving it alone',
-        task.identifier,
-        current.status,
-      );
+    if (currentStatus !== 'paused') {
+      log('task %s moved to %s before the claim; leaving it alone', task.identifier, currentStatus);
       return { outcome: 'settled' };
     }
     // A pause somebody made is theirs. The routing error survives a manual round trip
     // through another status, because the status update keeps the old error when none
     // is supplied, so the status alone cannot say whose pause this is.
-    if (statusAuthoredByActor(await taskModel.getActivities(task.id, 20), current.status)) {
+    if (statusAuthoredByActor(await taskModel.getActivities(task.id, 20), currentStatus)) {
       log('task %s was paused by an actor; leaving it alone', task.identifier);
       return { outcome: 'settled' };
     }

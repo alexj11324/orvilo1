@@ -190,6 +190,10 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
       generation: 0,
       id: dispatchId,
       idempotencyKey: `seed:${taskId}:${seq}`,
+      // A completed attempt's dispatch is settled — 'requested' (the default)
+      // is active and would pin the task at 'running' (and block a second
+      // attempt's dispatch on the one-active constraint).
+      phase: 'succeeded',
       policyRevision: 0,
       requestedBy: userId,
       requirementRevision: 0,
@@ -237,7 +241,7 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
   it('E05 — freezes a valid receipt when the upstream stands on its delivery', async () => {
     const { dependent, upstream } = await seedUpstreamWithDelivery();
     const topicId = await seedCompletedAttempt(upstream.id, 1);
-    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+    await taskModel.updateStatus(upstream.id, 'completed');
 
     const result = await buildFor(dependent.id);
 
@@ -263,7 +267,7 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
     await seedCompletedAttempt(upstream.id, 1);
     // Reopened: the task left 'completed' — the historical delivery can no
     // longer carry a fresh downstream claim.
-    await db.update(tasks).set({ status: 'backlog' }).where(eq(tasks.id, upstream.id));
+    await taskModel.updateStatus(upstream.id, 'backlog');
 
     await expect(buildFor(dependent.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
@@ -284,7 +288,7 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
       userId,
       workspaceId,
     });
-    await db.update(tasks).set({ status: 'failed' }).where(eq(tasks.id, upstream.id));
+    await taskModel.updateStatus(upstream.id, 'failed');
 
     await expect(buildFor(dependent.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
@@ -296,7 +300,7 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
     const { dependent, upstream } = await seedUpstreamWithDelivery();
     // Kanban/manual completion: the upstream was never executed, so no
     // taskTopics exist — the 'completed' status is the delivery evidence.
-    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+    await taskModel.updateStatus(upstream.id, 'completed');
 
     const result = await buildFor(dependent.id);
 
@@ -326,7 +330,7 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
       userId,
       workspaceId,
     });
-    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+    await taskModel.updateStatus(upstream.id, 'completed');
 
     await expect(buildFor(dependent.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
@@ -372,7 +376,7 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
       userId,
       workspaceId,
     });
-    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+    await taskModel.updateStatus(upstream.id, 'completed');
 
     await expect(buildFor(dependent.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',
@@ -398,7 +402,7 @@ describe('buildTaskPrompt dependency receipts (F07/E04–E05)', () => {
         },
       })
       .where(eq(taskTopics.topicId, topicId));
-    await db.update(tasks).set({ status: 'completed' }).where(eq(tasks.id, upstream.id));
+    await taskModel.updateStatus(upstream.id, 'completed');
 
     await expect(buildFor(dependent.id)).rejects.toMatchObject({
       code: 'PRECONDITION_FAILED',

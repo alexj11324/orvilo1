@@ -122,6 +122,11 @@ vi.mock('@/database/models/device', () => ({
     return {
       findByDeviceId: vi.fn().mockResolvedValue(undefined),
       findWorkspaceDeviceById: vi.fn().mockResolvedValue(undefined),
+      // Unified admission's authorized candidate set — no registered devices;
+      // sandbox/`none` runs never consult it, and an explicit request for an
+      // unregistered device is honestly unauthorized.
+      queryPersonal: vi.fn().mockResolvedValue([]),
+      queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
     };
   }),
 }));

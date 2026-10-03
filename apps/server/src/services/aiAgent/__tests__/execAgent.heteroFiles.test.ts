@@ -134,6 +134,10 @@ vi.mock('@/database/models/device', () => ({
     return {
       findByDeviceId: mockDeviceFindByDeviceId,
       findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
+      // Unified admission's authorized candidate set — `device-1` is the
+      // registered personal device this suite routes to.
+      queryPersonal: vi.fn().mockResolvedValue([{ deviceId: 'device-1' }]),
+      queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
     };
   }),
 }));

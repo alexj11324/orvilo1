@@ -90,19 +90,27 @@ const interruptGatewayTaskOrThrow = async (
 };
 
 /**
- * When the agent runs against the local machine, resolve this desktop's
- * own gateway deviceId so it can be passed as the run's routing `deviceId` and
- * `localDeviceId` capability hint. The server then presets `activeDeviceId`,
- * injects `orvilo-local-system` into the first LLM payload, and advertises direct
- * image reads only when the routed device still matches this desktop. This
- * skips the extra `activateDevice` round-trip the model is otherwise forced to
- * make whenever more than one device is online (with a single device the
- * server's heuristic already covered it).
+ * When the agent may run against the local machine, resolve this desktop's
+ * own gateway deviceId and pass it as the `localDeviceId` capability hint —
+ * "which registered device IS the requester's own machine". Unified
+ * admission on the server consumes it to resolve a stored `local` target
+ * (or a member's own `local` override) onto this desktop; it then presets
+ * `activeDeviceId`, injects `orvilo-local-system` into the first LLM payload,
+ * and advertises direct image reads only when the routed device still
+ * matches this desktop.
+ *
+ * The routing `deviceId` override is deliberately NOT sent: under unified
+ * admission a per-request id is an *explicit request* — an authorization-
+ * gated input distinct from the stored `local` intent — so a fixed-policy or
+ * workspace-scoped run would reject the hint it previously accepted, and an
+ * admitted run would wrongly outrank the session pin. The server's
+ * `resolveExecutionDevice` answer (session pin → explicit → preference →
+ * default) owns the pick.
  *
  * Gated on the effective runtime mode (`isLocalSystemEnabledById`), which
- * derives from `agencyConfig.executionTarget` — only a `local` target presets
- * the device. Resolving a device for `sandbox` / `none` / `device` targets
- * would wrongly route the run to this machine.
+ * derives from `agencyConfig.executionTarget` — only a `local` target sends
+ * the hint for local CLI agents; platform tasks always send it as a
+ * capability claim for the server's plan to accept or ignore.
  *
  * Desktop-only and best-effort: any failure falls back to the server-side
  * device-resolution heuristics. We don't pre-check online status here — an
@@ -111,7 +119,7 @@ const interruptGatewayTaskOrThrow = async (
 const resolveDesktopDeviceHints = async (
   agentId?: string,
   topicId?: string | null,
-): Promise<{ deviceId?: string; localDeviceId?: string }> => {
+): Promise<{ localDeviceId?: string }> => {
   if (!isDesktop || !agentId) return {};
 
   const agentState = getAgentStoreState();
@@ -180,9 +188,14 @@ const resolveDesktopDeviceHints = async (
   try {
     const info = await gatewayConnectionService.getDeviceInfo();
     if (!info?.deviceId) return {};
-    return isPlatformTask
-      ? { localDeviceId: info.deviceId }
-      : { deviceId: agencyConfig?.boundDeviceId ?? info.deviceId, localDeviceId: info.deviceId };
+    // `localDeviceId` is the only hint: it tells unified admission which
+    // registered device IS the requester's own machine. The previous `deviceId`
+    // override asked the server to run on that id as an *explicit request* —
+    // under admission that is a different, authorization-gated input than the
+    // stored `local` intent, so a fixed/workspace-scoped run would reject the
+    // hint it used to accept. The server resolves the actual device from the
+    // session pin + stored target instead.
+    return { localDeviceId: info.deviceId };
   } catch {
     return {};
   }

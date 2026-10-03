@@ -864,6 +864,10 @@ export class ConversationLifecycleActionImpl {
     try {
       runtimeType = selectRuntimeType({
         boundDeviceId: agencyConfig?.boundDeviceId,
+        // Whether the server's gateway can dispatch back onto THIS desktop —
+        // desktop `local` hetero rides gateway→device→ingest (unified
+        // admission) instead of the private IPC lifecycle when connected.
+        deviceGatewayConnected: getElectronStoreState().gatewayConnectionStatus === 'connected',
         executionTarget: agencyConfig?.executionTarget,
         heterogeneousProvider,
         isGatewayMode,

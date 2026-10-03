@@ -287,7 +287,10 @@ export interface MergedQueuedMessage {
   editorData?: Record<string, any>;
   files: string[];
   filesPreview: QueuedFile[];
-  forceRuntime?: 'gateway' | 'hetero';
+  /** Coerced at merge: a stale 'hetero' pin becomes 'gateway' — the private
+   *  IPC runtime no longer exists (SendMessageParams.forceRuntime is
+   *  gateway-only). */
+  forceRuntime?: 'gateway';
   metadata?: MessageMetadata;
 }
 
@@ -396,7 +399,9 @@ export const mergeQueuedMessages = (messages: QueuedMessage[]): MergedQueuedMess
   }, undefined);
 
   // If any queued message pins the runtime, propagate it — a "server topic"
-  // follow-up must stay on its rails even after merge.
+  // follow-up must stay on its rails even after merge. A stale 'hetero' pin
+  // (pre-removal queue data) coerces to 'gateway': the private IPC runtime
+  // it named no longer exists, and gateway is the only live rail left.
   const forceRuntime = sorted.find((m) => m.forceRuntime)?.forceRuntime;
 
   return {
@@ -404,7 +409,9 @@ export const mergeQueuedMessages = (messages: QueuedMessage[]): MergedQueuedMess
     editorData: mergeQueuedEditorData(sorted),
     files: sorted.flatMap((m) => m.files ?? []),
     filesPreview: sorted.flatMap((m) => m.filesPreview ?? []),
-    ...(forceRuntime ? { forceRuntime } : {}),
+    ...(forceRuntime
+      ? { forceRuntime: forceRuntime === 'hetero' ? ('gateway' as const) : forceRuntime }
+      : {}),
     metadata,
   };
 };

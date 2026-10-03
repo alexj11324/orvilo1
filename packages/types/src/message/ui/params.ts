@@ -140,8 +140,11 @@ export interface SendMessageParams {
    * so it wins over every other signal. Used by task topics (which were
    * spawned server-side via `runTask`) to keep follow-up sends pinned to
    * the gateway path even if the user's global runtime preference is local.
+   * The private `'hetero'` IPC runtime no longer exists — only `'gateway'`
+   * is a live value; stale persisted queue markers coerce to `'gateway'`
+   * when a queued message is merged for send.
    */
-  forceRuntime?: 'gateway' | 'hetero';
+  forceRuntime?: 'gateway';
   /**
    *
    */

@@ -78,7 +78,12 @@ const AgentHeader = memo(() => {
             zIndex: 4,
           }}
         >
-          <Avatar avatar={meta.avatar} name={personalName || role} shape={'square'} size={72} />
+          <Avatar
+            avatar={meta.avatar}
+            name={personalName || role}
+            shape={'square'}
+            size={72} // linear-token-override — 72px hero avatar inside the profile banner, not a row icon
+          />
         </div>
       </div>
       {/* Identity Section — display only. Editing all three fields happens in a

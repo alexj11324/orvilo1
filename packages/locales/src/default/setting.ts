@@ -561,6 +561,7 @@ export default {
   'agentEngine.harness.remoteGroup': 'Platform agent',
   'agentEngine.harness.primeHint':
     'The builtin Orvilo agent runs on the embedded Prime harness — this is fixed and cannot be swapped.',
+  'agentEngine.model.groupTitle': 'Model',
   'agentEngine.model.label': 'Model',
   'agentEngine.legacy.description':
     'This agent still uses its existing chat runtime. Its execution path will not change until you migrate it.',
@@ -1081,9 +1082,24 @@ export default {
   'settingAgent.agentTools.tabAgent': 'Agent Tools',
   'settingAgent.agentTools.tabUser': 'User Tools',
   'settingAgent.agentTools.tabWorkspace': 'Workspace Tools',
+  'settingAgent.accessSettings.title': 'Access',
   'settingAgent.devicePolicy.noPublicDevice': 'No public devices',
   'settingAgent.devicePolicy.selectTarget': 'Select environment',
   'settingAgent.devicePolicy.title': 'Execution environment',
+  'settingAgent.deviceSettings.bindingInvalidDesc':
+    'The bound device is gone or no longer selectable. Choose a replacement to repair this agent.',
+  'settingAgent.deviceSettings.bindingInvalidTitle': 'Device no longer available',
+  'settingAgent.deviceSettings.bindingMissing': 'Device binding unavailable',
+  'settingAgent.deviceSettings.bindingRepair': 'Use {{name}}',
+  'settingAgent.deviceSettings.deviceLabel': 'Device',
+  'settingAgent.deviceSettings.offlineBoundDesc':
+    'Runs will not start until this device reconnects.',
+  'settingAgent.deviceSettings.offlineBoundTitle': 'Bound device is offline',
+  'settingAgent.deviceSettings.title': 'Device',
+  'settingAgent.deviceSettings.zeroDeviceDesc':
+    'This agent has no legal execution device — runs are blocked until a device is connected.',
+  'settingAgent.deviceSettings.zeroDeviceTitle': 'No device available',
+  'settingAgent.generalSettings.title': 'General',
   'settingAgent.modelPolicy.fixedTip':
     'The model is fixed in Agent Profile and cannot be switched while chatting.',
   'settingAgent.modelPolicy.title': 'Model',

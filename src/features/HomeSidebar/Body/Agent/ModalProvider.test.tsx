@@ -5,25 +5,13 @@ import { AgentModalProvider, useAgentModal } from './ModalProvider';
 
 const mocks = vi.hoisted(() => ({
   closeCreateAgentModal: vi.fn(),
-  createAgent: vi.fn(),
   createAgentModalProps: undefined as
     | {
         onCreateBlank: () => Promise<void> | void;
+        type: 'agent' | 'group';
       }
     | undefined,
-  navigate: vi.fn(),
-  refreshAgentList: vi.fn(),
-  sendAsAgent: vi.fn(),
   sendAsGroup: vi.fn(),
-  toggleAgentBuilderPanel: vi.fn(),
-}));
-
-vi.mock('react-router', () => ({
-  useNavigate: () => mocks.navigate,
-}));
-
-vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
-  useWorkspaceAwareNavigate: () => mocks.navigate,
 }));
 
 vi.mock('@/components/ChatGroupWizard', () => ({
@@ -46,7 +34,7 @@ vi.mock('@/features/EditingPopover', () => ({
 
 vi.mock('@/features/HomeSidebar/hooks/useCreateModal', () => ({
   openCreateAgentModal: (props: { onCreateBlank: () => Promise<void> | void }) => {
-    mocks.createAgentModalProps = props;
+    mocks.createAgentModalProps = props as typeof mocks.createAgentModalProps;
     return { close: mocks.closeCreateAgentModal };
   },
 }));
@@ -56,13 +44,8 @@ vi.mock('@/features/WorkspaceSetting/Labels/LabelFormModal', () => ({
 }));
 
 vi.mock('@/store/agent', () => ({
-  useAgentStore: (
-    selector: (state: { createAgent: typeof mocks.createAgent; inboxAgentId: string }) => unknown,
-  ) =>
-    selector({
-      createAgent: mocks.createAgent,
-      inboxAgentId: 'inbox-agent',
-    }),
+  useAgentStore: (selector: (state: { inboxAgentId: string }) => unknown) =>
+    selector({ inboxAgentId: 'inbox-agent' }),
 }));
 
 vi.mock('@/store/agent/selectors', () => ({
@@ -71,25 +54,9 @@ vi.mock('@/store/agent/selectors', () => ({
   },
 }));
 
-vi.mock('@/store/global', () => ({
-  useGlobalStore: {
-    getState: () => ({
-      toggleAgentBuilderPanel: mocks.toggleAgentBuilderPanel,
-    }),
-  },
-}));
-
 vi.mock('@/store/home', () => ({
-  useHomeStore: (
-    selector: (state: {
-      refreshAgentList: typeof mocks.refreshAgentList;
-      sendAsAgent: typeof mocks.sendAsAgent;
-      sendAsGroup: typeof mocks.sendAsGroup;
-    }) => unknown,
-  ) =>
+  useHomeStore: (selector: (state: { sendAsGroup: typeof mocks.sendAsGroup }) => unknown) =>
     selector({
-      refreshAgentList: mocks.refreshAgentList,
-      sendAsAgent: mocks.sendAsAgent,
       sendAsGroup: mocks.sendAsGroup,
     }),
 }));
@@ -107,8 +74,8 @@ const OpenCreateAgentModalButton = () => {
 
   return (
     <>
-      <button type="button" onClick={() => openCreateModal('agent')}>
-        Open create agent modal
+      <button type="button" onClick={() => openCreateModal('group')}>
+        Open create group modal
       </button>
       <button type="button" onClick={() => openGroupWizardModal({})}>
         Open group wizard
@@ -131,25 +98,31 @@ describe('AgentModalProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mocks.createAgentModalProps = undefined;
-    mocks.createAgent.mockResolvedValue({ agentId: 'agent-new' });
+    mocks.sendAsGroup.mockResolvedValue('group-id');
   });
 
   afterEach(() => {
     cleanup();
   });
 
-  it('opens the Agent Builder panel after creating a blank agent', async () => {
+  it('routes the description create modal to the group flow only', async () => {
     renderProvider();
 
-    fireEvent.click(screen.getByText('Open create agent modal'));
+    fireEvent.click(screen.getByText('Open create group modal'));
     await waitFor(() => expect(mocks.createAgentModalProps).toBeDefined());
+
+    // The retired 'agent' type can no longer reach the renderer — the modal
+    // always opens as a group create.
+    expect(mocks.createAgentModalProps!.type).toBe('group');
+
     await mocks.createAgentModalProps!.onCreateBlank();
 
     await waitFor(() => {
-      expect(mocks.createAgent).toHaveBeenCalledWith({ groupId: undefined });
-      expect(mocks.toggleAgentBuilderPanel).toHaveBeenCalledWith(true);
-      expect(mocks.navigate).toHaveBeenCalledWith('/settings/agents/agent-new');
-      expect(mocks.refreshAgentList).toHaveBeenCalled();
+      expect(mocks.sendAsGroup).toHaveBeenCalledWith({
+        groupId: undefined,
+        message: '',
+        visibility: undefined,
+      });
     });
   });
 

@@ -155,7 +155,33 @@ export class AgentSliceActionImpl {
     this.#set({ streamingSystemRole: currentContent + chunk }, false, 'appendStreamingSystemRole');
   };
 
+  /**
+   * In-flight creates keyed by `clientRequestId`. A second call carrying the
+   * same key (double-click, React strict re-fire, a UI retry of a still-open
+   * mutation) joins the pending mutation instead of minting a second agent —
+   * the client-side half of the create idempotency contract. Entries clear
+   * on settle, so a real retry after failure creates normally.
+   */
+  #createAgentInFlight = new Map<string, Promise<CreateAgentResult>>();
+
   createAgent = async (params: CreateAgentParams): Promise<CreateAgentResult> => {
+    if (params.clientRequestId) {
+      const inFlight = this.#createAgentInFlight.get(params.clientRequestId);
+      if (inFlight) return inFlight;
+    }
+    const task = this.#createAgentInner(params);
+    if (params.clientRequestId) {
+      this.#createAgentInFlight.set(params.clientRequestId, task);
+      try {
+        return await task;
+      } finally {
+        this.#createAgentInFlight.delete(params.clientRequestId);
+      }
+    }
+    return task;
+  };
+
+  #createAgentInner = async (params: CreateAgentParams): Promise<CreateAgentResult> => {
     // Seed a default name so a new agent has an identity before the Agent
     // Builder conversation produces one; the builder may replace it later. A
     // caller that already carries a name — e.g. a market agent — keeps it.

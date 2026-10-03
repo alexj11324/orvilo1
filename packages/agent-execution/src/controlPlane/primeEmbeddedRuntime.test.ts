@@ -187,7 +187,7 @@ it('rejects malformed fence before calling authority or launching', async () => 
 });
 
 it.each([
-  ['wrong protocolVersion', { protocolVersion: 2 }],
+  ['wrong protocolVersion', { protocolVersion: HARNESS_PROTOCOL_VERSION + 1 }],
   ['wrong pin commit', { pin: { commit: 'deadbeef', version: '0.9.8', license: 'MIT' } }],
   [
     'non-empty tools',

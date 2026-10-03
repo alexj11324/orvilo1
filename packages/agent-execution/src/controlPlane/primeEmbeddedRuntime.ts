@@ -25,7 +25,7 @@ import type {
   RuntimeEvent,
   RuntimeSession,
 } from './contracts';
-import { CONTROL_PLANE_VERSION } from './contracts';
+import { CONTROL_PLANE_VERSION, toInferenceMessage } from './contracts';
 import type {
   HarnessInitModel,
   HarnessSessionEvent,
@@ -583,7 +583,7 @@ export class PrimeEmbeddedRuntime implements ExecutionRuntime {
         bindingRevision: 0,
         fence: { ...entry.session.fence },
         maxOutputTokens: request.maxOutputTokens,
-        messages: request.messages.map((m) => ({ role: m.role, content: m.content })),
+        messages: request.messages.map(toInferenceMessage),
         modelRoute: request.modelRoute,
         requestId: request.requestId,
         schemaVersion: CONTROL_PLANE_VERSION,

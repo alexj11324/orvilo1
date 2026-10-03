@@ -541,11 +541,12 @@ export const driveEmbeddedCanonicalRun = async (
           ]);
         } else if (event.type === 'turn-ended') {
           if (event.reason === 'cancelled') result = 'cancelled';
-        } else {
-          // 'error'
+        } else if (event.type === 'error') {
           finishError = { message: event.error.message, type: 'AgentRuntimeError' };
           result = 'error';
         }
+        // thinking/tool_* RuntimeEvents (protocol v2) have no ledger surface
+        // yet — the pipeline surfacing layer lands in the follow-up PR.
       }
       if (result === 'error' && finishError)
         await ingest([streamEvent(operationId, 'error', { message: finishError.message })]);

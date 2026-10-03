@@ -144,7 +144,10 @@ describe.skipIf(!RUNNER_UP)(
           // the same stdio broker — there is no other egress in the child.
           const summary = infers.find((request) =>
             request.messages.some(
-              (m) => m.role === 'system' && m.content.includes('context summarization assistant'),
+              (m) =>
+                m.role === 'system' &&
+                typeof m.content === 'string' &&
+                m.content.includes('context summarization assistant'),
             ),
           );
           console.error(

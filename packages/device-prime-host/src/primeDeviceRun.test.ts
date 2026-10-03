@@ -11,6 +11,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { PassThrough } from 'node:stream';
 
+import { HARNESS_PROTOCOL_VERSION } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import { PRIME_EMBEDDED_PIN } from '@orvilo/agent-execution/controlPlane/primeEmbeddedArtifact';
 import type { PrimeRunDescriptor } from '@orvilo/device-gateway-client';
 import { afterEach, describe, expect, it, vi } from 'vitest';
@@ -95,7 +96,7 @@ const fakeRunner = (): FakeRunner => {
               license: PRIME_EMBEDDED_PIN.license,
               version: PRIME_EMBEDDED_PIN.version,
             },
-            protocolVersion: 1,
+            protocolVersion: HARNESS_PROTOCOL_VERSION,
             sessionId: 'sess-1',
           },
         });

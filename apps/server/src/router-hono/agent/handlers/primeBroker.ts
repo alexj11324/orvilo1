@@ -4,7 +4,11 @@ import type {
   InferenceRequest,
   ProviderBinding,
 } from '@orvilo/agent-execution/controlPlane';
-import { CONTROL_PLANE_VERSION, createInferenceBroker } from '@orvilo/agent-execution/controlPlane';
+import {
+  CONTROL_PLANE_VERSION,
+  createInferenceBroker,
+  toInferenceMessage,
+} from '@orvilo/agent-execution/controlPlane';
 import type {
   BrokerStreamEvent,
   SanitizedInferenceRequest,
@@ -278,7 +282,15 @@ const toBrokerEvent = (event: InferenceEvent): BrokerStreamEvent => {
   if (event.type === 'text') return { text: event.text, type: 'text' };
   if (event.type === 'usage')
     return { inputTokens: event.inputTokens, outputTokens: event.outputTokens, type: 'usage' };
-  return { code: event.error.code, message: event.error.message, type: 'error' };
+  if (event.type === 'error')
+    return { code: event.error.code, message: event.error.message, type: 'error' };
+  // v2 variants (thinking/toolcall_*) have no producer until the runner
+  // unseal — guard loudly rather than fabricating a text event.
+  return {
+    code: 'unexpected_event',
+    message: `unexpected broker event type: ${event.type}`,
+    type: 'error',
+  };
 };
 
 /**
@@ -390,7 +402,7 @@ export const primeBrokerInfer = async (c: Context): Promise<Response> => {
       bindingRevision: issued.binding.revision,
       fence: requestFence,
       maxOutputTokens: request.maxOutputTokens,
-      messages: request.messages.map((m) => ({ content: m.content, role: m.role })),
+      messages: request.messages.map(toInferenceMessage),
       modelRoute: claims.model_route,
       requestId: request.requestId,
       schemaVersion: CONTROL_PLANE_VERSION,
@@ -467,7 +479,7 @@ export const primeBrokerInfer = async (c: Context): Promise<Response> => {
     bindingRevision: issued.binding.revision,
     fence: conversationFence,
     maxOutputTokens: request.maxOutputTokens,
-    messages: request.messages.map((m) => ({ content: m.content, role: m.role })),
+    messages: request.messages.map(toInferenceMessage),
     modelRoute: claims.model_route,
     requestId: request.requestId,
     schemaVersion: CONTROL_PLANE_VERSION,

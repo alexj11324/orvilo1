@@ -85,8 +85,8 @@ vi.mock('@/platform', async (importOriginal) => {
     getHostPort: () => ({
       ...actual.getHostPort(),
       menu: {
-        closePopupContextMenu: () => electronSystemService.closePopupContextMenu(),
-        popupContextMenu: (...args: any[]) => electronSystemService.popupContextMenu(...args),
+        closePopupContextMenu: electronSystemService.closePopupContextMenu,
+        popupContextMenu: electronSystemService.popupContextMenu,
       },
     }),
   };

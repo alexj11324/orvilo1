@@ -517,6 +517,45 @@ const normalizeAgencyConfigHeterogeneousProvider = (
     : { ...base, heterogeneousProvider };
 };
 
+/**
+ * Provider-config keys that rows persisted before the Prime cutover may still
+ * carry but that new writes must never set again. `normalizeHeterogeneousProviderConfig`
+ * deletes them at read time; the write path refuses them outright so a client
+ * cannot keep the retired preference alive by re-saving a stale row.
+ */
+const RETIRED_HETEROGENEOUS_PROVIDER_WRITE_FIELDS = ['adapterType', 'engine'] as const;
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null;
+
+/**
+ * Retired fields present on an `agencyConfig`-shaped value, as dotted paths
+ * (`heterogeneousProvider.engine`). Used by request-schema superRefines to
+ * refuse writes carrying dead fields — the stored-row compat path lives in
+ * `normalizeHeterogeneousProviderConfig`, which strips them on read.
+ */
+export const findRetiredAgencyConfigFields = (value: unknown): string[] => {
+  if (!isRecord(value)) return [];
+  const provider = value.heterogeneousProvider;
+  if (!isRecord(provider)) return [];
+  return RETIRED_HETEROGENEOUS_PROVIDER_WRITE_FIELDS.filter(
+    (field) => provider[field] !== undefined,
+  ).map((field) => `heterogeneousProvider.${field}`);
+};
+
+/**
+ * Strip retired provider fields before persisting a caller-supplied
+ * `agencyConfig`. The request schema refuses them for client writes, but
+ * internal callers (server-side copies, transfers, migrations) reach the
+ * model without schema validation — same smallest-correct-normalization
+ * decision as the read path: the retired value is meaningless, so it is
+ * dropped rather than carried forward.
+ */
+export const normalizeAgencyConfigForWrite = <T>(agencyConfig: T): T =>
+  normalizeAgencyConfigHeterogeneousProvider(
+    agencyConfig as OrviloAgentAgencyConfig | null | undefined,
+  ) as T;
+
 interface ClaudeCodeSelectionSource {
   args?: string[];
   effort?: string | null;

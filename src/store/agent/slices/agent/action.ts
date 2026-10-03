@@ -3,6 +3,7 @@ import { type AgentContextDocument } from '@orvilo/context-engine';
 import { getHeterogeneousTypeLabel } from '@orvilo/heterogeneous-agents';
 import {
   isChatGroupSessionId,
+  normalizeAgencyConfigForWrite,
   type OrviloAgentAgencyConfig,
   pruneWorkingDirByDeviceDeletes,
 } from '@orvilo/types';
@@ -714,10 +715,16 @@ export class AgentSliceActionImpl {
       agencyConfigPatch,
     ) as OrviloAgentAgencyConfig;
 
-    pruneWorkingDirByDeviceDeletes(agencyConfig, agencyConfigPatch);
-    preserveWorkingDirDeleteMarkers(agencyConfig, agencyConfigPatch);
+    // The merge carries the cached row wholesale — a legacy row still holding
+    // retired `engine`/`adapterType` fields would re-send them and trip the
+    // server's retired-write rejection. Strip them from what is sent (the
+    // request schema owns refusing them from new clients).
+    const normalizedAgencyConfig = normalizeAgencyConfigForWrite(agencyConfig);
 
-    return { ...data, agencyConfig };
+    pruneWorkingDirByDeviceDeletes(normalizedAgencyConfig, agencyConfigPatch);
+    preserveWorkingDirDeleteMarkers(normalizedAgencyConfig, agencyConfigPatch);
+
+    return { ...data, agencyConfig: normalizedAgencyConfig };
   };
 
   optimisticUpdateAgentConfig = async (

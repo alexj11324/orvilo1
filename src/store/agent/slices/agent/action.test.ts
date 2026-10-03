@@ -1219,6 +1219,50 @@ describe('AgentSlice Actions', () => {
       );
     });
 
+    it('strips retired heterogeneousProvider fields the cached row still carries', async () => {
+      // Migration (contract §migration): the merge re-sends the cached row
+      // wholesale — a legacy row holding `engine`/`adapterType` would trip the
+      // server's retired-write rejection. The client strips them from what it
+      // sends; the request schema owns refusing them from new clients.
+      const { result } = renderHook(() => useAgentStore());
+      const legacyAgencyConfig = {
+        boundDeviceId: 'current-device',
+        heterogeneousProvider: {
+          adapterType: 'cli',
+          command: 'claude',
+          engine: 'claude-sdk',
+          type: 'orvilo',
+        },
+      } as const;
+      const sentAgencyConfig = {
+        boundDeviceId: 'current-device',
+        heterogeneousProvider: { command: 'claude', effort: 'high', type: 'orvilo' },
+      };
+
+      vi.mocked(agentService.updateAgentConfig).mockResolvedValue({
+        agent: { agencyConfig: sentAgencyConfig } as any,
+        success: true,
+      });
+
+      act(() => {
+        useAgentStore.setState({
+          agentMap: { 'agent-1': { agencyConfig: legacyAgencyConfig } as any },
+        });
+      });
+
+      await act(async () => {
+        await result.current.updateAgentConfigById('agent-1', {
+          agencyConfig: { heterogeneousProvider: { effort: 'high' } },
+        } as any);
+      });
+
+      expect(agentService.updateAgentConfig).toHaveBeenCalledWith(
+        'agent-1',
+        { agencyConfig: sentAgencyConfig },
+        expect.any(AbortSignal),
+      );
+    });
+
     // Note: refreshSessions is no longer called after optimistic update
     // as the implementation now uses API returned data directly
 

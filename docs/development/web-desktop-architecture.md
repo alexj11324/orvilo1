@@ -50,6 +50,45 @@
    （`errorData.code` + `deviceId`/`repairCandidates`/`retryable`/`scope`/
    `workspaceId`/`operationId`/`bindingRevision`）下发，不嵌在 detail 文案里。
 
+## 显式设备作用域与候选集语义（FIX-D）
+
+MCP 设备操作与执行候选集的语义，任何修改必须保持：
+
+1. **无执行上下文 ≠ 本机**。`mcpService` 的公开调用显式携带
+   `McpDeviceScope`（`{kind:'device',deviceId}` / `{kind:'local'}` /
+   `{kind:'topic',topicId}`）或 `DeviceActionSubject`；`subject` / `scope` /
+   `deviceId` / `topicId` 之外没有第四语义。不带目标 → 类型化
+   `TARGET_REQUIRED`，绝不落到 "存在本机 deviceId" 的默认上。
+2. **topic 缓存只是展示缓存**。携带 `topicId` 且缓存未命中 → 读权威绑定
+   （`topic.getTopicDetail`）；读不出 → `TARGET_QUERY_FAILED`（可重试），
+   绝不等价于 "未绑定 → 本机"。本机 deviceId 仅是 "目标与本机相同" 的证据，
+   不是授权、不是默认选项。
+3. **同一作用域贯穿全链路**。install、manifest、tool discovery、connection
+   check、auth check、tool call 使用同一 scope；操作态缓存键为
+   principal、workspace、scope、plugin、connection、config 版本
+   （`mcpOperationCacheKey`），同 identifier 的两台设备操作互不串写。
+4. **网络空间属于目标设备**。stdio / `localhost` / LAN 地址在目标设备的
+   网络命名空间内解析；托管公网连接保持服务端路由。远程 MCP 隧道不存在
+   → 结构化 `OPERATION_UNSUPPORTED`（staging 可回读），绝不回落到另一台
+   机器、绝不伪报成功。
+5. **候选 = 已授权 + 合法 scope + 已验证 capability/version**。
+   `listAuthorizedDeviceCandidates` 扩展既有设备查询（不建第二注册表），
+   输入含 actor + workspace + requiredOperation + policy（grant 上下文）。
+   `online` 只影响 `runnable`；未知 capability/version →
+   `pending verification`（有界 probe：仅在线设备、上限 8），绝不记 true、
+   绝不 selectable/runnable。`agent-run` 的注册表行本身是能力证据
+   （`verification.delegated` —— 适配器兼容在设备侧启动时核验）；显式
+   `minAdapterVersion` 无存储信号可证 → version pending。
+6. **view-only 授权永不进入执行候选**（注册表行、transient、referenced
+   三条路径一致过滤）；`policy.permissionsReady === false` →
+   `permissions-unready`，与 `query-failed` / `empty` / `complete`
+   明确区分。settings、chat、connect、admission 走同一权限规则，候选
+   id 集合一致；UI 分组只改显示，不改成员。
+7. **owner / 路由身份 / 资源授权随候选下发**（`candidate.owner` +
+   `scopeSource` + `permission`），绝不从 `resolution.reason` 反推归属。
+   share、revoke、版本变更后由 admission + pre-launch 复验，前端缓存
+   永不是授权源。
+
 ## 不做什么
 
 - 不新建 Prime gateway / 调度器 / 第二套权限引擎；复用 TaskDispatch/TaskRunner、

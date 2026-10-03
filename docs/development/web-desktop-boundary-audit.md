@@ -1,0 +1,92 @@
+# Web/Desktop 边界基线审计（WD-00）
+
+> 基线：`canary @ 2fb63e750d853294d131c35d205146984e98377f`（PR #427 合并后）。
+> 性质：源码审阅，每条给真实路径；无路径证据的条目标 "待核实"，不写 "已修复"。
+> 配套：`web-desktop-architecture.md`（ADR）、`web-desktop-boundary-plan.md`（实施规范）、
+> `client-parity-contract.md`（冻结契约，规范源）。
+
+## 0. 判定口径
+
+| 面      | 回答的问题                                                | 允许依赖                               |
+| ------- | --------------------------------------------------------- | -------------------------------------- |
+| Product | 用户能做什么（会话、Issue、Automation、设备清单）         | 服务端权限 + 业务配置，不看查看端      |
+| Host    | 当前访问外壳能做什么（窗口、托盘、原生对话框、OTA、外链） | `isDesktop` / HostPort                 |
+| Device  | 目标机器能执行什么（Prime/Codex、文件、Git、终端、MCP）   | `deviceId` + deviceCapabilities + 授权 |
+
+`isDesktop` 只许出现在 Host 面；用它选执行机器 = 违规。设备操作必须显式
+`deviceId`（或显式 `local` 传输），不允许 "缺省 = 本机"。
+
+## 1. 已核实违规 / 缺口
+
+| 位置                                                                 | 证据                                                                                                                                                                                                                                                                                                                                                                  | 类别                       | 处置（工作包）                                           |
+| -------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------- | -------------------------------------------------------- |
+| `packages/types/src/agent/deviceExecution.ts`                        | `resolveExecutionDevice`：`sessionBoundDeviceId` 不在合法候选时 `pick()` 返回 undefined → 继续落到 explicit/preference/default/single-candidate；`isDeviceBindingInvalid` 是独立 opt-in helper，调用方漏检即静默换绑。显式请求未授权设备同样被静默忽略。`explicitRequestAllowed === false` 只挡 explicit，挡不住 `userAgentPreferenceDeviceId` 覆盖 policy-fixed 默认 | Device 解析                | WD-01（本 PR 修复，见 §3）                               |
+| `src/services/targetRequiredError.ts`                                | `requireLocalExecutionTransport` 放行 `deviceId \|\| isDesktop` —— Desktop 无 ID 即本机                                                                                                                                                                                                                                                                               | 隐式本机语义               | WD-04 收敛为显式 local-device 身份；WD-01 先在契约层声明 |
+| `src/services/projectFile.ts`                                        | `readProjectFileBytes`：`if (deviceId \|\| !isDesktop) return undefined` —— 设备调用静默返回空                                                                                                                                                                                                                                                                        | 不支持 → undefined         | WD-04：返回 `OPERATION_UNSUPPORTED` 或补真实字节链路     |
+| `src/services/mcp.ts`                                                | `isDesktop && isStdio`（stdio MCP 进程随查看端漂移）、`isDesktop && isLocalOrPrivateUrl`（localhost 归属网络空间按查看端判断）                                                                                                                                                                                                                                        | 查看端推导执行位置         | WD-04：按连接作用域 + 目标 deviceId 路由                 |
+| `src/features/Settings/about/features/Version.tsx`                   | 非桌面分支渲染 `upgradeVersion.action` → `MANUAL_UPGRADE_URL`（自托管 upstream-sync 文档）；运行时 `getElectronIpc()` 与编译期 `isDesktop` 两套探测并存                                                                                                                                                                                                               | Host 语义错位 + 探测不统一 | WD-05：hosted 部署隐藏或改指下载页；统一探测             |
+| `src/store/chat/slices/agentRun/actions/dispatch/agentDispatcher.ts` | `AgentRuntimeType = 'client'\|'gateway'\|'hetero'`；`clientExecutionAvailable: isDesktop` —— 平台参与执行路由                                                                                                                                                                                                                                                         | 传输模型残留               | WD-03：迁移到执行意图 + 权威设备上下文                   |
+| `src/services/` 剩余 IPC 业务入口                                    | `localFileService`、`desktopSkillRuntime`、`terminal`、`heteroSession`、`CodexQuotaMenu`（client-parity-inventory §7 W2-D 清单）                                                                                                                                                                                                                                      | 隐式本机传输               | WD-04 逐项审计                                           |
+| `apps/server` hetero 生命周期 vs renderer 私有 IPC                   | Desktop `local` hetero 会话走 `heterogeneousAgentExecutor`（`src/store/chat/slices/agentRun/actions/transports/hetero/`），不经服务端准入 / 持久化，Web 不可观察（W2-E）                                                                                                                                                                                              | 生命周期分叉               | WD-03：本机执行经 device gateway ingest 链路             |
+
+## 2. 已核实合规（保留）
+
+| 位置                                                           | 说明                                                                                                                                                                      |
+| -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `docs/development/device-execution-contract.md`                | 冻结契约：优先级链、绑定失效、0/1/N selector、RunSubject、ResolvedRunIdentity —— 规范源，不改语义                                                                         |
+| `packages/types/src/agent/deviceExecution.ts` 类型层           | `DeviceCandidate` / `isSelectableDevice` / `isRunnableDevice` / `shouldShowDeviceSelector` / `RunSubject` / `HARNESS_ADAPTER_BY_AGENT_TYPE` —— 语义正确，保留             |
+| `apps/server/src/services/deviceGateway/authorizedToolCall.ts` | 派发前 `resolveDeviceDispatchAuthorizationFailure` 复查 —— 保留，不得绕开做本机 fast path                                                                                 |
+| `packages/device-control/src/dispatch.ts`                      | Desktop 与 CLI 共用设备 RPC 分发（git/file/skill/quota handlers）—— 复用，不建第二套 Device SDK                                                                           |
+| `apps/cli/src/device/agentRun.ts` + `agentRunRegistry.ts`      | 进程组 liveness、kill 确认、注册去重 —— 设备侧生命周期复用                                                                                                                |
+| `packages/app-config/src/routes/settings.ts`                   | `SETTINGS_CAPABILITIES`：offered/gate/status/aliasOf + 直接访问解析（`unknown`/`unavailable`/`redirect`）—— 已含宿主 gate（Proxy、SystemTools = `isDesktop`），扩展不复制 |
+| `src/features/Settings/hooks/useSettingsCapability.ts`         | 单一 context 构造点，registry 保持纯函数 —— 模式正确                                                                                                                      |
+| `apps/collaboration-gateway`                                   | ws 房间 /ticket 中继 —— 传输层，不碰业务决策                                                                                                                              |
+| `apps/server/router-hono/webhooks/*`                           | webhook 接收在服务端（mcpEvents → inbox → admission → dispatch）—— Web 端配置 / 验证是正确入口                                                                            |
+| `src/features/DeviceManager/*`                                 | 设备清单 / 连接 UI 已独立于查看端                                                                                                                                         |
+| `src/spa/entry.{web,desktop}.tsx`                              | 双入口已分离（desktop 注册本地 DB 适配 + rendererOta）—— HostPort 注入点                                                                                                  |
+
+## 3. WD-01 契约修复（本 PR 落地）
+
+`resolveExecutionDevice` 现在按以下顺序裁决（全部在 `packages/types` 纯函数内）：
+
+0. `deviceInventoryComplete === false` → `DEVICE_INVENTORY_INCOMPLETE`（不判 0/1，不自动绑定）。
+1. `sessionBoundDeviceId` 已设置：合法 → resolved `session_bound`；失效（删除 / 撤权 / 不兼容）→ `DEVICE_BINDING_INVALID` + `repairCandidates`，**不再进入任何 fallback**（显式请求也不混为正常 resume，修复是单独受权动作）。
+2. `explicitRequestAllowed !== false` 且 `explicitDeviceId` 已设置：合法 → `explicit_request`；不在合法候选 → `DEVICE_REQUEST_UNAUTHORIZED`（拒绝，不跑默认设备）。
+3. `explicitRequestAllowed !== false` 时查 `userAgentPreferenceDeviceId`；**policy-pinned（false）跳过偏好**，成员不能覆盖固定默认。
+4. `agentDefaultDeviceId` → `agent_default`。
+5. 唯一合法候选 → `single_candidate`。
+6. `DEVICE_REQUIRED` / `DEVICE_SELECTION_REQUIRED`。
+
+新增中立契约（纯类型，无 React/Electron/DB 依赖）：
+
+- `packages/types/src/host.ts` — `HostKind`/`HostCapability`/`HostContext`（宿主正交维度；`localDeviceId` 仅 "本机标记"，非默认目标）。
+- `packages/types/src/device/operation.ts` — `DeviceResourceRef`、`DeviceActionSubject`（resource / run）、`DeviceOperationAvailability`（ready/loading/unsupported/blocked/unavailable）、`DeviceOperationError`（`OPERATION_UNSUPPORTED` 等，`undefined` 不再兼任 "不支持 / 不存在 / 失败"）。
+
+`isDeviceBindingInvalid` 保留为薄判定谓词（UI 修复面用），解析入口自身已内聚失效阻断。
+
+## 4. 入口矩阵（可达性与归属）
+
+| 入口                                                 | 现状判定                                                                                               | 证据                                                    |
+| ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ------------------------------------------------------- |
+| 设置 `Proxy`/`SystemTools`                           | Host gate，合规                                                                                        | `settings.ts` L139-140                                  |
+| 设置关于页 "更新"                                    | 违规（见 §1）                                                                                          | `Version.tsx`                                           |
+| Settings/devices 设备面                              | 合规，复用                                                                                             | `Settings/devices/index.tsx`                            |
+| Agent 初始聊天框设备切换                             | `boundDeviceId` 已有；selector 逻辑待对齐 0/1/N                                                        | `HeteroDeviceSwitcher.tsx` L402/L569/L595/L613          |
+| 本机文件浏览 `LocalFolder`/`Portal/LocalFile/Header` | Host 动作（reveal）；web 可达性待核实（`LocalFolder.tsx:43` 未自查 `isDesktop`，依赖挂载方 gate）      | §1 表                                                   |
+| 终端 `ChatTerminal`                                  | Device 操作（对目标设备）；`local` 语义待 WD-04                                                        | `src/features/ChatTerminal/`                            |
+| 连接器 / MCP                                         | stdio/localhost 位置违规（见 §1 mcp.ts）；服务端连接合规                                               | `src/services/mcp.ts`                                   |
+| 设备连接 `DeviceConnectModal`                        | 合规                                                                                                   | `src/features/DeviceManager/`                           |
+| Automation（schedule + MCP event triggers）          | 配置面合规（服务端 webhook/hatchet）；执行 target 显示待补                                             | `src/features/Automations/`、`router-hono/webhooks`     |
+| Browser/Computer Use                                 | 按目标设备能力，待核实 gate 证据                                                                       | 待核实（WD-05 补）                                      |
+| 命令面板 / 快捷键 → 原生动作                         | registry 未覆盖到命令层，待核实旁路                                                                    | `CmdkLazy.tsx`、`useHotkeys/globalScope.ts` —— WD-05 补 |
+| 深链接直达原生设置页                                 | registry `unavailable` 判定已有；组件挂载前拦截证据待核实                                              | `settings.ts` L231-240 —— WD-05 补                      |
+| Desktop 更新 / 托盘 / 原生权限                       | `UpdaterCtr`/`TrayMenuCtr`/`NotificationCtr` 在 main 进程，外壳正确归属                                | `apps/desktop/src/main/controllers/`                    |
+| Web 构建原生依赖                                     | `entry.web.tsx` 不引 electron 模块；`src/services/electron/*` 被业务 feature import 的边界待构建图核验 | WD-06 门禁覆盖                                          |
+
+## 5. 已知缺口（登记，非本轮修复）
+
+- W2-E：Desktop local hetero 会话私有 IPC 生命周期 → WD-03 收敛。
+- `readProjectFileBytes` 远程字节读取未实现 → WD-04 显式 unsupported 或补齐。
+- CAS 首绑（两入口并发绑定）属服务端 admission 持久层 → WD-03；纯函数 resolver 无状态，不在此测试。
+- 仓库 `isDesktop` 在 `src/` 约 494 处 / 194 文件 —— 绝大多数合法外壳用法（inventory 口径），WD-05/WD-06 建立清单 + 门禁防新增违规。
+- PR #426（draft，自动化绑定）范围重叠 → 集成阶段对齐其契约，不重复 outbox / 回执。

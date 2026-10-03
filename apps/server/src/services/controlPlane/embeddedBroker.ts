@@ -170,8 +170,12 @@ export async function createEmbeddedInferenceBridge(
         maxOutputTokens: request.maxOutputTokens,
         messages: request.messages.map(toInferenceMessage),
         modelRoute: request.modelRoute,
+        providerOptions: request.providerOptions,
         requestId: request.requestId,
         schemaVersion: CONTROL_PLANE_VERSION,
+        serviceTier: request.serviceTier,
+        thinkingLevel: request.thinkingLevel,
+        tools: request.tools,
       },
     };
   };
@@ -182,7 +186,15 @@ export async function createEmbeddedInferenceBridge(
       buildInferenceRequest,
       claim,
       inferenceBroker: createInferenceBroker({ authority, backend, now: deps.now }),
-      initModel: { id: capability.modelRoute, maxOutputTokens: capability.maxOutputTokens },
+      initModel: {
+        id: capability.modelRoute,
+        input: capability.images ? ['text', 'image'] : ['text'],
+        maxOutputTokens: capability.maxOutputTokens,
+        ...(typeof capability.contextWindow === 'number'
+          ? { contextWindow: capability.contextWindow }
+          : {}),
+        ...(typeof capability.reasoning === 'boolean' ? { reasoning: capability.reasoning } : {}),
+      },
     },
   };
 }

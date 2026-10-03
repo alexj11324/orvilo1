@@ -6,23 +6,34 @@
  * or credentials — the runner never holds any) and issues `broker.infer` over
  * the host link. `broker.event` notifications stream the answer back into an
  * AssistantMessageEventStream.
+ *
+ * Protocol v2: the wire carries the full pi-ai message shape — content blocks
+ * (text/thinking/image/toolCall), `toolResult` messages, the `tools` schemas
+ * the model may call, and `thinkingLevel`/`serviceTier`/`providerOptions`
+ * passthroughs — plus streamed `toolcall_*`/`thinking_delta` events. Tools
+ * execute inside the runner on the device; the broker only relays inference.
  */
 
 import type {
   AssistantMessage,
   AssistantMessageEventStream,
   Context,
-  Message,
+  ImageContent,
   Model,
   SimpleStreamOptions,
   TextContent,
+  ThinkingContent,
+  ToolCall,
   Usage,
 } from '@earendil-works/pi-ai';
 import { createAssistantMessageEventStream } from '@earendil-works/pi-ai';
 import type {
   BrokerStreamEvent,
+  SanitizedContentBlock,
   SanitizedInferenceMessage,
+  SanitizedToolCall,
 } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
+import { isBrokerStreamEvent } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import { isRecord } from '@orvilo/utils/object';
 
 import type { RunnerLink } from './ndjson';
@@ -36,20 +47,39 @@ const ZERO_USAGE: Usage = {
   cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0, total: 0 },
 };
 
-const messageText = (message: Message): string | undefined => {
-  if (message.role === 'toolResult') return undefined;
-  if (typeof message.content === 'string') return message.content;
-  const text = message.content
-    .filter((c): c is TextContent => c.type === 'text')
-    .map((c) => c.text)
-    .join('');
-  return text.length > 0 ? text : undefined;
+type SanitizedBlock = SanitizedContentBlock;
+
+const toBlock = (
+  content: TextContent | ThinkingContent | ImageContent | ToolCall,
+): SanitizedBlock | undefined => {
+  switch (content.type) {
+    case 'text': {
+      return { text: content.text, type: 'text' };
+    }
+    case 'thinking': {
+      return { thinking: content.thinking, type: 'thinking' };
+    }
+    case 'image': {
+      return { data: content.data, mimeType: content.mimeType, type: 'image' };
+    }
+    case 'toolCall': {
+      return {
+        arguments: content.arguments,
+        id: content.id,
+        name: content.name,
+        type: 'toolCall',
+      };
+    }
+    default: {
+      return undefined;
+    }
+  }
 };
 
 /**
- * Context → sanitized wire messages. Content that cannot be expressed as text
- * (images, tool calls, tool results) makes the request invalid rather than
- * silently dropped — a richer projection is phase 3.
+ * Context → sanitized wire messages. Every upstream message shape has a wire
+ * form; an unknown/empty block set makes the request invalid rather than
+ * silently dropped.
  */
 const sanitizeMessages = (context: Context): SanitizedInferenceMessage[] | undefined => {
   const out: SanitizedInferenceMessage[] = [];
@@ -57,35 +87,47 @@ const sanitizeMessages = (context: Context): SanitizedInferenceMessage[] | undef
     out.push({ role: 'system', content: context.systemPrompt });
   }
   for (const message of context.messages) {
-    const text = messageText(message);
-    if (text === undefined) return undefined;
-    if (message.role === 'assistant') out.push({ role: 'assistant', content: text });
-    else if (message.role === 'user') out.push({ role: 'user', content: text });
-    else return undefined;
+    if (message.role === 'user') {
+      const content =
+        typeof message.content === 'string'
+          ? message.content
+          : message.content.map(toBlock).filter((b): b is SanitizedBlock => b !== undefined);
+      out.push({ content, role: 'user' });
+      continue;
+    }
+    if (message.role === 'assistant') {
+      const blocks = message.content
+        .map(toBlock)
+        .filter((b): b is SanitizedBlock => b !== undefined);
+      out.push({ content: blocks, role: 'assistant' });
+      continue;
+    }
+    if (message.role === 'toolResult') {
+      const blocks = message.content
+        .map(toBlock)
+        .filter((b): b is SanitizedBlock => b !== undefined);
+      out.push({
+        content: blocks,
+        isError: message.isError,
+        role: 'tool',
+        toolCallId: message.toolCallId,
+        toolName: message.toolName,
+      });
+      continue;
+    }
+    return undefined;
   }
   return out.length > 0 ? out : undefined;
 };
 
-const isBrokerStreamEvent = (event: unknown): event is BrokerStreamEvent => {
-  if (!isRecord(event) || typeof event.type !== 'string') return false;
-  switch (event.type) {
-    case 'text': {
-      return typeof event.text === 'string';
-    }
-    case 'usage': {
-      return typeof event.inputTokens === 'number' && typeof event.outputTokens === 'number';
-    }
-    case 'error': {
-      return typeof event.message === 'string';
-    }
-    case 'end': {
-      return true;
-    }
-    default: {
-      return false;
-    }
-  }
-};
+const sanitizeTools = (context: Context) =>
+  Array.isArray(context.tools)
+    ? context.tools.map((tool) => ({
+        description: tool.description,
+        name: tool.name,
+        parameters: tool.parameters,
+      }))
+    : undefined;
 
 /** Per-request channel between `broker.event` notifications and `pump()`. */
 interface OpenStream {
@@ -106,7 +148,15 @@ export interface BrokerBridge {
   ) => AssistantMessageEventStream;
 }
 
-export const createBrokerBridge = (link: RunnerLink, sessionId: string): BrokerBridge => {
+/** In-flight tool call blocks keyed by their wire `index` (or call id). */
+interface PartialToolCall {
+  arguments: string;
+  blockIndex: number;
+  id?: string;
+  name?: string;
+}
+
+export const createBrokerBridge = (link: RunnerLink, sessionId: () => string): BrokerBridge => {
   const open = new Map<string, OpenStream>();
   let sequence = 0;
 
@@ -139,11 +189,10 @@ export const createBrokerBridge = (link: RunnerLink, sessionId: string): BrokerB
 
     const messages = sanitizeMessages(context);
     if (messages === undefined) {
-      fail('Request context contains content the broker cannot carry (tools or media)', false);
+      fail('Request context contains a message shape the wire cannot carry', false);
       return stream;
     }
 
-    const text: string[] = [];
     const usage: Usage = { ...ZERO_USAGE, cost: { ...ZERO_USAGE.cost } };
     let aborted = options?.signal?.aborted ?? false;
     let brokerError: string | undefined;
@@ -159,18 +208,140 @@ export const createBrokerBridge = (link: RunnerLink, sessionId: string): BrokerB
     };
     options?.signal?.addEventListener('abort', onAbort, { once: true });
 
-    // Events can outrun `broker.infer`'s ack; text deltas pushed before the
-    // stream's `text_start` are dropped upstream, so queue until the pump
-    // opens the stream, then flush in order.
-    let streamOpen = false;
-    const pending: BrokerStreamEvent[] = [];
+    // Ordered assistant content blocks as they are finalized. Upstream
+    // content is sequential — at most one text/thinking block is open at a
+    // time; a new block kind closes the open one. Tool calls get their own
+    // indices so parallel calls interleave correctly by `index`/id.
+    const text: string[] = [];
+    const thinking: string[] = [];
+    const toolCalls: SanitizedToolCall[] = [];
+    const openCalls = new Map<string, PartialToolCall>();
+    let nextIndex = 0;
+    let openBlock: { index: number; kind: 'text' | 'thinking' } | undefined;
+    let sawToolCalls = false;
+
+    // `index` is the provider's stream position — consistent across a call's
+    // start/delta/end; toolCallId is the fallback for providers that emit no
+    // index at all.
+    const callKey = (event: { index?: number; toolCallId?: string }): string =>
+      event.index !== undefined ? `i${event.index}` : (event.toolCallId ?? 'i0');
+
+    const closeOpenBlock = (): void => {
+      if (!openBlock) return;
+      const partial = makePartial(model);
+      if (openBlock.kind === 'text') {
+        partial.content = [{ text: text.join(''), type: 'text' }];
+        stream.push({
+          type: 'text_end',
+          contentIndex: openBlock.index,
+          content: text.join(''),
+          partial,
+        });
+      } else {
+        partial.content = [{ thinking: thinking.join(''), type: 'thinking' }];
+        stream.push({
+          contentIndex: openBlock.index,
+          content: thinking.join(''),
+          partial,
+          type: 'thinking_end',
+        });
+      }
+      openBlock = undefined;
+    };
+
+    const openTextBlock = (): void => {
+      if (openBlock?.kind === 'text') return;
+      closeOpenBlock();
+      const index = nextIndex;
+      nextIndex += 1;
+      openBlock = { index, kind: 'text' };
+      stream.push({ type: 'text_start', contentIndex: index, partial: makePartial(model) });
+    };
+
+    const openThinkingBlock = (): void => {
+      if (openBlock?.kind === 'thinking') return;
+      closeOpenBlock();
+      const index = nextIndex;
+      nextIndex += 1;
+      openBlock = { index, kind: 'thinking' };
+      stream.push({ type: 'thinking_start', contentIndex: index, partial: makePartial(model) });
+    };
+
     const dispatch = (event: BrokerStreamEvent): void => {
       switch (event.type) {
         case 'text': {
+          openTextBlock();
           text.push(event.text);
           const partial = makePartial(model);
-          partial.content = [{ type: 'text', text: text.join('') }];
-          stream.push({ type: 'text_delta', contentIndex: 0, delta: event.text, partial });
+          partial.content = [{ text: text.join(''), type: 'text' }];
+          stream.push({
+            type: 'text_delta',
+            contentIndex: openBlock?.index ?? 0,
+            delta: event.text,
+            partial,
+          });
+          return;
+        }
+        case 'thinking_delta': {
+          openThinkingBlock();
+          thinking.push(event.text);
+          const partial = makePartial(model);
+          partial.content = [{ thinking: thinking.join(''), type: 'thinking' }];
+          stream.push({
+            contentIndex: openBlock?.index ?? 0,
+            delta: event.text,
+            partial,
+            type: 'thinking_delta',
+          });
+          return;
+        }
+        case 'toolcall_start': {
+          sawToolCalls = true;
+          closeOpenBlock();
+          const index = nextIndex;
+          nextIndex += 1;
+          openCalls.set(callKey(event), {
+            arguments: '',
+            blockIndex: index,
+            id: event.toolCallId,
+            name: event.name,
+          });
+          stream.push({ type: 'toolcall_start', contentIndex: index, partial: makePartial(model) });
+          return;
+        }
+        case 'toolcall_delta': {
+          const call = openCalls.get(callKey(event));
+          if (!call) return;
+          call.arguments += event.argumentsDelta;
+          stream.push({
+            contentIndex: call.blockIndex,
+            delta: event.argumentsDelta,
+            partial: makePartial(model),
+            type: 'toolcall_delta',
+          });
+          return;
+        }
+        case 'toolcall_end': {
+          const call = openCalls.get(callKey(event)) ?? {
+            arguments: '',
+            blockIndex: nextIndex - 1,
+          };
+          openCalls.delete(callKey(event));
+          const toolCall: ToolCall = {
+            arguments: event.toolCall.arguments,
+            id: event.toolCall.id,
+            name: event.toolCall.name,
+            type: 'toolCall',
+          };
+          toolCalls.push(event.toolCall);
+          const partial = makePartial(model);
+          partial.content = [toolCall];
+          stream.push({
+            contentIndex: call.blockIndex >= 0 ? call.blockIndex : nextIndex - 1,
+            partial,
+            toolCall,
+            type: 'toolcall_end',
+          });
           return;
         }
         case 'usage': {
@@ -190,11 +361,12 @@ export const createBrokerBridge = (link: RunnerLink, sessionId: string): BrokerB
         }
       }
     };
-    const flush = (): void => {
-      streamOpen = true;
-      for (const event of pending) dispatch(event);
-      pending.length = 0;
-    };
+
+    // Events can outrun `broker.infer`'s ack; deltas pushed before their
+    // block's `*_start` are dropped upstream, so queue until the pump opens
+    // the stream, then flush in order.
+    let streamOpen = false;
+    const pending: BrokerStreamEvent[] = [];
 
     open.set(requestId, {
       deliver: (event) => {
@@ -210,16 +382,38 @@ export const createBrokerBridge = (link: RunnerLink, sessionId: string): BrokerB
       },
     });
 
+    const finalizeBlocks = (partial: AssistantMessage): void => {
+      const blocks: AssistantMessage['content'] = [];
+      if (thinking.length > 0) blocks.push({ thinking: thinking.join(''), type: 'thinking' });
+      if (text.length > 0) blocks.push({ text: text.join(''), type: 'text' });
+      for (const call of toolCalls) {
+        blocks.push({
+          arguments: call.arguments,
+          id: call.id,
+          name: call.name,
+          type: 'toolCall',
+        });
+      }
+      partial.content = blocks;
+    };
+
     const pump = async (): Promise<void> => {
       const partial = makePartial(model);
       try {
         const ack = await link.request('broker.infer', {
-          sessionId,
+          sessionId: sessionId(),
           request: {
             requestId,
             modelRoute: model.id,
             messages,
             maxOutputTokens: options?.maxTokens ?? model.maxTokens,
+            tools: sanitizeTools(context),
+            thinkingLevel: options?.reasoning,
+            serviceTier: options?.serviceTier,
+            providerOptions:
+              options?.thinkingBudgets !== undefined
+                ? { thinkingBudgets: options.thinkingBudgets }
+                : undefined,
           },
         });
         if (!isRecord(ack) || ack.accepted !== true) {
@@ -227,8 +421,9 @@ export const createBrokerBridge = (link: RunnerLink, sessionId: string): BrokerB
           return;
         }
         stream.push({ type: 'start', partial });
-        stream.push({ type: 'text_start', contentIndex: 0, partial });
-        flush();
+        streamOpen = true;
+        for (const event of pending) dispatch(event);
+        pending.length = 0;
         await done;
         if (aborted) {
           fail('Inference aborted', true);
@@ -238,12 +433,13 @@ export const createBrokerBridge = (link: RunnerLink, sessionId: string): BrokerB
           fail(brokerError, false);
           return;
         }
-        stream.push({ type: 'text_end', contentIndex: 0, content: text.join(''), partial });
+        // Close any still-open text/thinking block.
+        closeOpenBlock();
         const final = makePartial(model);
-        final.content = [{ type: 'text', text: text.join('') }];
+        finalizeBlocks(final);
         final.usage = usage;
-        final.stopReason = 'stop';
-        stream.push({ type: 'done', reason: 'stop', message: final });
+        final.stopReason = sawToolCalls ? 'toolUse' : 'stop';
+        stream.push({ type: 'done', reason: sawToolCalls ? 'toolUse' : 'stop', message: final });
         stream.end(final);
       } catch (error) {
         console.error('broker.infer request failed', error);
@@ -263,7 +459,6 @@ export const createBrokerBridge = (link: RunnerLink, sessionId: string): BrokerB
     deliverEvent: (params: unknown) => {
       if (!isRecord(params) || typeof params.requestId !== 'string') return;
       const event = params.event;
-      if (!isRecord(event) || typeof event.type !== 'string') return;
       if (!isBrokerStreamEvent(event)) return;
       open.get(params.requestId)?.deliver(event);
     },

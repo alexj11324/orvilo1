@@ -545,8 +545,8 @@ export const driveEmbeddedCanonicalRun = async (
           finishError = { message: event.error.message, type: 'AgentRuntimeError' };
           result = 'error';
         }
-        // thinking/tool_* RuntimeEvents (protocol v2) have no ledger surface
-        // yet — the pipeline surfacing layer lands in the follow-up PR.
+        // thinking/tool_* RuntimeEvents are surfaced to the ledger by the
+        // pipeline surfacing layer — skipped here until that lands.
       }
       if (result === 'error' && finishError)
         await ingest([streamEvent(operationId, 'error', { message: finishError.message })]);

@@ -257,7 +257,7 @@ describe('checkConnection real provider round-trip', () => {
           maxOutputTokens: 8192,
           modelRoute: MODEL_ID,
           text: true,
-          tools: false,
+          tools: true,
         },
       ],
     });

@@ -13,6 +13,7 @@ import type {
   BrokerStreamEvent,
   SanitizedInferenceRequest,
 } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
+import { isSanitizedInferenceRequest } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import { isNonEmptyString, isRecord } from '@orvilo/utils/object';
 import debug from 'debug';
 import { eq, sql } from 'drizzle-orm';
@@ -257,40 +258,51 @@ export const primeBrokerActivate = async (c: Context): Promise<Response> => {
 
 const isInferBody = (
   body: unknown,
-): body is { request: SanitizedInferenceRequest; sessionId: string } => {
-  if (!isRecord(body) || !isNonEmptyString(body.sessionId)) return false;
-  const request = body.request;
-  if (
-    !isRecord(request) ||
-    !isNonEmptyString(request.requestId) ||
-    !isNonEmptyString(request.modelRoute) ||
-    !Number.isSafeInteger(request.maxOutputTokens) ||
-    (request.maxOutputTokens as number) <= 0 ||
-    !Array.isArray(request.messages) ||
-    request.messages.some(
-      (message) =>
-        !isRecord(message) ||
-        !['system', 'user', 'assistant'].includes(message.role as string) ||
-        !isNonEmptyString(message.content),
-    )
-  )
-    return false;
-  return true;
-};
+): body is { request: SanitizedInferenceRequest; sessionId: string } =>
+  isRecord(body) && isNonEmptyString(body.sessionId) && isSanitizedInferenceRequest(body.request);
 
 const toBrokerEvent = (event: InferenceEvent): BrokerStreamEvent => {
-  if (event.type === 'text') return { text: event.text, type: 'text' };
-  if (event.type === 'usage')
-    return { inputTokens: event.inputTokens, outputTokens: event.outputTokens, type: 'usage' };
-  if (event.type === 'error')
-    return { code: event.error.code, message: event.error.message, type: 'error' };
-  // v2 variants (thinking/toolcall_*) have no producer until the runner
-  // unseal — guard loudly rather than fabricating a text event.
-  return {
-    code: 'unexpected_event',
-    message: `unexpected broker event type: ${event.type}`,
-    type: 'error',
-  };
+  switch (event.type) {
+    case 'text': {
+      return { text: event.text, type: 'text' };
+    }
+    case 'thinking': {
+      return { text: event.text, type: 'thinking_delta' };
+    }
+    case 'toolcall_start': {
+      return {
+        index: event.index,
+        name: event.name,
+        toolCallId: event.toolCallId,
+        type: 'toolcall_start',
+      };
+    }
+    case 'toolcall_delta': {
+      return {
+        argumentsDelta: event.argumentsDelta,
+        index: event.index,
+        toolCallId: event.toolCallId,
+        type: 'toolcall_delta',
+      };
+    }
+    case 'toolcall_end': {
+      return {
+        index: event.index,
+        toolCall: { ...event.toolCall, type: 'toolCall' },
+        type: 'toolcall_end',
+      };
+    }
+    case 'usage': {
+      return {
+        inputTokens: event.inputTokens,
+        outputTokens: event.outputTokens,
+        type: 'usage',
+      };
+    }
+    case 'error': {
+      return { code: event.error.code, message: event.error.message, type: 'error' };
+    }
+  }
 };
 
 /**
@@ -404,8 +416,12 @@ export const primeBrokerInfer = async (c: Context): Promise<Response> => {
       maxOutputTokens: request.maxOutputTokens,
       messages: request.messages.map(toInferenceMessage),
       modelRoute: claims.model_route,
+      providerOptions: request.providerOptions,
       requestId: request.requestId,
       schemaVersion: CONTROL_PLANE_VERSION,
+      serviceTier: request.serviceTier,
+      thinkingLevel: request.thinkingLevel,
+      tools: request.tools,
     };
     return streamInfer(c, claims, inferenceAuthority, backend, inferenceRequest);
   }
@@ -481,8 +497,12 @@ export const primeBrokerInfer = async (c: Context): Promise<Response> => {
     maxOutputTokens: request.maxOutputTokens,
     messages: request.messages.map(toInferenceMessage),
     modelRoute: claims.model_route,
+    providerOptions: request.providerOptions,
     requestId: request.requestId,
     schemaVersion: CONTROL_PLANE_VERSION,
+    serviceTier: request.serviceTier,
+    thinkingLevel: request.thinkingLevel,
+    tools: request.tools,
   };
   return streamInfer(c, claims, inferenceAuthority, backend, conversationRequest);
 };

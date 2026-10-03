@@ -12,6 +12,12 @@
 # a host-side inspect verifies before trusting the bundle.
 FROM public.ecr.aws/docker/library/node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c
 
+# The ipython builtin self-provisions its python kernel lazily through uv
+# (uv-installer needs curl; both resolve under the container's PATH).
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends curl ca-certificates \
+  && rm -rf /var/lib/apt/lists/*
+
 # Bundle digest the image was built for — required so a mislabeled image
 # cannot masquerade as the pinned artifact.
 ARG HARNESS_BUNDLE_SHA256

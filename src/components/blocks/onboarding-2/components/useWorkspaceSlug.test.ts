@@ -4,6 +4,32 @@ import { describe, expect, it } from 'vitest';
 import { useWorkspaceSlug } from './useWorkspaceSlug';
 
 describe('useWorkspaceSlug', () => {
+  it.each([
+    ['a'.repeat(32), undefined],
+    ['a'.repeat(33), 'invalidLength'],
+    ['public-release-acceptance-20261004', 'invalidLength'],
+    ['ab', 'invalidLength'],
+    ['abc', undefined],
+    ['invalid slug', 'invalidPattern'],
+    ['', undefined],
+  ] satisfies [string, 'invalidLength' | 'invalidPattern' | undefined][])(
+    'validates a manual workspace URL before continuing (%s)',
+    (slug, error) => {
+      const { result } = renderHook(() => useWorkspaceSlug('My Workspace'));
+      act(() => result.current.onWorkspaceSlugChange(slug));
+      expect(result.current.workspaceSlugError).toBe(error);
+    },
+  );
+
+  it('rejects a resumed overlong URL and clears the error when corrected', () => {
+    const { result } = renderHook(() =>
+      useWorkspaceSlug('My Workspace', 'public-release-acceptance-20261004'),
+    );
+    expect(result.current.workspaceSlugError).toBe('invalidLength');
+    act(() => result.current.onWorkspaceSlugChange('public-release-acceptance'));
+    expect(result.current.workspaceSlugError).toBeUndefined();
+  });
+
   it('resumes the checkpointed workspace name and custom slug', () => {
     const { result } = renderHook(() => useWorkspaceSlug('Saved Team', 'saved-custom-url'));
     expect(result.current.workspaceName).toBe('Saved Team');

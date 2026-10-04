@@ -1841,7 +1841,7 @@ describe('GatewayActionImpl', () => {
     // sidebar spinner (gated on `topic.status === 'running'` once the local
     // operation itself completes) is stuck permanently, even though the
     // conversation is genuinely finished.
-    it('resets the local topic status to active when a watched run completes successfully', async () => {
+    it.each([false, true])('clears watched status (missing marker: %s)', async (cleared) => {
       const connectToGateway = vi.fn();
       const internalDispatchTopic = vi.fn();
       const internalPinTopicStatus = vi.fn();
@@ -1918,9 +1918,19 @@ describe('GatewayActionImpl', () => {
       vi.mocked(topicService.settleRunningOperation).mockClear();
       vi.mocked(topicService.settleRunningOperation).mockResolvedValue(undefined as never);
 
+      const localTopic = state.topicDataMap['agent_agent-1'].items[0];
+      internalPinTopicStatus.mockImplementation(({ status }) => {
+        localTopic.status = status;
+      });
+      if (cleared) {
+        // A terminal refetch can clear the marker while the run-start status pin remains.
+        localTopic.metadata.runningOperation = null;
+      }
+
       // Still viewing the topic when the run's terminal event lands.
       onSessionComplete({ succeeded: true, terminalReceived: true });
 
+      expect(localTopic.status).toBe('active');
       expect(topicService.settleRunningOperation).toHaveBeenCalledWith(
         'topic-1',
         'server-op-1',

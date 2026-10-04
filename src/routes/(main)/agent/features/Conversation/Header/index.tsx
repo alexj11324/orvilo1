@@ -1,10 +1,11 @@
 'use client';
 
+import { resolveAgentRuntimeType } from '@orvilo/const';
 import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import { memo } from 'react';
 
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { AgentMigrationBadge, useAgentTransferJob } from '@/features/AgentTransferMigration';
 import { useAgentContext } from '@/features/Conversation/useAgentContext';
 import NavHeader from '@/features/NavHeader';
@@ -140,6 +141,9 @@ const Header = memo(() => {
   const agentMeta = useAgentStore((s) =>
     agentId ? agentSelectors.getAgentMetaById(agentId)(s) : undefined,
   );
+  const runtimeType = useAgentStore((s) =>
+    resolveAgentRuntimeType(agentId ? s.agentMap[agentId] : undefined),
+  );
   const isLocalSystemEnabled = useAgentStore((s) =>
     agentId ? chatConfigByIdSelectors.isLocalSystemEnabledById(agentId)(s) : false,
   );
@@ -154,15 +158,9 @@ const Header = memo(() => {
         left={
           <div className={cn('flex items-center gap-1', headerStyles.leftContent)}>
             {splitView && agentMeta && (
-              <Avatar
-                alt={agentMeta.title}
-                avatar={agentMeta.avatar}
-                background={agentMeta.backgroundColor}
-                shape={'square'}
-                size={24}
-                style={{ flex: 'none', marginInlineStart: 8 }}
-                title={agentMeta.title}
-              />
+              <span style={{ flex: 'none', marginInlineStart: 8 }}>
+                <AgentRuntimeIcon size={24} type={runtimeType} />
+              </span>
             )}
             <Tags />
             {/* Reference header order: title → favorite switch → chat options

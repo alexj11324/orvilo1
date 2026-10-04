@@ -19,6 +19,7 @@ import { homeAgentListSelectors } from '@/store/home/selectors';
 export interface AgentRow {
   avatar?: string;
   backgroundColor?: string;
+  heteroType?: string;
   id: string;
   pinned?: boolean;
   subtitle?: string;
@@ -92,6 +93,7 @@ export const useHomeAgentRows = (options?: UseHomeAgentRowsOptions): HomeAgentRo
           out.push({
             avatar: typeof item.avatar === 'string' ? item.avatar : undefined,
             backgroundColor: item.backgroundColor || undefined,
+            heteroType: item.heteroType,
             id: item.id,
             pinned: item.pinned ?? false,
             subtitle: agentSecondaryDisplayName(item),

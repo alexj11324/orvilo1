@@ -2,9 +2,12 @@ import { BUILTIN_AGENT_SLUGS, getAgentPersistConfig } from '@orvilo/builtin-agen
 import { INBOX_SESSION_ID, isHeterogeneousAgentModelId } from '@orvilo/const';
 import type { AgentRankItem, AgentTopicShareSubject, OrviloAgentAgencyConfig } from '@orvilo/types';
 import {
+  BUILTIN_HETEROGENEOUS_AGENT_CONFIGS,
   DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
+  HETEROGENEOUS_AGENT_CONFIGS,
   normalizeAgencyConfigForWrite,
   pruneWorkingDirByDeviceDeletes,
+  REMOTE_HETEROGENEOUS_AGENT_CONFIGS,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import {
@@ -619,6 +622,7 @@ export class AgentModel {
         description: agents.description,
         id: agents.id,
         name: agents.name,
+        model: agents.model,
         slug: agents.slug,
         title: agents.title,
         userId: agents.userId,
@@ -631,9 +635,14 @@ export class AgentModel {
       .offset(offset);
 
     // Surface only the hetero runtime type, not the full agencyConfig payload.
-    return rows.map(({ slug, agencyConfig, ...row }) =>
+    return rows.map(({ slug, agencyConfig, model, ...row }) =>
       normalizeInboxAgentMeta(
-        { ...row, heteroType: agencyConfig?.heterogeneousProvider?.type },
+        {
+          ...row,
+          heteroType:
+            agencyConfig?.heterogeneousProvider?.type ??
+            (isHeterogeneousAgentModelId(model) ? model : undefined),
+        },
         { slug },
       ),
     );
@@ -1020,12 +1029,41 @@ export class AgentModel {
     return { ...config, slug: undefined };
   };
 
+  private runtimeAvatar = (config: Partial<Pick<AgentItem, 'agencyConfig' | 'model'>>): string => {
+    if (
+      config.agencyConfig != null &&
+      (typeof config.agencyConfig !== 'object' || Array.isArray(config.agencyConfig))
+    ) {
+      throw new TRPCError({
+        code: 'BAD_REQUEST',
+        message: 'Unsupported agent runtime configuration',
+      });
+    }
+    const provider = config.agencyConfig?.heterogeneousProvider;
+    const type =
+      provider !== undefined && provider !== null
+        ? provider.type
+        : isHeterogeneousAgentModelId(config.model)
+          ? config.model
+          : 'orvilo';
+    const cli = HETEROGENEOUS_AGENT_CONFIGS.find((entry) => entry.type === type);
+    const remote = REMOTE_HETEROGENEOUS_AGENT_CONFIGS.find((entry) => entry.type === type);
+    const builtin = BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.find((entry) => entry.type === type);
+    if (!cli && !remote && !builtin) {
+      throw new TRPCError({ code: 'BAD_REQUEST', message: 'Unsupported agent runtime' });
+    }
+    if (builtin) return '/app-icons/icon-512x512.png';
+    if (type === 'droid') return 'https://factory.ai/favicon.svg';
+    const iconId = cli?.iconId ?? (type === 'hermes' ? 'HermesAgent' : 'OpenClaw');
+    return `https://registry.npmmirror.com/@lobehub/icons-static-avatar/latest/files/avatars/${iconId.toLowerCase()}.webp`;
+  };
+
   /**
    * Create an agent record only (without creating a session).
    * This is used for creating virtual agents (e.g., group chat members).
    */
   create = async (input: Partial<AgentItem>): Promise<AgentItem> => {
-    const config = this.stripReservedSlug(input);
+    const config = { ...this.stripReservedSlug(input), avatar: this.runtimeAvatar(input) };
     // Retired provider fields (`engine`, `adapterType`) are stripped at this
     // write chokepoint — the request schema refuses them from clients, and
     // internal callers must not carry them forward either (contract §migration).
@@ -1062,6 +1100,7 @@ export class AgentModel {
 
     const normalizedConfigs = configs.map((config) => ({
       ...this.stripReservedSlug(config),
+      avatar: this.runtimeAvatar(config),
       agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
         normalizeAgencyConfigForWrite(config.agencyConfig),
       ),
@@ -1096,9 +1135,20 @@ export class AgentModel {
       this.stripImmutableFields(data),
     );
 
+    const [agent] = await this.db
+      .select()
+      .from(agents)
+      .where(and(eq(agents.id, agentId), this.ownership()))
+      .limit(1);
+    if (!agent) return;
+    const avatar =
+      agent.slug === BUILTIN_AGENT_SLUGS.agentBuilder
+        ? agent.avatar
+        : this.runtimeAvatar({ ...agent, ...sanitizedData });
+
     return this.db
       .update(agents)
-      .set({ ...sanitizedData, updatedAt: new Date() })
+      .set({ ...sanitizedData, avatar, updatedAt: new Date() })
       .where(and(eq(agents.id, agentId), this.ownership()));
   };
 
@@ -1339,6 +1389,9 @@ export class AgentModel {
   updateConfig = async (agentId: string, input: PartialDeep<AgentItem> | undefined | null) => {
     if (!input || Object.keys(input).length === 0) return;
 
+    if (input.agencyConfig?.heterogeneousProvider !== undefined) {
+      this.runtimeAvatar(input as Partial<AgentItem>);
+    }
     const data = this.stripImmutableFields(input);
 
     // Same retired-field normalization as `create`: the request schema refuses
@@ -1465,6 +1518,8 @@ export class AgentModel {
     // `undefined`, which merge() skips — prune those keys so the delete persists.
     pruneWorkingDirByDeviceDeletes(mergedValue.agencyConfig, data.agencyConfig);
 
+    if (agent.slug !== BUILTIN_AGENT_SLUGS.agentBuilder)
+      mergedValue.avatar = this.runtimeAvatar(mergedValue);
     await this.assertFixedExecutionTarget(agent.workspaceId, mergedValue.agencyConfig);
 
     // Final cleanup: ensure no undefined or null values enter the database
@@ -1612,7 +1667,7 @@ export class AgentModel {
             // preserve it, otherwise a heterogeneous agent is copied as a plain
             // one and its external runtime config is silently lost.
             agencyConfig,
-            avatar: sourceAgent.avatar,
+            avatar: this.runtimeAvatar(sourceAgent),
             backgroundColor: sourceAgent.backgroundColor,
             chatConfig: sourceAgent.chatConfig,
             description: sourceAgent.description,

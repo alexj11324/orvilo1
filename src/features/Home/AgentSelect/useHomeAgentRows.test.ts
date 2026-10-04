@@ -110,6 +110,16 @@ describe('useHomeAgentRows', () => {
     mocks.homeState.ungroupedAgents = [];
   });
 
+  it('carries the actual runtime type through renamed rows for their brand icon', () => {
+    mocks.homeState.ungroupedAgents = [
+      agent('agt_cc', 'My assistant', { heteroType: 'claude-code', avatar: 'OA' }),
+    ];
+    const { result } = renderHook(() => useHomeAgentRows());
+    expect(result.current.workspaceRows.find((row) => row.id === 'agt_cc')?.heteroType).toBe(
+      'claude-code',
+    );
+  });
+
   it('ignores a stale per-agent sidebar-hidden preference', () => {
     // Per-item sidebar membership is retired — a leftover hidden id must not
     // drop the agent from the home switcher.

@@ -1,5 +1,6 @@
 'use client';
 
+import { resolveAgentRuntimeType } from '@orvilo/const';
 import { agentSecondaryDisplayName } from '@orvilo/types';
 import { cssVar } from 'antd-style';
 import isEqual from 'fast-deep-equal';
@@ -8,7 +9,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createAgentIdentityModal } from '@/features/AgentIdentityModal';
@@ -78,12 +79,7 @@ const AgentHeader = memo(() => {
             zIndex: 4,
           }}
         >
-          <Avatar
-            avatar={meta.avatar}
-            name={personalName || role}
-            shape={'square'}
-            size={72} // linear-token-override — 72px hero avatar inside the profile banner, not a row icon
-          />
+          <AgentRuntimeIcon size={72} type={resolveAgentRuntimeType(config)} />
         </div>
       </div>
       {/* Identity Section — display only. Editing all three fields happens in a

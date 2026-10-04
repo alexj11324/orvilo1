@@ -80,7 +80,7 @@ interface AgentItemProps {
 }
 
 const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, secondaryLabel }) => {
-  const { id, avatar, backgroundColor, pinned, slug, userId, visibility } = item;
+  const { id, heteroType, pinned, slug, userId, visibility } = item;
   // Unread count is server-computed (topics.status === 'unread') and carried on
   // the sidebar list item, so it stays accurate across agents whose topics
   // aren't loaded into the chat store on this client.
@@ -146,13 +146,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
       return <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={18} />;
     }
 
-    const avatarNode = (
-      <Avatar
-        avatar={typeof avatar === 'string' ? avatar : undefined}
-        avatarBackground={backgroundColor || undefined}
-        title={displayTitle}
-      />
-    );
+    const avatarNode = <Avatar type={heteroType} />;
 
     if (isLoading) {
       return (
@@ -175,7 +169,7 @@ const AgentItem = memo<AgentItemProps>(({ item, style, className, onNavigate, se
     }
 
     return avatarNode;
-  }, [isUpdating, isLoading, avatar, backgroundColor, displayTitle, unreadCount]);
+  }, [isUpdating, isLoading, heteroType, unreadCount]);
 
   const dropdownMenu = useAgentDropdownMenu({
     anchor,

@@ -5,10 +5,9 @@ import { PinIcon } from 'lucide-react';
 import { memo, type ReactNode } from 'react';
 import { useTranslation } from 'react-i18next';
 
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import AsyncBoundary from '@/components/AsyncBoundary';
-import Avatar from '@/components/Avatar';
 import { Button } from '@/components/ui/button';
-import { DEFAULT_AVATAR } from '@/const/meta';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -87,13 +86,7 @@ const AgentList = memo<AgentListProps>(
           )}
           onClick={() => onSelect(row.id)}
         >
-          <Avatar
-            avatar={row.avatar || DEFAULT_AVATAR}
-            background={row.backgroundColor}
-            name={row.title}
-            shape={'square'}
-            size={24}
-          />
+          <AgentRuntimeIcon size={24} type={row.heteroType} />
           <div
             className={cx('truncate', isActive ? 'font-semibold' : 'font-medium')}
             style={{ flex: 1, color: isActive ? cssVar.colorText : cssVar.colorTextSecondary }}

@@ -1,25 +1,9 @@
-import { DEFAULT_AVATAR } from '@orvilo/const';
 import { memo } from 'react';
 
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 
-interface AgentAvatarProps {
-  avatar?: string;
-  avatarBackground?: string;
-  title?: string;
-}
-
-const AgentAvatar = memo<AgentAvatarProps>(({ avatar, avatarBackground, title }) => {
-  return (
-    <Avatar
-      emojiScaleWithBackground
-      avatar={avatar || DEFAULT_AVATAR}
-      background={avatarBackground}
-      name={title}
-      shape={'square'}
-      size={22}
-    />
-  );
-});
+const AgentAvatar = memo<{ type?: string }>(({ type }) => (
+  <AgentRuntimeIcon size={22} type={type} />
+));
 
 export default AgentAvatar;

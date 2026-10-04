@@ -30,3 +30,13 @@ const HETEROGENEOUS_AGENT_MODEL_ID_SET = new Set<string>(HETEROGENEOUS_AGENT_MOD
 export const isHeterogeneousAgentModelId = (
   model?: string | null,
 ): model is HeterogeneousAgentModelId => !!model && HETEROGENEOUS_AGENT_MODEL_ID_SET.has(model);
+
+/** Agent names and custom artwork do not identify their execution runtime. */
+export const resolveAgentRuntimeType = (
+  config?: {
+    agencyConfig?: { heterogeneousProvider?: { type?: string } | null } | null;
+    model?: string | null;
+  } | null,
+): string =>
+  config?.agencyConfig?.heterogeneousProvider?.type ??
+  (isHeterogeneousAgentModelId(config?.model) ? config.model : 'orvilo');

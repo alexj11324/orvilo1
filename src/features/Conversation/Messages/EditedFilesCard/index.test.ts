@@ -3,6 +3,11 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { createElement } from 'react';
 import { describe, expect, it, vi } from 'vitest';
 
+import {
+  initServerConfigStore,
+  Provider as ServerConfigProvider,
+} from '@/store/serverConfig/store';
+
 import EditedFilesCard, {
   AGGREGATE_EDITED_FILE_ICON_SIZE,
   getEditedFileIconName,
@@ -77,7 +82,12 @@ describe('AGGREGATE_EDITED_FILE_ICON_SIZE', () => {
 
 describe('SingleEditedFileCard', () => {
   it('groups line deltas below the title and exposes the diff action as a secondary control', () => {
-    render(createElement(EditedFilesCard, { entries: [singleEntry] }));
+    render(
+      createElement(ServerConfigProvider, {
+        children: createElement(EditedFilesCard, { entries: [singleEntry] }),
+        createStore: () => initServerConfigStore({}),
+      }),
+    );
 
     const title = screen.getByText('editedFiles.singleTitle:Acceptance/index.tsx');
     const action = screen.getByRole('button', { name: 'editedFiles.viewChanges' });

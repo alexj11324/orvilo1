@@ -101,12 +101,14 @@ describe('retired vocabulary stays out of the user-facing surface', () => {
       "'toolsConfig.title'",
       'devicePolicy.noPublicDevice',
       'Execution Environment',
-      'Harness',
       // 'Cloud Sandbox' stays — `heteroAgent.executionTarget.sandbox` and the
       // orvilo-cloud-sandbox builtin tool are real hetero vocabulary.
     ]) {
       expect(`${setting}\n${chat}`).not.toContain(banned);
     }
+    // The installed-agent picker has live localHarness.* keys. Keep its
+    // human-facing label while excluding the retired settings keys above.
+    expect(chat).toContain("'localHarness.title': 'Installed on this device'");
   });
 
   it('keeps no retired-key references in the settings surface', () => {
@@ -155,10 +157,15 @@ describe('human-readable model labels', () => {
 });
 
 describe('sidebar + topic-row chrome stays de-attributed', () => {
-  it('builds the agent-sidebar header crumb without an href', () => {
+  it('keeps a workspace-aware Home destination without restoring an agent breadcrumb', () => {
     const header = read('src/features/AgentSidebar/Header/index.tsx');
 
-    expect(header).not.toContain('href');
+    expect(header).toContain("buildWorkspaceAwarePath('/', activeSlug)");
+    expect(header).toContain('href={homeHref}');
+    expect(header).toContain('icon={HomeIcon}');
+    expect(header).toContain("title={t('tab.home')}");
+    expect(header).not.toContain('AgentBreadcrumb');
+    expect(header).not.toContain('agentSelectors');
   });
 
   it('carries no bound-agent node on topic list rows', () => {

@@ -876,7 +876,9 @@ export const dispatchHeteroAgent = async (
     memberDeviceOverride,
     requestTrigger,
     sandboxExecutionAvailable:
-      enableCloudSandbox && !isRemoteHetero && supportsCloudHeterogeneousSandbox(heteroType),
+      enableCloudSandbox === true &&
+      !isRemoteHetero &&
+      supportsCloudHeterogeneousSandbox(heteroType),
     sessionBoundDeviceId,
     userId: deps.userId,
     workspaceId: deps.workspaceId,

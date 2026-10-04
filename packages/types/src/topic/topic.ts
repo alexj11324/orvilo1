@@ -140,15 +140,16 @@ export const applyTopicExecutionConfig = (
 ): OrviloAgentAgencyConfig | undefined => {
   if (!execution) return defaults;
   const provider = defaults?.heterogeneousProvider;
+  const permission = execution.permission;
   const withPermission =
-    execution.permission?.provider === provider?.type && provider
+    permission && provider && permission.provider === provider.type
       ? {
           ...defaults,
           heterogeneousProvider: {
             ...provider,
             permission: {
-              configId: execution.permission.configId,
-              value: execution.permission.value,
+              configId: permission.configId,
+              value: permission.value,
             },
           },
         }

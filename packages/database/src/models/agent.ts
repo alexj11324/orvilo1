@@ -3,7 +3,6 @@ import { INBOX_SESSION_ID, isHeterogeneousAgentModelId } from '@orvilo/const';
 import type { AgentRankItem, AgentTopicShareSubject, OrviloAgentAgencyConfig } from '@orvilo/types';
 import {
   DEFAULT_WORKSPACE_AGENT_SELECTION_POLICIES,
-  normalizeAgencyConfigForWrite,
   pruneWorkingDirByDeviceDeletes,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
@@ -81,6 +80,7 @@ import {
 } from '../utils/agentKnowledgeMounts';
 import { rehomeAgentLabelsForRecipient } from '../utils/agentLabelsOwnership';
 import { rehomeAgentQuotaBindingsForRecipient } from '../utils/agentQuotaBindings';
+import { normalizeAgentRuntimeIdentity } from '../utils/agentRuntimeIdentity';
 import { genEndDateWhere, genRangeWhere, genStartDateWhere, genWhere } from '../utils/genWhere';
 import { resolveGroupMembershipType } from '../utils/groupMembership';
 import { normalizeInboxAgentMeta } from '../utils/inboxAgent';
@@ -1030,7 +1030,7 @@ export class AgentModel {
     // write chokepoint — the request schema refuses them from clients, and
     // internal callers must not carry them forward either (contract §migration).
     const agencyConfig = this.withWorkspaceSelectionPolicyDefaults(
-      normalizeAgencyConfigForWrite(config.agencyConfig),
+      normalizeAgentRuntimeIdentity(config.agencyConfig),
     );
 
     await this.assertWorkspaceDeviceBinding(this.workspaceId ?? null, agencyConfig);
@@ -1063,7 +1063,7 @@ export class AgentModel {
     const normalizedConfigs = configs.map((config) => ({
       ...this.stripReservedSlug(config),
       agencyConfig: this.withWorkspaceSelectionPolicyDefaults(
-        normalizeAgencyConfigForWrite(config.agencyConfig),
+        normalizeAgentRuntimeIdentity(config.agencyConfig),
       ),
     }));
 
@@ -1095,6 +1095,10 @@ export class AgentModel {
       agentId,
       this.stripImmutableFields(data),
     );
+
+    if (Object.hasOwn(sanitizedData, 'agencyConfig')) {
+      sanitizedData.agencyConfig = normalizeAgentRuntimeIdentity(sanitizedData.agencyConfig);
+    }
 
     return this.db
       .update(agents)
@@ -1341,13 +1345,6 @@ export class AgentModel {
 
     const data = this.stripImmutableFields(input);
 
-    // Same retired-field normalization as `create`: the request schema refuses
-    // them from clients; internal callers reaching the model get them stripped
-    // (the retired value is meaningless to every reader — contract §migration).
-    if (data.agencyConfig) {
-      data.agencyConfig = normalizeAgencyConfigForWrite(data.agencyConfig);
-    }
-
     const agent = await this.db.query.agents.findFirst({
       where: and(eq(agents.id, agentId), this.ownership()),
     });
@@ -1391,6 +1388,11 @@ export class AgentModel {
     }
 
     const mergedValue = merge(agent, restData);
+    // Validate after merging so a command-only patch keeps the existing type.
+    // Do not infer Claude Code from an incomplete or malformed client binding.
+    if (Object.hasOwn(data, 'agencyConfig')) {
+      mergedValue.agencyConfig = normalizeAgentRuntimeIdentity(mergedValue.agencyConfig);
+    }
 
     // The inbox is Orvilo's built-in default cloud agent; it must never be
     // turned into a heterogeneous (external-CLI) agent. Two independent inputs can
@@ -1611,7 +1613,7 @@ export class AgentModel {
             // binding, sub-agent defaults, verify rubric...). Duplicating must
             // preserve it, otherwise a heterogeneous agent is copied as a plain
             // one and its external runtime config is silently lost.
-            agencyConfig,
+            agencyConfig: normalizeAgentRuntimeIdentity(agencyConfig),
             avatar: sourceAgent.avatar,
             backgroundColor: sourceAgent.backgroundColor,
             chatConfig: sourceAgent.chatConfig,

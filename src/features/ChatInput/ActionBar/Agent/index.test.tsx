@@ -142,6 +142,7 @@ vi.mock('@/store/agent', () => ({
 
 vi.mock('@/store/agent/selectors', () => ({
   agentSelectors: {
+    getAgentConfigById: (id: string) => (s: typeof mocks) => s.agentMap[id] ?? {},
     getAgentMetaById: (id: string) => (s: typeof mocks) => s.agentMap[id] ?? {},
   },
   builtinAgentSelectors: {
@@ -181,11 +182,18 @@ describe('Agent action', () => {
     mocks.isDesktop = false;
   });
 
-  it('shows the bound agent avatar and display name on the chip', () => {
+  it.each([
+    ['claude-code', 'Claude Code'],
+    ['codex', 'Codex'],
+    ['orvilo', 'Orvilo'],
+  ])('keeps the %s icon when the name and avatar are edited', (type, brand) => {
+    mocks.agentMap.agt_current.agencyConfig = { heterogeneousProvider: { type } };
     const { getByTestId } = render(<Agent />);
 
-    const avatar = within(getByTestId('popover-trigger')).getByTestId('avatar');
-    expect(avatar.dataset.avatar).toBe('current-avatar');
+    const icon = within(getByTestId('popover-trigger')).getAllByTitle(brand)[0];
+    expect(icon.querySelector('svg, img')).not.toBeNull();
+    expect(icon.textContent).not.toContain('Current Agent');
+    expect(within(getByTestId('popover-trigger')).queryByTestId('avatar')).toBeNull();
     expect(getByTestId('popover-trigger').textContent).toContain('Current Agent');
     expect(mocks.fetchAgentList).toHaveBeenCalledOnce();
     // The dropdown must offer the builtin task agent as a conversation target.

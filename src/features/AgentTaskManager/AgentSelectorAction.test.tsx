@@ -87,10 +87,6 @@ vi.mock('@/hooks/useFetchAgentList', () => ({
   useFetchAgentList: () => mocks.fetchAgentList(),
 }));
 
-vi.mock('@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar', () => ({
-  default: ({ avatar }: { avatar?: string }) => <span data-avatar={avatar} data-testid="avatar" />,
-}));
-
 vi.mock('@/features/HomeSidebar/Body/Agent/ModalProvider', () => ({
   AgentModalProvider: ({ children }: { children: ReactNode }) => <>{children}</>,
 }));
@@ -124,13 +120,13 @@ describe('AgentSelectorAction', () => {
     expect(document.body.textContent).not.toContain('Custom Group');
   });
 
-  it('uses the active agent avatar and forwards agent changes', () => {
+  it('uses the builtin runtime icon and forwards agent changes', () => {
     const onAgentChange = vi.fn();
-    const { getByTestId, getByText } = render(
+    const { getAllByTitle, getByText } = render(
       <AgentSelectorAction onAgentChange={onAgentChange} />,
     );
 
-    expect(getByTestId('avatar').dataset.avatar).toBe('task-avatar');
+    expect(getAllByTitle('Orvilo')[0].querySelector('img')).not.toBeNull();
 
     fireEvent.click(getByText('Custom Agent'));
     expect(onAgentChange).toHaveBeenCalledWith('agt_custom');

@@ -6,9 +6,8 @@ import isEqual from 'fast-deep-equal';
 import { memo, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { Skeleton } from '@/components/ui/skeleton';
-import { DEFAULT_AVATAR, DEFAULT_INBOX_AVATAR } from '@/const/meta';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { contextSelectors, useConversationStore } from '@/features/Conversation/store';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
@@ -26,6 +25,9 @@ const AgentInfo = memo(() => {
   const isInbox = !!inboxAgentId && agentId === inboxAgentId;
   const isLoading = useAgentStore(agentByIdSelectors.isAgentConfigLoadingById(agentId));
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId), isEqual);
+  const runtimeType = useAgentStore(
+    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig?.heterogeneousProvider?.type,
+  );
   const openingMessage = useAgentStore(
     (s) => agentSelectors.getAgentConfigById(agentId)(s)?.openingMessage || '',
   );
@@ -59,13 +61,7 @@ const AgentInfo = memo(() => {
 
   return (
     <div className="flex flex-col gap-3">
-      <Avatar
-        avatar={isInbox ? meta.avatar || DEFAULT_INBOX_AVATAR : meta.avatar || DEFAULT_AVATAR}
-        background={meta.backgroundColor}
-        name={displayTitle}
-        shape={'square'}
-        size={64}
-      />
+      <AgentRuntimeIcon size={64} type={runtimeType} />
       <div className="text-[24px] font-bold">{displayTitle}</div>
       <div className="flex flex-col" style={{ width: 'min(100%, 640px)' }}>
         <Markdown fontSize={fontSize} variant={'chat'}>

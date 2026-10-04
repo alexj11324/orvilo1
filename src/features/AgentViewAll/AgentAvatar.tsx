@@ -1,11 +1,10 @@
 'use client';
 
-import { DEFAULT_AVATAR } from '@orvilo/const';
-import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
+import { type SidebarAgentItem } from '@orvilo/types';
 import { memo } from 'react';
 
-import Avatar from '@/components/Avatar';
 import AgentGroupAvatar from '@/features/AgentGroupAvatar';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 
 interface AgentAvatarProps {
   item: SidebarAgentItem;
@@ -24,14 +23,7 @@ const AgentAvatar = memo<AgentAvatarProps>(({ item, size }) => {
       size={size}
     />
   ) : (
-    <Avatar
-      emojiScaleWithBackground
-      avatar={typeof avatar === 'string' ? avatar : DEFAULT_AVATAR}
-      background={backgroundColor || undefined}
-      name={agentDisplayName(item)}
-      shape={'square'}
-      size={size}
-    />
+    <AgentRuntimeIcon size={size} type={item.heterogeneousType} />
   );
 });
 

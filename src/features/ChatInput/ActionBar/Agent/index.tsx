@@ -1,15 +1,15 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import { CHAT_TOPIC_URL, DEFAULT_AVATAR } from '@orvilo/const';
+import { CHAT_TOPIC_URL } from '@orvilo/const';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { agentDisplayName } from '@orvilo/types';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
 import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
 import AgentList from '@/features/Home/AgentSelect/AgentList';
@@ -112,6 +112,9 @@ const Agent = memo(() => {
 
   const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
+  const runtimeType = useAgentStore(
+    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig?.heterogeneousProvider?.type,
+  );
   // The task agent is a virtual row — its label comes from the same fallback
   // the task-manager selector uses, not the agent meta map.
   const title = agentDisplayName(
@@ -194,16 +197,8 @@ const Agent = memo(() => {
         render={
           <SelectorTrigger
             ariaLabel={title}
+            leading={<AgentRuntimeIcon size={20} type={runtimeType} />}
             text={title}
-            leading={
-              <Avatar
-                avatar={meta.avatar || DEFAULT_AVATAR}
-                background={meta.backgroundColor}
-                name={title}
-                shape={'square'}
-                size={20}
-              />
-            }
           />
         }
       />

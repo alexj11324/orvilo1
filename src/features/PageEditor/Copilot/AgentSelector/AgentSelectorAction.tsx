@@ -1,4 +1,4 @@
-import { agentDisplayName } from '@orvilo/types';
+import { agentDisplayName, type SidebarAgentItem } from '@orvilo/types';
 import { createStaticStyles, cx } from 'antd-style';
 import { cn } from 'cn';
 import { ChevronsUpDownIcon } from 'lucide-react';
@@ -6,8 +6,8 @@ import { memo, Suspense, useCallback, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
-import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
@@ -52,7 +52,7 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
 
   useFetchAgentList();
 
-  const agentsWithBuiltin = useMemo(() => {
+  const agentsWithBuiltin = useMemo<SidebarAgentItem[]>(() => {
     // Page Copilot only supports selecting agent sessions, not group sessions.
     const availableAgents = agents.filter((agent) => agent.type === 'agent');
     const hasPageAgent = availableAgents.some((agent) => agent.id === pageAgentId);
@@ -102,7 +102,6 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
           agent={agent}
           agentId={agent.id}
           agentTitle={agentDisplayName(agent, t('untitledAgent', { ns: 'chat' }))}
-          avatar={agent.avatar}
           key={agent.id}
           onAgentChange={handleAgentChange}
           onClose={() => setOpen(false)}
@@ -120,9 +119,7 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
             style={{ height: 28 }}
           >
             <div className="flex items-center gap-1">
-              <AgentAvatar
-                avatar={typeof activeAgent?.avatar === 'string' ? activeAgent.avatar : undefined}
-              />
+              <AgentRuntimeIcon size={22} type={activeAgent?.heterogeneousType} />
               <ChevronsUpDownIcon className={styles.chevron} size={14} />
             </div>
           </div>

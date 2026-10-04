@@ -344,6 +344,7 @@ describe('AgentModel workspace device binding', () => {
       });
       expect(copy?.agencyConfig).toEqual({
         boundDeviceId: workspaceDeviceId,
+        heterogeneousProvider: { type: 'orvilo' },
         executionTargetSelectionPolicy: 'fixed',
         executionTarget: 'device',
         workingDirByDevice: { [workspaceDeviceId]: '/tmp/ws' },

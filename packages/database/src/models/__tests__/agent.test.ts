@@ -65,6 +65,69 @@ const fileList2 = [
   },
 ];
 
+describe('agent runtime identity', () => {
+  it('binds an ordinary new agent to the builtin runtime', async () => {
+    const agent = await agentModel.create({ name: 'My assistant' });
+    expect(agent.agencyConfig?.heterogeneousProvider).toEqual({ type: 'orvilo' });
+  });
+
+  it.each([{}, { type: '' }, { type: null }, { type: 42 }, { type: 'invented-agent' }])(
+    'refuses an invalid external runtime before inserting: %j',
+    async (provider) => {
+      const before = await serverDB.query.agents.findMany();
+      await expect(
+        agentModel.create({
+          agencyConfig: { heterogeneousProvider: provider } as OrviloAgentAgencyConfig,
+          name: 'Invalid runtime',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect(await serverDB.query.agents.findMany()).toHaveLength(before.length);
+    },
+  );
+
+  it('refuses an entire batch if one runtime is invalid', async () => {
+    const before = await serverDB.query.agents.findMany();
+    await expect(
+      agentModel.batchCreate([
+        { name: 'Builtin' },
+        { agencyConfig: { heterogeneousProvider: {} } as OrviloAgentAgencyConfig },
+      ]),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(await serverDB.query.agents.findMany()).toHaveLength(before.length);
+  });
+
+  it('keeps the runtime on rename and partial provider updates, and rejects invalid replacements', async () => {
+    const agent = await agentModel.create({
+      agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+      name: 'Codex',
+    });
+    await agentModel.updateConfig(agent.id, {
+      agencyConfig: { heterogeneousProvider: { command: 'my-codex' } },
+      name: 'My coding assistant',
+    });
+    const renamed = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
+    expect(renamed?.name).toBe('My coding assistant');
+    expect(renamed?.agencyConfig?.heterogeneousProvider).toMatchObject({
+      command: 'my-codex',
+      type: 'codex',
+    });
+    await expect(
+      agentModel.updateConfig(agent.id, {
+        agencyConfig: {
+          heterogeneousProvider: { type: null },
+        } as unknown as OrviloAgentAgencyConfig,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      agentModel.update(agent.id, {
+        agencyConfig: { heterogeneousProvider: {} } as OrviloAgentAgencyConfig,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    const unchanged = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
+    expect(unchanged?.agencyConfig?.heterogeneousProvider?.type).toBe('codex');
+  });
+});
+
 beforeEach(async () => {
   await serverDB.delete(users);
   // Jobs deliberately carry no FK onto users, so `delete(users)` leaves them
@@ -1537,10 +1600,11 @@ describe('AgentModel', () => {
 
       expect(workspaceAgent.agencyConfig).toEqual({
         executionTargetSelectionPolicy: 'member',
+        heterogeneousProvider: { type: 'orvilo' },
         modelSelectionPolicy: 'member',
         topicSharePolicy: 'member',
       });
-      expect(personalAgent.agencyConfig).toBeNull();
+      expect(personalAgent.agencyConfig).toEqual({ heterogeneousProvider: { type: 'orvilo' } });
     });
 
     // builtin slugs decide both `getBuiltinAgent` resolution and, for
@@ -1725,6 +1789,7 @@ describe('AgentModel', () => {
       expect(result.agencyConfig).toEqual({
         executionTarget: 'none',
         executionTargetSelectionPolicy: 'fixed',
+        heterogeneousProvider: { type: 'orvilo' },
         modelSelectionPolicy: 'member',
         topicSharePolicy: 'member',
       });
@@ -2412,7 +2477,7 @@ describe('AgentModel', () => {
       const hetero = result.find((a) => a.id === 'hetero-agent');
       const normal = result.find((a) => a.title === 'Normal Agent');
       expect(hetero?.heteroType).toBe('claude-code');
-      expect(normal?.heteroType).toBeUndefined();
+      expect(normal?.heteroType).toBe('orvilo');
       // raw agencyConfig must not leak into the result payload
       expect(hetero).not.toHaveProperty('agencyConfig');
     });
@@ -3045,7 +3110,11 @@ describe('AgentModel', () => {
 
       const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
 
-      expect(result?.agencyConfig).toEqual({ enableGraphMode: true, graph });
+      expect(result?.agencyConfig).toEqual({
+        enableGraphMode: true,
+        graph,
+        heterogeneousProvider: { type: 'orvilo' },
+      });
     });
 
     it('should migrate a legacy chatConfig graph to agencyConfig on write', async () => {

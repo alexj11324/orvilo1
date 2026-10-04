@@ -13,7 +13,7 @@ import { createModal, useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { getForwardedMessageText } from '@/store/chat/slices/forward/helpers';
 import { useHomeStore } from '@/store/home';
@@ -148,8 +148,6 @@ const ForwardModalContent = memo(() => {
     close();
   };
 
-  const avatarOf = (avatar: unknown) => (typeof avatar === 'string' ? avatar : undefined);
-
   return (
     <div className={cn('flex gap-4', styles.body)}>
       {/* Left: searchable multi-select agent list */}
@@ -190,7 +188,7 @@ const ForwardModalContent = memo(() => {
                   onClick={() => toggle(agent.id)}
                 >
                   <SelectCircle checked={checked} />
-                  <AgentAvatar avatar={avatarOf(agent.avatar)} />
+                  <AgentRuntimeIcon size={22} type={agent.heterogeneousType} />
                   <div className="truncate" style={{ flex: 1 }}>
                     {agentDisplayName(agent, t('untitledAgent'))}
                   </div>

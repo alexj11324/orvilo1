@@ -10,7 +10,7 @@ import { useModalContext } from '@/components/Modal';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useHomeStore } from '@/store/home';
 import { homeAgentListSelectors } from '@/store/home/selectors';
@@ -139,9 +139,7 @@ export const TopicForwardContent = ({
                     )
                   }
                 >
-                  <AgentAvatar
-                    avatar={typeof agent.avatar === 'string' ? agent.avatar : undefined}
-                  />
+                  <AgentRuntimeIcon size={22} type={agent.heterogeneousType} />
                   <div className="truncate" style={{ flex: 1 }}>
                     {agent.title || t('untitledAgent')}
                   </div>

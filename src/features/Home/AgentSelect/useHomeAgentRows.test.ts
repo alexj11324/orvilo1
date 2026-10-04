@@ -110,6 +110,17 @@ describe('useHomeAgentRows', () => {
     mocks.homeState.ungroupedAgents = [];
   });
 
+  it('keeps the declared runtime independent of an edited name and avatar', () => {
+    mocks.homeState.ungroupedAgents = [
+      agent('agt_codex', 'Personal name', { avatar: '🦄', heterogeneousType: 'codex' }),
+    ];
+    const { result } = renderHook(() => useHomeAgentRows());
+    expect(result.current.workspaceRows.find((row) => row.id === 'agt_codex')).toMatchObject({
+      heterogeneousType: 'codex',
+      title: 'Personal name',
+    });
+  });
+
   it('ignores a stale per-agent sidebar-hidden preference', () => {
     // Per-item sidebar membership is retired — a leftover hidden id must not
     // drop the agent from the home switcher.

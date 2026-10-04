@@ -7,8 +7,8 @@ import { useTranslation } from 'react-i18next';
 
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type SidebarAgentItem } from '@/database/repositories/home';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
-import AgentAvatar from '@/features/HomeSidebar/Body/Agent/List/AgentItem/Avatar';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
 import AgentItem from '@/features/PageEditor/Copilot/AgentSelector/AgentItem';
@@ -123,7 +123,6 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
         agent={agent}
         agentId={agent.id}
         agentTitle={agentDisplayName(agent, t('untitledAgent', { ns: 'chat' }))}
-        avatar={agent.avatar}
         key={agent.id}
         onAgentChange={handleAgentChange}
         onClose={() => setOpen(false)}
@@ -173,9 +172,7 @@ const AgentSelectorAction = memo<AgentSelectorActionProps>(({ onAgentChange }) =
             style={{ height: 28 }}
             type={'button'}
           >
-            <AgentAvatar
-              avatar={typeof activeAgent?.avatar === 'string' ? activeAgent.avatar : undefined}
-            />
+            <AgentRuntimeIcon size={22} type={activeAgent?.heterogeneousType} />
             <ChevronsUpDownIcon className={styles.chevron} size={14} />
           </button>
         }

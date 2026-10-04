@@ -9,11 +9,11 @@ import { useTranslation } from 'react-i18next';
 
 import { useAgentShareSupported } from '@/business/client/useAgentShareSupported';
 import ActionIcon from '@/components/ActionIcon';
-import Avatar from '@/components/Avatar';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { createAgentIdentityModal } from '@/features/AgentIdentityModal';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -39,6 +39,9 @@ const AgentSettingsHeader = memo<AgentSettingsHeaderProps>(({ agentId }) => {
   const navigate = useWorkspaceAwareNavigate();
 
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId), isEqual);
+  const runtimeType = useAgentStore(
+    (s) => agentSelectors.getAgentConfigById(agentId)(s)?.agencyConfig?.heterogeneousProvider?.type,
+  );
   const slug = useAgentStore(agentSelectors.getAgentSlugById(agentId));
   const removeAgent = useHomeStore((s) => s.removeAgent);
 
@@ -113,7 +116,7 @@ const AgentSettingsHeader = memo<AgentSettingsHeaderProps>(({ agentId }) => {
 
   return (
     <div className="flex items-center gap-3" style={{ paddingBlock: '8px 12px' }}>
-      <Avatar avatar={meta.avatar} name={personalName || role} shape={'square'} size={48} />
+      <AgentRuntimeIcon size={48} type={runtimeType} />
       <div className="flex flex-col gap-0.5" style={{ minWidth: 0 }}>
         <div className="truncate" style={{ fontSize: 22, fontWeight: 600, lineHeight: 1.3 }}>
           {personalName || t('settingAgent.identity.untitled', { ns: 'setting' })}

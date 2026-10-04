@@ -24,6 +24,7 @@ const ActionIconWithChevron = memo<ActionIconWithChevronProps>(
         <div className="flex flex-row items-center gap-1">
           <span className="anticon" role="img">
             {createElement(icon, {
+              className: 'size-[18px]',
               size: 18,
               width: 18,
               height: 18,
@@ -33,6 +34,7 @@ const ActionIconWithChevron = memo<ActionIconWithChevronProps>(
           </span>
           <span className="anticon" role="img">
             <ChevronDownIcon
+              className="size-3.5"
               color={cssVar.colorIcon}
               fill={'transparent'}
               height={14}

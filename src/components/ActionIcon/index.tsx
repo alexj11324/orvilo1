@@ -197,9 +197,10 @@ const ActionIcon = memo<ActionIconProps>(
     ...rest
   }) => {
     const { blockSize, borderRadius, iconSize, strokeWidth } = calcSize(size);
+    const iconStyle = { height: iconSize, width: iconSize, ...slotStyles?.icon };
 
     const iconNode = loading ? (
-      <Spinner className={cn('pointer-events-none', classNames?.icon)} style={slotStyles?.icon} />
+      <Spinner className={cn('pointer-events-none', classNames?.icon)} style={iconStyle} />
     ) : icon ? (
       isValidElement(icon) ? (
         icon
@@ -215,7 +216,7 @@ const ActionIcon = memo<ActionIconProps>(
               fillRule={fillRule}
               size={iconSize}
               strokeWidth={strokeWidth}
-              style={slotStyles?.icon}
+              style={iconStyle}
             />
           );
         })()
@@ -237,6 +238,7 @@ const ActionIcon = memo<ActionIconProps>(
         aria-label={ariaLabel ?? (typeof title === 'string' ? title : undefined)}
         data-active={active || undefined}
         disabled={disabled || loading}
+        size="icon"
         type={type ?? 'button'}
         variant={VARIANT_MAP[variant]}
         className={cn(

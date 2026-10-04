@@ -195,3 +195,6 @@ tasks/
 # them was reviewed and refused earlier; do not re-attempt or route around it.
 # Reproduce locally with .agents/acceptance/scripts/cdp-inspect.cjs --shot.
 docs/design-references/
+
+# Browser test reports and screenshots
+test-results/

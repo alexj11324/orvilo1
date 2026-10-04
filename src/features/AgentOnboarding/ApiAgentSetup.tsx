@@ -50,6 +50,7 @@ export default function ApiAgentSetup({
           creation.current,
           {
             config: firstPrimeAgentConfig(binding.model, deviceId),
+            visibility: 'private',
           },
           createAgent,
         );

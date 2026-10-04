@@ -39,6 +39,7 @@ import { getDeviceIcon } from '@/features/DeviceManager/getDeviceIcon';
 import { getDeviceLabel } from '@/features/DeviceManager/getDeviceLabel';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import type { CreateAgentParams } from '@/services/agent';
 import {
   createOnboardingAgentOnce,
   type FirstAgentCreationCheckpoint,
@@ -390,12 +391,21 @@ interface ConnectAgentContentProps {
    * that hand-off does not make the user find the same row again.
    */
   initialType?: HeterogeneousAgentType;
+  onCreated?: (agentId: string, config: CreateAgentParams['config']) => Promise<void>;
   onTitleChange: (title: string) => void;
   visibility?: 'private' | 'public';
 }
 
 const ConnectAgentContent = memo<ConnectAgentContentProps>(
-  ({ groupId, initialType, initialTarget, creationCheckpoint, onTitleChange, visibility }) => {
+  ({
+    groupId,
+    initialType,
+    initialTarget,
+    creationCheckpoint,
+    onCreated,
+    onTitleChange,
+    visibility,
+  }) => {
     const { t } = useTranslation('chat');
     const { close, setCanDismissByClickOutside } = useModalContext();
     const navigate = useWorkspaceAwareNavigate();
@@ -406,7 +416,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     // Workspace agents must bind workspace devices: a workspace agent on a
     // personal device is unreachable to other members and rejected server-side.
     const activeWorkspaceId = useActiveWorkspaceId();
-    const restrictToWorkspaceDevices = Boolean(activeWorkspaceId);
+    const restrictToWorkspaceDevices = Boolean(activeWorkspaceId) && !creationCheckpoint;
 
     const [step, setStep] = useState(0);
     const [target, setTarget] = useState<ScanTarget | null>(null);
@@ -594,6 +604,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                 ? await createOnboardingAgentOnce(creationCheckpoint, params, storeCreateAgent)
                 : { ...(await storeCreateAgent(params)), config: params.config };
               const savedConfig = result.config ?? params.config;
+              await onCreated?.(result.agentId, savedConfig);
               const savedProvider =
                 CONNECTABLE_PROVIDERS.find(
                   (item) => item.type === savedConfig.agencyConfig?.heterogeneousProvider?.type,
@@ -620,6 +631,10 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             }),
           );
           await refreshAgentList();
+          if (onCreated) {
+            close();
+            return;
+          }
           setDone(created);
           onTitleChange(
             created.length === 1
@@ -634,11 +649,13 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       },
       [
         activeWorkspaceId,
+        close,
         buildCreateParams,
         creationCheckpoint,
         deviceLabel,
         devices,
         onTitleChange,
+        onCreated,
         refreshAgentList,
         scanState,
         selectedProviders,
@@ -1052,6 +1069,7 @@ export interface OpenConnectAgentModalOptions {
   initialTarget?: ScanTarget;
   /** Pre-select this harness when the scan finds it (composer picker hand-off). */
   initialType?: HeterogeneousAgentType;
+  onCreated?: (agentId: string, config: CreateAgentParams['config']) => Promise<void>;
   visibility?: 'private' | 'public';
 }
 
@@ -1068,6 +1086,7 @@ export const openConnectAgentModal = (options?: OpenConnectAgentModalOptions): M
         initialTarget={options?.initialTarget}
         initialType={options?.initialType}
         visibility={options?.visibility}
+        onCreated={options?.onCreated}
         onTitleChange={(title) => holder.instance?.update({ title })}
       />
     ),

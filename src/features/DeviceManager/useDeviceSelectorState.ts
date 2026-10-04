@@ -48,12 +48,15 @@ export interface UseDeviceSelectorStateOptions {
   boundDeviceId?: string;
   /** Caller-side permission/policy result (`useEffectiveAgencyConfig`). */
   canSelectDevice: boolean;
+  /** Authority to choose the caller's personal pool for a workspace Agent. */
+  canSelectPersonalDevice?: boolean;
   /** Caller-owned device explicitly selected in the workspace member override. */
   memberSelectedDeviceId?: string;
   /**
    * Which legal pool to select from. `personal` agents may only bind the
    * caller's own devices; `workspace` agents use workspace-scope devices plus
-   * the caller's exact personal member override, never a personal shared default.
+   * the caller's exact personal member override. Authorized private owners and
+   * member-selectable callers may also choose a new caller-personal device.
    */
   scope: 'personal' | 'workspace';
 }
@@ -68,6 +71,7 @@ export interface UseDeviceSelectorStateOptions {
 export const useDeviceSelectorState = ({
   boundDeviceId,
   canSelectDevice,
+  canSelectPersonalDevice = false,
   memberSelectedDeviceId,
   permissionsLoaded = true,
   scope,
@@ -82,13 +86,27 @@ export const useDeviceSelectorState = ({
     );
     const selectable =
       scope === 'workspace'
-        ? [...workspace, ...(selectedPersonalDevice ? [selectedPersonalDevice] : [])]
+        ? [
+            ...workspace,
+            ...(canSelectDevice && canSelectPersonalDevice
+              ? personal
+              : selectedPersonalDevice
+                ? [selectedPersonalDevice]
+                : []),
+          ]
         : personal;
     return {
       runnableDevices: selectable.filter((device) => device.online),
       selectableDevices: selectable,
     };
-  }, [boundDeviceId, devices, memberSelectedDeviceId, scope]);
+  }, [
+    boundDeviceId,
+    canSelectDevice,
+    canSelectPersonalDevice,
+    devices,
+    memberSelectedDeviceId,
+    scope,
+  ]);
 
   const bindingState: DeviceSelectorState['bindingState'] = useMemo(() => {
     if (!boundDeviceId) return 'unset';

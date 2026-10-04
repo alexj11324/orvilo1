@@ -16,6 +16,8 @@ const dynamicComponentPropsMock = vi.hoisted(() => vi.fn());
 
 const serverConfigMock = vi.hoisted(() => ({ enableBusinessFeatures: false }));
 const shareContextMock = vi.hoisted(() => ({ topicShareId: '' }));
+const repairContextMock = vi.hoisted(() => ({ canSelectPersonalDevice: true }));
+vi.mock('@/hooks/useTopicAgencyConfig', () => ({ useTopicAgencyConfig: () => repairContextMock }));
 const delAndRegenerateMessageMock = vi.hoisted(() => vi.fn());
 const detectHeterogeneousAgentCommandMock = vi.hoisted(() => vi.fn());
 // Keyed by message id so a test can decide whether `data.id` is a top-level
@@ -72,6 +74,9 @@ vi.mock('react-i18next', () => ({
 
 vi.mock('react-router', () => ({
   useNavigate: () => navigateMock,
+}));
+vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
+  useWorkspaceAwareNavigate: () => navigateMock,
 }));
 
 vi.mock('@/business/client/hooks/useBusinessErrorAlertConfig', () => ({
@@ -191,6 +196,7 @@ describe('ErrorMessageExtra', () => {
     businessSlot.render = false;
     serverConfigMock.enableBusinessFeatures = false;
     shareContextMock.topicShareId = '';
+    repairContextMock.canSelectPersonalDevice = true;
     businessErrorContentMock.mockReturnValue({
       errorType: undefined,
       hideMessage: false,
@@ -217,6 +223,23 @@ describe('ErrorMessageExtra', () => {
     );
     expect(screen.getByText('deviceAdmission.required')).toBeInTheDocument();
     expect(screen.queryByText('card-retry')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
+    expect(navigateMock).toHaveBeenCalledWith('/settings/devices', { escape: true });
+  });
+  it('keeps a fixed workspace device repair on workspace settings', () => {
+    repairContextMock.canSelectPersonalDevice = false;
+    render(
+      <ErrorMessageExtra
+        error={{ message: 'DEVICE_REQUIRED' }}
+        data={{
+          id: 'fixed-device',
+          error: {
+            type: AgentRuntimeErrorType.AgentRuntimeError,
+            body: { detail: 'DEVICE_REQUIRED: Workspace pool is empty.' },
+          },
+        }}
+      />,
+    );
     fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
     expect(navigateMock).toHaveBeenCalledWith('/settings/devices');
   });

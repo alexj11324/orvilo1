@@ -24,6 +24,7 @@ import type { HeterogeneousAgentScheduleState } from '@/features/Electron/Hetero
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useProviderName } from '@/hooks/useProviderName';
+import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import dynamic from '@/libs/next/dynamic';
 import { binaryService } from '@/services/electron/binary';
 import { useChatStore } from '@/store/chat';
@@ -289,6 +290,8 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
     const { canUseResource } = useConversationResourceAccess();
     const canCreate = canCreateContent && canUseResource;
     const isSharedTopic = useConversationStore((s) => !!s.context?.topicShareId);
+    const agentId = useConversationStore((s) => s.context?.agentId);
+    const { canSelectPersonalDevice } = useTopicAgencyConfig(agentId);
     const sessionErrorBody = error?.body;
     const rawErrorMessage = getRawErrorMessage(error);
     const errorDetails = getErrorDetails(error);
@@ -448,7 +451,15 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
           error={{
             message: t(messageKey),
             action: !isSharedTopic && (
-              <Button size="sm" variant="outline" onClick={() => navigate('/settings/devices')}>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  canSelectPersonalDevice
+                    ? navigate('/settings/devices', { escape: true })
+                    : navigate('/settings/devices')
+                }
+              >
                 {t('deviceAdmission.configure')}
               </Button>
             ),

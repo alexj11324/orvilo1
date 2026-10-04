@@ -402,6 +402,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     agencyConfig,
     canDisplayExecutionTarget,
     canSelectExecutionTarget,
+    canSelectPersonalDevice,
     isPreferenceLoading: isWorkspacePreferenceLoading,
     memberSelectedDeviceId,
     workspaceScoped,
@@ -623,11 +624,10 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   //   Never show `scope: 'workspace'` rows here (they belong to a workspace
   //   the personal-mode agent has nothing to do with).
   //
-  // - **Workspace agent** — workspace-scope devices plus the caller's exact
-  //   personal device explicitly selected in their member override. The
-  //   inventory already authorizes personal rows to this caller; including
-  //   that selected row preserves its user gateway principal without sharing
-  //   it or treating shared Agent defaults as a personal selection.
+  // - **Workspace agent** — workspace devices plus caller-personal candidates
+  //   only for a private owner or member-selectable caller. Other contexts
+  //   retain only their exact personal member override. The API authorizes
+  //   personal inventory to the caller; shared defaults grant no personal pool.
   //
   // Naming — Personal is reserved for the account-tier concept; workspace
   // groupings say Private/Workspace (私人/工作区) instead.
@@ -636,7 +636,14 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     (device) => device.deviceId === memberSelectedDeviceId && device.deviceId === boundDeviceId,
   );
   const privateDevices = isWorkspaceAgent
-    ? [...privateWorkspace, ...(selectedPersonalDevice ? [selectedPersonalDevice] : [])]
+    ? [
+        ...privateWorkspace,
+        ...(canShowExecutionTargetSelector && canSelectPersonalDevice
+          ? personal
+          : selectedPersonalDevice
+            ? [selectedPersonalDevice]
+            : []),
+      ]
     : [];
   const workspaceDevices = isWorkspaceAgent ? workspace : [];
   const personalOnlyDevices = isWorkspaceAgent ? [] : personal;
@@ -779,7 +786,8 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
           type="button"
           onClick={() => {
             setOpen(false);
-            navigate('/settings/devices');
+            if (canSelectPersonalDevice) navigate('/settings/devices', { escape: true });
+            else navigate('/settings/devices');
           }}
         >
           <span className="anticon" role="img">

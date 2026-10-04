@@ -194,11 +194,6 @@ const styles = createStaticStyles(({ css }) => ({
 
     background: ${cssVar.colorFillTertiary};
   `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
   row: css`
     cursor: pointer;
 
@@ -344,9 +339,8 @@ const AgentScanRow = memo<{
   provider: ConnectableProvider;
   selected: boolean;
   status?: HeterogeneousAgentScanStatus;
-  subtitle: string;
   unavailableText: string;
-}>(({ onToggle, provider, selected, status, subtitle, unavailableText }) => {
+}>(({ onToggle, provider, selected, status, unavailableText }) => {
   const available = status?.available === true;
   const row = (
     <div
@@ -356,15 +350,11 @@ const AgentScanRow = memo<{
       onClick={available ? onToggle : undefined}
     >
       <provider.brand.Avatar size={32} />
-      <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1 justify-center" style={{ minHeight: 42, minWidth: 0 }}>
         <div className="font-semibold">{provider.title}</div>
-        <div className="truncate block text-[12px] text-muted-foreground">{subtitle}</div>
       </div>
       {available ? (
-        <>
-          {status?.version && <span className={styles.mono}>{status.version}</span>}
-          <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
-        </>
+        <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
       ) : (
         <div className="text-[12px] text-muted-foreground">{unavailableText}</div>
       )}
@@ -925,7 +915,6 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                     provider={provider}
                     selected={selectedTypes.includes(provider.type)}
                     status={status}
-                    subtitle={t(`connectAgent.providerDesc.${provider.type}`)}
                     unavailableText={t('connectAgent.create.notInstalled')}
                     onToggle={() => toggleType(provider)}
                   />

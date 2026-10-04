@@ -63,7 +63,7 @@ export const ensureTestUserPrimeAgent = async (request: APIRequestContext): Prom
       },
       model: E2E_PRIME_MODEL,
       provider: 'deepseek',
-      title: 'E2E Prime Agent',
+      title: 'Orvilo AI',
     },
     visibility: 'private',
   });

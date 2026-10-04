@@ -24,6 +24,7 @@ in remote CI. The Playwright spec and runner have a separate TypeScript project
 checked by this workflow: Playwright imports Electron's global DOM overloads,
 so these runner files are excluded from the application's Vitest type program.
 The browser fixture and Vite config remain covered by the root Typecheck job.
+Vitest excludes this directory; Playwright owns its browser test execution.
 For manual inspection, start only the fixture server:
 
 ```sh

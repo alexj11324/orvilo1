@@ -3,6 +3,7 @@ import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
@@ -15,6 +16,15 @@ import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
 // a model-loop `initialMessages` array. These tests delegate to the real
 // dispatch (stubs around the persistence/device/sandbox edges) and assert on
 // the serialized history the host receives.
+const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
+  mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/featureFlags', async (importOriginal) => ({
+  ...(await importOriginal<typeof FeatureFlagsModule>()),
+  getServerFeatureFlagsStateFromRuntimeConfig: mockSandboxFeatureFlags,
+}));
+
 const {
   mockDispatchHeteroAgent,
   mockFindById,
@@ -272,6 +282,7 @@ describe('AiAgentService.execAgent - resume mode', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
 
     vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
     vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);

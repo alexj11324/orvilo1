@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, type MockInstance, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 import {
   openEmbeddedChatDispatchHost,
@@ -8,6 +9,15 @@ import {
 } from '@/server/services/controlPlane/embeddedChatDispatch';
 
 import { AiAgentService } from '../index';
+
+const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
+  mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/featureFlags', async (importOriginal) => ({
+  ...(await importOriginal<typeof FeatureFlagsModule>()),
+  getServerFeatureFlagsStateFromRuntimeConfig: mockSandboxFeatureFlags,
+}));
 
 const {
   mockDeviceFindByDeviceId,
@@ -299,6 +309,7 @@ describe('AiAgentService.execAgent - hetero early-exit file attachments', () => 
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
     vi.spyOn(AgentOperationModel.prototype, 'findById').mockResolvedValue(undefined as any);
     vi.spyOn(AgentOperationModel.prototype, 'settleRunning').mockResolvedValue(true);
     recordStartSpy = vi.spyOn(CompletionLifecycle.prototype, 'recordStart').mockResolvedValue(true);

@@ -3,10 +3,20 @@ import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
+
+const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
+  mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/featureFlags', async (importOriginal) => ({
+  ...(await importOriginal<typeof FeatureFlagsModule>()),
+  getServerFeatureFlagsStateFromRuntimeConfig: mockSandboxFeatureFlags,
+}));
 
 const {
   mockComposeDevicePrimeRun,
@@ -323,6 +333,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: false });
     mockDispatchHeteroAgent.mockImplementation((deps, ctx, input) =>
       realDispatchRef.current!(deps, ctx, input),
     );
@@ -391,7 +402,22 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
     });
 
+    it('blocks an explicit sandbox target when cloud execution is disabled', async () => {
+      await useAgencyConfig({ executionTarget: 'sandbox' });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'List my files' });
+
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        autoStarted: false,
+        error: 'No bound device',
+        success: false,
+      });
+    });
+
     it('routes an explicit sandbox target to the cloud sandbox', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'sandbox' });
 
       await service.execAgent({ agentId: 'agent-1', prompt: 'List my files' });
@@ -415,6 +441,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     });
 
     it('keeps a bound device unrouted when the fixed target is sandbox', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'sandbox',
@@ -659,6 +686,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     });
 
     it('injects the .aegis/ completion contract + env bit on an enabled sandbox run', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({
         executionTarget: 'sandbox',
         heterogeneousProvider: { methodPacks: { aegis: true }, type: 'claude-code' },

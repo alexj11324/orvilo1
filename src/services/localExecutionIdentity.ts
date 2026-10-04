@@ -2,6 +2,7 @@ import { isDesktop } from '@orvilo/const';
 
 import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
 import { TargetRequiredError } from '@/services/targetRequiredError';
+import { useUserStore } from '@/store/user';
 
 /**
  * The main process reports this sentinel when no device identity has been
@@ -10,15 +11,15 @@ import { TargetRequiredError } from '@/services/targetRequiredError';
  */
 const UNPROVEN_DEVICE_ID = 'unknown';
 
-let cachedLocalDeviceId: string | undefined;
-let inflight: Promise<string | undefined> | undefined;
+let cached: { deviceId: string; ownerId: string } | undefined;
+let inflight: { ownerId: string; promise: Promise<string | undefined> } | undefined;
 
 export interface LocalExecutionIdentity {
   /**
    * This host's proven local device identity, resolved through the gateway
    * device handshake (`gatewayConnection.getDeviceInfo`): the stable
-   * user-scoped machine-derived id, or the persisted fallback UUID before
-   * login. Absent when this client has no local runtime (web) or the
+   * account-scoped machine-derived or persisted fallback identity.
+   * Absent before login, when this client has no local runtime (web), or the
    * identity cannot be proven yet.
    */
   localDeviceId?: string;
@@ -27,12 +28,15 @@ export interface LocalExecutionIdentity {
 /**
  * Record a device id that was proven by an upstream handshake (e.g. the
  * ElectronStore's `gatewayDeviceInfo` fetch) so service calls skip a
- * duplicate IPC round-trip. `undefined`/`unknown` inputs are ignored —
- * priming can only strengthen evidence, never fabricate it.
+ * duplicate IPC round-trip. Unavailable evidence clears this owner's cached
+ * identity; another account's evidence is never accepted.
  */
-export const primeLocalExecutionIdentity = (deviceId: string | null | undefined): void => {
-  if (deviceId && deviceId !== UNPROVEN_DEVICE_ID) {
-    cachedLocalDeviceId = deviceId;
+export const primeLocalExecutionIdentity = (
+  deviceId: string | null | undefined,
+  ownerId = useUserStore.getState().user?.id,
+): void => {
+  if (ownerId && ownerId === useUserStore.getState().user?.id) {
+    cached = deviceId && deviceId !== UNPROVEN_DEVICE_ID ? { deviceId, ownerId } : undefined;
   }
 };
 
@@ -40,25 +44,41 @@ export const primeLocalExecutionIdentity = (deviceId: string | null | undefined)
 export const resolveLocalExecutionIdentity = async (): Promise<LocalExecutionIdentity> => {
   // A web client has no local runtime — nothing to prove, no IPC to call.
   if (!isDesktop) return {};
-  if (cachedLocalDeviceId) return { localDeviceId: cachedLocalDeviceId };
+  const ownerId = useUserStore.getState().user?.id;
+  if (!ownerId) {
+    cached = undefined;
+    return {};
+  }
+  if (cached?.ownerId === ownerId) return { localDeviceId: cached.deviceId };
 
-  inflight ??= (async () => {
-    try {
-      const deviceId = (await gatewayConnectionService.getDeviceInfo())?.deviceId;
-      if (deviceId && deviceId !== UNPROVEN_DEVICE_ID) {
-        cachedLocalDeviceId = deviceId;
-        return deviceId;
+  if (inflight?.ownerId !== ownerId) {
+    const promise = (async () => {
+      try {
+        const info = await gatewayConnectionService.getDeviceInfo();
+        if (
+          useUserStore.getState().user?.id === ownerId &&
+          info?.userId === ownerId &&
+          info.deviceId &&
+          info.deviceId !== UNPROVEN_DEVICE_ID
+        ) {
+          cached = { deviceId: info.deviceId, ownerId };
+          return info.deviceId;
+        }
+        return undefined;
+      } catch (error) {
+        console.error('Local device identity handshake failed', error);
+        return undefined;
       }
-      return undefined;
-    } catch {
-      // Never cache a failure — the next caller retries the handshake.
-      return undefined;
-    } finally {
-      inflight = undefined;
-    }
-  })();
-
-  return { localDeviceId: await inflight };
+    })();
+    inflight = { ownerId, promise };
+  }
+  const { promise } = inflight;
+  try {
+    const localDeviceId = await promise;
+    return localDeviceId && useUserStore.getState().user?.id === ownerId ? { localDeviceId } : {};
+  } finally {
+    if (inflight?.promise === promise) inflight = undefined;
+  }
 };
 
 /**

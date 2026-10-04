@@ -249,7 +249,9 @@ export default class GatewayConnectionCtr extends ControllerModule {
     deviceId: string;
     hostname: string;
     platform: string;
+    userId?: string;
   }> {
+    await this.gatewayReady;
     return this.service.getDeviceInfo();
   }
 

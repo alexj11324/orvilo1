@@ -1,6 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
+import { link, mkdir, readFile, rename, rm, writeFile } from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
 
-import { machineIdSync } from 'node-machine-id';
+import { machineId, machineIdSync } from 'node-machine-id';
 
 /**
  * Constant mixed into the deviceId hash. Not a secret — it only ensures the
@@ -76,4 +79,111 @@ export const deriveDeviceId = (
   } catch {
     return { deviceId: options.fallbackId ?? randomUUID(), identitySource: 'fallback' };
   }
+};
+
+interface StoredDeviceIdentity extends DeviceIdentity {
+  /** Existing machine/principal hash, used to detect a copied record; never a raw machine ID. */
+  machineDeviceId?: string;
+  version: 1;
+}
+
+export interface PersistentDeviceIdentityOptions {
+  /** Test isolation only. Real clients share the user-level directory across installations. */
+  identityDirectory?: string;
+  readMachineId?: () => string;
+}
+
+const readIdentityRecord = async (filename: string): Promise<StoredDeviceIdentity | undefined> => {
+  let contents: string;
+  try {
+    contents = await readFile(filename, 'utf8');
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return undefined;
+    throw error;
+  }
+  const { deviceId, identitySource, machineDeviceId, version } = JSON.parse(contents) as {
+    deviceId?: unknown;
+    identitySource?: unknown;
+    machineDeviceId?: unknown;
+    version?: unknown;
+  };
+  if (
+    version !== 1 ||
+    typeof deviceId !== 'string' ||
+    !/^(?:[\da-f]{32}|[\da-f-]{36})$/.test(deviceId) ||
+    (identitySource !== 'machine-id' && identitySource !== 'fallback') ||
+    (machineDeviceId !== undefined &&
+      (typeof machineDeviceId !== 'string' || !/^[\da-f]{32}$/.test(machineDeviceId))) ||
+    (identitySource === 'machine-id' && machineDeviceId !== deviceId)
+  ) {
+    throw new Error('Invalid persisted device identity record');
+  }
+  return { deviceId, identitySource, machineDeviceId, version };
+};
+
+/**
+ * Canonical local identity shared by CLI and Electron, independent of their
+ * per-install connection IDs. The first complete record wins, including a
+ * fallback record; a later successful OS read must not rotate its device ID.
+ * Known-machine records are rejected on a different readable OS identity.
+ * This is local enrollment continuity, not proof against cloned OS state.
+ */
+export const resolvePersistentDeviceIdentity = async (
+  principal: string,
+  options: PersistentDeviceIdentityOptions = {},
+): Promise<DeviceIdentity> => {
+  const directory = options.identityDirectory ?? path.join(os.homedir(), '.orvilo-device-identity');
+  const filename = path.join(
+    directory,
+    `${createHash('sha256').update(principal).digest('hex')}.json`,
+  );
+  let rawMachineId: string;
+  try {
+    rawMachineId = await (options.readMachineId ? options.readMachineId() : machineId(true));
+  } catch {
+    rawMachineId = '';
+  }
+  const candidate = deriveDeviceId(principal, { readMachineId: () => rawMachineId });
+  const machineDeviceId =
+    candidate.identitySource === 'machine-id' ? candidate.deviceId : undefined;
+
+  await mkdir(directory, { mode: 0o700, recursive: true });
+  let record = await readIdentityRecord(filename);
+  if (!record) {
+    const temporary = `${filename}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(temporary, JSON.stringify({ ...candidate, machineDeviceId, version: 1 }), {
+        flag: 'wx',
+        mode: 0o600,
+      });
+      try {
+        // Hard-link publication is atomic and cannot overwrite a concurrent winner.
+        await link(temporary, filename);
+      } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EEXIST') throw error;
+      }
+    } finally {
+      await rm(temporary, { force: true });
+    }
+    record = await readIdentityRecord(filename);
+    if (!record) throw new Error('Persisted device identity disappeared during creation');
+  }
+
+  if (machineDeviceId && record.machineDeviceId && machineDeviceId !== record.machineDeviceId) {
+    throw new Error('Persisted device identity belongs to a different machine');
+  }
+  if (machineDeviceId && !record.machineDeviceId) {
+    const temporary = `${filename}.${randomUUID()}.tmp`;
+    try {
+      await writeFile(temporary, JSON.stringify({ ...record, machineDeviceId }), {
+        flag: 'wx',
+        mode: 0o600,
+      });
+      // Concurrent successful readers on this machine attach the same validation hash.
+      await rename(temporary, filename);
+    } finally {
+      await rm(temporary, { force: true });
+    }
+  }
+  return { deviceId: record.deviceId, identitySource: record.identitySource };
 };

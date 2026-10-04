@@ -410,7 +410,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       if (isScheduled) {
         const visual = TOPIC_STATUS_VISUALS.scheduled;
         const runAt = metadata?.scheduledRun?.runAt;
-        const icon = <visual.icon size={'small'} style={{ color: visual.color }} />;
+        const icon = <visual.icon size={14} style={{ color: visual.color }} />;
         return runAt ? (
           <Tooltip>
             <TooltipTrigger render={<span>{icon}</span>} />
@@ -424,7 +424,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       }
       if (isWaitingForHuman) {
         const visual = TOPIC_STATUS_VISUALS.waitingForHuman;
-        return <visual.icon size={'small'} style={{ color: visual.color }} />;
+        return <visual.icon size={14} style={{ color: visual.color }} />;
       }
       if (shouldShowRunningIcon) {
         return (
@@ -442,7 +442,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
             <TooltipTrigger
               render={
                 <span>
-                  <visual.icon size={'small'} style={{ color: visual.color }} />
+                  <visual.icon size={14} style={{ color: visual.color }} />
                 </span>
               }
             />
@@ -461,7 +461,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
       // the masked post-output tail cannot fall back to a static running icon.
       if (status && status !== 'active' && status !== 'running') {
         const visual = TOPIC_STATUS_VISUALS[status];
-        return <visual.icon size={'small'} style={{ color: visual.color }} />;
+        return <visual.icon size={14} style={{ color: visual.color }} />;
       }
       return null;
     })();
@@ -486,7 +486,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
               render={
                 <span>
                   <span className={styles.prIcon}>
-                    <prVisual.icon size={'small'} style={{ color: prVisual.color }} />
+                    <prVisual.icon size={14} style={{ color: prVisual.color }} />
                     {showCiBadge && (
                       <span className={styles.ciBadge}>
                         <ciVisual.icon

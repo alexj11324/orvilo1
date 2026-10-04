@@ -228,6 +228,24 @@ describe('TopicItem active state', () => {
     expect(screen.queryByTestId('topic-item-icon')).not.toBeInTheDocument();
   });
 
+  it.each(['failed', 'scheduled', 'waitingForHuman', 'completed', 'archived'] as const)(
+    'renders the %s status SVG within the sidebar icon slot',
+    (status) => {
+      useTopicNavigationMock.mockReturnValue({
+        isInAgentSubRoute: false,
+        isInTopicContextRoute: false,
+        navigateToTopic: vi.fn(),
+        routeTopicId: undefined,
+      });
+
+      const { container } = render(<TopicItem id="tpc_test" status={status} title="Topic" />);
+      const statusIcon = container.querySelector('svg');
+      expect(statusIcon).toHaveAttribute('width', '14');
+      expect(statusIcon).toHaveAttribute('height', '14');
+      expect(screen.getByText('Topic')).toBeInTheDocument();
+    },
+  );
+
   it('keeps idle topics iconless', () => {
     useTopicNavigationMock.mockReturnValue({
       isInAgentSubRoute: false,

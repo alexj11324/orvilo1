@@ -10,6 +10,7 @@ on:
       - 'postcss.config.mjs'
       - 'package.json'
       - 'pnpm-workspace.yaml'
+      - 'tsconfig.json'
       - '.github/actions/setup-env/**'
       - '.github/workflows/ui-alignment.yml'
   pull_request:
@@ -21,6 +22,7 @@ on:
       - 'postcss.config.mjs'
       - 'package.json'
       - 'pnpm-workspace.yaml'
+      - 'tsconfig.json'
       - '.github/actions/setup-env/**'
       - '.github/workflows/ui-alignment.yml'
   workflow_dispatch: {}
@@ -41,6 +43,8 @@ jobs:
       - uses: actions/checkout@v6
       - uses: ./.github/actions/setup-env
       - run: pnpm install --no-frozen-lockfile
+      - name: Typecheck browser tests
+        run: pnpm exec node scripts/type-check.mjs tsgo --noEmit -p tests/ui-alignment/tsconfig.json
       - run: pnpm exec playwright install --with-deps chromium
       - name: Record tested revision
         run: git rev-parse HEAD > ui-alignment-revision.txt

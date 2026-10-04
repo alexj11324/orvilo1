@@ -20,7 +20,11 @@ the diagnostics. The fixture uses representative row composition and real
 primitives; it does not mount the full authenticated project page.
 
 CI runs `bun run test:ui-alignment`. Browser automation is maintained and run
-in remote CI. For manual inspection, start only the fixture server:
+in remote CI. The Playwright spec and runner have a separate TypeScript project
+checked by this workflow: Playwright imports Electron's global DOM overloads,
+so these runner files are excluded from the application's Vitest type program.
+The browser fixture and Vite config remain covered by the root Typecheck job.
+For manual inspection, start only the fixture server:
 
 ```sh
 pnpm exec vite --config tests/ui-alignment/vite.config.ts

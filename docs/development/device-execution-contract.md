@@ -190,6 +190,22 @@ agent" action instead of writing `lastUsedAgentId` directly; navigation goes
 through the unified `openNewConversation({ agentId })` helper — do not
 hard-code the not-yet-wired `/chat/new` early.
 
+Agent names remain editable; their icons identify the declared runtime. Agent
+lists, selectors, settings headers and welcome surfaces use `AgentRuntimeIcon`
+with the shared provider catalog: Orvilo uses the product logo, and supported
+external agents use their own brand icons. Saved custom avatars and name
+initials do not override these runtime icons.
+
+At the `AgentModel` write boundary, ordinary creation without an external
+provider explicitly binds to `type:'orvilo'`. An external provider must declare
+a type accepted by `HeterogeneousAgentTypeSchema`; missing, empty, null,
+numeric or unknown types return `BAD_REQUEST` before insertion. Batch creation,
+duplication and configuration updates enforce the same rule. Partial provider
+updates merge with the existing configuration before validation, so changing
+the command or display name preserves the runtime. Legacy type inference is a
+read compatibility path and must not manufacture an external identity for a
+new write. This does not bulk-migrate existing records.
+
 ## Settings page
 
 Compact single-page groups: `AgentGeneralSettings` / `AgentModelSettings` /

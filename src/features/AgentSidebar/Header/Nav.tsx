@@ -114,7 +114,7 @@ const Nav = memo(() => {
         title={t('tab.tasks')}
         onClick={() => {
           switchTopic(null, { skipRefreshMessage: true });
-          router.push(urlJoin('/agent', agentId!, 'tasks'));
+          router.push(agentId ? urlJoin('/agent', agentId, 'tasks') : '/tasks');
         }}
       />
     </div>

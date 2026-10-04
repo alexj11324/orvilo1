@@ -2,29 +2,39 @@
  * @vitest-environment happy-dom
  */
 import { fireEvent, render, screen } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import type { ComponentProps } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as errorAlertModule from '../../components/ErrorAlert';
 import ErrorContent from './ErrorContent';
 
 const deleteMessageMock = vi.fn();
 const updateMessageErrorMock = vi.fn();
 let messageContent: string | undefined = '';
 let isRegenerating = false;
+let realAlert = false;
 
 // Drive the Alert's `afterClose` directly via a click, so we exercise
 // ErrorContent's dismiss branching without the real close animation.
-vi.mock('../../components/ErrorAlert', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  default: ({ action, afterClose }: { action?: ReactNode; afterClose?: () => void }) => (
-    <div>
-      <button type="button" onClick={() => afterClose?.()}>
-        close
-      </button>
-      {action}
-    </div>
-  ),
-}));
+vi.mock('../../components/ErrorAlert', async (importOriginal) => {
+  const actual = await importOriginal<typeof errorAlertModule>();
+  const RealAlert = actual.default;
+  return {
+    ...actual,
+    default: (props: ComponentProps<typeof RealAlert>) => {
+      if (realAlert) return <RealAlert {...props} />;
+      const { action, afterClose } = props;
+      return (
+        <div>
+          <button type="button" onClick={() => afterClose?.()}>
+            close
+          </button>
+          {action}
+        </div>
+      );
+    },
+  };
+});
 
 vi.mock('@/features/Conversation/store', () => ({
   dataSelectors: {
@@ -45,6 +55,20 @@ describe('ErrorContent dismiss behavior', () => {
     deleteMessageMock.mockClear();
     updateMessageErrorMock.mockClear();
     isRegenerating = false;
+    realAlert = false;
+  });
+
+  it('keeps technical details collapsed until explicitly requested', () => {
+    realAlert = true;
+    const view = render(
+      <ErrorContent
+        error={{ message: 'Configure a device', extra: <pre>DEVICE_REQUIRED detail</pre> }}
+        id="msg-details"
+      />,
+    );
+    expect(view.queryByText('DEVICE_REQUIRED detail')).toBeNull();
+    fireEvent.click(view.getByRole('button', { name: /View details|appLoading.showDetail/i }));
+    expect(view.getByText('DEVICE_REQUIRED detail')).toBeTruthy();
   });
 
   it('clears only the error (keeps the message) when the turn already streamed content', () => {

@@ -40,6 +40,7 @@ import BranchSwitcher from '@/features/ChatInput/ControlBar/BranchSwitcher';
 import WorktreeSwitcher from '@/features/ChatInput/ControlBar/WorktreeSwitcher';
 import { getAllWorkSummaries } from '@/features/Conversation/store/slices/data/workSummaries';
 import WorkSummaryCard from '@/features/Work/WorkSummaryCard';
+import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { getHostPort } from '@/platform';
 import { gitService } from '@/services/git';
 import { useAgentStore } from '@/store/agent';
@@ -131,6 +132,7 @@ const Overview = memo<OverviewProps>(
     workingDirectory,
   }) => {
     const { t } = useTranslation('chat');
+    const navigate = useWorkspaceAwareNavigate();
     const { t: tDevice } = useTranslation('device');
     const { t: tCommon } = useTranslation('common');
     const isHetero = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
@@ -507,6 +509,15 @@ const Overview = memo<OverviewProps>(
               </EmptyMedia>
               <EmptyTitle>{t('workingPanel.overview.emptyTitle')}</EmptyTitle>
               <EmptyDescription>{t('workingPanel.overview.empty')}</EmptyDescription>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  navigate(agentId ? `/agent/${agentId}/profile` : '/settings/devices')
+                }
+              >
+                {t('workingPanel.overview.configure')}
+              </Button>
             </EmptyHeader>
           </Empty>
         )}

@@ -1,7 +1,5 @@
 'use client';
 
-import 'antd/dist/reset.css';
-
 import { ConfigProvider, ThemeProvider } from '@lobehub/ui';
 import { App } from 'antd';
 import { domMax, LazyMotion } from 'motion/react';

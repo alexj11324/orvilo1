@@ -1,5 +1,4 @@
 import '@/app/globals.css';
-import 'antd/dist/reset.css';
 
 import { ThemeProvider } from '@lobehub/ui';
 import { PlusIcon } from 'lucide-react';
@@ -12,6 +11,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
+import { Button } from '@/components/ui/button';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import ActionIconWithChevron from '@/features/ResourceManager/components/Explorer/ToolBar/ActionIconWithChevron';
 
@@ -42,6 +42,14 @@ createRoot(document.getElementById('root')!).render(
     <TooltipProvider>
       <main style={{ display: 'grid', gap: 24, margin: '0 auto', maxWidth: 760, padding: 24 }}>
         <h1 style={{ fontSize: 18 }}>UI alignment regression fixture</h1>
+        <section aria-label="Primary button foreground">
+          <Button data-testid="primary-button">
+            {language === 'zh' ? '连接设备' : 'Connect device'}
+          </Button>
+          <span data-testid="primary-foreground" style={{ color: 'var(--primary-foreground)' }}>
+            {title}
+          </span>
+        </section>
         <section
           aria-label="Action icon sizes"
           style={{ display: 'flex', flexWrap: 'wrap', gap: 16 }}

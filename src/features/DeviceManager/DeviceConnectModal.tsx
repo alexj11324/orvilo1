@@ -8,10 +8,13 @@ import { memo, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import AsyncBoundary from '@/components/AsyncBoundary';
 import CommandLine from '@/components/CommandLine';
 import ImperativeModal from '@/components/ImperativeModal';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useClientDataSWR } from '@/libs/swr';
+import { cliReleaseService } from '@/services/cliRelease';
 
 const styles = createStaticStyles(({ css }) => ({
   footer: css`
@@ -57,7 +60,10 @@ const Step = memo<StepProps>(({ index, title, desc, children, last }) => (
       <span className={styles.index}>{index}</span>
       {!last && <span className={styles.line} />}
     </div>
-    <div className="flex flex-col flex-1 gap-1" style={{ paddingBlockEnd: last ? 0 : 24 }}>
+    <div
+      className="flex flex-col flex-1 gap-1"
+      style={{ minWidth: 0, paddingBlockEnd: last ? 0 : 24 }}
+    >
       <div className="font-medium">{title}</div>
       {desc && (
         <div className="leading-[1.6]" style={{ color: cssVar.colorTextTertiary }}>
@@ -102,6 +108,11 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
       if (open) setActive(isWorkspace ? 'cli' : (initialTab ?? 'desktop'));
     }, [open, initialTab, isWorkspace]);
 
+    const cliRelease = useClientDataSWR(
+      open && (isWorkspace || active === 'cli') ? 'cli-release' : null,
+      () => cliReleaseService.getLatest(),
+    );
+
     const connectCommand = isWorkspace
       ? `orvilo connect --workspace ${workspaceId ?? '<workspace-id>'}${
           visibility === 'public' ? ' --public' : ''
@@ -111,7 +122,28 @@ const DeviceConnectModal = memo<DeviceConnectModalProps>(
     const cliSteps = (
       <div className="flex flex-col">
         <Step index={1} title={t('devices.connectWizard.cli.installTitle')}>
-          <CommandLine command={'npm install -g @orvilo/cli'} />
+          <AsyncBoundary
+            data={cliRelease.data}
+            error={cliRelease.error}
+            isLoading={cliRelease.isLoading}
+            onRetry={() => void cliRelease.mutate()}
+          >
+            {cliRelease.data?.url ? (
+              <CommandLine
+                command={`npm install -g '${cliRelease.data.url.replaceAll("'", "'\\''")}'`}
+              />
+            ) : (
+              <div className="flex flex-col items-start gap-2">
+                <span>{t('devices.connectWizard.cli.unavailable')}</span>
+                <Button
+                  render={<a href={DOWNLOAD_URL.default} rel="noreferrer" target="_blank" />}
+                  variant="outline"
+                >
+                  {t('devices.connectWizard.cli.viewReleases')}
+                </Button>
+              </div>
+            )}
+          </AsyncBoundary>
         </Step>
         <Step index={2} title={t('devices.connectWizard.cli.loginTitle')}>
           <CommandLine command={'orvilo login'} />

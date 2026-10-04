@@ -107,7 +107,7 @@ const ErrorAlert = memo<ErrorAlertProps>(
           ) : (
             <Collapsible className="col-start-2" defaultOpen={extraDefaultExpand}>
               <CollapsibleTrigger className="text-xs text-muted-foreground">
-                {text?.detail ?? 'Show Details'}
+                {text?.detail ?? t('appLoading.showDetail', { ns: 'common' })}
               </CollapsibleTrigger>
               <CollapsibleContent>
                 <AlertDescription>{extra}</AlertDescription>

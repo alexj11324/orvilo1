@@ -234,6 +234,44 @@ describe('AiAgentService.execAgent - model/provider override', () => {
     service = new AiAgentService(mockDb, userId);
   });
 
+  it.each([null, 'legacy-default-model'])(
+    'uses the pinned inference route for the first Prime turn with legacy model %s',
+    async (legacyModel) => {
+      mockGetAgentConfig.mockResolvedValue({
+        ...defaultAgentConfig,
+        model: legacyModel,
+        provider: null,
+        agencyConfig: {
+          boundDeviceId: 'device-1',
+          executionTarget: 'device',
+          heterogeneousProvider: { model: 'fixture-prime-model', type: 'orvilo' },
+        },
+      });
+      await service.execAgent({ agentId: 'agent-1', prompt: 'First Prime turn' });
+      const topic = mockTopicCreate.mock.calls[0][0];
+      const runContext = mockDispatchHeteroAgent.mock.calls[0][1];
+      expect(topic.model).toBe('fixture-prime-model');
+      expect(runContext.model).toBe(topic.model);
+      expect(runContext.provider).toBe('orvilo');
+    },
+  );
+
+  it('keeps an explicit Prime model override ahead of its inference default', async () => {
+    mockGetAgentConfig.mockResolvedValue({
+      ...defaultAgentConfig,
+      agencyConfig: {
+        heterogeneousProvider: { model: 'fixture-prime-model', type: 'orvilo' },
+      },
+    });
+    await service.execAgent({
+      agentId: 'agent-1',
+      model: 'explicit-prime-model',
+      prompt: 'Explicit Prime turn',
+      provider: 'orvilo',
+    });
+    expect(mockDispatchHeteroAgent.mock.calls[0][1].model).toBe('explicit-prime-model');
+  });
+
   it('should use agent default model/provider when no override is provided', async () => {
     mockGetAgentConfig.mockResolvedValue({ ...defaultAgentConfig });
 

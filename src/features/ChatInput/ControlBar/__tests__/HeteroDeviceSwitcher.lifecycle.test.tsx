@@ -169,6 +169,31 @@ describe('HeteroDeviceSwitcher retained tab lifecycle', () => {
       screen.queryByText('heteroAgent.executionTarget.bindingInvalid'),
     ).not.toBeInTheDocument();
   });
+  it('does not authorize a personal host from the shared Agent default alone', () => {
+    targetFixture.workspaceId = 'workspace';
+    targetFixture.executionTarget = 'device';
+    targetFixture.boundDeviceId = 'personal-node';
+    targetFixture.devices = [
+      {
+        deviceId: 'personal-node',
+        defaultCwd: '/repo',
+        enroller: { avatar: null, fullName: 'Test User', userId: 'user-1', username: 'test-user' },
+        hostname: 'test-node',
+        identitySource: 'installation',
+        lastSeen: '2026-10-04T07:00:00Z',
+        platform: null,
+        visibility: null,
+        workingDirs: [],
+        scope: 'personal',
+        registered: true,
+        online: true,
+        friendlyName: 'My Node',
+        channels: [],
+      },
+    ];
+    render(<HeteroDeviceSwitcher agentId="agent-1" />);
+    expect(screen.getByText('heteroAgent.executionTarget.bindingInvalid')).toBeInTheDocument();
+  });
   it('leaves an unconfigured target closed until the user opens the picker', async () => {
     const user = userEvent.setup();
     render(<HeteroDeviceSwitcher agentId="agent-1" />);

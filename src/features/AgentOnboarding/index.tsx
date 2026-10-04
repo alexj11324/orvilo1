@@ -189,7 +189,11 @@ const OnboardingBody = ({
       })
       .catch(setCreateError);
   };
-  const completePrimeAgent = async (agentId: string, selectedDeviceId: string) => {
+  const completeAgent = async (
+    agentId: string,
+    selectedDeviceId?: string,
+    executionTarget: 'device' | 'local' = 'device',
+  ) => {
     setDeviceId(selectedDeviceId);
     const state = useUserStore.getState();
     await state.updateOnboarding({
@@ -197,6 +201,7 @@ const OnboardingBody = ({
         ...state.onboarding?.setup,
         firstAgentId: agentId,
         firstAgentDeviceId: selectedDeviceId,
+        firstAgentExecutionTarget: executionTarget,
       },
     });
     await retry();
@@ -217,6 +222,7 @@ const OnboardingBody = ({
           primeCreation.current,
           {
             config: firstPrimeAgentConfig(binding.model, deviceId),
+            visibility: 'private',
           },
           createAgent,
         );
@@ -224,7 +230,7 @@ const OnboardingBody = ({
         if (!savedDeviceId) throw new Error('FIRST_AGENT_DEVICE_REQUIRED');
         createdPrime.current = { agentId: result.agentId, deviceId: savedDeviceId };
       }
-      await completePrimeAgent(createdPrime.current!.agentId, createdPrime.current!.deviceId);
+      await completeAgent(createdPrime.current!.agentId, createdPrime.current!.deviceId);
     } catch (error) {
       setCreateError(error);
     } finally {
@@ -237,7 +243,7 @@ const OnboardingBody = ({
       title={DEFAULT_INBOX_TITLE}
       action={
         <Button
-          disabled={creating || (builtinUsable && !deviceId)}
+          disabled={creating || !deviceId}
           loading={creating}
           size="sm"
           onClick={() => (builtinUsable ? void createPrime() : setApiSetup(true))}
@@ -263,21 +269,26 @@ const OnboardingBody = ({
     void scan({ kind: 'local' });
   }, [scan]);
 
-  const connect = useCallback(
-    (type?: HeterogeneousAgentType) => {
-      if (!deviceId) return;
-      void verifyFirstAgentDevice(deviceId)
-        .then((device) => {
-          openConnectAgentModal({
-            initialType: type,
-            initialTarget: { kind: 'device', device },
-            creationCheckpoint: cliCreation.current,
-          });
-        })
-        .catch(setCreateError);
-    },
-    [deviceId],
-  );
+  const connect = (type?: HeterogeneousAgentType) => {
+    if (!deviceId) return;
+    setCreateError(undefined);
+    void verifyFirstAgentDevice(deviceId)
+      .then((device) => {
+        openConnectAgentModal({
+          initialType: type,
+          initialTarget: { kind: 'device', device },
+          creationCheckpoint: cliCreation.current,
+          visibility: 'private',
+          onCreated: (agentId, config) =>
+            completeAgent(
+              agentId,
+              config?.agencyConfig?.boundDeviceId,
+              config?.agencyConfig?.executionTarget === 'local' ? 'local' : 'device',
+            ),
+        });
+      })
+      .catch(setCreateError);
+  };
 
   // `idle` is the first paint before the mount effect fires. Only the local
   // branch runs here, and `scanLocal` catches every provider, so `error` is
@@ -354,7 +365,7 @@ const OnboardingBody = ({
       {createError !== undefined && (
         <AsyncError error={createError} retrying={creating} onRetry={() => void createPrime()} />
       )}
-      {apiSetup && <ApiAgentSetup deviceId={deviceId} onCreated={completePrimeAgent} />}
+      {apiSetup && <ApiAgentSetup deviceId={deviceId} onCreated={completeAgent} />}
       <div className={styles.footer}>{t('onboarding.footerHint')}</div>
       <Button variant="ghost" onClick={() => navigate('/settings/profile')}>
         {t('onboarding.account')}

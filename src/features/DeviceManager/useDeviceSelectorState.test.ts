@@ -58,6 +58,7 @@ const setInventory = (data?: DeviceListItem[], error?: unknown, isLoading = fals
 const renderState = (overrides?: {
   boundDeviceId?: string;
   canSelectDevice?: boolean;
+  memberSelectedDeviceId?: string;
   permissionsLoaded?: boolean;
   scope?: DeviceScope | 'personal' | 'workspace';
 }) =>
@@ -65,6 +66,7 @@ const renderState = (overrides?: {
     useDeviceSelectorState({
       boundDeviceId: overrides?.boundDeviceId,
       canSelectDevice: overrides?.canSelectDevice ?? true,
+      memberSelectedDeviceId: overrides?.memberSelectedDeviceId,
       permissionsLoaded: overrides?.permissionsLoaded ?? true,
       scope: (overrides?.scope === 'workspace' ? 'workspace' : 'personal') as
         'personal' | 'workspace',
@@ -144,6 +146,33 @@ describe('useDeviceSelectorState', () => {
   });
 
   describe('legal pool by scope', () => {
+    it('keeps only the exact personal member override valid in workspace settings', () => {
+      setInventory([buildDevice({ deviceId: 'selected' }), buildDevice({ deviceId: 'other' })]);
+      const { result } = renderState({
+        boundDeviceId: 'selected',
+        memberSelectedDeviceId: 'selected',
+        scope: 'workspace',
+      });
+      expect(result.current.bindingState).toBe('valid');
+      expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['selected']);
+      expect(result.current.runnableDevices.map((d) => d.deviceId)).toEqual(['selected']);
+      expect(result.current.showDeviceSelector).toBe(false);
+    });
+
+    it('does not authorize a personal shared binding or a mismatched member override', () => {
+      setInventory([buildDevice({ deviceId: 'shared' }), buildDevice({ deviceId: 'override' })]);
+      for (const memberSelectedDeviceId of [undefined, 'override']) {
+        const { result, unmount } = renderState({
+          boundDeviceId: 'shared',
+          memberSelectedDeviceId,
+          scope: 'workspace',
+        });
+        expect(result.current.bindingState).toBe('invalid');
+        expect(result.current.selectableDevices).toEqual([]);
+        unmount();
+      }
+    });
+
     it('personal scope selects only personal devices', () => {
       setInventory([buildDevice({ deviceId: 'p' }), workspaceDevice('w')]);
       const { result } = renderState({ scope: 'personal' });

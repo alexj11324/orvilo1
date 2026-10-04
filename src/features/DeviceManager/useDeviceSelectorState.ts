@@ -48,11 +48,12 @@ export interface UseDeviceSelectorStateOptions {
   boundDeviceId?: string;
   /** Caller-side permission/policy result (`useEffectiveAgencyConfig`). */
   canSelectDevice: boolean;
+  /** Caller-owned device explicitly selected in the workspace member override. */
+  memberSelectedDeviceId?: string;
   /**
    * Which legal pool to select from. `personal` agents may only bind the
-   * caller's own devices; `workspace` agents only workspace-scope devices —
-   * a workspace agent bound to a personal device is unreachable to other
-   * members and rejected server-side.
+   * caller's own devices; `workspace` agents use workspace-scope devices plus
+   * the caller's exact personal member override, never a personal shared default.
    */
   scope: 'personal' | 'workspace';
 }
@@ -67,6 +68,7 @@ export interface UseDeviceSelectorStateOptions {
 export const useDeviceSelectorState = ({
   boundDeviceId,
   canSelectDevice,
+  memberSelectedDeviceId,
   permissionsLoaded = true,
   scope,
 }: UseDeviceSelectorStateOptions & { permissionsLoaded?: boolean }): DeviceSelectorState => {
@@ -75,12 +77,18 @@ export const useDeviceSelectorState = ({
 
   const { selectableDevices, runnableDevices } = useMemo(() => {
     const { personal, workspace } = groupExecutionTargetDevices(devices);
-    const selectable = scope === 'workspace' ? workspace : personal;
+    const selectedPersonalDevice = personal.find(
+      (device) => device.deviceId === memberSelectedDeviceId && device.deviceId === boundDeviceId,
+    );
+    const selectable =
+      scope === 'workspace'
+        ? [...workspace, ...(selectedPersonalDevice ? [selectedPersonalDevice] : [])]
+        : personal;
     return {
       runnableDevices: selectable.filter((device) => device.online),
       selectableDevices: selectable,
     };
-  }, [devices, scope]);
+  }, [boundDeviceId, devices, memberSelectedDeviceId, scope]);
 
   const bindingState: DeviceSelectorState['bindingState'] = useMemo(() => {
     if (!boundDeviceId) return 'unset';

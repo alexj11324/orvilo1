@@ -15,8 +15,10 @@ const targetFixture = vi.hoisted(() => ({
   workspaceId: undefined as string | undefined,
   boundDeviceId: undefined as string | undefined,
   memberSelectedDeviceId: undefined as string | undefined,
+  canSelectPersonalDevice: false,
   listeners: new Set<() => void>(),
 }));
+const selectTargetMock = vi.hoisted(() => vi.fn());
 vi.mock('@orvilo/const', async (importOriginal) => ({
   ...(await importOriginal<object>()),
   isDesktop: true,
@@ -29,7 +31,7 @@ vi.mock('@/features/ChatInput/hooks/useChatInputResourceAccess', () => ({
   useChatInputResourceAccess: () => ({ canUseResource: true }),
 }));
 vi.mock('@/features/ChatInput/hooks/useSelectExecutionTarget', () => ({
-  useSelectExecutionTarget: () => vi.fn(),
+  useSelectExecutionTarget: () => selectTargetMock,
 }));
 vi.mock('@/features/ChatInput/hooks/useLocalSandboxCapability', () => ({
   useLocalSandboxCapability: () => ({ mutate: vi.fn() }),
@@ -55,6 +57,7 @@ vi.mock('@/hooks/useTopicAgencyConfig', async () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: targetFixture.canSelectPersonalDevice,
       isPreferenceLoading: false,
       workspaceScoped: false,
       memberSelectedDeviceId: targetFixture.memberSelectedDeviceId,
@@ -101,9 +104,35 @@ beforeEach(() => {
   targetFixture.workspaceId = undefined;
   targetFixture.boundDeviceId = undefined;
   targetFixture.memberSelectedDeviceId = undefined;
+  targetFixture.canSelectPersonalDevice = false;
+  selectTargetMock.mockClear();
 });
 
 describe('HeteroDeviceSwitcher retained tab lifecycle', () => {
+  it('lets an authorized caller repair a missing workspace binding with their personal node', async () => {
+    targetFixture.workspaceId = 'workspace';
+    targetFixture.executionTarget = 'device';
+    targetFixture.canSelectPersonalDevice = true;
+    targetFixture.devices = [
+      {
+        deviceId: 'personal-node',
+        scope: 'personal',
+        registered: true,
+        online: true,
+        friendlyName: 'My Node',
+        channels: [],
+      } as unknown as DeviceListItem,
+    ];
+    const user = userEvent.setup();
+    render(<HeteroDeviceSwitcher agentId="agent-1" />);
+    await user.click(
+      screen.getByRole('button', { name: 'heteroAgent.executionTarget.unknownDevice' }),
+    );
+    await user.click(screen.getByRole('button', { name: /My Node/ }));
+    expect(selectTargetMock).toHaveBeenCalledWith('device', 'personal-node', {
+      localSandbox: undefined,
+    });
+  });
   it('keeps an explicitly selected authorized personal host valid for a workspace Agent', () => {
     targetFixture.workspaceId = 'workspace';
     targetFixture.executionTarget = 'device';

@@ -82,8 +82,13 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   const { allowed: canEdit } = usePermission('edit_own_content');
   const agent = useAgentStore(agentByIdSelectors.getAgentById(agentId));
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId));
-  const { agencyConfig, canSelectExecutionTarget, isPreferenceLoading, memberSelectedDeviceId } =
-    useEffectiveAgencyConfig(agentId);
+  const {
+    agencyConfig,
+    canSelectExecutionTarget,
+    canSelectPersonalDevice,
+    isPreferenceLoading,
+    memberSelectedDeviceId,
+  } = useEffectiveAgencyConfig(agentId);
   const selectAgentDevice = useSelectAgentDevice(agentId);
   const { mutate: retryDevices } = useDeviceList();
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
@@ -137,6 +142,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   const state = useDeviceSelectorState({
     boundDeviceId: agencyConfig?.boundDeviceId,
     canSelectDevice,
+    canSelectPersonalDevice,
     memberSelectedDeviceId,
     permissionsLoaded: !isPreferenceLoading,
     scope: isWorkspaceAgent ? 'workspace' : 'personal',

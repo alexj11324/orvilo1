@@ -58,6 +58,7 @@ const setInventory = (data?: DeviceListItem[], error?: unknown, isLoading = fals
 const renderState = (overrides?: {
   boundDeviceId?: string;
   canSelectDevice?: boolean;
+  canSelectPersonalDevice?: boolean;
   memberSelectedDeviceId?: string;
   permissionsLoaded?: boolean;
   scope?: DeviceScope | 'personal' | 'workspace';
@@ -66,6 +67,7 @@ const renderState = (overrides?: {
     useDeviceSelectorState({
       boundDeviceId: overrides?.boundDeviceId,
       canSelectDevice: overrides?.canSelectDevice ?? true,
+      canSelectPersonalDevice: overrides?.canSelectPersonalDevice,
       memberSelectedDeviceId: overrides?.memberSelectedDeviceId,
       permissionsLoaded: overrides?.permissionsLoaded ?? true,
       scope: (overrides?.scope === 'workspace' ? 'workspace' : 'personal') as
@@ -146,6 +148,21 @@ describe('useDeviceSelectorState', () => {
   });
 
   describe('legal pool by scope', () => {
+    it('offers owned personal candidates for an authorized workspace repair with no binding', () => {
+      setInventory([buildDevice({ deviceId: 'mine' }), workspaceDevice('workspace')]);
+      const { result } = renderState({ scope: 'workspace', canSelectPersonalDevice: true });
+      expect(result.current.selectableDevices.map((d) => d.deviceId)).toEqual([
+        'workspace',
+        'mine',
+      ]);
+      expect(result.current.bindingState).toBe('unset');
+      const denied = renderState({
+        scope: 'workspace',
+        canSelectPersonalDevice: true,
+        canSelectDevice: false,
+      });
+      expect(denied.result.current.selectableDevices.map((d) => d.deviceId)).toEqual(['workspace']);
+    });
     it('keeps only the exact personal member override valid in workspace settings', () => {
       setInventory([buildDevice({ deviceId: 'selected' }), buildDevice({ deviceId: 'other' })]);
       const { result } = renderState({

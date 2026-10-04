@@ -21,9 +21,11 @@
  */
 import type { APIRequestContext } from 'playwright';
 
+import { E2E_PRIME_MODEL } from './seedOrviloProviderBinding';
 import { TEST_USER } from './seedTestUser';
 
 export const E2E_DEVICE_ID = 'e2e-mock-device';
+let primeAgentId: string | undefined;
 
 interface TrpcData<T> {
   result?: { data?: { json?: T } };
@@ -47,6 +49,27 @@ const lambdaCall = async <T>(
   }
   const body = (await res.json()) as TrpcData<T>;
   return body.result?.data?.json;
+};
+
+/** A completed account needs a real agent, not only its virtual inbox singleton. */
+export const ensureTestUserPrimeAgent = async (request: APIRequestContext): Promise<string> => {
+  if (primeAgentId) return primeAgentId;
+  const created = await lambdaCall<{ agentId: string }>(request, 'agent.createAgent', {
+    config: {
+      agencyConfig: {
+        boundDeviceId: E2E_DEVICE_ID,
+        executionTarget: 'device',
+        heterogeneousProvider: { model: E2E_PRIME_MODEL, type: 'orvilo' },
+      },
+      model: E2E_PRIME_MODEL,
+      provider: 'deepseek',
+      title: 'E2E Prime Agent',
+    },
+    visibility: 'private',
+  });
+  if (!created?.agentId) throw new Error('E2E Prime agent creation returned no agentId');
+  primeAgentId = created.agentId;
+  return primeAgentId;
 };
 
 /**

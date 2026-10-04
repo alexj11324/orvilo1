@@ -23,10 +23,11 @@ import { TEST_USER } from './seedTestUser';
 const MOCK_LLM_PORT = process.env.E2E_MOCK_LLM_PORT ?? '3406';
 const CREDENTIAL_ID = `cred_e2e_mock_${TEST_USER.id}`;
 const CREDENTIAL_KEY = 'e2e-mock-llm';
+export const E2E_PRIME_MODEL = 'deepseek-v4-flash';
 const BINDING_CONFIG = {
   name: 'E2E Mock DeepSeek',
   provider: 'deepseek',
-  model: 'deepseek-v4-flash',
+  model: E2E_PRIME_MODEL,
   endpoint: `http://localhost:${MOCK_LLM_PORT}/v1`,
   secretReference: `credential:${CREDENTIAL_ID}`,
   enabled: true,

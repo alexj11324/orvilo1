@@ -568,6 +568,7 @@ describe('GatewayActionImpl', () => {
       const replaceMessages = vi.fn();
       const refreshTopic = vi.fn().mockResolvedValue(undefined);
       const startOperation = vi.fn(() => ({ operationId: 'gw-op-1' }));
+      const failOperation = vi.fn();
       const switchTopic = vi.fn();
       const updateTopicStatus = vi.fn();
       const set = vi.fn((updater: any) => {
@@ -582,6 +583,8 @@ describe('GatewayActionImpl', () => {
         ...state,
         associateMessageWithOperation,
         connectToGateway,
+        completeOperation: vi.fn(),
+        getOperationAbortSignal: () => undefined,
         internal_dispatchTopic: internalDispatchTopic,
         internal_replaceTopicId: internalReplaceTopicId,
         moveQueuedMessages,
@@ -590,6 +593,7 @@ describe('GatewayActionImpl', () => {
         replaceMessages,
         refreshTopic,
         startOperation,
+        failOperation,
         switchTopic,
         updateTopicStatus,
       })) as any;
@@ -621,6 +625,7 @@ describe('GatewayActionImpl', () => {
         refreshTopic,
         set,
         startOperation,
+        failOperation,
         state,
         switchTopic,
         updateTopicStatus,
@@ -630,6 +635,115 @@ describe('GatewayActionImpl', () => {
     afterEach(() => {
       delete (globalThis as any).window;
     });
+
+    it.each([
+      { status: 'error', success: false },
+      { status: 'error', success: true },
+    ] as const)('settles a rejected dispatch without starting a runtime (%j)', async (terminal) => {
+      const {
+        action,
+        connectToGateway,
+        failOperation,
+        replaceMessages,
+        startOperation,
+        updateTopicStatus,
+      } = createExecuteTestAction();
+      const result = {
+        agentId: 'agent-1',
+        assistantMessageId: 'ast-1',
+        autoStarted: false,
+        createdAt: new Date().toISOString(),
+        error: 'No bound device',
+        message: 'Hetero agent requires an execution device',
+        operationId: 'server-op-rejected',
+        timestamp: new Date().toISOString(),
+        topicId: 'topic-1',
+        userMessageId: 'usr-1',
+        ...terminal,
+      };
+      const failedMessage = {
+        id: 'ast-1',
+        role: 'assistant',
+        error: { message: 'No bound device' },
+      };
+      vi.mocked(aiAgentService.execAgentTask).mockResolvedValue(result);
+      vi.mocked(messageService.getMessages).mockResolvedValueOnce([failedMessage] as any);
+
+      await expect(
+        action.executeGatewayAgent({
+          context: { agentId: 'agent-1', scope: 'main', topicId: null },
+          message: 'Hello',
+          parentOperationId: 'parent-send',
+        }),
+      ).resolves.toEqual(result);
+
+      expect(replaceMessages).toHaveBeenCalledWith([failedMessage], expect.anything());
+      expect(startOperation).not.toHaveBeenCalled();
+      expect(connectToGateway).not.toHaveBeenCalled();
+      expect(updateTopicStatus).toHaveBeenCalledWith(expect.objectContaining({ status: 'failed' }));
+      expect(updateTopicStatus).not.toHaveBeenCalledWith(
+        expect.objectContaining({ status: 'running' }),
+      );
+      expect(failOperation).toHaveBeenCalledWith(
+        'parent-send',
+        expect.objectContaining({ message: 'No bound device' }),
+      );
+    });
+
+    it.each(['confirmed', 'unknown'] as const)(
+      'only clears the workspace running marker after %s cancellation',
+      async (cancelState) => {
+        const { action, state, internalDispatchTopic, get, onOperationCancel } =
+          createExecuteTestAction();
+        const topic = {
+          id: 'topic-1',
+          status: 'running',
+          metadata: { runningOperation: { operationId: 'server-op-1' } },
+        };
+        state.topicDataMap.workspace = { items: [topic] };
+        internalDispatchTopic.mockImplementation(({ value }) => Object.assign(topic, value));
+        const baseGet = get.getMockImplementation()!;
+        get.mockImplementation(() => ({
+          ...baseGet(),
+          internal_pinTopicStatus: ({ status }: { status: string }) => {
+            topic.status = status;
+          },
+        }));
+        vi.mocked(aiAgentService.execAgentTask).mockResolvedValue({
+          agentId: 'agent-1',
+          assistantMessageId: 'ast-1',
+          autoStarted: true,
+          createdAt: new Date().toISOString(),
+          message: 'ok',
+          operationId: 'server-op-1',
+          status: 'created',
+          success: true,
+          timestamp: new Date().toISOString(),
+          token: 'test-token',
+          topicId: 'topic-1',
+          userMessageId: 'usr-1',
+        });
+        vi.mocked(aiAgentService.interruptTask).mockResolvedValue({
+          cancelState,
+          operationId: 'server-op-1',
+          success: true,
+        });
+        await action.executeGatewayAgent({
+          context: { agentId: 'agent-1', scope: 'main', topicId: 'topic-1' },
+          message: 'Hello',
+        });
+        const [, cancel] = onOperationCancel.mock.calls[0];
+        if (cancelState === 'unknown') {
+          await expect(cancel()).rejects.toThrow('cancellation unconfirmed');
+          expect(topic.status).toBe('running');
+          expect(topic.metadata.runningOperation).toEqual({ operationId: 'server-op-1' });
+        } else {
+          await cancel();
+          expect(topic.status).toBe('active');
+          expect(topic.metadata.runningOperation).toBeNull();
+        }
+      },
+    );
 
     it('should forward parentMessageId to execAgentTask for regeneration', async () => {
       const { action } = createExecuteTestAction();
@@ -1356,6 +1470,7 @@ describe('GatewayActionImpl', () => {
 
       expect(internalDispatchTopic).toHaveBeenCalledWith({
         agentId: 'agent-1',
+        containerKey: 'agent_agent-1',
         groupId: undefined,
         id: 'topic-1',
         type: 'updateTopic',
@@ -1456,6 +1571,7 @@ describe('GatewayActionImpl', () => {
 
       expect(internalDispatchTopic).toHaveBeenCalledWith({
         agentId: 'agent-1',
+        containerKey: 'agent_agent-1',
         groupId: undefined,
         id: 'topic-1',
         type: 'updateTopic',
@@ -1812,6 +1928,7 @@ describe('GatewayActionImpl', () => {
       );
       expect(internalDispatchTopic).toHaveBeenCalledWith({
         agentId: 'agent-1',
+        containerKey: 'agent_agent-1',
         groupId: undefined,
         id: 'topic-1',
         type: 'updateTopic',
@@ -1917,6 +2034,7 @@ describe('GatewayActionImpl', () => {
       );
       expect(internalDispatchTopic).toHaveBeenCalledWith({
         agentId: 'agent-1',
+        containerKey: 'agent_agent-1',
         groupId: undefined,
         id: 'topic-1',
         type: 'updateTopic',
@@ -2856,6 +2974,7 @@ describe('GatewayActionImpl', () => {
 
       expect(internalDispatchTopic).toHaveBeenCalledWith({
         id: 'topic-1',
+        containerKey: 'agent_agent-1',
         type: 'updateTopic',
         value: { metadata: { model: 'gpt-4', runningOperation: null } },
       });
@@ -2899,6 +3018,7 @@ describe('GatewayActionImpl', () => {
 
       expect(internalDispatchTopic).toHaveBeenCalledWith({
         agentId: 'agent-1',
+        containerKey: 'agent_agent-1',
         groupId: undefined,
         id: 'topic-1',
         type: 'updateTopic',

@@ -272,6 +272,20 @@ describe('Operation Actions', () => {
   });
 
   describe('cancelOperation', () => {
+    it('releases the runtime aborting blocker after cancellation is confirmed', async () => {
+      const store = useChatStore.getState();
+      const { operationId } = store.startOperation({
+        context: { agentId: 'agent-1', topicId: 'topic-1' },
+        type: 'execServerAgentRuntime',
+      });
+      store.onOperationCancel(operationId, async () => {});
+
+      await store.cancelOperation(operationId);
+
+      const operation = useChatStore.getState().operations[operationId];
+      expect(operation.status).toBe('cancelled');
+      expect(operation.metadata.isAborting).toBe(false);
+    });
     it('should cancel operation and abort controller', () => {
       const { result } = renderHook(() => useChatStore());
 

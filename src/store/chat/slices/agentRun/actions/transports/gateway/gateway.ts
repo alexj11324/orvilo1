@@ -1544,10 +1544,10 @@ export class GatewayActionImpl {
    * 404 forever and wedges the conversation.
    *
    * The `updateTopic` reducer shallow-merges `value.metadata` (`{...currentTopic, ...value}`),
-   * so we spread the existing metadata to avoid dropping its other keys. Only dispatch when
-   * the topic still carries the marker for `operationId` — a late close of a finished op
-   * can race with a retry/send that already wrote a NEWER operation's marker, and clearing
-   * unconditionally would break reconnect-after-reload for that live run.
+   * so we spread the existing metadata to avoid dropping its other keys. An already-cleared
+   * marker still permits the terminal status pin; only a different operation's marker blocks
+   * dispatch. A late close must preserve a newer run's marker and status so reconnect-after-reload
+   * continues to work for that live run.
    *
    * `agentId`/`groupId` route the lookup + dispatch to the run's OWNING topic bucket
    * (same convention as `updateTopicStatus`): a background completion can land after the
@@ -1610,7 +1610,8 @@ export class GatewayActionImpl {
     // provide: if a newer run already overwrote this topic's local marker with
     // its own operationId, this stale session's completion must not clobber it
     // (neither the metadata clear nor, now, the status write).
-    if (existingTopic?.metadata?.runningOperation?.operationId !== operationId) return;
+    const owner = existingTopic?.metadata?.runningOperation?.operationId;
+    if (!existingTopic || (owner && owner !== operationId)) return;
 
     state.internal_dispatchTopic({
       agentId,

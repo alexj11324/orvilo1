@@ -429,8 +429,8 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   const { data: devices, isLoading, mutate: refreshDevices } = useDeviceList();
 
   // The current machine's own gateway deviceId (desktop only), used to badge the
-  // matching device row with a "This device" tag and show the local-process
-  // description instead of the generic online/offline status.
+  // matching gateway row with a "This computer" tag. The route description
+  // distinguishes gateway execution from a direct local process.
   useElectronStore((s) => s.useFetchGatewayDeviceInfo)();
   const gatewayDeviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
   const currentDeviceId = isDesktop ? gatewayDeviceInfo?.deviceId : undefined;
@@ -760,7 +760,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
         }
         tag={
           isCurrentMachine
-            ? `${t('heteroAgent.executionTarget.gateway')}${d.online ? '' : ` · ${t('heteroAgent.executionTarget.offline')}`}`
+            ? `${t('connectAgent.create.localDevice')}${d.online ? '' : ` · ${t('heteroAgent.executionTarget.offline')}`}`
             : undefined
         }
         onClick={() => void handleSelect('device', d.deviceId)}
@@ -829,7 +829,6 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
           active={isActive('local')}
           desc={t('heteroAgent.executionTarget.localDesc')}
           icon={<ExecutionTargetIcon target={'local'} />}
-          // 本机统一显示「本地设备」，不再带具体设备名称
           label={t('heteroAgent.executionTarget.local')}
           onClick={() => void handleSelect('local', undefined, false)}
         />
@@ -906,7 +905,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
             {privateDevices.length > 0 ? (
               <>
                 <div className={styles.groupLabel}>
-                  {t('heteroAgent.executionTarget.externalGroup')}
+                  {t('heteroAgent.executionTarget.personalGroup')}
                 </div>
                 <div className={styles.deviceList}>
                   {privateDevices.map((d) => renderDeviceRow(d))}

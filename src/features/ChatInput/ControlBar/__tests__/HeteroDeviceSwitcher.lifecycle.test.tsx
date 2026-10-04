@@ -1,5 +1,5 @@
 import type { DeviceListItem } from '@orvilo/types';
-import { act, render, screen } from '@testing-library/react';
+import { act, render, screen, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Activity, useDeferredValue } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -109,6 +109,54 @@ beforeEach(() => {
 });
 
 describe('HeteroDeviceSwitcher retained tab lifecycle', () => {
+  it.each(['machine', 'another-machine'])(
+    'identifies %s by ID and separates local and gateway routes',
+    async (deviceId) => {
+      targetFixture.workspaceId = 'workspace';
+      targetFixture.canSelectPersonalDevice = true;
+      targetFixture.devices = [
+        {
+          deviceId,
+          scope: 'personal',
+          registered: true,
+          online: true,
+          friendlyName: 'My Mac',
+          channels: [],
+        } as unknown as DeviceListItem,
+      ];
+      const user = userEvent.setup();
+      render(<HeteroDeviceSwitcher agentId="agent-1" />);
+      await user.click(screen.getByRole('button', { name: 'heteroAgent.executionTarget.none' }));
+      expect(screen.getByText('heteroAgent.executionTarget.personalGroup')).toBeInTheDocument();
+      expect(
+        screen.queryByText('heteroAgent.executionTarget.externalGroup'),
+      ).not.toBeInTheDocument();
+      const gatewayRow = screen.getByRole('button', { name: /My Mac/ });
+      if (deviceId === 'machine') {
+        expect(within(gatewayRow).getByText('connectAgent.create.localDevice')).toBeInTheDocument();
+        expect(
+          within(gatewayRow).getByText('heteroAgent.executionTarget.gatewayDesc'),
+        ).toBeInTheDocument();
+      } else {
+        expect(
+          within(gatewayRow).queryByText('connectAgent.create.localDevice'),
+        ).not.toBeInTheDocument();
+      }
+      const localRow = screen.getByRole('button', {
+        name: /heteroAgent.executionTarget.localDesc/,
+      });
+      await user.click(localRow);
+      expect(selectTargetMock).toHaveBeenLastCalledWith('local', undefined, {
+        localSandbox: false,
+      });
+      await user.click(screen.getByRole('button', { name: 'heteroAgent.executionTarget.none' }));
+      await user.click(screen.getByRole('button', { name: /My Mac/ }));
+      expect(selectTargetMock).toHaveBeenLastCalledWith('device', deviceId, {
+        localSandbox: undefined,
+      });
+    },
+  );
+
   it('lets an authorized caller repair a missing workspace binding with their personal node', async () => {
     targetFixture.workspaceId = 'workspace';
     targetFixture.executionTarget = 'device';

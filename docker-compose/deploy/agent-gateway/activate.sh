@@ -7,7 +7,7 @@ service_dir=/var/lib/orvilo1/agent-gateway
 override="$compose_dir/orvilo1-production.override.yml"
 snapshot="$service_dir/rollback"
 compose() {
-  docker compose --profile hatchet -f "$compose_dir/docker-compose.yml" -f "$override" -f "$snapshot/pinned-images.yml" "$@"
+  docker compose --env-file "$compose_dir/.env" --profile hatchet -f "$compose_dir/docker-compose.yml" -f "$override" -f "$snapshot/pinned-images.yml" "$@"
 }
 if [[ "${1:-}" == rollback ]]; then
   cp -a "$snapshot/override.before.yml" "$override"

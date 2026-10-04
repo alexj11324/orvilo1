@@ -175,6 +175,8 @@ for (const theme of ['light', 'dark']) {
           await page.reload();
           await expect(page.getByTestId('action-small')).toBeVisible();
           await page.keyboard.press('Tab');
+          await expect(page.getByTestId('primary-button')).toBeFocused();
+          await page.keyboard.press('Tab');
           await expect(page.getByTestId('action-small')).toBeFocused();
           await expect(page.getByTestId('action-small')).toHaveAccessibleName(
             `${text === 'zh' ? '项目与任务' : 'Projects and tasks'}: small`,

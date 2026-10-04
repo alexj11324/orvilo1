@@ -1,4 +1,10 @@
 export default {
+  'deviceAdmission.required':
+    'Connect a device, then select it in Execution Device before sending again.',
+  'deviceAdmission.selectionRequired': 'Select a device in Execution Device before sending again.',
+  'deviceAdmission.denied':
+    'You do not have access to this device. Choose a device you can use or ask its owner for access.',
+  'deviceAdmission.configure': 'Manage devices',
   'asyncState.signIn': 'Sign in again',
   'asyncState.signInDesc':
     'Your session could not authenticate this request. Sign in again to continue on this page.',

@@ -377,6 +377,8 @@
   "devices.connectWizard.cli.connectTitle": "Start the daemon",
   "devices.connectWizard.cli.installTitle": "Install the CLI",
   "devices.connectWizard.cli.loginTitle": "Sign in",
+  "devices.connectWizard.cli.unavailable": "This release does not include a CLI installer yet. Check Releases for an available installer.",
+  "devices.connectWizard.cli.viewReleases": "View Releases",
   "devices.connectWizard.desktop.downloadLink": "Download Orvilo Desktop",
   "devices.connectWizard.desktop.step1": "Download the desktop app",
   "devices.connectWizard.desktop.step1Desc": "Visit the Orvilo downloads page and get the app for your operating system.",

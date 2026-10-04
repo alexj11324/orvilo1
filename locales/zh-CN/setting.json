@@ -377,6 +377,8 @@
   "devices.connectWizard.cli.connectTitle": "启动守护进程",
   "devices.connectWizard.cli.installTitle": "安装 CLI",
   "devices.connectWizard.cli.loginTitle": "登录账号",
+  "devices.connectWizard.cli.unavailable": "当前发行版尚未提供 CLI 安装包。请到发行页面查看可用安装包。",
+  "devices.connectWizard.cli.viewReleases": "查看发行页面",
   "devices.connectWizard.desktop.downloadLink": "下载 Orvilo 桌面端",
   "devices.connectWizard.desktop.step1": "下载桌面端",
   "devices.connectWizard.desktop.step1Desc": "前往 Orvilo 下载页获取适用于你操作系统的桌面版应用。",

@@ -94,12 +94,13 @@ vi.mock('@/features/Conversation/ChatItem/components/ErrorContent', () => ({
     error,
     onRegenerate,
   }: {
-    error?: { extra?: ReactNode; message?: string };
+    error?: { action?: ReactNode; extra?: ReactNode; message?: string };
     onRegenerate?: () => void;
   }) => (
     <div>
       <div>{error?.message}</div>
       {error?.extra}
+      {error?.action}
       {onRegenerate && <button onClick={onRegenerate}>card-retry</button>}
     </div>
   ),
@@ -198,6 +199,26 @@ describe('ErrorMessageExtra', () => {
     updateMessageErrorMock.mockClear();
     delAndRegenerateMessageMock.mockClear();
     displayMessageMock.clear();
+  });
+
+  it('offers device setup for an admission failure instead of regeneration', () => {
+    displayMessageMock.set('msg-device', { parentId: 'user-1' });
+    render(
+      <ErrorMessageExtra
+        error={{ message: 'Temporary runtime outage' }}
+        data={{
+          id: 'msg-device',
+          error: {
+            type: AgentRuntimeErrorType.AgentRuntimeError,
+            body: { detail: 'DEVICE_REQUIRED: No authorized device.' },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText('deviceAdmission.required')).toBeInTheDocument();
+    expect(screen.queryByText('card-retry')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
+    expect(navigateMock).toHaveBeenCalledWith('/settings/devices');
   });
 
   // Regression: the standalone surfaces (Assistant / Task / AgentCouncil) render

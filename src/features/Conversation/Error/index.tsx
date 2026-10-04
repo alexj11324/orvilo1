@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import useBusinessErrorAlertConfig from '@/business/client/hooks/useBusinessErrorAlertConfig';
 import useBusinessErrorContent from '@/business/client/hooks/useBusinessErrorContent';
 import useRenderBusinessChatErrorMessageExtra from '@/business/client/hooks/useRenderBusinessChatErrorMessageExtra';
+import { Button } from '@/components/ui/button';
 import { CodeBlock } from '@/components/ui/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 import ErrorContent from '@/features/Conversation/ChatItem/components/ErrorContent';
@@ -277,6 +278,7 @@ interface ErrorExtraProps {
 const ErrorMessageExtra = memo<ErrorExtraProps>(
   ({ error: alertError, data, onRegenerate, retryScopeId }) => {
     const error = data.error;
+    const { t } = useTranslation('error');
     const navigate = useWorkspaceAwareNavigate();
     const enableBusinessFeatures = useServerConfigStore(
       serverConfigSelectors.enableBusinessFeatures,
@@ -424,6 +426,40 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
           resetsAt: scheduledResetsAt ?? rateLimitInfo?.resetsAt,
         }
       : undefined;
+
+    // Existing persisted admission errors carry the contract code in detail,
+    // while their top-level type is the generic ServerAgentRuntimeError.
+    const admissionCode =
+      typeof sessionErrorBody?.detail === 'string'
+        ? /^(DEVICE_REQUIRED|DEVICE_SELECTION_REQUIRED|DEVICE_ACCESS_DENIED):/.exec(
+            sessionErrorBody.detail,
+          )?.[1]
+        : undefined;
+    if (admissionCode) {
+      const messageKey =
+        admissionCode === 'DEVICE_ACCESS_DENIED'
+          ? 'deviceAdmission.denied'
+          : admissionCode === 'DEVICE_SELECTION_REQUIRED'
+            ? 'deviceAdmission.selectionRequired'
+            : 'deviceAdmission.required';
+      return (
+        <ErrorContent
+          id={data.id}
+          error={{
+            message: t(messageKey),
+            action: !isSharedTopic && (
+              <Button size="sm" variant="outline" onClick={() => navigate('/settings/devices')}>
+                {t('deviceAdmission.configure')}
+              </Button>
+            ),
+            extra:
+              !isSharedTopic && errorDetails ? (
+                <CodeBlock code={JSON.stringify(errorDetails, null, 2)} language="json" />
+              ) : undefined,
+          }}
+        />
+      );
+    }
 
     if (isHeterogeneousAgentStatusGuideError(sessionErrorBody)) {
       return (

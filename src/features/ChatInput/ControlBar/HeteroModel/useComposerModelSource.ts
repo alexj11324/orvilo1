@@ -167,7 +167,9 @@ export const useComposerModelSource = ({
 
       return {
         emptyText: errorName
-          ? t(CATALOG_ERROR_KEYS[errorName] ?? 'heteroAgent.cliModel.error')
+          ? t(CATALOG_ERROR_KEYS[errorName] ?? 'heteroAgent.cliModel.error', {
+              defaultValue: t('heteroAgent.cliModel.error'),
+            })
           : t('heteroAgent.cliModel.empty', { name }),
         id: type,
         name,

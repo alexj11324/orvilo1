@@ -71,7 +71,7 @@ interface AgentModelSettingsProps {
  * capability contract), per docs/development/device-execution-contract.md.
  */
 const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
-  const { t } = useTranslation(['setting', 'chat']);
+  const { t } = useTranslation(['setting', 'chat', 'common']);
   const navigate = useWorkspaceAwareNavigate();
   const { allowed: canEdit } = usePermission('edit_own_content');
   const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);

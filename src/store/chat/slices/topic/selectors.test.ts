@@ -2,6 +2,7 @@ import dayjs from 'dayjs';
 import { describe, expect, it } from 'vitest';
 
 import { type ChatStore } from '@/store/chat';
+import { createMockStore } from '@/store/chat/agents/__tests__/clientRuntimeExecutors/fixtures/mockStore';
 import { initialState } from '@/store/chat/initialState';
 import { topicMapKey, WORKSPACE_TOPIC_MAP_KEY } from '@/store/chat/utils/topicMapKey';
 import { merge } from '@/utils/merge';
@@ -925,13 +926,21 @@ describe('topicSelectors', () => {
 });
 
 describe('active topic ownership for composer controls', () => {
-  const state = {
+  const state = createMockStore({
     ...initialStore,
     activeAgentId: 'route-a',
     activeTopicId: 'topic-b',
     topicDataMap: {},
-    topicDetailMap: { 'topic-b': { id: 'topic-b', agentId: 'composer-b' } },
-  } as ChatStore;
+    topicDetailMap: {
+      'topic-b': {
+        agentId: 'composer-b',
+        createdAt: 0,
+        id: 'topic-b',
+        title: 'Topic B',
+        updatedAt: 0,
+      },
+    },
+  });
   it('uses the loaded topic owner despite a stale route agent', () => {
     expect(topicSelectors.activeTopicIdForAgent('composer-b')(state)).toBe('topic-b');
     expect(topicSelectors.activeTopicIdForAgent('route-a')(state)).toBeUndefined();

@@ -971,6 +971,40 @@ export class GatewayActionImpl {
       return result;
     }
 
+    // Dispatch can persist the turn but reject execution (e.g. DEVICE_REQUIRED).
+    // It has already ended server-side: retain the error row, not a phantom
+    // runtime waiting for a terminal event published before we subscribed.
+    if (!result.success || result.status === 'error') {
+      if (parentOperationId)
+        this.#get().failOperation(parentOperationId, {
+          message: result.error || result.message,
+          type: 'GatewayError',
+        });
+      if (
+        !this.#isSupersededRunningOperation({
+          agentId: messageContext.agentId,
+          groupId: messageContext.groupId,
+          operationId: result.operationId,
+          topicId: result.topicId,
+        })
+      ) {
+        this.clearLocalRunningOperation({
+          agentId: messageContext.agentId,
+          groupId: messageContext.groupId,
+          operationId: result.operationId,
+          topicId: result.topicId,
+        });
+        if (!agentShareId)
+          void this.#get().updateTopicStatus?.({
+            agentId: messageContext.agentId,
+            groupId: messageContext.groupId,
+            status: 'failed',
+            topicId: result.topicId,
+          });
+      }
+      return result;
+    }
+
     // `updateTopicStatus` persists through the owner-scoped `topic.updateTopic`
     // procedure, which a share visitor is never authorized to call — firing it
     // would only produce a rejected request (and a pinned optimistic write that
@@ -1052,6 +1086,13 @@ export class GatewayActionImpl {
 
       await interruptGatewayTaskOrThrow({
         operationId: result.operationId,
+        topicId: result.topicId,
+      });
+      this.clearLocalRunningOperation({
+        agentId: messageContext.agentId,
+        groupId: messageContext.groupId,
+        operationId: result.operationId,
+        status: 'active',
         topicId: result.topicId,
       });
     });
@@ -1331,6 +1372,12 @@ export class GatewayActionImpl {
       }
 
       await interruptGatewayTaskOrThrow({ operationId });
+      this.clearLocalRunningOperation({
+        agentId: context.agentId,
+        operationId,
+        status: 'active',
+        topicId,
+      });
     });
 
     const eventHandler = createGatewayEventHandler(this.#get, {
@@ -1526,10 +1573,12 @@ export class GatewayActionImpl {
   }): boolean => {
     const { agentId, groupId, operationId, topicId } = params;
     const state = this.#get();
-    const key = topicMapKey({
-      agentId: agentId ?? state.activeAgentId,
-      groupId: groupId ?? state.activeGroupId,
-    });
+    const key =
+      topicSelectors.getTopicContainerKeyById(topicId)(state) ??
+      topicMapKey({
+        agentId: agentId ?? state.activeAgentId,
+        groupId: groupId ?? state.activeGroupId,
+      });
     const owner = state.topicDataMap[key]?.items?.find((t) => t.id === topicId)?.metadata
       ?.runningOperation?.operationId;
 
@@ -1550,10 +1599,12 @@ export class GatewayActionImpl {
   }): void => {
     const { topicId, operationId, agentId, groupId, status } = params;
     const state = this.#get();
-    const key = topicMapKey({
-      agentId: agentId ?? state.activeAgentId,
-      groupId: groupId ?? state.activeGroupId,
-    });
+    const key =
+      topicSelectors.getTopicContainerKeyById(topicId)(state) ??
+      topicMapKey({
+        agentId: agentId ?? state.activeAgentId,
+        groupId: groupId ?? state.activeGroupId,
+      });
     const existingTopic = state.topicDataMap[key]?.items?.find((t) => t.id === topicId);
     // Same ownership guard the removed client-side `superseded` check used to
     // provide: if a newer run already overwrote this topic's local marker with
@@ -1564,6 +1615,7 @@ export class GatewayActionImpl {
     state.internal_dispatchTopic({
       agentId,
       groupId,
+      containerKey: key,
       id: topicId,
       type: 'updateTopic',
       value: { metadata: { ...existingTopic.metadata, runningOperation: null } },

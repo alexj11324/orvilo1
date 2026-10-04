@@ -315,6 +315,11 @@ export function defineConfig(config: CustomNextConfig) {
     }),
     reactStrictMode: true,
     redirects: async () => [
+      {
+        destination: 'https://github.com/alexj11324/orvilo1/releases/latest',
+        permanent: false,
+        source: '/download',
+      },
       // Sitemap generation lives on the landing site; keep legacy app sitemap URLs crawlable.
       {
         destination: LANDING_SITEMAP_URL,

@@ -21,7 +21,7 @@ describe('permission discovery routing', () => {
     mocks.resolveTarget.mockResolvedValue({ commandPath: '/custom/acp', env: {} });
   });
 
-  it.each(['claude-code', 'codex'])(
+  it.each(['amp', 'claude-code', 'codebuddy', 'codex', 'kimi-code', 'opencode', 'pi', 'qoder'])(
     'returns only %s advertised permission options',
     async (type) => {
       const catalog = [
@@ -39,12 +39,13 @@ describe('permission discovery routing', () => {
     },
   );
 
-  it('returns an empty catalog for unsupported harnesses without spawning', async () => {
-    await expect(
-      listHeterogeneousAgentPermissions({ type: 'unsupported-harness' }),
-    ).resolves.toEqual([]);
-    expect(mocks.resolveCommand).not.toHaveBeenCalled();
-  });
+  it.each(['unsupported-harness', 'cursor', 'orvilo'])(
+    'returns an empty catalog for unsupported %s without spawning',
+    async (type) => {
+      await expect(listHeterogeneousAgentPermissions({ type })).resolves.toEqual([]);
+      expect(mocks.resolveCommand).not.toHaveBeenCalled();
+    },
+  );
 
   it('preserves harness failures instead of inventing permission choices', async () => {
     mocks.discover.mockRejectedValue(new Error('session/new failed'));

@@ -5,6 +5,7 @@ import type {
   ListHeterogeneousAgentPermissionsParams,
 } from '@orvilo/types';
 
+import { isLocalHeterogeneousType } from '../config';
 import { ACP_RUNTIME_AGENT_TYPES } from '../spawn/acpRuntime';
 import { resolveHeteroSpawnCommand } from '../spawn/resolveCliCommand';
 import { listStandardAcpPermissions, resolveAcpSpawnTarget } from '../spawn/standardAcpAgents';
@@ -13,7 +14,9 @@ import { listStandardAcpPermissions, resolveAcpSpawnTarget } from '../spawn/stan
 export const listHeterogeneousAgentPermissions = async (
   params: ListHeterogeneousAgentPermissionsParams,
 ): Promise<HeterogeneousAgentPermissionCatalog[]> => {
-  if (!ACP_RUNTIME_AGENT_TYPES.has(params.type)) return [];
+  if (!isLocalHeterogeneousType(params.type) || !ACP_RUNTIME_AGENT_TYPES.has(params.type)) {
+    return [];
+  }
 
   const resolved = await resolveHeteroSpawnCommand(params.type, params.command);
   const callerEnv = params.env ?? process.env;

@@ -1,9 +1,11 @@
-import { renderHook } from '@testing-library/react';
+import { render, renderHook } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { canGoNative } from '@/libs/contextMenu/canGoNative';
 import type { NativeContextMenuItem } from '@/libs/contextMenu/types';
 
+import AgentItem from './index';
 import { useAgentDropdownMenu } from './useDropdownMenu';
 
 const mocks = vi.hoisted(() => ({
@@ -89,6 +91,7 @@ vi.mock('@/services/agent', () => ({ agentService: {} }));
 
 vi.mock('@/features/HomeSidebar/Body/Agent/ModalProvider', () => ({
   useOptionalAgentModal: () => null,
+  useAgentModal: () => ({ openCreateGroupModal: vi.fn() }),
 }));
 
 vi.mock('@/store/global', () => ({
@@ -121,6 +124,27 @@ vi.mock('@/store/user/selectors', () => ({
 
 vi.mock('../../../../hooks', () => ({ useRevealSidebarSection: () => vi.fn() }));
 
+vi.mock('@/hooks/usePrefetchAgent', () => ({ usePrefetchAgent: () => vi.fn() }));
+vi.mock('@/store/chat', () => ({ useChatStore: () => false }));
+vi.mock('@/store/chat/selectors', () => ({
+  operationSelectors: { isAgentVisiblyRunning: () => () => false },
+}));
+vi.mock('../usePreservedAgentUrl', () => ({
+  usePreservedAgentUrl: (id: string) => `/agent/${id}`,
+}));
+vi.mock('@/features/Workspace/WorkspaceLink', () => ({
+  default: ({ children, to }: { children: ReactNode; to: string }) => <a href={to}>{children}</a>,
+}));
+vi.mock('@/features/NavPanel/components/NavItem', () => ({
+  default: ({ icon, title }: { icon: ReactNode; title: ReactNode }) => (
+    <div>
+      {icon}
+      {title}
+    </div>
+  ),
+}));
+vi.mock('../Item/Actions', () => ({ default: () => null }));
+
 const getMenuKeys = (items: ReturnType<ReturnType<typeof useAgentDropdownMenu>>) =>
   (items ?? []).flatMap((item) =>
     item && typeof item === 'object' && 'key' in item && item.key ? [item.key] : [],
@@ -144,6 +168,42 @@ describe('useAgentDropdownMenu', () => {
     mocks.canManageResource = false;
     mocks.canManage = false;
     mocks.transferMenuItems = null;
+  });
+
+  it('renders the actual sidebar item with editable artwork and runtime branding', () => {
+    const { container, getByText, rerender } = render(
+      <AgentItem
+        item={{
+          id: 'agent-render',
+          type: 'agent',
+          userId: 'member-1',
+          pinned: false,
+          updatedAt: new Date(),
+          title: 'Renamed Orvilo',
+          avatar: '⚡',
+          backgroundColor: '#fff',
+        }}
+      />,
+    );
+    expect(getByText('Renamed Orvilo')).toBeTruthy();
+    expect(container.querySelector('img')?.getAttribute('src')).toBe('/app-icons/icon-512x512.png');
+    rerender(
+      <AgentItem
+        item={{
+          id: 'agent-render',
+          type: 'agent',
+          userId: 'member-1',
+          pinned: false,
+          updatedAt: new Date(),
+          title: 'Renamed Codex',
+          avatar: '⚡',
+          heterogeneousType: 'codex',
+        }}
+      />,
+    );
+    expect(getByText('Renamed Codex')).toBeTruthy();
+    expect(container.querySelector('[aria-label="Codex"]')).not.toBeNull();
+    expect(container.querySelector('img[src="/app-icons/icon-512x512.png"]')).toBeNull();
   });
 
   it('keeps non-config actions available to a use-only Workspace member', () => {

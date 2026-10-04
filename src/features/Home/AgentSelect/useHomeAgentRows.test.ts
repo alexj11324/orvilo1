@@ -1,6 +1,7 @@
 /**
  * @vitest-environment happy-dom
  */
+import type { SidebarAgentItem } from '@orvilo/types';
 import { renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
@@ -83,10 +84,16 @@ vi.mock('@/store/global/selectors', () => ({
   systemStatusSelectors: { agentPageSize: () => 10 },
 }));
 
-const agent = (id: string, title: string, extra: Record<string, unknown> = {}) => ({
+const agent = (
+  id: string,
+  title: string,
+  extra: Partial<SidebarAgentItem> = {},
+): SidebarAgentItem => ({
   id,
   title,
   type: 'agent',
+  pinned: false,
+  updatedAt: new Date('2026-10-04T00:00:00Z'),
   userId: 'member-1',
   ...extra,
 });
@@ -112,10 +119,10 @@ describe('useHomeAgentRows', () => {
 
   it('carries the actual runtime type through renamed rows for their brand icon', () => {
     mocks.homeState.ungroupedAgents = [
-      agent('agt_cc', 'My assistant', { heteroType: 'claude-code', avatar: 'OA' }),
+      agent('agt_cc', 'My assistant', { heterogeneousType: 'claude-code', avatar: 'OA' }),
     ];
     const { result } = renderHook(() => useHomeAgentRows());
-    expect(result.current.workspaceRows.find((row) => row.id === 'agt_cc')?.heteroType).toBe(
+    expect(result.current.workspaceRows.find((row) => row.id === 'agt_cc')?.heterogeneousType).toBe(
       'claude-code',
     );
   });

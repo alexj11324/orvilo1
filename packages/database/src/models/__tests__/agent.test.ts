@@ -149,6 +149,69 @@ describe('AgentModel', () => {
       expect(saved.title).toBe('Copy');
     });
 
+    it.each(['rename', 'pin', 'updateConfig', 'duplicate'] as const)(
+      'normalizes a persisted command-only Codex row before %s',
+      async (operation) => {
+        const [source] = await serverDB
+          .insert(agents)
+          .values({
+            userId,
+            title: 'Legacy Codex',
+            agencyConfig: { heterogeneousProvider: { command: 'codex' } } as any,
+          })
+          .returning();
+        let savedId = source.id;
+        if (operation === 'rename') await agentModel.update(source.id, { title: 'Renamed' });
+        if (operation === 'pin') await agentModel.update(source.id, { pinned: true });
+        if (operation === 'updateConfig')
+          await agentModel.updateConfig(source.id, { description: 'Edited' });
+        if (operation === 'duplicate') savedId = (await agentModel.duplicate(source.id))!.agentId;
+        const [saved] = await serverDB.select().from(agents).where(eq(agents.id, savedId));
+        expect(saved.avatar).toContain('/avatars/codex.webp');
+        expect(saved.agencyConfig?.heterogeneousProvider).toMatchObject({
+          command: 'codex',
+          type: 'codex',
+        });
+      },
+    );
+
+    it('merges an effort-only provider patch with the persisted runtime type', async () => {
+      const agent = await agentModel.create({
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+      });
+      await agentModel.updateConfig(agent.id, {
+        agencyConfig: { heterogeneousProvider: { effort: 'high' } },
+      });
+      const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+      expect(saved.agencyConfig?.heterogeneousProvider).toMatchObject({
+        type: 'codex',
+        effort: 'high',
+      });
+      expect(saved.avatar).toContain('/avatars/codex.webp');
+    });
+
+    it.each([
+      'made-up-runtime',
+      [],
+      { heterogeneousProvider: { type: 'made-up-agent' } },
+      { heterogeneousProvider: { type: null } },
+    ])(
+      'rejects malformed replacement or partial config %j without changing the persisted Codex runtime',
+      async (agencyConfig) => {
+        const agent = await agentModel.create({
+          agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        });
+        await expect(agentModel.update(agent.id, { agencyConfig } as any)).rejects.toThrow(
+          /Unsupported agent runtime/,
+        );
+        await expect(agentModel.updateConfig(agent.id, { agencyConfig } as any)).rejects.toThrow(
+          /Unsupported agent runtime/,
+        );
+        const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+        expect(saved.agencyConfig?.heterogeneousProvider?.type).toBe('codex');
+      },
+    );
+
     it('refuses invalid runtime changes through both update paths', async () => {
       const agent = await agentModel.create({ title: 'Orvilo' });
       const invalid = { agencyConfig: { heterogeneousProvider: { type: 'made-up-agent' } } } as any;

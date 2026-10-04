@@ -1141,14 +1141,15 @@ export class AgentModel {
       .where(and(eq(agents.id, agentId), this.ownership()))
       .limit(1);
     if (!agent) return;
+    const agencyConfig = normalizeAgencyConfigForWrite(agent.agencyConfig);
     const avatar =
       agent.slug === BUILTIN_AGENT_SLUGS.agentBuilder
         ? agent.avatar
-        : this.runtimeAvatar({ ...agent, ...sanitizedData });
+        : this.runtimeAvatar({ ...agent, agencyConfig, ...sanitizedData });
 
     return this.db
       .update(agents)
-      .set({ ...sanitizedData, avatar, updatedAt: new Date() })
+      .set({ agencyConfig, ...sanitizedData, avatar, updatedAt: new Date() })
       .where(and(eq(agents.id, agentId), this.ownership()));
   };
 
@@ -1389,23 +1390,17 @@ export class AgentModel {
   updateConfig = async (agentId: string, input: PartialDeep<AgentItem> | undefined | null) => {
     if (!input || Object.keys(input).length === 0) return;
 
-    if (input.agencyConfig?.heterogeneousProvider !== undefined) {
-      this.runtimeAvatar(input as Partial<AgentItem>);
-    }
     const data = this.stripImmutableFields(input);
-
-    // Same retired-field normalization as `create`: the request schema refuses
-    // them from clients; internal callers reaching the model get them stripped
-    // (the retired value is meaningless to every reader — contract §migration).
-    if (data.agencyConfig) {
-      data.agencyConfig = normalizeAgencyConfigForWrite(data.agencyConfig);
-    }
 
     const agent = await this.db.query.agents.findFirst({
       where: and(eq(agents.id, agentId), this.ownership()),
     });
 
     if (!agent) return;
+
+    // Compatibility applies only to persisted rows. Merge provider patches with
+    // that source before validating; normalizing input alone invents a runtime.
+    agent.agencyConfig = normalizeAgencyConfigForWrite(agent.agencyConfig);
 
     await this.assertWorkspaceDeviceBinding(
       agent.workspaceId,
@@ -1444,6 +1439,8 @@ export class AgentModel {
     }
 
     const mergedValue = merge(agent, restData);
+    if (agent.slug !== BUILTIN_AGENT_SLUGS.agentBuilder) this.runtimeAvatar(mergedValue);
+    mergedValue.agencyConfig = normalizeAgencyConfigForWrite(mergedValue.agencyConfig);
 
     // The inbox is Orvilo's built-in default cloud agent; it must never be
     // turned into a heterogeneous (external-CLI) agent. Two independent inputs can
@@ -1647,6 +1644,7 @@ export class AgentModel {
     // device. Sanitize exactly like `transferAgents` does when moving into a
     // workspace. Personal-scope copies keep existing bindings (any device is
     // reachable there).
+    sourceAgent.agencyConfig = normalizeAgencyConfigForWrite(sourceAgent.agencyConfig);
     const agencyConfig = this.workspaceId
       ? (
           await this.sanitizeAgencyConfigForWorkspace(this.db, this.workspaceId, [

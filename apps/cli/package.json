@@ -18,6 +18,7 @@
     "cli:unlink": "bun unlink",
     "dev": "ORVILO_CLI_HOME=.orvilo-dev bun src/index.ts",
     "man:generate": "bun src/man/generate.ts",
+    "pack:release": "bun run build && bun run man:generate && npm pack --ignore-scripts",
     "prepublishOnly": "npm run build && npm run man:generate",
     "test": "bunx vitest run --config vitest.config.mts --silent='passed-only'",
     "test:coverage": "bunx vitest run --config vitest.config.mts --coverage",

@@ -2,16 +2,38 @@
 
 Orvilo command-line interface.
 
+## Install a release package
+
+Requires Node.js **22.15 or newer**. Download the `orvilo-cli-*.tgz` asset from an
+[Orvilo release](https://github.com/alexj11324/orvilo1/releases) that includes it,
+then install that downloaded file:
+
+```bash
+npm install --global ./orvilo-cli-*.tgz
+orvilo --version
+orvilo login
+orvilo connect
+```
+
+The tarball includes the built CLI, the Prime runner and its provenance manifest,
+and the man page. It does not need this repository or its workspace dependencies.
+The release workflow tests installation outside the workspace before attaching
+the package to a stable GitHub Release. Releases without a CLI asset do not
+support this installation path.
+
+Run `orvilo update --check` to check the latest stable release's CLI asset, or
+`orvilo update` to install it. `--tag` selects a specific GitHub release tag.
+
 ## Local Development
 
-| Task                                            | Command                    |
-| ----------------------------------------------- | -------------------------- |
-| Run in dev mode                                 | `bun run dev -- <command>` |
-| Build the CLI                                   | `bun run build`            |
-| Link `orvilo`/`orvilo`/`orvilo` into your shell | `bun run cli:link`         |
-| Remove the global link                          | `bun run cli:unlink`       |
+| Task                          | Command                    |
+| ----------------------------- | -------------------------- |
+| Run in dev mode               | `bun run dev -- <command>` |
+| Build the CLI                 | `bun run build`            |
+| Link `orvilo` into your shell | `bun run cli:link`         |
+| Remove the global link        | `bun run cli:unlink`       |
 
-- `bun run build` only generates `dist/index.js`.
+- `bun run build` generates `dist/index.js` and stages the Prime runner artifacts.
 - To make `orvilo` available in your shell, run `bun run cli:link`.
 - After linking, if your shell still cannot find `orvilo`, run `rehash` in `zsh`.
 

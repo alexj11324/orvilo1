@@ -1,9 +1,11 @@
+import type { IEditor } from '@lobehub/editor';
 import type * as OrvilochatConstModule from '@orvilo/const';
 import type { ExecAgentResult } from '@orvilo/types';
 import { act, renderHook, waitFor } from '@testing-library/react';
 import { TRPCClientError } from '@trpc/client';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { createStore as createChatInputStore } from '@/features/ChatInput/store';
 import { agentService } from '@/services/agent';
 import { aiAgentService } from '@/services/aiAgent';
 import { aiChatService } from '@/services/aiChat';
@@ -94,7 +96,7 @@ beforeEach(() => {
   vi.spyOn(sessionStore, 'triggerSessionUpdate').mockResolvedValue(undefined);
   vi.spyOn(agentService, 'getAgentConfigById').mockResolvedValue(createMockAgentConfig() as any);
   useUserStore.setState({ workspaceUserPreference: {} });
-  useFileStore.setState({ chatContextSelectionsByContext: {} });
+  useFileStore.setState({ chatContextSelectionsByContext: {}, chatUploadFileList: [] });
 
   act(() => {
     useChatStore.setState({
@@ -450,60 +452,65 @@ describe('ConversationLifecycle actions', () => {
         expect(onMessagePersisted).toHaveBeenCalledOnce();
       });
 
-      it('should restore the pre-send editor snapshot when server send fails', async () => {
-        const { result } = renderHook(() => useChatStore());
-        const onMessagePersisted = vi.fn();
-        const inputEditorState = {
-          root: {
-            children: [
-              {
-                children: [{ text: 'Restored rich text', type: 'text', version: 1 }],
-                type: 'paragraph',
-                version: 1,
-              },
-            ],
-            type: 'root',
-            version: 1,
-          },
-        };
-        const clearedEditorState = {
-          root: { children: [], type: 'root', version: 1 },
-        };
-        const setDocument = vi.fn();
-        const setJSONState = vi.fn();
+      it.each([false, true])(
+        'restores a legacy failed-send snapshot only when newer input=%s is absent',
+        async (hasNewInput) => {
+          const { result } = renderHook(() => useChatStore());
+          const onMessagePersisted = vi.fn();
+          const inputEditorState = {
+            root: {
+              children: [
+                {
+                  children: [{ text: 'Restored rich text', type: 'text', version: 1 }],
+                  type: 'paragraph',
+                  version: 1,
+                },
+              ],
+              type: 'root',
+              version: 1,
+            },
+          };
+          const clearedEditorState = {
+            root: { children: [], type: 'root', version: 1 },
+          };
+          const setDocument = vi.fn();
+          const setJSONState = vi.fn();
 
-        vi.spyOn(aiChatService, 'sendMessageInServer').mockRejectedValue(
-          new TRPCClientError('restore failed'),
-        );
+          vi.spyOn(aiChatService, 'sendMessageInServer').mockRejectedValue(
+            new TRPCClientError('restore failed'),
+          );
 
-        act(() => {
-          useChatStore.setState({
-            mainInputEditor: {
-              getJSONState: vi.fn().mockReturnValue(clearedEditorState),
-              setDocument,
-              setJSONState,
-            } as any,
+          act(() => {
+            useChatStore.setState({
+              mainInputEditor: {
+                getJSONState: vi.fn().mockReturnValue(clearedEditorState),
+                getMarkdownContent: () => (hasNewInput ? 'Newer input' : ''),
+                setDocument,
+                setJSONState,
+              } as any,
+            });
           });
-        });
 
-        await act(async () => {
-          await result.current.sendMessage({
-            context: createTestContext(),
-            editorData: inputEditorState as any,
-            message: 'Restored rich text',
-            onMessagePersisted,
+          await act(async () => {
+            await result.current.sendMessage({
+              context: createTestContext(),
+              editorData: inputEditorState as any,
+              message: 'Restored rich text',
+              onMessagePersisted,
+            });
           });
-        });
 
-        const sendMessageOperation = Object.values(result.current.operations).find(
-          (operation) => operation.type === 'sendMessage',
-        );
+          const sendMessageOperation = Object.values(result.current.operations).find(
+            (operation) => operation.type === 'sendMessage',
+          );
 
-        expect(sendMessageOperation?.metadata.inputEditorTempState).toEqual(inputEditorState);
-        expect(setJSONState).toHaveBeenCalledWith(inputEditorState);
-        expect(setDocument).not.toHaveBeenCalled();
-        expect(onMessagePersisted).not.toHaveBeenCalled();
-      });
+          expect(sendMessageOperation?.metadata.inputEditorTempState).toEqual(inputEditorState);
+          if (hasNewInput) expect(setJSONState).not.toHaveBeenCalled();
+          else expect(setJSONState).toHaveBeenCalledWith(inputEditorState);
+          expect(setDocument).not.toHaveBeenCalled();
+          expect(onMessagePersisted).not.toHaveBeenCalled();
+        },
+      );
 
       it('should not restore an editor snapshot when a separate voice send fails', async () => {
         const { result } = renderHook(() => useChatStore());
@@ -607,10 +614,98 @@ describe('ConversationLifecycle actions', () => {
         expect(sendMessageOperation?.metadata.inputSendErrorMsg).toBeTruthy();
       });
 
+      it('recovers attachments through the owning composer callback without clobbering input typed during a failed gateway preflight', async () => {
+        const original = { root: { children: [{ text: 'PREFLIGHT_DRAFT_KEEP' }] } };
+        let content = 'PREFLIGHT_DRAFT_KEEP';
+        let document = original;
+        const editor = {
+          cleanDocument: () => {
+            content = '';
+            document = { root: { children: [] } };
+          },
+          focus: vi.fn(),
+          getLexicalEditor: () => ({}),
+          getDocument: (type: string) => (type === 'markdown' ? content : document),
+          setDocument: vi.fn((_type: string, restored: typeof original) => {
+            document = restored;
+            content = 'PREFLIGHT_DRAFT_KEEP';
+          }),
+        } as unknown as IEditor;
+        const originalFile = {
+          id: 'file-original',
+          status: 'success',
+          file: new File(['old'], 'original.txt'),
+        } as ReturnType<typeof useFileStore.getState>['chatUploadFileList'][number];
+        const newerFile = { ...originalFile, id: 'file-newer' };
+        let pendingSend: Promise<unknown> | undefined;
+        let rejectGateway!: (error: Error) => void;
+        const executeGatewayAgent = vi.fn(
+          () =>
+            new Promise<ExecAgentResult>((_resolve, reject) => {
+              rejectGateway = reject;
+            }),
+        );
+        const inputStore = createChatInputStore({
+          agentId: TEST_IDS.SESSION_ID,
+          contextSelectionKey: 'same-conversation',
+          draftKey: 'same-draft',
+          editor,
+          feature: { inputCompletion: false, inputHistory: false },
+          onSend: ({ clearContent, getEditorData, getMarkdownContent, restoreDraft }) => {
+            const message = getMarkdownContent();
+            const editorData = getEditorData();
+            const files = useFileStore.getState().chatUploadFileList;
+            clearContent();
+            useFileStore.getState().clearChatUploadFileList();
+            pendingSend = useChatStore.getState().sendMessage({
+              context: createTestContext(),
+              message,
+              editorData,
+              files,
+              onPreflightFailure: restoreDraft,
+            });
+          },
+        });
+        act(() => {
+          useFileStore.setState({ chatUploadFileList: [originalFile] });
+          useChatStore.setState({
+            isGatewayModeEnabled: () => true,
+            executeGatewayAgent,
+            mainInputEditor: {
+              getJSONState: inputStore.getState().getJSONState,
+              getMarkdownContent: inputStore.getState().getMarkdownContent,
+              setDocument: inputStore.getState().setDocument,
+              setJSONState: inputStore.getState().setJSONState,
+            } as any,
+          });
+          inputStore.getState().handleSendButton();
+        });
+        await waitFor(() => expect(executeGatewayAgent).toHaveBeenCalledOnce());
+        act(() => {
+          content = 'DURING_FAILURE_NEW_INPUT_KEEP';
+          document = { root: { children: [{ text: content }] } };
+          useFileStore.setState({ chatUploadFileList: [newerFile] });
+        });
+        await act(async () => {
+          rejectGateway(new TRPCClientError('network failed before persistence'));
+          await pendingSend;
+        });
+        expect.soft(content).toBe('DURING_FAILURE_NEW_INPUT_KEEP');
+        expect.soft(document.root.children[0].text).toBe('DURING_FAILURE_NEW_INPUT_KEEP');
+        expect
+          .soft(useFileStore.getState().chatUploadFileList.map(({ id }) => id))
+          .toEqual(['file-newer', 'file-original']);
+        expect(
+          Object.values(useChatStore.getState().operations).find((op) => op.type === 'sendMessage')
+            ?.status,
+        ).toBe('failed');
+      });
+
       it('should not restore the composer when gateway setup fails after message acceptance', async () => {
         const { result } = renderHook(() => useChatStore());
         const setDocument = vi.fn();
         const setJSONState = vi.fn();
+        const onPreflightFailure = vi.fn();
         const executeGatewayAgentSpy = vi.fn().mockImplementation(async (params) => {
           params.onMessageAccepted();
           throw new Error('gateway client initialization failed');
@@ -632,6 +727,7 @@ describe('ConversationLifecycle actions', () => {
           await result.current.sendMessage({
             context: createTestContext(),
             message: 'Already persisted',
+            onPreflightFailure,
           });
         });
 
@@ -641,6 +737,7 @@ describe('ConversationLifecycle actions', () => {
         expect(executeGatewayAgentSpy).toHaveBeenCalledOnce();
         expect(setDocument).not.toHaveBeenCalled();
         expect(setJSONState).not.toHaveBeenCalled();
+        expect(onPreflightFailure).not.toHaveBeenCalled();
         expect(sendMessageOperation?.metadata.inputSendErrorMsg).toBeUndefined();
       });
 

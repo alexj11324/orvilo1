@@ -1,5 +1,6 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
 import { CHAT_TOPIC_URL, DEFAULT_AVATAR } from '@orvilo/const';
+import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { agentDisplayName } from '@orvilo/types';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -9,11 +10,13 @@ import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
 import AgentList from '@/features/Home/AgentSelect/AgentList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
+import { heterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
@@ -22,6 +25,7 @@ import { useGlobalStore } from '@/store/global';
 import SelectorTrigger from '../../components/SelectorTrigger';
 import { useAgentId } from '../../hooks/useAgentId';
 import { useActionBarContext } from '../context';
+import LocalHarnessSection from './LocalHarnessSection';
 
 interface HandoffChoiceContentProps {
   agentName: string;
@@ -171,6 +175,19 @@ const Agent = memo(() => {
     [agentId, t, taskAgentId, workspaceAwareNavigate],
   );
 
+  /**
+   * A locally detected harness the user has not connected yet. Picking it is
+   * deliberately NOT a selection: it hands off to the connect wizard, which
+   * owns naming, the target device and the explicit "Connect" confirmation.
+   * Nothing is written from chat — that is the invariant this indirection
+   * exists to protect, and why the row shows a 连接 affordance instead of
+   * looking like the agent rows above.
+   */
+  const handleConnectHarness = useCallback((type: HeterogeneousAgentType) => {
+    setOpen(false);
+    openConnectAgentModal({ initialType: type });
+  }, []);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
@@ -198,7 +215,14 @@ const Agent = memo(() => {
         <AgentList
           includeTaskAgent
           activeAgentId={agentId}
+          // Desktop only: the probe goes through the Electron binary detector,
+          // so on the web build there is no local machine to report on.
           error={error}
+          bottomSection={
+            heterogeneousAgentService.supportsLocalExecution ? (
+              <LocalHarnessSection onConnect={handleConnectHarness} />
+            ) : undefined
+          }
           onRetry={() => mutate()}
           onSelect={handleSelect}
         />

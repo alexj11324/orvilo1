@@ -166,12 +166,20 @@ export const listAuthorizedDeviceCandidates = async (
           ? await ownerModel.findByDeviceId(ref.deviceId)
           : undefined);
       if (!verified) continue;
+      // A personal binding keeps its owner's gateway pool even when the run
+      // belongs to a workspace; workspace presence cannot describe that host.
+      const personalOnline =
+        !verified.workspaceId && (workspaceId || verified.userId !== userId)
+          ? await deviceGateway.queryDeviceList(verified.userId)
+          : undefined;
       seen.add(ref.deviceId);
       candidates.push({
         capabilityOk: true,
         deviceId: ref.deviceId,
         isLocalMachine: ref.deviceId === localDeviceId,
-        online: !!liveById.get(ref.deviceId),
+        online: personalOnline
+          ? personalOnline.some((device) => device.deviceId === ref.deviceId)
+          : !!liveById.get(ref.deviceId),
         scopeOk: true,
         versionOk: true,
       });

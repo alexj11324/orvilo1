@@ -109,6 +109,8 @@ const isMissingGrokResumeSession = (data: Record<string, unknown> | undefined): 
 };
 
 interface ExecOptions {
+  acpPermissionId?: string;
+  acpPermissionValue?: string;
   /**
    * Install the vendored Aegis method pack into the run workspace and ship
    * `.aegis/` + `docs/aegis/` artifacts back on the finish report. Also
@@ -420,6 +422,14 @@ const exec = async (options: ExecOptions): Promise<void> => {
     );
     process.exit(2);
   }
+
+  if (!!options.acpPermissionId !== !!options.acpPermissionValue) {
+    throw new Error('Both ACP permission id and value are required');
+  }
+  const initialPermission =
+    options.acpPermissionId && options.acpPermissionValue
+      ? { configId: options.acpPermissionId, value: options.acpPermissionValue }
+      : undefined;
 
   let resolved: ResolvedPrompt;
   try {
@@ -1079,6 +1089,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
       extraArgs,
       mcpServers: askMcpServers,
       permissionMode,
+      initialPermission,
       initialModel:
         agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
           ? options.model
@@ -1117,6 +1128,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
         detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
         env: runEnv,
         extraArgs,
+        initialPermission,
         initialModel:
           agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
             ? options.model
@@ -1262,6 +1274,8 @@ export function registerHeteroCommand(program: Command) {
     .option('-r, --resume <sessionId>', 'Resume an existing agent session by its native id')
     .option('-d, --cwd <path>', 'Working directory for the spawned agent (default: process.cwd())')
     .option('--mode <mode>', 'Forward a resolved Amp agent mode selection to the agent CLI')
+    .option('--acp-permission-id <id>', 'ACP-advertised permission config id or mode')
+    .option('--acp-permission-value <value>', 'ACP-advertised permission value')
     .option('--model <model>', 'Forward a resolved model selection to the agent CLI')
     .option('--effort <level>', 'Forward a resolved reasoning effort selection to the agent CLI')
     .option(

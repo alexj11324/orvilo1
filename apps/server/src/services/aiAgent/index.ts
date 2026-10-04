@@ -713,6 +713,10 @@ export class AiAgentService {
       !!resumeToolResult ||
       !!parentMessageId;
     const clientIds = isResumeLike ? undefined : params.clientIds;
+    // Same fresh-send rule for the composer's topic pins: they describe the topic
+    // this send is about to create, and a replay would re-write the row the
+    // original send already owns.
+    const newTopicPins = isResumeLike ? undefined : params.newTopicPins;
 
     // Validate that either agentId or slug is provided
     if (!agentId && !slug) {
@@ -932,6 +936,7 @@ export class AiAgentService {
         cronJobId,
         files,
         modelOverride,
+        newTopicPins,
         operationTaskId,
         parentMessageId,
         prompt,

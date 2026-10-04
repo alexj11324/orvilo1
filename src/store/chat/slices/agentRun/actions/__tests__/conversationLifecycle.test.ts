@@ -1758,6 +1758,184 @@ describe('ConversationLifecycle actions', () => {
         );
       });
 
+      it('should hand blank-composer picks to the gateway send as newTopicPins', async () => {
+        const { result } = renderHook(() => useChatStore());
+        const agentId = TEST_IDS.SESSION_ID;
+        const newTopicId = TEST_IDS.NEW_TOPIC_ID;
+
+        // The gateway path lets the SERVER create the topic, so the picks have
+        // no client row to land on — they must travel with the request or the
+        // persisted topic silently falls back to the agent's stored
+        // model/effort (the optimistic row above only decorates the sidebar).
+        const executeGatewayAgentSpy = vi.fn(async (params: any) => {
+          useChatStore.getState().internal_replaceTopicId({
+            nextId: newTopicId,
+            previousId: params.optimisticTopic.id,
+          });
+          useChatStore.getState().completeOperation(params.parentOperationId);
+          return makeGatewayResult({
+            operationId: 'gateway-op-composer-picks',
+            topicId: newTopicId,
+          });
+        });
+
+        act(() => {
+          useChatStore.setState({
+            activeAgentId: agentId,
+            activeTopicId: undefined,
+            composerHeteroEffort: 'high',
+            composerModelSelection: { model: 'opus', provider: 'claude-code' },
+            executeClientAgent: vi.fn().mockResolvedValue(undefined),
+            executeGatewayAgent: executeGatewayAgentSpy,
+            isGatewayModeEnabled: () => true,
+            summaryTopicTitle: vi.fn().mockResolvedValue(undefined),
+          });
+        });
+
+        await act(async () => {
+          await result.current.sendMessage({
+            context: { agentId, threadId: null, topicId: null },
+            message: TEST_CONTENT.USER_MESSAGE,
+          });
+        });
+
+        expect(executeGatewayAgentSpy).toHaveBeenCalledWith(
+          expect.objectContaining({
+            newTopicPins: { effort: 'high', model: 'opus', provider: 'claude-code' },
+          }),
+        );
+        // Consumed by this send, exactly like the client-side createTopic path:
+        // leaving them set would leak the pick into the next conversation.
+        expect(useChatStore.getState().composerModelSelection).toBeUndefined();
+        expect(useChatStore.getState().composerHeteroEffort).toBeUndefined();
+      });
+
+      it('keeps blank-composer model and effort after a rejected first send so retry uses them', async () => {
+        const picks = { model: 'opus', provider: 'claude-code' };
+        const setDocument = vi.fn();
+        const executeGatewayAgent = vi.fn().mockRejectedValue(new Error('start rejected'));
+        useChatStore.setState({
+          activeAgentId: TEST_IDS.SESSION_ID,
+          activeTopicId: undefined,
+          composerAgentId: TEST_IDS.SESSION_ID,
+          composerHeteroEffort: 'high',
+          composerModelSelection: picks,
+          executeGatewayAgent,
+          isGatewayModeEnabled: () => true,
+          mainInputEditor: { getJSONState: vi.fn(), setDocument } as any,
+        });
+
+        await act(async () => {
+          await useChatStore
+            .getState()
+            .sendMessage({ context: createTestContext(), message: 'Retry me' });
+        });
+        expect(setDocument).toHaveBeenCalledWith('markdown', 'Retry me');
+        expect(useChatStore.getState().composerModelSelection).toEqual(picks);
+        expect(useChatStore.getState().composerHeteroEffort).toBe('high');
+
+        await act(async () => {
+          await useChatStore
+            .getState()
+            .sendMessage({ context: createTestContext(), message: 'Retry me' });
+        });
+        expect(executeGatewayAgent.mock.calls[1][0].newTopicPins).toEqual({
+          effort: 'high',
+          model: 'opus',
+          provider: 'claude-code',
+        });
+      });
+
+      it('does not consume newer blank-composer picks when an earlier send is accepted', async () => {
+        const newerPick = { model: 'sonnet', provider: 'claude-code' };
+        const executeGatewayAgent = vi.fn(async (params: any) => {
+          useChatStore.setState({ composerModelSelection: newerPick, composerHeteroEffort: 'low' });
+          params.onMessageAccepted();
+          return makeGatewayResult();
+        });
+        useChatStore.setState({
+          activeAgentId: TEST_IDS.SESSION_ID,
+          activeTopicId: undefined,
+          composerAgentId: TEST_IDS.SESSION_ID,
+          composerHeteroEffort: 'high',
+          composerModelSelection: { model: 'opus', provider: 'claude-code' },
+          executeGatewayAgent,
+          isGatewayModeEnabled: () => true,
+        });
+        await act(async () => {
+          await useChatStore
+            .getState()
+            .sendMessage({ context: createTestContext(), message: 'First send' });
+        });
+        expect(useChatStore.getState().composerModelSelection).toEqual(newerPick);
+        expect(useChatStore.getState().composerHeteroEffort).toBe('low');
+      });
+
+      it('keeps an effort-only choice in a newer blank composer when an earlier send is accepted', async () => {
+        const executeGatewayAgent = vi.fn(async (params: any) => {
+          // The user has opened a new blank conversation and selected the same effort.
+          useChatStore.setState({ activeTopicId: undefined, composerHeteroEffort: 'high' });
+          params.onMessageAccepted();
+          return makeGatewayResult();
+        });
+        useChatStore.setState({
+          activeAgentId: TEST_IDS.SESSION_ID,
+          activeTopicId: undefined,
+          composerAgentId: TEST_IDS.SESSION_ID,
+          composerHeteroEffort: 'high',
+          composerModelSelection: undefined,
+          executeGatewayAgent,
+          isGatewayModeEnabled: () => true,
+        });
+        await act(async () => {
+          await useChatStore
+            .getState()
+            .sendMessage({ context: createTestContext(), message: 'Earlier send' });
+        });
+        expect(useChatStore.getState().composerHeteroEffort).toBe('high');
+      });
+
+      it('should omit newTopicPins when the composer made no pick', async () => {
+        const { result } = renderHook(() => useChatStore());
+        const agentId = TEST_IDS.SESSION_ID;
+        const newTopicId = TEST_IDS.NEW_TOPIC_ID;
+
+        const executeGatewayAgentSpy = vi.fn(async (params: any) => {
+          useChatStore.getState().internal_replaceTopicId({
+            nextId: newTopicId,
+            previousId: params.optimisticTopic.id,
+          });
+          useChatStore.getState().completeOperation(params.parentOperationId);
+          return makeGatewayResult({
+            operationId: 'gateway-op-no-picks',
+            topicId: newTopicId,
+          });
+        });
+
+        act(() => {
+          useChatStore.setState({
+            activeAgentId: agentId,
+            activeTopicId: undefined,
+            composerHeteroEffort: undefined,
+            composerModelSelection: undefined,
+            executeClientAgent: vi.fn().mockResolvedValue(undefined),
+            executeGatewayAgent: executeGatewayAgentSpy,
+            isGatewayModeEnabled: () => true,
+            summaryTopicTitle: vi.fn().mockResolvedValue(undefined),
+          });
+        });
+
+        await act(async () => {
+          await result.current.sendMessage({
+            context: { agentId, threadId: null, topicId: null },
+            message: TEST_CONTENT.USER_MESSAGE,
+          });
+        });
+
+        // No pick ⇒ the wire payload is unchanged for every existing caller.
+        expect(executeGatewayAgentSpy.mock.calls[0][0].newTopicPins).toBeUndefined();
+      });
+
       it('should stop the sidebar spinner after a gateway send creates the topic', async () => {
         const { result } = renderHook(() => useChatStore());
         const agentId = TEST_IDS.SESSION_ID;
@@ -2434,6 +2612,50 @@ describe('ConversationLifecycle actions', () => {
           expect(sendSpy.mock.calls[0][0].newTopic?.metadata).toMatchObject({
             heteroEffort: 'high',
           });
+        });
+
+        it('executes an existing heterogeneous conversation in its selected worktree and resumes that cwd session', async () => {
+          const sendSpy = setupHeteroRun();
+          sendSpy.mockResolvedValue({
+            assistantMessageId: TEST_IDS.ASSISTANT_MESSAGE_ID,
+            messages: [createMockMessage({ id: TEST_IDS.USER_MESSAGE_ID, role: 'user' })],
+            topicId: TEST_IDS.TOPIC_ID,
+            userMessageId: TEST_IDS.USER_MESSAGE_ID,
+          } as any);
+          useChatStore.setState({
+            activeTopicId: TEST_IDS.TOPIC_ID,
+            topicDetailMap: {
+              [TEST_IDS.TOPIC_ID]: {
+                agentId: TEST_IDS.SESSION_ID,
+                id: TEST_IDS.TOPIC_ID,
+                metadata: {
+                  workingDirectory: '/repo/source',
+                  workingDirectoryConfig: {
+                    path: '/repo/source',
+                    git: { activeWorktree: '/repo/worktree' },
+                  },
+                  heteroSessionId: 'source-session',
+                  heteroSessionIdByWorkingDirectory: {
+                    '/repo/source': 'source-session',
+                    '/repo/worktree': 'worktree-session',
+                  },
+                },
+              } as any,
+            },
+          });
+          await act(async () => {
+            await useChatStore.getState().sendMessage({
+              context: { ...createTestContext(), topicId: TEST_IDS.TOPIC_ID },
+              message: 'Use this worktree',
+            });
+          });
+          expect(executeHeterogeneousAgentMock).toHaveBeenCalledWith(
+            expect.anything(),
+            expect.objectContaining({
+              workingDirectory: '/repo/worktree',
+              resumeSessionId: 'worktree-session',
+            }),
+          );
         });
 
         it('prefers the bound device defaultCwd over the desktop fallback', async () => {

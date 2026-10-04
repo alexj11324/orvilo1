@@ -126,6 +126,12 @@ describe('DeviceModel', () => {
   });
 
   describe('workspace devices', () => {
+    it('does not resolve an owned personal device as a workspace gateway device', async () => {
+      await deviceModel.register({ deviceId: 'personal-node', identitySource: 'machine-id' });
+      const scoped = new DeviceModel(serverDB, userId, wsId);
+      expect(await scoped.findWorkspaceDeviceById('personal-node')).toBeUndefined();
+      expect((await scoped.findByDeviceId('personal-node'))?.deviceId).toBe('personal-node');
+    });
     beforeEach(async () => {
       await serverDB
         .insert(workspaces)
@@ -200,13 +206,17 @@ describe('DeviceModel', () => {
           workspaceId: wsId,
         },
       ]);
-      // the owner's unfiled device follows them into the workspace view —
-      // activating a workspace never hides their own enrollments
+      // Personal devices are fetched separately for the user gateway pool.
+      // Returning them here relabels them as workspace devices and emits a
+      // second, offline row for the separate workspace gateway principal.
       await deviceModel.register({ deviceId: 'p1', identitySource: 'machine-id' });
 
       const wsModel = new DeviceModel(serverDB, userId, wsId);
       const ids = (await wsModel.queryWorkspaceDevices()).map((d) => d.deviceId).sort();
-      expect(ids).toEqual(['p1', 'w1', 'w2']);
+      expect(ids).toEqual(['w1', 'w2']);
+      const personal = await wsModel.queryPersonal();
+      expect(personal.map((row) => row.deviceId)).toEqual(['p1']);
+      expect([...personal.map((row) => row.deviceId), ...ids]).toEqual(['p1', 'w1', 'w2']);
     });
 
     it('queryWorkspaceDevices returns [] without workspace context', async () => {

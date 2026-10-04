@@ -1,9 +1,21 @@
 import { jsonb, pgTable, text } from 'drizzle-orm/pg-core';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { bindTopicDeviceIfUnset, resolveHeteroExecutionPlan } from './executionAdmission';
+import {
+  bindTopicDeviceIfUnset,
+  listAuthorizedDeviceCandidates,
+  resolveHeteroExecutionPlan,
+} from './executionAdmission';
 
-const { queryDeviceList, queryPersonal, queryWorkspaceDevices } = vi.hoisted(() => ({
+const {
+  findByDeviceId,
+  findWorkspaceDeviceById,
+  queryDeviceList,
+  queryPersonal,
+  queryWorkspaceDevices,
+} = vi.hoisted(() => ({
+  findByDeviceId: vi.fn(),
+  findWorkspaceDeviceById: vi.fn(),
   queryDeviceList: vi.fn(),
   queryPersonal: vi.fn(),
   queryWorkspaceDevices: vi.fn(),
@@ -11,6 +23,8 @@ const { queryDeviceList, queryPersonal, queryWorkspaceDevices } = vi.hoisted(() 
 
 vi.mock('@/database/models/device', () => ({
   DeviceModel: class DeviceModelMock {
+    findByDeviceId = findByDeviceId;
+    findWorkspaceDeviceById = findWorkspaceDeviceById;
     queryPersonal = queryPersonal;
     queryWorkspaceDevices = queryWorkspaceDevices;
   },
@@ -42,9 +56,47 @@ const baseParams = {
 };
 
 beforeEach(() => {
+  findByDeviceId.mockReset().mockResolvedValue(undefined);
+  findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
   queryPersonal.mockReset().mockResolvedValue(deviceRows('dev-a', 'dev-b'));
   queryWorkspaceDevices.mockReset().mockResolvedValue(deviceRows('dev-ws'));
   queryDeviceList.mockReset().mockResolvedValue([]);
+});
+
+describe('listAuthorizedDeviceCandidates', () => {
+  it('uses personal gateway presence for an authorized personal binding in a workspace run', async () => {
+    queryWorkspaceDevices.mockResolvedValue([]);
+    findByDeviceId.mockResolvedValue({
+      deviceId: 'dev-personal',
+      userId: 'user-1',
+      workspaceId: null,
+    });
+    queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
+      workspaceId ? [] : [{ deviceId: 'dev-personal', authenticated: true }],
+    );
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', {
+      referencedDevices: [{ deviceId: 'dev-personal' }],
+    });
+
+    expect(inventory).toMatchObject({
+      candidates: [{ deviceId: 'dev-personal', online: true, scopeOk: true }],
+      inventoryComplete: true,
+    });
+  });
+
+  it('keeps workspace devices offline when only the personal pool has the same device id', async () => {
+    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws'));
+    queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
+      workspaceId ? [] : [{ deviceId: 'dev-ws', authenticated: true }],
+    );
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', {
+      referencedDevices: [{ deviceId: 'dev-ws' }],
+    });
+
+    expect(inventory.candidates).toMatchObject([{ deviceId: 'dev-ws', online: false }]);
+  });
 });
 
 describe('resolveHeteroExecutionPlan', () => {

@@ -107,6 +107,7 @@ describe('useEffectiveAgencyConfig', () => {
 
     expect(result.current.agencyConfig).toEqual(sharedConfig);
     expect(result.current.workspaceScoped).toBe(true);
+    expect(result.current.memberSelectedDeviceId).toBeUndefined();
   });
 
   // The owner's own `local` / this-machine pick also lives in the per-user
@@ -199,6 +200,7 @@ describe('useEffectiveAgencyConfig', () => {
     const { result } = renderHook(() => useEffectiveAgencyConfig('agent-1'));
 
     expect(result.current.agencyConfig?.boundDeviceId).toBe('my-device');
+    expect(result.current.memberSelectedDeviceId).toBeUndefined();
     expect(result.current.workspaceScoped).toBe(true);
   });
 
@@ -230,6 +232,7 @@ describe('useEffectiveAgencyConfig', () => {
     const { result } = renderHook(() => useEffectiveAgencyConfig('agent-1'));
 
     expect(result.current.agencyConfig?.boundDeviceId).toBe('my-device');
+    expect(result.current.memberSelectedDeviceId).toBe('my-device');
   });
 
   it('treats a null SWR response (no server row) as no override', () => {

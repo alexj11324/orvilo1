@@ -1213,3 +1213,22 @@ describe('builtin orvilo spawn/exec args', () => {
     );
   });
 });
+
+describe('ACP permission dispatch', () => {
+  it('preserves protocol values in the wrapper args for device and sandbox runs', () => {
+    expect(
+      buildHeteroExecArgs({
+        type: 'codex',
+        permission: {
+          configId: 'approval-policy',
+          value: 'agent-safe-write',
+        },
+      }),
+    ).toEqual([
+      '--acp-permission-id',
+      'approval-policy',
+      '--acp-permission-value',
+      'agent-safe-write',
+    ]);
+  });
+});

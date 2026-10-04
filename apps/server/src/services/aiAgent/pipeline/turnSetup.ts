@@ -286,6 +286,12 @@ export interface TurnSetupInput {
   cronJobId?: string;
   files?: InternalExecAgentParams['files'];
   modelOverride?: string;
+  /**
+   * Blank-composer picks for the topic this turn creates (`topics.model` /
+   * `topics.provider` + `metadata.heteroEffort`). Only read on the create path —
+   * a turn that reuses a topic keeps that topic's own pins.
+   */
+  newTopicPins?: HeterogeneousTopicPin;
   operationTaskId?: string;
   parentMessageId?: string;
   prompt: string;
@@ -353,6 +359,7 @@ export const setupTurn = async (
     cronJobId,
     files,
     modelOverride,
+    newTopicPins,
     operationTaskId,
     parentMessageId,
     prompt,
@@ -437,7 +444,22 @@ export const setupTurn = async (
     };
 
     const fallbackTitleSource = markdownToTxt(prompt);
-    const snapshot = resolveNewTopicSnapshot(agentConfig);
+    const agentSnapshot = resolveNewTopicSnapshot(agentConfig);
+    // A pick made in the blank composer outranks the agent's stored model and
+    // effort for THIS conversation, exactly as in the client's createTopic /
+    // sendMessage paths. It lands on the topic's own pin fields — the same
+    // `topics.model`/`topics.provider` columns and `metadata.heteroEffort` slot a
+    // later turn reads back through the topic-pin path below — and never on the
+    // agent row (docs/development/chat-agent-model-ia.md §5.2). With no pick the
+    // snapshot stays byte-identical to the agent-config snapshot.
+    const snapshot = {
+      metadata:
+        newTopicPins?.effort === undefined
+          ? agentSnapshot.metadata
+          : { heteroEffort: newTopicPins.effort },
+      model: newTopicPins?.model ?? agentSnapshot.model,
+      provider: newTopicPins?.provider ?? agentSnapshot.provider,
+    };
     const metadataWithSnapshot: ChatTopicMetadata | undefined =
       metadata || snapshot.metadata ? { ...metadata, ...snapshot.metadata } : undefined;
     // Second argument: the id the client already rendered this topic under
@@ -471,6 +493,27 @@ export const setupTurn = async (
       appContext?.groupId || 'none',
       cronJobId || 'none',
     );
+
+    // Make the run honour the pins this topic was just born with, exactly as a
+    // reused topic does below: without them the FIRST turn of a composer-started
+    // conversation would execute on the agent default while the row it is
+    // writing to says otherwise. Each part is gated on its own pick, so a
+    // creation path with no picks — and a pick that only names an effort —
+    // keeps today's agent-config-derived run.
+    // Prime's inference route lives on its harness config. The first run must
+    // use the same snapshot its topic pins, rather than the legacy Agent model.
+    if (heterogeneousProvider?.type === 'orvilo') {
+      model = modelOverride || snapshot.model || model;
+      provider = providerOverride || snapshot.provider || provider;
+    }
+    if (newTopicPins?.model) model = newTopicPins.model;
+    if (newTopicPins?.provider) provider = newTopicPins.provider;
+    if (newTopicPins)
+      pinnedHeterogeneousTopicModel = {
+        ...(newTopicPins.effort !== undefined && { effort: newTopicPins.effort }),
+        ...(newTopicPins.model && { model: newTopicPins.model }),
+        ...(newTopicPins.provider && { provider: newTopicPins.provider }),
+      };
   } else {
     log('execAgent: reusing existing topic %s', topicId);
 
@@ -727,7 +770,7 @@ export const setupTurn = async (
     canUseDevice,
     effectiveRequestedDeviceId,
     heteroType,
-    heterogeneousProvider,
+    heterogeneousProvider: agentConfig.agencyConfig?.heterogeneousProvider ?? heterogeneousProvider,
     isFixedDeviceTarget,
     model,
     pinnedHeterogeneousTopicModel,

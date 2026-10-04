@@ -299,6 +299,25 @@ export const deviceRouter = router({
       return result ?? null;
     }),
 
+  listHeterogeneousAgentPermissions: deviceProcedure
+    .input(
+      z.object({
+        args: z.array(z.string()).optional(),
+        command: z.string().optional(),
+        cwd: z.string().optional(),
+        deviceId: z.string(),
+        env: z.record(z.string(), z.string()).optional(),
+        type: z.string(),
+      }),
+    )
+    .query(async ({ ctx, input }) =>
+      deviceGateway.listHeterogeneousAgentPermissions({
+        ...input,
+        userId: ctx.userId,
+        workspaceId: ctx.workspaceId,
+      }),
+    ),
+
   /** Query a heterogeneous CLI's model catalog on the device that will execute the agent. */
   listHeterogeneousAgentModels: deviceProcedure
     .input(

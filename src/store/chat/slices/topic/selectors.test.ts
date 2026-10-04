@@ -923,3 +923,30 @@ describe('topicSelectors', () => {
     });
   });
 });
+
+describe('active topic ownership for composer controls', () => {
+  const state = {
+    ...initialStore,
+    activeAgentId: 'route-a',
+    activeTopicId: 'topic-b',
+    topicDataMap: {},
+    topicDetailMap: { 'topic-b': { id: 'topic-b', agentId: 'composer-b' } },
+  } as ChatStore;
+  it('uses the loaded topic owner despite a stale route agent', () => {
+    expect(topicSelectors.activeTopicIdForAgent('composer-b')(state)).toBe('topic-b');
+    expect(topicSelectors.activeTopicIdForAgent('route-a')(state)).toBeUndefined();
+  });
+  it('does not give another agent control over the active topic', () => {
+    expect(topicSelectors.activeTopicIdForAgent('composer-c')(state)).toBeUndefined();
+  });
+  it('preserves legacy route ownership when topic owner is unavailable', () => {
+    const legacy = { ...state, topicDetailMap: {} };
+    expect(topicSelectors.activeTopicIdForAgent('route-a')(legacy)).toBe('topic-b');
+    expect(topicSelectors.activeTopicIdForAgent('composer-b')(legacy)).toBeUndefined();
+  });
+  it('keeps group member controls scoped to the active member', () => {
+    const group = { ...state, activeGroupId: 'group' };
+    expect(topicSelectors.activeTopicIdForAgent('route-a')(group)).toBe('topic-b');
+    expect(topicSelectors.activeTopicIdForAgent('composer-b')(group)).toBeUndefined();
+  });
+});

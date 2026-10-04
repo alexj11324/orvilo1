@@ -192,6 +192,23 @@ describe('executeDeviceRpc', () => {
     }
   });
 
+  it('returns permission catalogs and preserves discovery failures from the host', async () => {
+    const deps = makeDeps();
+    deps.listHeterogeneousAgentPermissions = vi.fn(async () => []);
+    await expect(
+      executeDeviceRpc('listHeterogeneousAgentPermissions', { type: 'codex' }, deps),
+    ).resolves.toEqual([]);
+    deps.listHeterogeneousAgentPermissions = vi.fn(async () => {
+      throw new Error('harness discovery failed');
+    });
+    await expect(
+      executeDeviceRpc('listHeterogeneousAgentPermissions', { type: 'claude-code' }, deps),
+    ).rejects.toThrow('harness discovery failed');
+    await expect(
+      executeDeviceRpc('listHeterogeneousAgentPermissions', { type: 'codex' }, makeDeps()),
+    ).rejects.toThrow('does not support heterogeneous agent permission discovery');
+  });
+
   it('routes heterogeneous agent model discovery to the execution host', async () => {
     const deps = makeDeps();
     deps.listHeterogeneousAgentModels = vi.fn(async () => ({

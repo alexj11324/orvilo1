@@ -4,7 +4,13 @@ import { describe, expect, it } from 'vitest';
 
 import { getStaticModelOptions } from './modelOptions';
 import type { ModelCapability } from './selectorView';
-import { resolveModelSwitchSelection } from './selectorView';
+import {
+  hasConversationEffortSelector,
+  hasConversationModelSelector,
+  resolveComposerCurrentEffort,
+  resolveComposerEffortReset,
+  resolveModelSwitchSelection,
+} from './selectorView';
 
 const selectorCapabilityOf = (type: string): HeteroSelectorCapability => {
   const capability = getHeteroSelectorCapability(type);
@@ -21,6 +27,31 @@ const capabilityOf = (type: string): ModelCapability => {
 
   return { ...capability, model: capability.model };
 };
+
+describe('conversation selector dimensions', () => {
+  it('offers a model picker only where the harness exposes a model dimension', () => {
+    expect(hasConversationModelSelector('codex')).toBe(true);
+    expect(hasConversationModelSelector('cursor')).toBe(true);
+    // Prime is absent from the ACP capability table — its list is the provider
+    // bindings — so it must be admitted by the builtin branch, or its picker
+    // renders as the inert "cannot switch models" chip.
+    expect(hasConversationModelSelector('orvilo')).toBe(true);
+    // mode-only and empty capabilities have no model to switch in the composer.
+    expect(hasConversationModelSelector('amp')).toBe(false);
+    expect(hasConversationModelSelector('kimi-code')).toBe(false);
+    expect(hasConversationModelSelector('not-a-harness')).toBe(false);
+    expect(hasConversationModelSelector(undefined)).toBe(false);
+  });
+
+  it('offers an effort picker only where the harness exposes an effort dimension', () => {
+    expect(hasConversationEffortSelector('codex')).toBe(true);
+    expect(hasConversationEffortSelector('claude-code')).toBe(true);
+    // model-only harnesses simply have no effort dimension.
+    expect(hasConversationEffortSelector('cursor')).toBe(false);
+    expect(hasConversationEffortSelector('droid')).toBe(false);
+    expect(hasConversationEffortSelector(undefined)).toBe(false);
+  });
+});
 
 describe('selector capabilities behind the engine form', () => {
   it('offers Astra before older Codex models', () => {
@@ -109,6 +140,74 @@ describe('resolveModelSwitchSelection', () => {
         value: 'haiku',
       }),
     ).toEqual({ model: 'haiku' });
+  });
+});
+
+describe('resolveComposerCurrentEffort', () => {
+  const codex = { type: 'codex' } as HeterogeneousProviderConfig;
+
+  it('reads the pick held by a conversation with no topic yet', () => {
+    // A blank composer keeps its pick in chat state, so nothing the provider
+    // carries can stand in for it.
+    expect(
+      resolveComposerCurrentEffort({
+        composerEffort: 'ultra',
+        provider: { ...codex, effort: 'low' },
+      }),
+    ).toBe('ultra');
+  });
+
+  it('falls back to the topic pin, then the agent config', () => {
+    expect(
+      resolveComposerCurrentEffort({
+        provider: { ...codex, effort: 'low' },
+        topicPin: { effort: 'high', model: 'gpt-5.5', provider: 'codex' },
+      }),
+    ).toBe('high');
+    expect(resolveComposerCurrentEffort({ provider: codex })).toBeUndefined();
+  });
+});
+
+describe('resolveComposerEffortReset', () => {
+  const codex = { type: 'codex' } as HeterogeneousProviderConfig;
+
+  it('resets an effort picked in the blank composer that the new model cannot serve', () => {
+    // The pick never reached a topic, so a reader that stops at the topic/agent
+    // levels sees nothing to reset and the topic is born with a level its model
+    // cannot run.
+    expect(
+      resolveComposerEffortReset({ composerEffort: 'ultra', provider: codex, value: 'gpt-5.4' }),
+    ).toBe('default');
+  });
+
+  it('keeps an effort picked in the blank composer that the new model still serves', () => {
+    expect(
+      resolveComposerEffortReset({ composerEffort: 'max', provider: codex, value: 'gpt-6-astra' }),
+    ).toBeUndefined();
+  });
+
+  it('resets from the topic pin when the composer holds no pick', () => {
+    expect(
+      resolveComposerEffortReset({
+        provider: codex,
+        topicPin: { effort: 'ultra', model: 'gpt-5.5', provider: 'codex' },
+        value: 'gpt-5.4',
+      }),
+    ).toBe('default');
+  });
+
+  it('never resets for a harness whose levels do not depend on the model', () => {
+    expect(
+      resolveComposerEffortReset({
+        composerEffort: 'high',
+        provider: { type: 'claude-code' } as HeterogeneousProviderConfig,
+        value: 'haiku',
+      }),
+    ).toBeUndefined();
+  });
+
+  it('never resets for a legacy agent with no heterogeneous provider', () => {
+    expect(resolveComposerEffortReset({ value: 'gpt-4' })).toBeUndefined();
   });
 });
 

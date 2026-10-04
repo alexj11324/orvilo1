@@ -689,6 +689,8 @@ export function Onboarding({
   initialFullName = '',
   initialTelemetry = true,
   initialTimezone = '',
+  initialWorkspaceName = '',
+  initialWorkspaceSlug = '',
   onComplete,
   onOpen,
 }: {
@@ -696,10 +698,12 @@ export function Onboarding({
   initialTelemetry?: boolean;
   /** Existing IANA timezone from user settings; the picker keeps it unless changed. */
   initialTimezone?: string;
+  initialWorkspaceName?: string;
+  initialWorkspaceSlug?: string;
   onComplete?: (values: OnboardingFormValues) => Promise<OnboardingCompletion | void>;
   onOpen?: () => void;
 } = {}) {
-  const { t } = useTranslation('onboarding');
+  const { t, ready } = useTranslation('onboarding');
   const onboardingData = useMemo(() => createOnboardingData(t), [t]);
   const onboardingSteps = onboardingData.steps;
   const totalSteps = onboardingSteps.length;
@@ -711,7 +715,7 @@ export function Onboarding({
   const [discoverySource, setDiscoverySource] = useState<DiscoverySourceValue>('linkedin');
   const [discoveryOther, setDiscoveryOther] = useState('');
   const { onWorkspaceNameChange, onWorkspaceSlugChange, workspaceName, workspaceSlug } =
-    useWorkspaceSlug();
+    useWorkspaceSlug(initialWorkspaceName, initialWorkspaceSlug);
   const [teamSize, setTeamSize] = useState<TeamSizeValue>('team');
   const [goals, setGoals] = useState<GoalValue[]>(['roadmaps', 'sprints']);
   const [invites, setInvites] = useState<InviteRow[]>(DEFAULT_INVITES);
@@ -885,6 +889,13 @@ export function Onboarding({
 
     void completeOnboarding();
   }
+
+  if (!ready)
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <Spinner />
+      </div>
+    );
 
   return (
     <main className="orvilo-entry-surface bg-background text-foreground relative min-h-[var(--onboarding-viewport-height,100svh)] w-full overflow-x-hidden">

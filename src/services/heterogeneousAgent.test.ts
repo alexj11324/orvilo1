@@ -4,6 +4,8 @@ import { heterogeneousAgentCatalogService } from './heterogeneousAgent';
 
 const mocks = vi.hoisted(() => ({
   electronListModels: vi.fn(),
+  electronListPermissions: vi.fn(),
+  remoteListPermissions: vi.fn(),
   remoteListModels: vi.fn(),
 }));
 
@@ -18,12 +20,16 @@ vi.mock('@/libs/trpc/client', () => ({
   lambdaClient: {
     device: {
       listHeterogeneousAgentModels: { query: mocks.remoteListModels },
+      listHeterogeneousAgentPermissions: { query: mocks.remoteListPermissions },
     },
   },
 }));
 
 vi.mock('@/services/electron/heterogeneousAgent', () => ({
-  heterogeneousAgentService: { listModels: mocks.electronListModels },
+  heterogeneousAgentService: {
+    listModels: mocks.electronListModels,
+    listPermissions: mocks.electronListPermissions,
+  },
 }));
 
 // Stand in for a host whose handshake proved a local device id — the IPC leg
@@ -35,6 +41,32 @@ vi.mock('@/services/localExecutionIdentity', () => ({
 describe('heterogeneousAgentCatalogService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+  });
+
+  it('returns the advertised permission catalog from the selected transport', async () => {
+    const catalogs = [
+      {
+        configId: 'permission_mode',
+        currentValue: 'default',
+        name: 'Permission mode',
+        options: [{ name: 'Default', value: 'default' }],
+      },
+    ];
+    mocks.electronListPermissions.mockResolvedValue(catalogs);
+    mocks.remoteListPermissions.mockResolvedValue(catalogs);
+    await expect(
+      heterogeneousAgentCatalogService.listPermissions({ type: 'claude-code' }),
+    ).resolves.toEqual(catalogs);
+    await expect(
+      heterogeneousAgentCatalogService.listPermissions({ deviceId: 'device-1', type: 'codex' }),
+    ).resolves.toEqual(catalogs);
+  });
+
+  it('preserves permission discovery failures instead of returning an empty catalog', async () => {
+    mocks.remoteListPermissions.mockRejectedValue(new Error('device offline'));
+    await expect(
+      heterogeneousAgentCatalogService.listPermissions({ deviceId: 'device-1', type: 'codex' }),
+    ).rejects.toThrow('device offline');
   });
 
   it('uses Electron IPC for the current Desktop', async () => {

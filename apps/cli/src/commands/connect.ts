@@ -17,7 +17,10 @@ import type {
   ToolCallRequestMessage,
 } from '@orvilo/device-gateway-client';
 import { GatewayClient } from '@orvilo/device-gateway-client';
-import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
+import {
+  listHeterogeneousAgentModels,
+  listHeterogeneousAgentPermissions,
+} from '@orvilo/heterogeneous-agents/models';
 import { canonicalizePath, getShellInfo } from '@orvilo/local-file-shell';
 import type { Command } from 'commander';
 
@@ -459,6 +462,11 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
     getProjectFileIndex: defaultGetProjectFileIndex,
     listHeterogeneousAgentModels: (params) =>
       listHeterogeneousAgentModels({
+        ...params,
+        env: { ...process.env, ...params.env },
+      }),
+    listHeterogeneousAgentPermissions: (params) =>
+      listHeterogeneousAgentPermissions({
         ...params,
         env: { ...process.env, ...params.env },
       }),

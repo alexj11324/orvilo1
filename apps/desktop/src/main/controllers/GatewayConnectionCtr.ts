@@ -463,6 +463,8 @@ export default class GatewayConnectionCtr extends ControllerModule {
       },
       getProjectFileIndex: (params) => this.localFileCtr.getProjectFileIndex(params),
       listHeterogeneousAgentModels: (params) => this.heterogeneousAgentCtr.listModels(params),
+      listHeterogeneousAgentPermissions: (params) =>
+        this.heterogeneousAgentCtr.listPermissions(params),
       searchProjectFiles: (params) => this.localFileCtr.searchProjectFiles(params),
       unenrollWorkspace: (params) => this.service.unenrollWorkspace(params),
       // Skill-archive cache (`prepareSkillDirectory` RPC): reuse LocalFileCtr's

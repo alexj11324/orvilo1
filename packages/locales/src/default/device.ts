@@ -106,6 +106,7 @@ export default {
   'workingDirectory.currentWorktree': 'current',
   'workingDirectory.detachedHeadShort': 'detached@{{sha}}',
   'workingDirectory.detachedWorktree': 'detached',
+  'workingDirectory.runningLocked': 'Wait until the current run has stopped to change directories',
   'workingDirectory.lockedWorktree': 'locked',
   'workingDirectory.prunableWorktree': 'prunable',
   'workingDirectory.removeWorktreeAction': 'Delete worktree',

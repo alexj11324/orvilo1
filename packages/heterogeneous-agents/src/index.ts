@@ -179,6 +179,8 @@ export type {
   AgentEventAdapter,
   AgentProcessConfig,
   HeterogeneousAgentEvent,
+  HeterogeneousAgentPermission,
+  HeterogeneousAgentPermissionCatalog,
   HeterogeneousEventType,
   HeterogeneousTerminalErrorData,
   StreamChunkData,

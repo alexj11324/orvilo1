@@ -31,6 +31,7 @@ export type IFeatureFlagsState = {
    */
   enableCaidDispatch: boolean | undefined;
   enableCheckUpdates: boolean | undefined;
+  enableCloudSandbox: boolean | undefined;
   enableDevDock: boolean | undefined;
   enableKnowledgeBase: boolean | undefined;
   enableOnboardingV2: boolean | undefined;

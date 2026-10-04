@@ -15,6 +15,7 @@ import type {
   ProviderModelCapability,
 } from './contracts';
 import { CONTROL_PLANE_VERSION } from './contracts';
+import { isSanitizedInferenceRequest } from './harnessProtocol';
 
 export interface InferenceAuthoritySnapshot {
   binding: ProviderBinding;
@@ -155,13 +156,7 @@ export function createInferenceBroker(deps: {
           !validRevision(request.bindingRevision) ||
           !Number.isSafeInteger(request.maxOutputTokens) ||
           request.maxOutputTokens <= 0 ||
-          !Array.isArray(request.messages) ||
-          request.messages.some(
-            (message) =>
-              !message ||
-              !['system', 'user', 'assistant'].includes(message.role) ||
-              typeof message.content !== 'string',
-          )
+          !isSanitizedInferenceRequest(request)
         ) {
           yield { type: 'error', error: error('invalid_request', 'Invalid inference request') };
           return;

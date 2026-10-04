@@ -20,6 +20,7 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { PartialDeep } from 'type-fest';
 
+import AsyncBoundary from '@/components/AsyncBoundary';
 import type { SelectOptions } from '@/components/SelectOptions';
 import { flattenSelectOptions, selectItems, SelectOptionItems } from '@/components/SelectOptions';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -109,7 +110,7 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   // user's enabled embedded-eligible bindings (runtime 'orvilo' + target
   // 'sandbox') — the same rows `resolveOrviloProviderBinding` may resolve.
   const bindings = useProviderBindingStore((s) => s.bindings);
-  useFetchProviderBindings();
+  const bindingQuery = useFetchProviderBindings();
   const builtinAiModelList = useAiInfraStore((s) => s.builtinAiModelList);
 
   const primeModelOptions = useMemo<SelectOptions>(() => {
@@ -264,46 +265,53 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
   return (
     <SettingsGroup title={t('settingAgent.modelSettings.title')}>
       {builtinEngine ? (
-        primeModelOptions.length > 0 ? (
-          <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
-            <Select
-              disabled={!canEdit}
-              items={selectItems(primeModelOptions)}
-              value={model || undefined}
-              onValueChange={(value) => {
-                if (typeof value !== 'string') return;
-                void patchProvider({ model: value });
-              }}
-            >
-              <SelectTrigger className={settingsStyles.select}>
-                <SelectValue placeholder={t('settingAgent.modelSettings.modelLabel')} />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectOptionItems options={primeModelOptions} />
-              </SelectContent>
-            </Select>
-            <div className={settingsStyles.hint}>{t('settingAgent.modelSettings.primeHint')}</div>
-          </SettingsRow>
-        ) : (
-          <SettingsRow>
-            <Alert variant="warning">
-              <TriangleAlertIcon />
-              <AlertTitle>{t('settingAgent.modelSettings.noBindingTitle')}</AlertTitle>
-              <AlertDescription>
-                <div className="flex flex-col items-start gap-2">
-                  <span>{t('settingAgent.modelSettings.noBindingDesc')}</span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => navigate('/settings/provider')}
-                  >
-                    {t('settingAgent.modelSettings.bindAction')}
-                  </Button>
-                </div>
-              </AlertDescription>
-            </Alert>
-          </SettingsRow>
-        )
+        <AsyncBoundary
+          data={bindingQuery.data}
+          error={bindingQuery.error}
+          isLoading={bindingQuery.isLoading}
+          onRetry={() => void bindingQuery.mutate()}
+        >
+          {primeModelOptions.length > 0 ? (
+            <SettingsRow label={t('settingAgent.modelSettings.modelLabel')}>
+              <Select
+                disabled={!canEdit}
+                items={selectItems(primeModelOptions)}
+                value={model || undefined}
+                onValueChange={(value) => {
+                  if (typeof value !== 'string') return;
+                  void patchProvider({ model: value });
+                }}
+              >
+                <SelectTrigger className={settingsStyles.select}>
+                  <SelectValue placeholder={t('settingAgent.modelSettings.modelLabel')} />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectOptionItems options={primeModelOptions} />
+                </SelectContent>
+              </Select>
+              <div className={settingsStyles.hint}>{t('settingAgent.modelSettings.primeHint')}</div>
+            </SettingsRow>
+          ) : (
+            <SettingsRow>
+              <Alert variant="warning">
+                <TriangleAlertIcon />
+                <AlertTitle>{t('settingAgent.modelSettings.noBindingTitle')}</AlertTitle>
+                <AlertDescription>
+                  <div className="flex flex-col items-start gap-2">
+                    <span>{t('settingAgent.modelSettings.noBindingDesc')}</span>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => navigate('/settings/provider')}
+                    >
+                      {t('settingAgent.modelSettings.bindAction')}
+                    </Button>
+                  </div>
+                </AlertDescription>
+              </Alert>
+            </SettingsRow>
+          )}
+        </AsyncBoundary>
       ) : null}
 
       {capability?.model?.source === 'static' ? (
@@ -343,7 +351,9 @@ const AgentModelSettings = memo<AgentModelSettingsProps>(({ agentId }) => {
             <ComboboxInput className={settingsStyles.select} />
             <ComboboxContent>
               <ComboboxEmpty>
-                {catalog.isLoading ? t('settingAgent.modelSettings.catalogPending') : null}
+                {catalog.isLoading
+                  ? t('settingAgent.modelSettings.catalogPending')
+                  : t('common:cmdk.noResults')}
               </ComboboxEmpty>
               <ComboboxList>
                 {(v) => {

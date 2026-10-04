@@ -101,6 +101,18 @@ const getTopicById =
     return s.topicDetailMap?.[id];
   };
 
+/** An open conversation's loaded owner outranks a stale route agent. */
+const activeTopicIdForAgent =
+  (agentId?: string) =>
+  (s: ChatStoreState): string | undefined => {
+    if (!s.activeTopicId) return undefined;
+    const topic = getTopicById(s.activeTopicId)(s);
+    const owner = !s.activeGroupId ? topic?.agentId : undefined;
+    return (owner != null ? owner === agentId : s.activeAgentId === agentId)
+      ? s.activeTopicId
+      : undefined;
+  };
+
 /**
  * The `topicDataMap` bucket that actually holds this topic, or undefined when
  * no loaded bucket does.
@@ -452,6 +464,7 @@ const isTopicNotFoundById =
     !!topicId && !!s.topicNotFoundMap[topicId];
 
 export const topicSelectors = {
+  activeTopicIdForAgent,
   activeTopicHeteroPin,
   activeTopicModel,
   currentActiveTopic,

@@ -301,6 +301,10 @@ export interface DeviceControlDeps extends SkillDirectoryDeps, WorkspaceScanDeps
   listHeterogeneousAgentModels?: (
     params: ListHeterogeneousAgentModelsParams,
   ) => Promise<HeterogeneousAgentModelCatalog>;
+  /** Query the permission options advertised by this execution host's harness. */
+  listHeterogeneousAgentPermissions?: (
+    params: ListHeterogeneousAgentPermissionsParams,
+  ) => Promise<HeterogeneousAgentPermissionCatalog[]>;
   /** Read raw bytes after the user explicitly approved an external publish closure. */
   readExternalAssetForPublish?: (
     params: ExternalAssetForPublishParams,
@@ -334,6 +338,21 @@ export interface WorktreeActiveWriter {
  * Structural mirrors of the canonical `@orvilo/types` catalog contracts.
  * Kept local so device-control remains a leaf package with no app/type-layer dependency.
  */
+export interface ListHeterogeneousAgentPermissionsParams {
+  args?: string[];
+  command?: string;
+  cwd?: string;
+  env?: Record<string, string>;
+  type: string;
+}
+
+export interface HeterogeneousAgentPermissionCatalog {
+  configId: string;
+  currentValue: string;
+  name: string;
+  options: { description?: string; name: string; value: string }[];
+}
+
 export interface ListHeterogeneousAgentModelsParams {
   args?: string[];
   command?: string;

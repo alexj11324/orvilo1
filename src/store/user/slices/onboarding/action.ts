@@ -44,15 +44,15 @@ export class OnboardingActionImpl {
       version: CURRENT_ONBOARDING_VERSION,
     } satisfies UserOnboarding;
 
+    await this.#enqueueOnboardingWrite(() => userService.updateOnboarding(onboarding));
+
     this.#set(
       {
         onboarding,
       },
       false,
-      'finishOnboarding/optimistic',
+      'finishOnboarding/persisted',
     );
-
-    await this.#enqueueOnboardingWrite(() => userService.updateOnboarding(onboarding));
 
     await this.#get().refreshUserState();
   };

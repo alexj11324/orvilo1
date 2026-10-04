@@ -9,7 +9,6 @@ import {
 import { createStaticStyles, cssVar, useTheme } from 'antd-style';
 import dayjs from 'dayjs';
 import isEqual from 'fast-deep-equal';
-import { MessageSquareDashed } from 'lucide-react';
 import type { DragEvent, RefObject } from 'react';
 import { memo, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
@@ -81,6 +80,23 @@ const styles = createStaticStyles(({ css }) => ({
     position: relative;
     display: inline-flex;
     flex: none;
+  `,
+  row: css`
+    .nav-item-content {
+      mask-image: none !important;
+    }
+
+    .nav-item-content > .truncate {
+      font-size: ${cssVar.fontSize};
+      font-weight: 400;
+    }
+
+    .nav-item-actions {
+      position: static;
+      flex: none;
+      inline-size: 52px;
+      padding-inline-end: 0;
+    }
   `,
   runningElapsedTime: css`
     flex: none;
@@ -357,16 +373,16 @@ const TopicItemRow = memo<TopicItemRowProps>(
           active={defaultTopicActive}
           slots={{ titlePrefix: draftPrefix }}
           titleColor={cssVar.colorText}
-          icon={
+          // Same no-leading-icon rule as a real topic row; the only state it
+          // ever showed there was the running ring, which trails instead.
+          extra={
             isLoading ? (
               <RingLoadingIcon
                 ringColor={loadingRingColor}
                 size={14}
                 style={{ color: cssVar.colorWarning }}
               />
-            ) : (
-              <MessageSquareDashed color={cssVar.colorTextDescription} size={'small'} />
-            )
+            ) : undefined
           }
           title={
             <div className="flex items-center flex-1 gap-1.5">
@@ -385,8 +401,9 @@ const TopicItemRow = memo<TopicItemRowProps>(
       );
     }
 
-    // Execution / attention state. In workspace mode this moves to the row's
-    // trailing side so the leading slot can carry the creator identity.
+    // Execution / attention state. This trails the row (see `ownIconNode`
+    // below), sharing one slot with the identity-flavored PR marker so a given
+    // topic reads the same way in every mode.
     const statusIconNode = (() => {
       // A scheduled topic hasn't run yet — nothing else can be true of it,
       // so its clock outranks the other states.
@@ -449,13 +466,12 @@ const TopicItemRow = memo<TopicItemRowProps>(
       return null;
     })();
 
-    // Identity-flavored icons the row owns (bot platform, PR marker) — these
-    // keep the leading slot even in workspace mode, with the creator shrunk to
-    // a corner badge.
+    // Identity-flavored icon the row owns (the PR marker). It shares the
+    // trailing slot with the execution status and only shows on an idle topic,
+    // which is where its secondary metadata ranks.
     const identityIconNode = (() => {
       // GitHub PR state marker (open=green, merged=purple, closed=red),
-      // like Codex. It is secondary metadata, so only an idle topic uses it
-      // as the leading icon.
+      // like Codex.
       if (metaCard?.pullRequest) {
         const prVisual = PR_STATE_VISUAL[getPullRequestState(metaCard.pullRequest)];
         const ciStatus = metaCard.pullRequest.ciStatus;
@@ -491,19 +507,17 @@ const TopicItemRow = memo<TopicItemRowProps>(
       return null;
     })();
 
-    const idleIconPlaceholder = <span aria-hidden style={{ flex: 'none', width: 16 }} />;
-
-    // Workspace mode (creator resolvable): the creator's round avatar is the
-    // primary visual and always leads the row; the row's own icon — execution
-    // status first, then the identity-flavored PR marker —
-    // shrinks into a bottom-right corner badge. Personal mode keeps the
-    // original layout untouched.
+    // Topic rows carry NO leading icon: the title starts at the row's text
+    // inset (x=16) instead of behind a 28px gutter, which read as a blank
+    // column on the many idle rows whose only occupant was a placeholder. Every
+    // icon a row owns — execution status first, then the identity-flavored PR
+    // marker — rides the trailing `extra` slot instead, so a status is always
+    // in the same place regardless of which state it represents. The one
+    // exception is the workspace creator avatar: real content, not a
+    // placeholder, so it still leads (and no longer needs a corner badge, since
+    // the status it used to carry now lives on the trailing side).
     const ownIconNode = statusIconNode ?? identityIconNode;
-    const leadingIconNode = author ? (
-      <TopicCreatorAvatar corner={ownIconNode} userId={userId} />
-    ) : (
-      (ownIconNode ?? idleIconPlaceholder)
-    );
+    const leadingIconNode = author ? <TopicCreatorAvatar userId={userId} /> : undefined;
 
     const navItem = (
       <TopicItemContextMenu fav={fav} id={id} status={status} title={title}>
@@ -511,6 +525,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
           draggable
           actions={() => <Actions fav={fav} id={id} status={status} title={title} />}
           active={isTopicActive}
+          className={styles.row}
           description={descriptionNode}
           href={href}
           icon={leadingIconNode}
@@ -519,6 +534,7 @@ const TopicItemRow = memo<TopicItemRowProps>(
           titleColor={cssVar.colorText}
           extra={
             <>
+              {ownIconNode}
               <TopicMigrationIndicator agentId={rowAgentId} topicId={id} />
               <RunningElapsedTime agentId={rowAgentId} topicId={id} />
             </>

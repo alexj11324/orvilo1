@@ -3,6 +3,8 @@ import { ChevronDownIcon, ZapIcon } from 'lucide-react';
 import type { ComponentPropsWithRef, ReactNode } from 'react';
 import { memo } from 'react';
 
+import { Button } from '@/components/ui/button';
+
 const styles = createStaticStyles(({ css }) => ({
   label: css`
     overflow: hidden;
@@ -30,11 +32,15 @@ const styles = createStaticStyles(({ css }) => ({
     max-width: 100%;
     height: 28px;
     padding-inline: 8px;
+    border: 0;
     border-radius: 6px;
 
     font-size: 12px;
+    font-weight: inherit;
     color: ${cssVar.colorTextSecondary};
     white-space: nowrap;
+
+    background: transparent;
 
     transition: all 0.2s;
 
@@ -45,6 +51,16 @@ const styles = createStaticStyles(({ css }) => ({
       [data-secondary] {
         color: ${cssVar.colorTextSecondary};
       }
+    }
+
+    &[aria-expanded='true'] {
+      color: ${cssVar.colorText};
+      background: ${cssVar.colorFillSecondary};
+    }
+
+    &:focus-visible {
+      outline: 2px solid ${cssVar.colorTextSecondary};
+      outline-offset: 2px;
     }
   `,
 }));
@@ -67,7 +83,7 @@ const styles = createStaticStyles(({ css }) => ({
  * `aria-haspopup`/`aria-expanded`. Swallowing the rest props here leaves a
  * chip that renders correctly and never opens, so they must reach the element.
  */
-interface TriggerProps extends ComponentPropsWithRef<'div'> {
+interface TriggerProps extends ComponentPropsWithRef<'button'> {
   ariaLabel: string;
   fast?: boolean;
   /** Optional leading visual (e.g. the agent avatar) rendered before the label. */
@@ -77,12 +93,19 @@ interface TriggerProps extends ComponentPropsWithRef<'div'> {
 }
 
 const SelectorTrigger = memo<TriggerProps>(
-  ({ ariaLabel, className, fast, leading, secondaryText, text, ...rest }) => (
-    <div {...rest} aria-label={ariaLabel} className={cx(styles.trigger, className)}>
+  ({ ariaLabel, className, fast, leading, secondaryText, text, type = 'button', ...rest }) => (
+    <Button
+      {...rest}
+      aria-label={ariaLabel}
+      className={cx(styles.trigger, className)}
+      size="sm"
+      type={type}
+      variant="ghost"
+    >
       {leading}
       {fast && (
         <span className="anticon" role="img">
-          <ZapIcon fill={'transparent'} height={12} size={12} width={12} />
+          <ZapIcon className="size-3" fill={'transparent'} height={12} size={12} width={12} />
         </span>
       )}
       <span className={styles.label}>{text}</span>
@@ -92,9 +115,9 @@ const SelectorTrigger = memo<TriggerProps>(
         </span>
       )}
       <span className="anticon" role="img">
-        <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
+        <ChevronDownIcon className="size-3" fill={'transparent'} height={12} size={12} width={12} />
       </span>
-    </div>
+    </Button>
   ),
 );
 

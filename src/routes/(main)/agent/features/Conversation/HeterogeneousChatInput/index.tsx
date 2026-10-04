@@ -33,9 +33,10 @@ import ScheduledSendChip from './ScheduledSendChip';
 // so most Orvilo-side pickers don't apply — no built-in left action fits, and
 // the bar is composed entirely from `extraActionItems`: a hetero-only `+` menu
 // (formatting toolbar + "Send later") in the input's bottom-left corner.
-// Model + thinking effort are Engine config on the agent now, so the composer
-// carries the same agent chip as the standard input (next to Send) instead of
-// the CLI model selector.
+//
+// The right side carries the agent selector and nothing else: the CLI's model
+// and its thinking effort are the agent's own Engine config, not picks the
+// composer offers per conversation.
 const leftActions: ActionKeys[] = [];
 const rightActions: ActionKeys[] = ['agent'];
 
@@ -287,10 +288,9 @@ const HeterogeneousChatInput = memo(() => {
       {renderCloudConfigGuard()}
       {renderDeviceGuard()}
       <ChatInput
-        // Same composer parity as MainChatInput: the hetero control strip
-        // renders inside the card footer, and the editor opens at one text
-        // row (~24px) instead of the shared two-row default.
-        controlBarInCard
+        // Same composer parity as MainChatInput: the hetero control strip floats
+        // under the card rather than inside its footer, and the editor opens at
+        // one text row (~24px) instead of the shared two-row default.
         allowExpand={false}
         controlBarSlot={<HeteroControlBar />}
         editorDefaultRows={1}

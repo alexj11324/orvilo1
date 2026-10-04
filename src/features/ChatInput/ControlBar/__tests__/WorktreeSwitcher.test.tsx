@@ -2,6 +2,7 @@ import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import BranchSwitcher from '../BranchSwitcher';
 import WorktreeSwitcher from '../WorktreeSwitcher';
 
 const commitMock = vi.hoisted(() => vi.fn());
@@ -16,6 +17,10 @@ const toastLoadingMock = vi.hoisted(() =>
 
 vi.mock('../useCommitWorkingDirectory', () => ({
   useCommitWorkingDirectory: () => ({ commit: commitMock }),
+}));
+
+vi.mock('@/store/device', () => ({
+  useFetchGitWorkingTreeStatus: () => ({ data: undefined, mutate: vi.fn() }),
 }));
 
 vi.mock('@/services/git', () => ({
@@ -479,4 +484,22 @@ describe('WorktreeSwitcher', () => {
 
     expect(commitMock).toHaveBeenCalledWith({ path: '/repo', repoType: 'git' });
   });
+});
+
+it('renders a branch switcher outside a conversation provider', () => {
+  render(
+    <BranchSwitcher
+      agentId="agent"
+      currentBranch="main"
+      isGithub={false}
+      open={false}
+      path="/repo"
+      sourcePath="/repo"
+      worktrees={[]}
+      onOpenChange={vi.fn()}
+    >
+      <span>Current branch</span>
+    </BranchSwitcher>,
+  );
+  expect(screen.getByText('Current branch')).toBeInTheDocument();
 });

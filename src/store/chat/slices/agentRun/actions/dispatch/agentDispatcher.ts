@@ -201,6 +201,10 @@ export const selectRuntimeType = (
     throw new Error(GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR);
   }
 
+  // Prime is a device-hosted runner, not an ACP session. Its native local
+  // selection still uses Gateway; IPC cannot launch it, even as a child.
+  if (ctx.heterogeneousProvider?.type === 'orvilo') return 'gateway';
+
   if (ctx.parentRuntime) return ctx.parentRuntime;
   // Notify-based platform agents (openclaw / hermes) use the gateway transport for both
   // targets: `local` presets this desktop's personal device ID on the request, while

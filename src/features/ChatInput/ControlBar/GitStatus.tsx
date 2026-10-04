@@ -123,10 +123,11 @@ interface GitStatusProps {
   isGithub: boolean;
   path: string;
   sourcePath?: string;
+  topicId?: string | null;
 }
 
 const GitStatus = memo<GitStatusProps>(
-  ({ agentId, path, sourcePath, isGithub, deviceId, fallbackGit }) => {
+  ({ agentId, path, sourcePath, isGithub, deviceId, fallbackGit, topicId }) => {
     const { t } = useTranslation('device');
     // Transport (Electron IPC vs device RPC) is decided inside the service; the
     // component just reads, identically for local and remote.
@@ -294,6 +295,7 @@ const GitStatus = memo<GitStatusProps>(
           isGithub={isGithub}
           path={path}
           sourcePath={sourcePath}
+          topicId={topicId}
         />
       );
     }
@@ -329,7 +331,9 @@ const GitStatus = memo<GitStatusProps>(
 
     const branchTrigger = (
       <div className={gitChipStyles.trigger}>
-        <span className={styles.branchLabel}>{branch}</span>
+        <span data-workspace-label className={styles.branchLabel}>
+          {branch}
+        </span>
       </div>
     );
 
@@ -344,6 +348,7 @@ const GitStatus = memo<GitStatusProps>(
         isGithub={isGithub}
         path={path}
         sourcePath={sourcePath ?? path}
+        topicId={topicId}
         worktrees={worktrees}
         onWorktreesChange={mutateWorktrees}
       />
@@ -362,6 +367,7 @@ const GitStatus = memo<GitStatusProps>(
         open={switcherOpen}
         path={path}
         sourcePath={sourcePath ?? path}
+        topicId={topicId}
         worktrees={worktrees}
         onExternalRefresh={refreshAfterSync}
         onOpenChange={setSwitcherOpen}

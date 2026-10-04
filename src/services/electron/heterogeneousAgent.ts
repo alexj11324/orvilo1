@@ -1,3 +1,4 @@
+import { isDesktop } from '@orvilo/const';
 import type {
   ClaudeCodeQuotaSnapshot,
   CodexQuotaSnapshot,
@@ -6,8 +7,11 @@ import type {
 import type { HeterogeneousProviderBindingReference } from '@orvilo/heterogeneous-agents';
 import type {
   HeterogeneousAgentModelCatalog,
+  HeterogeneousAgentPermission,
+  HeterogeneousAgentPermissionCatalog,
   HeteroSessionImportMessage,
   ListHeterogeneousAgentModelsParams,
+  ListHeterogeneousAgentPermissionsParams,
 } from '@orvilo/types';
 
 import { requireProvenLocalDeviceId } from '@/services/localExecutionIdentity';
@@ -17,6 +21,11 @@ import { ensureElectronIpc } from '@/utils/electron/ipc';
  * Renderer-side service for managing heterogeneous agent processes via Electron IPC.
  */
 class HeterogeneousAgentService {
+  /** Local discovery UI availability only; this never proves device identity or execution admission. */
+  get supportsLocalExecution(): boolean {
+    return isDesktop;
+  }
+
   private get ipc() {
     return ensureElectronIpc();
   }
@@ -28,6 +37,7 @@ class HeterogeneousAgentService {
     cwd?: string;
     env?: Record<string, string>;
     initialModel?: string;
+    initialPermission?: HeterogeneousAgentPermission;
     providerBinding?: HeterogeneousProviderBindingReference;
     resumeSessionId?: string;
     useClaudeCodeSdk?: boolean;
@@ -65,6 +75,13 @@ class HeterogeneousAgentService {
   async getSessionInfo(sessionId: string) {
     await requireProvenLocalDeviceId('getSessionInfo');
     return this.ipc.heterogeneousAgent.getSessionInfo({ sessionId });
+  }
+
+  async listPermissions(
+    params: ListHeterogeneousAgentPermissionsParams,
+  ): Promise<HeterogeneousAgentPermissionCatalog[]> {
+    await requireProvenLocalDeviceId('listPermissions');
+    return this.ipc.heterogeneousAgent.listPermissions(params);
   }
 
   async listModels(

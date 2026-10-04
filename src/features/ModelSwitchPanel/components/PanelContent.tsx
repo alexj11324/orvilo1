@@ -1,5 +1,5 @@
 import { Flexbox } from '@lobehub/ui';
-import { type ComponentType, type FC } from 'react';
+import { type ComponentType, type FC, useMemo } from 'react';
 import { useState } from 'react';
 import { Rnd } from 'react-rnd';
 
@@ -12,6 +12,9 @@ import type { EnabledProviderWithModels } from '@/types/aiProvider';
 import { DEFAULT_WIDTH, ENABLE_RESIZING, MAX_WIDTH, MIN_WIDTH } from '../const';
 import { usePanelSize } from '../hooks/usePanelSize';
 import { usePanelState } from '../hooks/usePanelState';
+import { styles } from '../styles';
+import type { SimpleModelSource } from '../types';
+import { toSimpleEnabledList } from '../utils';
 import { List } from './List';
 import type { PricingMode } from './ModelDetailPanel';
 import { Toolbar } from './Toolbar';
@@ -24,6 +27,7 @@ interface PanelContentProps {
   onOpenChange?: (open: boolean) => void;
   pricingMode?: PricingMode;
   provider?: string;
+  simpleSource?: SimpleModelSource;
 }
 
 export const PanelContent: FC<PanelContentProps> = ({
@@ -34,15 +38,34 @@ export const PanelContent: FC<PanelContentProps> = ({
   onOpenChange,
   pricingMode,
   provider: providerProp,
+  simpleSource,
 }) => {
   const chatEnabledList = useEnabledChatModels();
-  const enabledList = enabledListProp ?? chatEnabledList;
   const [searchKeyword, setSearchKeyword] = useState('');
   const isDevMode = useUserStore((s) => userGeneralSettingsSelectors.config(s).isDevMode);
   const { groupMode, handleGroupModeChange } = usePanelState();
+
+  const enabledList = useMemo(
+    () => (simpleSource ? toSimpleEnabledList(simpleSource) : (enabledListProp ?? chatEnabledList)),
+    [chatEnabledList, enabledListProp, simpleSource],
+  );
   const { panelHeight, panelWidth, handlePanelWidthChange } = usePanelSize(enabledList.length);
 
   useBusinessModelPricingPrefetch();
+
+  // A simple source with nothing in it (Prime with no binding, a CLI catalog
+  // that failed to load) gets its own message: the model-bank "go configure a
+  // provider" row would be a dead end for these sources.
+  // `panelWidth` (not the content) sizes the popup: a bare message would
+  // otherwise shrink the menu to the text, unlike every other state of this
+  // panel.
+  if (simpleSource && simpleSource.options.length === 0) {
+    return (
+      <div className={styles.empty} style={{ width: panelWidth }}>
+        {simpleSource.emptyText}
+      </div>
+    );
+  }
 
   const content = (
     <>

@@ -231,8 +231,17 @@ export class ChatTopicActionImpl {
 
     this.#set({ creatingTopic: true }, false, n('creatingTopic/start'));
     const targetAgentId = agentId || activeAgentId;
-    const modelSnapshot = snapshotAgentModel(targetAgentId);
-    const reasoningSnapshot = await snapshotAgentReasoning(targetAgentId, modelSnapshot);
+    // Blank-composer picks outrank the agent's stored model/effort for THIS
+    // conversation — the agent row is never written (spec §5.2). The pending
+    // effort lands on the same `metadata.heteroEffort` column
+    // `snapshotAgentReasoning` would have filled.
+    const composerModel = this.#get().composerModelSelection;
+    const composerEffort = this.#get().composerHeteroEffort;
+    const modelSnapshot = composerModel ?? snapshotAgentModel(targetAgentId);
+    const reasoningSnapshot =
+      composerEffort === undefined
+        ? await snapshotAgentReasoning(targetAgentId, modelSnapshot)
+        : { heteroEffort: composerEffort };
     const topicId = await internal_createTopic({
       ...modelSnapshot,
       ...(reasoningSnapshot ? { metadata: reasoningSnapshot } : {}),
@@ -243,8 +252,24 @@ export class ChatTopicActionImpl {
       messages: messages.map((m) => m.id),
     });
     this.#set({ creatingTopic: false }, false, n('creatingTopic/end'));
+    this.clearComposerSelection();
 
     return topicId;
+  };
+
+  /**
+   * Blank-composer picks (`composerModelSelection` / `composerHeteroEffort`) are
+   * consumed by whichever path actually creates the topic — `createTopic`,
+   * `saveToTopic`, or the agent-run send lifecycle in `conversationLifecycle` —
+   * so this is the single definition of "the pick has been used". Leaving them
+   * set would leak the pick into the next conversation's first message.
+   */
+  clearComposerSelection = () => {
+    this.#set(
+      { composerHeteroEffort: undefined, composerModelSelection: undefined },
+      false,
+      n('composerSelection/consumed'),
+    );
   };
 
   saveToTopic = async (agentId?: string): Promise<string | undefined> => {
@@ -255,9 +280,16 @@ export class ChatTopicActionImpl {
     const { activeAgentId, summaryTopicTitle, internal_createTopic } = this.#get();
     const targetAgentId = agentId || activeAgentId;
 
-    // 1. create topic and bind these messages
-    const modelSnapshot = snapshotAgentModel(targetAgentId);
-    const reasoningSnapshot = await snapshotAgentReasoning(targetAgentId, modelSnapshot);
+    // 1. create topic and bind these messages. Blank-composer picks outrank the
+    // agent's stored model/effort for THIS conversation — the agent row is never
+    // written (spec §5.2).
+    const composerModel = this.#get().composerModelSelection;
+    const composerEffort = this.#get().composerHeteroEffort;
+    const modelSnapshot = composerModel ?? snapshotAgentModel(targetAgentId);
+    const reasoningSnapshot =
+      composerEffort === undefined
+        ? await snapshotAgentReasoning(targetAgentId, modelSnapshot)
+        : { heteroEffort: composerEffort };
     const topicId = await internal_createTopic({
       ...modelSnapshot,
       ...(reasoningSnapshot ? { metadata: reasoningSnapshot } : {}),
@@ -265,6 +297,8 @@ export class ChatTopicActionImpl {
       title: t('defaultTitle', { ns: 'topic' }),
       messages: messages.map((m) => m.id),
     });
+
+    this.clearComposerSelection();
 
     // 2. auto summary topic Title — fire-and-forget; the title streams into the
     // row as it generates, no separate loading affordance needed.
@@ -485,7 +519,20 @@ export class ChatTopicActionImpl {
     // Persistence goes through updateTopic, not the move mutation: only the
     // topic row's owner column flips — its messages/threads are never
     // re-parented, so earlier segments stay attributed to their agent.
-    await topicService.updateTopic(topicId, { agentId: toAgentId });
+    try {
+      await topicService.updateTopic(topicId, { agentId: toAgentId });
+    } catch (error) {
+      // A newer handoff owns its own optimistic assignment.
+      if (topicSelectors.getTopicById(topicId)(this.#get())?.agentId === toAgentId) {
+        this.#get().internal_dispatchTopic({
+          type: 'updateTopic',
+          id: topicId,
+          value: { agentId: topic?.agentId },
+          containerKey,
+        });
+      }
+      throw error;
+    }
     await this.#get().refreshTopic(containerKey);
 
     // If the handoff write fails the switch still happened — it only loses

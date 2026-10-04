@@ -1,8 +1,10 @@
 import { applyTopicExecutionConfig, snapshotTopicExecutionConfig } from '@orvilo/types';
 import { describe, expect, it, vi } from 'vitest';
 
+import { createServerConfigStore } from '@/store/serverConfig/store';
+
 import { resolveExecutionTarget } from './executionTarget';
-import { resolveTopicAgencyConfig } from './topicExecutionConfig';
+import { getTopicAgencyConfig, resolveTopicAgencyConfig } from './topicExecutionConfig';
 
 describe('Topic execution isolation', () => {
   it('keeps A on its device when B or the Agent default switches to sandbox', () => {
@@ -81,3 +83,35 @@ it.each([undefined, 'local'] as const)(
     ).toBe('none');
   },
 );
+
+it('keeps a stored cloud sandbox selection pending while its flag is disabled', () => {
+  const defaults = { executionTarget: 'sandbox' as const };
+  expect(
+    resolveTopicAgencyConfig(defaults, undefined, false, false).agencyConfig?.executionTarget,
+  ).toBe('none');
+  expect(
+    resolveTopicAgencyConfig(defaults, undefined, false, true).agencyConfig?.executionTarget,
+  ).toBe('sandbox');
+  expect(defaults.executionTarget).toBe('sandbox');
+  expect(
+    resolveTopicAgencyConfig(defaults, { executionTarget: 'local' }, false, false).agencyConfig
+      ?.executionTarget,
+  ).toBe('local');
+});
+
+it('reads cloud availability through the real imperative server config API during dispatch', () => {
+  const store = createServerConfigStore();
+  const previous = store.getState().featureFlags;
+  try {
+    store.setState({ featureFlags: { ...previous, enableCloudSandbox: false } });
+    expect(getTopicAgencyConfig({ executionTarget: 'sandbox' })).toMatchObject({
+      executionTarget: 'none',
+    });
+    store.setState({ featureFlags: { ...previous, enableCloudSandbox: true } });
+    expect(getTopicAgencyConfig({ executionTarget: 'sandbox' })).toMatchObject({
+      executionTarget: 'sandbox',
+    });
+  } finally {
+    store.setState({ featureFlags: previous });
+  }
+});

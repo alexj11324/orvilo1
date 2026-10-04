@@ -5,10 +5,12 @@ import { useRef, useState } from 'react';
  * Workspace URL field that tracks the slugified workspace name until the user
  * takes it over; clearing a manual slug hands the field back to auto-fill.
  */
-export const useWorkspaceSlug = () => {
-  const [workspaceName, setWorkspaceName] = useState('');
-  const [workspaceSlug, setWorkspaceSlug] = useState('');
-  const slugEditedRef = useRef(false);
+export const useWorkspaceSlug = (initialName = '', initialSlug = '') => {
+  const [workspaceName, setWorkspaceName] = useState(initialName);
+  const [workspaceSlug, setWorkspaceSlug] = useState(
+    initialSlug || slugifyWorkspaceName(initialName),
+  );
+  const slugEditedRef = useRef(initialSlug.trim() !== '');
 
   const onWorkspaceNameChange = (value: string) => {
     setWorkspaceName(value);

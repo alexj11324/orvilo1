@@ -50,6 +50,8 @@ import type {
   DeviceUnavailableErrorData,
   DeviceWriteProjectFileResult,
   HeterogeneousAgentModelCatalog,
+  HeterogeneousAgentPermissionCatalog,
+  ListHeterogeneousAgentPermissionsParams,
   ProjectSkillMeta,
   WorkspaceInitResult,
 } from '@orvilo/types';
@@ -534,6 +536,27 @@ export class DeviceGateway {
       params,
       { path: params.path, worktreePath: params.worktreePath },
     );
+  }
+
+  async listHeterogeneousAgentPermissions(
+    params: ListHeterogeneousAgentPermissionsParams & {
+      deviceId: string;
+      timeout?: number;
+      userId: string;
+      workspaceId?: string;
+    },
+  ): Promise<HeterogeneousAgentPermissionCatalog[]> {
+    const { deviceId, timeout = 20_000, userId, workspaceId, ...rpcParams } = params;
+    const client = this.getClient();
+    if (!client) throw new Error('Device gateway is not configured');
+    const result = await client.invokeRpc<HeterogeneousAgentPermissionCatalog[]>(
+      { deviceId, timeout, userId, workspaceId },
+      { method: 'listHeterogeneousAgentPermissions', params: rpcParams },
+    );
+    if (!result.success || result.data === undefined) {
+      throw new Error(result.error || 'The device did not return a permission catalog');
+    }
+    return result.data;
   }
 
   /** Query a heterogeneous CLI's model catalog on the device that will execute it. */

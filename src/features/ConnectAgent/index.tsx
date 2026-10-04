@@ -36,8 +36,13 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DOWNLOAD_URL } from '@/const/url';
 import { getDeviceIcon } from '@/features/DeviceManager/getDeviceIcon';
+import { getDeviceLabel } from '@/features/DeviceManager/getDeviceLabel';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import {
+  createOnboardingAgentOnce,
+  type FirstAgentCreationCheckpoint,
+} from '@/services/agentOnboarding';
 import { deviceService } from '@/services/device';
 import { useAgentStore } from '@/store/agent';
 import { heteroAgentDefaultName } from '@/store/agent/utils/heteroAgentDefaultName';
@@ -376,13 +381,21 @@ const AgentScanRow = memo<{
 });
 
 interface ConnectAgentContentProps {
+  creationCheckpoint?: FirstAgentCreationCheckpoint;
   groupId?: string;
+  initialTarget?: ScanTarget;
+  /**
+   * Harness the caller already chose (the composer picker's "installed on this
+   * device" row). Seeded into the step-2 selection once its scan settles, so
+   * that hand-off does not make the user find the same row again.
+   */
+  initialType?: HeterogeneousAgentType;
   onTitleChange: (title: string) => void;
   visibility?: 'private' | 'public';
 }
 
 const ConnectAgentContent = memo<ConnectAgentContentProps>(
-  ({ groupId, onTitleChange, visibility }) => {
+  ({ groupId, initialType, initialTarget, creationCheckpoint, onTitleChange, visibility }) => {
     const { t } = useTranslation('chat');
     const { close, setCanDismissByClickOutside } = useModalContext();
     const navigate = useWorkspaceAwareNavigate();
@@ -432,8 +445,8 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     const deviceInventoryComplete = !loadingDevices && !fetchingDevices && !devicesError;
 
     const deviceLabel = useCallback(
-      (device: DeviceListItem) => device.friendlyName || device.hostname || device.deviceId,
-      [],
+      (device: DeviceListItem) => getDeviceLabel(device, t('connectAgent.create.desktopChannel')),
+      [t],
     );
 
     const targetLabel =
@@ -474,12 +487,31 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     // listedDevices.length totals 1.
     const autoResolvedTargetRef = useRef(false);
     useEffect(() => {
+      if (!initialTarget || autoResolvedTargetRef.current) return;
+      autoResolvedTargetRef.current = true;
+      pickTarget(initialTarget);
+    }, [initialTarget, pickTarget]);
+    useEffect(() => {
       if (autoResolvedTargetRef.current || step !== 0 || !deviceInventoryComplete) return;
       const candidates = (isDesktop ? 1 : 0) + listedDevices.length;
       if (candidates !== 1) return;
       autoResolvedTargetRef.current = true;
       pickTarget(isDesktop ? { kind: 'local' } : { device: listedDevices[0], kind: 'device' });
     }, [deviceInventoryComplete, listedDevices, pickTarget, step]);
+
+    // Seed a hand-off selection once — and only once the scan confirms the
+    // binary is actually on the target. Seeding before that could preselect a
+    // harness the device does not have, and re-seeding after an explicit
+    // Rescan would undo the user's own selection.
+    const seededInitialTypeRef = useRef(false);
+    useEffect(() => {
+      const pending = initialType;
+      if (seededInitialTypeRef.current || !pending) return;
+      if (scanState.status !== 'success') return;
+      if (scanState.agents?.[pending]?.available !== true) return;
+      seededInitialTypeRef.current = true;
+      setSelectedTypes((prev) => (prev.includes(pending) ? prev : [...prev, pending]));
+    }, [initialType, scanState]);
 
     const rescan = useCallback(() => {
       if (!target) return;
@@ -492,7 +524,9 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         setSelectedTypes((prev) =>
           prev.includes(provider.type)
             ? prev.filter((type) => type !== provider.type)
-            : [...prev, provider.type],
+            : creationCheckpoint
+              ? [provider.type]
+              : [...prev, provider.type],
         );
         // Prefetch the platform's profile so create/customize can prefill
         // title / description / avatar without an extra wait.
@@ -510,7 +544,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             .catch(() => {});
         }
       },
-      [currentDeviceId, profiles, target],
+      [creationCheckpoint, currentDeviceId, profiles, target],
     );
 
     const goConfirm = useCallback(() => {
@@ -556,21 +590,31 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                 provider,
                 provider === single ? overrides : undefined,
               );
-              const result = await storeCreateAgent(params);
+              const result = creationCheckpoint
+                ? await createOnboardingAgentOnce(creationCheckpoint, params, storeCreateAgent)
+                : { ...(await storeCreateAgent(params)), config: params.config };
+              const savedConfig = result.config ?? params.config;
+              const savedProvider =
+                CONNECTABLE_PROVIDERS.find(
+                  (item) => item.type === savedConfig.agencyConfig?.heterogeneousProvider?.type,
+                ) ?? provider;
+              const savedDevice = devices?.find(
+                (item) => item.deviceId === savedConfig.agencyConfig?.boundDeviceId,
+              );
               return {
                 agentId: result.agentId,
-                locationLabel: targetLabel,
-                provider,
+                locationLabel: savedDevice ? deviceLabel(savedDevice) : targetLabel,
+                provider: savedProvider,
                 // Mirror the default-name seeding in createAgent so the done
                 // screen shows the same label the sidebar will.
                 title:
-                  params.config.name?.trim() ||
+                  savedConfig.name?.trim() ||
                   heteroAgentDefaultName({
-                    productTitle: params.config.title,
+                    productTitle: savedConfig.title ?? undefined,
                     visibility,
                     workspaceId: activeWorkspaceId,
                   }) ||
-                  agentDisplayName(params.config, provider.title),
+                  agentDisplayName(savedConfig, savedProvider.title),
                 version: scanState.agents?.[provider.type]?.version,
               } satisfies CreatedAgent;
             }),
@@ -591,6 +635,9 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       [
         activeWorkspaceId,
         buildCreateParams,
+        creationCheckpoint,
+        deviceLabel,
+        devices,
         onTitleChange,
         refreshAgentList,
         scanState,
@@ -809,7 +856,9 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
 
           {scanning && (
             <div className="flex flex-col gap-1.5">
-              <SectionLabel>{t('connectAgent.create.scanning')}</SectionLabel>
+              <SectionLabel>
+                {t('connectAgent.create.scanning', { device: targetLabel })}
+              </SectionLabel>
               <ScrollableAgentList>
                 {[90, 70, 110, 80, 100, 75, 95]
                   .slice(0, CONNECTABLE_PROVIDERS.length)
@@ -998,7 +1047,11 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
 ConnectAgentContent.displayName = 'ConnectAgentContent';
 
 export interface OpenConnectAgentModalOptions {
+  creationCheckpoint?: FirstAgentCreationCheckpoint;
   groupId?: string;
+  initialTarget?: ScanTarget;
+  /** Pre-select this harness when the scan finds it (composer picker hand-off). */
+  initialType?: HeterogeneousAgentType;
   visibility?: 'private' | 'public';
 }
 
@@ -1010,7 +1063,10 @@ export const openConnectAgentModal = (options?: OpenConnectAgentModalOptions): M
   holder.instance = createModal({
     content: (
       <ConnectAgentContent
+        creationCheckpoint={options?.creationCheckpoint}
         groupId={options?.groupId}
+        initialTarget={options?.initialTarget}
+        initialType={options?.initialType}
         visibility={options?.visibility}
         onTitleChange={(title) => holder.instance?.update({ title })}
       />

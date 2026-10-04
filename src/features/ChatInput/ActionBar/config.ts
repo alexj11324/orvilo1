@@ -6,7 +6,6 @@ import Clear from './Clear';
 import History from './History';
 import Memory from './Memory';
 import Mention from './Mention';
-import Model from './Model';
 import Params from './Params';
 import Plus from './Plus';
 import Search from './Search';
@@ -25,7 +24,6 @@ export const actionMap = {
   history: History,
   memory: Memory,
   mention: Mention,
-  model: Model,
   params: Params,
   search: Search,
   temperature: Params,

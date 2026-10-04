@@ -2278,6 +2278,62 @@ describe('topic action', () => {
       ]);
     });
 
+    it('rolls back a rejected handoff and allows the same destination to be retried', async () => {
+      const { topicId } = setupBoundTopic();
+      const update = vi
+        .spyOn(topicService, 'updateTopic')
+        .mockRejectedValueOnce(new Error('handoff rejected'))
+        .mockResolvedValue([] as never);
+      vi.spyOn(topicService, 'queryTopics').mockResolvedValue([]);
+      vi.spyOn(topicService, 'updateTopicMetadata').mockResolvedValue([]);
+      await act(async () => {
+        await expect(useChatStore.getState().rebindTopicAgent(topicId, 'agent-b')).rejects.toThrow(
+          'handoff rejected',
+        );
+      });
+      const bucket = topicMapKey({ agentId: 'agent-a' });
+      expect(useChatStore.getState().topicDataMap[bucket].items[0].agentId).toBe('agent-a');
+      await act(async () => {
+        await useChatStore.getState().rebindTopicAgent(topicId, 'agent-b');
+      });
+      expect(update).toHaveBeenCalledTimes(2);
+      expect(useChatStore.getState().topicDataMap[bucket].items[0].agentId).toBe('agent-b');
+    });
+
+    it('restores an unbound topic after a rejected handoff', async () => {
+      const { topicId } = setupBoundTopic({ agentId: null });
+      vi.spyOn(topicService, 'updateTopic').mockRejectedValue(new Error('handoff rejected'));
+      await act(async () => {
+        await expect(useChatStore.getState().rebindTopicAgent(topicId, 'agent-b')).rejects.toThrow(
+          'handoff rejected',
+        );
+      });
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0].agentId,
+      ).toBeNull();
+    });
+
+    it('does not roll back a newer owner when an earlier handoff fails', async () => {
+      const { topicId } = setupBoundTopic();
+      vi.spyOn(topicService, 'updateTopic').mockImplementation(async () => {
+        useChatStore.getState().internal_dispatchTopic({
+          type: 'updateTopic',
+          id: topicId,
+          value: { agentId: 'agent-c' },
+          containerKey: topicMapKey({ agentId: 'agent-a' }),
+        });
+        throw new Error('earlier handoff rejected');
+      });
+      await act(async () => {
+        await expect(useChatStore.getState().rebindTopicAgent(topicId, 'agent-b')).rejects.toThrow(
+          'earlier handoff rejected',
+        );
+      });
+      expect(
+        useChatStore.getState().topicDataMap[topicMapKey({ agentId: 'agent-a' })].items[0].agentId,
+      ).toBe('agent-c');
+    });
+
     it('still completes the switch when the handoff metadata write fails', async () => {
       const { result } = renderHook(() => useChatStore());
       const { topicId } = setupBoundTopic();
@@ -3789,5 +3845,72 @@ describe('lastUsedAgentId contract', () => {
 
     expect(useChatStore.getState().topicDataMap[backgroundKey].items[0].status).toBe('completed');
     expect(useGlobalStore.getState().status.lastUsedAgentId).toBe('agent-user-picked');
+  });
+
+  describe('composer model pick binding', () => {
+    const seedBlankComposer = (agentId: string, selection: { model: string; provider: string }) => {
+      const messages = [{ id: 'message1' }] as UIChatMessage[];
+      act(() => {
+        useChatStore.setState({
+          messagesMap: { [messageMapKey({ agentId })]: messages },
+          activeAgentId: agentId,
+          composerModelSelection: selection,
+        });
+      });
+    };
+
+    it('binds the composer pick to the new topic instead of the agent snapshot', async () => {
+      const { result } = renderHook(() => useChatStore());
+      seedBlankComposer('agt_codex', { model: 'gpt-5.6-sol', provider: 'codex' });
+
+      const createTopicSpy = vi
+        .spyOn(topicService, 'createTopic')
+        .mockResolvedValue('new-topic-id');
+
+      await result.current.saveToTopic();
+
+      const payload = createTopicSpy.mock.calls[0][0];
+      // The agent row carries the default model; the composer pick must win for
+      // this conversation without the agent ever being written.
+      expect(payload.model).toBe('gpt-5.6-sol');
+      expect(payload.provider).toBe('codex');
+    });
+
+    it('consumes the pending pick so it cannot leak into the next conversation', async () => {
+      const { result } = renderHook(() => useChatStore());
+      seedBlankComposer('agt_codex', { model: 'gpt-5.6-sol', provider: 'codex' });
+
+      vi.spyOn(topicService, 'createTopic').mockResolvedValue('new-topic-id');
+
+      await result.current.saveToTopic();
+
+      expect(useChatStore.getState().composerModelSelection).toBeUndefined();
+    });
+
+    it('prefers both composer picks over the agent snapshot and clears them', async () => {
+      const createTopicSpy = vi
+        .spyOn(topicService, 'createTopic')
+        .mockResolvedValue('new-topic-id');
+
+      act(() => {
+        useChatStore.setState({
+          activeAgentId: 'agt_codex',
+          composerHeteroEffort: 'high',
+          composerModelSelection: { model: 'gpt-5.6-sol', provider: 'codex' },
+        });
+      });
+
+      await useChatStore.getState().createTopic();
+
+      expect(createTopicSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          metadata: { heteroEffort: 'high' },
+          model: 'gpt-5.6-sol',
+          provider: 'codex',
+        }),
+      );
+      expect(useChatStore.getState().composerModelSelection).toBeUndefined();
+      expect(useChatStore.getState().composerHeteroEffort).toBeUndefined();
+    });
   });
 });

@@ -8,7 +8,6 @@ import {
   TRACING_SCENARIOS,
 } from '@orvilo/const';
 import { formatSelectedSkillsContext, formatSelectedToolsContext } from '@orvilo/context-engine';
-import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
 import {
   chainCompressContext,
   COMPRESS_CONTEXT_JSON_SCHEMA,
@@ -28,7 +27,6 @@ import type {
 import {
   applyTopicModelToHeterogeneousProvider,
   getWorkingDirEffectivePath,
-  getWorkingDirSourcePath,
   resolveAgentAgencyConfig,
   snapshotTopicExecutionConfig,
 } from '@orvilo/types';
@@ -354,6 +352,7 @@ export class ConversationLifecycleActionImpl {
 
     let detachCallerAbort = () => {};
     let hasNotifiedMessageAccepted = false;
+    let consumeComposerSelection = () => {};
     const detachUnacceptedCallerAbort = () => {
       if (!hasNotifiedMessageAccepted) detachCallerAbort();
     };
@@ -361,6 +360,7 @@ export class ConversationLifecycleActionImpl {
       if (hasNotifiedMessageAccepted) return;
 
       hasNotifiedMessageAccepted = true;
+      consumeComposerSelection();
       detachCallerAbort();
       try {
         onMessageAccepted?.();
@@ -1107,9 +1107,34 @@ export class ConversationLifecycleActionImpl {
     // snapshot goes to the top-level `topics.model`/`provider` columns (config
     // source of truth) — generation and ChatInput display resolve from it
     // (topicSelectors.getTopicModelById).
+    //
+    // A blank-composer pick outranks the agent's stored model/effort for THIS
+    // conversation, exactly as in createTopic/saveToTopic — the agent row is
+    // never written (spec §5.2). Read once and consume after acceptance: a
+    // rejected first send must retain the same settings for retry.
+    const composerPicks = {
+      effort: this.#get().composerHeteroEffort,
+      model: this.#get().composerModelSelection,
+    };
     const newTopicModelSnapshot = willCreateNewTopic
-      ? snapshotAgentModel(operationContext.agentId)
+      ? (composerPicks.model ?? snapshotAgentModel(operationContext.agentId))
       : undefined;
+    if (willCreateNewTopic && (composerPicks.model || composerPicks.effort !== undefined)) {
+      const composerAgentId = this.#get().composerAgentId;
+      consumeComposerSelection = () => {
+        const current = this.#get();
+        // The accepted topic owns these picks. A later composer selection must
+        // survive an earlier request finishing, and a rejected send keeps its picks.
+        if (
+          (context.isolatedTopic || !!current.activeTopicId) &&
+          current.composerAgentId === composerAgentId &&
+          current.composerModelSelection === composerPicks.model &&
+          current.composerHeteroEffort === composerPicks.effort
+        ) {
+          current.clearComposerSelection();
+        }
+      };
+    }
 
     // Adopt the minted topic id NOW, synchronously with the optimistic message
     // dispatch above: insert the sidebar row and point `activeTopicId` at it in
@@ -1221,22 +1246,10 @@ export class ConversationLifecycleActionImpl {
     const agentWorkingDirectoryConfig = runCwdParams
       ? resolveAgentWorkingDirectoryConfig(runCwdParams)
       : undefined;
-    // Heterogeneous CLI agents (Claude Code, Codex, …) store sessions per-cwd
-    // (`~/.claude/projects/<encoded-cwd>/`). Anchor their session cwd to the
-    // SOURCE repo, NOT the selected worktree, so switching worktree keeps cwd +
-    // sessionId consistent and never drops the conversation context. The active
-    // worktree lives only in `workingDirectoryConfig.git.activeWorktree` as a
-    // record. The per-cwd session store is a LOCAL CLI trait — remote platform
-    // agents (openclaw / hermes) run through the gateway with no such
-    // constraint, so they (like non-hetero runtimes) keep the effective
-    // (worktree) path.
-    const isLocalCliHetero =
-      !!heterogeneousProvider && !isRemoteHeterogeneousType(heterogeneousProvider.type);
-    const resolveWorkingDirPath = isLocalCliHetero
-      ? getWorkingDirSourcePath
-      : getWorkingDirEffectivePath;
+    // Execute in the selected worktree. Native sessions are scoped to that
+    // effective cwd; resolveHeteroResume chooses its session or resets context.
     const workingDirectory =
-      resolveWorkingDirPath(existingTopic?.metadata?.workingDirectoryConfig) ??
+      getWorkingDirEffectivePath(existingTopic?.metadata?.workingDirectoryConfig) ??
       existingTopic?.metadata?.workingDirectory ??
       agentWorkingDirectory;
     const workingDirectoryConfig =
@@ -1251,7 +1264,9 @@ export class ConversationLifecycleActionImpl {
     // Example: a pending repo topic without this metadata renders under "No
     // directory" until the server row lands.
     const newTopicReasoningSnapshot = newTopicModelSnapshot
-      ? await snapshotAgentReasoning(operationContext.agentId, newTopicModelSnapshot)
+      ? composerPicks.effort === undefined
+        ? await snapshotAgentReasoning(operationContext.agentId, newTopicModelSnapshot)
+        : { heteroEffort: composerPicks.effort }
       : undefined;
     const workingDirectoryMetadata: ChatTopicMetadata | undefined =
       pendingTopicRepos.length > 0
@@ -1782,6 +1797,22 @@ export class ConversationLifecycleActionImpl {
           // not need supervisor delegation context). Non-group only — group @member mentions are handled by
           // the group orchestration path, not agent-management delegation.
           mentionedAgents: hasMentionedAgents ? mentionedAgents : undefined,
+          // Blank-composer picks have to ride along on this path: the SERVER
+          // creates the gateway topic, so `newTopicModelSnapshot` /
+          // `newTopicReasoningSnapshot` above only decorate the optimistic row —
+          // without these the persisted topic would fall back to the agent's
+          // stored model/effort. Only meaningful while creating; the server
+          // ignores them on every topic-reusing run.
+          newTopicPins:
+            willCreateNewTopic && (composerPicks.model || composerPicks.effort !== undefined)
+              ? {
+                  ...(composerPicks.effort !== undefined && { effort: composerPicks.effort }),
+                  ...(composerPicks.model && {
+                    model: composerPicks.model.model,
+                    provider: composerPicks.model.provider,
+                  }),
+                }
+              : undefined,
           // Pass temp message IDs so the UI doesn't show a blank loading
           // state while waiting for the first step_start event to replace
           // messages with the server's real IDs.

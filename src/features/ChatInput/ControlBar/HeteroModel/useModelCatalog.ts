@@ -9,7 +9,7 @@ import { heterogeneousAgentCatalogService } from '@/services/heterogeneousAgent'
 
 const DEDUPING_INTERVAL = 5 * 60 * 1000;
 
-const fingerprintConfig = (provider: HeterogeneousProviderConfig | undefined) => {
+export const fingerprintConfig = (provider: HeterogeneousProviderConfig | undefined) => {
   const serialized = JSON.stringify({
     args: provider?.args ?? [],
     env: Object.entries(provider?.env ?? {}).sort(([a], [b]) => a.localeCompare(b)),
@@ -25,6 +25,8 @@ const fingerprintConfig = (provider: HeterogeneousProviderConfig | undefined) =>
 interface UseHeterogeneousAgentModelCatalogParams {
   cwd?: string;
   deviceId?: string;
+  /** Skip the probe entirely for harnesses whose model source is not a catalog. */
+  enabled?: boolean;
   isDeviceListLoading: boolean;
   isPreferenceLoading: boolean;
   open: boolean;
@@ -41,6 +43,7 @@ interface UseHeterogeneousAgentModelCatalogParams {
 export const useModelCatalog = ({
   cwd,
   deviceId,
+  enabled = true,
   isDeviceListLoading,
   isPreferenceLoading,
   open,
@@ -50,7 +53,7 @@ export const useModelCatalog = ({
 }: UseHeterogeneousAgentModelCatalogParams) => {
   const wasOpenRef = useRef(open);
   const response = useSWR(
-    targetReady && !isDeviceListLoading && !isPreferenceLoading
+    enabled && targetReady && !isDeviceListLoading && !isPreferenceLoading
       ? [
           'heterogeneous-agent-model-catalog',
           type,
@@ -84,11 +87,11 @@ export const useModelCatalog = ({
   );
 
   useEffect(() => {
-    const hasJustOpened = open && !wasOpenRef.current;
+    const hasJustOpened = enabled && open && !wasOpenRef.current;
     wasOpenRef.current = open;
 
     if (hasJustOpened && response.error) void response.mutate();
-  }, [open, response.error, response.mutate]);
+  }, [enabled, open, response.error, response.mutate]);
 
   return response;
 };

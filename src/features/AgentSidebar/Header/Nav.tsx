@@ -1,20 +1,12 @@
 'use client';
 
-import {
-  BotMessageSquareIcon,
-  DnaIcon,
-  ListTodoIcon,
-  MessageSquarePlusIcon,
-  SearchIcon,
-  TargetIcon,
-} from 'lucide-react';
+import { DnaIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
 
 import { toast } from '@/components/toast';
 import NavItem from '@/features/NavPanel/components/NavItem';
-import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useActiveLocation } from '@/hooks/useActiveLocation';
 import { useActiveRouteParams } from '@/hooks/useActiveRouteParams';
 import { usePermission } from '@/hooks/usePermission';
@@ -24,7 +16,6 @@ import { topicActionKeys } from '@/libs/swr/keys';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
-import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 import { useUserStore } from '@/store/user';
 import { labPreferSelectors } from '@/store/user/selectors';
 
@@ -35,24 +26,13 @@ const Nav = memo(() => {
   const params = useActiveRouteParams();
   const agentId = params.aid;
   const { pathname } = useActiveLocation();
-  // The profile entry now owns a group of sub-views — profile / channels /
-  // statistics — switched by a Segmented in the page header, so all three keep
-  // this entry lit instead of leaving the sidebar with nothing selected.
-  const isProfileActive =
-    pathname.includes('/profile') ||
-    pathname.includes('/channel') ||
-    pathname.endsWith('/statistics');
   const isGoalsActive = pathname.endsWith('/goals');
   // 下钻页 /self-evolving/:domainId 也算在这个入口下，否则点进去侧边栏就失焦了
   const isSelfLearningActive = pathname.includes('/self-evolving');
   const isTasksActive = pathname.endsWith('/tasks') || pathname.includes('/task/');
   const router = useQueryRoute();
   const { allowed: canCreateTopic } = usePermission('create_content');
-  const { allowed: canEditContent } = usePermission('edit_own_content');
-  const { canEditResource, isAccessResolved } = useResourceAccess('agent', agentId);
-  const { isAgentEditable } = useServerConfigStore(featureFlagsSelectors);
   const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
-  const hideProfile = !isAgentEditable || !isAccessResolved || !canEditContent || !canEditResource;
   const switchTopic = useChatStore((s) => s.switchTopic);
   const [openNewTopicOrSaveTopic] = useChatStore((s) => [s.openNewTopicOrSaveTopic]);
   const isNewTopicSendInFlight = useChatStore(topicSelectors.isNewTopicSendInFlight);
@@ -106,17 +86,6 @@ const Nav = memo(() => {
           toggleCommandMenu(true);
         }}
       />
-      {!hideProfile && (
-        <NavItem
-          active={isProfileActive}
-          icon={BotMessageSquareIcon}
-          title={t('tab.profile')}
-          onClick={() => {
-            switchTopic(null, { skipRefreshMessage: true });
-            router.push(urlJoin('/agent', agentId!, 'profile'));
-          }}
-        />
-      )}
       {enableSelfLearning && (
         <NavItem
           active={isSelfLearningActive}

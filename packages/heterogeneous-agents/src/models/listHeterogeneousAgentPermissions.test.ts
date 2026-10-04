@@ -1,4 +1,6 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import path from 'node:path';
+
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { listHeterogeneousAgentPermissions } from './listHeterogeneousAgentPermissions';
 
@@ -19,6 +21,36 @@ describe('permission discovery routing', () => {
     vi.clearAllMocks();
     mocks.resolveCommand.mockResolvedValue({ command: '/custom/native-cli', pathEnv: '/usr/bin' });
     mocks.resolveTarget.mockResolvedValue({ commandPath: '/custom/acp', env: {} });
+  });
+
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('preserves the filtered caller environment and proxy without inheriting parent entries', async () => {
+    vi.stubEnv('PERMISSION_DISCOVERY_PARENT_ONLY', 'must-not-inherit');
+    mocks.resolveTarget.mockImplementationOnce(async (_type, commandPath, env) => ({
+      commandPath,
+      env,
+    }));
+    mocks.discover.mockResolvedValue([]);
+
+    await listHeterogeneousAgentPermissions({
+      env: {
+        CUSTOM_HARNESS_SETTING: 'retained',
+        HTTPS_PROXY: 'http://proxy.example:8080',
+        PATH: '/custom/bin',
+      },
+      type: 'codex',
+    });
+
+    const childEnv = mocks.discover.mock.calls[0][1].env;
+    expect(childEnv).toEqual({
+      CUSTOM_HARNESS_SETTING: 'retained',
+      HTTPS_PROXY: 'http://proxy.example:8080',
+      PATH: ['/custom/bin', '/usr/bin'].join(path.delimiter),
+    });
+    expect(childEnv.PERMISSION_DISCOVERY_PARENT_ONLY).toBeUndefined();
   });
 
   it.each(['amp', 'claude-code', 'codebuddy', 'codex', 'kimi-code', 'opencode', 'pi', 'qoder'])(

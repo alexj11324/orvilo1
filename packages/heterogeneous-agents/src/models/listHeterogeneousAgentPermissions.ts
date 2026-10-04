@@ -28,7 +28,13 @@ export const listHeterogeneousAgentPermissions = async (
     .filter(Boolean)
     .join(path.delimiter);
   const env = { ...callerEnv, ...(mergedPath ? { PATH: mergedPath } : {}) };
-  const target = await resolveAcpSpawnTarget(params.type, resolved.command, env);
+  // Caller-owned filtered env is valid for Node spawn; Next's ambient required
+  // ProcessEnv fields describe the app process, not the child harness.
+  const target = await resolveAcpSpawnTarget(
+    params.type,
+    resolved.command,
+    env as NodeJS.ProcessEnv,
+  );
 
   return listStandardAcpPermissions(params.type, {
     args: params.args,

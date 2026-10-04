@@ -3249,32 +3249,4 @@ export default {
   'internalLink.preview.verifyStatus.unverified': 'Unverified',
   'internalLink.preview.verifyStatus.verifying': 'Verifying',
   'you': 'You',
-  'connectAgent.create.desktopChannel': 'Desktop',
-  'onboarding.account': 'Account settings',
-  'onboarding.api.configure': 'Use my API key',
-  'onboarding.api.create': 'Verify and create agent',
-  'onboarding.api.description':
-    'Use an OpenAI-compatible provider. Your new API key is stored securely in your account.',
-  'onboarding.api.endpoint': 'Provider endpoint (HTTPS)',
-  'onboarding.api.failed':
-    'Setup could not finish. Check your device, key, endpoint, and model, then retry. Your saved setup will be reused.',
-  'onboarding.api.key': 'API key',
-  'onboarding.api.model': 'Model ID',
-  'onboarding.builtin.group': 'Prime Agent',
-  'onboarding.connect': 'Connect an ACP agent',
-  'onboarding.device.connect': 'Connect a device',
-  'onboarding.device.description':
-    'Prime is the built-in harness. It runs on your connected device, with your verified model provider.',
-  'onboarding.device.empty':
-    'No connected device is online. Connect this computer or enroll a device, then check again.',
-  'onboarding.device.title': 'Choose an execution device',
-  'onboarding.device.use': 'Use {{name}}',
-  'onboarding.emptyDesc': 'Connect an ACP agent or create Prime with your API key.',
-  'onboarding.footerHint': 'Create your first usable agent to continue setup.',
-  'onboarding.prime.create': 'Create Prime Agent',
-  'onboarding.prime.ready': 'An existing provider route is available for Prime.',
-  'onboarding.prime.unavailable':
-    'Prime needs a verified provider route. Connect an ACP agent or configure your API key.',
-  'onboarding.rescan': 'Check again',
-  'onboarding.title': 'Create your first agent',
 };

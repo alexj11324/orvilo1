@@ -17,6 +17,21 @@ const action = parse(
 );
 const script = action.runs.steps[0].run;
 
+test('pins a manually dispatched canary release tag to the built commit', async () => {
+  const workflow = parse(
+    await readFile(
+      new URL('../.github/workflows/release-desktop-canary.yml', import.meta.url),
+      'utf8',
+    ),
+  );
+  const publication = workflow.jobs['publish-release'].steps.find(
+    (step) => step.name === 'Create Canary Release',
+  );
+  // Omitting this input makes GitHub create the tag on the default branch,
+  // even when the installer was built from a manually selected candidate.
+  assert.equal(publication.with.target_commitish, '${{ github.sha }}');
+});
+
 test('stages the API key privately and makes notarization credentials available to the build', async () => {
   const dir = await mkdtemp(path.join(os.tmpdir(), 'orvilo-notarization-'));
   const output = path.join(dir, 'env');

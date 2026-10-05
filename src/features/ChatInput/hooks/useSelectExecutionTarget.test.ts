@@ -110,6 +110,24 @@ describe('Topic execution selection', () => {
     expect(state.toast).toHaveBeenCalled();
     expect(state.chat.switchTopic).not.toHaveBeenCalled();
   });
+  it('mount/rerender/StrictMode produce zero writes (F01)', async () => {
+    // The composer must not commit a binding on behalf of the user: mounting
+    // the selection hook — under rerenders and StrictMode's double-invocation
+    // — performs no `updateTopicMetadata`/`createTopic` write. Only an
+    // explicit returned call or the server's atomic first-bind may create a
+    // binding (the chat switcher's mount effect used to break this rule).
+    const render = () =>
+      renderHook(() => useSelectExecutionTarget('agent'), {
+        reactStrictMode: true,
+      });
+    const first = render();
+    first.rerender();
+    const second = render();
+    second.rerender();
+    await Promise.resolve();
+    expect(state.chat.updateTopicMetadata).not.toHaveBeenCalled();
+    expect(state.chat.createTopic).not.toHaveBeenCalled();
+  });
 });
 
 it('does not reparent another Topic messages after leaving an empty composer', async () => {

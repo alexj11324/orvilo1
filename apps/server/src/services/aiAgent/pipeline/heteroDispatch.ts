@@ -435,6 +435,60 @@ const ensureDispatchAdmission = async (
 };
 
 /**
+ * A transport-level `DeviceChannelUnavailable` means the gateway addressed the
+ * device but it is unreachable (offline, asleep, mid-reconnect) — surface the
+ * honest `DEVICE_NOT_CONNECTED` availability code. A `DeviceNotFound` after
+ * the pre-dispatch registry check is ambiguous (the row existed moments ago):
+ * re-read the registry once on the failure path — row gone means the binding
+ * was revoked mid-run (`DEVICE_BINDING_INVALID`, explicit repair), row present
+ * means the gateway simply lost reachability (`DEVICE_NOT_CONNECTED`).
+ * Anything else passes through untouched.
+ */
+const classifyUnreachableDeviceError = async (
+  deps: { db: OrviloDatabase | undefined; userId: string },
+  params: {
+    deviceId?: string;
+    error?: string;
+    errorCode?: string;
+    errorData?: DeviceUnavailableErrorData;
+    workspaceId?: string;
+  },
+): Promise<{ error?: string; errorData?: DeviceUnavailableErrorData }> => {
+  const deviceId = params.deviceId;
+  if (!deviceId) {
+    return { error: params.error, errorData: params.errorData };
+  }
+  const notConnected = (): { error: string; errorData: DeviceUnavailableErrorData } => ({
+    error: 'DEVICE_NOT_CONNECTED',
+    errorData: {
+      ...params.errorData,
+      code: 'DEVICE_NOT_CONNECTED',
+      deviceId,
+      retryable: true,
+      scope: params.workspaceId ? 'workspace' : 'personal',
+      ...(params.workspaceId ? { workspaceId: params.workspaceId } : {}),
+    },
+  });
+
+  if (params.errorCode === DeviceTransportErrorCode.DeviceChannelUnavailable) {
+    return notConnected();
+  }
+  if (params.errorCode !== DeviceTransportErrorCode.DeviceNotFound) {
+    return { error: params.error, errorData: params.errorData };
+  }
+  const authorizationFailure = await resolveDeviceDispatchAuthorizationFailure(
+    deps.db,
+    deps.userId,
+    deviceId,
+    params.workspaceId,
+  );
+  if (authorizationFailure) {
+    return { error: authorizationFailure.code, errorData: authorizationFailure };
+  }
+  return notConnected();
+};
+
+/**
  * Settle the admission ledger after a remote dispatch call and classify what
  * the caller may do next:
  *
@@ -1429,13 +1483,20 @@ export const dispatchHeteroAgent = async (
     }
     if (dispatchOutcome.outcome === 'terminal') {
       log('execAgent: remote hetero dispatch failed: %s', result.error);
+      const terminalError = await classifyUnreachableDeviceError(deps, {
+        deviceId: remoteDeviceId,
+        error: result.error,
+        errorCode: result.errorCode,
+        errorData: result.errorData,
+        workspaceId: remoteDeviceWorkspaceId,
+      });
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
         assistantMessageId,
-        detail: result.error ?? 'Device dispatch failed',
-        errorData: result.errorData,
-        errorType: resolveHeteroDispatchErrorType(result.error),
-        message: humanizeHeteroDispatchError(result.error),
+        detail: terminalError.error ?? 'Device dispatch failed',
+        errorData: terminalError.errorData,
+        errorType: resolveHeteroDispatchErrorType(terminalError.error),
+        message: humanizeHeteroDispatchError(terminalError.error),
         operationId,
         topicId,
       });
@@ -1444,8 +1505,8 @@ export const dispatchHeteroAgent = async (
         assistantMessageId,
         autoStarted: false,
         createdAt: new Date().toISOString(),
-        error: result.error,
-        errorData: result.errorData,
+        error: terminalError.error,
+        errorData: terminalError.errorData,
         message: 'Remote hetero agent dispatch failed',
         operationId,
         remoteAdmission: dispatchOutcome.admissionState,
@@ -1515,6 +1576,26 @@ export const dispatchHeteroAgent = async (
         ? 'Pick a local or connected device in the Execution Device switcher.'
         : 'Pick a device in the Execution Device switcher, or switch to Cloud sandbox.';
       log('execAgent: hetero admission blocked (code=%s)', blockedCode);
+      // Structured admission refusal — the code lives in `errorData.code`
+      // (the contract surface the repair UI branches on), never embedded in
+      // the detail prose. `error` keeps the established 'No bound device'/
+      // 'Device access denied' labels for compatibility.
+      const admissionError: DeviceAdmissionErrorData = {
+        code: blockedCode,
+        deviceId:
+          blockedCode === 'DEVICE_BINDING_INVALID'
+            ? (sessionBoundDeviceId ?? undefined)
+            : blockedCode === 'DEVICE_REQUEST_UNAUTHORIZED'
+              ? requestedDeviceId
+              : undefined,
+        operationId,
+        ...(heteroPlan.kind === 'blocked' && heteroPlan.repairCandidates
+          ? { repairCandidates: heteroPlan.repairCandidates }
+          : {}),
+        retryable: true,
+        scope: deps.workspaceId ? 'workspace' : 'personal',
+        ...(deps.workspaceId ? { workspaceId: deps.workspaceId } : {}),
+      };
       await finalizeHeteroDispatchError(deps, {
         agentId: resolvedAgentId,
         assistantMessageId,
@@ -1522,6 +1603,7 @@ export const dispatchHeteroAgent = async (
           heteroPlan.kind === 'blocked'
             ? `${blockedCode}: ${heteroPlan.detail} ${pickerHint}`
             : `No device bound. ${pickerHint}`,
+        errorData: admissionError,
         message: denied ? 'Device access denied' : 'No bound device',
         operationId,
         topicId,
@@ -1532,6 +1614,7 @@ export const dispatchHeteroAgent = async (
         autoStarted: false,
         createdAt: new Date().toISOString(),
         error: denied ? 'Device access denied' : 'No bound device',
+        errorData: admissionError,
         message: denied
           ? 'This sender is not allowed to run agents on a bound device'
           : 'Hetero agent requires an execution device',
@@ -1776,13 +1859,20 @@ export const dispatchHeteroAgent = async (
       }
       if (dispatchOutcome.outcome === 'terminal') {
         log('execAgent: hetero device dispatch failed: %s', result.error);
+        const terminalError = await classifyUnreachableDeviceError(deps, {
+          deviceId: dispatchDeviceId,
+          error: result.error,
+          errorCode: result.errorCode,
+          errorData: result.errorData,
+          workspaceId: dispatchWorkspaceId,
+        });
         await finalizeHeteroDispatchError(deps, {
           agentId: resolvedAgentId,
           assistantMessageId,
-          detail: result.error ?? 'Device dispatch failed',
-          errorData: result.errorData,
-          errorType: resolveHeteroDispatchErrorType(result.error),
-          message: humanizeHeteroDispatchError(result.error),
+          detail: terminalError.error ?? 'Device dispatch failed',
+          errorData: terminalError.errorData,
+          errorType: resolveHeteroDispatchErrorType(terminalError.error),
+          message: humanizeHeteroDispatchError(terminalError.error),
           operationId,
           topicId,
         });
@@ -1791,8 +1881,8 @@ export const dispatchHeteroAgent = async (
           assistantMessageId,
           autoStarted: false,
           createdAt: new Date().toISOString(),
-          error: result.error,
-          errorData: result.errorData,
+          error: terminalError.error,
+          errorData: terminalError.errorData,
           message: 'Hetero agent device dispatch failed',
           operationId,
           remoteAdmission: dispatchOutcome.admissionState,

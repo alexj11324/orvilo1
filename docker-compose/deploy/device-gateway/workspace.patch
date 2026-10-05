@@ -1,0 +1,555 @@
+diff --git a/device-gateway-go/README.md b/device-gateway-go/README.md
+index a683953..b62a05c 100644
+--- a/device-gateway-go/README.md
++++ b/device-gateway-go/README.md
+@@ -31,8 +31,10 @@ All `/api/device/*` endpoints require `Authorization: Bearer <SERVICE_TOKEN>` an
+ 
+ | Variable | Default | Description |
+ | --- | --- | --- |
++| `HOST` | `127.0.0.1` | Standalone device gateway listen address; the reverse proxy owns public ingress. |
+ | `PORT` | `8787` | HTTP listen port. |
+ | `SERVICE_TOKEN` | required | Shared service token for `/api/device/*` and WebSocket service-token auth. The process refuses to start without it. |
++| `ORVILO_API_BASE_URL` | empty | Trusted Orvilo server URL for API-key WebSocket auth. Other server URLs are rejected; API-key auth is disabled when unset. |
+ | `JWKS_PUBLIC_KEY` | empty | JWKS JSON containing an RS256 public key for JWT WebSocket auth. |
+ | `READ_TIMEOUT` | `30s` | Go HTTP server read timeout. |
+ | `WRITE_TIMEOUT` | `1m` | Go HTTP server write timeout. |
+diff --git a/device-gateway-go/cmd/device-gateway-go/main.go b/device-gateway-go/cmd/device-gateway-go/main.go
+index a791394..5a4aed7 100644
+--- a/device-gateway-go/cmd/device-gateway-go/main.go
++++ b/device-gateway-go/cmd/device-gateway-go/main.go
+@@ -4,6 +4,7 @@ import (
+ 	"context"
+ 	"errors"
+ 	"log/slog"
++	"net"
+ 	"net/http"
+ 	"os"
+ 	"os/signal"
+@@ -21,7 +22,7 @@ func main() {
+ 	srv := gateway.NewServer(cfg)
+ 
+ 	httpServer := &http.Server{
+-		Addr:         ":" + cfg.Port,
++		Addr:         net.JoinHostPort(cfg.ListenHost, cfg.Port),
+ 		Handler:      srv.Routes(),
+ 		ReadTimeout:  cfg.ReadTimeout,
+ 		WriteTimeout: cfg.WriteTimeout,
+diff --git a/device-gateway-go/internal/gateway/auth.go b/device-gateway-go/internal/gateway/auth.go
+index daf6acf..b7d73aa 100644
+--- a/device-gateway-go/internal/gateway/auth.go
++++ b/device-gateway-go/internal/gateway/auth.go
+@@ -28,12 +28,18 @@ func newAuthResolver(cfg Config) *authResolver {
+ 	return &authResolver{cfg: cfg}
+ }
+ 
+-func (a *authResolver) resolve(ctx context.Context, storedUserID string, msg authMessage) (string, error) {
++func (a *authResolver) resolve(ctx context.Context, storedUserID, workspaceID string, msg authMessage) (string, error) {
+ 	if msg.Token == "" {
+ 		return "", errors.New("Missing token")
+ 	}
+ 
+ 	if msg.TokenType == "apiKey" {
++		if workspaceID != "" {
++			return "", errors.New("Workspace connections require a workspace device JWT")
++		}
++		if a.cfg.OrviloAPIBaseURL == "" || strings.TrimRight(msg.ServerURL, "/") != strings.TrimRight(a.cfg.OrviloAPIBaseURL, "/") {
++			return "", errors.New("API key serverUrl is not the configured Orvilo API server")
++		}
+ 		if msg.ServerURL == "" {
+ 			return "", errors.New("Missing serverUrl")
+ 		}
+@@ -41,13 +47,32 @@ func (a *authResolver) resolve(ctx context.Context, storedUserID string, msg aut
+ 	}
+ 
+ 	if msg.Token == a.cfg.ServiceToken {
++		if workspaceID != "" {
++			return workspaceID, nil
++		}
+ 		if storedUserID == "" {
+ 			return "", errors.New("Missing userId")
+ 		}
+ 		return storedUserID, nil
+ 	}
+ 
+-	return a.verifyJWT(msg.Token)
++	claims, err := a.verifyJWT(msg.Token)
++	if err != nil {
++		return "", err
++	}
++	sub, _ := claims["sub"].(string)
++	claimedWorkspace, _ := claims["workspace_id"].(string)
++	purpose, _ := claims["purpose"].(string)
++	if workspaceID != "" {
++		if purpose != "workspace-device-connect" || claimedWorkspace != workspaceID || sub != workspaceID {
++			return "", errors.New("Workspace device token does not match requested workspace")
++		}
++		return workspaceID, nil
++	}
++	if purpose == "workspace-device-connect" || claimedWorkspace != "" {
++		return "", errors.New("Workspace device token cannot authenticate a personal connection")
++	}
++	return sub, nil
+ }
+ 
+ func verifyAPIKey(ctx context.Context, serverURL string, token string) (string, error) {
+@@ -105,14 +130,14 @@ func verifyAPIKey(ctx context.Context, serverURL string, token string) (string,
+ 	return "", errors.New("Current user response did not include a user id.")
+ }
+ 
+-func (a *authResolver) verifyJWT(tokenString string) (string, error) {
++func (a *authResolver) verifyJWT(tokenString string) (map[string]any, error) {
+ 	key, err := a.publicKey()
+ 	if err != nil {
+-		return "", err
++		return nil, err
+ 	}
+ 	parts := strings.Split(tokenString, ".")
+ 	if len(parts) != 3 {
+-		return "", errors.New("invalid token")
++		return nil, errors.New("invalid token")
+ 	}
+ 
+ 	var header struct {
+@@ -120,45 +145,45 @@ func (a *authResolver) verifyJWT(tokenString string) (string, error) {
+ 	}
+ 	headerBytes, err := base64.RawURLEncoding.DecodeString(parts[0])
+ 	if err != nil {
+-		return "", err
++		return nil, err
+ 	}
+ 	if err := json.Unmarshal(headerBytes, &header); err != nil {
+-		return "", err
++		return nil, err
+ 	}
+ 	if header.Alg != "RS256" {
+-		return "", fmt.Errorf("unexpected signing method: %s", header.Alg)
++		return nil, fmt.Errorf("unexpected signing method: %s", header.Alg)
+ 	}
+ 
+ 	signed := []byte(parts[0] + "." + parts[1])
+ 	sum := sha256.Sum256(signed)
+ 	sig, err := base64.RawURLEncoding.DecodeString(parts[2])
+ 	if err != nil {
+-		return "", err
++		return nil, err
+ 	}
+ 	if err := rsa.VerifyPKCS1v15(key, crypto.SHA256, sum[:], sig); err != nil {
+-		return "", err
++		return nil, err
+ 	}
+ 
+ 	payloadBytes, err := base64.RawURLEncoding.DecodeString(parts[1])
+ 	if err != nil {
+-		return "", err
++		return nil, err
+ 	}
+ 	var claims map[string]any
+ 	if err := json.Unmarshal(payloadBytes, &claims); err != nil {
+-		return "", err
++		return nil, err
+ 	}
+ 	now := float64(time.Now().Unix())
+ 	if exp, ok := claims["exp"].(float64); ok && now >= exp {
+-		return "", errors.New(`"exp" claim timestamp check failed`)
++		return nil, errors.New(`"exp" claim timestamp check failed`)
+ 	}
+ 	if nbf, ok := claims["nbf"].(float64); ok && now < nbf {
+-		return "", errors.New(`"nbf" claim timestamp check failed`)
++		return nil, errors.New(`"nbf" claim timestamp check failed`)
+ 	}
+ 	sub, _ := claims["sub"].(string)
+ 	if sub == "" {
+-		return "", errors.New("Missing sub claim")
++		return nil, errors.New("Missing sub claim")
+ 	}
+-	return sub, nil
++	return claims, nil
+ }
+ 
+ func (a *authResolver) publicKey() (*rsa.PublicKey, error) {
+diff --git a/device-gateway-go/internal/gateway/config.go b/device-gateway-go/internal/gateway/config.go
+index 340a1a6..4c61260 100644
+--- a/device-gateway-go/internal/gateway/config.go
++++ b/device-gateway-go/internal/gateway/config.go
+@@ -7,12 +7,14 @@ import (
+ )
+ 
+ type Config struct {
+-	JWKSPublicKey   string
+-	Port            string
+-	ReadTimeout     time.Duration
+-	ServiceToken    string
+-	ShutdownTimeout time.Duration
+-	WriteTimeout    time.Duration
++	ListenHost       string
++	OrviloAPIBaseURL string
++	JWKSPublicKey    string
++	Port             string
++	ReadTimeout      time.Duration
++	ServiceToken     string
++	ShutdownTimeout  time.Duration
++	WriteTimeout     time.Duration
+ }
+ 
+ func (c Config) Validate() error {
+@@ -24,12 +26,14 @@ func (c Config) Validate() error {
+ 
+ func ConfigFromEnv() Config {
+ 	return Config{
+-		JWKSPublicKey:   os.Getenv("JWKS_PUBLIC_KEY"),
+-		Port:            envOrDefault("PORT", "8787"),
+-		ReadTimeout:     durationEnvOrDefault("READ_TIMEOUT", 30*time.Second),
+-		ServiceToken:    os.Getenv("SERVICE_TOKEN"),
+-		ShutdownTimeout: durationEnvOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
+-		WriteTimeout:    durationEnvOrDefault("WRITE_TIMEOUT", time.Minute),
++		ListenHost:       envOrDefault("HOST", "127.0.0.1"),
++		OrviloAPIBaseURL: os.Getenv("ORVILO_API_BASE_URL"),
++		JWKSPublicKey:    os.Getenv("JWKS_PUBLIC_KEY"),
++		Port:             envOrDefault("PORT", "8787"),
++		ReadTimeout:      durationEnvOrDefault("READ_TIMEOUT", 30*time.Second),
++		ServiceToken:     os.Getenv("SERVICE_TOKEN"),
++		ShutdownTimeout:  durationEnvOrDefault("SHUTDOWN_TIMEOUT", 10*time.Second),
++		WriteTimeout:     durationEnvOrDefault("WRITE_TIMEOUT", time.Minute),
+ 	}
+ }
+ 
+diff --git a/device-gateway-go/internal/gateway/connection.go b/device-gateway-go/internal/gateway/connection.go
+index c82f6c1..000baf2 100644
+--- a/device-gateway-go/internal/gateway/connection.go
++++ b/device-gateway-go/internal/gateway/connection.go
+@@ -8,6 +8,8 @@ import (
+ )
+ 
+ type connection struct {
++	principalID    string
++	workspaceID    string
+ 	att            DeviceAttachment
+ 	authTimeout    time.Duration
+ 	heartbeatTimer *time.Timer
+@@ -89,8 +91,12 @@ func (c *connection) readLoop(auth *authResolver, heartbeatTimeout time.Duration
+ 				c.close(wsClosePolicy, err.Error())
+ 				return
+ 			}
+-			verifiedUserID, err := auth.resolve(context.Background(), c.hub.userID, msg)
+-			if err == nil && verifiedUserID != c.hub.userID {
++			verifiedUserID, err := auth.resolve(context.Background(), c.principalID, c.workspaceID, msg)
++			expectedID := c.principalID
++			if c.workspaceID != "" {
++				expectedID = c.workspaceID
++			}
++			if err == nil && verifiedUserID != expectedID {
+ 				err = errUserIDMismatch
+ 			}
+ 			if err != nil {
+diff --git a/device-gateway-go/internal/gateway/server.go b/device-gateway-go/internal/gateway/server.go
+index c24d5c3..d0c84ba 100644
+--- a/device-gateway-go/internal/gateway/server.go
++++ b/device-gateway-go/internal/gateway/server.go
+@@ -53,14 +53,18 @@ func (s *Server) Routes() http.Handler {
+ 	return mux
+ }
+ 
+-func (s *Server) hub(userID string) *hub {
++func (s *Server) hub(userID, workspaceID string) *hub {
++	key := "user:" + userID
++	if workspaceID != "" {
++		key = "workspace:" + workspaceID
++	}
+ 	s.hubsMu.Lock()
+ 	defer s.hubsMu.Unlock()
+-	if existing := s.hubs[userID]; existing != nil {
++	if existing := s.hubs[key]; existing != nil {
+ 		return existing
+ 	}
+-	h := newHub(userID)
+-	s.hubs[userID] = h
++	h := newHub(key)
++	s.hubs[key] = h
+ 	return h
+ }
+ 
+@@ -94,7 +98,8 @@ func (s *Server) withServiceAuth(next func(http.ResponseWriter, *http.Request, d
+ 
+ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+ 	userID := r.URL.Query().Get("userId")
+-	if userID == "" {
++	workspaceID := r.URL.Query().Get("workspaceId")
++	if userID == "" && workspaceID == "" {
+ 		writeText(w, http.StatusBadRequest, "Missing userId")
+ 		return
+ 	}
+@@ -105,7 +110,7 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+ 	}
+ 
+ 	now := time.Now().UnixMilli()
+-	h := s.hub(userID)
++	h := s.hub(userID, workspaceID)
+ 	conn := &connection{
+ 		att: DeviceAttachment{
+ 			Authenticated: false,
+@@ -118,6 +123,8 @@ func (s *Server) handleWebSocket(w http.ResponseWriter, r *http.Request) {
+ 			Platform:      r.URL.Query().Get("platform"),
+ 		},
+ 		authTimeout: s.authTimeout,
++		principalID: userID,
++		workspaceID: workspaceID,
+ 		hub:         h,
+ 		ws:          ws,
+ 	}
+@@ -168,16 +175,16 @@ func (s *Server) handleDeviceAPI(w http.ResponseWriter, r *http.Request, body de
+ }
+ 
+ func (s *Server) handleStatus(w http.ResponseWriter, _ *http.Request, body deviceHTTPBody) {
+-	connections := s.hub(body.UserID).authenticatedConnections()
+-	writeJSON(w, http.StatusOK, map[string]any{"deviceCount": s.hub(body.UserID).deviceCount(), "online": len(connections) > 0})
++	connections := s.hub(body.UserID, body.WorkspaceID).authenticatedConnections()
++	writeJSON(w, http.StatusOK, map[string]any{"deviceCount": s.hub(body.UserID, body.WorkspaceID).deviceCount(), "online": len(connections) > 0})
+ }
+ 
+ func (s *Server) handleDevices(w http.ResponseWriter, _ *http.Request, body deviceHTTPBody) {
+-	writeJSON(w, http.StatusOK, map[string]any{"devices": s.hub(body.UserID).devices()})
++	writeJSON(w, http.StatusOK, map[string]any{"devices": s.hub(body.UserID, body.WorkspaceID).devices()})
+ }
+ 
+ func (s *Server) handleToolCall(w http.ResponseWriter, _ *http.Request, body deviceHTTPBody) {
+-	h := s.hub(body.UserID)
++	h := s.hub(body.UserID, body.WorkspaceID)
+ 	if len(h.authenticatedConnections()) == 0 {
+ 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"content": "桌面设备不在线", "error": "DEVICE_OFFLINE", "success": false})
+ 		return
+@@ -212,7 +219,7 @@ func (s *Server) handleToolCall(w http.ResponseWriter, _ *http.Request, body dev
+ }
+ 
+ func (s *Server) handleSystemInfo(w http.ResponseWriter, _ *http.Request, body deviceHTTPBody) {
+-	h := s.hub(body.UserID)
++	h := s.hub(body.UserID, body.WorkspaceID)
+ 	if len(h.authenticatedConnections()) == 0 {
+ 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "DEVICE_OFFLINE", "success": false})
+ 		return
+@@ -241,7 +248,7 @@ func (s *Server) handleRPC(w http.ResponseWriter, _ *http.Request, body deviceHT
+ 		writeText(w, http.StatusBadRequest, "Missing method")
+ 		return
+ 	}
+-	h := s.hub(body.UserID)
++	h := s.hub(body.UserID, body.WorkspaceID)
+ 	if len(h.authenticatedConnections()) == 0 {
+ 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "DEVICE_OFFLINE", "success": false})
+ 		return
+@@ -276,7 +283,7 @@ func (s *Server) handleRPC(w http.ResponseWriter, _ *http.Request, body deviceHT
+ }
+ 
+ func (s *Server) handleMessageAPI(w http.ResponseWriter, _ *http.Request, body deviceHTTPBody) {
+-	h := s.hub(body.UserID)
++	h := s.hub(body.UserID, body.WorkspaceID)
+ 	if len(h.authenticatedConnections()) == 0 {
+ 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"content": "桌面设备不在线", "error": "DEVICE_OFFLINE", "success": false})
+ 		return
+@@ -313,7 +320,7 @@ func (s *Server) handleAgentRun(w http.ResponseWriter, _ *http.Request, body dev
+ 		writeText(w, http.StatusBadRequest, "Missing operationId")
+ 		return
+ 	}
+-	h := s.hub(body.UserID)
++	h := s.hub(body.UserID, body.WorkspaceID)
+ 	if len(h.authenticatedConnections()) == 0 {
+ 		writeJSON(w, http.StatusServiceUnavailable, map[string]any{"error": "DEVICE_OFFLINE", "success": false})
+ 		return
+diff --git a/device-gateway-go/internal/gateway/server_test.go b/device-gateway-go/internal/gateway/server_test.go
+index 1957619..5e106ac 100644
+--- a/device-gateway-go/internal/gateway/server_test.go
++++ b/device-gateway-go/internal/gateway/server_test.go
+@@ -304,7 +304,7 @@ func TestAgentRunForwardsAllOptionalFields(t *testing.T) {
+ 	httpSrv := httptest.NewServer(srv.Routes())
+ 	defer httpSrv.Close()
+ 
+-	ws := dialTestWS(t, httpSrv.URL, "/ws?userId=u1&deviceId=d1&connectionId=conn-1")
++	ws := dialTestWS(t, httpSrv.URL, "/ws?workspaceId=ws-1&deviceId=d1&connectionId=conn-1")
+ 	defer ws.close()
+ 	ws.sendJSON(t, map[string]any{"type": "auth", "token": "service-token"})
+ 	assertWSJSON(t, ws, map[string]any{"type": "auth_success"})
+@@ -579,6 +579,13 @@ func base64Std(value []byte) string {
+ }
+ 
+ func testJWTSigner(t *testing.T) (string, func(string, time.Time, time.Time) string) {
++	jwks, sign := testJWTClaimsSigner(t)
++	return jwks, func(sub string, exp time.Time, nbf time.Time) string {
++		return sign(map[string]any{"exp": exp.Unix(), "iat": time.Now().Unix(), "nbf": nbf.Unix(), "sub": sub})
++	}
++}
++
++func testJWTClaimsSigner(t *testing.T) (string, func(map[string]any) string) {
+ 	t.Helper()
+ 	key, err := rsa.GenerateKey(rand.Reader, 2048)
+ 	if err != nil {
+@@ -598,18 +605,13 @@ func testJWTSigner(t *testing.T) (string, func(string, time.Time, time.Time) str
+ 		t.Fatal(err)
+ 	}
+ 
+-	return string(jwks), func(sub string, exp time.Time, nbf time.Time) string {
++	return string(jwks), func(claims map[string]any) string {
+ 		t.Helper()
+ 		header, err := json.Marshal(map[string]any{"alg": "RS256", "typ": "JWT"})
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+-		payload, err := json.Marshal(map[string]any{
+-			"exp": exp.Unix(),
+-			"iat": time.Now().Unix(),
+-			"nbf": nbf.Unix(),
+-			"sub": sub,
+-		})
++		payload, err := json.Marshal(claims)
+ 		if err != nil {
+ 			t.Fatal(err)
+ 		}
+diff --git a/device-gateway-go/internal/gateway/types.go b/device-gateway-go/internal/gateway/types.go
+index 298cf23..0dbddfd 100644
+--- a/device-gateway-go/internal/gateway/types.go
++++ b/device-gateway-go/internal/gateway/types.go
+@@ -44,6 +44,7 @@ type rpcEnvelope struct {
+ }
+ 
+ type deviceHTTPBody struct {
++	WorkspaceID     string          `json:"workspaceId,omitempty"`
+ 	AgentType       string          `json:"agentType,omitempty"`
+ 	API             json.RawMessage `json:"api,omitempty"`
+ 	CWD             string          `json:"cwd,omitempty"`
+diff --git a/device-gateway-go/internal/gateway/workspace_test.go b/device-gateway-go/internal/gateway/workspace_test.go
+new file mode 100644
+index 0000000..3cfe02a
+--- /dev/null
++++ b/device-gateway-go/internal/gateway/workspace_test.go
+@@ -0,0 +1,134 @@
++package gateway
++
++import (
++	"fmt"
++	"net/http"
++	"net/http/httptest"
++	"testing"
++	"time"
++)
++
++func TestWorkspaceJWTBoundToPool(t *testing.T) {
++	jwks, sign := testJWTClaimsSigner(t)
++	server := httptest.NewServer(NewServer(Config{ServiceToken: "service-token", JWKSPublicKey: jwks}).Routes())
++	defer server.Close()
++	claims := func(sub, workspace, purpose string) map[string]any {
++		return map[string]any{"sub": sub, "workspace_id": workspace, "purpose": purpose, "exp": time.Now().Add(time.Minute).Unix()}
++	}
++	for _, tc := range []struct {
++		name, path string
++		claims     map[string]any
++		accepted   bool
++	}{
++		{"workspace", "/ws?workspaceId=w1&deviceId=shared", claims("w1", "w1", "workspace-device-connect"), true},
++		{"wrong-sub", "/ws?workspaceId=w1", claims("w2", "w1", "workspace-device-connect"), false},
++		{"wrong-workspace", "/ws?workspaceId=w1", claims("w1", "w2", "workspace-device-connect"), false},
++		{"wrong-purpose", "/ws?workspaceId=w1", claims("w1", "w1", "cli-sandbox"), false},
++		{"personal-rejects-workspace", "/ws?userId=w1", claims("w1", "w1", "workspace-device-connect"), false},
++	} {
++		t.Run(tc.name, func(t *testing.T) {
++			ws := dialTestWS(t, server.URL, tc.path)
++			defer ws.conn.Close()
++			ws.sendJSON(t, map[string]any{"type": "auth", "token": sign(tc.claims), "tokenType": "jwt"})
++			result := ws.readJSON(t)
++			expected := "auth_failed"
++			if tc.accepted {
++				expected = "auth_success"
++			}
++			if result["type"] != expected {
++				t.Fatalf("expected %s, got %#v", expected, result)
++			}
++		})
++	}
++}
++
++func TestAPIKeyRejectsUnconfiguredServer(t *testing.T) {
++	calls := 0
++	fake := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		calls++
++		fmt.Fprint(w, `{"data":{"id":"victim"},"success":true}`)
++	}))
++	defer fake.Close()
++	server := httptest.NewServer(NewServer(Config{ServiceToken: "service-token"}).Routes())
++	defer server.Close()
++	ws := dialTestWS(t, server.URL, "/ws?userId=victim")
++	defer ws.conn.Close()
++	ws.sendJSON(t, map[string]any{"type": "auth", "tokenType": "apiKey", "token": "fake-key", "serverUrl": fake.URL})
++	if result := ws.readJSON(t); result["type"] != "auth_failed" {
++		t.Fatalf("untrusted server authenticated user: %#v", result)
++	}
++	if calls != 0 {
++		t.Fatal("untrusted server received validation request")
++	}
++}
++
++func TestWorkspacePoolsAndPermissionRPC(t *testing.T) {
++	jwks, sign := testJWTClaimsSigner(t)
++	server := httptest.NewServer(NewServer(Config{ServiceToken: "service-token", JWKSPublicKey: jwks}).Routes())
++	defer server.Close()
++	personal := dialTestWS(t, server.URL, "/ws?userId=member-a&deviceId=same-device&connectionId=personal")
++	defer personal.conn.Close()
++	personal.sendJSON(t, map[string]any{"type": "auth", "token": "service-token"})
++	if result := personal.readJSON(t); result["type"] != "auth_success" {
++		t.Fatal(result)
++	}
++	workspace := dialTestWS(t, server.URL, "/ws?workspaceId=shared&deviceId=same-device&connectionId=workspace")
++	defer workspace.conn.Close()
++	workspace.sendJSON(t, map[string]any{"type": "auth", "token": sign(map[string]any{"sub": "shared", "workspace_id": "shared", "purpose": "workspace-device-connect", "exp": time.Now().Add(time.Minute).Unix()})})
++	if result := workspace.readJSON(t); result["type"] != "auth_success" {
++		t.Fatal(result)
++	}
++	for _, body := range []string{`{"userId":"member-a"}`, `{"userId":"member-a","workspaceId":"shared"}`, `{"userId":"member-b","workspaceId":"shared"}`} {
++		res := postJSON(t, server.URL+"/api/device/status", "service-token", body)
++		assertJSON(t, res, map[string]any{"online": true, "deviceCount": float64(1)})
++	}
++	assertJSON(t, postJSON(t, server.URL+"/api/device/status", "service-token", `{"userId":"member-b"}`), map[string]any{"online": false, "deviceCount": float64(0)})
++	assertJSON(t, postJSON(t, server.URL+"/api/device/status", "service-token", `{"userId":"member-a","workspaceId":"other"}`), map[string]any{"online": false, "deviceCount": float64(0)})
++	assertJSON(t, postJSON(t, server.URL+"/api/device/status", "service-token", `{"userId":"workspace:shared"}`), map[string]any{"online": false, "deviceCount": float64(0)})
++	done := make(chan *http.Response, 1)
++	go func() {
++		done <- postJSON(t, server.URL+"/api/device/rpc", "service-token", `{"userId":"member-b","workspaceId":"shared","deviceId":"same-device","method":"listHeterogeneousAgentPermissions","params":{"type":"claude-code","configId":"mode","value":"manual"}}`)
++	}()
++	request := workspace.readJSON(t)
++	if request["type"] != "rpc_request" || request["method"] != "listHeterogeneousAgentPermissions" {
++		t.Fatal(request)
++	}
++	params := request["params"].(map[string]any)
++	if params["configId"] != "mode" || params["value"] != "manual" {
++		t.Fatal(params)
++	}
++	workspace.sendJSON(t, map[string]any{"type": "rpc_response", "requestId": request["requestId"], "result": map[string]any{"success": true, "data": "workspace-permissions"}})
++	assertJSON(t, <-done, map[string]any{"success": true, "data": "workspace-permissions"})
++}
++
++func TestAPIKeyConfiguredServerOnly(t *testing.T) {
++	calls := 0
++	trusted := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		if r.URL.Path != "/api/v1/users/me" {
++			t.Errorf("unexpected path %s", r.URL.Path)
++		}
++		fmt.Fprint(w, `{"data":{"id":"user"},"success":true}`)
++	}))
++	defer trusted.Close()
++	malicious := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
++		calls++
++		fmt.Fprint(w, `{"data":{"id":"user"},"success":true}`)
++	}))
++	defer malicious.Close()
++	server := httptest.NewServer(NewServer(Config{ServiceToken: "service-token", OrviloAPIBaseURL: trusted.URL}).Routes())
++	defer server.Close()
++	for _, tc := range []struct {
++		url      string
++		expected string
++	}{{malicious.URL, "auth_failed"}, {trusted.URL + "/", "auth_success"}} {
++		ws := dialTestWS(t, server.URL, "/ws?userId=user&connectionId="+tc.expected)
++		ws.sendJSON(t, map[string]any{"type": "auth", "tokenType": "apiKey", "token": "key", "serverUrl": tc.url})
++		if result := ws.readJSON(t); result["type"] != tc.expected {
++			t.Fatal(result)
++		}
++		ws.conn.Close()
++	}
++	if calls != 0 {
++		t.Fatal("malicious server received credential request")
++	}
++}

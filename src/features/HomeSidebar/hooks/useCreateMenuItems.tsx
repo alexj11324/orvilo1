@@ -16,6 +16,8 @@ import { useGroupTemplates } from '@/components/ChatGroupWizard/templates';
 import { toast } from '@/components/toast';
 import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
+import { openNewConversation } from '@/features/Conversation/selectAgent';
+import { requestAgentRuntime } from '@/features/CreateAgent';
 import { useOptionalAgentModal } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import type { SidebarMenuItemData } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
@@ -45,6 +47,14 @@ interface CreateAgentOptions {
   isPinned?: boolean;
   onSuccess?: () => void;
   /**
+   * Which surface the create entry lives on. The contract fixes the
+   * destination by origin: a chat-surface entry opens a blank conversation
+   * with the new agent selected; a settings entry stays in the new agent's
+   * settings without touching the chat default. Default `chat` — the
+   * sidebar menus are conversation chrome.
+   */
+  origin?: 'chat' | 'settings';
+  /**
    * Forwarded to the server-side `visibility` column. Used by the sidebar's
    * "Create Private …" entries; defaults to undefined which the server reads
    * as `'public'`. Has no effect in personal mode.
@@ -57,34 +67,32 @@ interface CreateAgentOptions {
  * Used by the home sidebar create menus.
  */
 export const useCreateMenuItems = () => {
-  const { t } = useTranslation('chat');
+  const { t } = useTranslation(['chat', 'common']);
   const navigate = useWorkspaceAwareNavigate();
   const groupTemplates = useGroupTemplates();
   const { allowed: canCreate } = usePermission('create_content');
 
   const [storeCreateAgent] = useAgentStore((s) => [s.createAgent]);
-  const [addGroup, refreshAgentList, switchToGroup] = useHomeStore((s) => [
+  const [addGroup, refreshAgentList, switchToGroup, removeAgent] = useHomeStore((s) => [
     s.addGroup,
     s.refreshAgentList,
     s.switchToGroup,
+    s.removeAgent,
   ]);
+  const privateGroups = useHomeStore((s) => s.privateAgentGroups);
   const [createGroup, loadGroups] = useAgentGroupStore((s) => [s.createGroup, s.loadGroups]);
 
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [isCreatingSessionGroup, setIsCreatingSessionGroup] = useState(false);
 
-  // SWR-based agent creation with auto navigation to profile
+  // SWR-based agent creation; the caller decides the destination after the
+  // mutation resolves (origin decides destination per the create contract).
   const { trigger: mutateAgent, isMutating: isMutatingAgent } = useSWRMutation(
     'agent.createAgent',
     async (_key: string, { arg }: { arg?: CreateAgentParams }) => {
       const result = await storeCreateAgent(arg ?? {});
+      await refreshAgentList();
       return result;
-    },
-    {
-      onSuccess: async (result) => {
-        navigate(`/settings/agents/${result.agentId}`);
-        await refreshAgentList();
-      },
     },
   );
 
@@ -115,22 +123,40 @@ export const useCreateMenuItems = () => {
     },
   );
 
-  /**
-   * Create agent action (optionally with a prompt as systemRole)
-   */
   const createAgent = useCallback(
-    async (options?: CreateAgentOptions & { prompt?: string }) => {
+    async (options?: CreateAgentOptions) => {
       if (!canCreate) return;
 
-      const config = options?.prompt ? { systemRole: options.prompt } : undefined;
-      await mutateAgent({
+      const config = await requestAgentRuntime({ visibility: options?.visibility });
+      if (!config) return;
+
+      const result = await mutateAgent({
+        clientRequestId: crypto.randomUUID(),
         config,
         groupId: options?.groupId,
         visibility: options?.visibility,
       });
+
+      toast.success({
+        actions: [
+          {
+            label: t('common:undo'),
+            onClick: () => {
+              void removeAgent(result.agentId);
+            },
+          },
+        ],
+        title: t('agentCreated', { name: config.title || 'Orvilo AI' }),
+      });
+
+      if (options?.origin === 'settings') {
+        navigate(`/settings/agents/${result.agentId}`);
+      } else {
+        openNewConversation({ agentId: result.agentId });
+      }
       options?.onSuccess?.();
     },
-    [canCreate, mutateAgent],
+    [canCreate, mutateAgent, navigate, removeAgent, t],
   );
 
   /**
@@ -138,7 +164,7 @@ export const useCreateMenuItems = () => {
    * Uses backend batch creation for better performance and consistency
    */
   const createGroupFromTemplate = useCallback(
-    async (templateId: string, selectedMemberTitles?: string[]) => {
+    async (templateId: string, selectedMemberTitles?: string[], options?: CreateAgentOptions) => {
       if (!canCreate) return false;
 
       setIsCreatingGroup(true);
@@ -153,8 +179,17 @@ export const useCreateMenuItems = () => {
             ? template.members
             : template.members.filter((m) => selectedMemberTitles.includes(m.title));
 
+        const visibility = options?.groupId
+          ? privateGroups.some((group) => group.id === options.groupId)
+            ? 'private'
+            : 'public'
+          : options?.visibility;
+        const runtimeConfig = await requestAgentRuntime({ visibility });
+        if (!runtimeConfig) return false;
+
         // Prepare member configs for batch creation
         const memberConfigs: GroupMemberConfig[] = membersToCreate.map((member) => ({
+          ...runtimeConfig,
           avatar: member.avatar,
           backgroundColor: member.backgroundColor,
           plugins: member.plugins,
@@ -166,6 +201,8 @@ export const useCreateMenuItems = () => {
         const { groupId } = await chatGroupService.createGroupWithMembers(
           {
             title: template.title,
+            groupId: options?.groupId,
+            visibility,
           },
           memberConfigs,
         );
@@ -186,7 +223,7 @@ export const useCreateMenuItems = () => {
         setIsCreatingGroup(false);
       }
     },
-    [canCreate, groupTemplates, refreshAgentList, loadGroups, switchToGroup, t],
+    [canCreate, groupTemplates, refreshAgentList, loadGroups, switchToGroup, privateGroups, t],
   );
 
   /**
@@ -251,18 +288,10 @@ export const useCreateMenuItems = () => {
       onClick: async (info) => {
         stopMenuItemDomEvent(info.domEvent);
         if (!canCreate) return;
-
-        if (openCreateModal) {
-          openCreateModal('agent', {
-            ...(options?.groupId ? { groupId: options.groupId } : {}),
-            ...(options?.visibility ? { visibility: options.visibility } : {}),
-          });
-        } else {
-          await createAgent(options);
-        }
+        await createAgent(options);
       },
     }),
-    [canCreate, t, createAgent, openCreateModal],
+    [canCreate, t, createAgent],
   );
 
   /**

@@ -269,21 +269,6 @@ describe('Agent sidebar header nav', () => {
     expect(mutateMock).not.toHaveBeenCalled();
   });
 
-  it.each([
-    '/agent/agt_eH4zL98zBx5u',
-    '/agent/agt_eH4zL98zBx5u/profile',
-    '/agent/agt_eH4zL98zBx5u/tasks',
-  ])('does not render the removed profile or tasks entries on %s', (pathname) => {
-    usePathnameMock.mockReturnValue(pathname);
-
-    render(<Nav />);
-
-    // Agent config moved to Settings → Agents; the tasks surface is reachable
-    // by route only — neither keeps a sidebar nav affordance.
-    expect(screen.queryByRole('button', { name: 'tab.profile' })).toBeNull();
-    expect(screen.queryByRole('button', { name: 'tab.tasks' })).toBeNull();
-  });
-
   it('navigates to the agent goals page', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
@@ -293,6 +278,38 @@ describe('Agent sidebar header nav', () => {
     expect(switchTopicMock).toHaveBeenCalledWith(null, { skipRefreshMessage: true });
     expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u/goals');
   });
+
+  it('opens workspace tasks from a new conversation without an agent route parameter', () => {
+    useParamsMock.mockReturnValue({});
+    usePathnameMock.mockReturnValue('/chat/new');
+    render(<Nav />);
+    fireEvent.click(screen.getByRole('button', { name: 'tab.tasks' }));
+    expect(pushMock).toHaveBeenCalledWith('/tasks');
+  });
+
+  it('navigates to the agent tasks page', () => {
+    usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
+
+    render(<Nav />);
+    fireEvent.click(screen.getByRole('button', { name: 'tab.tasks' }));
+
+    expect(switchTopicMock).toHaveBeenCalledWith(null, { skipRefreshMessage: true });
+    expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u/tasks');
+  });
+
+  it.each(['/agent/agt_eH4zL98zBx5u/tasks', '/agent/agt_eH4zL98zBx5u/task/task_2FCHvjS7d4CA'])(
+    'keeps the tasks entry active on %s',
+    (pathname) => {
+      usePathnameMock.mockReturnValue(pathname);
+
+      render(<Nav />);
+
+      expect(screen.getByRole('button', { name: 'tab.tasks' })).toHaveAttribute(
+        'data-active',
+        'true',
+      );
+    },
+  );
 
   it('navigates to the agent self-learning page', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
@@ -323,12 +340,15 @@ describe('Agent sidebar header nav', () => {
     expect(screen.getByRole('button', { name: 'title' })).toHaveAttribute('data-active', 'true');
   });
 
-  it('orders self-learning and goals in the agent navigation', () => {
+  // The profile entry was dropped from this nav on 2026-10-03: the sidebar is a
+  // flat list of destinations, with no trailing "about this agent" row.
+  it('orders self-learning, goals, and tasks in the agent navigation', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 
     render(<Nav />);
 
     const labels = screen.getAllByRole('button').map((button) => button.textContent);
     expect(labels.indexOf('title')).toBeLessThan(labels.indexOf('goalList.title'));
+    expect(labels.indexOf('goalList.title')).toBeLessThan(labels.indexOf('tab.tasks'));
   });
 });

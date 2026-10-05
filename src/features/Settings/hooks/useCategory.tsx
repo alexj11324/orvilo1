@@ -45,6 +45,7 @@ export enum SettingsGroupKey {
   Data = 'data',
   Developer = 'developer',
   Security = 'security',
+  ThisDevice = 'thisDevice',
   Tools = 'tools',
   UsageAndCost = 'usageAndCost',
 }
@@ -163,16 +164,6 @@ export const useCategory = () => {
             key: SettingsTabs.Memory,
             label: t('tab.memory'),
           },
-          offered(SettingsTabs.Proxy) && {
-            icon: EthernetPort,
-            key: SettingsTabs.Proxy,
-            label: t('tab.proxy'),
-          },
-          offered(SettingsTabs.SystemTools) && {
-            icon: TerminalSquare,
-            key: SettingsTabs.SystemTools,
-            label: t('tab.systemTools'),
-          },
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Agent,
         title: t('group.aiConfig'),
@@ -195,6 +186,27 @@ export const useCategory = () => {
         ].filter(Boolean) as CategoryItem[],
         key: SettingsGroupKey.Tools,
         title: t('group.tools'),
+      },
+
+      // 此应用·此设备 — host-scoped pages (this install's proxy, OS-level
+      // permissions). Registry scope 'host'; offered() already resolves the
+      // isDesktop gate, so an empty group can be dropped without a platform
+      // check here.
+      {
+        items: [
+          offered(SettingsTabs.Proxy) && {
+            icon: EthernetPort,
+            key: SettingsTabs.Proxy,
+            label: t('tab.proxy'),
+          },
+          offered(SettingsTabs.SystemTools) && {
+            icon: TerminalSquare,
+            key: SettingsTabs.SystemTools,
+            label: t('tab.systemTools'),
+          },
+        ].filter(Boolean) as CategoryItem[],
+        key: SettingsGroupKey.ThisDevice,
+        title: t('group.thisDevice'),
       },
 
       // 用量与成本 — the quota / cost / billing / audit surface S70 says to keep.

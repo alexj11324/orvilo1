@@ -1,26 +1,32 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import { CHAT_TOPIC_URL, DEFAULT_AVATAR } from '@orvilo/const';
+import { CHAT_TOPIC_URL } from '@orvilo/const';
+import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { agentDisplayName } from '@orvilo/types';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { openConnectAgentModal } from '@/features/ConnectAgent';
+import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
 import AgentList from '@/features/Home/AgentSelect/AgentList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
 import { useInitBuiltinAgent } from '@/hooks/useInitBuiltinAgent';
+import { heterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import SelectorTrigger from '../../components/SelectorTrigger';
 import { useAgentId } from '../../hooks/useAgentId';
 import { useActionBarContext } from '../context';
+import LocalHarnessSection from './LocalHarnessSection';
 
 interface HandoffChoiceContentProps {
   agentName: string;
@@ -106,6 +112,9 @@ const Agent = memo(() => {
   useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.taskAgent);
 
   const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
+  const runtimeType = useAgentStore((s) =>
+    resolveAgentRuntimeType(agentSelectors.getAgentConfigById(agentId)(s)),
+  );
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   // The task agent is a virtual row — its label comes from the same fallback
   // the task-manager selector uses, not the agent meta map.
@@ -126,11 +135,9 @@ const Agent = memo(() => {
         // and no draft carry — the blank composer's draft keys on the
         // workspace, so the typed text stays under the same key. An explicit
         // pick is also one of the three write points for `lastUsedAgentId`
-        // (pick / send / handoff) — recording it here keeps the next blank
-        // composer's default on the agent the user last chose, never on
-        // background list churn.
-        useChatStore.setState({ composerAgentId: id }, false, 'composerAgent/switch');
-        useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: id });
+        // (pick / send / handoff) — the shared explicit-select action keeps
+        // the next blank composer's default on the agent the user last chose.
+        selectAgentForConversation(id);
         return;
       }
 
@@ -172,22 +179,27 @@ const Agent = memo(() => {
     [agentId, t, taskAgentId, workspaceAwareNavigate],
   );
 
+  /**
+   * A locally detected harness the user has not connected yet. Picking it is
+   * deliberately NOT a selection: it hands off to the connect wizard, which
+   * owns naming, the target device and the explicit "Connect" confirmation.
+   * Nothing is written from chat — that is the invariant this indirection
+   * exists to protect, and why the row shows a 连接 affordance instead of
+   * looking like the agent rows above.
+   */
+  const handleConnectHarness = useCallback((type: HeterogeneousAgentType) => {
+    setOpen(false);
+    openConnectAgentModal({ initialType: type });
+  }, []);
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         render={
           <SelectorTrigger
             ariaLabel={title}
+            leading={<AgentRuntimeIcon size={20} type={runtimeType} />}
             text={title}
-            leading={
-              <Avatar
-                avatar={meta.avatar || DEFAULT_AVATAR}
-                background={meta.backgroundColor}
-                name={title}
-                shape={'square'}
-                size={20}
-              />
-            }
           />
         }
       />
@@ -199,7 +211,14 @@ const Agent = memo(() => {
         <AgentList
           includeTaskAgent
           activeAgentId={agentId}
+          // Desktop only: the probe goes through the Electron binary detector,
+          // so on the web build there is no local machine to report on.
           error={error}
+          bottomSection={
+            heterogeneousAgentService.supportsLocalExecution ? (
+              <LocalHarnessSection onConnect={handleConnectHarness} />
+            ) : undefined
+          }
           onRetry={() => mutate()}
           onSelect={handleSelect}
         />

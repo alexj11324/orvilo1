@@ -7,6 +7,7 @@ import { Given, Then, When } from '@cucumber/cucumber';
 import { expect } from '@playwright/test';
 
 import { llmMockManager, presetResponses } from '../../mocks/llm';
+import { ensureTestUserPrimeAgent } from '../../support/bindExecutionDevice';
 import type { CustomWorld } from '../../support/world';
 import { WAIT_TIMEOUT } from '../../support/world';
 
@@ -113,7 +114,8 @@ Given('用户进入 Orvilo AI 对话页面', { timeout: 30_000 }, async function
   await llmMockManager.setup(this.page);
 
   console.log('   📍 Step: 直接进入 Orvilo AI 对话路由...');
-  await this.page.goto('/agent/inbox', { waitUntil: 'domcontentloaded' });
+  const agentId = await ensureTestUserPrimeAgent(this.browserContext.request);
+  await this.page.goto(`/agent/${agentId}`, { waitUntil: 'domcontentloaded' });
 
   console.log('   📍 Step: 查找输入框...');
   await focusChatInput.call(this);

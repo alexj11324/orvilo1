@@ -4,7 +4,13 @@ import { type AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { LOADING_FLAT } from '@orvilo/const';
 import { isFullAccessApiKey } from '@orvilo/const/apiKeyScope';
 import { parse } from '@orvilo/conversation-flow';
-import type { ExecAgentResult, TaskCurrentActivity, TaskStatusResult } from '@orvilo/types';
+import type {
+  AgentMarketplaceRuntimeConfig,
+  ExecAgentResult,
+  HeterogeneousReasoningEffort,
+  TaskCurrentActivity,
+  TaskStatusResult,
+} from '@orvilo/types';
 import {
   CreateThreadWithMessageSchema,
   entityIdPattern,
@@ -55,6 +61,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { agentInterventions, agentOperations, topics, workspaceMembers } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreation';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -530,6 +537,16 @@ const dispatchClaimedAgentIntervention = async (
       switch (runtimeAction.type) {
         case 'execute_custom_interaction': {
           const customAction = runtimeAction.input.action;
+          if (customAction.type === 'submitted') {
+            await assertAgentRuntimeCreation(
+              ctx.serverDB,
+              {
+                userId: resolution.ownerUserId,
+                workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+              },
+              customAction.runtimeConfig,
+            );
+          }
           const customResult = await executeAgentMarketplaceIntervention({
             action: customAction,
             actorUserId: ctx.userId,
@@ -1019,6 +1036,24 @@ const ExecAgentSchema = z
     existingMessageIds: z.array(z.string()).optional().default([]),
     /** File IDs of already-uploaded attachments to attach to the new user message */
     fileIds: z.array(z.string()).optional(),
+    /**
+     * Model / provider / reasoning effort picked in a blank composer before the
+     * conversation existed (`composerModelSelection` / `composerHeteroEffort`
+     * client-side). Written onto the topic THIS run creates and never onto the
+     * agent row — a chat-side pick is conversation-scoped
+     * (docs/development/chat-agent-model-ia.md §5.2). Ignored when the run reuses
+     * an existing topic; absent for every non-composer caller, which leaves the
+     * agent-config topic snapshot exactly as before.
+     */
+    newTopicPins: z
+      .object({
+        effort: z
+          .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
+          .optional(),
+        model: z.string().optional(),
+        provider: z.string().optional(),
+      })
+      .optional(),
     /** Parent message ID for regeneration/continue (skip user message creation, branch from this message) */
     parentMessageId: z.string().optional(),
     /** Existing gateway operation this fresh turn atomically supersedes. */
@@ -1424,7 +1459,10 @@ const AgentStreamEventSchema = z.object({
  * → topic reverse-lookup is unreliable per design decision).
  */
 const HeteroIngestSchema = z.object({
-  agentType: LocalHeterogeneousAgentTypeSchema,
+  // 'orvilo' is deliberately outside LOCAL_HETEROGENEOUS_AGENT_TYPES (no
+  // binary to scan), but a device-hosted Prime run produces ingest under
+  // that honest label — admit it here without widening the scan enum.
+  agentType: z.union([LocalHeterogeneousAgentTypeSchema, z.literal('orvilo')]),
   /** Initial assistant placeholder message id forwarded from the sandbox env var.
    * When present, `loadOrCreateState` uses it directly and skips the DB read of
    * topic.metadata.runningOperation, eliminating the replica-lag race condition. */
@@ -1464,7 +1502,7 @@ const HeteroFinishSchema = z.object({
         .max(64),
     })
     .optional(),
-  agentType: LocalHeterogeneousAgentTypeSchema,
+  agentType: z.union([LocalHeterogeneousAgentTypeSchema, z.literal('orvilo')]),
   /** Initial assistant placeholder forwarded by the producer. Unlike the live
    * ingest path, finish may arrive after gateway session completion has already
    * cleared topic.metadata.runningOperation, so this is the durable fallback
@@ -2095,6 +2133,7 @@ export const aiAgentRouter = router({
       existingMessageIds = [],
       fileIds,
       mentionedAgents,
+      newTopicPins,
       parentMessageId,
       resumeApproval,
       resumeApprovals,
@@ -2178,6 +2217,7 @@ export const aiAgentRouter = router({
                 | {
                     askUserAnswers?: Record<string, unknown>;
                     selectedAgentIds?: unknown;
+                    runtimeConfig?: AgentMarketplaceRuntimeConfig;
                   }
                 | undefined;
               const answers = pluginState?.askUserAnswers;
@@ -2200,10 +2240,21 @@ export const aiAgentRouter = router({
                 Array.isArray(pluginState?.selectedAgentIds) &&
                 pluginState.selectedAgentIds.every((id) => typeof id === 'string')
               ) {
+                if (!pluginState.runtimeConfig)
+                  throw new TRPCError({
+                    code: 'PRECONDITION_FAILED',
+                    message: 'AGENT_RUNTIME_REQUIRED',
+                  });
+                await assertAgentRuntimeCreation(
+                  ctx.serverDB,
+                  { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+                  pluginState.runtimeConfig,
+                );
                 sourceAction = {
                   result: {
                     kind: 'agent_marketplace',
                     selectedTemplateIds: pluginState.selectedAgentIds as string[],
+                    runtimeConfig: pluginState.runtimeConfig,
                   },
                   type: 'submit_custom',
                 };
@@ -2286,6 +2337,7 @@ export const aiAgentRouter = router({
         existingMessageIds,
         fileIds,
         mentionedAgents,
+        newTopicPins,
         parentMessageId,
         prompt,
         // When parentMessageId is provided, this is a regeneration/continue or a
@@ -3485,6 +3537,14 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
+      if (input.action.type === 'submit_custom') {
+        await assertAgentRuntimeCreation(
+          ctx.serverDB,
+          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          input.action.result.runtimeConfig,
+        );
+      }
+
       // A rejected resolution describes the submitted response, not a server
       // fault, so map the contract failure instead of letting it become a 500.
       const resolution = await resolveAgentInterventionBySource({
@@ -3536,6 +3596,13 @@ export const aiAgentRouter = router({
   resolveAgentIntervention: aiAgentWriteProcedure
     .input(ResolveAgentInterventionSchema)
     .mutation(async ({ input, ctx }) => {
+      if (input.action.type === 'submit_custom') {
+        await assertAgentRuntimeCreation(
+          ctx.serverDB,
+          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          input.action.result.runtimeConfig,
+        );
+      }
       const resolution = await resolveAgentIntervention({
         action: input.action,
         expectedBatchVersion: input.expectedBatchVersion,

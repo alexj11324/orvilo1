@@ -16,6 +16,8 @@ const dynamicComponentPropsMock = vi.hoisted(() => vi.fn());
 
 const serverConfigMock = vi.hoisted(() => ({ enableBusinessFeatures: false }));
 const shareContextMock = vi.hoisted(() => ({ topicShareId: '' }));
+const repairContextMock = vi.hoisted(() => ({ canSelectPersonalDevice: true }));
+vi.mock('@/hooks/useTopicAgencyConfig', () => ({ useTopicAgencyConfig: () => repairContextMock }));
 const delAndRegenerateMessageMock = vi.hoisted(() => vi.fn());
 const detectHeterogeneousAgentCommandMock = vi.hoisted(() => vi.fn());
 // Keyed by message id so a test can decide whether `data.id` is a top-level
@@ -73,6 +75,9 @@ vi.mock('react-i18next', () => ({
 vi.mock('react-router', () => ({
   useNavigate: () => navigateMock,
 }));
+vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
+  useWorkspaceAwareNavigate: () => navigateMock,
+}));
 
 vi.mock('@/business/client/hooks/useBusinessErrorAlertConfig', () => ({
   default: () => undefined,
@@ -94,12 +99,13 @@ vi.mock('@/features/Conversation/ChatItem/components/ErrorContent', () => ({
     error,
     onRegenerate,
   }: {
-    error?: { extra?: ReactNode; message?: string };
+    error?: { action?: ReactNode; extra?: ReactNode; message?: string };
     onRegenerate?: () => void;
   }) => (
     <div>
       <div>{error?.message}</div>
       {error?.extra}
+      {error?.action}
       {onRegenerate && <button onClick={onRegenerate}>card-retry</button>}
     </div>
   ),
@@ -190,6 +196,7 @@ describe('ErrorMessageExtra', () => {
     businessSlot.render = false;
     serverConfigMock.enableBusinessFeatures = false;
     shareContextMock.topicShareId = '';
+    repairContextMock.canSelectPersonalDevice = true;
     businessErrorContentMock.mockReturnValue({
       errorType: undefined,
       hideMessage: false,
@@ -198,6 +205,43 @@ describe('ErrorMessageExtra', () => {
     updateMessageErrorMock.mockClear();
     delAndRegenerateMessageMock.mockClear();
     displayMessageMock.clear();
+  });
+
+  it('offers device setup for an admission failure instead of regeneration', () => {
+    displayMessageMock.set('msg-device', { parentId: 'user-1' });
+    render(
+      <ErrorMessageExtra
+        error={{ message: 'Temporary runtime outage' }}
+        data={{
+          id: 'msg-device',
+          error: {
+            type: AgentRuntimeErrorType.AgentRuntimeError,
+            body: { detail: 'DEVICE_REQUIRED: No authorized device.' },
+          },
+        }}
+      />,
+    );
+    expect(screen.getByText('deviceAdmission.required')).toBeInTheDocument();
+    expect(screen.queryByText('card-retry')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
+    expect(navigateMock).toHaveBeenCalledWith('/settings/devices', { escape: true });
+  });
+  it('keeps a fixed workspace device repair on workspace settings', () => {
+    repairContextMock.canSelectPersonalDevice = false;
+    render(
+      <ErrorMessageExtra
+        error={{ message: 'DEVICE_REQUIRED' }}
+        data={{
+          id: 'fixed-device',
+          error: {
+            type: AgentRuntimeErrorType.AgentRuntimeError,
+            body: { detail: 'DEVICE_REQUIRED: Workspace pool is empty.' },
+          },
+        }}
+      />,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'deviceAdmission.configure' }));
+    expect(navigateMock).toHaveBeenCalledWith('/settings/devices');
   });
 
   // Regression: the standalone surfaces (Assistant / Task / AgentCouncil) render

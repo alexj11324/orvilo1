@@ -178,6 +178,7 @@ export {
   extractStandardAcpSelectors,
   listStandardAcpModels,
   type ListStandardAcpModelsOptions,
+  listStandardAcpPermissions,
   resolveAcpSpawnTarget,
   type StandardAcpSelectors,
 } from './standardAcpAgents';

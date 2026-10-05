@@ -281,3 +281,114 @@ expected:[<current phase>]})` is the same transition the runtime callback uses.
 6. vitest suppresses `console.log` for passing tests — write evidence rows to a
    file (`fs.writeFileSync('/tmp/evidence.json', ...)`) or snapshot them via
    `psql -P pager=off` after the run instead of relying on stdout.
+
+## Broken `pnpm install` on this box (as of Oct 2026)
+
+`pnpm install` fails: the registry lacks `@aws-sdk/token-providers@3.1145.0` (and the
+lockfile pins it). Root `node_modules` ends up partially populated and `apps/server`
+has none. Symptoms at Vite dev time are sequential `Failed to resolve import "X"`
+500s — each fix reveals the next missing package, and a stale `node_modules/.vite`
+deps bundle can keep serving the old failure until you clear it AND restart dev.
+
+Workaround that got a working SPA + in-process server:
+
+```bash
+mkdir -p /tmp/missdeps && cd /tmp/missdeps
+npm install --no-save --legacy-peer-deps \
+  sonner@2.0.8 react-day-picker@10.0.2 @date-fns/tz \
+  @dnd-kit/modifiers @tanstack/react-table @tanstack/react-virtual \
+  date-fns@4 embla-carousel embla-carousel-react use-sync-external-store \
+  tslib scheduler
+cp -R node_modules/* ~/repos/orvilo1/node_modules/ # merge, don't replace
+# workspace packages that never got linked:
+ln -sfn ~/repos/orvilo1/packages/agent-runtime \
+  ~/repos/orvilo1/node_modules/@orvilo/agent-runtime
+rm -rf ~/repos/orvilo1/node_modules/.vite # force re-optimize
+# then restart the dev server — clearing .vite alone is NOT enough
+```
+
+Note: a second `import()` of a failed module inside the same document returns the
+cached rejection with NO new network request — always reload + capture Network
+events (Page.reload ignoreCache) to find the real 500 module.
+
+## APP_URL override for `init-dev-env.sh dev`
+
+If the environment leaks `APP_URL=http://localhost:3010` (a platform secret), dev
+signin bounces to a dead port. Restart with the real Next port, e.g.
+`APP_URL=http://localhost:37789 .agents/acceptance/scripts/init-dev-env.sh dev`.
+
+## Hetero "Cloud credentials required" guard
+
+`useHeteroAgentCloudConfig` blocks hetero sends until the agent advertises a creds
+env var. No real token is needed — presence of the env key is enough:
+
+```sql
+UPDATE agents SET agency_config = agency_config ||
+  '{"heterogeneousProvider":{"type":"claude-code","env":{"CLAUDE_CODE_CRED_KEY":"dummy"},"apiMode":"local"}}'::jsonb
+WHERE id='<agent-id>';
+```
+
+Nested `jsonb_set` on a missing path silently no-ops — use the `||` jsonb merge.
+
+## PG17 trigger syntax + workspace auto-provision crash
+
+- `CREATE TRIGGER ... EXECUTE FUNCTION f()` (not `EXECUTE PROCEDURE`) on PG17.
+- The `block_ws_insert` workspaces trigger from older notes CRASHES
+  current-branch boot: `workspace.ensureDefault` 500s → React error boundary.
+  Drop it and let the app auto-provision the workspace on first load instead;
+  seed test rows into that auto-created workspace id.
+
+## Server-side dispatch testing without the desktop app
+
+The web composer's send is two tRPC calls: `aiChat.sendMessageInServer` (persists
+messages, \~30ms) then `aiAgent.execAgent` (the actual dispatch, \~300ms+). Calling
+only the first silently strands the turn — no op, no error. To drive a server
+dispatch from the authenticated page (e.g. when a client guard like
+"Device not connected" blocks the send button):
+
+```js
+fetch('/trpc/lambda/aiAgent.execAgent', {
+  method: 'POST',
+  headers: {
+    'content-type': 'application/json',
+    'X-Workspace-Id': '<ws-id>',
+  },
+  body: JSON.stringify({
+    json: {
+      agentId: '<a>',
+      prompt: '...',
+      appContext: { topicId: '<t>' },
+      clientIds: { userMessageId: 'msg_x1', assistantMessageId: 'msg_x2' },
+      trigger: 'chat',
+    },
+  }),
+});
+```
+
+- `X-Workspace-Id` is REQUIRED for workspace-scoped topics — without it the
+  server resolves personal scope and execAgent fails "Topic not found".
+- `clientIds` rows must not already exist (409 "already been created").
+- Blocked admissions return 200 with `error` in the payload and land the honest
+  error on `messages.error` + `agent_operations` (`status='error'`); resolved
+  device dispatches write `metadata.executionPlan` + `metadata.remoteAdmission`
+  before the gateway call.
+
+## Device admission fixture shape
+
+`topics.metadata.executionConfig` must snapshot BOTH `executionTarget` and
+`boundDeviceId` (what `snapshotTopicExecutionConfig` writes). A config with only
+`boundDeviceId` applies `executionTarget: undefined` onto the agent and blocks
+with EXECUTION_TARGET_NONE before the pin is ever evaluated. The session pin
+admission consults comes from the topic's applied `boundDeviceId`; the raw
+`deviceId` request param is the explicit-request slot; for a NEW topic the raw
+deviceId BECOMES the session pin (so a rogue id blocks as DEVICE_BINDING_INVALID,
+not DEVICE_REQUEST_UNAUTHORIZED — use an existing unpinned topic for the latter).
+
+## Known flaky symptom: eternal "Task is running" after instant-finalize
+
+When a dispatch fails in <100ms (e.g. GATEWAY_NOT_CONFIGURED), the topic can be
+left with `topics.status='running'` and both surfaces show an eternal
+"Task is running in the server" banner even though `agent_operations` is `error`,
+`messages.error` is set, and `agent_runtime_end` was published to the Redis
+stream. The client op store never sees the terminal state in the local env —
+verify terminal state in Postgres/Redis, not the banner.

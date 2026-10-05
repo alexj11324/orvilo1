@@ -1814,12 +1814,9 @@ export class TaskModel {
         workflowCategories: Array.from(new Set(group.workflowCategories ?? [])),
       }));
       const taskQueries = statusGroups.map(async (group) => {
-        const linkedWorkflowCondition =
+        const workflowCategoryCondition =
           group.workflowCategories.length > 0
-            ? and(
-                isNotNull(tasks.workflowStateId),
-                inArray(tasks.workflowCategory, group.workflowCategories),
-              )
+            ? inArray(tasks.workflowCategory, group.workflowCategories)
             : undefined;
         const legacyStatusCondition =
           group.statuses.length > 0
@@ -1827,7 +1824,7 @@ export class TaskModel {
               ? and(isNull(tasks.workflowStateId), predicateForLegacyStatuses(group.statuses))
               : predicateForLegacyStatuses(group.statuses)
             : undefined;
-        const membership = or(linkedWorkflowCondition, legacyStatusCondition);
+        const membership = or(workflowCategoryCondition, legacyStatusCondition);
         if (!membership) throw new Error(`Task group ${group.key} has no membership criteria`);
         const conditions = [membership];
         const limit = group.limit ?? 50;

@@ -14,7 +14,7 @@ import {
   SHELL9_SIDEBAR_WIDTH,
 } from '@/features/ReUIShell/constants';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort, hostResultOr } from '@/platform';
 import { useElectronStore } from '@/store/electron';
 import { useGlobalStore } from '@/store/global';
 import type { GlobalState } from '@/store/global/initialState';
@@ -73,8 +73,8 @@ const NavigationBar = memo(() => {
 
     const syncFullScreenState = async () => {
       try {
-        const isFullScreen = await electronSystemService.isWindowFullScreen();
-        if (!disposed) setIsWindowFullScreen(isFullScreen);
+        const isFullScreen = await getHostPort().window.isFullScreen();
+        if (!disposed) setIsWindowFullScreen(hostResultOr(isFullScreen, false));
       } catch {
         if (!disposed) setIsWindowFullScreen(false);
       }

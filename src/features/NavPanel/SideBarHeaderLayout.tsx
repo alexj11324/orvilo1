@@ -11,6 +11,7 @@ import {
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
+  BreadcrumbPage,
   BreadcrumbSeparator,
 } from '@/components/ui/breadcrumb';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
@@ -94,22 +95,26 @@ const SideBarHeaderLayout = memo<SideBarHeaderLayoutProps>(
             {[homeCrumb, ...breadcrumb].map((item, index, all) => (
               <Fragment key={index}>
                 <BreadcrumbItem>
-                  <BreadcrumbLink
-                    href={item.href}
-                    onClick={(event) => {
-                      item.onClick?.(event);
-                      if (isModifierClick(event)) return;
-                      const href = item.href;
-                      if (href) {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        // eslint-disable-next-line @eslint-react/dom/no-flush-sync
-                        flushSync(() => navigate(href));
-                      }
-                    }}
-                  >
-                    {item.title}
-                  </BreadcrumbLink>
+                  {item.href ? (
+                    <BreadcrumbLink
+                      href={item.href}
+                      onClick={(event) => {
+                        item.onClick?.(event);
+                        if (isModifierClick(event)) return;
+                        const href = item.href;
+                        if (href) {
+                          event.preventDefault();
+                          event.stopPropagation();
+                          // eslint-disable-next-line @eslint-react/dom/no-flush-sync
+                          flushSync(() => navigate(href));
+                        }
+                      }}
+                    >
+                      {item.title}
+                    </BreadcrumbLink>
+                  ) : (
+                    <BreadcrumbPage>{item.title}</BreadcrumbPage>
+                  )}
                 </BreadcrumbItem>
                 {index < all.length - 1 && (
                   <BreadcrumbSeparator>

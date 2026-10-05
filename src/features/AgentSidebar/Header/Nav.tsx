@@ -1,6 +1,6 @@
 'use client';
 
-import { DnaIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
+import { DnaIcon, ListTodoIcon, MessageSquarePlusIcon, SearchIcon, TargetIcon } from 'lucide-react';
 import { memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import urlJoin from 'url-join';
@@ -29,6 +29,7 @@ const Nav = memo(() => {
   const isGoalsActive = pathname.endsWith('/goals');
   // 下钻页 /self-evolving/:domainId 也算在这个入口下，否则点进去侧边栏就失焦了
   const isSelfLearningActive = pathname.includes('/self-evolving');
+  const isTasksActive = pathname.endsWith('/tasks') || pathname.includes('/task/');
   const router = useQueryRoute();
   const { allowed: canCreateTopic } = usePermission('create_content');
   const toggleCommandMenu = useGlobalStore((s) => s.toggleCommandMenu);
@@ -107,6 +108,15 @@ const Nav = memo(() => {
           }}
         />
       )}
+      <NavItem
+        active={isTasksActive}
+        icon={ListTodoIcon}
+        title={t('tab.tasks')}
+        onClick={() => {
+          switchTopic(null, { skipRefreshMessage: true });
+          router.push(agentId ? urlJoin('/agent', agentId, 'tasks') : '/tasks');
+        }}
+      />
     </div>
   );
 });

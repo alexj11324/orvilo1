@@ -40,6 +40,10 @@ vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
+        // An external mount-capable binding keeps this agent on the ACP
+        // surface the pin assertions below exercise (builtin orvilo = Prime
+        // mounts nothing).
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
         chatConfig: {},
         files: [],
         id: 'agent-1',
@@ -59,6 +63,7 @@ vi.mock('@/server/services/agent', () => ({
   AgentService: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
         chatConfig: {},
         files: [],
         id: 'agent-1',

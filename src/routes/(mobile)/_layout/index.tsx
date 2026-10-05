@@ -7,9 +7,10 @@ import { Outlet, useLocation } from 'react-router';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
 import Loading from '@/components/Loading/BrandTextLoading';
+import AgentOnboarding from '@/features/AgentOnboarding';
+import FirstLoginGate from '@/features/AgentOnboarding/FirstLoginGate';
 import { MobileNavVisibleContext } from '@/features/MobileNav/navContext';
 import { RouteMetaBridge } from '@/features/RouteMeta';
-import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { stripWorkspaceSlug } from '@/features/Workspace/workspaceAwarePath';
 import dynamic from '@/libs/next/dynamic';
 import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
@@ -56,20 +57,25 @@ const MobileMainLayout: FC = () => {
   const { showCloudPromotion } = useServerConfigStore(featureFlagsSelectors);
   const activeSlug = useActiveWorkspaceSlug();
   const { pathname } = useLocation();
-  useWorkspaceUrlSync();
 
   const showNav = isMobileNavRoute(pathname, activeSlug);
   return (
-    <WorkspaceContextSlot>
-      <RouteMetaBridge />
-      <Suspense fallback={null}>{showCloudPromotion && <CloudBanner mobile />}</Suspense>
-      <Suspense fallback={<Loading debugId="MobileMainLayout > Outlet" />}>
-        <MobileNavVisibleContext value={showNav}>
-          <Outlet />
-          {showNav && <NavBar />}
-        </MobileNavVisibleContext>
-      </Suspense>
-    </WorkspaceContextSlot>
+    <FirstLoginGate>
+      <WorkspaceContextSlot>
+        {/* Same first-agent gate as the desktop layout: while no usable agent
+            exists the setup screen covers the whole window, tab bar included. */}
+        <AgentOnboarding>
+          <RouteMetaBridge />
+          <Suspense fallback={null}>{showCloudPromotion && <CloudBanner mobile />}</Suspense>
+          <Suspense fallback={<Loading debugId="MobileMainLayout > Outlet" />}>
+            <MobileNavVisibleContext value={showNav}>
+              <Outlet />
+              {showNav && <NavBar />}
+            </MobileNavVisibleContext>
+          </Suspense>
+        </AgentOnboarding>
+      </WorkspaceContextSlot>
+    </FirstLoginGate>
   );
 };
 

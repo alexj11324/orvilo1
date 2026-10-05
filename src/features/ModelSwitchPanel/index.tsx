@@ -25,6 +25,7 @@ const ModelSwitchPanel = memo<ModelSwitchPanelProps>(
     placement = 'topLeft',
     pricingMode,
     provider: providerProp,
+    simpleSource,
     openOnHover = true,
   }) => {
     const [internalOpen, setInternalOpen] = useState(false);
@@ -53,6 +54,7 @@ const ModelSwitchPanel = memo<ModelSwitchPanelProps>(
                   model={modelProp}
                   pricingMode={pricingMode}
                   provider={providerProp}
+                  simpleSource={simpleSource}
                   onModelChange={onModelChange}
                   onOpenChange={handleOpenChange}
                 />
@@ -70,4 +72,4 @@ ModelSwitchPanel.displayName = 'ModelSwitchPanel';
 export default ModelSwitchPanel;
 
 export { ModelSwitchSubmenuPopup } from './SubmenuPopup';
-export { type ModelSwitchPanelProps } from './types';
+export { type ModelSwitchPanelProps, type SimpleModelSource } from './types';

@@ -1,14 +1,28 @@
+import { DeviceTransportErrorCode } from '@orvilo/device-gateway-client';
 import type * as ModelBankModule from 'model-bank';
 import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
+import { resolveDeviceDispatchAuthorizationFailure } from '@/server/services/deviceGateway/dispatchAuthorization';
 
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
+import { createDispatchTestDb } from './dispatchAdmission.test-utils';
+
+const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
+  mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/featureFlags', async (importOriginal) => ({
+  ...(await importOriginal<typeof FeatureFlagsModule>()),
+  getServerFeatureFlagsStateFromRuntimeConfig: mockSandboxFeatureFlags,
+}));
 
 const {
+  mockComposeDevicePrimeRun,
   mockDeviceFindByDeviceId,
   mockDeviceFindWorkspaceDeviceById,
   mockDispatchAgentRun,
@@ -17,9 +31,11 @@ const {
   mockGetHeterogeneousResumeSessionId,
   mockMessageCreate,
   mockMessageUpdate,
+  mockOpenEmbeddedChatDispatchHost,
   mockSpawnHeteroSandbox,
   realDispatchRef,
 } = vi.hoisted(() => ({
+  mockComposeDevicePrimeRun: vi.fn(),
   mockDeviceFindByDeviceId: vi.fn(),
   mockDeviceFindWorkspaceDeviceById: vi.fn(),
   mockDispatchAgentRun: vi.fn(),
@@ -28,6 +44,7 @@ const {
   mockGetHeterogeneousResumeSessionId: vi.fn(),
   mockMessageCreate: vi.fn(),
   mockMessageUpdate: vi.fn(),
+  mockOpenEmbeddedChatDispatchHost: vi.fn(),
   mockSpawnHeteroSandbox: vi.fn(),
   // The unmocked dispatch, captured by the factory below; the mock delegates
   // to it so tests observe the call AND the real routing pipeline runs.
@@ -71,7 +88,26 @@ vi.mock('@/database/models/message', () => ({
   }),
 }));
 
+const mockPrimeDescriptor = {
+  artifact: {
+    bytes: 1234,
+    commit: '7d442aafa985f9342134fac16c2ef41f03fb45c1',
+    license: 'MIT',
+    sha256: '0'.repeat(64),
+    version: '0.9.8',
+  },
+  broker: { credential: 'op-jwt' },
+  lease: { ttlMs: 300_000 },
+  model: { id: 'gpt-4', maxOutputTokens: 4096 },
+  subject: { kind: 'conversation', topicId: 'topic-1' },
+};
+
 const baseAgentConfig = {
+  // An external-agent binding: device/sandbox routing is exercised on
+  // claude-code — the builtin orvilo agent's harness is fixed to Prime
+  // (docs/development/device-execution-contract.md); device-first routing
+  // applies to it equally, so these cases pin the external CLI adapter.
+  agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
   chatConfig: {},
   files: [],
   id: 'agent-1',
@@ -104,6 +140,15 @@ vi.mock('@/database/models/device', () => ({
     return {
       findByDeviceId: mockDeviceFindByDeviceId,
       findWorkspaceDeviceById: mockDeviceFindWorkspaceDeviceById,
+      // Unified admission's authorized candidate set — the devices this suite
+      // routes to are registered in both scopes (workspace runs query the
+      // workspace list, personal runs the personal one).
+      queryPersonal: vi
+        .fn()
+        .mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
+      queryWorkspaceDevices: vi
+        .fn()
+        .mockResolvedValue([{ deviceId: 'device-001' }, { deviceId: 'device-002' }]),
     };
   }),
 }));
@@ -207,6 +252,14 @@ vi.mock('../pipeline/heteroDispatch', async (importOriginal) => {
   return { ...actual, dispatchHeteroAgent: mockDispatchHeteroAgent };
 });
 
+// The host-open is stubbed (its admission re-proof needs a real `deps.db`);
+// `resolveEmbeddedChatDispatchRoute` stays real so routing into the embedded
+// chat host is genuinely exercised.
+vi.mock('@/server/services/controlPlane/embeddedChatDispatch', async (importOriginal) => {
+  const actual = await importOriginal<Record<string, unknown>>();
+  return { ...actual, openEmbeddedChatDispatchHost: mockOpenEmbeddedChatDispatchHost };
+});
+
 vi.mock('@/server/services/heterogeneousAgent', () => ({
   HeterogeneousAgentService: vi.fn().mockImplementation(function () {
     return {
@@ -220,7 +273,16 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
 }));
 
 vi.mock('@/server/services/providerBinding/execution', () => ({
-  resolveOrviloProviderBinding: vi.fn().mockResolvedValue({ status: 'none' }),
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
+}));
+
+// Composition is the control-plane half of the device-Prime contract — these
+// tests pin ROUTING (a device-resolved orvilo plan reaches the gateway with a
+// prime descriptor), not the descriptor's contents, so composition is stubbed
+// at its module seam.
+vi.mock('@/server/services/controlPlane/devicePrimeDispatch', () => ({
+  composeDevicePrimeRun: mockComposeDevicePrimeRun,
 }));
 
 vi.mock('@/server/services/deviceGateway', () => ({
@@ -269,11 +331,12 @@ vi.mock('model-bank', async (importOriginal) => {
 describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
   let service: AiAgentService;
   let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
-  const mockDb = {} as any;
+  const mockDb = createDispatchTestDb() as any;
   const userId = 'test-user-id';
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: false });
     mockDispatchHeteroAgent.mockImplementation((deps, ctx, input) =>
       realDispatchRef.current!(deps, ctx, input),
     );
@@ -287,9 +350,23 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     mockDispatchAgentRun.mockResolvedValue({ success: true });
     mockExecuteToolCall.mockResolvedValue({ success: true });
     mockSpawnHeteroSandbox.mockResolvedValue(undefined);
+    // Deny with a sentinel — proves the run reached embedded chat admission
+    // without driving `openEmbeddedChatDispatchHost`'s `deps.db` re-proof.
+    mockOpenEmbeddedChatDispatchHost.mockResolvedValue({
+      error: { code: 'stale_fence', message: 'chat host stubbed by fence test', retryable: false },
+      ok: false,
+    });
     mockGetHeterogeneousResumeSessionId.mockResolvedValue(undefined);
     mockDeviceFindByDeviceId.mockResolvedValue(undefined);
     mockDeviceFindWorkspaceDeviceById.mockResolvedValue(undefined);
+    // `clearAllMocks` keeps the last-set implementation — re-establish the
+    // auth-pass default so a test that stubs BINDING_INVALID can't leak it
+    // into later tests.
+    vi.mocked(resolveDeviceDispatchAuthorizationFailure).mockResolvedValue(undefined);
+    mockComposeDevicePrimeRun.mockResolvedValue({
+      ok: true,
+      value: { descriptor: mockPrimeDescriptor },
+    });
 
     service = new AiAgentService(mockDb, userId);
   });
@@ -306,7 +383,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       return {
         getAgentConfig: vi.fn().mockResolvedValue({
           ...baseAgentConfig,
-          agencyConfig,
+          agencyConfig: {
+            heterogeneousProvider: { type: 'claude-code' },
+            ...agencyConfig,
+          },
         }),
       } as any;
     });
@@ -329,7 +409,22 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       });
     });
 
+    it('blocks an explicit sandbox target when cloud execution is disabled', async () => {
+      await useAgencyConfig({ executionTarget: 'sandbox' });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'List my files' });
+
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        autoStarted: false,
+        error: 'No bound device',
+        success: false,
+      });
+    });
+
     it('routes an explicit sandbox target to the cloud sandbox', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'sandbox' });
 
       await service.execAgent({ agentId: 'agent-1', prompt: 'List my files' });
@@ -353,6 +448,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     });
 
     it('keeps a bound device unrouted when the fixed target is sandbox', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({
         boundDeviceId: 'device-001',
         executionTarget: 'sandbox',
@@ -543,6 +639,10 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
         expect(mockDispatchAgentRun).not.toHaveBeenCalled();
         expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
         expect(result).toMatchObject({ error: 'No bound device', success: false });
+        // Every admission refusal carries the structured contract surface —
+        // the repair UI branches on errorData.code, never the prose.
+        expect(result.errorData?.code).toMatch(/^DEVICE_/);
+        expect(result.errorData?.retryable).toBe(true);
       },
     );
 
@@ -572,6 +672,91 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
       );
       expect(result).toMatchObject({ error: 'DEVICE_NOT_FOUND', success: false });
     });
+
+    it('surfaces DEVICE_NOT_CONNECTED when the bound device is unreachable', async () => {
+      // DEVICE_CHANNEL_UNAVAILABLE = the gateway addressed the device but it
+      // is offline/asleep/mid-reconnect — the honest surface code is
+      // DEVICE_NOT_CONNECTED, not the registration-gone DEVICE_NOT_FOUND.
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_CHANNEL_UNAVAILABLE',
+        errorCode: DeviceTransportErrorCode.DeviceChannelUnavailable,
+        success: false,
+      });
+
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Run a command',
+      });
+
+      expect(result).toMatchObject({ error: 'DEVICE_NOT_CONNECTED', success: false });
+      expect(result.errorData).toMatchObject({
+        code: 'DEVICE_NOT_CONNECTED',
+        deviceId: 'device-001',
+        retryable: true,
+        scope: 'personal',
+      });
+    });
+
+    it('surfaces DEVICE_BINDING_INVALID when the bound device row is gone', async () => {
+      // The bound pin resolves at admission, then the registry re-check on the
+      // NOT_FOUND failure finds the row already deleted — the surface names
+      // the explicit-repair code and offers candidates in the same scope.
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_NOT_FOUND',
+        errorCode: DeviceTransportErrorCode.DeviceNotFound,
+        success: false,
+      });
+      vi.mocked(resolveDeviceDispatchAuthorizationFailure).mockResolvedValue({
+        code: 'DEVICE_BINDING_INVALID',
+        deviceId: 'device-001',
+        repairCandidates: ['device-002'],
+        retryable: true,
+        scope: 'personal',
+      });
+
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Run a command',
+      });
+
+      expect(result).toMatchObject({ error: 'DEVICE_BINDING_INVALID', success: false });
+      expect(result.errorData).toMatchObject({
+        code: 'DEVICE_BINDING_INVALID',
+        deviceId: 'device-001',
+        repairCandidates: ['device-002'],
+      });
+    });
+
+    it('surfaces DEVICE_NOT_CONNECTED when the registry still holds the device row', async () => {
+      // The gateway reported NOT_FOUND but the registry still knows the
+      // device — the gateway simply lost reachability, so the surface names
+      // DEVICE_NOT_CONNECTED (retryable), never the repair-only NOT_FOUND.
+      await useAgencyConfig({ boundDeviceId: 'device-001', executionTarget: 'device' });
+      mockDispatchAgentRun.mockResolvedValue({
+        error: 'DEVICE_NOT_FOUND',
+        errorCode: DeviceTransportErrorCode.DeviceNotFound,
+        success: false,
+      });
+
+      const result = await service.execAgent({
+        agentId: 'agent-1',
+        prompt: 'Run a command',
+      });
+
+      expect(resolveDeviceDispatchAuthorizationFailure).toHaveBeenCalledWith(
+        mockDb,
+        userId,
+        'device-001',
+        undefined,
+      );
+      expect(result).toMatchObject({ error: 'DEVICE_NOT_CONNECTED', success: false });
+      expect(result.errorData).toMatchObject({
+        code: 'DEVICE_NOT_CONNECTED',
+        deviceId: 'device-001',
+      });
+    });
   });
 
   describe('aegis method-pack opt-in', () => {
@@ -597,6 +782,7 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
     });
 
     it('injects the .aegis/ completion contract + env bit on an enabled sandbox run', async () => {
+      mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
       await useAgencyConfig({
         executionTarget: 'sandbox',
         heterogeneousProvider: { methodPacks: { aegis: true }, type: 'claude-code' },
@@ -634,6 +820,56 @@ describe('AiAgentService.execAgent - device routing over ACP dispatch', () => {
           metadata: expect.not.objectContaining({ aegis: expect.anything() }),
         }),
       );
+    });
+  });
+
+  // The transitional embedded fence (device-execution-contract.md
+  // §transitional-fence) is down: a builtin orvilo plan that resolves to a
+  // device now composes a Prime descriptor and dispatches to the bound device
+  // like every other adapter — the device runs the Prime harness itself.
+  describe('device-resolved orvilo runs dispatch Prime (fence removed)', () => {
+    it('sends the composed prime descriptor to the bound device', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'orvilo' },
+      });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(mockComposeDevicePrimeRun).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ deviceId: 'device-001' }),
+      );
+      expect(mockDispatchAgentRun).toHaveBeenCalledWith(
+        expect.objectContaining({
+          deviceId: 'device-001',
+          prime: mockPrimeDescriptor,
+        }),
+      );
+      // No embedded fork, no engine CLI spawn.
+      expect(mockSpawnHeteroSandbox).not.toHaveBeenCalled();
+      expect(result).toMatchObject({ autoStarted: true, success: true });
+    });
+
+    it('surfaces the compose failure instead of routing embedded', async () => {
+      await useAgencyConfig({
+        boundDeviceId: 'device-001',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'orvilo' },
+      });
+      mockComposeDevicePrimeRun.mockResolvedValueOnce({
+        error: { code: 'provider_disabled', message: 'no backend' },
+        ok: false,
+      });
+
+      const result = await service.execAgent({ agentId: 'agent-1', prompt: 'Run a command' });
+
+      expect(mockDispatchAgentRun).not.toHaveBeenCalled();
+      expect(result).toMatchObject({
+        error: 'provider_disabled',
+        success: false,
+      });
     });
   });
 });

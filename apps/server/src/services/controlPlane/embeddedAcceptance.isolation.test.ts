@@ -77,7 +77,7 @@ const seed = async () => {
     type: 'kv-env',
   });
   const bindConfig: ProviderBindingConfig = {
-    enabled: false,
+    enabled: true,
     endpoint: provider.endpoint,
     model: MODEL_ID,
     name: 'Embedded acceptance binding',

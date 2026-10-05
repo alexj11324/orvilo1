@@ -98,35 +98,36 @@ describe('preferenceSelectors', () => {
   });
 
   describe('labPreferSelectors', () => {
-    it('keeps desktop split view disabled by default', () => {
+    const labFlags = [
+      'enableAgentGraphConfig',
+      'enableArtifactDeployment',
+      'enableDesktopSplitView',
+      'enableHeteroSessionImport',
+      'enableInputMarkdown',
+      'enableMessageTextSelectionActions',
+      'enableProjects',
+      'enableSelfLearning',
+      'enableTaskVerify',
+      'enableTopicAcceptance',
+    ] as const;
+
+    it('turns every lab experiment on when the preference is unset', () => {
       store.preference.lab = undefined;
+
+      for (const flag of labFlags) {
+        expect(labPreferSelectors[flag](store)).toBe(true);
+      }
+    });
+
+    it('keeps an explicit lab opt-out off and leaves the other experiments on', () => {
+      store.preference.lab = {
+        enableDesktopSplitView: false,
+        enableProjects: false,
+      };
 
       expect(labPreferSelectors.enableDesktopSplitView(store)).toBe(false);
-    });
-
-    it('returns the configured desktop split view preference', () => {
-      store.preference.lab = { enableDesktopSplitView: true };
-
-      expect(labPreferSelectors.enableDesktopSplitView(store)).toBe(true);
-    });
-
-    it('should default project workspaces to disabled and honor the lab preference', () => {
-      store.preference.lab = undefined;
       expect(labPreferSelectors.enableProjects(store)).toBe(false);
-
-      store.preference.lab = { enableProjects: true };
-      expect(labPreferSelectors.enableProjects(store)).toBe(true);
-    });
-
-    it('returns false for message text selection actions by default', () => {
-      store.preference.lab = undefined;
-
-      expect(labPreferSelectors.enableMessageTextSelectionActions(store)).toBe(false);
-    });
-
-    it('returns the configured message text selection actions preference', () => {
-      store.preference.lab = { enableMessageTextSelectionActions: true };
-
+      expect(labPreferSelectors.enableInputMarkdown(store)).toBe(true);
       expect(labPreferSelectors.enableMessageTextSelectionActions(store)).toBe(true);
     });
   });

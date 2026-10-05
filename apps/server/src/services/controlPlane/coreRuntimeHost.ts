@@ -13,6 +13,7 @@ import type {
   RuntimeEvent,
   RuntimeSession,
 } from '@orvilo/agent-execution';
+import type { HarnessInitPolicy } from '@orvilo/agent-execution/controlPlane/harnessProtocol';
 import { HarnessTransport } from '@orvilo/agent-execution/controlPlane/harnessTransport';
 import type {
   DockerSupervisorOptions,
@@ -38,7 +39,11 @@ import type { OrviloDatabase } from '@/database/type';
 import { issueBindingExecution } from '../providerBinding/execution';
 import type { CanonicalCompletionOutcome, CanonicalReceiptMapping } from './canonicalCompletion';
 import { CanonicalVerifyCompletion } from './canonicalCompletion';
-import type { CanonicalRunBinding } from './canonicalRun';
+import type {
+  CanonicalRunAuthorityPort,
+  CanonicalRunBinding,
+  CanonicalRunRegistrationPort,
+} from './canonicalRun';
 import { CanonicalRunAuthority } from './canonicalRun';
 import { CanonicalSessionSnapshots } from './canonicalSessionSnapshot';
 import type { EmbeddedInferenceBridge, EmbeddedInferenceBridgeDeps } from './embeddedBroker';
@@ -56,6 +61,10 @@ interface HostJournal {
 }
 
 export interface CanonicalCoreHostOptions {
+  /** Canonical admission authority — defaults to the task-row-locked
+   * `CanonicalRunAuthority`. Chat runs substitute `CanonicalChatRunAuthority`
+   * (the agent_operations chat-parallel contract). */
+  authority?: CanonicalRunAuthorityPort;
   binding: CanonicalRunBinding;
   /** Loaded from trusted server registration; never accepted as completion request data. */
   completionMappings?: CanonicalReceiptMapping[];
@@ -74,6 +83,10 @@ export interface CanonicalCoreHostOptions {
   outputDirectory: string;
   /** Stable private receipt namespace shared by successor registrations of this task. */
   receiptDirectory?: string;
+  /** Canonical process-ownership model — defaults to
+   * `TaskExecutionControlModel` (task_topics.execution_control). Chat runs
+   * substitute `ChatExecutionControlModel` (agent_operations.metadata). */
+  registration?: CanonicalRunRegistrationPort;
   runtimeLeaseMs?: number;
   /** Test seam — substitutes the supervised-tree port (e.g. without a daemon).
    * The supplied port must honour the launch/connect/recover/terminate contract
@@ -94,6 +107,9 @@ export interface EmbeddedRuntimeComposition extends Omit<
   args?: string[];
   /** Runner bundle — the artifact `verifyArtifact` hashes before launch. */
   artifact: string;
+  /** Run-derived `harness.init` policy (goal/rlm/tool surface); merged under
+   * the binding-derived slice the bridge returns. */
+  initPolicy?: HarnessInitPolicy;
   /** Trusted embedded-artifact verification; the pin is always PRIME_EMBEDDED_PIN. */
   verifyArtifact: PrimeEmbeddedRuntimeOptions['verifyArtifact'];
 }
@@ -116,8 +132,8 @@ const failure = (message: string): ControlResult<never> => ({
  * them and persists a fence advance before quiescence can be acknowledged. */
 export class CanonicalCoreRuntimeHost {
   private readonly runtime: ExecutionRuntime;
-  private readonly authority: CanonicalRunAuthority;
-  private readonly registration: TaskExecutionControlModel;
+  private readonly authority: CanonicalRunAuthorityPort;
+  private readonly registration: CanonicalRunRegistrationPort;
   private readonly supervisor: HostSupervisorPort;
   private readonly commitments: Map<string, Commitment>;
   private readonly embeddedBridge?: EmbeddedInferenceBridge;
@@ -138,12 +154,14 @@ export class CanonicalCoreRuntimeHost {
     this.recovering = recovering;
     this.embeddedBridge = embeddedBridge;
     this.receipts = options.receiptDirectory ?? path.join(options.controlDirectory, 'receipts');
-    this.authority = new CanonicalRunAuthority(options.database);
-    this.registration = new TaskExecutionControlModel(
-      options.database,
-      options.binding.userId,
-      options.binding.workspaceId,
-    );
+    this.authority = options.authority ?? new CanonicalRunAuthority(options.database);
+    this.registration =
+      options.registration ??
+      new TaskExecutionControlModel(
+        options.database,
+        options.binding.userId,
+        options.binding.workspaceId,
+      );
     this.commitments = new Map(
       options.fileCommitments.map((commitment) => [commitment.id, structuredClone(commitment)]),
     );
@@ -199,6 +217,7 @@ export class CanonicalCoreRuntimeHost {
           home: '/tmp',
           inferenceBroker: embeddedBridge?.inferenceBroker,
           initModel: embeddedBridge?.initModel,
+          initPolicy: { ...embedded.initPolicy, ...embeddedBridge?.initPolicy },
           runtimeWorkspace: '/workspace',
           supervisor: {
             launch: supervisedLaunch,
@@ -274,7 +293,7 @@ export class CanonicalCoreRuntimeHost {
         .update(
           JSON.stringify([
             options.binding.workspaceId,
-            options.binding.taskId,
+            options.binding.subject,
             options.binding.runtimeRegistrationId,
           ]),
         )
@@ -472,7 +491,9 @@ export class CanonicalCoreRuntimeHost {
     const commitment = this.commitments.get(request.commitmentId);
     if (
       !commitment ||
-      commitment.taskId !== this.journal.binding.taskId ||
+      // File commitments are task-scoped — a conversation subject approves none.
+      this.journal.binding.subject.kind !== 'task' ||
+      commitment.taskId !== this.journal.binding.subject.taskId ||
       request.action.kind !== 'file.write'
     )
       return failure('No approved file commitment');

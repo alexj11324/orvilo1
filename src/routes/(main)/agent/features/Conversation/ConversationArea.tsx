@@ -197,6 +197,9 @@ const Conversation = memo(() => {
               <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={20} />
             </div>
           ) : (
+            /* The first-agent gate lives at the (main) layout now — while no
+               usable agent exists it covers the whole window, so by the time
+               this renders the composer is always backed by a real agent. */
             <>
               {chatInput}
               {/* Reference state B: the examples row sits inside the same

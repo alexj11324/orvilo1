@@ -25,6 +25,7 @@ import { useChatStore } from '@/store/chat';
 import { operationSelectors } from '@/store/chat/selectors';
 
 import { buildPrefixedAgentRoutePath, parseAgentPathname } from '../../../utils/agentPathname';
+import { accordionStyles } from '../../accordionStyles';
 import TopicItem from '../../List/Item';
 import { type GroupItemComponentProps } from '../GroupedAccordion';
 import {
@@ -69,18 +70,15 @@ const styles = createStaticStyles(({ css }) => ({
     overflow: hidden;
     display: inline-flex;
 
-    width: 0;
+    width: 24px;
 
     opacity: 0;
 
-    transition:
-      width 150ms ${cssVar.motionEaseOut},
-      opacity 150ms ${cssVar.motionEaseOut};
+    transition: opacity 150ms ${cssVar.motionEaseOut};
 
     &:focus-within,
     .accordion-header:hover & {
       pointer-events: auto;
-      width: 24px;
       opacity: 1;
     }
   `,
@@ -249,7 +247,12 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
         {hasCollapsedStatus && <CollapsedStatusBadges counts={statusCounts} />}
         {hasCollapsedUnread && <CollapsedUnreadDot count={unreadCount} />}
         {canAddTopic && (
-          <span className={hasCollapsedIndicators ? styles.addTopicAction : undefined}>
+          <span
+            className={cx(
+              'inline-flex',
+              hasCollapsedIndicators ? styles.addTopicAction : undefined,
+            )}
+          >
             <ActionIcon
               icon={PlusIcon}
               size={'small'}
@@ -266,17 +269,20 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
     ) : undefined;
 
   return (
-    <AccordionItem value={id}>
+    <AccordionItem className={accordionStyles.item} value={id}>
       <div className="flex items-center accordion-header">
         <div className="min-w-0 flex-1">
-          <AccordionTrigger style={{ paddingBlock: 4, paddingInline: 4 }}>
-            <div className="flex items-center gap-2 h-[24px]" style={{ overflow: 'hidden' }}>
-              <div className="flex flex-col items-center justify-center flex-none h-[24px] w-[28px]">
+          <AccordionTrigger
+            className={accordionStyles.trigger}
+            style={{ paddingBlock: 4, paddingInline: 8 }}
+          >
+            <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
+              <div className="flex flex-col items-center justify-center flex-none h-[16px] w-[16px]">
                 <ProjectFolderIcon color={cssVar.colorTextTertiary} size={15} strokeWidth={1.5} />
               </div>
               <div
-                className="truncate text-[14px]"
-                style={{ color: cssVar.colorTextSecondary, flex: 1 }}
+                className="truncate text-[12px] text-muted-foreground font-medium"
+                style={{ flex: 1 }}
               >
                 {title}
               </div>
@@ -285,7 +291,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
         </div>
         {action && <div className="flex shrink-0 items-center">{action}</div>}
       </div>
-      <AccordionContent className="[&>div]:p-0">
+      <AccordionContent className="p-0">
         <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem

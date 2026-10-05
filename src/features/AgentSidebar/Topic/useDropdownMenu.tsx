@@ -1,7 +1,17 @@
 import { isDesktop } from '@orvilo/const';
 import { css, cx } from 'antd-style';
-import { Archive, HardDriveDownload, Hash, Import, LucideCheck, Trash } from 'lucide-react';
-import { useCallback } from 'react';
+import isEqual from 'fast-deep-equal';
+import {
+  Archive,
+  HardDriveDownload,
+  Hash,
+  Import,
+  LucideCheck,
+  Maximize2,
+  Minimize2,
+  Trash,
+} from 'lucide-react';
+import { useCallback, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -13,12 +23,19 @@ import { openHeteroSessionImportModal } from '@/features/HeteroSessionImport';
 import { type SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { openWorkspaceDeleteAllModal } from '@/features/WorkspaceDeleteAllModal';
 import { usePermission } from '@/hooks/usePermission';
+import { useTopicGroupCollapse } from '@/hooks/useTopicGroupCollapse';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 import { useUserStore } from '@/store/user';
-import { labPreferSelectors, userProfileSelectors } from '@/store/user/selectors';
+import {
+  labPreferSelectors,
+  preferenceSelectors,
+  userProfileSelectors,
+} from '@/store/user/selectors';
+
+import { useAgentTopicGroupMode } from './hooks/useAgentTopicGroupMode';
 
 const hotArea = css`
   &::before {
@@ -124,6 +141,17 @@ export const useTopicActionsDropdownMenu = (
     s.updateSystemStatus,
   ]);
 
+  const topicSortBy = useUserStore(preferenceSelectors.topicSortBy);
+  const { topicGroupMode } = useAgentTopicGroupMode();
+  const groupSelector = useMemo(
+    () => topicSelectors.groupedTopicsForSidebar(topicPageSize, topicSortBy, topicGroupMode),
+    [topicPageSize, topicSortBy, topicGroupMode],
+  );
+  const groupTopics = useChatStore(groupSelector, isEqual);
+  const groupIds = useMemo(() => groupTopics.map((group) => group.id), [groupTopics]);
+  const { expandedKeys, setExpandedKeys } = useTopicGroupCollapse(topicGroupMode, groupIds);
+  const isAllCollapsed = expandedKeys.length === 0;
+
   const enableHeteroSessionImport = useUserStore(labPreferSelectors.enableHeteroSessionImport);
 
   return useCallback((): SidebarMenuItems => {
@@ -138,6 +166,16 @@ export const useTopicActionsDropdownMenu = (
     }));
 
     return [
+      ...(topicGroupMode !== 'flat' && groupIds.length > 1
+        ? [
+            {
+              icon: isAllCollapsed ? <Maximize2 /> : <Minimize2 />,
+              key: 'toggleGroups',
+              label: isAllCollapsed ? t('sidebar.expandAll') : t('sidebar.collapseAll'),
+              onClick: () => setExpandedKeys(isAllCollapsed ? groupIds : []),
+            },
+          ]
+        : []),
       {
         children: pageSizeItems,
         extra: topicPageSize,
@@ -243,6 +281,10 @@ export const useTopicActionsDropdownMenu = (
         : []),
     ].filter(Boolean) as SidebarMenuItems;
   }, [
+    topicGroupMode,
+    groupIds,
+    isAllCollapsed,
+    setExpandedKeys,
     topicPageSize,
     updateSystemStatus,
     handleImport,

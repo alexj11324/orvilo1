@@ -260,14 +260,22 @@ export class ConnectorActionImpl {
     if (!isStdio && !isLocalHttp) return false;
 
     let api: Array<{ description?: string; name: string; parameters?: Record<string, unknown> }>;
+    // This sync only runs on desktop and only for device-local endpoints —
+    // the manifest probes the machine it runs on, which is an explicit
+    // `local` scope, not an implicit default.
+    const localScope = { kind: 'local' } as const;
     if (isStdio) {
       if (!detail.mcpStdioConfig?.command) throw new Error('Connector is missing stdio config');
-      const manifest = await mcpService.getStdioMcpServerManifest({
-        args: detail.mcpStdioConfig.args ?? [],
-        command: detail.mcpStdioConfig.command,
-        env: detail.mcpStdioConfig.env ?? undefined,
-        name: detail.identifier,
-      });
+      const manifest = await mcpService.getStdioMcpServerManifest(
+        {
+          args: detail.mcpStdioConfig.args ?? [],
+          command: detail.mcpStdioConfig.command,
+          env: detail.mcpStdioConfig.env ?? undefined,
+          name: detail.identifier,
+        },
+        undefined,
+        { scope: localScope },
+      );
       api = manifest.api ?? [];
     } else {
       const credentials = detail.credentials;
@@ -284,12 +292,15 @@ export class ConnectorActionImpl {
       const customHeaders = detail.metadata?.customHeaders as Record<string, string> | undefined;
       const headers =
         headerCreds || customHeaders ? { ...headerCreds, ...customHeaders } : undefined;
-      const manifest = await mcpService.getStreamableMcpServerManifest({
-        auth,
-        headers,
-        identifier: detail.identifier,
-        url: detail.mcpServerUrl!,
-      });
+      const manifest = await mcpService.getStreamableMcpServerManifest(
+        {
+          auth,
+          headers,
+          identifier: detail.identifier,
+          url: detail.mcpServerUrl!,
+        },
+        { scope: localScope },
+      );
       api = manifest.api ?? [];
     }
 

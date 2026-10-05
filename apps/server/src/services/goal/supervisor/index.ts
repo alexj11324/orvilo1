@@ -6,6 +6,7 @@ import type {
   GoalSupervisionState,
   GoalTickResult,
   TaskItem,
+  UserSystemAgentConfig,
 } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 
@@ -16,12 +17,12 @@ import { GoalGraphModel } from '@/database/models/goalGraph';
 import { TaskModel } from '@/database/models/task';
 import { TaskTopicModel } from '@/database/models/taskTopic';
 import { TopicModel } from '@/database/models/topic';
+import { UserModel } from '@/database/models/user';
 import type { OrviloDatabase } from '@/database/type';
 import { findUsableAgentExecutionBinding } from '@/database/utils/agent-access';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { agentCanMountBuiltinToolSurface } from '@/server/services/aiAgent/pipeline/resolveExecutionBinding';
 
-import { resolveGoalModelConfig } from '../modelConfig';
 import { scheduleGoalAdvance } from '../scheduler';
 import { claimGoalTask } from '../taskClaim';
 import {
@@ -85,21 +86,30 @@ export class GoalSupervisorService {
     };
   };
 
+  private explicitModelSelection = async (db: OrviloDatabase) => {
+    const settings = await new UserModel(db, this.userId).getUserSettings();
+    const config = (settings?.systemAgent as Partial<UserSystemAgentConfig> | undefined)?.goal;
+    return { model: config?.model || undefined, provider: config?.provider || undefined };
+  };
+
   private initialize = async (graph: GoalGraphSnapshot): Promise<GoalSupervisionState> => {
-    const config = await resolveGoalModelConfig(this.db, this.userId);
     return this.db.transaction(async (tx) => {
       const model = new GoalModel(tx, this.userId, this.workspaceId);
       const goal = await model.lockById(graph.goal.id);
       if (!goal) throw new Error('Goal not found');
       if (goal.config?.supervisorState) return goal.config.supervisorState;
-      const agent = await new AgentModel(tx, this.userId, this.workspaceId).create({
-        agencyConfig: { executionTarget: 'none', executionTargetSelectionPolicy: 'fixed' },
-        model: config.model,
+      const agentModel = new AgentModel(tx, this.userId, this.workspaceId);
+      const runtime = await agentModel.getPrimeRuntimeForCreation({
+        ...(await this.explicitModelSelection(tx)),
+        visibility: 'private',
+      });
+      const agent = await agentModel.create({
+        ...runtime,
         plugins: [],
-        provider: config.provider,
         systemRole: GOAL_SUPERVISOR_INSTRUCTIONS,
         title: `Goal Supervisor: ${goal.title}`.slice(0, 255),
         virtual: true,
+        visibility: 'private',
       });
       const topic = await new TopicModel(tx, this.userId, this.workspaceId).create({
         agentId: agent.id,
@@ -215,13 +225,15 @@ export class GoalSupervisorService {
           });
           return null;
         }
-        const modelConfig = await resolveGoalModelConfig(this.db, this.userId);
-        // The supervisor's own agent is always the builtin 'orvilo' binding —
-        // mount-capable by construction — but a heterogeneous goal-model
-        // override retypes its execution binding. When that binding cannot
-        // mount the diagnostic tool surface, the run below can only throw at
-        // admission; escalate now rather than parking the incident on the
-        // diagnosis timeout.
+        const runtime = await new AgentModel(
+          this.db,
+          this.userId,
+          this.workspaceId,
+        ).inheritRuntimeForCreation(state.agentId, {
+          ...(await this.explicitModelSelection(this.db)),
+          visibility: 'private',
+        });
+        // Revalidate the admitted runtime and explicit user selection before diagnosis.
         const supervisorBinding = await findUsableAgentExecutionBinding(this.db, state.agentId, {
           userId: this.userId,
           workspaceId: this.workspaceId,
@@ -229,7 +241,7 @@ export class GoalSupervisorService {
         if (
           !agentCanMountBuiltinToolSurface(
             { agencyConfig: supervisorBinding?.agencyConfig },
-            modelConfig.model ?? supervisorBinding?.model,
+            runtime.model ?? supervisorBinding?.model,
           )
         ) {
           await this.updateIncident(goalId, incident.id, {
@@ -252,7 +264,7 @@ export class GoalSupervisorService {
           // hard mount contract (unmountable → incident escalates).
           requiredToolIds: [GoalSupervisorIdentifier],
           maxSteps: 16,
-          model: modelConfig.model,
+          model: runtime.model ?? undefined,
           prompt: buildGoalSupervisorPrompt({
             failedOperation: { error: failedOperation?.error, id: latest.operationId },
             goal: { requirement: graph.goal.requirement, title: graph.goal.title },
@@ -270,7 +282,7 @@ export class GoalSupervisorService {
               .map((run) => ({ handoff: run.handoff, topicId: run.topicId })),
             workVersions: graph.workVersions.filter((work) => work.nodeId === nodeId),
           }),
-          provider: modelConfig.provider,
+          provider: runtime.provider ?? undefined,
           userInterventionConfig: { approvalMode: 'headless' },
         });
         await this.updateIncident(goalId, incident.id, {

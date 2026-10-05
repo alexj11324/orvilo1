@@ -23,6 +23,7 @@ import type {
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { electronGitService } from '@/services/electron/git';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
 
 /** Current branch + detached-HEAD state for a working directory (cheap read). */
@@ -52,21 +53,25 @@ export interface GitLinkedPRSummary {
  */
 class GitService {
   /** Local branches of a working directory. */
-  listGitBranches({
+  async listGitBranches({
     deviceId,
     path,
   }: {
     deviceId?: string;
     path: string;
   }): Promise<DeviceGitBranchListItem[]> {
-    requireLocalExecutionTransport(deviceId, 'listGitBranches');
+    requireLocalExecutionTransport(
+      deviceId,
+      'listGitBranches',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.listGitBranches.query({ deviceId, path })
       : electronGitService.listGitBranches(path);
   }
 
   /** Checkout (or create) a branch in a working directory. */
-  checkoutGitBranch({
+  async checkoutGitBranch({
     branch,
     create,
     deviceId,
@@ -77,14 +82,18 @@ class GitService {
     deviceId?: string;
     path: string;
   }): Promise<DeviceGitCheckoutResult> {
-    requireLocalExecutionTransport(deviceId, 'checkoutGitBranch');
+    requireLocalExecutionTransport(
+      deviceId,
+      'checkoutGitBranch',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.checkoutGitBranch.mutate({ branch, create, deviceId, path })
       : electronGitService.checkoutGitBranch({ branch, create, path });
   }
 
   /** Rename a branch in a working directory. */
-  renameGitBranch({
+  async renameGitBranch({
     deviceId,
     from,
     path,
@@ -95,14 +104,18 @@ class GitService {
     path: string;
     to: string;
   }): Promise<DeviceGitRenameBranchResult> {
-    requireLocalExecutionTransport(deviceId, 'renameGitBranch');
+    requireLocalExecutionTransport(
+      deviceId,
+      'renameGitBranch',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.renameGitBranch.mutate({ deviceId, from, path, to })
       : electronGitService.renameGitBranch({ from, path, to });
   }
 
   /** Delete a branch in a working directory. */
-  deleteGitBranch({
+  async deleteGitBranch({
     branch,
     deviceId,
     path,
@@ -111,14 +124,18 @@ class GitService {
     deviceId?: string;
     path: string;
   }): Promise<DeviceGitDeleteBranchResult> {
-    requireLocalExecutionTransport(deviceId, 'deleteGitBranch');
+    requireLocalExecutionTransport(
+      deviceId,
+      'deleteGitBranch',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.deleteGitBranch.mutate({ branch, deviceId, path })
       : electronGitService.deleteGitBranch({ branch, path });
   }
 
   /** Remove a worktree from a working directory's repository. */
-  removeGitWorktree({
+  async removeGitWorktree({
     deviceId,
     path,
     worktreePath,
@@ -127,7 +144,11 @@ class GitService {
     path: string;
     worktreePath: string;
   }): Promise<DeviceGitRemoveWorktreeResult> {
-    requireLocalExecutionTransport(deviceId, 'removeGitWorktree');
+    requireLocalExecutionTransport(
+      deviceId,
+      'removeGitWorktree',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.removeGitWorktree.mutate({ deviceId, path, worktreePath })
       : electronGitService.removeGitWorktree({ path, worktreePath });
@@ -139,7 +160,7 @@ class GitService {
    * (never trusting a client-supplied absolute path), so `worktreePath` is only
    * forwarded on the local IPC route where this machine owns the filesystem.
    */
-  addGitWorktree({
+  async addGitWorktree({
     branch,
     deviceId,
     path,
@@ -150,35 +171,47 @@ class GitService {
     path: string;
     worktreePath: string;
   }): Promise<DeviceGitAddWorktreeResult> {
-    requireLocalExecutionTransport(deviceId, 'addGitWorktree');
+    requireLocalExecutionTransport(
+      deviceId,
+      'addGitWorktree',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.addGitWorktree.mutate({ branch, deviceId, path })
       : electronGitService.addGitWorktree({ branch, path, worktreePath });
   }
 
   /** Pull (`--ff-only`) the current branch of a working directory. */
-  pullGitBranch({
+  async pullGitBranch({
     deviceId,
     path,
   }: {
     deviceId?: string;
     path: string;
   }): Promise<DeviceGitSyncResult> {
-    requireLocalExecutionTransport(deviceId, 'pullGitBranch');
+    requireLocalExecutionTransport(
+      deviceId,
+      'pullGitBranch',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.pullGitBranch.mutate({ deviceId, path })
       : electronGitService.pullGitBranch({ path });
   }
 
   /** Push the current branch of a working directory. */
-  pushGitBranch({
+  async pushGitBranch({
     deviceId,
     path,
   }: {
     deviceId?: string;
     path: string;
   }): Promise<DeviceGitSyncResult> {
-    requireLocalExecutionTransport(deviceId, 'pushGitBranch');
+    requireLocalExecutionTransport(
+      deviceId,
+      'pushGitBranch',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.pushGitBranch.mutate({ deviceId, path })
       : electronGitService.pushGitBranch({ path });
@@ -197,7 +230,7 @@ class GitService {
     deviceId?: string;
     path: string;
   }): Promise<GitBranchSummary> {
-    requireLocalExecutionTransport(deviceId, 'getGitBranch');
+    requireLocalExecutionTransport(deviceId, 'getGitBranch', await resolveLocalExecutionIdentity());
     const info = deviceId
       ? await lambdaClient.device.gitBranch.query({ deviceId, path })
       : await electronGitService.getGitBranch(path);
@@ -225,7 +258,11 @@ class GitService {
     path: string;
     pullRequestNumber?: number;
   }): Promise<GitLinkedPRSummary | undefined> {
-    requireLocalExecutionTransport(deviceId, 'getLinkedPullRequest');
+    requireLocalExecutionTransport(
+      deviceId,
+      'getLinkedPullRequest',
+      await resolveLocalExecutionIdentity(),
+    );
     const pr = deviceId
       ? await lambdaClient.device.gitLinkedPullRequest.query({
           branch,
@@ -252,7 +289,11 @@ class GitService {
     deviceId?: string;
     path: string;
   }): Promise<DeviceGitWorkingTreeStatus | undefined> {
-    requireLocalExecutionTransport(deviceId, 'getGitWorkingTreeStatus');
+    requireLocalExecutionTransport(
+      deviceId,
+      'getGitWorkingTreeStatus',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? ((await lambdaClient.device.gitWorkingTreeStatus.query({ deviceId, path })) ?? undefined)
       : electronGitService.getGitWorkingTreeStatus(path);
@@ -266,7 +307,11 @@ class GitService {
     deviceId?: string;
     path: string;
   }): Promise<DeviceGitAheadBehind | undefined> {
-    requireLocalExecutionTransport(deviceId, 'getGitAheadBehind');
+    requireLocalExecutionTransport(
+      deviceId,
+      'getGitAheadBehind',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? ((await lambdaClient.device.gitAheadBehind.query({ deviceId, path })) ?? undefined)
       : electronGitService.getGitAheadBehind(path);
@@ -280,7 +325,11 @@ class GitService {
     deviceId?: string;
     path: string;
   }): Promise<GitWorkingTreePatches | undefined> {
-    requireLocalExecutionTransport(deviceId, 'getGitWorkingTreePatches');
+    requireLocalExecutionTransport(
+      deviceId,
+      'getGitWorkingTreePatches',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? ((await lambdaClient.device.getGitWorkingTreePatches.query({ deviceId, path })) ??
           undefined)
@@ -295,7 +344,11 @@ class GitService {
     deviceId?: string;
     path: string;
   }): Promise<GitWorkingTreeFiles | undefined> {
-    requireLocalExecutionTransport(deviceId, 'getGitWorkingTreeFiles');
+    requireLocalExecutionTransport(
+      deviceId,
+      'getGitWorkingTreeFiles',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? ((await lambdaClient.device.getGitWorkingTreeFiles.query({ deviceId, path })) ?? undefined)
       : electronGitService.getGitWorkingTreeFiles(path);
@@ -311,7 +364,11 @@ class GitService {
     deviceId?: string;
     path: string;
   }): Promise<GitBranchDiffPatches | undefined> {
-    requireLocalExecutionTransport(deviceId, 'getGitBranchDiff');
+    requireLocalExecutionTransport(
+      deviceId,
+      'getGitBranchDiff',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? ((await lambdaClient.device.getGitBranchDiff.query({ baseRef, deviceId, path })) ??
           undefined)
@@ -319,35 +376,43 @@ class GitService {
   }
 
   /** Remote branches (`refs/remotes/origin/*`) of a working directory. */
-  listGitRemoteBranches({
+  async listGitRemoteBranches({
     deviceId,
     path,
   }: {
     deviceId?: string;
     path: string;
   }): Promise<GitRemoteBranchListItem[]> {
-    requireLocalExecutionTransport(deviceId, 'listGitRemoteBranches');
+    requireLocalExecutionTransport(
+      deviceId,
+      'listGitRemoteBranches',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.listGitRemoteBranches.query({ deviceId, path })
       : electronGitService.listGitRemoteBranches(path);
   }
 
   /** Git worktrees attached to the same repository as a working directory. */
-  listGitWorktrees({
+  async listGitWorktrees({
     deviceId,
     path,
   }: {
     deviceId?: string;
     path: string;
   }): Promise<DeviceGitWorktreeListItem[]> {
-    requireLocalExecutionTransport(deviceId, 'listGitWorktrees');
+    requireLocalExecutionTransport(
+      deviceId,
+      'listGitWorktrees',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.listGitWorktrees.query({ deviceId, path })
       : electronGitService.listGitWorktrees(path);
   }
 
   /** Revert (discard working-tree changes to) a single file in a working directory. */
-  revertGitFile({
+  async revertGitFile({
     deviceId,
     filePath,
     path,
@@ -356,7 +421,11 @@ class GitService {
     filePath: string;
     path: string;
   }): Promise<GitFileRevertResult> {
-    requireLocalExecutionTransport(deviceId, 'revertGitFile');
+    requireLocalExecutionTransport(
+      deviceId,
+      'revertGitFile',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.revertGitFile.mutate({ deviceId, filePath, path })
       : electronGitService.revertGitFile({ filePath, path });

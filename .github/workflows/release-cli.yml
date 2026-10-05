@@ -1,0 +1,83 @@
+name: Release CLI
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - apps/cli/**
+      - packages/prime-harness/**
+      - .github/workflows/release-cli.yml
+
+permissions:
+  contents: read
+  checks: read
+
+jobs:
+  package:
+    if: github.event_name != 'release' || !github.event.release.prerelease
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-env
+        with:
+          node-version: '22.15.0'
+      - run: pnpm install
+      - name: Install the isolated CLI workspace
+        working-directory: apps/cli
+        run: pnpm install --ignore-scripts
+      - name: Set CLI version from the stable release tag
+        if: github.event_name == 'release'
+        working-directory: apps/cli
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import semver from 'semver';
+          const version = process.env.RELEASE_TAG.replace(/^v/, '');
+          if (!semver.valid(version) || semver.prerelease(version)) throw new Error('Expected a stable release tag');
+          const pkg = JSON.parse(fs.readFileSync('package.json', 'utf8'));
+          pkg.version = version;
+          fs.writeFileSync('package.json', `${JSON.stringify(pkg, null, 2)}\n`);
+          NODE
+      - name: Build and pack the public CLI
+        working-directory: apps/cli
+        run: bun run pack:release
+      - name: Install the packed CLI outside the workspace
+        working-directory: apps/cli
+        run: |
+          set -euo pipefail
+          npm install --global --prefix "$RUNNER_TEMP/cli-install" ./orvilo-cli-*.tgz
+          "$RUNNER_TEMP/cli-install/bin/orvilo" --version
+          "$RUNNER_TEMP/cli-install/bin/orvilo" --help
+          "$RUNNER_TEMP/cli-install/bin/orvilo" connect --help
+      - uses: actions/upload-artifact@v7
+        with:
+          name: public-cli
+          path: apps/cli/orvilo-cli-*.tgz
+          if-no-files-found: error
+
+  publish:
+    if: github.event_name == 'release'
+    needs: package
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      checks: read
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/require-quality-gate
+        with:
+          sha: ${{ github.sha }}
+          wait_seconds: '3600'
+      - uses: actions/download-artifact@v8
+        with:
+          name: public-cli
+          path: cli-release
+      - name: Attach the verified CLI package to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: gh release upload "$RELEASE_TAG" cli-release/orvilo-cli-*.tgz --repo "$GITHUB_REPOSITORY"

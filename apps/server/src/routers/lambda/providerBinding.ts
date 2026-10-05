@@ -38,13 +38,23 @@ export const createProviderBindingRouter = (composition?: ProviderConfigurationC
     })),
     create: procedure.input(providerBindingConfigSchema).mutation(async ({ ctx, input }) => {
       await assertCredential(ctx.providerBindings, input.secretReference);
-      return { success: true, data: present(await ctx.providerBindings.create(input)) };
+      // A save never arms a binding: `enabled` is set only by `checkConnection`
+      // after the broker verifies the row end-to-end. Forwarding a client-
+      // supplied `enabled: true` would let a crafted request skip that check.
+      return {
+        success: true,
+        data: present(await ctx.providerBindings.create({ ...input, enabled: false })),
+      };
     }),
     update: procedure
       .input(version.extend({ config: providerBindingConfigSchema }))
       .mutation(async ({ ctx, input }) => {
         await assertCredential(ctx.providerBindings, input.config.secretReference);
-        const row = await ctx.providerBindings.update(input.id, input.revision, input.config);
+        // Editing a binding disarms it until `checkConnection` re-verifies.
+        const row = await ctx.providerBindings.update(input.id, input.revision, {
+          ...input.config,
+          enabled: false,
+        });
         if (!row) throw conflict();
         return { success: true, data: present(row) };
       }),

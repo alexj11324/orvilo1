@@ -4,7 +4,9 @@ import { hasServerRuntime } from '..';
 import { groupAgentBuilderRuntime } from '../groupAgentBuilder';
 
 const {
+  mockCreateGroupWithSupervisor,
   mockAddAgentsToGroup,
+  mockInheritRuntime,
   mockBatchCreate,
   mockBuilderUpdateConfig,
   mockFindById,
@@ -16,7 +18,9 @@ const {
   mockUpdateAgent,
   mockUpdateGroup,
 } = vi.hoisted(() => ({
+  mockCreateGroupWithSupervisor: vi.fn(),
   mockAddAgentsToGroup: vi.fn(),
+  mockInheritRuntime: vi.fn(),
   mockBatchCreate: vi.fn(),
   mockBuilderUpdateConfig: vi.fn(),
   mockFindById: vi.fn(),
@@ -32,6 +36,7 @@ const {
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn(function () {
     return {
+      inheritRuntimeForCreation: mockInheritRuntime,
       batchCreate: mockBatchCreate,
       getAgentConfigById: mockGetAgentConfigById,
       queryAgents: vi.fn(async () => []),
@@ -64,7 +69,7 @@ vi.mock('@/database/models/resourcePermission', () => ({
 
 vi.mock('@/database/repositories/agentGroup', () => ({
   AgentGroupRepository: vi.fn(function () {
-    return { createGroupWithSupervisor: vi.fn() };
+    return { createGroupWithSupervisor: mockCreateGroupWithSupervisor };
   }),
 }));
 
@@ -93,11 +98,18 @@ const createRuntime = (workspaceId?: string) =>
     workspaceId,
   });
 
-const groupCtx = { editingGroupId: 'cg_1' } as never;
+const groupCtx = { agentId: 'source', editingGroupId: 'cg_1' } as never;
 
 describe('groupAgentBuilderRuntime', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockInheritRuntime.mockReset();
+    mockCreateGroupWithSupervisor.mockReset();
+    mockInheritRuntime.mockResolvedValue({
+      agencyConfig: { activeProvider: 'codex' },
+      model: 'saved-model',
+      provider: 'saved-provider',
+    });
     mockFindById.mockResolvedValue({ id: 'cg_1', title: 'Launch Team', visibility: 'public' });
     mockGetGroupAgentsWithMeta.mockResolvedValue([
       { agentId: 'agt_sup', description: null, role: 'supervisor', title: 'Supervisor' },
@@ -111,7 +123,74 @@ describe('groupAgentBuilderRuntime', () => {
     expect(hasServerRuntime('orvilo-group-agent-builder')).toBe(true);
   });
 
+  describe('createGroup supervisor admission', () => {
+    it('requires invoking source before group creation', async () => {
+      const result = await createRuntime().createGroup({ title: 'Team' }, {} as never);
+      expect(result.success).toBe(false);
+      expect(result.content).toContain('setup');
+      expect(mockCreateGroupWithSupervisor).not.toHaveBeenCalled();
+    });
+
+    it('rejects imported runtimes that cannot execute supervisor builtin tools', async () => {
+      mockInheritRuntime.mockResolvedValueOnce({
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+      });
+      const result = await createRuntime().createGroup({ title: 'Team' }, groupCtx);
+      expect(result.success).toBe(false);
+      expect(result.content).toContain('unsupported');
+      expect(mockCreateGroupWithSupervisor).not.toHaveBeenCalled();
+    });
+
+    it('creates private group and supervisor with admitted Prime before insertion', async () => {
+      const admitted = {
+        agencyConfig: {
+          heterogeneousProvider: { type: 'orvilo', model: 'saved-model' },
+          boundDeviceId: 'host',
+        },
+        model: 'saved-model',
+        provider: 'saved-provider',
+      };
+      mockInheritRuntime.mockResolvedValueOnce(admitted);
+      mockCreateGroupWithSupervisor.mockResolvedValueOnce({
+        group: { id: 'new-group', visibility: 'private' },
+        supervisorAgentId: 'supervisor',
+      });
+      const result = await createRuntime().createGroup(
+        { title: 'Team', supervisor: { title: 'Lead', model: 'requested' } },
+        groupCtx,
+      );
+      expect(result.success).toBe(true);
+      expect(mockCreateGroupWithSupervisor).toHaveBeenCalledWith(
+        expect.objectContaining({ title: 'Team', visibility: 'private' }),
+        [],
+        expect.objectContaining({ ...admitted, title: 'Lead' }),
+      );
+    });
+  });
+
   describe('createAgent', () => {
+    it('rejects a missing source before agent or roster insertion', async () => {
+      const result = await createRuntime().createAgent({ title: 'Child', systemRole: 'x' }, {
+        editingGroupId: 'cg_1',
+      } as never);
+      expect(result.success).toBe(false);
+      expect(result.content).toContain('setup');
+      expect(mockBatchCreate).not.toHaveBeenCalled();
+      expect(mockAddAgentsToGroup).not.toHaveBeenCalled();
+    });
+
+    it('rejects denied runtime before agent or roster insertion', async () => {
+      mockInheritRuntime.mockRejectedValueOnce(
+        new Error('Agent setup required: personal host cannot be shared'),
+      );
+      const result = await createRuntime().batchCreateAgents(
+        { agents: [{ title: 'Child', systemRole: 'x' }] },
+        groupCtx,
+      );
+      expect(result.success).toBe(false);
+      expect(mockBatchCreate).not.toHaveBeenCalled();
+      expect(mockAddAgentsToGroup).not.toHaveBeenCalled();
+    });
     it('creates a virtual agent and adds it to the edited group', async () => {
       mockBatchCreate.mockResolvedValue([{ id: 'agt_new', visibility: 'public' }]);
 
@@ -126,6 +205,9 @@ describe('groupAgentBuilderRuntime', () => {
 
       expect(mockBatchCreate).toHaveBeenCalledWith([
         expect.objectContaining({
+          agencyConfig: { activeProvider: 'codex' },
+          model: 'saved-model',
+          provider: 'saved-provider',
           plugins: ['orvilo-web-browsing'],
           title: 'Product Manager',
           virtual: true,

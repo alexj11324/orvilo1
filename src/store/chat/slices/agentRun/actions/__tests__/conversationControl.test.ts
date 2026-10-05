@@ -2108,6 +2108,7 @@ describe('ConversationControl actions', () => {
             agentInterventionAction: {
               result: {
                 kind: 'agent_marketplace',
+                runtimeConfig: { model: 'gpt-4' },
                 selectedTemplateIds: ['template-1'],
               },
               type: 'submit_custom',

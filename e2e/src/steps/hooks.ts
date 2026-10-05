@@ -2,7 +2,11 @@ import { After, AfterAll, Before, BeforeAll, setDefaultTimeout, Status } from '@
 import type { Cookie } from 'playwright';
 
 import { clearMockLLMWorkerState } from '../mocks/llm/registry';
-import { bindTestUserExecutionDevice } from '../support/bindExecutionDevice';
+import {
+  bindTestUserExecutionDevice,
+  ensureTestUserPrimeAgent,
+} from '../support/bindExecutionDevice';
+import { seedOrviloProviderBinding } from '../support/seedOrviloProviderBinding';
 import { createTestSession, seedTestUser } from '../support/seedTestUser';
 import { startWebServer, stopWebServer } from '../support/webServer';
 import { closeSharedBrowser, type CustomWorld } from '../support/world';
@@ -112,6 +116,25 @@ Before(async function (this: CustomWorld, { pickle }) {
       await bindTestUserExecutionDevice(this.browserContext.request);
     } catch (error) {
       console.warn('[e2e] execution-device binding failed:', error);
+    }
+
+    // Embedded Prime admission requires a resolving provider binding — the
+    // seeded orvilo+sandbox row points at the mock LLM so send-dependent
+    // journeys exercise the real infer path.
+    try {
+      await seedOrviloProviderBinding();
+    } catch (error) {
+      console.warn('[e2e] provider-binding seed failed:', error);
+    }
+
+    // The first-agent gate now covers the whole app until a usable agent
+    // exists — the same gate a production account passes via onboarding's
+    // firstAgentId. Mint the real Prime agent (a non-virtual row the sidebar
+    // lists) so scenarios start usable, like a finished onboarding leaves it.
+    try {
+      await ensureTestUserPrimeAgent(this.browserContext.request);
+    } catch (error) {
+      console.warn('[e2e] prime-agent seed failed:', error);
     }
   }
 });

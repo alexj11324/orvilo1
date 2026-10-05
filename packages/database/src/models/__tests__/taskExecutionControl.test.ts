@@ -23,7 +23,11 @@ import {
 } from '../../schemas';
 import { TASK_EXECUTION_CONTROL_CANDIDATE_SQL } from '../../schemas/taskExecutionControl';
 import type { OrviloDatabase } from '../../type';
-import { type RuntimeRunBinding, TaskExecutionControlModel } from '../taskExecutionControl';
+import {
+  type RuntimeRunBinding,
+  subjectTaskId,
+  TaskExecutionControlModel,
+} from '../taskExecutionControl';
 import { TaskTopicModel } from '../taskTopic';
 
 const db = await getTestDB();
@@ -135,7 +139,7 @@ beforeEach(async () => {
   b = {
     workspaceId: workspace.id,
     userId,
-    taskId: task.id,
+    subject: { dispatchId, kind: 'task', taskId: task.id },
     topicId,
     dispatchId,
     operationId,
@@ -405,7 +409,7 @@ describe('canonical durable runtime handoff', () => {
   it('fences legacy startRun from overwriting registered Core ownership', async () => {
     const before = await model().readControl(b);
     await expect(
-      new TaskTopicModel(db, b.userId, b.workspaceId).startRun(b.taskId, b.topicId, {
+      new TaskTopicModel(db, b.userId, b.workspaceId).startRun(subjectTaskId(b), b.topicId, {
         seq: 1,
         operationId: 'legacy-other-operation',
         dispatch: {

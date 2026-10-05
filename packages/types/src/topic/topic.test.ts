@@ -1,9 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  applyTopicExecutionConfig,
   chatTopicCreateMetadataSchema,
   chatTopicMetadataUpdateSchema,
   parseTopicScheduledRun,
+  snapshotTopicExecutionConfig,
 } from './topic';
 
 describe.each([chatTopicCreateMetadataSchema, chatTopicMetadataUpdateSchema])(
@@ -184,4 +186,64 @@ it('preserves execution selection alongside reasoning when creating a topic', ()
     reasoningConfig: { gpt5ReasoningEffort: 'high' },
   };
   expect(chatTopicCreateMetadataSchema.parse(metadata)).toEqual(metadata);
+});
+
+// A permission pin belongs to a harness and remains independent of routing policy.
+describe('topic ACP permission persistence', () => {
+  const defaults = {
+    executionTarget: 'local' as const,
+    executionTargetSelectionPolicy: 'fixed' as const,
+    heterogeneousProvider: { type: 'codex' as const },
+  };
+  it('applies a permission without overriding fixed execution routing', () => {
+    expect(
+      applyTopicExecutionConfig(defaults, {
+        executionTarget: 'sandbox',
+        permission: { provider: 'codex', configId: 'approval', value: 'ask' },
+      }),
+    ).toEqual({
+      ...defaults,
+      heterogeneousProvider: {
+        type: 'codex',
+        permission: { configId: 'approval', value: 'ask' },
+      },
+    });
+  });
+  it('ignores a permission saved for another harness', () => {
+    expect(
+      applyTopicExecutionConfig(defaults, {
+        permission: {
+          provider: 'claude-code',
+          configId: 'approval',
+          value: 'ask',
+        },
+      }),
+    ).toEqual(defaults);
+  });
+  it('snapshots the chosen permission for a new conversation', () => {
+    const config = {
+      ...defaults,
+      heterogeneousProvider: {
+        type: 'codex' as const,
+        permission: { configId: 'approval', value: 'ask' },
+      },
+    };
+    expect(snapshotTopicExecutionConfig(config).permission).toEqual({
+      provider: 'codex',
+      configId: 'approval',
+      value: 'ask',
+    });
+  });
+  it('retains advertised opaque values through metadata validation', () => {
+    const metadata = {
+      executionConfig: {
+        permission: {
+          provider: 'codex',
+          configId: 'approval',
+          value: 'ask-on-write',
+        },
+      },
+    };
+    expect(chatTopicMetadataUpdateSchema.parse(metadata)).toEqual(metadata);
+  });
 });

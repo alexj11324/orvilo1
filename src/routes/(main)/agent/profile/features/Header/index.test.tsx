@@ -144,6 +144,7 @@ vi.mock('lucide-react', async (importOriginal) => ({
 }));
 
 vi.mock('react-router', () => ({
+  useLocation: () => ({ pathname: '/agent/agt_1' }),
   useNavigate: () => mocks.navigate,
 }));
 

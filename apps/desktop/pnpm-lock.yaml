@@ -33,6 +33,9 @@ importers:
       get-windows:
         specifier: ^9.3.0
         version: 9.3.0(encoding@0.1.13)(supports-color@9.4.0)
+      lucide-react:
+        specifier: ^1.31.0
+        version: 1.33.0(react@19.2.7)
       node-screenshots:
         specifier: ^0.2.8
         version: 0.2.8
@@ -356,6 +359,22 @@ importers:
       node-machine-id:
         specifier: ^1.1.12
         version: 1.1.12
+    devDependencies:
+      vitest:
+        specifier: 5.0.0
+        version: 5.0.0(@opentelemetry/api@1.9.1)(@types/node@24.13.3)(happy-dom@20.10.6)(vite@8.0.14(@types/node@24.13.3)(esbuild@0.28.1)(jiti@2.7.0)(tsx@4.23.0)(yaml@2.9.0))
+
+  ../../packages/device-prime-host:
+    dependencies:
+      '@orvilo/agent-execution':
+        specifier: link:../agent-execution
+        version: link:../agent-execution
+      '@orvilo/device-gateway-client':
+        specifier: workspace:*
+        version: link:../device-gateway-client
+      '@orvilo/utils':
+        specifier: workspace:*
+        version: link:../utils
     devDependencies:
       vitest:
         specifier: 5.0.0
@@ -738,6 +757,9 @@ importers:
       '@orvilo/device-identity':
         specifier: workspace:*
         version: link:../../packages/device-identity
+      '@orvilo/device-prime-host':
+        specifier: workspace:*
+        version: link:../../packages/device-prime-host
       '@orvilo/eval-rubric':
         specifier: workspace:*
         version: link:../../packages/eval-rubric

@@ -15,7 +15,7 @@
 
 | 分支     | 语义                | 谁往里写                                   |
 | -------- | ------------------- | ------------------------------------------ |
-| `canary` | 开发主干 + 云端生产 | 只接受 PR；回同步当前受阻，见「保护规则」  |
+| `canary` | 开发主干 + 云端生产 | 日常开发通过 PR；发布工作流回同步，见下文  |
 | `main`   | 发布快照            | 只接受来自 `release/*` 或 `hotfix/*` 的 PR |
 
 **`main` 不是「生产环境」。** 它是发布基准线：打 tag、发 GitHub Release、
@@ -69,10 +69,7 @@ feat/xxx ──PR──▶ canary ───────────────�
 > `canary`，下一次 release 就会在旧版本号上再 bump 一次，且两条线会持续
 > 分叉到无法自动合并。
 
-> **当前状态：回同步尚未生效。** `sync-main-to-canary.yaml` 处于 disabled
-> 状态，而且它靠直接 push 写回分支，会被 `trunk-branches` ruleset 挡住。
-> 在这条链路打通之前，上面第 1–3 步能跑，第 4 步不会发生。启用前必须先把它
-> 改造成通过 PR 提交，详见「保护规则」。
+> **工作流状态（2026-10-04 核查）**：Auto Tag Release 与 Branch Synchronization 已启用。同步工作流先尝试快进或合并写回；直接写回失败时创建同步 PR。启用状态不代表某一次同步已成功，应以该次 Actions 运行和两条分支的提交为准。
 
 ## Hotfix 流程
 
@@ -93,18 +90,19 @@ feat/xxx ──PR──▶ canary ───────────────�
 
 ## 分发通道现状
 
-诚实记录：以下通道**代码已就绪，但依凭据与基础设施才能运行**。
+以下状态区分工作流启用、产物发布和产品验收；不能以构建成功代替安装或更新验证。
 
-| 通道            | 触发                                                   | 更新源 / 目标                         | 状态      |
-| --------------- | ------------------------------------------------------ | ------------------------------------- | --------- |
-| Web 生产        | `push canary`                                          | GHCR → Oracle（`deploy-orvilo1.yml`） | ✅ 运行中 |
-| Vercel Preview  | PR                                                     | Vercel（`vercel-preview.yml`）        | ✅ 运行中 |
-| Vercel 分支部署 | `push canary` / `push main`，全部 CI 门禁通过后        | Vercel（`vercel-branch-deploy.yml`）  | ✅ 运行中 |
-| Test / E2E CI   | push + PR                                              | —                                     | ✅ 运行中 |
-| Desktop Canary  | `push canary`                                          | GitHub Release（prerelease）          | ⚠️ 待打通 |
-| Desktop Stable  | GitHub Release published                               | GitHub Release                        | ⚠️ 待打通 |
-| Docker 镜像     | GitHub Release published                               | Docker Hub                            | ⚠️ 待打通 |
-| npm 包          | `push canary`（`packages/sdk`、`packages/model-bank`） | npm                                   | ⚠️ 待打通 |
+| 通道            | 触发                                            | 更新源 / 目标                                | 状态                                                         |
+| --------------- | ----------------------------------------------- | -------------------------------------------- | ------------------------------------------------------------ |
+| Web 生产        | `push canary`                                   | GHCR → Oracle（`deploy-orvilo1.yml`）        | ✅ 运行中                                                    |
+| Vercel Preview  | PR                                              | Vercel（`vercel-preview.yml`）               | ✅ 运行中                                                    |
+| Vercel 分支部署 | `push canary` / `push main`，全部 CI 门禁通过后 | Vercel（`vercel-branch-deploy.yml`）         | ✅ 运行中                                                    |
+| Test / E2E CI   | push + PR                                       | —                                            | ✅ 运行中                                                    |
+| Desktop Canary  | `push canary` / 手动触发                        | GitHub prerelease；可配置更新服务器          | 工作流已启用，逐次核验产物                                   |
+| Desktop Stable  | 正式 GitHub Release / 手动触发                  | GitHub Release；可配置更新服务器             | 已发布 v2.6.0；安装、公证与更新另行验收                      |
+| Docker 镜像     | GitHub Release published                        | Docker Hub                                   | ⚠️ 待打通                                                    |
+| npm 包          | `push canary`（SDK、model-bank）                | npm                                          | 按各包发布工作流核验，不代表 CLI 已在 npm 发布               |
+| CLI             | 正式 GitHub Release                             | 同一个 Release 的 `orvilo-cli-<version>.tgz` | 安装指南只显示实际存在的资产；PR / 手动构建上传测试 artifact |
 
 ## Vercel 部署门禁
 
@@ -117,22 +115,11 @@ GitGuardian 及其他未忽略检查全部成功后创建部署。
 SHA。`canary` 创建 preview 部署，`main` 创建 Vercel production 部署。Vercel 的
 production target 只描述该 Vercel 项目的别名，不改变上面的 Oracle 云端生产代码线。
 
-桌面端的更新源已确定为 **GitHub Release**，不走自建对象存储。理由与代价
-见下节。
+桌面更新源由构建配置决定：设置 `UPDATE_SERVER_URL` 时使用对应通道的通用更新服务器；未设置时使用 `alexj11324/orvilo1` 的 GitHub Release。稳定版工作流同时支持 GitHub 资产和对象存储上传，不能把源码中的可选路径当作每个发行包的实际配置。
 
-### 为什么桌面更新源用 GitHub Release
+验证发行包时记录其中的 `app-update.yml`、通道与来源提交，并实测检查更新和安装。GitHub 匿名更新检查受 API 速率限制；通用更新服务器需要匹配的 manifest 和资产。
 
-`electron-builder` 的 provider 与存储后端解耦，只认 URL 结构。选 GitHub
-Release 的实际代价有三条，接受它们是因为省去了一整套对象存储与域名运维：
-
-1. **速率限制** —— 更新检查走 GitHub API，客户端无法内置 token，因此按
-   匿名请求计（60 次 / 小时 / IP）。同一出口 IP 下客户端数量大时会撞限流。
-2. **通道能力弱** —— GitHub 只有 prerelease 这一个布尔维度，`stable` /
-   `canary` 刚好用满，再要 `beta` / `nightly` 就需要换更新源。
-3. **无自定义 CDN** —— 下载走 `objects.githubusercontent.com`，无法加速。
-
-切换成本很低：provider 在构建时由 `UPDATE_SERVER_URL` 决定，将来换成对象
-存储只需配置该变量。
+macOS 发布构建使用 App Store Connect API 凭据。上传之前必须通过签名、stapler 和 Gatekeeper 验证，缺少凭据或公证失败时不能悄悄发布未公证包。CLI 公开安装使用 GitHub 上的真实 tarball，更新命令也查询同一发行源。
 
 ## 保护规则
 
@@ -149,14 +136,7 @@ Release 的实际代价有三条，接受它们是因为省去了一整套对象
 - **不设必需批准数**：仓库只有一个 maintainer，而 GitHub 不允许自我批准，
   设成 1 会把所有人都锁死。
 
-> **为什么不给 GitHub Actions 开豁免**：个人账号的 repository ruleset
-> 不支持把 GitHub Actions 加入 bypass list —— API 直接拒绝：
-> `Actor GitHub Actions integration must be part of the ruleset source or
-owner organization`。该能力只对 organization 级 ruleset 开放。
->
-> 后果：`auto-tag-release.yml` 与 `sync-main-to-canary.yaml` 都靠**直接
-> push** 写回分支，在本规则下会被挡。两者当前都是 disabled 状态，所以不影响
-> 现状；**启用前必须先改造成通过 PR 提交**。
+> **保护规则（2026-10-04 核查）**：日常开发继续通过 PR。当前规则集有仓库管理员和指定 Integration 的 bypass actor；发布工作流使用的身份是否能写回，必须由实际运行确认，不再将工作流声明为 disabled。不要为了发布临时关闭保护规则。
 
 `trunk-branches` 把 `Documentation Required` 设为必需状态检查。该检查使用
 `pull_request_target`，只读取 PR 的改动清单，并从受保护目标分支运行门禁脚本；

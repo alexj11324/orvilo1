@@ -149,7 +149,6 @@ const MoveTopicsContent = memo<MoveTopicsContentProps>(({ onMoved, sourceAgentId
                 agent={agent}
                 agentId={agent.id}
                 agentTitle={agentDisplayName(agent, t('untitledAgent', { ns: 'chat' }))}
-                avatar={agent.avatar}
                 key={agent.id}
                 onClose={() => {}}
                 onAgentChange={() => {

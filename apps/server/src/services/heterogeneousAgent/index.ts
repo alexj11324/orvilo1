@@ -4,16 +4,25 @@ import type { OrviloDatabase } from '@orvilo/database';
 import {
   classifyHeteroProcessFailure,
   getNativeHeteroSessionBindingKey,
+  type HeterogeneousAgentType as AnyHeterogeneousAgentType,
   isHeteroStatusGuideErrorData,
-  type LocalHeterogeneousAgentType,
 } from '@orvilo/heterogeneous-agents';
-import { type AegisFinishReport, ThreadStatus } from '@orvilo/types';
+import { type AegisFinishReport, getWorkingDirEffectivePath, ThreadStatus } from '@orvilo/types';
+import { pickString, toRecord } from '@orvilo/utils/object';
 import debug from 'debug';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { MessageModel } from '@/database/models/message';
 import { ThreadModel } from '@/database/models/thread';
 import { TopicModel } from '@/database/models/topic';
+import {
+  getHeteroSessionBindingKeyForWorkingDirectory,
+  getHeteroSessionIdForWorkingDirectory,
+  removeHeteroSessionBindingKeyForWorkingDirectory,
+  removeHeteroSessionIdForWorkingDirectory,
+  setHeteroSessionBindingKeyForWorkingDirectory,
+  setHeteroSessionIdForWorkingDirectory,
+} from '@/helpers/heteroSessionByWorkingDirectory';
 import { createStreamEventManager } from '@/server/modules/AgentExecution/factory';
 import { type IStreamEventManager } from '@/server/modules/AgentExecution/types';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
@@ -35,7 +44,12 @@ import {
 
 const log = debug('orvilo-server:hetero-agent-service');
 
-export type HeterogeneousAgentType = LocalHeterogeneousAgentType;
+/**
+ * Producer identity carried on ingest/finish calls. Covers every hetero
+ * producer surface — external CLI agents (local + remote families) and the
+ * builtin `'orvilo'` type, which produces through the Prime adapter.
+ */
+export type HeterogeneousAgentType = AnyHeterogeneousAgentType;
 
 export type HeterogeneousFinishResult = 'success' | 'error' | 'cancelled';
 
@@ -181,6 +195,7 @@ export class HeterogeneousAgentService {
     this.persistenceHandler =
       options.persistenceHandler ??
       new HeterogeneousPersistenceHandler({
+        agentOperationModel: this.agentOperationModel,
         messageModel: this.messageModel,
         threadModel: new ThreadModel(db, userId, workspaceId),
         topicModel: this.topicModel,
@@ -388,6 +403,7 @@ export class HeterogeneousAgentService {
     let isolationThreadId: string | undefined;
     let orchestrationRole: 'member' | 'supervisor' | undefined;
     let staleActiveOperationId: string | undefined;
+    let executionWorkingDirectory: string | undefined;
 
     // The operation row is the durable lifecycle owner. The frontend may have
     // already consumed the in-stream terminal event and cleared the topic's
@@ -395,6 +411,9 @@ export class HeterogeneousAgentService {
     try {
       const operation = await this.agentOperationModel.findById(operationId);
       const metadata = operation?.metadata as Record<string, unknown> | null | undefined;
+      executionWorkingDirectory = pickString(
+        toRecord(metadata?.executionPlan)?.workingDirectoryBinding,
+      );
       const operationHooks = metadata?._hooks;
       if (Array.isArray(operationHooks)) serializedHooks = operationHooks as SerializedHook[];
       if (typeof metadata?.assistantMessageId === 'string') {
@@ -475,7 +494,39 @@ export class HeterogeneousAgentService {
         // Only the producer can distinguish a missing native session from a
         // transient pre-init error such as Codex's "already has an active writer".
         // Clearing every error without a new id would fork the next turn empty.
-        await this.topicModel.updateMetadata(topicId, resumeBindingUpdate);
+        const topic = await this.topicModel.findById(topicId);
+        const metadata = topic?.metadata;
+        const cwd =
+          executionWorkingDirectory ??
+          getWorkingDirEffectivePath(metadata?.workingDirectoryConfig) ??
+          metadata?.workingDirectory;
+        await this.topicModel.updateMetadata(topicId, {
+          ...resumeBindingUpdate,
+          ...(cwd === undefined
+            ? {}
+            : sessionId
+              ? {
+                  heteroSessionIdByWorkingDirectory: setHeteroSessionIdForWorkingDirectory(
+                    metadata,
+                    cwd,
+                    sessionId,
+                  ),
+                  heteroSessionBindingKeyByWorkingDirectory:
+                    setHeteroSessionBindingKeyForWorkingDirectory(
+                      metadata,
+                      cwd,
+                      getNativeHeteroSessionBindingKey(agentType),
+                    ),
+                }
+              : {
+                  heteroSessionIdByWorkingDirectory: removeHeteroSessionIdForWorkingDirectory(
+                    metadata,
+                    cwd,
+                  ),
+                  heteroSessionBindingKeyByWorkingDirectory:
+                    removeHeteroSessionBindingKeyForWorkingDirectory(metadata, cwd),
+                }),
+        });
       } catch (err) {
         log('heteroFinish: update resume session binding failed (non-fatal): %O', err);
       }
@@ -690,9 +741,17 @@ export class HeterogeneousAgentService {
     expectedBindingKey?: string,
   ): Promise<string | undefined> {
     const topic = await this.topicModel.findById(topicId);
-    const sessionId = topic?.metadata?.heteroSessionId;
+    const metadata = topic?.metadata;
+    const cwd =
+      getWorkingDirEffectivePath(metadata?.workingDirectoryConfig) ?? metadata?.workingDirectory;
+    const scopedSessionId = getHeteroSessionIdForWorkingDirectory(metadata, cwd);
+    const sessionId = scopedSessionId ?? metadata?.heteroSessionId;
     if (!sessionId) return undefined;
-    const savedBindingKey = topic?.metadata?.heteroSessionBindingKey;
+    // A legacy source-repo session must not execute inside a selected worktree.
+    if (!scopedSessionId && cwd !== metadata?.workingDirectory) return undefined;
+    const savedBindingKey = scopedSessionId
+      ? getHeteroSessionBindingKeyForWorkingDirectory(metadata, cwd)
+      : metadata?.heteroSessionBindingKey;
     if (savedBindingKey && expectedBindingKey && savedBindingKey !== expectedBindingKey) {
       log(
         'getHeterogeneousResumeSessionId: binding mismatch topic=%s saved=%s expected=%s — skipping resume',

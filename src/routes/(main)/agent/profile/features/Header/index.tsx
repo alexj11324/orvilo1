@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { memo, useCallback, useEffect, useMemo, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { useLocation } from 'react-router';
 
 import { useAgentTransferMenuItem } from '@/business/client/hooks/useAgentTransferMenuItem';
 import { useAgentTransferToMemberMenuItem } from '@/business/client/hooks/useAgentTransferToMemberMenuItem';
@@ -28,6 +29,7 @@ import { type ModalInstance } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import AgentBreadcrumb from '@/features/AgentBreadcrumb';
+import { shouldShowAgentBreadcrumb } from '@/features/AgentBreadcrumb/shouldShowAgentBreadcrumb';
 import AgentProfileTabs, { AGENT_PROFILE_TABS_CENTER_STYLE } from '@/features/AgentProfileTabs';
 import NavHeader from '@/features/NavHeader';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
@@ -106,6 +108,7 @@ const Header = memo(() => {
   const { i18n, t } = useTranslation(['setting', 'chat', 'file', 'common', 'agent']);
   const dateLocale = i18n?.resolvedLanguage || i18n?.language;
   const navigate = useWorkspaceAwareNavigate();
+  const location = useLocation();
 
   const meta = useAgentStore(agentSelectors.currentAgentMeta, isEqual);
   // `currentAgentConfig` is typed non-nullable but reads straight out of
@@ -375,7 +378,9 @@ const Header = memo(() => {
       left={
         <div className="flex items-center gap-2">
           {/* No section title — the Segmented beside it names the current tab. */}
-          {activeAgentId && <AgentBreadcrumb agentId={activeAgentId} />}
+          {activeAgentId && shouldShowAgentBreadcrumb(location.pathname) && (
+            <AgentBreadcrumb agentId={activeAgentId} />
+          )}
           <AccessLevelTag
             resourceId={showPermissionsEntry ? (activeAgentId ?? undefined) : undefined}
             resourceType={'agent'}

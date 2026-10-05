@@ -8,7 +8,7 @@ import { memo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { Button } from '@/components/ui/button';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
 import { createAgentIdentityModal } from '@/features/AgentIdentityModal';
@@ -16,6 +16,7 @@ import { useIsMobile } from '@/hooks/useIsMobile';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import { useAutoName } from './useAutoName';
 
@@ -78,7 +79,10 @@ const AgentHeader = memo(() => {
             zIndex: 4,
           }}
         >
-          <Avatar avatar={meta.avatar} shape={'square'} size={72} />
+          <AgentRuntimeIcon
+            size={72} // linear-token-override: profile hero avatar disc — matches the 72px identity header scale used by group/member profile pages
+            type={resolveAgentRuntimeType(config)}
+          />
         </div>
       </div>
       {/* Identity Section — display only. Editing all three fields happens in a

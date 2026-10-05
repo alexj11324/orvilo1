@@ -1,6 +1,9 @@
 export default {
+  'devices.connectWizard.cli.unavailable':
+    'This release does not include a CLI installer yet. Check Releases for an available installer.',
+  'devices.connectWizard.cli.viewReleases': 'View Releases',
   'providerBindings.runtime': 'Runtime',
-  'providerBindings.engine': 'Engine',
+  'providerBindings.engine': 'Adapter',
   'providerBindings.effort': 'Reasoning effort',
   'providerBindings.mode': 'Mode',
   'providerBindings.speed': 'Speed',
@@ -376,11 +379,11 @@ export default {
     'Members get this level once the agent is published to the workspace. It can be changed after publishing.',
   'permission.page.configGroup': 'Editable settings',
   'permission.page.devicePolicyDesc':
-    'Whether members can switch the execution environment for their own runs.',
-  'permission.page.devicePolicyFixedDesc': 'Members can only use the environment you set',
-  'permission.page.devicePolicyMemberDesc': 'Members can set their own execution environment',
+    'Whether members can switch the execution device for their own runs.',
+  'permission.page.devicePolicyFixedDesc': 'Members can only use the device you set',
+  'permission.page.devicePolicyMemberDesc': 'Members can set their own execution device',
   'permission.page.devicePolicyUnset':
-    'Pick an execution environment in Agent Profile first, then you can fix it here.',
+    'Pick an execution device for the agent first, then you can fix it here.',
   'permission.page.editableWhenShared': 'Can edit when shared',
   'permission.page.documentAccessLevelPrivateHint':
     'Members get this level once the page is published to the workspace. It can be changed after publishing.',
@@ -402,12 +405,12 @@ export default {
   'permission.page.groupAccessLevelPrivateHint':
     'Members get this level once the group is published to the workspace. It can be changed after publishing.',
   'permission.page.groupDevicePolicyDesc':
-    'Whether members can switch the execution environment for their own runs in this group.',
+    'Whether members can switch the execution device for their own runs in this group.',
   'permission.page.groupDevicePolicyFixedDesc':
-    'Members can only use the environment you set for this group',
-  'permission.page.groupDevicePolicyMemberDesc': 'Members can set their own execution environment',
+    'Members can only use the device you set for this group',
+  'permission.page.groupDevicePolicyMemberDesc': 'Members can set their own execution device',
   'permission.page.groupDevicePolicyUnset':
-    'Pick an execution environment for the orchestrator first, then you can fix it here.',
+    'Pick an execution device for the orchestrator first, then you can fix it here.',
   'permission.page.groupGeneralAccessDesc':
     'What every workspace member can do with this group. The same level is applied to the member agents the group owns. The creator and workspace owners always keep full access.',
   'permission.page.groupPersonalDesc':
@@ -553,31 +556,6 @@ export default {
   'platformAgentConfig.changeDevice': 'Change Device',
   'platformAgentConfig.redetect': 'Re-detect',
   'platformAgentConfig.selectDevice': 'Select a device',
-
-  // Agent engine settings (harness / builtin engine / model / effort / target)
-  'agentEngine.title': 'Engine',
-  'agentEngine.harness.label': 'Harness',
-  'agentEngine.harness.localGroup': 'Local CLI',
-  'agentEngine.harness.remoteGroup': 'Platform agent',
-  'agentEngine.engine.label': 'Engine',
-  'agentEngine.engine.claudeSdk': 'Claude Code',
-  'agentEngine.engine.codexAppServer': 'Codex',
-  'agentEngine.engine.limitedCapabilities':
-    'This engine cannot ask questions during a run or use Orvilo builtin tools yet.',
-  'agentEngine.model.label': 'Model',
-  'agentEngine.legacy.description':
-    'This agent still uses its existing chat runtime. Its execution path will not change until you migrate it.',
-  'agentEngine.legacy.migrate': 'Migrate to Orvilo',
-  'agentEngine.legacy.name': 'Legacy chat runtime',
-  'agentEngine.model.catalogPending':
-    'Models load from the selected machine once an execution target is set.',
-  'agentEngine.model.catalogError': 'Could not load models from the selected machine.',
-  'agentEngine.effort.label': 'Reasoning effort',
-  'agentEngine.mode.label': 'Mode',
-  'agentEngine.speed.label': 'Speed',
-  'agentEngine.target.label': 'Run on',
-  'agentEngine.target.orviloHint':
-    'Orvilo runs the engine CLI on the selected machine — the target must have it installed.',
 
   'checking': 'Checking...',
 
@@ -791,6 +769,7 @@ export default {
   'group.security': 'Security & access',
   'group.tools': 'Tools & connectors',
   'group.usageAndCost': 'Usage & cost',
+  'group.thisDevice': 'This app & device',
 
   'group.developer': 'Developer',
   'group.profile': 'Account',
@@ -1030,6 +1009,7 @@ export default {
   'settingAgent.personalName.roll': 'Roll a random name',
   'settingAgent.identity.done': 'Done',
   'settingAgent.identity.edit': 'Edit identity',
+  'settingAgent.identity.rename': 'Rename',
   'settingAgent.identity.saveFailed': 'Could not save the identity, please try again',
   'settingAgent.identity.untitled': 'Unnamed agent',
   'settingAgent.role.label': 'Role',
@@ -1081,12 +1061,47 @@ export default {
   'settingAgent.agentTools.tabAgent': 'Agent Tools',
   'settingAgent.agentTools.tabUser': 'User Tools',
   'settingAgent.agentTools.tabWorkspace': 'Workspace Tools',
-  'settingAgent.devicePolicy.noPublicDevice': 'No public devices',
-  'settingAgent.devicePolicy.selectTarget': 'Select environment',
-  'settingAgent.devicePolicy.title': 'Execution environment',
-  'settingAgent.modelPolicy.fixedTip':
-    'The model is fixed in Agent Profile and cannot be switched while chatting.',
+  'settingAgent.accessSettings.title': 'Access',
+  'settingAgent.advancedSettings.diagnosticsAction': 'View diagnostics',
+  'settingAgent.advancedSettings.diagnosticsLabel': 'Diagnostics',
+  'settingAgent.advancedSettings.title': 'Advanced',
+  'settingAgent.devicePolicy.selectTarget': 'Select target',
+  'settingAgent.devicePolicy.title': 'Device switching',
+  'settingAgent.deviceSettings.bindingInvalidDesc':
+    'The bound device is gone or no longer selectable. Choose a replacement to repair this agent.',
+  'settingAgent.deviceSettings.bindingInvalidTitle': 'Device no longer available',
+  'settingAgent.deviceSettings.bindingMissing': 'Device binding unavailable',
+  'settingAgent.deviceSettings.bindingRepair': 'Use {{name}}',
+  'settingAgent.deviceSettings.deviceLabel': 'Device',
+  'settingAgent.deviceSettings.offlineBoundDesc':
+    'Runs will not start until this device reconnects.',
+  'settingAgent.deviceSettings.offlineBoundTitle': 'Bound device is offline',
+  'settingAgent.executionSettings.title': 'Execution',
+  'settingAgent.deviceSettings.zeroDeviceDesc':
+    'This agent has no legal execution device — runs are blocked until a device is connected.',
+  'settingAgent.deviceSettings.zeroDeviceTitle': 'No device available',
+  'settingAgent.generalSettings.legacyDesc':
+    'This agent still uses its existing chat runtime. Its execution path will not change until you migrate it.',
+  'settingAgent.generalSettings.legacyLabel': 'Runtime',
+  'settingAgent.generalSettings.legacyMigrate': 'Migrate to Orvilo',
+  'settingAgent.generalSettings.legacyName': 'Legacy chat runtime',
+  'settingAgent.generalSettings.name': 'Name',
+  'settingAgent.generalSettings.title': 'General',
   'settingAgent.modelPolicy.title': 'Model',
+  'settingAgent.modelSettings.bindAction': 'Bind a provider',
+  'settingAgent.modelSettings.catalogError': 'Could not load models from the selected machine.',
+  'settingAgent.modelSettings.catalogPending':
+    'Models load from the selected machine once an execution target is set.',
+  'settingAgent.modelSettings.effortLabel': 'Reasoning effort',
+  'settingAgent.modelSettings.modeLabel': 'Mode',
+  'settingAgent.modelSettings.modelLabel': 'Model',
+  'settingAgent.modelSettings.noBindingDesc':
+    'This agent has no model to run on yet — bind an Orvilo provider first.',
+  'settingAgent.modelSettings.noBindingTitle': 'No provider bound',
+  'settingAgent.modelSettings.primeHint':
+    'Model routes come from your enabled Orvilo provider bindings.',
+  'settingAgent.modelSettings.speedLabel': 'Speed',
+  'settingAgent.modelSettings.title': 'Model & reasoning',
   'settingAgent.runtimeConfig.reasoningEffortHint':
     'Your default reasoning effort for this model. Shared by every agent using it; each topic keeps the effort it started with and can change it from the chat input.',
   'settingAgent.runtimeConfig.title': 'Model & Reasoning Effort',
@@ -1099,7 +1114,6 @@ export default {
   'settingAgent.topicSharePolicy.membersCanShare': 'Members can share',
   'settingAgent.topicSharePolicy.membersCannotShare': 'Creator and owners only',
   'settingAgent.topicSharePolicy.title': 'Topic sharing',
-  'settingAgent.toolsConfig.title': 'Tools',
   'settingAgent.submit': 'Update Agent',
   'settingAgent.tag.desc': 'Agent tags will be displayed in the Agent Community',
   'settingAgent.tag.placeholder': 'Enter tag',

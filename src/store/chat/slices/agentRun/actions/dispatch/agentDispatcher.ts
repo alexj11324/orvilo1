@@ -33,8 +33,16 @@ export const GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR =
  * Which agent runtime should handle an operation.
  *
  * - `client`: in-browser AgentRuntime (default)
- * - `gateway`: cloud sandbox via Gateway WebSocket
- * - `hetero`: heterogeneous CLI agent (Claude Code, Codex, …) via desktop IPC or sandbox
+ * - `gateway`: server-admitted execution via Gateway WebSocket — sandbox,
+ *   remote `orvilo connect` device, or this desktop dispatched back to itself
+ *   through `agent_run_request` (unified admission → device → ingest)
+ * - `hetero`: transport/event marker ONLY — the device-side heterogeneous
+ *   lifecycle (Claude Code, Codex, …) as attributed by ingest/gateway events.
+ *   `selectRuntimeType` never returns it: no product entry may spawn the
+ *   renderer IPC session, because that lifecycle bypassed server admission
+ *   (F03). If a genuinely offline/local-only mode is ever productized it must
+ *   be an explicitly-gated opt-in — the retired entry branches that called
+ *   `executeHeterogeneousAgent` are the seam, not a live fallback.
  */
 export type AgentRuntimeType = 'client' | 'gateway' | 'hetero';
 
@@ -79,12 +87,13 @@ export interface RuntimeSelectionContext {
   /**
    * Per-agent execution device choice from the composer's Execution Device
    * switcher. Only meaningful when `heterogeneousProvider` is a local CLI
-   * (claude-code / codex). Controls the desktop fork:
-   *   - `'device'` / `'sandbox'` → route through Gateway so the server can
-   *     dispatch to an `orvilo connect` device or spawn a sandbox.
-   *   - `'local'` / `undefined`  → keep today's default (desktop → `hetero`
-   *     in-process spawn, web → `gateway` sandbox unless a desktop-local
-   *     boundDeviceId is available, in which case the server dispatches to it.
+   * (claude-code / codex). Routes through Gateway for every value — `'device'`
+   * / `'sandbox'` / `'local'` alike — so the server's unified admission makes
+   * the authorization and lifecycle decision (device reachability included).
+   * The socket state of the viewing client must NEVER factor into routing:
+   * dispatching back onto this desktop through `agent_run_request` vs refusing
+   * with a typed blocked result is the server's call, not a local fork.
+   *   - `undefined` → resolves to `none` / `auto` per resolveExecutionTarget.
    */
   executionTarget?: DeviceExecutionTarget;
   /** Per-agent heterogeneous provider config (desktop only — takes priority over gateway). */
@@ -102,7 +111,9 @@ export interface RuntimeSelectionContext {
    * The agent is workspace-scoped (`agent.workspaceId` set), regardless of
    * authorship or per-member overrides. Unlike `workspaceScoped`, this stays
    * true for the agent's author and for members with an explicit local
-   * override — the cases that CAN spawn a workspace agent in-process.
+   * override. It no longer unlocks a local spawn — it only feeds the
+   * api-mode personal-provider guard below; whether a workspace run may
+   * execute on this machine is the server admission's call.
    */
   isWorkspaceAgent?: boolean;
   /**
@@ -112,6 +123,9 @@ export interface RuntimeSelectionContext {
    * operations inherit the parent operation's runtime instead of re-running
    * the global decision — a sub-agent spawned inside a Gateway run should
    * stay on Gateway, even if its own agent config would say otherwise.
+   * A stale/forced `'hetero'` is coerced to `'gateway'` rather than passed
+   * through: inheriting "run it the same way" from a device-side hetero
+   * parent means unified admission, never the retired renderer IPC spawn.
    */
   parentRuntime?: AgentRuntimeType;
   /**
@@ -133,10 +147,15 @@ interface SelectRuntimeTypeOptions {
  * Centralized "which runtime should run this agent operation" decision.
  *
  * The same priority is applied at every entry point (sendMessage, regenerate,
- * resume, continue, sub-agent dispatch, …) so adding a new entry point does
- * not require re-deriving the routing rules.
+ * resume, continue, sub-agent dispatch, cancel, reconnect …) so adding a new
+ * entry point does not require re-deriving the routing rules.
  *
- * Priority: `parentRuntime` > `hetero` (desktop only) > `gateway` > `client`.
+ * Priority: `parentRuntime` > `gateway` > `client`. Every heterogeneous
+ * provider — local CLI and remote platform alike — routes to `gateway` so the
+ * server's unified admission owns authorization and lifecycle (FIX-C: the
+ * renderer IPC `hetero` spawn that bypassed admission for workspace agents
+ * and socket-down desktops is removed, not gated). A refusal is a typed
+ * blocked result from the server, never a transport downgrade to local IPC.
  */
 export const selectRuntimeType = (
   ctx: RuntimeSelectionContext,
@@ -146,10 +165,10 @@ export const selectRuntimeType = (
     // Personal-scope invariant: Desktop main resolves the binding's providerId
     // with NO workspace header (see `providerBindingPort`), while a workspace
     // agent's binding was configured against workspace-scoped providers. The
-    // author (or an explicitly overriding member) CAN spawn a workspace agent
-    // in-process — `workspaceScoped` alone does not block them — so a colliding
-    // personal provider id (e.g. builtin `anthropic`) would silently supply
-    // different credentials. Reject before any IPC.
+    // author (or an explicitly overriding member) CAN execute a workspace
+    // agent on their own machine — `workspaceScoped` alone does not block
+    // them — so a colliding personal provider id (e.g. builtin `anthropic`)
+    // would silently supply different credentials. Reject before any spawn.
     // The deployment-default API source uses deployment-owned credentials
     // rather than a user provider id, so this guard stays on user-provider
     // bindings only.
@@ -187,7 +206,11 @@ export const selectRuntimeType = (
     throw new Error(GROUP_SUPERVISOR_REQUIRES_GATEWAY_ERROR);
   }
 
-  if (ctx.parentRuntime) return ctx.parentRuntime;
+  // `parentRuntime === 'hetero'` is a stale marker, not a transport to
+  // re-enter: the parent ran on a device through server admission, so the
+  // child inherits `gateway` — the same admission decision — rather than
+  // resurrecting the removed renderer IPC spawn.
+  if (ctx.parentRuntime) return ctx.parentRuntime === 'hetero' ? 'gateway' : ctx.parentRuntime;
   // Notify-based platform agents (openclaw / hermes) use the gateway transport for both
   // targets: `local` presets this desktop's personal device ID on the request, while
   // `device` dispatches to the configured remote device. They do not implement the
@@ -195,30 +218,20 @@ export const selectRuntimeType = (
   if (ctx.heterogeneousProvider && isRemoteHeterogeneousType(ctx.heterogeneousProvider.type)) {
     return 'gateway';
   }
-  // Local CLI hetero (Amp / Claude Code / Codex) — route by the resolved execution
-  // target (shared resolution with the server / the device switcher UI):
-  // `device` / `sandbox` need server-side dispatch; `local` runs in-process on
-  // the desktop. Unset targets resolve to the pending `none` state on every
-  // client — the viewer's platform never picks an execution host — and an
-  // unbound `local` on a client without local execution also stays pending.
-  // A desktop `local` selection synced with boundDeviceId resolves to `device`
-  // dispatch when viewed from another client.
-  if (ctx.heterogeneousProvider) {
-    const target = resolveExecutionTarget(
-      {
-        boundDeviceId: ctx.boundDeviceId,
-        executionTarget: ctx.executionTarget,
-        heterogeneousProvider: ctx.heterogeneousProvider,
-      },
-      // on the client the desktop build IS where local execution is available
-      {
-        isHetero: true,
-        clientExecutionAvailable: isDesktop,
-        workspaceScoped: ctx.workspaceScoped,
-      },
-    );
-    return target === 'local' ? 'hetero' : 'gateway';
-  }
+  // Local CLI hetero (Amp / Claude Code / Codex) — every resolved target
+  // routes through Gateway. For `local` on a desktop the server dispatches the
+  // run back onto this very machine via `agent_run_request` →
+  // `orvilo hetero exec` → heteroIngest — the same admission/ledger lifecycle
+  // every other surface uses, so web observes the desktop-local run
+  // identically and the desktop main spawns only under a verified execution
+  // identity (device authorization + run generation fence). When this
+  // machine's device socket is down, admission cannot reach it and the run
+  // surfaces as a typed blocked/unknown result — never a silent IPC spawn.
+  // Workspace agents get the same treatment: whether a member's personal
+  // desktop may execute a workspace run is an authorization question the
+  // server answers (enrollment/grant surfaced through the blocked result),
+  // not something the client pre-decides by spawning privately.
+  if (ctx.heterogeneousProvider) return 'gateway';
   if (ctx.isGatewayMode) return 'gateway';
   return 'client';
 };

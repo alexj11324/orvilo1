@@ -12,6 +12,7 @@ import { useTranslation } from 'react-i18next';
 import useBusinessErrorAlertConfig from '@/business/client/hooks/useBusinessErrorAlertConfig';
 import useBusinessErrorContent from '@/business/client/hooks/useBusinessErrorContent';
 import useRenderBusinessChatErrorMessageExtra from '@/business/client/hooks/useRenderBusinessChatErrorMessageExtra';
+import { Button } from '@/components/ui/button';
 import { CodeBlock } from '@/components/ui/code-block';
 import { Skeleton } from '@/components/ui/skeleton';
 import ErrorContent from '@/features/Conversation/ChatItem/components/ErrorContent';
@@ -23,6 +24,7 @@ import type { HeterogeneousAgentScheduleState } from '@/features/Electron/Hetero
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { usePermission } from '@/hooks/usePermission';
 import { useProviderName } from '@/hooks/useProviderName';
+import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import dynamic from '@/libs/next/dynamic';
 import { binaryService } from '@/services/electron/binary';
 import { useChatStore } from '@/store/chat';
@@ -31,6 +33,7 @@ import { serverConfigSelectors, useServerConfigStore } from '@/store/serverConfi
 import { getRuntimeErrorMessage } from '@/utils/locale/runtimeErrorMessage';
 
 import ChatInvalidAPIKey from './ChatInvalidApiKey';
+import { isDeviceAdmissionErrorBody } from './deviceAdmission';
 import { isHeterogeneousAgentStatusGuideError } from './heterogeneous';
 import { useHeterogeneousAutoRetry } from './useHeterogeneousAutoRetry';
 
@@ -110,6 +113,11 @@ const DeprecatedModelError = dynamic(() => import('./DeprecatedModelError'), {
 });
 
 const QuotaLimitError = dynamic(() => import('./QuotaLimitError'), { loading, ssr: false });
+
+const DeviceAdmissionError = dynamic(() => import('./DeviceAdmissionError'), {
+  loading,
+  ssr: false,
+});
 
 const TraceIdError = dynamic(() => import('./TraceIdError'), { loading, ssr: false });
 
@@ -277,6 +285,7 @@ interface ErrorExtraProps {
 const ErrorMessageExtra = memo<ErrorExtraProps>(
   ({ error: alertError, data, onRegenerate, retryScopeId }) => {
     const error = data.error;
+    const { t } = useTranslation('error');
     const navigate = useWorkspaceAwareNavigate();
     const enableBusinessFeatures = useServerConfigStore(
       serverConfigSelectors.enableBusinessFeatures,
@@ -287,6 +296,8 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
     const { canUseResource } = useConversationResourceAccess();
     const canCreate = canCreateContent && canUseResource;
     const isSharedTopic = useConversationStore((s) => !!s.context?.topicShareId);
+    const agentId = useConversationStore((s) => s.context?.agentId);
+    const { canSelectPersonalDevice } = useTopicAgencyConfig(agentId);
     const sessionErrorBody = error?.body;
     const rawErrorMessage = getRawErrorMessage(error);
     const errorDetails = getErrorDetails(error);
@@ -425,6 +436,48 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
         }
       : undefined;
 
+    // Existing persisted admission errors carry the contract code in detail,
+    // while their top-level type is the generic ServerAgentRuntimeError.
+    const admissionCode =
+      typeof sessionErrorBody?.detail === 'string'
+        ? /^(DEVICE_REQUIRED|DEVICE_SELECTION_REQUIRED|DEVICE_ACCESS_DENIED):/.exec(
+            sessionErrorBody.detail,
+          )?.[1]
+        : undefined;
+    if (admissionCode) {
+      const messageKey =
+        admissionCode === 'DEVICE_ACCESS_DENIED'
+          ? 'deviceAdmission.denied'
+          : admissionCode === 'DEVICE_SELECTION_REQUIRED'
+            ? 'deviceAdmission.selectionRequired'
+            : 'deviceAdmission.required';
+      return (
+        <ErrorContent
+          id={data.id}
+          error={{
+            message: t(messageKey),
+            action: !isSharedTopic && (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() =>
+                  canSelectPersonalDevice
+                    ? navigate('/settings/devices', { escape: true })
+                    : navigate('/settings/devices')
+                }
+              >
+                {t('deviceAdmission.configure')}
+              </Button>
+            ),
+            extra:
+              !isSharedTopic && errorDetails ? (
+                <CodeBlock code={JSON.stringify(errorDetails, null, 2)} language="json" />
+              ) : undefined,
+          }}
+        />
+      );
+    }
+
     if (isHeterogeneousAgentStatusGuideError(sessionErrorBody)) {
       return (
         <HeterogeneousAgentStatusGuide
@@ -443,6 +496,22 @@ const ErrorMessageExtra = memo<ErrorExtraProps>(
                   : '/settings/credential',
             )
           }
+        />
+      );
+    }
+
+    // Device-execution admission errors (FIX-A `DeviceAdmissionErrorData`) get
+    // the structured card — the SAME `code` that came through API → stream →
+    // store decides the ONE true action; the human `detail` text is display
+    // only, never parsed. Placed before the generic error-type fallbacks so a
+    // ServerAgentRuntimeError body still reaches the admission surface.
+    if (isDeviceAdmissionErrorBody(sessionErrorBody)) {
+      return (
+        <DeviceAdmissionError
+          body={sessionErrorBody}
+          error={error ?? undefined}
+          id={data.id}
+          onRetry={handleRetryAgentMessage}
         />
       );
     }

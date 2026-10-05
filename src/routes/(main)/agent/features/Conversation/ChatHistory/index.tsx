@@ -41,7 +41,13 @@ const ChatHistoryMenu = memo<ChatHistoryMenuProps>(
         >
           {children}
         </PopoverTrigger>
-        <PopoverContent align={align} className="p-0" side={side}>
+        <PopoverContent
+          align={align}
+          side={side}
+          className={
+            'w-80 max-w-[calc(100vw-32px)] overflow-hidden p-0' // linear-token-override: fit viewport with 16px edge margins.
+          }
+        >
           <Content onNavigate={() => setOpen(false)} />
         </PopoverContent>
       </Popover>

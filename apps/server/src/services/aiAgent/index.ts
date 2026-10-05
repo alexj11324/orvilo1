@@ -713,6 +713,10 @@ export class AiAgentService {
       !!resumeToolResult ||
       !!parentMessageId;
     const clientIds = isResumeLike ? undefined : params.clientIds;
+    // Same fresh-send rule for the composer's topic pins: they describe the topic
+    // this send is about to create, and a replay would re-write the row the
+    // original send already owns.
+    const newTopicPins = isResumeLike ? undefined : params.newTopicPins;
 
     // Validate that either agentId or slug is provided
     if (!agentId && !slug) {
@@ -932,6 +936,7 @@ export class AiAgentService {
         cronJobId,
         files,
         modelOverride,
+        newTopicPins,
         operationTaskId,
         parentMessageId,
         prompt,
@@ -1019,7 +1024,6 @@ export class AiAgentService {
       // drop the payload (pi-acp) never see a spec, so they never advertise
       // uncallable tools.
       supportsBuiltinToolMount: canMountBuiltinToolSurface({
-        engine: turn.heterogeneousProvider?.engine,
         type: turn.heteroType,
       }),
     });
@@ -1044,7 +1048,6 @@ export class AiAgentService {
         externalToolMounts: toolSurface.externalTools,
         toolSurfaceOutcomes: toolSurface.outcomes,
         clientIp,
-        effectiveRequestedDeviceId: turn.effectiveRequestedDeviceId,
         // Skill content, mounted-tool usage guidance and eval env prompts all
         // ride the ACP system-context channel — the retired loop consumed them
         // as live tool definitions / `evalContext` during operation prep.
@@ -1062,8 +1065,17 @@ export class AiAgentService {
         parentOperationId,
         pinnedHeterogeneousTopicModel: turn.pinnedHeterogeneousTopicModel,
         requestTrigger: requestTriggerMetadata.trigger,
-        requestedDeviceId: turn.effectiveRequestedDeviceId,
+        // The caller's raw per-request device id — admission treats it as the
+        // explicit request (subject to request authorization), NOT the pin.
+        requestedDeviceId,
         runAttachments,
+        // The binding epoch paired with the pin — echoed in admission
+        // errorData so repair can CAS on the revision it was shown.
+        sessionBindingRevision: turn.topicBindingRevision,
+        // The topic's durable device pin — the session binding admission
+        // consults first (invalid → DEVICE_BINDING_INVALID, never silently
+        // re-resolved onto another device).
+        sessionBoundDeviceId: turn.topicBoundDeviceId,
         selfMessageIds,
         skipTaskVerification,
         topicStartOwnerOperationId: params.topicStartOwnerOperationId,

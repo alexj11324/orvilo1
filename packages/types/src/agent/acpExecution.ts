@@ -214,6 +214,13 @@ export interface AgentRunAdmissionRecord {
   /** Run generation/fence minted at admission; a re-admission bumps it. */
   generation: number;
   /**
+   * Harness adapter the run executes under (`prime`, `codex`, ...). Lets
+   * reconcile sweeps scope to one adapter's runs — a prime device run has
+   * different liveness evidence (activation record, `/cancel`) than an ACP
+   * hetero run on the same channel.
+   */
+  harness?: string;
+  /**
    * Admission idempotency key — always the operationId, which is also the
    * task id the device dedupes dispatch/cancel on.
    */

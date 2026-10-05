@@ -1,4 +1,5 @@
 import {
+  type OrviloAgentAgencyConfig,
   type SidebarAgentItem,
   type SidebarAgentLabel,
   type SidebarAgentListResponse,
@@ -6,6 +7,8 @@ import {
 } from '@orvilo/types';
 import { cleanObject } from '@orvilo/utils';
 import { and, asc, count, desc, eq, inArray, isNull, not, or, sql } from 'drizzle-orm';
+
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import { ChatGroupModel } from '../../models/chatGroup';
 import {
@@ -94,6 +97,7 @@ export class HomeRepository {
         description: agents.description,
         id: agents.id,
         name: agents.name,
+        model: agents.model,
         pinned: agents.pinned,
         slug: agents.slug,
         title: agents.title,
@@ -280,7 +284,8 @@ export class HomeRepository {
 
   private processAgentList(
     agentItems: Array<{
-      agencyConfig: { heterogeneousProvider?: { type?: string } } | null;
+      agencyConfig: OrviloAgentAgencyConfig | null;
+      model: string | null;
       agentUserId: string;
       avatar: string | null;
       backgroundColor: string | null;
@@ -336,13 +341,14 @@ export class HomeRepository {
           { slug: a.slug },
         );
         const visibility = this.normalizeVisibility(a.visibility);
+        const runtimeType = resolveAgentRuntimeType(a);
 
         return {
           avatar: meta.avatar,
           backgroundColor: a.backgroundColor,
           description: a.description,
           groupId: a.sessionGroupId,
-          heterogeneousType: a.agencyConfig?.heterogeneousProvider?.type ?? null,
+          heterogeneousType: runtimeType === 'orvilo' ? null : runtimeType,
           id: a.id,
           isPrivate: visibility === 'private',
           labels: agentLabelsMap.get(a.id),

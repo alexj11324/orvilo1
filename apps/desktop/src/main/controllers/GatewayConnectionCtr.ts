@@ -14,7 +14,9 @@ import {
   resolveRemotePlatformRuntime,
 } from '@orvilo/heterogeneous-agents/scanHost';
 import { type ILocalSystemService, LocalSystemExecutionRuntime } from '@orvilo/tool-runtime';
+import { serializeMcpIpcPayload } from '@orvilo/utils/mcpIpcPayload';
 import { sleep } from '@orvilo/utils/sleep';
+import { app as electronApp } from 'electron';
 
 import AuvService, { type AuvRunCommandParams } from '@/services/auvSrv';
 import GatewayConnectionService from '@/services/gatewayConnectionSrv';
@@ -250,7 +252,9 @@ export default class GatewayConnectionCtr extends ControllerModule {
     deviceId: string;
     hostname: string;
     platform: string;
+    userId?: string;
   }> {
+    await this.gatewayReady;
     return this.service.getDeviceInfo();
   }
 
@@ -350,6 +354,9 @@ export default class GatewayConnectionCtr extends ControllerModule {
         // tool callbacks (`hetero:tool:exec`) even though `jwt` above was
         // swapped for this device's user token (see the comment above).
         operationJwt: request.jwt,
+        // Prime adapter: when the dispatch carries a descriptor the host
+        // launches `orvilo prime exec` — the resolved device executes the run.
+        prime: request.prime,
         prompt: request.prompt,
         resumeFallbackSystemContext: request.resumeFallbackSystemContext,
         resumeSessionId: request.resumeSessionId,
@@ -440,9 +447,16 @@ export default class GatewayConnectionCtr extends ControllerModule {
           logger.error(`Failed to approve project preview root ${root}:`, error);
         }
       },
-      // Workspace share (server-driven enroll/unenroll RPCs): the service owns
-      // the gateway connections, so both handlers route straight to it.
+      // Device-scoped MCP queries: manifest probes and installability checks
+      // only mean anything on this host — reuse McpCtr's IPC implementations,
+      // wrapped in the same `{json}` envelope the dispatcher ships to the server.
+      checkMcpInstallable: (params) =>
+        this.mcpCtr.validMcpServerInstallable(serializeMcpIpcPayload(params)),
       enrollWorkspace: (params) => this.service.enrollWorkspace(params),
+      getStdioMcpServerManifest: (params) =>
+        this.mcpCtr.getStdioMcpServerManifest(serializeMcpIpcPayload(params)),
+      getStreamableMcpServerManifest: (params) =>
+        this.mcpCtr.getStreamableMcpServerManifest(serializeMcpIpcPayload(params)),
       getLocalFilePreview: (params) => this.localFileCtr.getLocalFilePreview(params),
       readExternalAssetForPublish: (params) =>
         this.localFileCtr.readExternalAssetForPublish(params),
@@ -461,6 +475,8 @@ export default class GatewayConnectionCtr extends ControllerModule {
       },
       getProjectFileIndex: (params) => this.localFileCtr.getProjectFileIndex(params),
       listHeterogeneousAgentModels: (params) => this.heterogeneousAgentCtr.listModels(params),
+      listHeterogeneousAgentPermissions: (params) =>
+        this.heterogeneousAgentCtr.listPermissions(params),
       searchProjectFiles: (params) => this.localFileCtr.searchProjectFiles(params),
       unenrollWorkspace: (params) => this.service.unenrollWorkspace(params),
       // Skill-archive cache (`prepareSkillDirectory` RPC): reuse LocalFileCtr's
@@ -1284,8 +1300,13 @@ export default class GatewayConnectionCtr extends ControllerModule {
     };
     setDesktopUserAgentHeader(headers);
 
+    // Stamp the adapter version the server keeps as capability evidence —
+    // `adapterVersion` feeds admission's `minAdapterVersion` checks so a
+    // stale client is judged from its registered version, not guessed.
+    const payload = { ...info, adapterVersion: electronApp.getVersion() };
+
     await fetch(`${serverUrl}/trpc/lambda/device.register`, {
-      body: JSON.stringify({ json: info }),
+      body: JSON.stringify({ json: payload }),
       headers,
       method: 'POST',
     });

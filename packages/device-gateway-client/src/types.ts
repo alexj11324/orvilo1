@@ -1,4 +1,4 @@
-import type { AcpBuiltinToolSpec } from '@orvilo/types';
+import type { AcpBuiltinToolSpec, RunSubject } from '@orvilo/types';
 
 // ─── Device Info ───
 
@@ -210,6 +210,94 @@ export interface RpcResponseMessage {
   type: 'rpc_response';
 }
 
+/**
+ * Everything the device-side Prime host needs to launch `runner.mjs` and no
+ * more — the `agent_run_request` equivalent of the embedded path's launch
+ * environment. Composed server-side at dispatch admission:
+ *
+ * - `artifact` is the digest+pin the device MUST verify against its shipped
+ *   bundle before every launch (the device-execution contract's version
+ *   verification: a connected heartbeat never proves runner availability).
+ * - `broker` is the remote inference surface the runner's `broker.infer`
+ *   reverse requests are bridged to. `credential` is the bound operation
+ *   credential (operation + device + model-route + TTL — never a raw
+ *   provider key); the device resolves the endpoint under its own
+ *   configured server URL, the same way its ingest sink does.
+ * - `lease` bounds how long the run may produce side-effects without a
+ *   renewal signal from the control side; the device host stops new
+ *   side-effects when the lease lapses instead of running uncontrolled.
+ * - `subject` is the canonical run subject — device leases/auth key on
+ *   `subject.taskId` (null for conversation subjects).
+ */
+/**
+ * Host-pinnable init policy mirrored from the harness protocol's
+ * `HarnessInitPolicy` — the fields on `harness.init` a server composer may
+ * set. Declared structurally here (the package cannot depend on
+ * agent-execution) and spread verbatim into the runner's init request.
+ */
+export interface PrimeRunInitPolicy {
+  /** Upstream autonomous-continuation policy; absent keeps it disabled. */
+  autonomous?: {
+    enabled?: boolean;
+    gates?: { commands?: string[]; maxRetries?: number; timeoutMs?: number };
+    maxContinuations?: number;
+    maxTokens?: number;
+    maxTurns?: number;
+    continuationPrompt?: string;
+    subagentKeepAliveMs?: number;
+    timeoutMs?: number;
+  };
+  /** Seed goal for a fresh top-level session; ignored on resume. */
+  goal?: { objective: string; tokenBudget?: number };
+  /** RLM sub-agent policy (`maxDepth` pins upstream `rlmMaxDepth`). */
+  rlm?: { maxDepth?: number };
+  /** Reasoning effort for the session (upstream `thinkingLevel`). */
+  thinkingLevel?: string;
+  /** Host-pinnable tool allowlist/active subset; absent → upstream defaults. */
+  toolPolicy?: { active?: string[]; allowed?: string[] };
+}
+
+export interface PrimeRunDescriptor {
+  artifact: {
+    /** Byte length of the verified bundle (matches runner.manifest.json). */
+    bytes: number;
+    /** Upstream source pin — must equal the manifest's `prime` fields. */
+    commit: string;
+    license: string;
+    /** sha256 of the shipped `runner.mjs` bundle. */
+    sha256: string;
+    version: string;
+  };
+  broker: {
+    /** Bound operation credential (RS256 op-JWT carrying `prime:infer`,
+     * `device_id`, `model_route`, `operation_id`). */
+    credential: string;
+  };
+  /** Host-pinnable `harness.init` policy — spread under the handshake
+   * identity fields the host derives itself. */
+  init?: PrimeRunInitPolicy;
+  lease: {
+    /** Milliseconds a run may continue without a lease renewal signal. */
+    ttlMs: number;
+  };
+  /**
+   * Model identity pinned into `harness.init` — the issued binding's route
+   * plus the capability metadata the runner needs to shape upstream
+   * behaviour (thinking clamp, image blocks, context budget). `input`,
+   * `reasoning` and `contextWindow` are present only when the provider
+   * catalog declares them. Optional fields keep older servers/devices
+   * wire-compatible.
+   */
+  model: {
+    contextWindow?: number;
+    id: string;
+    input?: string[];
+    maxOutputTokens: number;
+    reasoning?: boolean;
+  };
+  subject: RunSubject;
+}
+
 /** Server → Client: request the desktop to spawn `orvilo hetero exec`. */
 export interface AgentRunRequestMessage {
   agentType: string;
@@ -258,6 +346,12 @@ export interface AgentRunRequestMessage {
   ingestWorkspaceId?: string;
   jwt: string;
   operationId: string;
+  /**
+   * Present iff the run's harness adapter is Prime (`orvilo` agent type
+   * resolved onto a device). Absent = legacy hetero-exec path — older
+   * devices keep spawning `orvilo hetero exec`.
+   */
+  prime?: PrimeRunDescriptor;
   prompt: string;
   /**
    * Full system context used only when native resume fails and the device CLI

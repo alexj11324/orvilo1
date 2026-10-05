@@ -62,7 +62,12 @@ const mocks = vi.hoisted(() => ({
     taskDetailMap: {} as Record<string, unknown>,
     useFetchTaskDetail: vi.fn(),
   },
-  userState: { isSignedIn: true },
+  userState: {
+    isLoaded: true,
+    isSignedIn: true,
+    isUserStateInit: true,
+    onboarding: { finishedAt: '2026-10-04T00:00:00.000Z' },
+  },
 }));
 
 /**
@@ -77,7 +82,7 @@ vi.mock('@lobehub/ui/base-ui', async (importOriginal) => ({
 }));
 
 // --- the real `(main)` layout's leaves -------------------------------------
-vi.mock('@/const/version', () => ({ isDesktop: false }));
+vi.mock('@/const/version', () => ({ CURRENT_VERSION: '0.0.0', isDesktop: false }));
 vi.mock('@/hooks/usePlatform', () => ({ usePlatform: () => ({ isPWA: false }) }));
 vi.mock('@/libs/next/dynamic', () => ({ default: () => () => null }));
 vi.mock('@/features/AlertBanner/CloudBanner', () => ({ BANNER_HEIGHT: 0, default: nullComponent }));

@@ -3,12 +3,23 @@ import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
 import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
+import { createDispatchTestDb } from './dispatchAdmission.test-utils';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
+const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
+  mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/featureFlags', async (importOriginal) => ({
+  ...(await importOriginal<typeof FeatureFlagsModule>()),
+  getServerFeatureFlagsStateFromRuntimeConfig: mockSandboxFeatureFlags,
+}));
+
 const {
   mockDispatchAgentRun,
   mockDispatchHeteroAgent,
@@ -64,7 +75,13 @@ vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
-        agencyConfig: { executionTarget: 'sandbox' },
+        agencyConfig: {
+          // External-agent binding — the builtin orvilo agent is embedded-
+          // only and its chat runs route through the embedded chat
+          // admission (which needs a real database).
+          executionTarget: 'sandbox',
+          heterogeneousProvider: { type: 'claude-code' },
+        },
         chatConfig: {},
         files: [],
         id: 'agent-1',
@@ -83,7 +100,13 @@ vi.mock('@/server/services/agent', () => ({
   AgentService: vi.fn().mockImplementation(function () {
     return {
       getAgentConfig: vi.fn().mockResolvedValue({
-        agencyConfig: { executionTarget: 'sandbox' },
+        agencyConfig: {
+          // External-agent binding — the builtin orvilo agent is embedded-
+          // only and its chat runs route through the embedded chat
+          // admission (which needs a real database).
+          executionTarget: 'sandbox',
+          heterogeneousProvider: { type: 'claude-code' },
+        },
         chatConfig: {},
         files: [],
         id: 'agent-1',
@@ -110,6 +133,11 @@ vi.mock('@/database/models/device', () => ({
     return {
       findByDeviceId: vi.fn().mockResolvedValue(undefined),
       findWorkspaceDeviceById: vi.fn().mockResolvedValue(undefined),
+      // Unified admission's authorized candidate set — no registered devices;
+      // sandbox/`none` runs never consult it, and an explicit request for an
+      // unregistered device is honestly unauthorized.
+      queryPersonal: vi.fn().mockResolvedValue([]),
+      queryWorkspaceDevices: vi.fn().mockResolvedValue([]),
     };
   }),
 }));
@@ -174,7 +202,8 @@ vi.mock('@/server/services/heterogeneousAgent/sandboxRunner', () => ({
 }));
 
 vi.mock('@/server/services/providerBinding/execution', () => ({
-  resolveOrviloProviderBinding: vi.fn().mockResolvedValue({ status: 'none' }),
+  issueBindingExecution: vi.fn(),
+  resolveOrviloProviderBinding: vi.fn().mockResolvedValue(undefined),
 }));
 
 vi.mock('@/server/services/market', () => ({
@@ -241,11 +270,12 @@ vi.mock('model-bank', async (importOriginal) => {
 describe('AiAgentService.execAgent - topic history loading', () => {
   let service: AiAgentService;
   let recordStartSpy: MockInstance<CompletionLifecycle['recordStart']>;
-  const mockDb = {} as any;
+  const mockDb = createDispatchTestDb() as any;
   const userId = 'test-user-id';
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
     // Restore the delegate-to-real implementation cleared by clearAllMocks.
     mockDispatchHeteroAgent.mockImplementation((deps, ctx, input) =>
       realDispatchRef.current!(deps, ctx, input),

@@ -33,12 +33,7 @@ import {
   isHeteroStatusGuideErrorData,
   spawnAgent,
 } from '@orvilo/heterogeneous-agents/spawn';
-import {
-  AEGIS_PACK_ENV,
-  isOrviloEngineKind,
-  ORVILO_ENGINE_KINDS,
-  resolveOrviloCliAgentType,
-} from '@orvilo/types';
+import { AEGIS_PACK_ENV } from '@orvilo/types';
 import { isRecord } from '@orvilo/utils/object';
 import type { Command } from 'commander';
 
@@ -56,12 +51,12 @@ import { createOperationTokenRenewal } from '../utils/OperationTokenRenewal';
 import { createLocalTraceStore } from '../utils/traceStore';
 import { TrpcIngestSink } from '../utils/TrpcIngestSink';
 
-// `orvilo` is the builtin managed harness — there is no `orvilo` binary; the
-// `--engine` option selects which CLI family (`claude` / `codex`) executes.
-export const SUPPORTED_AGENT_TYPES = new Set<string>([
-  ...LOCAL_HETEROGENEOUS_AGENT_TYPES,
-  'orvilo',
-]);
+// `orvilo` is the builtin agent bound to the Prime harness — the fixed
+// type→adapter map resolves it to 'prime' (see
+// docs/development/device-execution-contract.md). The device-side Prime
+// adapter is packaged separately, so `orvilo` stays unspawnable here until
+// that adapter lands — there is no `orvilo` binary.
+export const SUPPORTED_AGENT_TYPES = new Set<string>(LOCAL_HETEROGENEOUS_AGENT_TYPES);
 const SUPPORTED_AGENT_TITLES = HETEROGENEOUS_AGENT_CONFIGS.map(({ title }) => title).join(' / ');
 const SUPPORTED_AGENT_COMMANDS = HETEROGENEOUS_AGENT_CONFIGS.map(
   ({ defaultCommand }) => `\`${defaultCommand}\``,
@@ -114,6 +109,8 @@ const isMissingGrokResumeSession = (data: Record<string, unknown> | undefined): 
 };
 
 interface ExecOptions {
+  acpPermissionId?: string;
+  acpPermissionValue?: string;
   /**
    * Install the vendored Aegis method pack into the run workspace and ship
    * `.aegis/` + `docs/aegis/` artifacts back on the finish report. Also
@@ -124,12 +121,6 @@ interface ExecOptions {
   command?: string;
   cwd?: string;
   effort?: string;
-  /**
-   * Builtin Orvilo engine selection (`--type orvilo` only): `claude-sdk` or
-   * `codex-app-server`. Resolves to the engine's ACP runtime (`claude-code` →
-   * `claude-agent-acp`, `codex` → `codex-acp`) for this exec.
-   */
-  engine?: string;
   image?: string[];
   inputJson?: string;
   /** Amp agent mode, forwarded as the native `--mode` flag. */
@@ -419,22 +410,26 @@ class RawStreamDump {
 }
 
 const exec = async (options: ExecOptions): Promise<void> => {
-  if (!isLocalHeterogeneousType(options.type) && !isBuiltinHeterogeneousType(options.type)) {
+  if (isBuiltinHeterogeneousType(options.type)) {
+    log.error(
+      `Unsupported --type "${options.type}". The builtin Orvilo agent's Prime adapter is not packaged for this CLI yet — its harness is fixed and never resolves to a CLI binary.`,
+    );
+    process.exit(2);
+  }
+  if (!isLocalHeterogeneousType(options.type)) {
     log.error(
       `Unsupported --type "${options.type}". Supported: ${[...SUPPORTED_AGENT_TYPES].join(', ')}`,
     );
     process.exit(2);
   }
-  if (
-    isBuiltinHeterogeneousType(options.type) &&
-    options.engine !== undefined &&
-    !isOrviloEngineKind(options.engine)
-  ) {
-    log.error(
-      `Unsupported --engine "${options.engine}". Supported: ${ORVILO_ENGINE_KINDS.join(', ')}`,
-    );
-    process.exit(2);
+
+  if (!!options.acpPermissionId !== !!options.acpPermissionValue) {
+    throw new Error('Both ACP permission id and value are required');
   }
+  const initialPermission =
+    options.acpPermissionId && options.acpPermissionValue
+      ? { configId: options.acpPermissionId, value: options.acpPermissionValue }
+      : undefined;
 
   let resolved: ResolvedPrompt;
   try {
@@ -493,14 +488,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
   // Build the ingest sink — no-op for standalone mode, real tRPC sink for
   // server-ingest mode.  The tRPC client reads ORVILO_JWT (operation-scoped
   // JWT injected by the server) for authentication.
-  // Every downstream consumer (ingest sink, AskUser bridge, spawn, error
-  // classification) works in CLI-family terms. The builtin `orvilo` harness
-  // resolves to the selected engine's family (`claude-code` / `codex`) — there
-  // is no `orvilo` executable — while the declared type stays on the trace /
-  // raw-dump metadata recorded above.
-  const agentType = isBuiltinHeterogeneousType(options.type)
-    ? resolveOrviloCliAgentType(options.engine)
-    : options.type;
+  const agentType = options.type;
 
   const runCwd = options.cwd || process.cwd();
 
@@ -1068,8 +1056,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
 
   const interceptResume = !!options.resume;
   const extraArgs = [
-    // Selector args (model/effort/speed) translate against the CLI family — for
-    // orvilo the engine already resolved `agentType` to `claude-code`/`codex`.
+    // Selector args (model/effort/speed) translate against the CLI family.
     ...(buildExtraArgs({ ...options, type: agentType }) ?? []),
   ];
   // Resolve the CLI binary once, up front, and reuse it for both the initial
@@ -1102,6 +1089,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
       extraArgs,
       mcpServers: askMcpServers,
       permissionMode,
+      initialPermission,
       initialModel:
         agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
           ? options.model
@@ -1140,6 +1128,7 @@ const exec = async (options: ExecOptions): Promise<void> => {
         detached: process.env[HETERO_EXEC_INHERIT_PROCESS_GROUP_ENV] !== '1',
         env: runEnv,
         extraArgs,
+        initialPermission,
         initialModel:
           agentType === 'droid' || agentType === 'devin' || agentType === 'trae'
             ? options.model
@@ -1284,11 +1273,9 @@ export function registerHeteroCommand(program: Command) {
     )
     .option('-r, --resume <sessionId>', 'Resume an existing agent session by its native id')
     .option('-d, --cwd <path>', 'Working directory for the spawned agent (default: process.cwd())')
-    .option(
-      '--engine <engine>',
-      `Builtin Orvilo engine (--type orvilo only): ${ORVILO_ENGINE_KINDS.join(' | ')}. Selects which CLI family executes.`,
-    )
     .option('--mode <mode>', 'Forward a resolved Amp agent mode selection to the agent CLI')
+    .option('--acp-permission-id <id>', 'ACP-advertised permission config id or mode')
+    .option('--acp-permission-value <value>', 'ACP-advertised permission value')
     .option('--model <model>', 'Forward a resolved model selection to the agent CLI')
     .option('--effort <level>', 'Forward a resolved reasoning effort selection to the agent CLI')
     .option(

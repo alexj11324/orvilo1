@@ -468,6 +468,12 @@ export const BUILTIN_HETEROGENEOUS_AGENT_CONFIGS = [
   },
 ] as const satisfies readonly BuiltinHeterogeneousAgentDescriptor[];
 
+export const HeterogeneousAgentTypeSchema = z.enum([
+  ...LOCAL_HETEROGENEOUS_AGENT_TYPES,
+  ...REMOTE_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
+  ...BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
+]);
+
 export type HeterogeneousAgentMenuLabelKey =
   (typeof HETEROGENEOUS_AGENT_CONFIGS)[number]['menuLabelKey'];
 export type LocalHeterogeneousAgentType = (typeof HETEROGENEOUS_AGENT_CONFIGS)[number]['type'];
@@ -477,3 +483,25 @@ export type BuiltinHeterogeneousAgentType =
   (typeof BUILTIN_HETEROGENEOUS_AGENT_CONFIGS)[number]['type'];
 export type HeterogeneousAgentType =
   LocalHeterogeneousAgentType | RemoteHeterogeneousAgentType | BuiltinHeterogeneousAgentType;
+
+/** Query the permission settings advertised by an execution harness. */
+export interface ListHeterogeneousAgentPermissionsParams {
+  args?: string[];
+  command?: string;
+  cwd?: string;
+  env?: Record<string, string>;
+  type: string;
+}
+
+/** An exact permission choice advertised by an ACP agent. */
+export interface HeterogeneousAgentPermission {
+  configId: string;
+  value: string;
+}
+
+export interface HeterogeneousAgentPermissionCatalog {
+  configId: string;
+  currentValue: string;
+  name: string;
+  options: { description?: string; name: string; value: string }[];
+}

@@ -1,4 +1,3 @@
-import { isDesktop } from '@orvilo/const';
 import type {
   LocalFilePreviewUrlParams,
   LocalMoveFilesResultItem,
@@ -7,11 +6,23 @@ import type {
   ProjectFileSearchResult,
   RenameLocalFileResult,
 } from '@orvilo/electron-client-ipc';
-import type { DeviceLocalFilePreview } from '@orvilo/types';
+import {
+  type DeviceLocalFilePreview,
+  deviceOperationError,
+  deviceOperationOk,
+  type DeviceOperationResult,
+} from '@orvilo/types';
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { type LocalFilePreview, localFileService } from '@/services/electron/localFileService';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
+
+/** Raw bytes payload served by the byte-read legs. */
+export interface ProjectFileBytes {
+  bytes: Uint8Array;
+  contentType: string;
+}
 
 export type { LocalFilePreview } from '@/services/electron/localFileService';
 
@@ -69,7 +80,11 @@ class ProjectFileService {
     deviceId?: string;
     scope: string;
   }): Promise<ProjectFileIndexResult | undefined> {
-    requireLocalExecutionTransport(deviceId, 'getProjectFileIndex');
+    requireLocalExecutionTransport(
+      deviceId,
+      'getProjectFileIndex',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? ((await lambdaClient.device.getProjectFileIndex.query({ deviceId, scope })) ?? undefined)
       : localFileService.getProjectFileIndex({ scope });
@@ -91,7 +106,11 @@ class ProjectFileService {
     query: string;
     scope: string;
   }): Promise<ProjectFileSearchResult | undefined> {
-    requireLocalExecutionTransport(deviceId, 'searchProjectFiles');
+    requireLocalExecutionTransport(
+      deviceId,
+      'searchProjectFiles',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? ((await lambdaClient.device.searchProjectFiles.query({
           changedOnly,
@@ -109,7 +128,11 @@ class ProjectFileService {
     deviceId,
     ...params
   }: GetLocalFilePreviewParams): Promise<LocalFilePreview> {
-    requireLocalExecutionTransport(deviceId, 'getLocalFilePreview');
+    requireLocalExecutionTransport(
+      deviceId,
+      'getLocalFilePreview',
+      await resolveLocalExecutionIdentity(),
+    );
     if (deviceId) {
       const result = await lambdaClient.device.getLocalFilePreview.query({
         accept: params.accept,
@@ -135,7 +158,8 @@ class ProjectFileService {
   /**
    * Raw bytes for a file in a project working directory. Only the local desktop
    * transport can serve bytes today — remote devices have no byte-read RPC yet,
-   * so device-backed calls resolve to `undefined`.
+   * so device-backed calls get a structured `OPERATION_UNSUPPORTED` answer
+   * (per the device-operation contract) instead of a silent empty result.
    */
   async readProjectFileBytes({
     deviceId,
@@ -145,9 +169,35 @@ class ProjectFileService {
     deviceId?: string;
     path: string;
     workingDirectory: string;
-  }): Promise<{ bytes: Uint8Array; contentType: string } | undefined> {
-    if (deviceId || !isDesktop) return undefined;
-    return localFileService.readLocalFileBytes({ path, workingDirectory });
+  }): Promise<DeviceOperationResult<ProjectFileBytes>> {
+    if (deviceId) {
+      return {
+        error: deviceOperationError(
+          'OPERATION_UNSUPPORTED',
+          deviceId,
+          'the device RPC surface has no raw workspace byte read — bytes are only ' +
+            'served by preview/publish channels',
+        ),
+        status: 'error',
+      };
+    }
+
+    requireLocalExecutionTransport(
+      deviceId,
+      'readProjectFileBytes',
+      await resolveLocalExecutionIdentity(),
+    );
+    const result = await localFileService.readLocalFileBytes({ path, workingDirectory });
+    return result
+      ? deviceOperationOk(result)
+      : {
+          error: deviceOperationError(
+            'TARGET_QUERY_FAILED',
+            undefined,
+            'the local preview channel returned no bytes for this path',
+          ),
+          status: 'error',
+        };
   }
 
   async readExternalAssetForPublish({
@@ -158,10 +208,27 @@ class ProjectFileService {
     deviceId?: string;
     path: string;
     workingDirectory: string;
-  }): Promise<{ bytes: Uint8Array; contentType: string } | undefined> {
-    requireLocalExecutionTransport(deviceId, 'readExternalAssetForPublish');
+  }): Promise<DeviceOperationResult<ProjectFileBytes>> {
+    requireLocalExecutionTransport(
+      deviceId,
+      'readExternalAssetForPublish',
+      await resolveLocalExecutionIdentity(),
+    );
     if (!deviceId) {
-      return localFileService.readExternalAssetForPublish({ path, workingDirectory });
+      const local = await localFileService.readExternalAssetForPublish({
+        path,
+        workingDirectory,
+      });
+      return local
+        ? deviceOperationOk(local)
+        : {
+            error: deviceOperationError(
+              'TARGET_QUERY_FAILED',
+              undefined,
+              'the local publish-asset channel returned no bytes for this path',
+            ),
+            status: 'error',
+          };
     }
 
     const result = await lambdaClient.device.readExternalAssetForPublish.query({
@@ -169,12 +236,21 @@ class ProjectFileService {
       path,
       workingDirectory,
     });
-    if (!result.success || result.base64 === undefined || !result.contentType) return;
+    if (!result.success || result.base64 === undefined || !result.contentType) {
+      return {
+        error: deviceOperationError(
+          'TARGET_QUERY_FAILED',
+          deviceId,
+          result.error ?? 'the device returned no publish-asset bytes for this path',
+        ),
+        status: 'error',
+      };
+    }
 
-    return {
+    return deviceOperationOk({
       bytes: Uint8Array.from(globalThis.atob(result.base64), (char) => char.charCodeAt(0)),
       contentType: result.contentType,
-    };
+    });
   }
 
   async copyAssetForPublish({
@@ -188,7 +264,11 @@ class ProjectFileService {
     to: string;
     workingDirectory: string;
   }): Promise<{ error?: string; success: boolean }> {
-    requireLocalExecutionTransport(deviceId, 'copyAssetForPublish');
+    requireLocalExecutionTransport(
+      deviceId,
+      'copyAssetForPublish',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.copyAssetForPublish.mutate({ deviceId, from, to, workingDirectory })
       : localFileService.copyAssetForPublish({ from, to, workingDirectory });
@@ -207,7 +287,11 @@ class ProjectFileService {
     items: MoveLocalFileParams[];
     workingDirectory: string;
   }): Promise<LocalMoveFilesResultItem[]> {
-    requireLocalExecutionTransport(deviceId, 'moveProjectFiles');
+    requireLocalExecutionTransport(
+      deviceId,
+      'moveProjectFiles',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.moveProjectFiles.mutate({ deviceId, items, workingDirectory })
       : localFileService.moveLocalFiles({ items });
@@ -225,7 +309,11 @@ class ProjectFileService {
     path: string;
     workingDirectory: string;
   }): Promise<RenameLocalFileResult> {
-    requireLocalExecutionTransport(deviceId, 'renameProjectFile');
+    requireLocalExecutionTransport(
+      deviceId,
+      'renameProjectFile',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.renameProjectFile.mutate({ deviceId, newName, path, workingDirectory })
       : localFileService.renameLocalFile({ newName, path });
@@ -248,7 +336,11 @@ class ProjectFileService {
     path: string;
     workingDirectory: string;
   }): Promise<{ error?: string; success: boolean }> {
-    requireLocalExecutionTransport(deviceId, 'writeProjectFile');
+    requireLocalExecutionTransport(
+      deviceId,
+      'writeProjectFile',
+      await resolveLocalExecutionIdentity(),
+    );
     return deviceId
       ? lambdaClient.device.writeProjectFile.mutate({ content, deviceId, path, workingDirectory })
       : localFileService.writeFile({ content, path });

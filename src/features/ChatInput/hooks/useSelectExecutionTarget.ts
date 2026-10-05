@@ -8,7 +8,10 @@ import { toast } from '@/components/toast';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 import { gatewayConnectionService } from '@/services/electron/gatewayConnection';
 import { useChatStore } from '@/store/chat';
+import { topicSelectors } from '@/store/chat/selectors';
 import { useElectronStore } from '@/store/electron';
+
+import { useCurrentComposerAgentId } from './useAgentId';
 
 export interface SelectExecutionTargetOptions {
   localSandbox?: boolean;
@@ -19,7 +22,8 @@ export interface SelectExecutionTargetOptions {
 /** Capture the destination before device discovery or persistence can yield. */
 export const useSelectExecutionTarget = (agentId: string) => {
   const { agencyConfig, canSelectExecutionTarget } = useTopicAgencyConfig(agentId);
-  const topicId = useChatStore((s) => (s.activeAgentId === agentId ? s.activeTopicId : undefined));
+  const topicId = useChatStore(topicSelectors.activeTopicIdForAgent(agentId));
+  const getCurrentComposerAgentId = useCurrentComposerAgentId();
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
 
   return async (
@@ -30,6 +34,11 @@ export const useSelectExecutionTarget = (agentId: string) => {
     if (!canSelectExecutionTarget) return;
     // An automatic default must not create an empty conversation on mount.
     if (options?.silent && !topicId) return;
+    if (
+      !topicId &&
+      (getCurrentComposerAgentId() !== agentId || useChatStore.getState().activeTopicId)
+    )
+      return;
     try {
       let boundDeviceId = target === 'device' ? deviceId : undefined;
       if (target === 'local') {
@@ -40,7 +49,7 @@ export const useSelectExecutionTarget = (agentId: string) => {
       }
       if (target === 'device' && !boundDeviceId) return;
       const store = useChatStore.getState();
-      if (!topicId && (store.activeAgentId !== agentId || store.activeTopicId)) return;
+      if (!topicId && (getCurrentComposerAgentId() !== agentId || store.activeTopicId)) return;
       const destination = topicId ?? (await store.createTopic(agentId));
       if (!destination) return;
       await useChatStore.getState().updateTopicMetadata(destination, {
@@ -57,7 +66,7 @@ export const useSelectExecutionTarget = (agentId: string) => {
       });
       if (
         !topicId &&
-        useChatStore.getState().activeAgentId === agentId &&
+        getCurrentComposerAgentId() === agentId &&
         !useChatStore.getState().activeTopicId
       ) {
         await useChatStore.getState().switchTopic(destination);

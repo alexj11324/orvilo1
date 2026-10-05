@@ -1,0 +1,10 @@
+{
+  "compilerOptions": {
+    "incremental": false,
+    "types": ["node"]
+  },
+  "exclude": [],
+  "extends": "../../tsconfig.json",
+  "include": ["alignment.spec.ts", "playwright.config.ts"],
+  "references": []
+}

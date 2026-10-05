@@ -91,6 +91,7 @@
   "workingDirectory.renameBranchAction": "Rename branch",
   "workingDirectory.renameBranchTitle": "Rename branch",
   "workingDirectory.renameFailed": "Rename failed",
+  "workingDirectory.runningLocked": "Wait until the current run has stopped to change directories",
   "workingDirectory.searchPlaceholder": "Search directories",
   "workingDirectory.selectFolder": "Select folder",
   "workingDirectory.setDefault": "Set as default",

@@ -17,7 +17,10 @@ import type {
   ToolCallRequestMessage,
 } from '@orvilo/device-gateway-client';
 import { GatewayClient } from '@orvilo/device-gateway-client';
-import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
+import {
+  listHeterogeneousAgentModels,
+  listHeterogeneousAgentPermissions,
+} from '@orvilo/heterogeneous-agents/models';
 import { canonicalizePath, getShellInfo } from '@orvilo/local-file-shell';
 import type { Command } from 'commander';
 
@@ -45,6 +48,7 @@ import {
 } from '../daemon/manager';
 import { listTasks } from '../daemon/taskRegistry';
 import { spawnHeteroAgentRun } from '../device/agentRun';
+import { renewDevicePrimeRuns } from '../device/primeRun';
 import {
   mintWorkspaceConnectToken,
   registerDevice,
@@ -348,8 +352,8 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   // user pin a VM to a fixed identity); otherwise derive from the machine id so
   // the same machine maps to one device across reconnects.
   const identity = workspaceId
-    ? resolveWorkspaceDeviceIdentity(workspaceId, options.deviceId, loadOrCreateConnectionId())
-    : resolveDeviceIdentity(auth.userId, options.deviceId);
+    ? await resolveWorkspaceDeviceIdentity(workspaceId, options.deviceId)
+    : await resolveDeviceIdentity(auth.userId, options.deviceId);
 
   // The token the gateway socket authenticates with. Re-minted on refresh for
   // workspace devices (see `refreshConnectToken`).
@@ -461,6 +465,11 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
         ...params,
         env: { ...process.env, ...params.env },
       }),
+    listHeterogeneousAgentPermissions: (params) =>
+      listHeterogeneousAgentPermissions({
+        ...params,
+        env: { ...process.env, ...params.env },
+      }),
     searchProjectFiles: defaultSearchProjectFiles,
   };
 
@@ -519,7 +528,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
 
     // Same derivation as `orvilo connect --workspace` so the enroll RPC and a manual
     // workspace enrollment on this machine resolve to one workspace device.
-    const wsIdentity = resolveWorkspaceDeviceIdentity(wsId, undefined, loadOrCreateConnectionId());
+    const wsIdentity = await resolveWorkspaceDeviceIdentity(wsId);
 
     const wsClient = new GatewayClient({
       channel,
@@ -619,9 +628,8 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
     }) => {
       // Dry-run probe: hand the server our derived identity so it can detect
       // an existing enrollment (and ask for overwrite confirmation) without
-      // this machine opening or persisting anything.
-      if (identityOnly)
-        return resolveWorkspaceDeviceIdentity(wsId, undefined, loadOrCreateConnectionId());
+      // this machine opening a connection or persisting an enrollment.
+      if (identityOnly) return await resolveWorkspaceDeviceIdentity(wsId);
       const wsIdentity = await openWorkspaceConnection(wsId, wsToken);
       // Persist so a restart re-opens the share connection without the server
       // having to re-share. The server registers the device row itself from
@@ -651,11 +659,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   const restoreWorkspaceEnrollments = async () => {
     for (const wsId of loadWorkspaceEnrollments()) {
       try {
-        const wsIdentity = resolveWorkspaceDeviceIdentity(
-          wsId,
-          undefined,
-          loadOrCreateConnectionId(),
-        );
+        const wsIdentity = await resolveWorkspaceDeviceIdentity(wsId);
         const trpc = createLambdaClient(auth, wsId);
         const devices = await trpc.device.listDevices.query();
         const stillEnrolled = devices.some(
@@ -920,6 +924,13 @@ function bindGatewayClientHandlers(
     }
   });
 
+  // Gateway liveness is the lease renewal source for in-daemon Prime runs:
+  // each heartbeat ack re-arms every live run's bounded side-effect lease,
+  // so a device that loses the gateway stops them on schedule.
+  client.on('heartbeat_ack', () => {
+    renewDevicePrimeRuns();
+  });
+
   // Handle gateway-dispatched agent runs (heterogeneous agents, e.g. Claude
   // Code). Mirrors the desktop app: spawn `orvilo hetero exec`, which owns the full
   // execution + server-ingest pipeline. Ack with the spawn outcome — `accepted`
@@ -945,6 +956,7 @@ function bindGatewayClientHandlers(
           // substitution like the desktop does) — forwarded under the explicit
           // key so the exec-side env contract matches the other two hosts.
           operationJwt: request.jwt,
+          prime: request.prime,
           prompt: request.prompt,
           resumeFallbackSystemContext: request.resumeFallbackSystemContext,
           resumeSessionId: request.resumeSessionId,

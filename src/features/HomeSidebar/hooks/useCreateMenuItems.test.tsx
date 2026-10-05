@@ -1,333 +1,323 @@
 /**
  * @vitest-environment happy-dom
  */
-import { act, render, renderHook, screen } from '@testing-library/react';
+import { act, renderHook } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { useCreateMenuItems } from './useCreateMenuItems';
+import { useSessionGroupMenuItems } from './useSessionGroupMenuItems';
 
-const createAgentMock = vi.hoisted(() => vi.fn().mockResolvedValue({ agentId: 'agent-codex' }));
-const refreshAgentListMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const addGroupMock = vi.hoisted(() => vi.fn());
-const switchToGroupMock = vi.hoisted(() => vi.fn());
-const createGroupMock = vi.hoisted(() => vi.fn());
-const loadGroupsMock = vi.hoisted(() => vi.fn());
-const messageErrorMock = vi.hoisted(() => vi.fn());
-const navigateMock = vi.hoisted(() => vi.fn());
-const openConnectAgentModalMock = vi.hoisted(() => vi.fn());
-const openCreateGroupModalMock = vi.hoisted(() => vi.fn());
-const agentModalMock = vi.hoisted(() => ({
-  current: undefined as
-    | { openCreateGroupModal: (id?: string, v?: string) => void; openCreateModal?: unknown }
-    | undefined,
-}));
-const openCreateModalMock = vi.hoisted(() => vi.fn());
-const swrMutations = vi.hoisted(() => ({
-  map: new Map<string, { options?: { onSuccess?: (result: unknown) => void }; trigger: unknown }>(),
+const mocks = vi.hoisted(() => ({
+  createAgent: vi.fn(),
+  requestAgentRuntime: vi.fn(),
+  createGroup: vi.fn(),
+  createGroupWithMembers: vi.fn(),
+  navigate: vi.fn(),
+  openNewConversation: vi.fn(),
+  canCreate: { current: true },
+  refreshAgentList: vi.fn(),
+  loadGroups: vi.fn(),
+  addGroup: vi.fn(),
+  switchToGroup: vi.fn(),
+  removeAgent: vi.fn(),
+  toastSuccess: vi.fn(),
 }));
 
-vi.mock('@orvilo/const', () => ({
-  isDesktop: true,
+vi.mock('@/components/Modal', () => ({ confirmModal: vi.fn() }));
+vi.mock('@/features/EditingPopover/store', () => ({ openEditingPopover: vi.fn() }));
+
+vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
+  useWorkspaceAwareNavigate: () => mocks.navigate,
 }));
 
-vi.mock('antd', async (importOriginal) => ({
-  ...(await importOriginal<object>()),
-  App: {
-    useApp: () => ({
-      message: { error: messageErrorMock },
-      notification: { error: vi.fn() },
-    }),
-  },
+vi.mock('@/features/Conversation/selectAgent', () => ({
+  openNewConversation: mocks.openNewConversation,
 }));
 
-vi.mock('react-router', () => ({
-  useNavigate: () => navigateMock,
-}));
-
-vi.mock('swr/mutation', () => ({
-  default: (key: string, _fetcher: unknown, options?: { onSuccess?: (r: unknown) => void }) => {
-    const entry = { options, trigger: vi.fn() };
-    swrMutations.map.set(key, entry);
-    return { isMutating: false, trigger: entry.trigger };
-  },
-}));
-
-vi.mock('@/components/ChatGroupWizard/templates', () => ({
-  useGroupTemplates: () => [],
-}));
+vi.mock('@/features/CreateAgent', () => ({ requestAgentRuntime: mocks.requestAgentRuntime }));
 
 vi.mock('@/features/ConnectAgent', () => ({
-  openConnectAgentModal: openConnectAgentModalMock,
+  openConnectAgentModal: vi.fn(),
 }));
 
 vi.mock('@/features/HomeSidebar/Body/Agent/ModalProvider', () => ({
-  useOptionalAgentModal: () => agentModalMock.current,
+  useOptionalAgentModal: () => undefined,
+}));
+
+vi.mock('@/hooks/usePermission', () => ({
+  usePermission: () => ({ allowed: mocks.canCreate.current }),
+}));
+
+vi.mock('@/components/ChatGroupWizard/templates', () => ({
+  useGroupTemplates: () => [
+    {
+      id: 'team',
+      title: 'Team',
+      members: [
+        { title: 'Writer', systemRole: 'Write prose' },
+        { title: 'Editor', systemRole: 'Edit prose' },
+      ],
+    },
+  ],
 }));
 
 vi.mock('@/services/chatGroup', () => ({
-  chatGroupService: {
-    createGroupWithMembers: vi.fn(),
-  },
+  chatGroupService: { createGroupWithMembers: mocks.createGroupWithMembers },
 }));
 
 vi.mock('@/store/agent', () => ({
-  useAgentStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      createAgent: createAgentMock,
-    }),
+  useAgentStore: (selector: (state: unknown) => unknown) =>
+    selector({ createAgent: mocks.createAgent }),
 }));
 
 vi.mock('@/store/agentGroup', () => ({
-  useAgentGroupStore: (selector: (state: Record<string, unknown>) => unknown) =>
-    selector({
-      createGroup: createGroupMock,
-      loadGroups: loadGroupsMock,
-    }),
+  useAgentGroupStore: (selector: (state: unknown) => unknown) =>
+    selector({ createGroup: mocks.createGroup, loadGroups: mocks.loadGroups }),
 }));
 
 vi.mock('@/store/home', () => ({
-  useHomeStore: (selector: (state: Record<string, unknown>) => unknown) =>
+  useHomeStore: (selector: (state: unknown) => unknown) =>
     selector({
-      addGroup: addGroupMock,
-      refreshAgentList: refreshAgentListMock,
-      switchToGroup: switchToGroupMock,
+      privateAgentGroups: [{ id: 'private-category' }],
+      addGroup: mocks.addGroup,
+      refreshAgentList: mocks.refreshAgentList,
+      switchToGroup: mocks.switchToGroup,
+      removeAgent: mocks.removeAgent,
     }),
 }));
 
-const isActionItem = (
-  item: unknown,
-): item is {
-  label?: unknown;
-  key: string;
-  onClick?: (info: { domEvent?: { stopPropagation?: () => void } }) => Promise<void> | void;
-} => !!item && typeof item === 'object' && 'key' in item;
+vi.mock('react-i18next', () => ({
+  useTranslation: () => ({ t: (key: string) => key }),
+}));
 
-describe('useCreateMenuItems', () => {
+vi.mock('@/components/toast', () => ({
+  toast: { error: vi.fn(), success: mocks.toastSuccess },
+}));
+
+describe('useCreateMenuItems.createAgent', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    agentModalMock.current = undefined;
-    swrMutations.map.clear();
+    mocks.requestAgentRuntime.mockResolvedValue({
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'host-1',
+        heterogeneousProvider: { type: 'orvilo', model: 'prime-model' },
+      },
+      model: 'prime-model',
+      provider: 'openai',
+      title: 'Orvilo AI',
+    });
+    mocks.createAgent.mockResolvedValue({ agentId: 'agent-9' });
+    mocks.refreshAgentList.mockResolvedValue(undefined);
   });
 
-  it('keeps the Agent-list entry without retired marketplace or Page actions', async () => {
+  it('creates Prime only after the user selects its host and executable model', async () => {
     const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent();
 
-    const items = result.current.createTopLevelMenuItems();
-    const itemKeys = items.map((item) =>
-      isActionItem(item)
-        ? item.key
-        : item && typeof item === 'object' && 'type' in item
-          ? item.type
-          : item,
+    expect(mocks.createAgent).toHaveBeenCalledTimes(1);
+    const params = mocks.createAgent.mock.calls[0][0];
+    expect(params.clientRequestId).toMatch(/^[0-9a-f-]{36}$/);
+    expect(params.config.agencyConfig.heterogeneousProvider).toEqual({
+      type: 'orvilo',
+      model: 'prime-model',
+    });
+    expect(params.config.agencyConfig.boundDeviceId).toBe('host-1');
+    expect(params.config.provider).toBe('openai');
+    expect(params.config.model).toBe('prime-model');
+    expect(params.config.title).toBe('Orvilo AI');
+    expect(params.config.systemRole).toBeUndefined();
+    expect(params.config).not.toHaveProperty('purpose');
+  });
+
+  it('creates nothing and leaves navigation unchanged when runtime selection is dismissed', async () => {
+    mocks.requestAgentRuntime.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent();
+    expect(mocks.createAgent).not.toHaveBeenCalled();
+    expect(mocks.toastSuccess).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+    expect(mocks.openNewConversation).not.toHaveBeenCalled();
+  });
+
+  it('uses an explicitly selected imported runtime instead of inventing a builtin binding', async () => {
+    mocks.requestAgentRuntime.mockResolvedValue({
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'host-2',
+        heterogeneousProvider: {
+          type: 'codex',
+          command: 'codex',
+        },
+      },
+      title: 'Codex',
+      model: 'gpt-model',
+      provider: 'codex',
+    });
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent();
+    expect(mocks.createAgent.mock.calls[0][0].config.agencyConfig.heterogeneousProvider.type).toBe(
+      'codex',
     );
+    expect(mocks.createAgent.mock.calls[0][0].config.agencyConfig.boundDeviceId).toBe('host-2');
+  });
 
-    expect(itemKeys).toEqual([
-      'newAgent',
-      'newGroupChat',
-      'divider',
-      'newPlatformAgent',
-      'divider',
-      'addAgentFromList',
+  it('a fresh clientRequestId per click — the key exists on every call', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent();
+    await result.current.createAgent();
+
+    const [a, b] = mocks.createAgent.mock.calls.map(([params]) => params.clientRequestId);
+    expect(a).toBeTruthy();
+    expect(b).toBeTruthy();
+    expect(a).not.toBe(b);
+  });
+
+  it('chat origin selects the new agent and opens a blank conversation', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent({ origin: 'chat' });
+
+    expect(mocks.openNewConversation).toHaveBeenCalledWith({ agentId: 'agent-9' });
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('settings origin stays in the new agent’s settings without touching chat', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent({ origin: 'settings' });
+
+    expect(mocks.navigate).toHaveBeenCalledWith('/settings/agents/agent-9');
+    expect(mocks.openNewConversation).not.toHaveBeenCalled();
+  });
+
+  it('announces the create with a delete-undo action', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent();
+
+    expect(mocks.toastSuccess).toHaveBeenCalledTimes(1);
+    const [options] = mocks.toastSuccess.mock.calls[0];
+    expect(options.title).toBe('agentCreated');
+    expect(options.actions).toHaveLength(1);
+    options.actions[0].onClick();
+    expect(mocks.removeAgent).toHaveBeenCalledWith('agent-9');
+  });
+
+  it('forwards groupId and visibility without minting anything extra', async () => {
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent({ groupId: 'g1', visibility: 'private' });
+
+    const params = mocks.createAgent.mock.calls[0][0];
+    expect(params.groupId).toBe('g1');
+    expect(params.visibility).toBe('private');
+    expect(mocks.requestAgentRuntime).toHaveBeenCalledWith({ visibility: 'private' });
+    expect(mocks.createGroup).not.toHaveBeenCalled();
+  });
+
+  it('creates nothing when the caller lacks create permission', async () => {
+    mocks.canCreate.current = false;
+    const { result } = renderHook(() => useCreateMenuItems());
+    await result.current.createAgent();
+    expect(mocks.createAgent).not.toHaveBeenCalled();
+    expect(mocks.requestAgentRuntime).not.toHaveBeenCalled();
+    mocks.canCreate.current = true;
+  });
+});
+
+describe('template runtime admission', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.createGroupWithMembers.mockResolvedValue({ groupId: 'new-group' });
+  });
+  it('does not insert a template group when runtime selection is cancelled', async () => {
+    mocks.requestAgentRuntime.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useCreateMenuItems());
+    let created;
+    await act(async () => {
+      created = await result.current.createGroupFromTemplate('team');
+    });
+    expect(created).toBe(false);
+    expect(mocks.createGroupWithMembers).not.toHaveBeenCalled();
+  });
+  it('chooses one runtime for the whole template while preserving member prompts', async () => {
+    const runtime = {
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'host-2',
+        heterogeneousProvider: { type: 'codex' },
+      },
+      model: 'gpt-model',
+      provider: 'codex',
+      title: 'Codex',
+    };
+    mocks.requestAgentRuntime.mockResolvedValue(runtime);
+    const { result } = renderHook(() => useCreateMenuItems());
+    let created;
+    await act(async () => {
+      created = await result.current.createGroupFromTemplate('team');
+    });
+    expect(created).toBe(true);
+    expect(mocks.requestAgentRuntime).toHaveBeenCalledTimes(1);
+    const [, members] = mocks.createGroupWithMembers.mock.calls[0];
+    expect(members.map((member: any) => member.agencyConfig)).toEqual([
+      runtime.agencyConfig,
+      runtime.agencyConfig,
     ]);
+    expect(members.map((member: any) => [member.title, member.systemRole])).toEqual([
+      ['Writer', 'Write prose'],
+      ['Editor', 'Edit prose'],
+    ]);
+  });
+});
 
-    const listItem = items.find((item) => isActionItem(item) && item.key === 'addAgentFromList');
-
-    if (!isActionItem(listItem)) {
-      throw new Error('Expected Agent-list menu item');
-    }
-
-    expect(listItem.label).toBe('addAgentFromList');
-
-    const listStopPropagation = vi.fn();
+describe('category template runtime admission', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mocks.createGroup.mockResolvedValue('new-group');
+    mocks.createAgent.mockResolvedValue({ agentId: 'member' });
+  });
+  it('cancelling the chooser inserts neither members nor group', async () => {
+    mocks.requestAgentRuntime.mockResolvedValue(undefined);
+    const { result } = renderHook(() => useSessionGroupMenuItems());
     await act(async () => {
-      await listItem.onClick?.({ domEvent: { stopPropagation: listStopPropagation } });
+      expect(await result.current.createGroupFromTemplate('team')).toBe(false);
     });
-
-    expect(listStopPropagation).toHaveBeenCalled();
-    expect(navigateMock).toHaveBeenCalledWith('/agents');
-    expect(items.some((item) => isActionItem(item) && item.key === 'addAgentFromMarket')).toBe(
-      false,
-    );
-    expect(items.some((item) => isActionItem(item) && item.key === 'newPage')).toBe(false);
+    expect(mocks.createAgent).not.toHaveBeenCalled();
+    expect(mocks.createGroup).not.toHaveBeenCalled();
   });
-
-  it('opens the agent list on the Private tab for the private bucket', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-
-    const listItem = result.current.createAgentListMenuItem({ visibility: 'private' });
-
-    if (!isActionItem(listItem)) {
-      throw new Error('Expected Agent-list menu item');
-    }
-
-    expect(listItem.key).toBe('addPrivateAgentFromList');
-
-    navigateMock.mockClear();
+  it('uses the private category host pool once for every selected member', async () => {
+    vi.useFakeTimers();
+    const runtime = {
+      agencyConfig: {
+        executionTarget: 'device',
+        boundDeviceId: 'host-private',
+        heterogeneousProvider: { type: 'orvilo', model: 'prime-model' },
+      },
+      model: 'prime-model',
+      provider: 'openai',
+      title: 'Orvilo AI',
+    };
+    mocks.requestAgentRuntime.mockResolvedValue(runtime);
+    const { result } = renderHook(() => useSessionGroupMenuItems());
     await act(async () => {
-      await listItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
+      const pending = result.current.createGroupFromTemplate('team', undefined, {
+        groupId: 'private-category',
+      });
+      await vi.runAllTimersAsync();
+      expect(await pending).toBe(true);
     });
-
-    expect(navigateMock).toHaveBeenCalledWith('/agents?tab=private');
-  });
-
-  it('opens the naming modal when creating a category inside the modal provider', async () => {
-    agentModalMock.current = { openCreateGroupModal: openCreateGroupModalMock };
-
-    const { result } = renderHook(() => useCreateMenuItems());
-
-    const groupItem = result.current.createSessionGroupMenuItem({ visibility: 'private' });
-
-    if (!isActionItem(groupItem)) {
-      throw new Error('Expected session group menu item');
-    }
-
-    await act(async () => {
-      await groupItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
-    });
-
-    expect(openCreateGroupModalMock).toHaveBeenCalledWith(undefined, 'private');
-    expect(addGroupMock).not.toHaveBeenCalled();
-  });
-
-  it('falls back to default-name creation without the modal provider', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-
-    const groupItem = result.current.createSessionGroupMenuItem();
-
-    if (!isActionItem(groupItem)) {
-      throw new Error('Expected session group menu item');
-    }
-
-    await act(async () => {
-      await groupItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
-    });
-
-    expect(addGroupMock).toHaveBeenCalledWith('sessionGroup.newGroup', undefined);
-    expect(openCreateGroupModalMock).not.toHaveBeenCalled();
-  });
-
-  it('uses an action-oriented label for category management', () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-
-    const configItem = result.current.configMenuItem(vi.fn());
-
-    if (!isActionItem(configItem)) {
-      throw new Error('Expected category management menu item');
-    }
-
-    expect(configItem.label).toBe('sessionGroup.manageCategory');
-  });
-
-  it('opens the connect wizard and renders its explanatory label', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    const connectItem = result.current.createConnectAgentMenuItem();
-
-    if (!isActionItem(connectItem)) throw new Error('Expected Connect Agent menu item');
-
-    render(<>{connectItem.label}</>);
-    expect(screen.getByText('newPlatformAgent')).toBeTruthy();
-    expect(screen.getByText('newPlatformAgentDesc')).toBeTruthy();
-
-    await act(async () => {
-      await connectItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
-    });
-    expect(openConnectAgentModalMock).toHaveBeenCalledWith(undefined);
-  });
-
-  it('threads groupId and visibility into the connect wizard', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    const connectItem = result.current.createConnectAgentMenuItem({
-      groupId: 'group-1',
+    expect(mocks.requestAgentRuntime).toHaveBeenCalledExactlyOnceWith({ visibility: 'private' });
+    expect(
+      mocks.createAgent.mock.calls.map(([params]) => [
+        params.config.agencyConfig,
+        params.visibility,
+      ]),
+    ).toEqual([
+      [runtime.agencyConfig, 'private'],
+      [runtime.agencyConfig, 'private'],
+    ]);
+    expect(mocks.createGroup.mock.calls[0][0]).toMatchObject({
+      groupId: 'private-category',
       visibility: 'private',
     });
-
-    if (!isActionItem(connectItem)) throw new Error('Expected Connect Agent menu item');
-
-    await act(async () => {
-      await connectItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
-    });
-    expect(openConnectAgentModalMock).toHaveBeenCalledWith({
-      groupId: 'group-1',
-      visibility: 'private',
-    });
-  });
-
-  it('creates the group directly — never through the purpose modal — even when the modal exists', async () => {
-    agentModalMock.current = {
-      openCreateGroupModal: openCreateGroupModalMock,
-      openCreateModal: openCreateModalMock,
-    };
-
-    const { result } = renderHook(() => useCreateMenuItems());
-    const groupItem = result.current.createGroupChatMenuItem();
-
-    if (!isActionItem(groupItem)) throw new Error('Expected group chat menu item');
-
-    await act(async () => {
-      await groupItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
-    });
-
-    const groupMutation = swrMutations.map.get('group.createGroup');
-    expect(groupMutation?.trigger).toHaveBeenCalled();
-    expect(openCreateModalMock).not.toHaveBeenCalled();
-  });
-
-  it('lands inside the new group conversation, not the profile screen', async () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-    const groupItem = result.current.createGroupChatMenuItem();
-
-    if (!isActionItem(groupItem)) throw new Error('Expected group chat menu item');
-
-    await act(async () => {
-      await groupItem.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
-    });
-
-    await act(async () => {
-      await swrMutations.map.get('group.createGroup')?.options?.onSuccess?.('group-42');
-    });
-
-    expect(navigateMock).toHaveBeenCalledWith('/group/group-42');
-  });
-
-  it('offers generate-from-description only as a secondary item when the modal exists', async () => {
-    agentModalMock.current = {
-      openCreateGroupModal: openCreateGroupModalMock,
-      openCreateModal: openCreateModalMock,
-    };
-
-    const { result } = renderHook(() => useCreateMenuItems());
-    const keys = result.current
-      .createTopLevelMenuItems()
-      .map((item) => (isActionItem(item) ? item.key : (item as { type?: string })?.type));
-
-    expect(keys).toEqual([
-      'newAgent',
-      'newGroupChat',
-      'newGroupChatFromDescription',
-      'divider',
-      'newPlatformAgent',
-      'divider',
-      'addAgentFromList',
-    ]);
-
-    const item = result.current.createGroupFromDescriptionMenuItem({ visibility: 'private' });
-    if (!item || !isActionItem(item)) throw new Error('Expected description menu item');
-
-    await act(async () => {
-      await item.onClick?.({ domEvent: { stopPropagation: vi.fn() } });
-    });
-
-    expect(openCreateModalMock).toHaveBeenCalledWith('group', { visibility: 'private' });
-  });
-
-  it('hides the description affordance without the modal provider', () => {
-    const { result } = renderHook(() => useCreateMenuItems());
-
-    const keys = result.current
-      .createTopLevelMenuItems()
-      .map((item) => (isActionItem(item) ? item.key : (item as { type?: string })?.type));
-
-    expect(keys).not.toContain('newGroupChatFromDescription');
-    expect(result.current.createGroupFromDescriptionMenuItem()).toBeNull();
+    vi.useRealTimers();
   });
 });

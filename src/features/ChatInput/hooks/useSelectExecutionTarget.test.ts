@@ -15,10 +15,18 @@ const state = vi.hoisted(() => ({
     updateTopicMetadata: vi.fn(),
     switchTopic: vi.fn(),
   },
+  composerAgentId: 'agent',
   desktop: true,
   deviceInfo: vi.fn(),
   toast: vi.fn(),
 }));
+vi.mock('@/store/chat/selectors', () => ({
+  topicSelectors: {
+    activeTopicIdForAgent: (agentId: string) => (s: typeof state.chat) =>
+      s.activeAgentId === agentId ? s.activeTopicId : undefined,
+  },
+}));
+vi.mock('./useAgentId', () => ({ useCurrentComposerAgentId: () => () => state.composerAgentId }));
 vi.mock('@orvilo/const', () => ({
   get isDesktop() {
     return state.desktop;
@@ -46,6 +54,7 @@ describe('Topic execution selection', () => {
     vi.clearAllMocks();
     state.chat.activeTopicId = 'topic-a';
     state.chat.activeAgentId = 'agent';
+    state.composerAgentId = 'agent';
     state.config.canSelectExecutionTarget = true;
     state.chat.createTopic.mockResolvedValue('new-topic');
     state.chat.updateTopicMetadata.mockResolvedValue(undefined);
@@ -86,6 +95,30 @@ describe('Topic execution selection', () => {
       }),
     );
   });
+  it('creates for composer B when the route still names Agent A', async () => {
+    state.chat.activeTopicId = undefined;
+    state.chat.activeAgentId = 'route-a';
+    state.composerAgentId = 'composer-b';
+    const { result } = renderHook(() => useSelectExecutionTarget('composer-b'));
+    await result.current('none');
+    expect(state.chat.createTopic).toHaveBeenCalledWith('composer-b');
+    expect(state.chat.switchTopic).toHaveBeenCalledWith('new-topic');
+  });
+  it('does not create after the composer changes during device discovery', async () => {
+    state.chat.activeTopicId = undefined;
+    let resolve!: (value: { deviceId: string }) => void;
+    state.deviceInfo.mockReturnValue(
+      new Promise((r) => {
+        resolve = r;
+      }),
+    );
+    const { result } = renderHook(() => useSelectExecutionTarget('agent'));
+    const selection = result.current('local');
+    state.composerAgentId = 'agent-c';
+    resolve({ deviceId: 'device-a' });
+    await selection;
+    expect(state.chat.createTopic).not.toHaveBeenCalled();
+  });
   it('creates a Topic for an explicit choice in the empty composer', async () => {
     state.chat.activeTopicId = undefined;
     const { result } = renderHook(() => useSelectExecutionTarget('agent'));
@@ -109,6 +142,24 @@ describe('Topic execution selection', () => {
     await result.current('sandbox');
     expect(state.toast).toHaveBeenCalled();
     expect(state.chat.switchTopic).not.toHaveBeenCalled();
+  });
+  it('mount/rerender/StrictMode produce zero writes (F01)', async () => {
+    // The composer must not commit a binding on behalf of the user: mounting
+    // the selection hook — under rerenders and StrictMode's double-invocation
+    // — performs no `updateTopicMetadata`/`createTopic` write. Only an
+    // explicit returned call or the server's atomic first-bind may create a
+    // binding (the chat switcher's mount effect used to break this rule).
+    const render = () =>
+      renderHook(() => useSelectExecutionTarget('agent'), {
+        reactStrictMode: true,
+      });
+    const first = render();
+    first.rerender();
+    const second = render();
+    second.rerender();
+    await Promise.resolve();
+    expect(state.chat.updateTopicMetadata).not.toHaveBeenCalled();
+    expect(state.chat.createTopic).not.toHaveBeenCalled();
   });
 });
 

@@ -7,10 +7,12 @@ import { memo, useMemo, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import { requestAgentRuntime } from '@/features/CreateAgent';
 import type { SidebarMenuItems } from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { usePermission } from '@/hooks/usePermission';
 import { parseAsString, useQueryState } from '@/hooks/useQueryParam';
 import AddGroupMemberModal from '@/routes/(main)/group/_layout/Sidebar/AddGroupMemberModal';
+import { chatGroupService } from '@/services/chatGroup';
 import { useAgentGroupStore } from '@/store/agentGroup';
 import { agentGroupSelectors } from '@/store/agentGroup/selectors';
 
@@ -97,9 +99,15 @@ const Header = memo(() => {
 
   const handleCreateMember = async () => {
     if (!activeGroupId) return;
-    const newAgentId = await createAgentInGroup(activeGroupId, {
-      title: t('group.profile.addMember.newMemberTitle'),
-    });
+    const group = await chatGroupService.getGroup(activeGroupId);
+    if (!group) return;
+    const runtimeConfig = await requestAgentRuntime({ visibility: group.visibility });
+    if (!runtimeConfig) return;
+    const newAgentId = await createAgentInGroup(
+      activeGroupId,
+      { title: t('group.profile.addMember.newMemberTitle') },
+      runtimeConfig,
+    );
     // Jump to the newly created member so the user can configure it right away
     if (newAgentId) setSelectedTabId(newAgentId);
   };

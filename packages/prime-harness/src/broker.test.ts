@@ -50,7 +50,7 @@ const harness = (sessionId = 'session-1'): Harness => {
       if (line) frames.push(JSON.parse(line) as Record<string, unknown>);
     }
   });
-  const bridge = createBrokerBridge(link, sessionId);
+  const bridge = createBrokerBridge(link, () => sessionId);
   // Runner wiring (runner.ts): broker.event notifications route to the bridge.
   link.setNotificationHandler((method, params) => {
     if (method === 'broker.event') bridge.deliverEvent(params);
@@ -169,24 +169,178 @@ describe('orvilo-broker streamSimple → broker.infer wire mapping', () => {
     const h = makeHarness();
     const done = collect(
       h.bridge.streamSimple(MODEL, {
-        messages: [
-          {
-            role: 'toolResult',
-            content: [{ type: 'text', text: 'result' }],
-            isError: false,
-            timestamp: 0,
-            toolCallId: 'call-1',
-            toolName: 'bash',
-          },
-        ],
+        messages: [{ role: 'function', content: 'x' } as never],
       }),
     );
     const events = await done;
     const error = events.at(-1);
     if (error?.type !== 'error') throw new Error('expected error event');
     expect(error.reason).toBe('error');
-    expect(error.error.errorMessage).toContain('broker cannot carry');
+    expect(error.error.errorMessage).toContain('wire cannot carry');
     expect(h.frames).toHaveLength(0);
+  });
+
+  it('carries toolResult and assistant toolCall blocks on the wire', async () => {
+    const h = makeHarness('session-7');
+    const done = collect(
+      h.bridge.streamSimple(MODEL, {
+        messages: [
+          { role: 'user', content: 'run it', timestamp: 0 },
+          {
+            role: 'assistant',
+            api: 'orvilo-broker',
+            content: [
+              { type: 'text', text: 'calling ipython' },
+              {
+                arguments: { code: '2+2' },
+                id: 'call-1',
+                name: 'ipython',
+                type: 'toolCall',
+              },
+            ],
+            model: 'mock-model-1',
+            provider: 'orvilo-broker',
+            stopReason: 'toolUse',
+            timestamp: 0,
+            usage: {
+              cacheRead: 0,
+              cacheWrite: 0,
+              cost: { cacheRead: 0, cacheWrite: 0, input: 0, output: 0, total: 0 },
+              input: 0,
+              output: 0,
+              totalTokens: 0,
+            },
+          },
+          {
+            role: 'toolResult',
+            content: [{ type: 'text', text: '4' }],
+            isError: false,
+            timestamp: 0,
+            toolCallId: 'call-1',
+            toolName: 'ipython',
+          },
+        ],
+      }),
+    );
+    const infer = await nextInfer(h.frames);
+    expect(infer.params).toMatchObject({
+      request: {
+        messages: [
+          { role: 'user', content: 'run it' },
+          {
+            content: [
+              { text: 'calling ipython', type: 'text' },
+              { arguments: { code: '2+2' }, id: 'call-1', name: 'ipython', type: 'toolCall' },
+            ],
+            role: 'assistant',
+          },
+          {
+            content: [{ text: '4', type: 'text' }],
+            isError: false,
+            role: 'tool',
+            toolCallId: 'call-1',
+            toolName: 'ipython',
+          },
+        ],
+      },
+    });
+    ack(h, infer, 'infer-1');
+    brokerEvent(h, 'infer-1', { type: 'end' });
+    await done;
+  });
+
+  it('relays tools schemas plus thinkingLevel/serviceTier/providerOptions on the request', async () => {
+    const h = makeHarness();
+    const done = collect(
+      h.bridge.streamSimple(
+        MODEL,
+        {
+          messages: [{ role: 'user', content: 'hi', timestamp: 0 }],
+          tools: [
+            {
+              description: 'run python',
+              name: 'ipython',
+              parameters: { properties: { code: { type: 'string' } }, type: 'object' },
+            },
+          ],
+        },
+        {
+          reasoning: 'high',
+          serviceTier: 'flex',
+          thinkingBudgets: { high: 4096 },
+        },
+      ),
+    );
+    const infer = await nextInfer(h.frames);
+    expect(infer.params).toMatchObject({
+      request: {
+        providerOptions: { thinkingBudgets: { high: 4096 } },
+        serviceTier: 'flex',
+        thinkingLevel: 'high',
+        tools: [
+          {
+            description: 'run python',
+            name: 'ipython',
+            parameters: { properties: { code: { type: 'string' } }, type: 'object' },
+          },
+        ],
+      },
+    });
+    ack(h, infer, 'infer-1');
+    brokerEvent(h, 'infer-1', { type: 'end' });
+    await done;
+  });
+
+  it('pumps toolcall_* and thinking_delta broker events into upstream stream events', async () => {
+    const h = makeHarness();
+    const done = collect(h.bridge.streamSimple(MODEL, context('hi')));
+    const infer = await nextInfer(h.frames);
+    ack(h, infer, 'infer-1');
+    brokerEvent(h, 'infer-1', { type: 'thinking_delta', text: 'let me think ' });
+    brokerEvent(h, 'infer-1', { type: 'thinking_delta', text: 'about it' });
+    brokerEvent(h, 'infer-1', { type: 'text', text: 'calling a tool' });
+    brokerEvent(h, 'infer-1', {
+      type: 'toolcall_start',
+      index: 0,
+      name: 'ipython',
+      toolCallId: 'call-1',
+    });
+    brokerEvent(h, 'infer-1', {
+      argumentsDelta: '{"code":"2+2"}',
+      index: 0,
+      type: 'toolcall_delta',
+    });
+    brokerEvent(h, 'infer-1', {
+      index: 0,
+      toolCall: { arguments: { code: '2+2' }, id: 'call-1', name: 'ipython', type: 'toolCall' },
+      type: 'toolcall_end',
+    });
+    brokerEvent(h, 'infer-1', { type: 'usage', inputTokens: 5, outputTokens: 9 });
+    brokerEvent(h, 'infer-1', { type: 'end' });
+
+    const events = await done;
+    expect(events.map((event) => event.type)).toEqual([
+      'start',
+      'thinking_start',
+      'thinking_delta',
+      'thinking_delta',
+      'thinking_end',
+      'text_start',
+      'text_delta',
+      'text_end',
+      'toolcall_start',
+      'toolcall_delta',
+      'toolcall_end',
+      'done',
+    ]);
+    const last = events.at(-1);
+    if (last?.type !== 'done') throw new Error('expected done event');
+    expect(last.reason).toBe('toolUse');
+    expect(last.message.content).toEqual([
+      { thinking: 'let me think about it', type: 'thinking' },
+      { text: 'calling a tool', type: 'text' },
+      { arguments: { code: '2+2' }, id: 'call-1', name: 'ipython', type: 'toolCall' },
+    ]);
   });
 
   it('surfaces a broker stream error as a stream error', async () => {

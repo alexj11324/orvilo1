@@ -1,4 +1,3 @@
-import type * as Constants from '@orvilo/const';
 import {
   AGENT_CHAT_TOPIC_URL,
   AGENT_CHAT_URL,
@@ -29,15 +28,15 @@ const { getNotificationSoundFile, playSound, setBadgeCount, showNotification } =
   setBadgeCount: vi.fn(),
   showNotification: vi.fn(),
 }));
-vi.mock('@orvilo/const', async (importOriginal) => ({
-  ...(await importOriginal<typeof Constants>()),
-  isDesktop: true,
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getHostPort: () => ({
+    notification: { setBadgeCount, show: showNotification },
+  }),
+  hasHostCapability: () => true,
 }));
 vi.mock('@/services/electron/completionSound', () => ({
   completionSoundService: { getNotificationSoundFile, play: playSound },
-}));
-vi.mock('@/services/electron/desktopNotification', () => ({
-  desktopNotificationService: { setBadgeCount, showNotification },
 }));
 
 vi.mock('@/store/agent', () => ({ getAgentStoreState: () => ({}) }));

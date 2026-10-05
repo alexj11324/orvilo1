@@ -32,6 +32,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: false,
       isPreferenceLoading: false,
       workspaceScoped: false,
     });
@@ -54,6 +55,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: false,
       isPreferenceLoading: false,
       workspaceScoped: false,
     });
@@ -72,6 +74,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: false,
       isPreferenceLoading: false,
       workspaceScoped: true,
     });
@@ -92,6 +95,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: false,
       isPreferenceLoading: false,
       workspaceScoped: false,
     });
@@ -119,6 +123,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: false,
       isPreferenceLoading: true,
       workspaceScoped: true,
     });
@@ -134,6 +139,7 @@ describe('useRemoteAgentDeviceGuard', () => {
       agencyConfig: { heterogeneousProvider: { type: 'codex' } },
       canDisplayExecutionTarget: true,
       canSelectExecutionTarget: true,
+      canSelectPersonalDevice: false,
       isPreferenceLoading: false,
       workspaceScoped: false,
     });

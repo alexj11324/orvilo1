@@ -7,6 +7,8 @@ import { DiscoverService } from '@/server/services/discover';
 import { agentManagementRuntime } from '../agentManagement';
 
 const {
+  mockCreateAgent,
+  mockInheritRuntime,
   mockCountAgents,
   mockGetAssistantList,
   mockQueryAgents,
@@ -15,6 +17,8 @@ const {
   mockFindById,
   mockCreatePlugin,
 } = vi.hoisted(() => ({
+  mockCreateAgent: vi.fn(),
+  mockInheritRuntime: vi.fn(),
   mockCountAgents: vi.fn(),
   mockCreatePlugin: vi.fn(),
   mockFindById: vi.fn(),
@@ -27,6 +31,8 @@ const {
 vi.mock('@/database/models/agent', () => ({
   AgentModel: vi.fn(function () {
     return {
+      create: mockCreateAgent,
+      inheritRuntimeForCreation: mockInheritRuntime,
       countAgents: mockCountAgents,
       getAgentConfigById: mockGetAgentConfigById,
       queryAgents: mockQueryAgents,
@@ -79,6 +85,8 @@ const makeAgents = (count: number, startIndex = 0) =>
 describe('agentManagementRuntime', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockCreateAgent.mockReset();
+    mockInheritRuntime.mockReset();
   });
 
   it('declares the agent management runtime identifier', () => {
@@ -96,6 +104,53 @@ describe('agentManagementRuntime', () => {
 
     expect(AgentModel).toHaveBeenCalledWith(expect.anything(), 'user-1', 'workspace-1');
     expect(PluginModel).toHaveBeenCalledWith(expect.anything(), 'user-1', 'workspace-1');
+  });
+
+  describe('createAgent admission', () => {
+    it('rejects missing invocation source before insertion', async () => {
+      mockCreateAgent.mockResolvedValue({ id: 'new' });
+      const result = await createRuntime().createAgent({ title: 'Child' }, { toolManifestMap: {} });
+      expect(result.success).toBe(false);
+      expect(result.content).toContain('setup');
+      expect(mockCreateAgent).not.toHaveBeenCalled();
+    });
+
+    it('persists the admitted invoking runtime as a private agent', async () => {
+      const runtimeConfig = {
+        agencyConfig: {
+          activeProvider: 'codex',
+          providers: { codex: { type: 'codex', deviceId: 'host' } },
+        },
+        model: 'saved-model',
+        provider: 'saved-provider',
+      };
+      mockInheritRuntime.mockResolvedValue(runtimeConfig);
+      mockCreateAgent.mockImplementation(async (config) => {
+        expect(config).toMatchObject({ ...runtimeConfig, visibility: 'private' });
+        return { id: 'new' };
+      });
+      const result = await createRuntime().createAgent(
+        { title: 'Child', model: 'requested-model', provider: 'requested-provider' },
+        { agentId: 'source', activeDeviceId: 'host', toolManifestMap: {} },
+      );
+      expect(result.success).toBe(true);
+      expect(mockInheritRuntime).toHaveBeenCalledWith('source', {
+        deviceId: 'host',
+        model: 'requested-model',
+        provider: 'requested-provider',
+        visibility: 'private',
+      });
+    });
+
+    it('does not insert after runtime admission fails', async () => {
+      mockInheritRuntime.mockRejectedValueOnce(new Error('Agent setup required: host denied'));
+      const result = await createRuntime().createAgent(
+        { title: 'Child' },
+        { agentId: 'source', toolManifestMap: {} },
+      );
+      expect(result.success).toBe(false);
+      expect(mockCreateAgent).not.toHaveBeenCalled();
+    });
   });
 
   describe('callAgent', () => {

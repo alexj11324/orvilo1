@@ -62,8 +62,19 @@ describe('scanLocal', () => {
 });
 
 describe('buildPlatformAgencyConfig', () => {
-  it('uses the default local target without binding a device for this computer', () => {
+  it('marks the local execution target even before a device id resolves', () => {
     expect(buildPlatformAgencyConfig('openclaw', { kind: 'local' })).toEqual({
+      executionTarget: 'local',
+      heterogeneousProvider: { type: 'openclaw' },
+    });
+  });
+
+  it('binds this computer for a local target once its device id resolves', () => {
+    expect(
+      buildPlatformAgencyConfig('openclaw', { deviceId: 'local-desktop', kind: 'local' }),
+    ).toEqual({
+      boundDeviceId: 'local-desktop',
+      executionTarget: 'local',
       heterogeneousProvider: { type: 'openclaw' },
     });
   });

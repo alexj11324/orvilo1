@@ -5,6 +5,8 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
+
 import { projectRouter } from '../../project';
 import { taskRouter } from '../../task';
 import { cleanupTestUser, createTestContext, createTestUser } from './setup';
@@ -25,6 +27,9 @@ describe('Project Router Integration', () => {
     serverDB = await getTestDB();
     testDB = serverDB;
     userId = await createTestUser(serverDB);
+    // Project creation provisions a coordinator via Prime inheritance; strict
+    // admission requires an executable orvilo runtime to exist first.
+    await seedPrimeRuntime(serverDB, { userId });
     caller = projectRouter.createCaller(createTestContext(userId));
   });
 

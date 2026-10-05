@@ -8,6 +8,7 @@ import { type EnabledAiModel, ModelProvider } from 'model-bank';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import * as toolEngineering from '@/helpers/toolEngineering';
+import type * as OrviloPlatform from '@/platform';
 import { chatService } from '@/services/chat';
 import * as agentConfigResolver from '@/services/chat/mecha/agentConfigResolver';
 import { messageService } from '@/services/message';
@@ -120,11 +121,32 @@ vi.mock('@orvilo/const', async (importOriginal) => {
 vi.mock('@/services/electron/desktopNotification', () => ({
   desktopNotificationService: desktopNotificationMock,
 }));
+// HostPort — the notification path moved behind the port (WD-02); bridge the
+// same desktopFlag + spies so this suite keeps characterizing the desktop
+// notification gating without depending on the runtime host injection.
+vi.mock('@/platform', async (importOriginal) => {
+  const actual = await importOriginal<typeof OrviloPlatform>();
+  return {
+    ...actual,
+    getHostPort: () => ({
+      ...actual.getHostPort(),
+      notification: {
+        setBadgeCount: vi.fn(),
+        show: (...args: any[]) => desktopNotificationMock.showNotification(...args),
+      },
+    }),
+    hasHostCapability: (capability: string) =>
+      capability === 'notification.native'
+        ? desktopFlag.value
+        : actual.hasHostCapability(capability as never),
+  };
+});
 vi.mock('@/services/electron/completionSound', () => ({
   completionSoundService: completionSoundMock,
 }));
 vi.mock('@/store/serverConfig', () => ({
   getServerConfigStoreState: () => ({
+    featureFlags: { enableCloudSandbox: false },
     serverConfig: { enableMultimodalUnderstanding: serverConfigMock.enableMultimodalUnderstanding },
   }),
   serverConfigSelectors: {

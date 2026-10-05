@@ -20,6 +20,7 @@ import { isDesktop } from '@/const/version';
 import UserInfo from '@/features/User/UserInfo';
 import { useIMECompositionEvent } from '@/hooks/useIMECompositionEvent';
 import { useSignOut } from '@/hooks/useSignOut';
+import { getHostPort } from '@/platform';
 import { remoteServerService } from '@/services/electron/remoteServer';
 import { electronSystemService } from '@/services/electron/system';
 import { useElectronStore } from '@/store/electron';
@@ -391,7 +392,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
                     input.selectionStart || 0,
                     input.selectionEnd || 0,
                   );
-                  await electronSystemService.showContextMenu('editor', {
+                  await getHostPort().menu.showContextMenu('editor', {
                     selectionText: selectionText || undefined,
                   });
                 }}
@@ -499,9 +500,7 @@ const LoginStep = memo<LoginStepProps>(({ mode = 'onboarding', onBack, onNext })
       {hasLegacyLocalDb && (
         <Button
           variant="link"
-          onClick={() =>
-            electronSystemService.openExternalLink(LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL)
-          }
+          onClick={() => getHostPort().openExternal(LEGACY_LOCAL_DB_MIGRATION_GUIDE_URL)}
         >
           {t('screen5.legacyLocalDb.link')}
         </Button>

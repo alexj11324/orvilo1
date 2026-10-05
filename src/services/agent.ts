@@ -71,6 +71,14 @@ const normalizeMarketAgentModel = (config?: PartialDeep<AgentItem>): PartialDeep
 };
 
 export interface CreateAgentParams {
+  /**
+   * Client-generated key identifying one create intent. The store action
+   * dedupes in-flight calls on it, so a double-click or a UI retry carrying
+   * the same key returns the in-flight result instead of minting a twin
+   * (docs/development/device-execution-contract.md — create flow). A genuine
+   * retry after a failure generates a fresh key — the server creates again.
+   */
+  clientRequestId?: string;
   config?: PartialDeep<AgentItem>;
   groupId?: string;
   /**
@@ -108,6 +116,19 @@ interface AgentGroupMembershipImpactRef {
 }
 
 class AgentService {
+  getRuntimeForCreation = async (params: {
+    agentId: string;
+    visibility?: 'private' | 'public';
+    model?: string;
+    provider?: string;
+  }): Promise<Pick<Partial<OrviloAgentConfig>, 'agencyConfig' | 'model' | 'provider'>> => {
+    const runtime = await lambdaClient.agent.getAgentRuntimeForCreation.query(params);
+    return {
+      agencyConfig: runtime.agencyConfig ?? undefined,
+      model: runtime.model ?? undefined,
+      provider: runtime.provider ?? undefined,
+    };
+  };
   /**
    * Check if an agent with the given marketIdentifier already exists
    */

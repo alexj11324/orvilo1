@@ -1,5 +1,6 @@
 import { createStaticStyles, cssVar, cx } from 'antd-style';
 import {
+  CheckIcon,
   ChevronDownIcon,
   FolderIcon,
   InfinityIcon,
@@ -12,6 +13,7 @@ import { createElement, memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useBusinessAgentModeSync } from '@/business/client/hooks/useBusinessAgentMode';
+import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useAgentId } from '@/features/ChatInput/hooks/useAgentId';
 import { useChatInputResourceAccess } from '@/features/ChatInput/hooks/useChatInputResourceAccess';
@@ -23,7 +25,10 @@ import { SimpleTooltip } from '../SimpleTooltip';
 
 const styles = createStaticStyles(({ css }) => ({
   activeOption: css`
-    background: ${cssVar.colorFillSecondary};
+    &&,
+    &&:hover {
+      background: var(--muted);
+    }
   `,
   agentTooltip: css`
     display: flex;
@@ -68,6 +73,13 @@ const styles = createStaticStyles(({ css }) => ({
       background: ${cssVar.colorFillTertiary};
     }
   `,
+  buttonOpen: css`
+    &&,
+    &&:hover {
+      color: var(--foreground);
+      background: var(--muted);
+    }
+  `,
   buttonDisabled: css`
     cursor: not-allowed;
     opacity: 0.5;
@@ -80,10 +92,16 @@ const styles = createStaticStyles(({ css }) => ({
   option: css`
     cursor: pointer;
 
+    justify-content: flex-start;
+
     width: 100%;
+    height: auto;
     padding-block: 10px;
     padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
+    border-radius: calc(var(--radius) - 2px);
+
+    text-align: start;
+    white-space: normal;
 
     transition: background-color 0.2s;
 
@@ -197,7 +215,10 @@ const ModeSelector = memo(() => {
 
   const popoverContent = (
     <div className="flex flex-col gap-1" style={{ maxWidth: 320, minWidth: 280 }}>
-      <div
+      <Button
+        aria-current={currentMode === 'agent' ? 'true' : undefined}
+        disabled={!canSelectAgentMode}
+        variant="ghost"
         className={cx(
           'flex flex-row items-center gap-3',
           cx(
@@ -222,9 +243,12 @@ const ModeSelector = memo(() => {
           <div className={styles.optionTitle}>{t('chatMode.agent')}</div>
           <div className={styles.optionDesc}>{agentDesc}</div>
         </div>
-      </div>
+        {currentMode === 'agent' ? <CheckIcon aria-hidden size={14} /> : null}
+      </Button>
 
-      <div
+      <Button
+        aria-current={currentMode === 'chat' ? 'true' : undefined}
+        variant="ghost"
         className={cx(
           'flex flex-row items-center gap-3',
           cx(styles.option, currentMode === 'chat' && styles.activeOption),
@@ -245,12 +269,19 @@ const ModeSelector = memo(() => {
           <div className={styles.optionTitle}>{t('chatMode.chat')}</div>
           <div className={styles.optionDesc}>{t('chatMode.chatDesc')}</div>
         </div>
-      </div>
+        {currentMode === 'chat' ? <CheckIcon aria-hidden size={14} /> : null}
+      </Button>
     </div>
   );
 
   const button = (
-    <div className={cx(styles.button, disabled && styles.buttonDisabled)}>
+    <div
+      className={cx(
+        styles.button,
+        open && !disabled && styles.buttonOpen,
+        disabled && styles.buttonDisabled,
+      )}
+    >
       <span className="anticon" role="img">
         <CurrentIcon fill={'transparent'} height={14} size={14} width={14} />
       </span>
@@ -272,11 +303,9 @@ const ModeSelector = memo(() => {
 
   return (
     <Popover open={!disabled && open} onOpenChange={handleOpenChange}>
-      <PopoverTrigger
-        render={
-          <div>{open ? button : <SimpleTooltip title={buttonTooltip}>{button}</SimpleTooltip>}</div>
-        }
-      />
+      <PopoverTrigger>
+        {open ? button : <SimpleTooltip title={buttonTooltip}>{button}</SimpleTooltip>}
+      </PopoverTrigger>
       <PopoverContent
         align={'start'}
         className={cx('w-auto', styles.popoverPopup)}

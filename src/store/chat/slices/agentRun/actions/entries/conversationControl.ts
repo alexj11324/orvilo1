@@ -19,6 +19,7 @@ import {
 } from '@/services/aiAgent';
 import { getAgentStoreState } from '@/store/agent';
 import { agentSelectors } from '@/store/agent/selectors';
+import { agentByIdSelectors } from '@/store/agent/selectors/agentByIdSelectors';
 import { displayMessageSelectors } from '@/store/chat/selectors';
 import {
   type AgentRuntimeType,
@@ -201,15 +202,23 @@ export class ConversationControlActionImpl {
     const agentConfig = context.agentId
       ? agentSelectors.getAgentConfigById(context.agentId)(getAgentStoreState())
       : undefined;
+    const agentWorkspaceId = context.agentId
+      ? agentByIdSelectors.getAgentById(context.agentId)(getAgentStoreState())?.workspaceId
+      : undefined;
     const agencyConfig = getTopicAgencyConfig(agentConfig?.agencyConfig, context.topicId);
     try {
       return (
         selectRuntimeType({
           boundDeviceId: agencyConfig?.boundDeviceId,
+          // Resume takes the same transport the original send resolved — a
+          // desktop `local` run admitted through the gateway resumes through
+          // it. Socket state no longer reroutes to an IPC-local lifecycle:
+          // unreachable devices surface as blocked/unknown instead.
           executionTarget: agencyConfig?.executionTarget,
           heterogeneousProvider: agencyConfig?.heterogeneousProvider,
           isGatewayMode: this.#get().isGatewayModeEnabled(context.agentId),
           isGroupSupervisor: resolveIsGroupSupervisor(context.agentId, context.groupId),
+          isWorkspaceAgent: !!agentWorkspaceId,
         }) === 'gateway'
       );
     } catch {

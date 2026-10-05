@@ -30,7 +30,7 @@ import { newOAuthAttempt, waitForOAuthSession } from '@/features/Connectors/oaut
 import LinearIcon from '@/features/Work/icons/LinearIcon';
 import { usePermission } from '@/hooks/usePermission';
 import { lambdaClient } from '@/libs/trpc/client';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 
 type Installation = { id: string; name?: string; status: string };
 type LocalProject = { id: string; identifier: string; name: string };
@@ -578,7 +578,7 @@ function LinearImportWizardForWorkspace({ workspaceSlug }: { workspaceSlug: stri
       });
       if (!response?.authorizationUrl) throw new Error(t('workspaceSetting.linear.connectFailed'));
       if (!popup) {
-        await electronSystemService.openExternalLink(response.authorizationUrl);
+        await getHostPort().openExternal(response.authorizationUrl);
         return;
       }
       popup.location.href = response.authorizationUrl;

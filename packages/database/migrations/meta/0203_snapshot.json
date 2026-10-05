@@ -6,7 +6,7 @@
   },
   "dialect": "postgresql",
   "enums": {},
-  "id": "38287c6d-51f4-4db3-813f-73f7351c9db1",
+  "id": "8483ceed-8199-4f43-b51b-fd97f13bd0b1",
   "policies": {},
   "prevId": "de643755-8f57-4e48-9da9-1ba6171cafba",
   "roles": {},
@@ -10801,6 +10801,24 @@
           "primaryKey": false,
           "notNull": false,
           "default": "'[]'::jsonb"
+        },
+        "capability_snapshot": {
+          "name": "capability_snapshot",
+          "type": "jsonb",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "adapter_version": {
+          "name": "adapter_version",
+          "type": "varchar(32)",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "last_verified_at": {
+          "name": "last_verified_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
         },
         "first_seen_at": {
           "name": "first_seen_at",
@@ -22339,12 +22357,6 @@
         "dispatch_id": {
           "name": "dispatch_id",
           "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "automation_occurrence": {
-          "name": "automation_occurrence",
-          "type": "jsonb",
           "primaryKey": false,
           "notNull": false
         },
@@ -33894,237 +33906,6 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.automation_result_deliveries": {
-      "name": "automation_result_deliveries",
-      "schema": "",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "text",
-          "primaryKey": true,
-          "notNull": true
-        },
-        "task_id": {
-          "name": "task_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "user_id": {
-          "name": "user_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "workspace_id": {
-          "name": "workspace_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "topic_id": {
-          "name": "topic_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "operation_id": {
-          "name": "operation_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "destination_id": {
-          "name": "destination_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "endpoint": {
-          "name": "endpoint",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "credential_id": {
-          "name": "credential_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "payload": {
-          "name": "payload",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": true
-        },
-        "status": {
-          "name": "status",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "'pending'"
-        },
-        "attempts": {
-          "name": "attempts",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "default": 0
-        },
-        "next_attempt_at": {
-          "name": "next_attempt_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "lease_token": {
-          "name": "lease_token",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "lease_expires_at": {
-          "name": "lease_expires_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "http_status": {
-          "name": "http_status",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "error": {
-          "name": "error",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "delivered_at": {
-          "name": "delivered_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "accessed_at": {
-          "name": "accessed_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "created_at": {
-          "name": "created_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        },
-        "updated_at": {
-          "name": "updated_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": true,
-          "default": "now()"
-        }
-      },
-      "indexes": {
-        "automation_result_deliveries_run_destination_unique": {
-          "name": "automation_result_deliveries_run_destination_unique",
-          "columns": [
-            {
-              "expression": "user_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "operation_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "destination_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
-        "automation_result_deliveries_due": {
-          "name": "automation_result_deliveries_due",
-          "columns": [
-            {
-              "expression": "status",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            },
-            {
-              "expression": "next_attempt_at",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": false,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        }
-      },
-      "foreignKeys": {
-        "automation_result_deliveries_task_id_tasks_id_fk": {
-          "name": "automation_result_deliveries_task_id_tasks_id_fk",
-          "tableFrom": "automation_result_deliveries",
-          "tableTo": "tasks",
-          "columnsFrom": ["task_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "automation_result_deliveries_user_id_users_id_fk": {
-          "name": "automation_result_deliveries_user_id_users_id_fk",
-          "tableFrom": "automation_result_deliveries",
-          "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "automation_result_deliveries_workspace_id_workspaces_id_fk": {
-          "name": "automation_result_deliveries_workspace_id_workspaces_id_fk",
-          "tableFrom": "automation_result_deliveries",
-          "tableTo": "workspaces",
-          "columnsFrom": ["workspace_id"],
-          "columnsTo": ["id"],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "automation_result_deliveries_topic_id_topics_id_fk": {
-          "name": "automation_result_deliveries_topic_id_topics_id_fk",
-          "tableFrom": "automation_result_deliveries",
-          "tableTo": "topics",
-          "columnsFrom": ["topic_id"],
-          "columnsTo": ["id"],
-          "onDelete": "set null",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "policies": {},
-      "checkConstraints": {},
-      "isRLSEnabled": false
-    },
     "public.briefs": {
       "name": "briefs",
       "schema": "",
@@ -35275,18 +35056,6 @@
           "primaryKey": false,
           "notNull": false
         },
-        "automation_occurrence": {
-          "name": "automation_occurrence",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "event_evidence": {
-          "name": "event_evidence",
-          "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
         "lease_owner": {
           "name": "lease_owner",
           "type": "text",
@@ -35873,24 +35642,6 @@
         "contract": {
           "name": "contract",
           "type": "jsonb",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "stop_reason": {
-          "name": "stop_reason",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "result_ready_at": {
-          "name": "result_ready_at",
-          "type": "timestamp with time zone",
-          "primaryKey": false,
-          "notNull": false
-        },
-        "result_outcome": {
-          "name": "result_outcome",
-          "type": "text",
           "primaryKey": false,
           "notNull": false
         },

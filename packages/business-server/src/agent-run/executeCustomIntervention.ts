@@ -1,6 +1,12 @@
+import type { AgentMarketplaceRuntimeConfig } from '@orvilo/types';
+
 export interface ExecuteAgentMarketplaceInterventionParams {
   action:
-    | { selectedTemplateIds: string[]; type: 'submitted' }
+    | {
+        selectedTemplateIds: string[];
+        runtimeConfig: AgentMarketplaceRuntimeConfig;
+        type: 'submitted';
+      }
     | { type: 'skipped' }
     | { type: 'cancelled' };
   actorUserId: string;

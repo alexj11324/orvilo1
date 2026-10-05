@@ -31,6 +31,12 @@ vi.mock('@/services/electron/localFileService', () => ({
   },
 }));
 
+// The runtime entries authorize the local transport through the proven local
+// device identity — these tests simulate a host whose handshake proved it.
+vi.mock('@/services/localExecutionIdentity', () => ({
+  requireProvenLocalDeviceId: vi.fn(async () => 'local-device'),
+}));
+
 describe('desktopSkillRuntimeService', () => {
   beforeEach(() => {
     vi.clearAllMocks();

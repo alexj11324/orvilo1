@@ -23,6 +23,19 @@ export const styles = createStaticStyles(({ css, cssVar }) => ({
       border-radius: ${cssVar.borderRadiusSM};
     }
   `,
+  empty: css`
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 96px;
+    padding-block: 24px;
+    padding-inline: 16px;
+
+    font-size: 12px;
+    color: ${cssVar.colorTextTertiary};
+    text-align: center;
+  `,
   groupHeader: css`
     width: 100%;
     color: ${cssVar.colorTextSecondary};

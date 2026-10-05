@@ -5,6 +5,7 @@ import type { AgentStreamEvent } from '@orvilo/agent-gateway-client';
 
 import type { AskUserBridge } from '../askUser/AskUserBridge';
 import { resolveHeterogeneousAgentCommand } from '../config';
+import type { HeterogeneousAgentPermission } from '../types';
 import { ACP_RUNTIME_AGENT_TYPES } from './acpRuntime';
 import type { UploadHeterogeneousImage } from './agentStreamPipeline';
 import { isPathLikeCommand } from './cliSpawn';
@@ -57,6 +58,7 @@ export interface SpawnAgentOptions {
   extraArgs?: string[];
   /** Initial model selected through the agent protocol after session setup. */
   initialModel?: string;
+  initialPermission?: HeterogeneousAgentPermission;
   /**
    * Image normalization options (URL fetch + on-disk cache + path
    * materialization). Forwarded to the prompt builder. When `prompt` is a
@@ -429,6 +431,7 @@ const spawnStandardAcpAgent = async (
     env: target.env,
     initialCumulativeUsage,
     initialModel: options.initialModel ?? selectors.initialModel,
+    initialPermission: options.initialPermission,
     inputOptions: options.inputOptions,
     mcpServers: options.mcpServers,
     onEvents: bridge.onEvents,
@@ -461,6 +464,11 @@ const spawnStandardAcpAgent = async (
  * failed image fetch surfaces before the child starts.
  */
 export const spawnAgent = async (options: SpawnAgentOptions): Promise<SpawnAgentHandle> => {
+  if (options.initialPermission && !ACP_RUNTIME_AGENT_TYPES.has(options.agentType)) {
+    throw new Error(
+      `spawnAgent: permission selection is unsupported for agent type "${options.agentType}"`,
+    );
+  }
   if (options.agentType === 'trae') return spawnTraeAcpAgent(options);
 
   const command = resolveHeterogeneousAgentCommand(options.agentType, options.command);

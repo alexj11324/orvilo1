@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+import { accordionStyles } from '../../accordionStyles';
 import TopicItem from '../../List/Item';
 import { type GroupItemComponentProps } from '../GroupedAccordion';
 
@@ -18,8 +19,11 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
   const timeTitle = useMemo(() => preformat(id) ?? t(`groupTitle.byTime.${id}` as any), [id, t]);
 
   return (
-    <AccordionItem value={id}>
-      <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
+    <AccordionItem className={accordionStyles.item} value={id}>
+      <AccordionTrigger
+        className={accordionStyles.trigger}
+        style={{ paddingBlock: 4, paddingInline: 8 }}
+      >
         <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
           <div
             className="truncate text-[12px] text-muted-foreground font-medium"
@@ -29,7 +33,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="[&>div]:p-0">
+      <AccordionContent className="p-0">
         <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem

@@ -6,7 +6,7 @@ import { useTranslation } from 'react-i18next';
 import { useActiveWorkspaceSlug } from '@/business/client/hooks/useActiveWorkspaceSlug';
 import ActionIcon from '@/components/ActionIcon';
 import { useAppOrigin } from '@/hooks/useAppOrigin';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { useChatStore } from '@/store/chat';
 import { chatPortalSelectors } from '@/store/chat/selectors';
 import { useTaskStore } from '@/store/task';
@@ -46,7 +46,7 @@ const TaskDetailHeader = memo(() => {
           onClick={() => {
             if (!pageUrl) return;
             if (isDesktop) {
-              void electronSystemService.openExternalLink(pageUrl);
+              void getHostPort().openExternal(pageUrl);
               return;
             }
             window.open(pageUrl, '_blank', 'noopener,noreferrer');

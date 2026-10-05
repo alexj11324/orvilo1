@@ -1,7 +1,7 @@
 import type { Context } from 'hono';
 
 import { getServerDB } from '@/database/server';
-import { AutomationResultDeliveryService } from '@/server/services/automationResultDelivery';
+import { sweepDevicePrimeRunReconcile } from '@/server/services/devicePrimeReconcile';
 import { sweepMcpEventSubscriptions } from '@/server/services/mcpEvents/maintenance';
 import { sweepMcpEventInbox } from '@/server/services/mcpEvents/runtime';
 import { sweepTaskBacklogIntake } from '@/server/services/taskBacklogIntake';
@@ -80,22 +80,30 @@ export async function watchdog(c: Context) {
     // Event ingress has its own durable leases, but shares this maintenance
     // invocation and the core admission boundary with ordinary task dispatch.
     // A missing event migration must not stop cancellation/watchdog recovery.
-    const eventOutcomes = await Promise.allSettled([
-      eventMaintenanceWithTimeout(() => sweepMcpEventSubscriptions(db)),
-      eventMaintenanceWithTimeout(() => sweepMcpEventInbox(db)),
-    ]);
-    const [subscriptionsOutcome, inboxOutcome] = eventOutcomes;
-    const eventSubscriptions =
-      subscriptionsOutcome.status === 'fulfilled'
-        ? subscriptionsOutcome.value
-        : { status: 'unavailable' };
-    const eventInbox =
-      inboxOutcome.status === 'fulfilled' ? inboxOutcome.value : { status: 'unavailable' };
-    const eventMaintenanceHealthy = eventOutcomes.every(
-      (outcome) => outcome.status === 'fulfilled',
-    );
-    if (!eventMaintenanceHealthy)
-      console.error('[task/watchdog] MCP event maintenance unavailable or timed out');
+    let eventInbox: unknown;
+    let eventSubscriptions: unknown;
+    try {
+      eventSubscriptions = await sweepMcpEventSubscriptions(db);
+    } catch {
+      eventSubscriptions = { status: 'unavailable' };
+      console.error('[task/watchdog] MCP event subscription maintenance unavailable');
+    }
+    try {
+      eventInbox = await sweepMcpEventInbox(db);
+    } catch {
+      eventInbox = { status: 'unavailable' };
+      console.error('[task/watchdog] MCP event inbox sweep unavailable');
+    }
+    // Post-ack device rejections never reach the server — the reconcile sweep
+    // is the only convergence path for stranded prime runs (conversation
+    // subjects have no dispatch row for the task sweeps to see).
+    let primeReconcile: unknown;
+    try {
+      primeReconcile = await sweepDevicePrimeRunReconcile({ db });
+    } catch {
+      primeReconcile = { status: 'unavailable' };
+      console.error('[task/watchdog] device prime reconcile unavailable');
+    }
     const abandonedDispatches =
       cancellationOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length +
       dispatchRecoveryOutcomes.filter((outcome) => outcome.outcome === 'abandoned').length;
@@ -138,6 +146,7 @@ export async function watchdog(c: Context) {
       intakeStarted,
       intakeWaiting,
       orphanedTasksParked,
+      primeReconcile,
       cancellationRetries,
       dispatchRecoveryRetries,
       resumeRetries,

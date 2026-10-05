@@ -1,3 +1,4 @@
+import semver from 'semver';
 import urlJoin from 'url-join';
 import { parse } from 'yaml';
 
@@ -13,6 +14,8 @@ export interface DesktopDownloadInfo {
   url: string;
   version: string;
 }
+
+export type CliReleaseDownloadInfo = Omit<DesktopDownloadInfo, 'type'>;
 
 type GithubReleaseAsset = {
   browser_download_url: string;
@@ -110,16 +113,59 @@ export const resolveDesktopDownload = (
   };
 };
 
+export const resolveCliReleaseDownload = (
+  release: GithubRelease,
+): CliReleaseDownloadInfo | null => {
+  for (const asset of release.assets) {
+    const version = /^orvilo-cli-(.+)\.tgz$/.exec(asset.name)?.[1];
+    if (!version || !semver.valid(version)) continue;
+
+    try {
+      const url = new URL(asset.browser_download_url);
+      const assetPath = `/alexj11324/orvilo1/releases/download/${release.tag_name}/${asset.name}`;
+      if (
+        url.protocol !== 'https:' ||
+        url.hostname !== 'github.com' ||
+        url.username ||
+        url.password ||
+        url.port ||
+        url.search ||
+        url.hash ||
+        decodeURIComponent(url.pathname) !== assetPath
+      ) {
+        continue;
+      }
+
+      return {
+        assetName: asset.name,
+        publishedAt: release.published_at,
+        tag: release.tag_name,
+        url: url.href,
+        version,
+      };
+    } catch {
+      // A malformed asset URL is not an installable package.
+      continue;
+    }
+  }
+
+  return null;
+};
+
 export const getLatestDesktopReleaseFromGithub = async (options?: {
   owner?: string;
   repo?: string;
+  tag?: string;
   token?: string;
 }): Promise<GithubRelease> => {
   const owner = options?.owner || 'alexj11324';
   const repo = options?.repo || 'orvilo1';
   const token = options?.token || process.env.GITHUB_TOKEN;
+  const tag = options?.tag;
+  if (tag && !semver.valid(tag.replace(/^v/, ''))) throw new Error('Invalid release tag');
+  const releasePath = tag ? `tags/${encodeURIComponent(tag)}` : 'latest';
 
-  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/latest`, {
+  const res = await fetch(`https://api.github.com/repos/${owner}/${repo}/releases/${releasePath}`, {
     headers: {
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       'Accept': 'application/vnd.github+json',
@@ -134,6 +180,13 @@ export const getLatestDesktopReleaseFromGithub = async (options?: {
   }
 
   return (await res.json()) as GithubRelease;
+};
+
+export const getCliReleaseDownload = async (): Promise<CliReleaseDownloadInfo | null> => {
+  const release = await getLatestDesktopReleaseFromGithub({
+    tag: process.env.ORVILO_CLI_RELEASE_TAG || undefined,
+  });
+  return resolveCliReleaseDownload(release);
 };
 
 const fetchUpdateServerManifest = async (

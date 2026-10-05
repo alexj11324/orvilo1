@@ -497,7 +497,11 @@ export class OperationActionsImpl {
 
     const confirmations = await Promise.all([cancelHandler, ...childCancellations]);
     const cancellationConfirmed = confirmations.every(Boolean);
-    if (cancellationConfirmed) return true;
+    if (cancellationConfirmed) {
+      // Only confirmed transport shutdown releases execution-context controls.
+      this.#get().updateOperationMetadata(operationId, { isAborting: false });
+      return true;
+    }
 
     // The native transport may still own resources even though the optimistic
     // UI transition above marked the operation cancelled. Restore the blocker

@@ -1424,8 +1424,8 @@
     {
       "idx": 203,
       "version": "7",
-      "when": 1790988701940,
-      "tag": "0203_automation_occurrences_and_outputs",
+      "when": 1791162171349,
+      "tag": "0203_device_capability_snapshot",
       "breakpoints": true
     }
   ]

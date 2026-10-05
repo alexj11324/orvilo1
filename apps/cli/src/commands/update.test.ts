@@ -1,6 +1,62 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { buildInstallCommand, isNewerVersion } from './update';
+import { buildInstallCommand, fetchLatestRelease, isNewerVersion } from './update';
+
+describe('GitHub CLI release updates', () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('uses the version and install URL of the published CLI asset', async () => {
+    const spec =
+      'https://github.com/alexj11324/orvilo1/releases/download/v2.7.0/orvilo-cli-2.7.0.tgz';
+    const fetchMock = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          assets: [{ browser_download_url: spec, name: 'orvilo-cli-2.7.0.tgz' }],
+        }),
+      ),
+    );
+
+    expect(await fetchLatestRelease('latest')).toEqual({ spec, version: '2.7.0' });
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.github.com/repos/alexj11324/orvilo1/releases/latest',
+    );
+    expect(buildInstallCommand('npm', spec).args).toEqual(['install', '-g', spec]);
+  });
+
+  it('reports a release without a CLI asset instead of attempting the absent npm package', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(new Response(JSON.stringify({ assets: [] })));
+    await expect(fetchLatestRelease('latest')).rejects.toThrow(
+      'does not include an installable CLI package',
+    );
+  });
+
+  it('rejects assets outside the repository release downloads', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          assets: [
+            { browser_download_url: 'https://example.com/cli.tgz', name: 'orvilo-cli-2.7.0.tgz' },
+          ],
+        }),
+      ),
+    );
+    await expect(fetchLatestRelease('latest')).rejects.toThrow(
+      'does not include an installable CLI package',
+    );
+  });
+
+  it('queries an explicit release tag and reports API failures', async () => {
+    const fetchMock = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response('', { status: 404 }));
+    await expect(fetchLatestRelease('v2.7.0')).rejects.toThrow(
+      'GitHub Releases returned status 404',
+    );
+    expect(fetchMock.mock.calls[0][0]).toBe(
+      'https://api.github.com/repos/alexj11324/orvilo1/releases/tags/v2.7.0',
+    );
+  });
+});
 
 describe('isNewerVersion', () => {
   it('compares core versions', () => {

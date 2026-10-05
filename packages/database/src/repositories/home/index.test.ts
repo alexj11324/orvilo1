@@ -6,6 +6,7 @@ import { getTestDB } from '../../core/getTestDB';
 import { AgentModel } from '../../models/agent';
 import { agents } from '../../schemas/agent';
 import { chatGroups, chatGroupsAgents } from '../../schemas/chatGroup';
+import { devices } from '../../schemas/device';
 import { agentsToSessions } from '../../schemas/relations';
 import { sessionGroups, sessions } from '../../schemas/session';
 import { users } from '../../schemas/user';
@@ -468,7 +469,20 @@ describe('HomeRepository', () => {
         slug: workspaceId,
       });
       const workspaceAgentModel = new AgentModel(serverDB, userId, workspaceId);
+      // Creation admission requires a resolvable bound host.
+      await serverDB.insert(devices).values({
+        deviceId: `creation-host-${workspaceId}`,
+        identitySource: 'installation',
+        userId,
+        visibility: 'public',
+        workspaceId,
+      });
       const agent = await workspaceAgentModel.create({
+        agencyConfig: {
+          boundDeviceId: `creation-host-${workspaceId}`,
+          executionTarget: 'device',
+          heterogeneousProvider: { type: 'codex' },
+        },
         title: 'Transferred Private Agent',
         virtual: false,
         visibility: 'private',

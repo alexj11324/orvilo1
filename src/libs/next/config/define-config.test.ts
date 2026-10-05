@@ -6,6 +6,15 @@ describe('defineConfig', () => {
   const originalAssetBaseUrl = process.env.ASSET_BASE_URL;
   const originalLegacyPrefix = process.env.NEXT_PUBLIC_ASSET_PREFIX;
 
+  it('routes the public download entry to the current stable release', async () => {
+    const config = defineConfig({});
+    expect(await config.redirects!()).toContainEqual({
+      destination: 'https://github.com/alexj11324/orvilo1/releases/latest',
+      permanent: false,
+      source: '/download',
+    });
+  });
+
   afterEach(() => {
     if (originalAssetBaseUrl === undefined) delete process.env.ASSET_BASE_URL;
     else process.env.ASSET_BASE_URL = originalAssetBaseUrl;

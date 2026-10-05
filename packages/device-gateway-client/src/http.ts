@@ -12,6 +12,7 @@ import type {
   GatewayDevice,
   GatewayMcpParams,
   GatewayToolCallType,
+  PrimeRunDescriptor,
 } from './types';
 
 const DEFAULT_GATEWAY_TOOL_CALL_TIMEOUT_MS = 30_000;
@@ -254,6 +255,11 @@ export class GatewayHttpClient {
     imageList?: Array<{ id?: string; url: string }>;
     jwt: string;
     operationId: string;
+    /**
+     * Prime device-run descriptor — present iff the resolved harness
+     * adapter is Prime. Relayed verbatim onto `agent_run_request.prime`.
+     */
+    prime?: PrimeRunDescriptor;
     prompt: string;
     resumeFallbackSystemContext?: string;
     resumeSessionId?: string;

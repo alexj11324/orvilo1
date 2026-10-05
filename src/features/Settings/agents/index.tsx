@@ -1,18 +1,22 @@
 'use client';
 
+import { PlusIcon } from 'lucide-react';
 import { memo, useLayoutEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useParams } from 'react-router';
 
+import { Button } from '@/components/ui/button';
 import AgentList from '@/features/Home/AgentSelect/AgentList';
+import { useCreateMenuItems } from '@/features/HomeSidebar/hooks';
 import SettingContainer from '@/features/Setting/SettingContainer';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
 import { useFetchAgentList } from '@/hooks/useFetchAgentList';
-import AgentProfile from '@/routes/(main)/agent/profile';
 import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
 import { useUserStore } from '@/store/user';
 import { authSelectors } from '@/store/user/selectors';
+
+import AgentSettingsDetailPage from './AgentSettingsDetailPage';
 
 /**
  * Scope the settings host to the `:sub` route param — the per-agent settings
@@ -44,10 +48,10 @@ const useScopedAgent = (agentId: string) => {
 };
 
 /**
- * `/settings/agents/:agentId` — the exiled per-agent configuration surface.
- * Renders the full agent settings page (General / Runtime / Model / Tools &
- * Permissions / Environment — what the `/agent/:aid/profile` surface used to
- * host) inside the settings shell.
+ * `/settings/agents/:agentId` — the native per-agent settings page: a compact
+ * identity header and the grouped sections, with zero profile chrome (no
+ * Hero, breadcrumb, tabs or builder rail). The profile route stays for compat
+ * but settings never mounts it.
  */
 const AgentSettingsDetail = memo<{ agentId: string }>(({ agentId }) => {
   useScopedAgent(agentId);
@@ -55,7 +59,7 @@ const AgentSettingsDetail = memo<{ agentId: string }>(({ agentId }) => {
   const useFetchAgentConfig = useAgentStore((s) => s.useFetchAgentConfig);
   useFetchAgentConfig(isLogin, agentId);
 
-  return <AgentProfile agentId={agentId} />;
+  return <AgentSettingsDetailPage agentId={agentId} />;
 });
 
 AgentSettingsDetail.displayName = 'AgentSettingsDetail';
@@ -66,17 +70,32 @@ AgentSettingsDetail.displayName = 'AgentSettingsDetail';
  */
 const AgentSettingsIndex = memo(() => {
   const { t } = useTranslation('setting');
+  const { t: tChat } = useTranslation('chat');
   const navigate = useWorkspaceAwareNavigate();
   const { error, mutate } = useFetchAgentList();
+  const { createAgent, isMutatingAgent } = useCreateMenuItems();
 
   return (
     <SettingContainer maxWidth={640} paddingBlock={'24px 128px'} paddingInline={24}>
       <div className="flex flex-col gap-4">
-        <div className="flex flex-col gap-1">
-          <div className="text-[20px] font-semibold">{t('tab.agents')}</div>
-          <div className="text-[13px]" style={{ color: 'var(--ant-color-text-description)' }}>
-            {t('agentsIndexHint')}
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex flex-col gap-1">
+            <div className="text-[20px] font-semibold">{t('tab.agents')}</div>
+            <div className="text-[13px]" style={{ color: 'var(--ant-color-text-description)' }}>
+              {t('agentsIndexHint')}
+            </div>
           </div>
+          {/* Settings origin: one-click create stays on this surface — opens
+              the new agent's settings, never touches the chat default. */}
+          <Button
+            disabled={isMutatingAgent}
+            size="sm"
+            variant="outline"
+            onClick={() => void createAgent({ origin: 'settings' })}
+          >
+            <PlusIcon size={14} />
+            {tChat('newAgent')}
+          </Button>
         </div>
         <AgentList
           activeAgentId={''}

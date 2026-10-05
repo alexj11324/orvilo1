@@ -32,7 +32,10 @@ export interface ReviewPatchesData {
  * through `gitService`, which dispatches Electron IPC (local) vs `device.*` RPC
  * (remote, `deviceId` set). UI only consumes these hooks — same call shape for
  * local and remote. Disabled (no request) until a `path` is available, and on
- * web (no `isDesktop`) until a `deviceId` is too.
+ * web until a `deviceId` is too. `isDesktop` here only means "a local runtime
+ * the client can prove" — the service layer itself re-verifies the proven
+ * local device identity before touching IPC (`resolveLocalExecutionIdentity`),
+ * so this gate is an early-off optimization, never the authorization.
  */
 const isEnabled = (deviceId: string | undefined, path: string | undefined): path is string =>
   !!path && (!!deviceId || isDesktop);

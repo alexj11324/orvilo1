@@ -10,7 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 
 import { gitChipStyles } from './gitChipStyles';
 import { resolveStaleSnapshot } from './staleSnapshot';
@@ -59,6 +59,7 @@ interface StaleGitSnapshotProps {
   path: string;
   /** The source repo the worktree was linked from, when the topic recorded one. */
   sourcePath?: string;
+  topicId?: string | null;
 }
 
 /**
@@ -73,18 +74,23 @@ interface StaleGitSnapshotProps {
  * explains why the branch is frozen but leaves no way out of it.
  */
 const StaleGitSnapshot = memo<StaleGitSnapshotProps>(
-  ({ agentId, git, isGithub, path, sourcePath }) => {
+  ({ agentId, git, isGithub, path, sourcePath, topicId }) => {
     const { t } = useTranslation('device');
     const [open, setOpen] = useState(false);
     const [resetting, setResetting] = useState(false);
-    const switchWorktree = useSwitchWorktree({ agentId, isGithub, sourcePath: sourcePath ?? path });
+    const switchWorktree = useSwitchWorktree({
+      agentId,
+      isGithub,
+      sourcePath: sourcePath ?? path,
+      topicId,
+    });
 
     const { branch, explanation, isWorktree, pullRequest, reset, worktreePath } =
       resolveStaleSnapshot({ git, path, sourcePath });
 
     const handleOpenPr = useCallback(() => {
       if (pullRequest?.url) {
-        void electronSystemService.openExternalLink(pullRequest.url);
+        void getHostPort().openExternal(pullRequest.url);
       }
     }, [pullRequest?.url]);
 

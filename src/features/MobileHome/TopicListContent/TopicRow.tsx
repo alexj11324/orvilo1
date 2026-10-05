@@ -1,12 +1,11 @@
 import { AGENT_CHAT_TOPIC_URL } from '@orvilo/const';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles, cssVar, cx } from 'antd-style';
 import dayjs from 'dayjs';
+import { MessageSquare } from 'lucide-react';
 import { memo } from 'react';
 
-import Avatar from '@/components/Avatar';
 import { TOPIC_STATUS_VISUALS } from '@/components/ExecutionStatus';
 import UnreadDot from '@/components/UnreadDot';
-import { useAgentDisplayMeta } from '@/features/AgentTasks/shared/useAgentDisplayMeta';
 import RunningGlyph from '@/features/Home/components/RunningGlyph';
 import WorkspaceLink from '@/features/Workspace/WorkspaceLink';
 
@@ -72,12 +71,12 @@ const StatusMark = ({ status }: { status: MobileTopicRow['status'] }) => {
 };
 
 /**
- * A conversation row on the mobile 会话 tab: topic title is the primary
- * visual, the owning agent is weak secondary metadata (status + name only —
- * model/provider is configuration and never appears here).
+ * A conversation row on the mobile 会话 tab: the topic title is the primary
+ * visual and execution status is the only secondary line — the owning agent
+ * lives in the composer's agent picker once the topic opens, never on the
+ * row itself.
  */
 const TopicRow = memo<{ topic: MobileTopicRow }>(({ topic }) => {
-  const agent = useAgentDisplayMeta(topic.agentId);
   const isUnread = topic.status === 'unread';
 
   return (
@@ -86,22 +85,26 @@ const TopicRow = memo<{ topic: MobileTopicRow }>(({ topic }) => {
       className={cx(styles.row)}
       to={AGENT_CHAT_TOPIC_URL(topic.agentId, topic.id, true)}
     >
-      <Avatar
-        avatar={agent?.avatar}
-        background={agent?.backgroundColor}
-        shape={'circle'}
-        size={40}
-        style={{ flex: 'none' }}
-        title={agent?.title}
-      />
+      <span
+        className="flex items-center justify-center rounded-full"
+        style={{
+          backgroundColor: cssVar.colorFillSecondary,
+          flex: 'none',
+          height: 40,
+          width: 40,
+        }}
+      >
+        <MessageSquare size={18} style={{ color: cssVar.colorTextDescription }} />
+      </span>
       <div className="min-w-0 flex-1">
         <div className={styles.title} style={isUnread ? { fontWeight: 600 } : undefined}>
           {topic.title}
         </div>
-        <div className={styles.desc}>
-          <StatusMark status={topic.status} />
-          <span className="truncate">{agent?.title ?? '—'}</span>
-        </div>
+        {topic.status ? (
+          <div className={styles.desc}>
+            <StatusMark status={topic.status} />
+          </div>
+        ) : null}
       </div>
       <div className={styles.time}>{formatRowTime(topic.updatedAt)}</div>
     </WorkspaceLink>

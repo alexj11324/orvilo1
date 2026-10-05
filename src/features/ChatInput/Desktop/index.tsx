@@ -93,10 +93,11 @@ interface DesktopChatInputProps extends ActionToolbarProps {
   compact?: boolean;
   /**
    * Render the control bar (or `controlBarSlot`) as the card's last footer row
-   * instead of a sibling below it. The reference composer keeps its controls
-   * inside the card border; surfaces that want a free-floating bar keep the
-   * default off. In `compact` mode the footer is dropped entirely, so the bar
-   * falls back to the sibling position.
+   * instead of a sibling below it. No surface sets this: the reference composer
+   * keeps its controls *below* the card border, and the two agent surfaces that
+   * once opted in had read that reference backwards. Kept as an escape hatch,
+   * but a new caller should not set it. In `compact` mode the footer is dropped
+   * entirely, so the bar falls back to the sibling position regardless.
    */
   controlBarInCard?: boolean;
   /**

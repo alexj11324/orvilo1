@@ -101,6 +101,44 @@ describe('selectRuntimeType', () => {
     });
   });
 
+  it.each([
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ])(
+    'keeps local Prime on Gateway with workspace=%s and socket connected=%s',
+    (isWorkspaceAgent, deviceGatewayConnected) => {
+      expect(
+        selectRuntimeType(
+          {
+            boundDeviceId: 'verified-device',
+            deviceGatewayConnected,
+            executionTarget: 'local',
+            heterogeneousProvider: { type: 'orvilo' },
+            isGatewayMode: false,
+            isWorkspaceAgent,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('gateway');
+    },
+  );
+
+  it('does not inherit an IPC parent runtime for a Prime child', () => {
+    expect(
+      selectRuntimeType(
+        {
+          executionTarget: 'local',
+          heterogeneousProvider: { type: 'orvilo' },
+          isGatewayMode: false,
+          parentRuntime: 'hetero',
+        },
+        { isDesktop: true },
+      ),
+    ).toBe('gateway');
+  });
+
   describe('executionTarget routing for local CLI hetero', () => {
     it('allows Claude Code API mode only for Desktop local execution', () => {
       expect(
@@ -112,7 +150,7 @@ describe('selectRuntimeType', () => {
           },
           { isDesktop: true },
         ),
-      ).toBe('hetero');
+      ).toBe('gateway');
 
       expect(() =>
         selectRuntimeType(
@@ -147,7 +185,7 @@ describe('selectRuntimeType', () => {
           },
           { isDesktop: true },
         ),
-      ).toBe('hetero');
+      ).toBe('gateway');
 
       expect(() =>
         selectRuntimeType(
@@ -182,7 +220,7 @@ describe('selectRuntimeType', () => {
           },
           { isDesktop: true },
         ),
-      ).toBe('hetero');
+      ).toBe('gateway');
 
       expect(() =>
         selectRuntimeType(
@@ -213,7 +251,10 @@ describe('selectRuntimeType', () => {
       },
     );
 
-    it('allows API mode inherited from the Desktop hetero parent runtime', () => {
+    it("routes API mode inherited from a stale 'hetero' parent runtime to gateway", () => {
+      // A persisted 'hetero' parentRuntime is a transport marker, not a live
+      // target: the api-mode local guard still passes (the run stays on the
+      // box), but the child can only be admitted through gateway.
       expect(
         selectRuntimeType(
           {
@@ -224,7 +265,7 @@ describe('selectRuntimeType', () => {
           },
           { isDesktop: true },
         ),
-      ).toBe('hetero');
+      ).toBe('gateway');
     });
 
     it.each(['client', 'gateway', 'hetero'] as const)(
@@ -289,7 +330,11 @@ describe('selectRuntimeType', () => {
       ).toBe('gateway');
     });
 
-    it('keeps hetero when executionTarget = local on desktop', () => {
+    it('routes `local` to gateway even when the device socket is down — never an IPC spawn (FIX-C)', () => {
+      // Socket state never changes the routing decision. With the socket down
+      // the server's admission simply cannot reach this device, and the run
+      // surfaces as a typed blocked/unknown result — the private IPC fallback
+      // that used to spawn here is removed.
       expect(
         selectRuntimeType(
           {
@@ -299,7 +344,61 @@ describe('selectRuntimeType', () => {
           },
           { isDesktop: true },
         ),
-      ).toBe('hetero');
+      ).toBe('gateway');
+    });
+
+    it('routes desktop `local` through gateway — server dispatches back onto THIS device', () => {
+      // Converged path: the server dispatches the run back onto THIS desktop
+      // via agent_run_request → heteroIngest — the same admission + ledger
+      // lifecycle every other surface uses, so web observes the run too.
+      // There is no socket-state input: `deviceGatewayConnected` was removed
+      // from RuntimeSelectionContext because connectivity is a reachability
+      // fact for the server, not a routing signal for the client.
+      expect(
+        selectRuntimeType(
+          {
+            executionTarget: 'local',
+            heterogeneousProvider: heteroProvider,
+            isGatewayMode: false,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('gateway');
+    });
+
+    it('routes workspace-agent `local` to gateway — admission decides, not the client (FIX-C)', () => {
+      // Whether a member's personal desktop may execute a workspace run is an
+      // authorization question the server admission answers (enrollment/grant
+      // surfaced through a blocked result). The client never pre-decides it
+      // by spawning the private IPC lifecycle.
+      expect(
+        selectRuntimeType(
+          {
+            executionTarget: 'local',
+            heterogeneousProvider: heteroProvider,
+            isGatewayMode: false,
+            isWorkspaceAgent: true,
+            workspaceScoped: false,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('gateway');
+    });
+
+    it('routes API-mode `local` to gateway — the exec stays on the same desktop', () => {
+      // The provider binding resolves on the desktop either way; gateway
+      // dispatch does not move credentials off the box, it only moves the
+      // admission/ledger hop server-side.
+      expect(
+        selectRuntimeType(
+          {
+            executionTarget: 'local',
+            heterogeneousProvider: apiHeteroProvider,
+            isGatewayMode: false,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('gateway');
     });
 
     it('falls back to gateway when executionTarget = local on web (sandbox or bound device)', () => {
@@ -356,7 +455,9 @@ describe('selectRuntimeType', () => {
   });
 
   describe('isWorkspaceAgent', () => {
-    it('keeps subscription-auth workspace agents spawnable by their author', () => {
+    it("routes an author's workspace-agent `local` run to gateway", () => {
+      // `isWorkspaceAgent` no longer unlocks an in-process spawn — it only
+      // feeds the api-mode personal-provider guard.
       expect(
         selectRuntimeType(
           {
@@ -368,7 +469,7 @@ describe('selectRuntimeType', () => {
           },
           { isDesktop: true },
         ),
-      ).toBe('hetero');
+      ).toBe('gateway');
     });
   });
 
@@ -389,9 +490,39 @@ describe('selectRuntimeType', () => {
         selectRuntimeType({ parentRuntime: 'gateway', isGatewayMode: false }, { isDesktop: false }),
       ).toBe('gateway');
 
+      // A stale/forced 'hetero' never resurrects the retired IPC spawn — it
+      // is coerced to the same admission the parent actually ran under.
       expect(
         selectRuntimeType({ parentRuntime: 'hetero', isGatewayMode: true }, { isDesktop: false }),
-      ).toBe('hetero');
+      ).toBe('gateway');
+    });
+
+    it("never returns 'hetero' for any routing outcome (FIX-C invariant)", () => {
+      const contexts: Parameters<typeof selectRuntimeType>[0][] = [
+        { isGatewayMode: false },
+        { isGatewayMode: true },
+        { isGatewayMode: false },
+        { heterogeneousProvider: heteroProvider, isGatewayMode: false },
+        { heterogeneousProvider: remoteHeteroProvider, isGatewayMode: false },
+        {
+          executionTarget: 'local',
+          heterogeneousProvider: heteroProvider,
+          isGatewayMode: false,
+        },
+        {
+          executionTarget: 'local',
+          heterogeneousProvider: heteroProvider,
+          isGatewayMode: false,
+          isWorkspaceAgent: true,
+          workspaceScoped: false,
+        },
+        { isGatewayMode: false, parentRuntime: 'hetero' },
+      ];
+      for (const isDesktop of [false, true]) {
+        for (const ctx of contexts) {
+          expect(selectRuntimeType(ctx, { isDesktop })).not.toBe('hetero');
+        }
+      }
     });
   });
 });

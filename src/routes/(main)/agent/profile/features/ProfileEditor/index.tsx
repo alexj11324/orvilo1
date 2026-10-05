@@ -1,53 +1,27 @@
 'use client';
 
-import { isDesktop } from '@orvilo/const';
-import {
-  isHeterogeneousProviderBindingSupported,
-  isRemoteHeterogeneousType,
-  isServerDefaultHeterogeneousAgentType,
-} from '@orvilo/heterogeneous-agents';
-import type { HeterogeneousApiConfig, HeterogeneousAuthMode } from '@orvilo/types';
-import { createStaticStyles, cssVar } from 'antd-style';
+import { isRemoteHeterogeneousType } from '@orvilo/heterogeneous-agents';
+import { createStaticStyles } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
-import { Wrench } from 'lucide-react';
-import React, { memo, type ReactNode } from 'react';
-import { useTranslation } from 'react-i18next';
+import React, { memo } from 'react';
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AgentAccessSettings from '@/features/AgentSettings/AgentAccessSettings';
+import AgentAdvancedSettings from '@/features/AgentSettings/AgentAdvancedSettings';
+import AgentDeviceSettings from '@/features/AgentSettings/AgentDeviceSettings';
+import AgentGeneralSettings from '@/features/AgentSettings/AgentGeneralSettings';
+import AgentModelSettings from '@/features/AgentSettings/AgentModelSettings';
+import ExternalAgentConnectionSettings from '@/features/AgentSettings/ExternalAgentConnectionSettings';
 import { isBuiltinEngineType } from '@/features/HeterogeneousAgent/engine';
-import { resolveServerDefaultAgentModels } from '@/features/HeterogeneousAgent/modelPicker';
-import RunPriorityHint from '@/features/ProfileEditor/AgentUserTools/RunPriorityHint';
-import { resolveExecutionTarget } from '@/helpers/executionTarget';
-import { useEffectiveAgencyConfig } from '@/hooks/useEffectiveAgencyConfig';
-import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
-import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
+import { agentSelectors } from '@/store/agent/selectors';
 
 import EditorCanvas from '../EditorCanvas';
 import AgentHeader from './AgentHeader';
-import AgentTool from './AgentTool';
-import CloudHeterogeneousConfig from './CloudHeterogeneousConfig';
-import EngineConfigCard from './EngineConfigCard';
-import HeterogeneousAgentStatusCard from './HeterogeneousAgentStatusCard';
-import RemoteAgentConfigCard from './RemoteAgentConfigCard';
-import WorkspaceAgentDevicePolicy from './WorkspaceAgentDevicePolicy';
-import { WorkspaceAgentPolicyCard } from './WorkspaceAgentPolicyCard';
 
 const styles = createStaticStyles(({ css }) => ({
-  configLabel: css`
-    font-size: 12px;
-    line-height: 1;
-    color: ${cssVar.colorTextTertiary};
-  `,
   configStack: css`
     container-type: inline-size;
-  `,
-  configPanel: css`
-    padding: 24px;
-    border: 1px solid ${cssVar.colorBorderSecondary};
-    border-radius: ${cssVar.borderRadiusLG};
-    background: ${cssVar.colorFillQuaternary};
   `,
   topArea: css`
     cursor: default;
@@ -56,164 +30,22 @@ const styles = createStaticStyles(({ css }) => ({
 }));
 
 const ProfileEditor = memo(() => {
-  const { t } = useTranslation('setting');
-  const { allowed: canEdit } = usePermission('edit_own_content');
   const agentId = useAgentStore((s) => s.activeAgentId || '');
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId), isEqual);
-  const isWorkspaceAgent = useAgentStore(agentByIdSelectors.isWorkspaceAgentById(agentId));
-  const updateAgentConfigById = useAgentStore((s) => s.updateAgentConfigById);
   const isHeterogeneous = useAgentStore(agentSelectors.isCurrentAgentHeterogeneous);
   const heterogeneousProvider = config?.agencyConfig?.heterogeneousProvider;
-  const { agencyConfig: effectiveAgencyConfig, workspaceScoped } =
-    useEffectiveAgencyConfig(agentId);
-
-  const updateHeterogeneousCommand = async (command: string) => {
-    if (!canEdit) return;
-    if (!heterogeneousProvider) return;
-    await updateAgentConfigById(agentId, {
-      agencyConfig: {
-        heterogeneousProvider: { ...heterogeneousProvider, command },
-      },
-    });
-  };
-
-  const updateHeterogeneousEnv = async (env: Record<string, string>) => {
-    if (!canEdit) return;
-    if (!heterogeneousProvider) return;
-    await updateAgentConfigById(agentId, {
-      agencyConfig: {
-        heterogeneousProvider: { ...heterogeneousProvider, env },
-      },
-    });
-  };
-
-  const updateHeterogeneousAuthMode = async (
-    authMode: HeterogeneousAuthMode,
-    apiConfig?: HeterogeneousApiConfig,
-  ) => {
-    if (!canEdit || !heterogeneousProvider) return;
-    await updateAgentConfigById(agentId, {
-      agencyConfig: {
-        heterogeneousProvider: { ...heterogeneousProvider, apiConfig, authMode },
-      },
-    });
-  };
-
-  const updateHeterogeneousApiConfig = async (apiConfig: HeterogeneousApiConfig | undefined) => {
-    if (!canEdit || !heterogeneousProvider) return;
-    await updateAgentConfigById(agentId, {
-      agencyConfig: {
-        heterogeneousProvider: { ...heterogeneousProvider, apiConfig },
-      },
-    });
-  };
-
-  const updateBoundDeviceId = async (boundDeviceId: string) => {
-    await updateAgentConfigById(agentId, {
-      agencyConfig: { ...config?.agencyConfig, boundDeviceId, executionTarget: 'device' },
-    });
-  };
 
   const isRemoteHetero =
     isHeterogeneous &&
     !!heterogeneousProvider &&
     isRemoteHeterogeneousType(heterogeneousProvider.type);
-  // The builtin Orvilo harness shares the local-CLI status card (engine binary
-  // detection, command override) but has no Cloud tab — the cloud runner only
-  // wraps the claude-code CLI.
   const isBuiltinEngine =
     isHeterogeneous && !!heterogeneousProvider && isBuiltinEngineType(heterogeneousProvider.type);
-  const showCloudHeterogeneousTab = heterogeneousProvider?.type === 'claude-code';
-  const localDesktopAvailable =
-    isDesktop &&
-    !!heterogeneousProvider &&
-    isHeterogeneousProviderBindingSupported(heterogeneousProvider.type) &&
-    resolveExecutionTarget(effectiveAgencyConfig, {
-      clientExecutionAvailable: true,
-      isHetero: true,
-      workspaceScoped,
-    }) === 'local';
-  // Workspace agents are excluded even when the author could spawn them
-  // locally: the binding UI would list workspace-scoped providers, but Desktop
-  // main resolves the reference in the personal scope only (see
-  // `selectRuntimeType`'s personal-scope guard). The deployment-default API
-  // source is not a user-provider binding, so it stays available whenever
-  // local Desktop execution is available.
-  const apiModeAvailable = localDesktopAvailable && !isWorkspaceAgent;
-  const useFetchServerDefaultCapability = useAgentStore(
-    (s) => s.useFetchServerDefaultHeterogeneousCapability,
-  );
-  // The shared matrix owns which native drivers can reach the deployment relay;
-  // model/runtime compatibility continues to come from the server capability below.
-  const serverDefaultAgentType =
-    heterogeneousProvider && isServerDefaultHeterogeneousAgentType(heterogeneousProvider.type)
-      ? heterogeneousProvider.type
-      : undefined;
-  const serverCapabilityEnabled = localDesktopAvailable && !!serverDefaultAgentType;
-  const serverCapability = useFetchServerDefaultCapability(serverCapabilityEnabled);
-  const serverDefaultModels =
-    serverCapability.data?.enabled === true && serverDefaultAgentType
-      ? resolveServerDefaultAgentModels(serverCapability.data.models, serverDefaultAgentType)
-      : [];
-  const serverDefaultAvailable = serverCapabilityEnabled && serverDefaultModels.length > 0;
-  const serverDefaultUnavailableReason = !localDesktopAvailable
-    ? t('heterogeneousStatus.apiMode.localOnly')
-    : serverCapability.error
-      ? t('heterogeneousStatus.apiMode.serverDefault.loadFailed')
-      : serverCapability.data?.enabled === false
-        ? t(
-            serverCapability.data.reason === 'disabled'
-              ? 'heterogeneousStatus.apiMode.serverDefault.disabled'
-              : 'heterogeneousStatus.apiMode.serverDefault.invalidConfiguration',
-          )
-        : serverCapabilityEnabled && !serverCapability.isLoading && !serverDefaultAvailable
-          ? t('heterogeneousStatus.apiMode.serverDefault.unsupported')
-          : undefined;
-  const heterogeneousTabItems: {
-    children: ReactNode;
-    disabled?: boolean;
-    key: string;
-    label: ReactNode;
-  }[] = heterogeneousProvider
-    ? [
-        ...(showCloudHeterogeneousTab
-          ? [
-              {
-                key: 'cloud',
-                label: t('heterogeneousStatus.cloud.tabLabel'),
-                children: (
-                  <CloudHeterogeneousConfig
-                    provider={heterogeneousProvider}
-                    onEnvChange={updateHeterogeneousEnv}
-                  />
-                ),
-              },
-            ]
-          : []),
-        {
-          key: 'desktop',
-          label: t('heterogeneousStatus.desktop.tabLabel'),
-          disabled: !isDesktop,
-          children: (
-            <HeterogeneousAgentStatusCard
-              apiModeAvailable={apiModeAvailable}
-              apiModeWorkspaceBlocked={isWorkspaceAgent}
-              provider={heterogeneousProvider}
-              serverDefaultAvailable={serverDefaultAvailable}
-              serverDefaultLoading={serverCapabilityEnabled && serverCapability.isLoading}
-              serverDefaultModels={serverDefaultModels}
-              serverDefaultUnavailableReason={serverDefaultUnavailableReason}
-              onApiConfigChange={updateHeterogeneousApiConfig}
-              onAuthModeChange={updateHeterogeneousAuthMode}
-              onCommandChange={updateHeterogeneousCommand}
-              onServerDefaultRetry={() => {
-                void serverCapability.mutate();
-              }}
-            />
-          ),
-        },
-      ]
-    : [];
+  // External harnesses (local CLIs + remote platforms) get the Connection
+  // group; builtin/legacy runtimes get the General tools group. Both share
+  // the same Device and Access groups — the execution contract's single
+  // device component and one write path per setting.
+  const externalAgent = isHeterogeneous && !!heterogeneousProvider && !isBuiltinEngine;
 
   return (
     <>
@@ -229,76 +61,25 @@ const ProfileEditor = memo(() => {
           className={cn('flex flex-col gap-2', styles.configStack)}
           style={{ paddingBlock: isRemoteHetero ? '8px 0' : undefined }}
         >
-          {/* Engine: harness / builtin engine / per-harness model + effort /
-              execution target. Also the upgrade surface for legacy agents —
-              the first pick materializes `agencyConfig.heterogeneousProvider`. */}
-          <EngineConfigCard agentId={agentId} />
-          {isRemoteHetero && heterogeneousProvider ? (
-            // Remote platform agents (openclaw / hermes): show device config panel
-            <RemoteAgentConfigCard
-              provider={heterogeneousProvider}
-              onBoundDeviceChange={updateBoundDeviceId}
-            />
-          ) : isBuiltinEngine && heterogeneousProvider ? (
-            // Builtin Orvilo harness: engine-CLI detection + command override,
-            // no cloud/desktop tab split.
-            <HeterogeneousAgentStatusCard
-              apiModeAvailable={apiModeAvailable}
-              apiModeWorkspaceBlocked={isWorkspaceAgent}
-              provider={heterogeneousProvider}
-              serverDefaultAvailable={serverDefaultAvailable}
-              serverDefaultLoading={serverCapabilityEnabled && serverCapability.isLoading}
-              serverDefaultModels={serverDefaultModels}
-              serverDefaultUnavailableReason={serverDefaultUnavailableReason}
-              onApiConfigChange={updateHeterogeneousApiConfig}
-              onAuthModeChange={updateHeterogeneousAuthMode}
-              onCommandChange={updateHeterogeneousCommand}
-              onServerDefaultRetry={() => {
-                void serverCapability.mutate();
-              }}
-            />
-          ) : isHeterogeneous && heterogeneousProvider ? (
-            // Local CLI agents: Claude Code supports cloud config; Codex is desktop-only for now.
-            <Tabs defaultValue={isDesktop || !showCloudHeterogeneousTab ? 'desktop' : 'cloud'}>
-              <TabsList>
-                {heterogeneousTabItems.map((item) => (
-                  <TabsTrigger disabled={item.disabled} key={item.key} value={item.key}>
-                    {item.label}
-                  </TabsTrigger>
-                ))}
-              </TabsList>
-              {heterogeneousTabItems.map((item) => (
-                <TabsContent key={item.key} value={item.key}>
-                  {item.children}
-                </TabsContent>
-              ))}
-            </Tabs>
-          ) : isWorkspaceAgent ? (
+          {externalAgent ? (
             <>
-              <div className="flex gap-2 flex-wrap">
-                <WorkspaceAgentDevicePolicy agentId={agentId} />
-              </div>
-              <WorkspaceAgentPolicyCard
-                fullWidth
-                action={<RunPriorityHint agentId={agentId} />}
-                icon={Wrench}
-                title={t('settingAgent.toolsConfig.title')}
-              >
-                <AgentTool />
-              </WorkspaceAgentPolicyCard>
+              <ExternalAgentConnectionSettings agentId={agentId} />
+              {/* Remote platforms carry no local model rows — model/effort is
+                  a local-CLI concept. */}
+              {isRemoteHetero ? null : <AgentModelSettings agentId={agentId} />}
+              <AgentDeviceSettings agentId={agentId} />
+              <AgentAccessSettings agentId={agentId} />
+              <AgentAdvancedSettings agentId={agentId} />
             </>
           ) : (
-            <div className={cn('flex flex-col gap-2.5', styles.configPanel)}>
-              <div className="flex items-center gap-3 justify-between">
-                <div className={styles.configLabel}>{t('settingAgent.runtimeConfig.title')}</div>
-                <RunPriorityHint agentId={agentId} />
-              </div>
-              <AgentTool />
-            </div>
+            <>
+              <AgentGeneralSettings agentId={agentId} />
+              <AgentModelSettings agentId={agentId} />
+              <AgentDeviceSettings agentId={agentId} />
+              <AgentAccessSettings agentId={agentId} />
+              <AgentAdvancedSettings agentId={agentId} />
+            </>
           )}
-          {isHeterogeneous ? (
-            <WorkspaceAgentDevicePolicy agentId={agentId} showDevicePicker={!isRemoteHetero} />
-          ) : null}
         </div>
       </div>
       {/* Main Content: Prompt Editor — built-in model runtime only. Hetero agents

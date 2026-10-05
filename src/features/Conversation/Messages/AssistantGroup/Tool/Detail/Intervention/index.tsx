@@ -3,6 +3,7 @@ import { safeParseJSON } from '@orvilo/utils';
 import { memo, Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 
+import { requestAgentRuntime } from '@/features/CreateAgent';
 import { useSingleton } from '@/hooks/useSingleton';
 import { useUserStore } from '@/store/user';
 import { toolInterventionSelectors } from '@/store/user/selectors';
@@ -152,16 +153,18 @@ const Intervention = memo<InterventionProps>(
                 selectedTemplateIds.length > 0 &&
                 selectedTemplateIds.every((templateId) => typeof templateId === 'string')
               ) {
+                const runtimeConfig = await requestAgentRuntime();
+                if (!runtimeConfig) break;
                 await submitToolInteraction(id, action.payload, {
                   agentInterventionAction: {
-                    result: { kind: 'agent_marketplace', selectedTemplateIds },
+                    result: { kind: 'agent_marketplace', selectedTemplateIds, runtimeConfig },
                     type: 'submit_custom',
                   },
                   prepareLegacyFallback: async () => {
                     const prepared = await prepareCustomInteractionSubmit(
                       identifier,
                       action.payload,
-                      { apiName, requestArgs: parsedArgs, topicId },
+                      { apiName, requestArgs: parsedArgs, topicId, runtimeConfig },
                     );
                     return { response: prepared.payload, ...prepared.options };
                   },

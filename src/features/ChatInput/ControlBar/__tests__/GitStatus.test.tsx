@@ -69,8 +69,9 @@ vi.mock('@/store/global/selectors', () => ({
   },
 }));
 
-vi.mock('@/services/electron/system', () => ({
-  electronSystemService: { openExternalLink: vi.fn() },
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getHostPort: () => ({ openExternal: vi.fn() }),
 }));
 
 vi.mock('@/services/git', () => ({

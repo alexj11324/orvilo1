@@ -12,7 +12,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { usePermission } from '@/hooks/usePermission';
 import { useGroupWizard } from '@/layout/GlobalProvider/GroupWizardProvider';
 import { lambdaClient } from '@/libs/trpc/client';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { omitPersonalTeamItems } from '@/services/recent';
 import { workAttentionService } from '@/services/workAttention';
 import { useAgentStore } from '@/store/agent';
@@ -21,7 +21,6 @@ import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
 import { useGlobalStore } from '@/store/global';
 import { globalHelpers } from '@/store/global/helpers';
-import { useHomeStore } from '@/store/home';
 
 import { useCommandMenuContext } from './CommandMenuContext';
 import { type CommandMenuSearchResult, type ThemeMode } from './types';
@@ -57,11 +56,9 @@ export const useCommandMenu = () => {
   const workspaceId = useActiveWorkspaceId();
   const { allowed: canCreate } = usePermission('create_content');
   const { setTheme } = useNextThemesTheme();
-  const createAgent = useAgentStore((s) => s.createAgent);
-  const refreshAgentList = useHomeStore((s) => s.refreshAgentList);
   const inboxAgentId = useAgentStore(builtinAgentSelectors.inboxAgentId);
   const { openGroupWizard } = useGroupWizard();
-  const { createGroupWithMembers, createGroupFromTemplate } = useCreateMenuItems();
+  const { createAgent, createGroupWithMembers, createGroupFromTemplate } = useCreateMenuItems();
   const { open: openCreateLibraryModal } = useCreateNewModal();
 
   // Debounce search input to reduce API calls
@@ -148,7 +145,7 @@ export const useCommandMenu = () => {
   const handleExternalLink = useCallback(
     async (url: string) => {
       if (isDesktop) {
-        await electronSystemService.openExternalLink(url);
+        await getHostPort().openExternal(url);
       } else {
         window.open(url, '_blank', 'noopener,noreferrer');
       }
@@ -190,16 +187,13 @@ export const useCommandMenu = () => {
   const handleCreateSession = useCallback(async () => {
     if (!canCreate) return;
 
-    const result = await createAgent({});
-    await refreshAgentList();
-
-    // Navigate to the newly created agent
-    if (result.agentId) {
-      navigate(`/agent/${result.agentId}`);
-    }
+    // One-click Orvilo create — fixed type + idempotency key + deterministic
+    // naming + the openNewConversation destination all live in the shared
+    // create path (docs/development/device-execution-contract.md).
+    await createAgent();
 
     onClose();
-  }, [canCreate, createAgent, refreshAgentList, navigate, onClose]);
+  }, [canCreate, createAgent, onClose]);
 
   const openNewTopicOrSaveTopic = useChatStore((s) => s.openNewTopicOrSaveTopic);
 

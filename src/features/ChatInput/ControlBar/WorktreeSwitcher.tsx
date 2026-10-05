@@ -36,6 +36,7 @@ import { gitService } from '@/services/git';
 
 import { SimpleTooltip } from '../SimpleTooltip';
 import { openCreateWorktreeModal } from './CreateWorktreeModal';
+import { useCommitWorkingDirectory } from './useCommitWorkingDirectory';
 import { useSwitchWorktree } from './useSwitchWorktree';
 import { getPathName, isDisabled, normalizeDisplayPath } from './worktreeHelpers';
 
@@ -88,8 +89,7 @@ const styles = createStaticStyles(({ css }) => ({
     display: flex;
     flex-direction: column;
 
-    width: 460px;
-    max-width: calc(100vw - 48px);
+    width: 100%;
     height: 380px;
 
     /* Cancel DropdownMenuPopup's default 4px padding so our sections align edge-to-edge */
@@ -199,8 +199,9 @@ const styles = createStaticStyles(({ css }) => ({
       display: flex;
     }
 
-    &[data-current='true'] {
-      background: ${cssVar.colorFillSecondary};
+    &[data-current='true'],
+    &[data-current='true']:hover {
+      background: var(--muted);
     }
 
     &[aria-disabled='true'] {
@@ -442,12 +443,14 @@ interface WorktreeSwitcherProps {
   /** Dropdown placement — the runtime bar opens upward, embedding panels open downward. */
   placement?: 'topLeft' | 'bottomLeft' | 'bottomRight';
   sourcePath: string;
+  topicId?: string | null;
   worktrees: DeviceGitWorktreeListItem[];
 }
 
 const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
   ({
     agentId,
+    topicId,
     children,
     currentBranch,
     detached,
@@ -470,7 +473,8 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
     // duplicate delete if the dropdown is reopened mid-removal.
     const [removingPaths, setRemovingPaths] = useState<Set<string>>(() => new Set());
     const currentRowRef = useRef<HTMLDivElement>(null);
-    const switchWorktree = useSwitchWorktree({ agentId, isGithub, sourcePath });
+    const { isLocked } = useCommitWorkingDirectory(agentId, topicId);
+    const switchWorktree = useSwitchWorktree({ agentId, isGithub, sourcePath, topicId });
 
     // Clear the query each time the dropdown closes so it reopens unfiltered.
     useEffect(() => {
@@ -517,7 +521,7 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
 
     const commitWorktree = useCallback(
       async (worktree: DeviceGitWorktreeListItem) => {
-        if (worktree.current || isDisabled(worktree)) {
+        if (isLocked || worktree.current || isDisabled(worktree)) {
           setOpen(false);
           return;
         }
@@ -525,7 +529,7 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
         await switchWorktree(worktree.path);
         setOpen(false);
       },
-      [switchWorktree],
+      [isLocked, switchWorktree],
     );
 
     const handleRemoveWorktree = useCallback(
@@ -647,16 +651,23 @@ const WorktreeSwitcher = memo<WorktreeSwitcherProps>(
     );
 
     return (
-      <DropdownMenu open={open} onOpenChange={setOpen}>
-        <DropdownMenuTrigger className={styles.triggerAnchor}>
+      <DropdownMenu open={open && !isLocked} onOpenChange={setOpen}>
+        <DropdownMenuTrigger className={styles.triggerAnchor} disabled={isLocked}>
           <div className={children ? styles.triggerFill : undefined}>
-            {open ? trigger : <SimpleTooltip title={triggerTitle}>{trigger}</SimpleTooltip>}
+            {open ? (
+              trigger
+            ) : (
+              <SimpleTooltip title={isLocked ? t('workingDirectory.runningLocked') : triggerTitle}>
+                {trigger}
+              </SimpleTooltip>
+            )}
           </div>
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align={placement === 'bottomRight' ? 'end' : 'start'}
           side={placement === 'topLeft' ? 'top' : 'bottom'}
           sideOffset={8}
+          style={{ maxWidth: 'calc(100vw - 48px)', minWidth: 0, width: 460 }}
         >
           <div className={styles.container}>
             <div className={styles.searchBar}>

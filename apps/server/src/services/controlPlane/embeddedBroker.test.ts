@@ -25,7 +25,7 @@ import type { OrviloDatabase } from '@/database/type';
 import { cleanupTestUser } from '@/server/routers/lambda/__tests__/integration/setup';
 
 import type { CanonicalRunBinding } from './canonicalRun';
-import { createCanonicalRunFixture } from './canonicalRun.test-utils';
+import { createCanonicalRunFixture, fixtureTaskId } from './canonicalRun.test-utils';
 import { createEmbeddedInferenceBridge } from './embeddedBroker';
 
 const db: OrviloDatabase = await getTestDB();
@@ -106,20 +106,20 @@ const bindConfig = (
   endpointUrl: string,
   secretReference: string,
   overrides?: {
-    engine?: ProviderBindingConfig['selection']['engine'];
+    effort?: ProviderBindingConfig['selection']['effort'];
     runtime?: ProviderBindingConfig['selection']['runtime'];
     target?: ProviderBindingConfig['selection']['target'];
   },
 ): ProviderBindingConfig => ({
-  enabled: false,
+  // Armed: `enabled` gates both resolution and claim-time issuance.
+  enabled: true,
   endpoint: endpointUrl,
   model: MODEL_ID,
   name: 'Embedded broker fixture',
   provider: 'mock',
   secretReference,
   selection: {
-    effort: 'default',
-    engine: overrides?.engine,
+    effort: overrides?.effort ?? 'default',
     mode: 'default',
     runtime: overrides?.runtime ?? 'orvilo',
     speed: 'default',
@@ -150,7 +150,7 @@ const fenceFor = (b: CanonicalRunBinding): ExecutionFence => ({
   policyRevision: b.policyRevision,
   principalId: b.userId,
   stateRevision: b.stateRevision,
-  taskId: b.taskId,
+  taskId: fixtureTaskId(b),
   tenantId: b.workspaceId,
 });
 
@@ -221,11 +221,14 @@ afterAll(async () => {
   );
 });
 
-const seed = async () => {
+const seed = async (overrides?: Parameters<typeof bindConfig>[2]) => {
   const run = await createCanonicalRunFixture(db);
   binding = run;
   const cred = await createCredential(run.userId, { PROVIDER_KEY: 'env-secret-7' });
-  const row = await insertBinding(run.userId, bindConfig(endpoint(), `credential:${cred.id}`));
+  const row = await insertBinding(
+    run.userId,
+    bindConfig(endpoint(), `credential:${cred.id}`, overrides),
+  );
   return { cred, row, run };
 };
 
@@ -247,7 +250,12 @@ describe('embedded inference bridge composition', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) return;
     const bridge = result.value;
-    expect(bridge.initModel).toEqual({ id: MODEL_ID, maxOutputTokens: 8192 });
+    expect(bridge.initModel).toEqual({
+      contextWindow: 32768,
+      id: MODEL_ID,
+      input: ['text'],
+      maxOutputTokens: 8192,
+    });
 
     const wrong = bridge.buildInferenceRequest({
       request: sanitizedRequest('other-model'),
@@ -270,6 +278,22 @@ describe('embedded inference bridge composition', () => {
       requestId: 'req-1',
       schemaVersion: CONTROL_PLANE_VERSION,
     });
+  });
+
+  // The binding's effort pin is the session's thinkingLevel — the spec §7.3
+  // surface upstream clamps to model capability runner-side.
+  it('maps selection.effort onto initPolicy.thinkingLevel', async () => {
+    await seed({ effort: 'high' });
+    const result = await createEmbeddedInferenceBridge({ binding: binding!, database: db });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.value.initPolicy).toEqual({ thinkingLevel: 'high' });
+  });
+
+  it('maps ultra effort onto the upstream ceiling and omits default', async () => {
+    await seed({ effort: 'ultra' });
+    const ultra = await createEmbeddedInferenceBridge({ binding: binding!, database: db });
+    expect(ultra.ok && ultra.value.initPolicy).toEqual({ thinkingLevel: 'max' });
   });
 });
 

@@ -2,11 +2,12 @@ import { KEY_ESCAPE_COMMAND } from 'lexical';
 import { type StateCreator } from 'zustand/vanilla';
 
 import { useAgentStore } from '@/store/agent';
+import { getFileStoreState } from '@/store/file/store';
 import { useUserStore } from '@/store/user';
 import { systemAgentSelectors, userProfileSelectors } from '@/store/user/selectors';
 
-import { removeDraft } from '../draftStorage';
-import { readDocument, writeDocument } from '../editorDocument';
+import { removeDraft, saveDraft } from '../draftStorage';
+import { canSerialize, readDocument, writeDocument } from '../editorDocument';
 import { addInputHistory } from '../inputHistoryStorage';
 import { type PublicState, type State } from './initialState';
 import { initialState } from './initialState';
@@ -94,15 +95,65 @@ export const store: CreateStore = (publicState) => (set, get) => ({
     // on screen), and the key is captured here because committing the send can
     // move the conversation to a freshly created topic.
     const sentDraftKey = get().draftKey;
+    const contextSelectionKey = get().contextSelectionKey;
+    let clearedDraft:
+      | {
+          json: Record<string, any> | undefined;
+          files: ReturnType<typeof getFileStoreState>['chatUploadFileList'];
+          selections: ReturnType<
+            typeof getFileStoreState
+          >['chatContextSelectionsByContext'][string];
+        }
+      | undefined;
 
     onSend?.({
       clearContent: () => {
+        const fileStore = getFileStoreState();
+        clearedDraft ??= {
+          json: get().getJSONState(),
+          files: fileStore.chatUploadFileList,
+          selections: contextSelectionKey
+            ? (fileStore.chatContextSelectionsByContext[contextSelectionKey] ?? [])
+            : [],
+        };
         editor?.cleanDocument();
         if (sentDraftKey) removeDraft(sentDraftKey);
       },
       editor: editor!,
       getEditorData: get().getJSONState,
       getMarkdownContent: get().getMarkdownContent,
+      restoreDraft: () => {
+        // Preflight can reject before a message/operation exists. The snapshot
+        // belongs to this composer; never put it into a newer conversation.
+        if (
+          !clearedDraft ||
+          get().editor !== editor ||
+          get().draftKey !== sentDraftKey ||
+          get().contextSelectionKey !== contextSelectionKey
+        )
+          return;
+
+        if (canSerialize(editor) && !get().getMarkdownContent().trim() && clearedDraft.json) {
+          writeDocument(editor, 'json', clearedDraft.json);
+          if (sentDraftKey) saveDraft(sentDraftKey, clearedDraft.json);
+        }
+        // Keep uploads and selections added while the failed preflight awaited.
+        const fileStore = getFileStoreState();
+        const currentIds = new Set(fileStore.chatUploadFileList.map((file) => file.id));
+        fileStore.dispatchChatUploadFileList({
+          files: clearedDraft.files.filter((file) => !currentIds.has(file.id)),
+          type: 'addFiles',
+        });
+        if (contextSelectionKey) {
+          const currentSelections =
+            fileStore.chatContextSelectionsByContext[contextSelectionKey] ?? [];
+          const selectionIds = new Set(currentSelections.map((selection) => selection.id));
+          fileStore.restoreChatContextSelections(
+            contextSelectionKey,
+            clearedDraft.selections.filter((selection) => !selectionIds.has(selection.id)),
+          );
+        }
+      },
     });
 
     if (historySnapshot) {

@@ -68,7 +68,7 @@ const AgentBreadcrumb = memo<AgentBreadcrumbProps>(({ agentId, extraItems, title
     <Breadcrumb className={styles.breadcrumb}>
       <BreadcrumbList>
         <BreadcrumbItem>
-          <BreadcrumbLink render={<Link to={agentHomePath} />}>
+          <BreadcrumbLink className="text-muted-foreground" render={<Link to={agentHomePath} />}>
             <span
               className="truncate block font-medium"
               style={{ maxWidth: 200, color: 'inherit' }}

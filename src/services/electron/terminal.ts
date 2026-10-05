@@ -6,6 +6,7 @@ import type {
   TerminalWriteParams,
 } from '@orvilo/electron-client-ipc';
 
+import { requireProvenLocalDeviceId } from '@/services/localExecutionIdentity';
 import { ensureElectronIpc } from '@/utils/electron/ipc';
 
 class ElectronTerminalService {
@@ -13,19 +14,23 @@ class ElectronTerminalService {
     return ensureElectronIpc();
   }
 
-  createSession(params: TerminalCreateSessionParams): Promise<TerminalCreateSessionResult> {
+  async createSession(params: TerminalCreateSessionParams): Promise<TerminalCreateSessionResult> {
+    await requireProvenLocalDeviceId('createSession');
     return this.ipc.terminal.createSession(params);
   }
 
-  writeSession(params: TerminalWriteParams): Promise<void> {
+  async writeSession(params: TerminalWriteParams): Promise<void> {
+    await requireProvenLocalDeviceId('writeSession');
     return this.ipc.terminal.writeSession(params);
   }
 
-  resizeSession(params: TerminalResizeParams): Promise<void> {
+  async resizeSession(params: TerminalResizeParams): Promise<void> {
+    await requireProvenLocalDeviceId('resizeSession');
     return this.ipc.terminal.resizeSession(params);
   }
 
-  killSession(params: TerminalKillParams): Promise<void> {
+  async killSession(params: TerminalKillParams): Promise<void> {
+    await requireProvenLocalDeviceId('killSession');
     return this.ipc.terminal.killSession(params);
   }
 }

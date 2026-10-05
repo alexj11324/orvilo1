@@ -59,6 +59,7 @@ export const FeatureFlagsSchema = z.object({
   // Cloud feature flag. Keep here until cloud owns a separate runtime flag domain.
   auth_captcha: FeatureFlagValue.optional(),
   cloud_promotion: FeatureFlagValue.optional(),
+  cloud_sandbox: FeatureFlagValue.optional(),
   onboarding_v2: FeatureFlagValue.optional(),
   storage_overage: FeatureFlagValue.optional(),
   workspace: FeatureFlagValue.optional(),
@@ -117,6 +118,7 @@ export const DEFAULT_FEATURE_FLAGS: IFeatureFlags = {
   dev_dock: isDev,
   auth_captcha: true,
   cloud_promotion: false,
+  cloud_sandbox: false,
   onboarding_v2: isDev,
   storage_overage: true,
   workspace: isDev,
@@ -165,6 +167,7 @@ export const mapFeatureFlagsEnvToState = (
     enableStorageOverage: evaluateFeatureFlag(config.storage_overage, userId),
 
     showCloudPromotion: evaluateFeatureFlag(config.cloud_promotion, userId),
+    enableCloudSandbox: evaluateFeatureFlag(config.cloud_sandbox, userId),
     enableWorkspace: evaluateFeatureFlag(config.workspace, userId),
 
     showMarket: evaluateFeatureFlag(config.market, userId),

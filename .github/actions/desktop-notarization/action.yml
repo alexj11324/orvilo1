@@ -1,0 +1,32 @@
+name: Prepare macOS notarization
+description: Require and stage the App Store Connect key used by release builds
+inputs:
+  api-key-base64:
+    required: true
+    description: Base64 encoded App Store Connect private key
+  api-key-id:
+    required: true
+    description: App Store Connect key ID
+  api-issuer:
+    required: true
+    description: App Store Connect issuer ID
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        APPLE_API_KEY_BASE64: ${{ inputs.api-key-base64 }}
+        APPLE_API_KEY_ID: ${{ inputs.api-key-id }}
+        APPLE_API_ISSUER: ${{ inputs.api-issuer }}
+      run: |
+        set -euo pipefail
+        : "${APPLE_API_KEY_BASE64:?Missing APPLE_API_KEY_BASE64}"
+        : "${APPLE_API_KEY_ID:?Missing APPLE_API_KEY_ID}"
+        : "${APPLE_API_ISSUER:?Missing APPLE_API_ISSUER}"
+        umask 077
+        key_path="$RUNNER_TEMP/orvilo-notarization.p8"
+        printf '%s' "$APPLE_API_KEY_BASE64" | base64 --decode > "$key_path"
+        test -s "$key_path"
+        echo "APPLE_API_KEY=$key_path" >> "$GITHUB_ENV"
+        echo "APPLE_API_KEY_ID=$APPLE_API_KEY_ID" >> "$GITHUB_ENV"
+        echo "APPLE_API_ISSUER=$APPLE_API_ISSUER" >> "$GITHUB_ENV"

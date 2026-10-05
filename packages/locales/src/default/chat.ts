@@ -1,4 +1,18 @@
 export default {
+  'creation.runtime.title': 'Choose Agent runtime',
+  'creation.runtime.description':
+    'Choose Orvilo AI with a saved host and model, or reuse an existing connected runtime.',
+  'creation.runtime.label': 'Runtime',
+  'creation.runtime.prime': 'Orvilo AI',
+  'creation.runtime.host': 'Execution host',
+  'creation.runtime.hostEmpty': 'Choose a registered host',
+  'creation.runtime.hostHelp':
+    'Register a device in Devices. Shared Agents require a public Workspace device.',
+  'creation.runtime.provider': 'Provider and model',
+  'creation.runtime.devices': 'Open Devices',
+  'creation.runtime.use': 'Use runtime',
+
+  'workingPanel.overview.configure': 'Review execution setup',
   'goalExperiment.continuedFrom': 'Continued exploration',
   'goalExperiment.drill': 'Explore inside',
   'goalExperiment.drillNamed': 'Explore inside: {{title}}',
@@ -436,7 +450,7 @@ export default {
     'Turn it on in Settings → Labs, or switch this agent to Subscription authentication.',
   'heteroAgent.apiMode.labDisabled.title': 'Provider binding is a Labs experiment',
   'heteroAgent.apiMode.localOnly.desc':
-    'Switch the execution environment to Local device, or use Subscription authentication.',
+    'Switch the execution device to Local device, or use Subscription authentication.',
   'heteroAgent.apiMode.localOnly.title': 'API mode requires Desktop local execution',
   'heteroAgent.apiMode.modelUnavailable':
     'The model "{{providerId}}/{{model}}" is disabled or no longer available.',
@@ -583,6 +597,7 @@ export default {
   'heteroAgent.modelSelector.speed.fastDesc': '1.5x speed, increased usage',
   'heteroAgent.modelSelector.speed.standard': 'Standard',
   'heteroAgent.modelSelector.speed.standardDesc': 'Default speed',
+  'heteroAgent.modelSelector.unsupported': 'This agent cannot switch models in chat',
   'heteroAgent.cliModel.ariaLabel': '{{name}} model: {{model}}',
   'heteroAgent.cliModel.cliNotFound': 'The CLI is not installed on the target device.',
   'heteroAgent.cliModel.defaultDesc': 'Use the default model configured in {{name}}',
@@ -604,13 +619,13 @@ export default {
   'heteroAgent.resumeReset.cwdChanged':
     'Working directory changed. Previous Claude Code session can only be resumed from its original directory, so a new conversation has started.',
   'heteroAgent.resumeReset.cursorAcpIncompatible':
-    'The previous Cursor session could not be restored through ACP, so a new conversation has started with fresh context.',
+    'The previous Cursor session could not be restored, so a new conversation has started with fresh context.',
   'heteroAgent.resumeReset.resumeFailed':
     'The saved Codex thread could not be resumed safely, so a new conversation has started for this topic.',
   'heteroAgent.switchCwd.cancel': 'Cancel',
   'heteroAgent.switchCwd.content':
-    'Agent sessions are pinned to a working directory. Switching will start a new session for this topic — chat messages stay, but the previous session context cannot be resumed.',
-  'heteroAgent.switchCwd.ok': 'Switch and start new session',
+    'Agent sessions belong to a working directory. Switching uses the saved session for the destination, or starts a new one if none exists. This topic’s messages are kept.',
+  'heteroAgent.switchCwd.ok': 'Switch working directory',
   'heteroAgent.switchCwd.title': 'Switch working directory?',
   'heteroAgent.cloudNotConfigured.action': 'Configure',
   'heteroAgent.cloudNotConfigured.desc':
@@ -626,27 +641,28 @@ export default {
   'heteroAgent.executionTarget.autoDesc':
     'Use an online device automatically, picking one when several are available',
   'heteroAgent.executionTarget.fixedTip':
-    'The execution environment is fixed in the Agent Profile and cannot be switched while chatting.',
+    'The execution device is fixed in the agent\u0027s settings and cannot be switched while chatting.',
   'heteroAgent.executionTarget.infoTooltip':
     'Choose where this Agent runs. A device can read and write files or operate a computer; Cloud Sandbox runs in an isolated temporary environment.',
+  'heteroAgent.executionTarget.readOnlyTip': 'This run executes on this device.',
   'heteroAgent.executionTarget.gateway': 'Gateway',
   'heteroAgent.executionTarget.gatewayDesc':
-    'Run through the device gateway so other clients can follow progress',
+    'Run on this computer via the gateway; other clients can follow progress',
   'heteroAgent.executionTarget.loading': 'Loading devices…',
-  'heteroAgent.executionTarget.local': 'Local device',
-  'heteroAgent.executionTarget.localDesc': 'Run as a local process on this desktop app',
-  'heteroAgent.executionTarget.localSandbox': 'Local sandbox',
+  'heteroAgent.executionTarget.local': 'Local',
+  'heteroAgent.executionTarget.localDesc': 'Run directly on this computer through the desktop app',
+  'heteroAgent.executionTarget.localSandbox': 'Shell isolation',
   'heteroAgent.executionTarget.localSandboxDesc':
-    'Run on this computer, with commands limited to the working directory and no network',
+    'Optional shell isolation: writes stay in the working directory and temporary directory; network is blocked',
   'heteroAgent.executionTarget.localSandboxDescNetwork':
-    'Run on this computer, with commands limited to the working directory and to common developer domains',
+    'Optional shell isolation: writes stay in the working directory and temporary directory; developer domains are allowed',
   'heteroAgent.executionTarget.localSandboxSetUp': 'Set up',
   'heteroAgent.executionTarget.localSandboxNetworkTip':
     'Let sandboxed commands reach package registries and source forges — npm, PyPI, crates.io, RubyGems, Go, GitHub, GitLab. Every other domain stays blocked; the sandbox cannot open the network entirely.',
   'heteroAgent.executionTarget.localSandboxUnavailable': 'Not available on this device: {{reason}}',
   'heteroAgent.executionTarget.manage': 'Manage',
   'heteroAgent.executionTarget.noDevices':
-    'No remote devices yet. Run `orvilo connect` on another machine to add one.',
+    'No connected devices yet. Run `orvilo connect` on this computer or another computer to add one.',
   'heteroAgent.executionTarget.noWorkspaceDevices':
     'No workspace devices yet. Run `{{cmd}}` on a machine to enroll it for every member.',
   'heteroAgent.executionTarget.none': 'No device',
@@ -658,6 +674,16 @@ export default {
   'heteroAgent.executionTarget.reconnect': 'Reconnect',
   'heteroAgent.executionTarget.reconnectFailed':
     'Could not reconnect this device. Make sure the desktop app is running, then try again.',
+  'heteroAgent.executionTarget.bindingInvalid': 'Rebind device',
+  'heteroAgent.executionTarget.bindingInvalidBanner':
+    'The bound device ({{device}}) is no longer available — pick a device below to rebind.',
+  'heteroAgent.executionTarget.externalGroup': 'External devices',
+  'heteroAgent.permission.loading': 'Loading permissions…',
+  'heteroAgent.permission.unavailable': 'Permissions unavailable',
+  'heteroAgent.permission.unsupported': 'Permissions not advertised',
+  'heteroAgent.permission.saveError': 'Could not save permission setting',
+  'heteroAgent.permission.stale': 'Permission selection unavailable',
+  'heteroAgent.permission.label': 'Permissions',
   'heteroAgent.executionTarget.personalGroup': 'Private Devices',
   'heteroAgent.executionTarget.sandbox': 'Cloud Sandbox',
   'heteroAgent.executionTarget.sandboxDesc': 'Run in an ephemeral cloud sandbox',
@@ -665,8 +691,21 @@ export default {
   'heteroAgent.executionTarget.downloadDesktop': 'Get Desktop App',
   'heteroAgent.executionTarget.downloadDesktopDesc': 'Run agents with access to your computer',
   'heteroAgent.executionTarget.downloadDesktopTitle': 'Get the desktop app',
-  'heteroAgent.executionTarget.title': 'Execution Environment',
+  'heteroAgent.executionTarget.title': 'Device',
   'heteroAgent.executionTarget.unknownDevice': 'Unknown device',
+  'deviceAdmission.bindingChanged':
+    'The device binding changed while repairing — nothing was written.',
+  'deviceAdmission.connect': 'Connect a device',
+  'deviceAdmission.operation': 'Run: {{id}}',
+  'deviceAdmission.repairDesc':
+    'Pick the device this conversation runs on. The broken binding is only replaced by the device you choose — the old device\u0027s session is never reused.',
+  'deviceAdmission.repairFailed': 'Could not repair the device binding — try again.',
+  'deviceAdmission.repairTo': 'Repair binding to {{device}}',
+  'deviceAdmission.repaired': 'Device binding repaired.',
+  'deviceAdmission.requestAuthorization': 'Manage device access',
+  'deviceAdmission.retryInventory': 'Retry device lookup',
+  'deviceAdmission.title': 'This run could not start on a device',
+  'deviceAdmission.viewRunStatus': 'View run status',
   'hideForYou':
     "Direct message content is hidden. Please enable 'Show Direct Message Content' in settings to view.",
   'history.title': 'The Agent will keep only the latest {{count}} messages.',
@@ -1072,6 +1111,7 @@ export default {
   'traeInstallGuide.reason': 'Orvilo could not start TRAE CLI: {{message}}',
   'traeInstallGuide.title': 'Install TRAE CLI',
   'addAgent': 'Add Agent',
+  'agentCreated': 'Created {{name}}',
   'addAgentFromList': 'Add from Agent list',
   'addAgentFromMarket': 'Add from Market',
   'newAgent': 'Create Agent',
@@ -1110,6 +1150,44 @@ export default {
   'resources.knowledgePicker.publicAgentHint':
     'Public agents can only reference workspace resources. Publish a private resource to the workspace first if you want to attach it.',
 
+  // First-run onboarding (the conversation landing when nothing can run yet)
+  'onboarding.api.description':
+    'Use an OpenAI-compatible provider. Your new API key is stored securely in your account.',
+  'onboarding.api.endpoint': 'Provider endpoint (HTTPS)',
+  'onboarding.api.model': 'Model ID',
+  'onboarding.api.key': 'API key',
+  'onboarding.account': 'Account settings',
+  'onboarding.api.configure': 'Use my API key',
+  'onboarding.api.create': 'Verify and create agent',
+  'onboarding.api.failed':
+    'Setup could not finish. Check your device, key, endpoint, and model, then retry. Your saved setup will be reused.',
+  'onboarding.connect': 'Connect an agent',
+  'onboarding.prime.create': 'Create Orvilo AI',
+  'onboarding.prime.ready': 'An existing provider route is available for Orvilo AI.',
+  'onboarding.prime.unavailable':
+    'Orvilo AI needs a verified provider route. Connect an agent or configure your API key.',
+  'onboarding.builtin.action': 'Open settings',
+  'onboarding.builtin.desc': 'No model provider is configured yet, so it cannot run.',
+  'onboarding.builtin.group': 'Built-in Agent',
+  'onboarding.builtin.unavailable': 'Unavailable',
+  'onboarding.device.title': 'Choose an execution device',
+  'onboarding.device.description':
+    'Orvilo AI is the built-in harness. It runs on your connected device, with your verified model provider.',
+  'onboarding.device.empty':
+    'No connected device is online. Connect this computer or enroll a device, then check again.',
+  'onboarding.device.use': 'Use {{name}}',
+  'onboarding.device.connect': 'Connect a device',
+  'onboarding.emptyDesc': 'Connect an agent or create Orvilo AI with your API key.',
+  'onboarding.emptyTitle': 'Create your first agent',
+  'onboarding.footerHint': 'Create your first usable agent to continue setup.',
+  'onboarding.installCli.desc': 'Claude Code / Codex / OpenCode…',
+  'onboarding.installCli.hint': 'Come back here to check again once it is installed.',
+  'onboarding.installCli.title': 'Install a CLI',
+  'onboarding.provider.desc': 'Connect one with an API key to use Orvilo AI.',
+  'onboarding.provider.title': 'Configure a model provider',
+  'onboarding.rescan': 'Check again',
+  'onboarding.title': 'Create your first agent',
+
   // Op status tray (floating panel above the chat input during a run)
   'opStatusTray.status.compressing': 'Compressing context',
   'opStatusTray.status.generating': 'Generating',
@@ -1128,6 +1206,7 @@ export default {
   'connectAgent.create.stepAgents': 'Step 2 of 3 · {{device}}',
   'connectAgent.create.stepConfirm': 'Step 3 of 3 · Name it for your agent list',
   'connectAgent.create.thisDevice': 'This device',
+  'connectAgent.create.desktopChannel': 'Desktop',
   'connectAgent.create.connectedDevices': 'Connected devices',
   'connectAgent.create.localDevice': 'This computer',
   'connectAgent.create.localDeviceDesc': 'Runs agents directly on this machine',
@@ -1144,7 +1223,7 @@ export default {
   'connectAgent.create.noDevicesCliHint': 'Run this command on the computer you want to connect',
   'connectAgent.create.noDevicesCmd': 'orvilo connect',
   'connectAgent.create.refresh': 'Refresh',
-  'connectAgent.create.scanning': 'Scanning agents on this device…',
+  'connectAgent.create.scanning': 'Scanning agents on {{device}}…',
   'connectAgent.create.scanFailed': 'Scan failed',
   'connectAgent.create.rescan': 'Rescan',
   'connectAgent.create.rescanDevice': 'Rescan Device',
@@ -1179,12 +1258,21 @@ export default {
   'connectAgent.providerDesc.amp': 'Sourcegraph coding agent CLI',
   'connectAgent.providerDesc.kimi-code': 'Moonshot AI coding agent CLI',
   'connectAgent.providerDesc.opencode': 'Open-source coding agent CLI',
-  'connectAgent.providerDesc.orvilo': 'Orvilo managed agent engine',
+  'connectAgent.providerDesc.orvilo': 'Orvilo managed agent',
   'connectAgent.providerDesc.pi': 'Minimal coding agent CLI',
   'connectAgent.providerDesc.qoder': 'Qoder coding agent CLI',
   'connectAgent.providerDesc.trae': 'TRAE Enterprise coding agent CLI',
   'connectAgent.providerDesc.openclaw': 'Personal agent platform',
   'connectAgent.providerDesc.hermes': 'Personal agent platform',
+
+  // Composer agent picker · harnesses installed on this desktop
+  'localHarness.connect': 'Connect',
+  'localHarness.hideMissing': 'Hide not installed',
+  'localHarness.noneInstalled': 'No coding agents found on this device',
+  'localHarness.scanFailed': 'Could not check this device',
+  'localHarness.scanning': 'Checking this device…',
+  'localHarness.showMissing': 'Show {{total}} not installed',
+  'localHarness.title': 'Installed on this device',
 
   // Connect agent device guard banner
   'platformAgent.deviceGuard.deviceOffline.title': 'Device not connected',
@@ -1280,14 +1368,6 @@ export default {
   'chatMode.chat': 'Chat',
   'chatMode.chatDesc': 'No runtime environment or autonomy; uses fewer tokens',
   'chatMode.select': 'Switch Mode',
-  'runtimeEnv.mode.cloud': 'Cloud Sandbox',
-  'runtimeEnv.mode.cloudDesc': 'Run in a secure cloud sandbox',
-  'runtimeEnv.mode.local': 'Local',
-  'runtimeEnv.mode.localDesc': 'Access local files and commands',
-  'runtimeEnv.mode.none': 'Off',
-  'runtimeEnv.mode.noneDesc': 'Disable runtime environment',
-  'runtimeEnv.selectMode': 'Select Runtime Environment',
-  'runtimeEnv.title': 'Runtime Environment',
   'search.grounding.searchQueries': 'Search Keywords',
   'search.grounding.title': 'Found {{count}} results',
   'search.mode.auto.desc': 'Search the web automatically when needed.',
@@ -1446,6 +1526,7 @@ export default {
   'supervisor.todoList.allComplete': 'All tasks completed',
   'supervisor.todoList.title': 'Tasks Completed',
   'tab.groupProfile': 'Group Profile',
+  'tab.home': 'Home',
   'tab.integration': 'Channels',
   'tab.profile': 'Agent Profile',
   'tab.profileBasic': 'Profile',
@@ -2864,8 +2945,8 @@ export default {
   'workingPanel.overview.ci.failure': 'Failed',
   'workingPanel.overview.ci.pending': 'Running',
   'workingPanel.overview.empty':
-    'Workspace activity and outputs will appear here as the agent works.',
-  'workingPanel.overview.emptyTitle': 'Ready to work',
+    'Activity and outputs appear here after a run starts. Review the agent’s execution setup before sending.',
+  'workingPanel.overview.emptyTitle': 'Workspace activity',
   'workingPanel.overview.environmentError': 'Could not load the repository status',
   'workingPanel.overview.execution.device': 'Connected device',
   'workingPanel.overview.execution.local': 'This device',

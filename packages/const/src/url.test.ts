@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest';
 
-import { isOfficialCloudServer,OFFICIAL_DOMAIN } from './url';
+import { DOWNLOAD_URL, isOfficialCloudServer, OFFICIAL_DOMAIN, OFFICIAL_URL } from './url';
+
+it('uses published desktop releases and the mobile web app for acquisition', () => {
+  expect(DOWNLOAD_URL.default).toBe('https://github.com/alexj11324/orvilo1/releases/latest');
+  expect(DOWNLOAD_URL.mobile).toBe(OFFICIAL_URL);
+  expect(DOWNLOAD_URL.ios).toBe(OFFICIAL_URL);
+  expect(DOWNLOAD_URL.android).toBe(OFFICIAL_URL);
+});
 
 describe('isOfficialCloudServer', () => {
   // Every case is derived from the configured domain: hardcoding it here is how

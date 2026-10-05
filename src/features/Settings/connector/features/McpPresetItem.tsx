@@ -17,7 +17,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip
 import NavItem from '@/features/NavPanel/components/NavItem';
 import { usePermission } from '@/hooks/usePermission';
 import { useResourceManageable } from '@/hooks/useResourceManageable';
-import { electronSystemService } from '@/services/electron/system';
+import { getHostPort } from '@/platform';
 import { useToolStore } from '@/store/tool';
 import { connectorSelectors } from '@/store/tool/slices/connector';
 import type { ConnectorWithTools } from '@/store/tool/slices/connector/types';
@@ -114,7 +114,9 @@ const McpPresetItem = memo<McpPresetItemProps>(
           createConnector,
           fetchConnectors,
           ...(isDesktop && {
-            openExternalLink: (url: string) => electronSystemService.openExternalLink(url),
+            openExternalLink: async (url: string) => {
+              await getHostPort().openExternal(url);
+            },
           }),
           startConnectorOAuth,
         });

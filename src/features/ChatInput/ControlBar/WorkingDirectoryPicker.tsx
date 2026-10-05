@@ -19,6 +19,7 @@ import { useTranslation } from 'react-i18next';
 
 import ActionIcon from '@/components/ActionIcon';
 import { toast } from '@/components/toast';
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { useConversationStore } from '@/features/Conversation/store';
@@ -32,8 +33,8 @@ import {
   getWorkingDirectoryPathString,
 } from '@/helpers/workingDirectoryPath';
 import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
+import { getHostPort, hostResultOr } from '@/platform';
 import { deviceService } from '@/services/device';
-import { electronSystemService } from '@/services/electron/system';
 import { useAgentStore } from '@/store/agent';
 import { useChatStore } from '@/store/chat';
 import { topicSelectors } from '@/store/chat/selectors';
@@ -86,6 +87,13 @@ const styles = createStaticStyles(({ css }) => ({
       background: ${cssVar.colorFillTertiary};
     }
   `,
+  buttonOpen: css`
+    &&,
+    &&:hover {
+      color: var(--foreground);
+      background: var(--muted);
+    }
+  `,
   buttonLabel: css`
     overflow: hidden;
     max-width: 140px;
@@ -95,6 +103,10 @@ const styles = createStaticStyles(({ css }) => ({
   chooseFolderItem: css`
     cursor: pointer;
 
+    justify-content: flex-start;
+
+    width: 100%;
+    height: auto;
     padding-block: 8px;
     padding-inline: 8px;
     border-radius: ${cssVar.borderRadius};
@@ -112,6 +124,7 @@ const styles = createStaticStyles(({ css }) => ({
   clearText: css`
     cursor: pointer;
 
+    height: auto;
     padding-block: 6px 2px;
     padding-inline: 8px;
 
@@ -130,9 +143,18 @@ const styles = createStaticStyles(({ css }) => ({
 
     padding-block: 6px;
     padding-inline: 8px;
-    border-radius: ${cssVar.borderRadius};
+    border-radius: calc(var(--radius) - 2px);
 
     transition: background-color 0.2s;
+
+    &:focus-visible {
+      outline: 2px solid var(--ring);
+      outline-offset: -2px;
+    }
+
+    &:focus-within .wd-row-actions {
+      display: flex;
+    }
 
     &:hover {
       background: ${cssVar.colorFillTertiary};
@@ -144,7 +166,10 @@ const styles = createStaticStyles(({ css }) => ({
     }
   `,
   dirItemActive: css`
-    background: ${cssVar.colorFillTertiary};
+    &&,
+    &&:hover {
+      background: var(--muted);
+    }
   `,
   dirName: css`
     overflow: hidden;
@@ -206,22 +231,26 @@ const ChooseLocalFolderRow = memo<{ defaultPath?: string; onPick: (entry: Folder
   ({ defaultPath, onPick }) => {
     const { t } = useTranslation('device');
     const handleClick = async () => {
-      const result = await electronSystemService.selectFolder({
-        defaultPath: defaultPath || undefined,
-        title: t('workingDirectory.selectFolder'),
-      });
+      const result = hostResultOr(
+        await getHostPort().dialog.selectFolder({
+          defaultPath: defaultPath || undefined,
+          title: t('workingDirectory.selectFolder'),
+        }),
+        undefined,
+      );
       if (result) onPick({ path: result.path, repoType: result.repoType });
     };
     return (
-      <div
+      <Button
         className={cx('flex flex-row items-center gap-2', styles.chooseFolderItem)}
+        variant="ghost"
         onClick={handleClick}
       >
         <span className="anticon" role="img">
           <FolderOpenIcon fill={'transparent'} height={14} size={14} width={14} />
         </span>
         <span>{t('workingDirectory.chooseDifferentFolder')}</span>
-      </div>
+      </Button>
     );
   },
 );
@@ -259,15 +288,16 @@ const AddRemoteFolderRow = memo<{
     });
   };
   return (
-    <div
+    <Button
       className={cx('flex flex-row items-center gap-2', styles.chooseFolderItem)}
+      variant="ghost"
       onClick={handleClick}
     >
       <span className="anticon" role="img">
         <FolderPlusIcon fill={'transparent'} height={14} size={14} width={14} />
       </span>
       <span>{t('workingDirectory.addFolder')}</span>
-    </div>
+    </Button>
   );
 });
 AddRemoteFolderRow.displayName = 'AddRemoteFolderRow';
@@ -355,7 +385,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
     legacyAgentWorkingDirectory
   );
 
-  const { clear, commit } = useCommitWorkingDirectory(agentId, topicId);
+  const { clear, commit, isLocked } = useCommitWorkingDirectory(agentId, topicId ?? null);
   const clearDeviceDefaultCwd = useDeviceStore((s) => s.clearDeviceDefaultCwd);
   const removeDeviceWorkingDir = useDeviceStore((s) => s.removeDeviceWorkingDir);
   const updateDeviceCwd = useDeviceStore((s) => s.updateDeviceCwd);
@@ -442,13 +472,22 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
     );
     return (
       <div
+        aria-current={isActive ? 'true' : undefined}
         key={entry.path}
         ref={isActive ? activeRowRef : undefined}
+        role="button"
+        tabIndex={0}
         className={cx(
           'flex flex-row items-center gap-2',
           cx(styles.dirItem, isActive && styles.dirItemActive),
         )}
         onClick={() => void pick(entry)}
+        onKeyDown={(event) => {
+          if (event.target !== event.currentTarget) return;
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          void pick(entry);
+        }}
       >
         <DirIcon repoType={entry.repoType} />
         <div className="flex flex-col flex-1" style={{ minWidth: 0 }}>
@@ -525,9 +564,13 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
       <div className="flex flex-row items-center justify-between">
         <div className={styles.sectionTitle}>{t('workingDirectory.recent')}</div>
         {hasClearableSelection && (
-          <div className={styles.clearText} onClick={() => void clear().then(() => setOpen(false))}>
+          <Button
+            className={styles.clearText}
+            variant="ghost"
+            onClick={() => void clear().then(() => setOpen(false))}
+          >
             {t('workingDirectory.clear')}
-          </div>
+          </Button>
         )}
       </div>
       <div className={styles.scrollContainer}>
@@ -561,7 +604,7 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
     : t('workingDirectory.title');
 
   const trigger = (
-    <div className={styles.button}>
+    <div className={cx(styles.button, open && styles.buttonOpen)}>
       {selectedDir ? (
         <DirIcon repoType={recents.find((r) => r.path === selectedDir)?.repoType} />
       ) : (
@@ -569,7 +612,9 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
           <FolderIcon fill={'transparent'} height={14} size={14} width={14} />
         </span>
       )}
-      <span className={styles.buttonLabel}>{displayName}</span>
+      <span data-workspace-label className={styles.buttonLabel}>
+        {displayName}
+      </span>
       <span className="anticon" role="img">
         <ChevronDownIcon fill={'transparent'} height={12} size={12} width={12} />
       </span>
@@ -577,20 +622,22 @@ const WorkingDirectoryPicker = memo<WorkingDirectoryPickerProps>(({ agentId }) =
   );
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        render={
-          <div>
-            {open ? (
-              trigger
-            ) : (
-              <SimpleTooltip title={selectedDir || t('workingDirectory.title')}>
-                {trigger}
-              </SimpleTooltip>
-            )}
-          </div>
-        }
-      />
+    <Popover open={open && !isLocked} onOpenChange={setOpen}>
+      <PopoverTrigger disabled={isLocked}>
+        {open ? (
+          trigger
+        ) : (
+          <SimpleTooltip
+            title={
+              isLocked
+                ? t('workingDirectory.runningLocked')
+                : selectedDir || t('workingDirectory.title')
+            }
+          >
+            {trigger}
+          </SimpleTooltip>
+        )}
+      </PopoverTrigger>
       <PopoverContent align={'start'} className={'w-auto'} side={'bottom'} style={{ padding: 4 }}>
         {content}
       </PopoverContent>

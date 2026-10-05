@@ -259,6 +259,14 @@ jobs:
             echo "MAC_PROVISIONING_PROFILE=$RUNNER_TEMP/orvilo.provisionprofile" >> "$GITHUB_ENV"
           fi
 
+      - name: Prepare macOS notarization
+        if: runner.os == 'macOS'
+        uses: ./.github/actions/desktop-notarization
+        with:
+          api-key-base64: ${{ secrets.APPLE_API_KEY_BASE64 }}
+          api-key-id: ${{ secrets.APPLE_API_KEY_ID }}
+          api-issuer: ${{ secrets.APPLE_API_ISSUER }}
+
       # macOS 构建
       - name: Build artifact on macOS
         id: build_macos
@@ -273,11 +281,19 @@ jobs:
           CSC_LINK: ${{ secrets.APPLE_CERTIFICATE_BASE64 }}
           CSC_KEY_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
           CSC_FOR_PULL_REQUEST: true
-          APPLE_ID: ${{ secrets.APPLE_ID }}
-          APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
           APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
           NEXT_PUBLIC_DESKTOP_PROJECT_ID: ${{ secrets.UMAMI_BETA_DESKTOP_PROJECT_ID }}
           NEXT_PUBLIC_DESKTOP_UMAMI_BASE_URL: ${{ secrets.UMAMI_BETA_DESKTOP_BASE_URL }}
+
+      - name: Verify signed and notarized macOS application
+        if: runner.os == 'macOS'
+        run: |
+          set -euo pipefail
+          for app in apps/desktop/release/mac*/Orvilo*.app; do
+            codesign --verify --deep --strict --verbose=4 "$app"
+            xcrun stapler validate "$app"
+            spctl --assess --type execute --verbose=4 "$app"
+          done
 
       # Windows 构建
       - name: Build artifact on Windows
@@ -414,6 +430,7 @@ jobs:
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ needs.calculate-version.outputs.tag }}
+          target_commitish: ${{ github.sha }}
           name: 'Desktop Canary ${{ needs.calculate-version.outputs.tag }}'
           prerelease: true
           body: ${{ needs.calculate-version.outputs.release_notes }}

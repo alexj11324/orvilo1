@@ -1,0 +1,66 @@
+name: UI alignment
+
+on:
+  push:
+    paths:
+      - 'src/components/**'
+      - 'src/features/**'
+      - 'src/app/globals.css'
+      - 'tests/ui-alignment/**'
+      - 'postcss.config.mjs'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.json'
+      - 'vitest.config.mts'
+      - '.github/actions/setup-env/**'
+      - '.github/workflows/ui-alignment.yml'
+  pull_request:
+    paths:
+      - 'src/components/**'
+      - 'src/features/**'
+      - 'src/app/globals.css'
+      - 'tests/ui-alignment/**'
+      - 'postcss.config.mjs'
+      - 'package.json'
+      - 'pnpm-workspace.yaml'
+      - 'tsconfig.json'
+      - 'vitest.config.mts'
+      - '.github/actions/setup-env/**'
+      - '.github/workflows/ui-alignment.yml'
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ui-alignment-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  alignment:
+    name: Browser geometry
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v6
+      - uses: ./.github/actions/setup-env
+      - run: pnpm install --no-frozen-lockfile
+      - name: Typecheck browser tests
+        run: pnpm exec node scripts/type-check.mjs tsgo --noEmit -p tests/ui-alignment/tsconfig.json
+      - run: pnpm exec playwright install --with-deps chromium
+      - name: Record tested revision
+        run: git rev-parse HEAD > ui-alignment-revision.txt
+      - name: Measure production components in Chromium
+        env:
+          UI_ALIGNMENT_SHA: ${{ github.sha }}
+        run: bun run test:ui-alignment
+      - name: Upload screenshots and geometry
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-alignment-${{ github.sha }}
+          path: |
+            test-results/ui-alignment/
+            test-results/ui-alignment-report/
+            ui-alignment-revision.txt
+          retention-days: 14

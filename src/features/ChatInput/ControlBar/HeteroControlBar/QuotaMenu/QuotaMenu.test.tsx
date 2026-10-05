@@ -8,6 +8,8 @@ import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { createContext, type ReactNode, use } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+import type * as ChatInputAgentIdModule from '@/features/ChatInput/hooks/useAgentId';
+
 import HeteroControlBar from '..';
 import ClaudeCodeQuotaMenu from './ClaudeCodeQuotaMenu';
 import CodexQuotaMenu from './CodexQuotaMenu';
@@ -57,7 +59,11 @@ vi.mock('@/features/AgentQuotaCalendar', () => ({
   openQuotaCalendarModal: vi.fn(),
 }));
 
-vi.mock('@/features/ChatInput/hooks/useAgentId', () => ({ useAgentId: () => 'agent-1' }));
+vi.mock('@/features/ChatInput/hooks/useAgentId', async (importOriginal) => ({
+  ...(await importOriginal<typeof ChatInputAgentIdModule>()),
+  useAgentId: () => 'agent-1',
+  useCurrentComposerAgentId: () => () => 'agent-1',
+}));
 
 // Resource-access gating is out of scope for quota tests — keep it permissive
 // so HeteroControlBar renders its full quota UI without the ChatInput store.
@@ -78,7 +84,8 @@ vi.mock('@/hooks/useTopicAgencyConfig', () => ({
 }));
 
 vi.mock('@/store/agent', () => ({
-  useAgentStore: (selector: (state: Record<string, unknown>) => unknown) => selector({}),
+  useAgentStore: (selector: (state: Record<string, unknown>) => unknown) =>
+    selector({ localAgentWorkingDirectoryMap: {} }),
 }));
 
 vi.mock('@/store/agent/selectors', () => ({
@@ -101,6 +108,13 @@ const translate = vi.hoisted(() => (key: string, opts?: Record<string, unknown>)
 
 vi.mock('@/services/electron/heterogeneousAgent', () => ({
   heterogeneousAgentService: mockService,
+}));
+
+// The quota snapshot service now requires proven local device identity before
+// the IPC leg — this suite simulates a host whose handshake proved it.
+vi.mock('@/services/localExecutionIdentity', () => ({
+  requireProvenLocalDeviceId: vi.fn(async () => 'local-device'),
+  resolveLocalExecutionIdentity: vi.fn(async () => ({ localDeviceId: 'local-device' })),
 }));
 
 // A `deviceId` routes the live sample through the device gateway TRPC instead

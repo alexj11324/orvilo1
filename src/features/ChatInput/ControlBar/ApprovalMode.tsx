@@ -35,6 +35,20 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     font-size: ${cssVar.fontSizeSM};
     color: ${cssVar.colorTextSecondary};
   `,
+  selectedItem: css`
+    &&,
+    &&:hover,
+    &&:focus {
+      background: var(--muted);
+    }
+  `,
+  modeButtonOpen: css`
+    &&,
+    &&:hover {
+      color: var(--foreground);
+      background: var(--muted);
+    }
+  `,
   modeButtonDisabled: css`
     cursor: not-allowed;
     opacity: 0.5;
@@ -44,10 +58,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
     font-weight: 500;
     line-height: 1.4;
     color: ${cssVar.colorText};
-  `,
-  trigger: css`
-    overflow: hidden;
-    border-radius: ${cssVar.borderRadius};
   `,
 }));
 
@@ -115,7 +125,7 @@ const ModeSelector = memo(() => {
       {
         extra:
           approvalMode === 'auto-run' ? (
-            <span className="anticon" role="img">
+            <span aria-hidden className="anticon">
               <Check fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
             </span>
           ) : undefined,
@@ -132,7 +142,7 @@ const ModeSelector = memo(() => {
       {
         extra:
           approvalMode === 'allow-list' ? (
-            <span className="anticon" role="img">
+            <span aria-hidden className="anticon">
               <Check fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
             </span>
           ) : undefined,
@@ -149,7 +159,7 @@ const ModeSelector = memo(() => {
       {
         extra:
           approvalMode === 'manual' ? (
-            <span className="anticon" role="img">
+            <span aria-hidden className="anticon">
               <Check fill={'transparent'} height={'1em'} size={'1em'} width={'1em'} />
             </span>
           ) : undefined,
@@ -168,7 +178,12 @@ const ModeSelector = memo(() => {
   );
 
   const button = (
-    <Button className={styles.modeButton} disabled={disabled} size="sm" variant="ghost">
+    <Button
+      className={cx(styles.modeButton, dropdownOpen && styles.modeButtonOpen)}
+      disabled={disabled}
+      size="sm"
+      variant="ghost"
+    >
       {modeLabels[approvalMode]}
       <ChevronDown data-icon="inline-end" />
     </Button>
@@ -189,20 +204,17 @@ const ModeSelector = memo(() => {
 
   return (
     <DropdownMenu open={!disabled && dropdownOpen} onOpenChange={handleOpenChange}>
-      <DropdownMenuTrigger
-        render={
-          <div className={styles.trigger}>
-            {dropdownOpen ? (
-              button
-            ) : (
-              <SimpleTooltip title={t('tool.intervention.approvalMode')}>{button}</SimpleTooltip>
-            )}
-          </div>
-        }
-      />
+      <SimpleTooltip title={t('tool.intervention.approvalMode')}>
+        <DropdownMenuTrigger render={button} />
+      </SimpleTooltip>
       <DropdownMenuContent align={'end'} className={'w-auto min-w-56'} side={'bottom'}>
         {menuItems().map((item) => (
-          <DropdownMenuItem key={item.key} onClick={item.onClick}>
+          <DropdownMenuItem
+            aria-current={approvalMode === item.key ? 'true' : undefined}
+            className={approvalMode === item.key ? styles.selectedItem : undefined}
+            key={item.key}
+            onClick={item.onClick}
+          >
             <div className="flex flex-1 flex-row items-center justify-between gap-2">
               {item.label}
               {item.extra}

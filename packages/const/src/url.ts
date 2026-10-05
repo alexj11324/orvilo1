@@ -113,10 +113,10 @@ export const AES_GCM_URL = 'https://datatracker.ietf.org/doc/html/draft-ietf-avt
 export const CHANGELOG_URL = urlJoin(OFFICIAL_SITE, 'changelog');
 
 export const DOWNLOAD_URL = {
-  android: 'https://play.google.com/store/apps/details?id=com.orvilo.app',
-  default: urlJoin(OFFICIAL_SITE, '/downloads'),
-  mobile: urlJoin(OFFICIAL_SITE, '/mobile'),
-  ios: 'https://testflight.apple.com/join/2ZbjX4Qp',
+  android: OFFICIAL_URL,
+  default: urlJoin(RELEASES_URL, 'latest'),
+  mobile: OFFICIAL_URL,
+  ios: OFFICIAL_URL,
 } as const;
 
 export const discoverUrl = (type: string, identifier: string) =>

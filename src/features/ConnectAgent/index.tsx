@@ -22,7 +22,7 @@ import {
   ScanSearch,
   TerminalIcon,
 } from 'lucide-react';
-import { memo, type ReactNode, useCallback, useEffect, useMemo, useState } from 'react';
+import { memo, type ReactNode, useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
@@ -36,9 +36,16 @@ import { Textarea } from '@/components/ui/textarea';
 import { Tooltip, TooltipContent, TooltipTrigger } from '@/components/ui/tooltip';
 import { DOWNLOAD_URL } from '@/const/url';
 import { getDeviceIcon } from '@/features/DeviceManager/getDeviceIcon';
+import { getDeviceLabel } from '@/features/DeviceManager/getDeviceLabel';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';
+import type { CreateAgentParams } from '@/services/agent';
+import {
+  createOnboardingAgentOnce,
+  type FirstAgentCreationCheckpoint,
+} from '@/services/agentOnboarding';
 import { deviceService } from '@/services/device';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { useAgentStore } from '@/store/agent';
 import { heteroAgentDefaultName } from '@/store/agent/utils/heteroAgentDefaultName';
 import { useElectronStore } from '@/store/electron';
@@ -188,11 +195,6 @@ const styles = createStaticStyles(({ css }) => ({
 
     background: ${cssVar.colorFillTertiary};
   `,
-  mono: css`
-    font-family: ${cssVar.fontFamilyCode};
-    font-size: 12px;
-    color: ${cssVar.colorTextTertiary};
-  `,
   row: css`
     cursor: pointer;
 
@@ -338,9 +340,8 @@ const AgentScanRow = memo<{
   provider: ConnectableProvider;
   selected: boolean;
   status?: HeterogeneousAgentScanStatus;
-  subtitle: string;
   unavailableText: string;
-}>(({ onToggle, provider, selected, status, subtitle, unavailableText }) => {
+}>(({ onToggle, provider, selected, status, unavailableText }) => {
   const available = status?.available === true;
   const row = (
     <div
@@ -350,15 +351,11 @@ const AgentScanRow = memo<{
       onClick={available ? onToggle : undefined}
     >
       <provider.brand.Avatar size={32} />
-      <div className="flex flex-col flex-1 gap-[1px]" style={{ minWidth: 0 }}>
+      <div className="flex flex-col flex-1 justify-center" style={{ minHeight: 42, minWidth: 0 }}>
         <div className="font-semibold">{provider.title}</div>
-        <div className="truncate block text-[12px] text-muted-foreground">{subtitle}</div>
       </div>
       {available ? (
-        <>
-          {status?.version && <span className={styles.mono}>{status.version}</span>}
-          <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
-        </>
+        <Checkbox checked={selected} style={{ pointerEvents: 'none' }} />
       ) : (
         <div className="text-[12px] text-muted-foreground">{unavailableText}</div>
       )}
@@ -376,13 +373,30 @@ const AgentScanRow = memo<{
 });
 
 interface ConnectAgentContentProps {
+  creationCheckpoint?: FirstAgentCreationCheckpoint;
   groupId?: string;
+  initialTarget?: ScanTarget;
+  /**
+   * Harness the caller already chose (the composer picker's "installed on this
+   * device" row). Seeded into the step-2 selection once its scan settles, so
+   * that hand-off does not make the user find the same row again.
+   */
+  initialType?: HeterogeneousAgentType;
+  onCreated?: (agentId: string, config: CreateAgentParams['config']) => Promise<void>;
   onTitleChange: (title: string) => void;
   visibility?: 'private' | 'public';
 }
 
 const ConnectAgentContent = memo<ConnectAgentContentProps>(
-  ({ groupId, onTitleChange, visibility }) => {
+  ({
+    groupId,
+    initialType,
+    initialTarget,
+    creationCheckpoint,
+    onCreated,
+    onTitleChange,
+    visibility,
+  }) => {
     const { t } = useTranslation('chat');
     const { close, setCanDismissByClickOutside } = useModalContext();
     const navigate = useWorkspaceAwareNavigate();
@@ -393,7 +407,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     // Workspace agents must bind workspace devices: a workspace agent on a
     // personal device is unreachable to other members and rejected server-side.
     const activeWorkspaceId = useActiveWorkspaceId();
-    const restrictToWorkspaceDevices = Boolean(activeWorkspaceId);
+    const restrictToWorkspaceDevices = Boolean(activeWorkspaceId) && !creationCheckpoint;
 
     const [step, setStep] = useState(0);
     const [target, setTarget] = useState<ScanTarget | null>(null);
@@ -415,6 +429,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
 
     const {
       data: devices,
+      error: devicesError,
       isLoading: loadingDevices,
       isValidating: fetchingDevices,
       mutate: refetchDevices,
@@ -424,25 +439,30 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       () => (devices ?? []).filter((d) => !restrictToWorkspaceDevices || d.scope === 'workspace'),
       [devices, restrictToWorkspaceDevices],
     );
-    const onlineDevices = listedDevices.filter((d) => d.online);
+    // The connect flow obeys the same 0/1/N device rules as the execution
+    // contract: with exactly one legal candidate (desktop counts as its own
+    // "This device" candidate) the flow auto-resolves it instead of showing a
+    // one-row picker. Loading/failed inventory never counts as 0 or 1.
+    const deviceInventoryComplete = !loadingDevices && !fetchingDevices && !devicesError;
 
     const deviceLabel = useCallback(
-      (device: DeviceListItem) => device.friendlyName || device.hostname || device.deviceId,
-      [],
+      (device: DeviceListItem) => getDeviceLabel(device, t('connectAgent.create.desktopChannel')),
+      [t],
     );
 
     const targetLabel =
       target?.kind === 'device' ? deviceLabel(target.device) : t('connectAgent.create.localDevice');
 
+    // Only providers the scan actually found are listed — this step is the
+    // picker for what can be connected, so uninstalled harnesses never render.
     const inventory = useMemo(() => {
       if (scanState.status !== 'success' || !scanState.agents) return [];
-      const rank = (available?: boolean) => (available ? 0 : 1);
-      return [...CONNECTABLE_PROVIDERS]
-        .map((provider) => ({ provider, status: scanState.agents?.[provider.type] }))
-        .sort((a, b) => rank(a.status?.available) - rank(b.status?.available));
+      return CONNECTABLE_PROVIDERS.filter(
+        (provider) => scanState.agents?.[provider.type]?.available,
+      ).map((provider) => ({ provider, status: scanState.agents?.[provider.type] }));
     }, [scanState]);
 
-    const detectedCount = inventory.filter((entry) => entry.status?.available).length;
+    const detectedCount = inventory.length;
 
     const selectedProviders = useMemo(
       () => CONNECTABLE_PROVIDERS.filter((provider) => selectedTypes.includes(provider.type)),
@@ -463,6 +483,38 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       [scan],
     );
 
+    // 1-candidate rule: exactly one legal connect target resolves at flow
+    // admission rather than rendering a one-row picker — desktop is its own
+    // "This device" candidate, so this fires only when (isDesktop ? 1 : 0) +
+    // listedDevices.length totals 1.
+    const autoResolvedTargetRef = useRef(false);
+    useEffect(() => {
+      if (!initialTarget || autoResolvedTargetRef.current) return;
+      autoResolvedTargetRef.current = true;
+      pickTarget(initialTarget);
+    }, [initialTarget, pickTarget]);
+    useEffect(() => {
+      if (autoResolvedTargetRef.current || step !== 0 || !deviceInventoryComplete) return;
+      const candidates = (isDesktop ? 1 : 0) + listedDevices.length;
+      if (candidates !== 1) return;
+      autoResolvedTargetRef.current = true;
+      pickTarget(isDesktop ? { kind: 'local' } : { device: listedDevices[0], kind: 'device' });
+    }, [deviceInventoryComplete, listedDevices, pickTarget, step]);
+
+    // Seed a hand-off selection once — and only once the scan confirms the
+    // binary is actually on the target. Seeding before that could preselect a
+    // harness the device does not have, and re-seeding after an explicit
+    // Rescan would undo the user's own selection.
+    const seededInitialTypeRef = useRef(false);
+    useEffect(() => {
+      const pending = initialType;
+      if (seededInitialTypeRef.current || !pending) return;
+      if (scanState.status !== 'success') return;
+      if (scanState.agents?.[pending]?.available !== true) return;
+      seededInitialTypeRef.current = true;
+      setSelectedTypes((prev) => (prev.includes(pending) ? prev : [...prev, pending]));
+    }, [initialType, scanState]);
+
     const rescan = useCallback(() => {
       if (!target) return;
       setSelectedTypes([]);
@@ -474,7 +526,9 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         setSelectedTypes((prev) =>
           prev.includes(provider.type)
             ? prev.filter((type) => type !== provider.type)
-            : [...prev, provider.type],
+            : creationCheckpoint
+              ? [provider.type]
+              : [...prev, provider.type],
         );
         // Prefetch the platform's profile so create/customize can prefill
         // title / description / avatar without an extra wait.
@@ -483,16 +537,19 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
           isRemoteHeterogeneousType(provider.type) &&
           !profiles[provider.type]
         ) {
-          const deviceId = target?.kind === 'device' ? target.device.deviceId : currentDeviceId;
-          if (!deviceId) return;
           const platform = provider.type;
-          void deviceService
-            .getAgentProfile({ deviceId, platform })
-            .then((profile) => setProfiles((prev) => ({ ...prev, [platform]: profile })))
-            .catch(() => {});
+          void (async () => {
+            const deviceId =
+              target?.kind === 'device'
+                ? target.device.deviceId
+                : (currentDeviceId ?? (await resolveLocalExecutionIdentity()).localDeviceId);
+            if (!deviceId) return;
+            const profile = await deviceService.getAgentProfile({ deviceId, platform });
+            setProfiles((prev) => ({ ...prev, [platform]: profile }));
+          })().catch(() => {});
         }
       },
-      [currentDeviceId, profiles, target],
+      [creationCheckpoint, currentDeviceId, profiles, target],
     );
 
     const goConfirm = useCallback(() => {
@@ -508,7 +565,17 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
     }, [activeWorkspaceId, profiles, single, visibility]);
 
     const buildCreateParams = useCallback(
-      (provider: ConnectableProvider, overrides?: { description?: string; name?: string }) => {
+      async (
+        provider: ConnectableProvider,
+        overrides?: { description?: string; name?: string },
+      ) => {
+        // A local target binds this computer's device: the electron-store
+        // snapshot can be absent before the gateway handshake lands, so fall
+        // back to the proven identity owner instead of shipping an empty id.
+        const localDeviceId =
+          target?.kind === 'device'
+            ? target.device.deviceId
+            : (currentDeviceId ?? (await resolveLocalExecutionIdentity()).localDeviceId);
         return {
           config: buildConnectAgentConfig({
             overrides,
@@ -517,7 +584,7 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
             target:
               target?.kind === 'device'
                 ? { deviceId: target.device.deviceId, kind: 'device' }
-                : { deviceId: currentDeviceId, kind: 'local' },
+                : { deviceId: localDeviceId, kind: 'local' },
           }),
           groupId,
           visibility,
@@ -534,30 +601,45 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         try {
           const created = await Promise.all(
             selectedProviders.map(async (provider) => {
-              const params = buildCreateParams(
+              const params = await buildCreateParams(
                 provider,
                 provider === single ? overrides : undefined,
               );
-              const result = await storeCreateAgent(params);
+              const result = creationCheckpoint
+                ? await createOnboardingAgentOnce(creationCheckpoint, params, storeCreateAgent)
+                : { ...(await storeCreateAgent(params)), config: params.config };
+              const savedConfig = result.config ?? params.config;
+              await onCreated?.(result.agentId, savedConfig);
+              const savedProvider =
+                CONNECTABLE_PROVIDERS.find(
+                  (item) => item.type === savedConfig.agencyConfig?.heterogeneousProvider?.type,
+                ) ?? provider;
+              const savedDevice = devices?.find(
+                (item) => item.deviceId === savedConfig.agencyConfig?.boundDeviceId,
+              );
               return {
                 agentId: result.agentId,
-                locationLabel: targetLabel,
-                provider,
+                locationLabel: savedDevice ? deviceLabel(savedDevice) : targetLabel,
+                provider: savedProvider,
                 // Mirror the default-name seeding in createAgent so the done
                 // screen shows the same label the sidebar will.
                 title:
-                  params.config.name?.trim() ||
+                  savedConfig.name?.trim() ||
                   heteroAgentDefaultName({
-                    productTitle: params.config.title,
+                    productTitle: savedConfig.title ?? undefined,
                     visibility,
                     workspaceId: activeWorkspaceId,
                   }) ||
-                  agentDisplayName(params.config, provider.title),
+                  agentDisplayName(savedConfig, savedProvider.title),
                 version: scanState.agents?.[provider.type]?.version,
               } satisfies CreatedAgent;
             }),
           );
           await refreshAgentList();
+          if (onCreated) {
+            close();
+            return;
+          }
           setDone(created);
           onTitleChange(
             created.length === 1
@@ -572,8 +654,13 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
       },
       [
         activeWorkspaceId,
+        close,
         buildCreateParams,
+        creationCheckpoint,
+        deviceLabel,
+        devices,
         onTitleChange,
+        onCreated,
         refreshAgentList,
         scanState,
         selectedProviders,
@@ -633,7 +720,10 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
         hasDevices: listedDevices.length > 0,
         isFetching: isRefreshing,
       });
-      const showEmpty = !isDesktop && !isRefreshing && onlineDevices.length === 0;
+      // Offline devices stay legal candidates (they cannot start yet, but
+      // they are not "no device"), so the empty state only covers a truly
+      // empty inventory — matching the contract's zero-device rule.
+      const showEmpty = !isDesktop && !isRefreshing && listedDevices.length === 0;
 
       return (
         <div className="flex flex-col gap-4" style={{ paddingBlock: '16px 8px' }}>
@@ -788,7 +878,9 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
 
           {scanning && (
             <div className="flex flex-col gap-1.5">
-              <SectionLabel>{t('connectAgent.create.scanning')}</SectionLabel>
+              <SectionLabel>
+                {t('connectAgent.create.scanning', { device: targetLabel })}
+              </SectionLabel>
               <ScrollableAgentList>
                 {[90, 70, 110, 80, 100, 75, 95]
                   .slice(0, CONNECTABLE_PROVIDERS.length)
@@ -838,7 +930,6 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
                     provider={provider}
                     selected={selectedTypes.includes(provider.type)}
                     status={status}
-                    subtitle={t(`connectAgent.providerDesc.${provider.type}`)}
                     unavailableText={t('connectAgent.create.notInstalled')}
                     onToggle={() => toggleType(provider)}
                   />
@@ -977,7 +1068,12 @@ const ConnectAgentContent = memo<ConnectAgentContentProps>(
 ConnectAgentContent.displayName = 'ConnectAgentContent';
 
 export interface OpenConnectAgentModalOptions {
+  creationCheckpoint?: FirstAgentCreationCheckpoint;
   groupId?: string;
+  initialTarget?: ScanTarget;
+  /** Pre-select this harness when the scan finds it (composer picker hand-off). */
+  initialType?: HeterogeneousAgentType;
+  onCreated?: (agentId: string, config: CreateAgentParams['config']) => Promise<void>;
   visibility?: 'private' | 'public';
 }
 
@@ -989,8 +1085,12 @@ export const openConnectAgentModal = (options?: OpenConnectAgentModalOptions): M
   holder.instance = createModal({
     content: (
       <ConnectAgentContent
+        creationCheckpoint={options?.creationCheckpoint}
         groupId={options?.groupId}
+        initialTarget={options?.initialTarget}
+        initialType={options?.initialType}
         visibility={options?.visibility}
+        onCreated={options?.onCreated}
         onTitleChange={(title) => holder.instance?.update({ title })}
       />
     ),

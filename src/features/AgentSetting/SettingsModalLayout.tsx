@@ -21,6 +21,7 @@ export interface SettingsModalLayoutProps {
   avatar: string;
   background?: string;
   children: ReactNode;
+  icon?: ReactNode;
   onTabChange?: (key: string) => void;
   tabs?: SettingsModalTabItem[];
   title: ReactNode;
@@ -41,7 +42,7 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 }));
 
 const SettingsModalLayout = memo<SettingsModalLayoutProps>(
-  ({ avatar, background, title, tabs, activeTab, onTabChange, children }) => {
+  ({ avatar, background, title, tabs, activeTab, onTabChange, children, icon }) => {
     const { t } = useTranslation('common');
     const { close } = useModalContext();
 
@@ -55,7 +56,7 @@ const SettingsModalLayout = memo<SettingsModalLayoutProps>(
       <div className="flex flex-col h-full" style={{ overflow: 'hidden' }}>
         <div className={`flex items-center justify-between ${styles.header}`}>
           <div className="flex items-center gap-2" style={{ minWidth: 0 }}>
-            <Avatar avatar={avatar} background={background} shape={'square'} size={24} />
+            {icon ?? <Avatar avatar={avatar} background={background} shape={'square'} size={24} />}
             <div className="truncate font-semibold">{title}</div>
           </div>
           <ActionIcon icon={XIcon} title={t('cancel')} onClick={close} />

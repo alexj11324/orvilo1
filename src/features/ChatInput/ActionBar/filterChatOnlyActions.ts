@@ -7,7 +7,6 @@ const CHAT_ONLY_ACTIONS = new Set<ActionKey>([
   'fileUpload',
   'history',
   'mention',
-  'model',
   'plus',
   'typo',
   'voiceDictation',
@@ -16,8 +15,7 @@ const CHAT_ONLY_ACTIONS = new Set<ActionKey>([
 /**
  * Chat-only members (no configuration access) keep runtime preferences,
  * attachments, formatting and chat operations while configuration actions are
- * hidden. `model` stays as the text chip — it is policy-aware and renders an
- * inert label when the member cannot pick a model.
+ * hidden.
  */
 export const filterChatOnlyActions = (actions: ActionKeys[]): ActionKeys[] => {
   const visibleActions: ActionKeys[] = [];

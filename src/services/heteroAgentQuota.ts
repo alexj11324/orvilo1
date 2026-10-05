@@ -2,6 +2,7 @@ import type { ClaudeCodeQuotaSnapshot } from '@orvilo/electron-client-ipc';
 
 import { lambdaClient } from '@/libs/trpc/client';
 import { heterogeneousAgentService } from '@/services/electron/heterogeneousAgent';
+import { resolveLocalExecutionIdentity } from '@/services/localExecutionIdentity';
 import { requireLocalExecutionTransport } from '@/services/targetRequiredError';
 
 export interface FetchClaudeCodeQuotaSnapshotParams {
@@ -20,12 +21,16 @@ export interface FetchClaudeCodeQuotaSnapshotParams {
  * offline or its client predates the quota RPC — callers fall back to
  * persisted windows.
  */
-export const fetchClaudeCodeQuotaSnapshot = ({
+export const fetchClaudeCodeQuotaSnapshot = async ({
   deviceId,
   env,
   force,
 }: FetchClaudeCodeQuotaSnapshotParams): Promise<ClaudeCodeQuotaSnapshot | null> => {
-  requireLocalExecutionTransport(deviceId, 'fetchClaudeCodeQuotaSnapshot');
+  requireLocalExecutionTransport(
+    deviceId,
+    'fetchClaudeCodeQuotaSnapshot',
+    await resolveLocalExecutionIdentity(),
+  );
   return deviceId
     ? lambdaClient.device.getClaudeCodeQuota.query({
         deviceId,

@@ -15,6 +15,7 @@ import type {
   ProviderModelCapability,
 } from './contracts';
 import { CONTROL_PLANE_VERSION } from './contracts';
+import { isSanitizedInferenceRequest } from './harnessProtocol';
 
 export interface InferenceAuthoritySnapshot {
   binding: ProviderBinding;
@@ -65,18 +66,14 @@ const failure = (value: ControlError): ControlResult<never> => ({ ok: false, err
 const validRevision = (value: unknown) => Number.isSafeInteger(value) && (value as number) >= 0;
 const nonempty = (value: unknown): value is string => typeof value === 'string' && value.length > 0;
 
-const fenceStrings = [
-  'tenantId',
-  'principalId',
-  'taskId',
-  'grantId',
-  'ownerId',
-  'leaseId',
-] as const;
+const fenceStrings = ['tenantId', 'principalId', 'grantId', 'ownerId', 'leaseId'] as const;
 const fenceRevisions = ['epoch', 'policyRevision', 'stateRevision'] as const;
 const scopeStrings = ['tenantId', 'principalId', 'ownerId'] as const;
+// `taskId` is the only nullable fence slot: a conversation-subject run has
+// no task id — `null` is the contract, not a placeholder.
 const validFence = (value: unknown): value is ExecutionFence =>
   isRecord(value) &&
+  (value.taskId === null || nonempty(value.taskId)) &&
   fenceStrings.every((key) => nonempty(value[key])) &&
   fenceRevisions.every((key) => validRevision(value[key]));
 const validScope = (value: unknown): value is ProviderConfigurationScope =>
@@ -159,13 +156,7 @@ export function createInferenceBroker(deps: {
           !validRevision(request.bindingRevision) ||
           !Number.isSafeInteger(request.maxOutputTokens) ||
           request.maxOutputTokens <= 0 ||
-          !Array.isArray(request.messages) ||
-          request.messages.some(
-            (message) =>
-              !message ||
-              !['system', 'user', 'assistant'].includes(message.role) ||
-              typeof message.content !== 'string',
-          )
+          !isSanitizedInferenceRequest(request)
         ) {
           yield { type: 'error', error: error('invalid_request', 'Invalid inference request') };
           return;

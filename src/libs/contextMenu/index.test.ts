@@ -6,10 +6,13 @@ import {
 } from '@lobehub/ui';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
-import { electronSystemService } from '@/services/electron/system';
-
 import { closeContextMenu, registerNativeContextMenuInterceptor, showContextMenu } from './index';
 import type { NativeContextMenuItem } from './types';
+
+const hostMenu = vi.hoisted(() => ({
+  closePopupContextMenu: vi.fn(),
+  popupContextMenu: vi.fn(),
+}));
 
 vi.mock('@lobehub/ui', () => ({
   closeContextMenu: vi.fn(),
@@ -17,11 +20,9 @@ vi.mock('@lobehub/ui', () => ({
   showContextMenu: vi.fn(),
 }));
 
-vi.mock('@/services/electron/system', () => ({
-  electronSystemService: {
-    closePopupContextMenu: vi.fn(),
-    popupContextMenu: vi.fn(),
-  },
+vi.mock('@/platform', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  getHostPort: () => ({ menu: hostMenu }),
 }));
 
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0));
@@ -47,7 +48,7 @@ describe('showContextMenu routing', () => {
     showContextMenu(items, options);
 
     expect(showWebContextMenu).toHaveBeenCalledWith(items, options);
-    expect(electronSystemService.popupContextMenu).not.toHaveBeenCalled();
+    expect(hostMenu.popupContextMenu).not.toHaveBeenCalled();
   });
 
   it('delegates to the web menu on darwin when the menu is not native-safe', () => {
@@ -57,16 +58,16 @@ describe('showContextMenu routing', () => {
     showContextMenu(items);
 
     expect(showWebContextMenu).toHaveBeenCalledWith(items, undefined);
-    expect(electronSystemService.popupContextMenu).not.toHaveBeenCalled();
+    expect(hostMenu.popupContextMenu).not.toHaveBeenCalled();
   });
 
   it('goes native on darwin when the menu is native-safe', () => {
     stubDarwin();
-    vi.mocked(electronSystemService.popupContextMenu).mockResolvedValue({ clickedId: null });
+    vi.mocked(hostMenu.popupContextMenu).mockResolvedValue({ clickedId: null });
 
     showContextMenu([{ key: '1', label: 'Copy' }]);
 
-    expect(electronSystemService.popupContextMenu).toHaveBeenCalledTimes(1);
+    expect(hostMenu.popupContextMenu).toHaveBeenCalledTimes(1);
     expect(showWebContextMenu).not.toHaveBeenCalled();
   });
 
@@ -76,7 +77,7 @@ describe('showContextMenu routing', () => {
     showContextMenu([]);
 
     expect(showWebContextMenu).toHaveBeenCalledWith([], undefined);
-    expect(electronSystemService.popupContextMenu).not.toHaveBeenCalled();
+    expect(hostMenu.popupContextMenu).not.toHaveBeenCalled();
   });
 });
 
@@ -84,7 +85,7 @@ describe('native popup resolution', () => {
   it('invokes the matching handler once the IPC call resolves', async () => {
     stubDarwin();
     const onClick = vi.fn();
-    vi.mocked(electronSystemService.popupContextMenu).mockResolvedValue({ clickedId: '0' });
+    vi.mocked(hostMenu.popupContextMenu).mockResolvedValue({ clickedId: '0' });
 
     showContextMenu([{ key: '1', label: 'Copy', onClick }]);
 
@@ -94,7 +95,7 @@ describe('native popup resolution', () => {
   it('invokes no handler when the menu is cancelled', async () => {
     stubDarwin();
     const onClick = vi.fn();
-    vi.mocked(electronSystemService.popupContextMenu).mockResolvedValue({ clickedId: null });
+    vi.mocked(hostMenu.popupContextMenu).mockResolvedValue({ clickedId: null });
 
     showContextMenu([{ key: '1', label: 'Copy', onClick }]);
 
@@ -106,7 +107,7 @@ describe('native popup resolution', () => {
   it('does not throw when the IPC call rejects, and invokes no handler', async () => {
     stubDarwin();
     const onClick = vi.fn();
-    vi.mocked(electronSystemService.popupContextMenu).mockRejectedValue(new Error('boom'));
+    vi.mocked(hostMenu.popupContextMenu).mockRejectedValue(new Error('boom'));
 
     expect(() => showContextMenu([{ key: '1', label: 'Copy', onClick }])).not.toThrow();
 
@@ -127,7 +128,7 @@ describe('native popup resolution', () => {
       resolveB = resolve;
     });
 
-    vi.mocked(electronSystemService.popupContextMenu)
+    vi.mocked(hostMenu.popupContextMenu)
       .mockReturnValueOnce(promiseA)
       .mockReturnValueOnce(promiseB);
 
@@ -144,7 +145,7 @@ describe('native popup resolution', () => {
     expect(onClickB).not.toHaveBeenCalled();
 
     closeContextMenu();
-    expect(electronSystemService.closePopupContextMenu).toHaveBeenCalledTimes(1);
+    expect(hostMenu.closePopupContextMenu).toHaveBeenCalledTimes(1);
     expect(closeWebContextMenu).not.toHaveBeenCalled();
 
     resolveB({ clickedId: '0' });
@@ -157,12 +158,12 @@ describe('native popup resolution', () => {
 describe('closeContextMenu routing', () => {
   it('routes to the native IPC after a native menu was shown', () => {
     stubDarwin();
-    vi.mocked(electronSystemService.popupContextMenu).mockResolvedValue({ clickedId: null });
+    vi.mocked(hostMenu.popupContextMenu).mockResolvedValue({ clickedId: null });
     showContextMenu([{ key: '1', label: 'Copy' }]);
 
     closeContextMenu();
 
-    expect(electronSystemService.closePopupContextMenu).toHaveBeenCalledTimes(1);
+    expect(hostMenu.closePopupContextMenu).toHaveBeenCalledTimes(1);
     expect(closeWebContextMenu).not.toHaveBeenCalled();
   });
 
@@ -172,12 +173,12 @@ describe('closeContextMenu routing', () => {
     closeContextMenu();
 
     expect(closeWebContextMenu).toHaveBeenCalledTimes(1);
-    expect(electronSystemService.closePopupContextMenu).not.toHaveBeenCalled();
+    expect(hostMenu.closePopupContextMenu).not.toHaveBeenCalled();
   });
 
   it('routes to the web menu once a native popup has settled after a click', async () => {
     stubDarwin();
-    vi.mocked(electronSystemService.popupContextMenu).mockResolvedValue({ clickedId: '0' });
+    vi.mocked(hostMenu.popupContextMenu).mockResolvedValue({ clickedId: '0' });
     showContextMenu([{ key: '1', label: 'Copy', onClick: vi.fn() }]);
 
     await flush();
@@ -185,12 +186,12 @@ describe('closeContextMenu routing', () => {
     closeContextMenu();
 
     expect(closeWebContextMenu).toHaveBeenCalledTimes(1);
-    expect(electronSystemService.closePopupContextMenu).not.toHaveBeenCalled();
+    expect(hostMenu.closePopupContextMenu).not.toHaveBeenCalled();
   });
 
   it('routes to the web menu once a native popup has settled after a cancel', async () => {
     stubDarwin();
-    vi.mocked(electronSystemService.popupContextMenu).mockResolvedValue({ clickedId: null });
+    vi.mocked(hostMenu.popupContextMenu).mockResolvedValue({ clickedId: null });
     showContextMenu([{ key: '1', label: 'Copy' }]);
 
     await flush();
@@ -198,12 +199,12 @@ describe('closeContextMenu routing', () => {
     closeContextMenu();
 
     expect(closeWebContextMenu).toHaveBeenCalledTimes(1);
-    expect(electronSystemService.closePopupContextMenu).not.toHaveBeenCalled();
+    expect(hostMenu.closePopupContextMenu).not.toHaveBeenCalled();
   });
 
   it('routes to the web menu after a native popup settles by rejecting', async () => {
     stubDarwin();
-    vi.mocked(electronSystemService.popupContextMenu).mockRejectedValue(new Error('boom'));
+    vi.mocked(hostMenu.popupContextMenu).mockRejectedValue(new Error('boom'));
     showContextMenu([{ key: '1', label: 'Copy' }]);
 
     await flush();
@@ -211,7 +212,7 @@ describe('closeContextMenu routing', () => {
     closeContextMenu();
 
     expect(closeWebContextMenu).toHaveBeenCalledTimes(1);
-    expect(electronSystemService.closePopupContextMenu).not.toHaveBeenCalled();
+    expect(hostMenu.closePopupContextMenu).not.toHaveBeenCalled();
   });
 });
 
@@ -224,13 +225,13 @@ describe('registerNativeContextMenuInterceptor', () => {
 
   it('routes declarative shows to the native popup on darwin without touching the fallback', async () => {
     stubDarwin();
-    vi.mocked(electronSystemService.popupContextMenu).mockResolvedValue({ clickedId: null });
+    vi.mocked(hostMenu.popupContextMenu).mockResolvedValue({ clickedId: null });
     const fallback = vi.fn();
 
     getInterceptor().show?.([{ key: '1', label: 'Copy' }], undefined, fallback);
     await flush();
 
-    expect(electronSystemService.popupContextMenu).toHaveBeenCalledTimes(1);
+    expect(hostMenu.popupContextMenu).toHaveBeenCalledTimes(1);
     expect(fallback).not.toHaveBeenCalled();
   });
 
@@ -248,13 +249,13 @@ describe('registerNativeContextMenuInterceptor', () => {
       fallback,
     );
     expect(fallback).toHaveBeenCalledTimes(2);
-    expect(electronSystemService.popupContextMenu).not.toHaveBeenCalled();
+    expect(hostMenu.popupContextMenu).not.toHaveBeenCalled();
   });
 
   it('routes close to the native IPC while a native popup is open, else to the fallback', async () => {
     stubDarwin();
     let resolvePopup: (value: { clickedId: string | null }) => void = () => {};
-    vi.mocked(electronSystemService.popupContextMenu).mockImplementation(
+    vi.mocked(hostMenu.popupContextMenu).mockImplementation(
       () => new Promise((resolve) => (resolvePopup = resolve)),
     );
     const closeFallback = vi.fn();
@@ -263,7 +264,7 @@ describe('registerNativeContextMenuInterceptor', () => {
     interceptor.show?.([{ key: '1', label: 'Copy' }], undefined, vi.fn());
     interceptor.close?.(closeFallback);
 
-    expect(electronSystemService.closePopupContextMenu).toHaveBeenCalledTimes(1);
+    expect(hostMenu.closePopupContextMenu).toHaveBeenCalledTimes(1);
     expect(closeFallback).not.toHaveBeenCalled();
 
     resolvePopup({ clickedId: null });
@@ -271,6 +272,6 @@ describe('registerNativeContextMenuInterceptor', () => {
     interceptor.close?.(closeFallback);
 
     expect(closeFallback).toHaveBeenCalledTimes(1);
-    expect(electronSystemService.closePopupContextMenu).toHaveBeenCalledTimes(1);
+    expect(hostMenu.closePopupContextMenu).toHaveBeenCalledTimes(1);
   });
 });

@@ -82,6 +82,150 @@ afterEach(async () => {
 });
 
 describe('AgentModel', () => {
+  describe('runtime identity', () => {
+    it('refuses an unregistered runtime before inserting any rows', async () => {
+      const config = { agencyConfig: { heterogeneousProvider: { type: 'made-up-agent' } } } as any;
+      await expect(agentModel.create(config)).rejects.toThrow(
+        /Unsupported agent runtime|Unknown heterogeneous agent type/,
+      );
+      await expect(agentModel.batchCreate([{ title: 'Orvilo' }, config])).rejects.toThrow(
+        /Unsupported agent runtime|Unknown heterogeneous agent type/,
+      );
+      expect(await serverDB.select().from(agents)).toHaveLength(0);
+    });
+
+    it.each(['made-up-runtime', []])(
+      'refuses malformed runtime configuration %j',
+      async (agencyConfig) => {
+        await expect(agentModel.create({ agencyConfig } as any)).rejects.toThrow(
+          'Unsupported agent runtime configuration',
+        );
+        expect(await serverDB.select().from(agents)).toHaveLength(0);
+      },
+    );
+
+    it('keeps the runtime icon when an agent is renamed or given a custom avatar', async () => {
+      const agent = await agentModel.create({ title: 'OA', avatar: '🐱' });
+      expect(agent.avatar).toBe('/app-icons/icon-512x512.png');
+      await agentModel.update(agent.id, { title: 'DR', avatar: 'DR' });
+      let [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+      expect(saved.title).toBe('DR');
+      expect(saved.avatar).toBe('/app-icons/icon-512x512.png');
+      await agentModel.updateConfig(agent.id, { avatar: '⚡' });
+      [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+      expect(saved.avatar).toBe('/app-icons/icon-512x512.png');
+    });
+
+    it('uses the imported runtime brand regardless of its display name', async () => {
+      const agent = await agentModel.create({
+        agencyConfig: { heterogeneousProvider: { type: 'claude-code' } },
+        avatar: 'OA',
+        title: 'Custom name',
+      });
+      expect(agent.avatar).toContain('/avatars/claudecode.webp');
+      await agentModel.updateConfig(agent.id, { title: 'Renamed', avatar: 'DR' });
+      const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+      expect(saved.title).toBe('Renamed');
+      expect(saved.avatar).toBe(agent.avatar);
+    });
+
+    it('does not infer an imported runtime for a write missing its type', async () => {
+      const agent = await agentModel.create({ title: 'Orvilo' });
+      const invalid = { agencyConfig: { heterogeneousProvider: { command: 'claude' } } } as any;
+      await expect(agentModel.create(invalid)).rejects.toThrow('Unsupported agent runtime');
+      await expect(agentModel.updateConfig(agent.id, invalid)).rejects.toThrow(
+        'Unsupported agent runtime',
+      );
+    });
+
+    it('stamps the runtime brand when duplicating an older row with custom artwork', async () => {
+      const [source] = await serverDB
+        .insert(agents)
+        .values({ userId, title: 'Older', avatar: '⚡' })
+        .returning();
+      const copy = await agentModel.duplicate(source.id, 'Copy');
+      const [saved] = await serverDB.select().from(agents).where(eq(agents.id, copy!.agentId));
+      expect(saved.avatar).toBe('/app-icons/icon-512x512.png');
+      expect(saved.title).toBe('Copy');
+    });
+
+    it.each(['rename', 'pin', 'updateConfig', 'duplicate'] as const)(
+      'normalizes a persisted command-only Codex row before %s',
+      async (operation) => {
+        const [source] = await serverDB
+          .insert(agents)
+          .values({
+            userId,
+            title: 'Legacy Codex',
+            agencyConfig: { heterogeneousProvider: { command: 'codex' } } as any,
+          })
+          .returning();
+        let savedId = source.id;
+        if (operation === 'rename') await agentModel.update(source.id, { title: 'Renamed' });
+        if (operation === 'pin') await agentModel.update(source.id, { pinned: true });
+        if (operation === 'updateConfig')
+          await agentModel.updateConfig(source.id, { description: 'Edited' });
+        if (operation === 'duplicate') savedId = (await agentModel.duplicate(source.id))!.agentId;
+        const [saved] = await serverDB.select().from(agents).where(eq(agents.id, savedId));
+        expect(saved.avatar).toContain('/avatars/codex.webp');
+        expect(saved.agencyConfig?.heterogeneousProvider).toMatchObject({
+          command: 'codex',
+          type: 'codex',
+        });
+      },
+    );
+
+    it('merges an effort-only provider patch with the persisted runtime type', async () => {
+      const agent = await agentModel.create({
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+      });
+      await agentModel.updateConfig(agent.id, {
+        agencyConfig: { heterogeneousProvider: { effort: 'high' } },
+      });
+      const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+      expect(saved.agencyConfig?.heterogeneousProvider).toMatchObject({
+        type: 'codex',
+        effort: 'high',
+      });
+      expect(saved.avatar).toContain('/avatars/codex.webp');
+    });
+
+    it.each([
+      'made-up-runtime',
+      [],
+      { heterogeneousProvider: { type: 'made-up-agent' } },
+      { heterogeneousProvider: { type: null } },
+    ])(
+      'rejects malformed replacement or partial config %j without changing the persisted Codex runtime',
+      async (agencyConfig) => {
+        const agent = await agentModel.create({
+          agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        });
+        await expect(agentModel.update(agent.id, { agencyConfig } as any)).rejects.toThrow(
+          /Unsupported agent runtime/,
+        );
+        await expect(agentModel.updateConfig(agent.id, { agencyConfig } as any)).rejects.toThrow(
+          /Unsupported agent runtime/,
+        );
+        const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+        expect(saved.agencyConfig?.heterogeneousProvider?.type).toBe('codex');
+      },
+    );
+
+    it('refuses invalid runtime changes through both update paths', async () => {
+      const agent = await agentModel.create({ title: 'Orvilo' });
+      const invalid = { agencyConfig: { heterogeneousProvider: { type: 'made-up-agent' } } } as any;
+      await expect(agentModel.update(agent.id, invalid)).rejects.toThrow(
+        /Unsupported agent runtime|Unknown heterogeneous agent type/,
+      );
+      await expect(agentModel.updateConfig(agent.id, invalid)).rejects.toThrow(
+        /Unsupported agent runtime|Unknown heterogeneous agent type/,
+      );
+      const [saved] = await serverDB.select().from(agents).where(eq(agents.id, agent.id));
+      expect(saved.agencyConfig?.heterogeneousProvider).toBeUndefined();
+    });
+  });
+
   describe('existsOwnedById', () => {
     it('is true only for the agent creator (edit-rights gate), not merely visibility', async () => {
       const ownAgent = 'owned-agent-id';
@@ -1251,7 +1395,7 @@ describe('AgentModel', () => {
         where: eq(agents.id, agent.id),
       });
 
-      expect(result?.avatar).toBe('new-avatar');
+      expect(result?.avatar).toBe('/app-icons/icon-512x512.png');
       expect(result?.title).toBe('Test Agent'); // Should preserve other fields
       expect(result?.updatedAt.getTime()).toBeGreaterThan(originalUpdatedAt.getTime());
     });
@@ -1652,7 +1796,7 @@ describe('AgentModel', () => {
 
       expect(result.title).toBe('Full Agent');
       expect(result.description).toBe('Full description');
-      expect(result.avatar).toBe('avatar-url');
+      expect(result.avatar).toBe('/app-icons/icon-512x512.png');
       expect(result.backgroundColor).toBe('#ffffff');
       expect(result.model).toBe('gpt-4');
       expect(result.provider).toBe('openai');
@@ -2221,11 +2365,11 @@ describe('AgentModel', () => {
 
       expect(duplicatedAgent).toEqual(
         expect.objectContaining({
-          // Should be copied
+          // Editable names and configuration are copied; runtime branding is fixed.
           title: 'Original Agent (Copy)',
           description: 'Original description',
           tags: ['tag1', 'tag2'],
-          avatar: 'avatar-url',
+          avatar: '/app-icons/icon-512x512.png',
           backgroundColor: '#ffffff',
           plugins: ['plugin1'],
           model: 'gpt-4',

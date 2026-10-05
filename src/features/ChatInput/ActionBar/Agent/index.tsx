@@ -1,11 +1,11 @@
 import { BUILTIN_AGENT_SLUGS } from '@orvilo/builtin-agents';
-import { CHAT_TOPIC_URL, DEFAULT_AVATAR } from '@orvilo/const';
+import { CHAT_TOPIC_URL } from '@orvilo/const';
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
 import { agentDisplayName } from '@orvilo/types';
 import { memo, useCallback, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 
-import Avatar from '@/components/Avatar';
+import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
@@ -21,6 +21,7 @@ import { useAgentStore } from '@/store/agent';
 import { agentSelectors, builtinAgentSelectors } from '@/store/agent/selectors';
 import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
+import { resolveAgentRuntimeType } from '@/utils/agentRuntimeIdentity';
 
 import SelectorTrigger from '../../components/SelectorTrigger';
 import { useAgentId } from '../../hooks/useAgentId';
@@ -111,6 +112,9 @@ const Agent = memo(() => {
   useInitBuiltinAgent(BUILTIN_AGENT_SLUGS.taskAgent);
 
   const taskAgentId = useAgentStore(builtinAgentSelectors.taskAgentId);
+  const runtimeType = useAgentStore((s) =>
+    resolveAgentRuntimeType(agentSelectors.getAgentConfigById(agentId)(s)),
+  );
   const meta = useAgentStore(agentSelectors.getAgentMetaById(agentId));
   // The task agent is a virtual row — its label comes from the same fallback
   // the task-manager selector uses, not the agent meta map.
@@ -194,16 +198,8 @@ const Agent = memo(() => {
         render={
           <SelectorTrigger
             ariaLabel={title}
+            leading={<AgentRuntimeIcon size={20} type={runtimeType} />}
             text={title}
-            leading={
-              <Avatar
-                avatar={meta.avatar || DEFAULT_AVATAR}
-                background={meta.backgroundColor}
-                name={title}
-                shape={'square'}
-                size={20}
-              />
-            }
           />
         }
       />

@@ -111,14 +111,26 @@ const readIdentityRecord = async (filename: string): Promise<StoredDeviceIdentit
     version !== 1 ||
     typeof deviceId !== 'string' ||
     !/^(?:[\da-f]{32}|[\da-f-]{36})$/.test(deviceId) ||
-    (identitySource !== 'machine-id' && identitySource !== 'fallback') ||
-    (machineDeviceId !== undefined &&
-      (typeof machineDeviceId !== 'string' || !/^[\da-f]{32}$/.test(machineDeviceId))) ||
-    (identitySource === 'machine-id' && machineDeviceId !== deviceId)
+    (identitySource !== 'machine-id' && identitySource !== 'fallback')
   ) {
     throw new Error('Invalid persisted device identity record');
   }
-  return { deviceId, identitySource, machineDeviceId, version };
+  if (
+    machineDeviceId !== undefined &&
+    (typeof machineDeviceId !== 'string' ||
+      !/^[\da-f]{32}$/.test(machineDeviceId) ||
+      (identitySource === 'machine-id' && machineDeviceId !== deviceId))
+  ) {
+    throw new Error('Invalid persisted device identity record');
+  }
+  // The guards above prove machineDeviceId is a 32-hex string or absent;
+  // tsgo does not narrow the destructured unknown, so the type is stated here.
+  return {
+    deviceId,
+    identitySource,
+    machineDeviceId: machineDeviceId as string | undefined,
+    version,
+  };
 };
 
 /**

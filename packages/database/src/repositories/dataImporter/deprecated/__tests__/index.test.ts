@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import {
   agents,
   agentsToSessions,
+  devices,
   messages,
   sessionGroups,
   sessions,
@@ -24,6 +25,21 @@ const serverDB = await getTestDB();
 const userId = 'test-user-id';
 let importer: DataImporterRepos;
 
+const withRuntime = (archive: ImporterEntryData): ImporterEntryData => ({
+  ...archive,
+  sessions: archive.sessions?.map((session) => ({
+    ...session,
+    config: {
+      ...session.config,
+      agencyConfig: {
+        boundDeviceId: 'deprecated-import-host',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'codex' },
+      },
+    },
+  })),
+});
+
 beforeEach(async () => {
   await serverDB.delete(users);
 
@@ -32,6 +48,9 @@ beforeEach(async () => {
     await tx.insert(users).values({ id: userId });
   });
 
+  await serverDB
+    .insert(devices)
+    .values({ deviceId: 'deprecated-import-host', identitySource: 'installation', userId });
   importer = new DataImporterRepos(serverDB, userId);
 });
 
@@ -46,7 +65,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
 
       expect(result.sessionGroups.added).toBe(2);
       expect(result.sessionGroups.skips).toBe(0);
@@ -71,7 +90,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
 
       expect(result.sessionGroups.added).toBe(1);
       expect(result.sessionGroups.skips).toBe(1);
@@ -121,7 +140,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
 
       expect(result.sessions.added).toBe(2);
       expect(result.sessions.skips).toBe(0);
@@ -185,7 +204,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
 
       expect(result.sessions.added).toBe(1);
       expect(result.sessions.skips).toBe(1);
@@ -257,7 +276,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
 
       expect(result.sessionGroups.added).toBe(2);
       expect(result.sessionGroups.skips).toBe(0);
@@ -321,7 +340,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      await importer.importData(data);
+      await importer.importData(withRuntime(data));
 
       // Verify that a corresponding agent was created for each session
       const agentCount = await serverDB.query.agents.findMany({
@@ -478,7 +497,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
 
       expect(result.topics.added).toBe(2);
       expect(result.topics.skips).toBe(0);
@@ -501,7 +520,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
       expect(result.topics.added).toBe(1);
       expect(result.topics.skips).toBe(1);
       expect(result.topics.errors).toBe(0);
@@ -541,7 +560,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      await importer.importData(data);
+      await importer.importData(withRuntime(data));
 
       // topic1 should be associated with session1
       const [topic1] = await serverDB
@@ -616,7 +635,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
 
       expect(result.messages.added).toBe(2);
       expect(result.messages.skips).toBe(0);
@@ -656,7 +675,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      const result = await importer.importData(data);
+      const result = await importer.importData(withRuntime(data));
 
       expect(result.messages.added).toBe(1);
       expect(result.messages.skips).toBe(1);
@@ -724,7 +743,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      await importer.importData(data);
+      await importer.importData(withRuntime(data));
 
       // msg1 and msg2 should be associated with session1 and topic1
       const [msg1, msg2] = await serverDB.query.messages.findMany({
@@ -774,7 +793,7 @@ describe('DataImporter', () => {
         ],
       };
 
-      await importer.importData(data);
+      await importer.importData(withRuntime(data));
 
       const msg2 = await serverDB.query.messages.findFirst({
         where: eq(messages.clientId, 'msg2'),

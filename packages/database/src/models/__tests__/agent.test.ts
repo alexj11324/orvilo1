@@ -11,10 +11,12 @@ import {
   agentsFiles,
   agentsKnowledgeBases,
   agentsToSessions,
+  credentials,
   devices,
   documents,
   files,
   knowledgeBases,
+  providerBindings,
   sessionGroups,
   sessions,
   topics,
@@ -32,6 +34,36 @@ const userId = 'agent-model-test-user-id';
 const userId2 = 'agent-model-test-user-id-2';
 const agentModel = new AgentModel(serverDB, userId);
 const agentModel2 = new AgentModel(serverDB, userId2);
+
+// Creation fixtures use saved hosts and real provider authority; history-only rows stay raw.
+const withRuntime = async (
+  config: Partial<NewAgent> = {},
+  actor = userId,
+  workspaceId?: string,
+) => {
+  const boundDeviceId = workspaceId ? `creation-host-${workspaceId}` : `creation-host-${actor}`;
+  await serverDB
+    .insert(devices)
+    .values({
+      deviceId: boundDeviceId,
+      identitySource: 'installation',
+      userId: actor,
+      visibility: workspaceId ? 'public' : 'private',
+      workspaceId,
+    })
+    .onConflictDoNothing();
+  return {
+    model: 'gpt-4',
+    provider: config.model?.startsWith('claude') ? 'anthropic' : 'openai',
+    ...config,
+    agencyConfig: {
+      boundDeviceId,
+      executionTarget: 'device' as const,
+      heterogeneousProvider: { type: 'orvilo' as const },
+      ...config.agencyConfig,
+    },
+  };
+};
 
 const knowledgeBase = { id: 'kb1', userId, name: 'knowledgeBase' };
 const knowledgeBase2 = { id: 'kb2', userId: userId2, name: 'knowledgeBase2' };
@@ -65,6 +97,71 @@ const fileList2 = [
   },
 ];
 
+describe('agent runtime identity', () => {
+  it('binds an explicitly configured new agent to the builtin runtime', async () => {
+    const agent = await agentModel.create(await withRuntime({ name: 'My assistant' }));
+    expect(agent.agencyConfig?.heterogeneousProvider).toEqual({ type: 'orvilo' });
+  });
+
+  it.each([{}, { type: '' }, { type: null }, { type: 42 }, { type: 'invented-agent' }])(
+    'refuses an invalid external runtime before inserting: %j',
+    async (provider) => {
+      const before = await serverDB.query.agents.findMany();
+      await expect(
+        agentModel.create({
+          agencyConfig: { heterogeneousProvider: provider } as OrviloAgentAgencyConfig,
+          name: 'Invalid runtime',
+        }),
+      ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+      expect(await serverDB.query.agents.findMany()).toHaveLength(before.length);
+    },
+  );
+
+  it('refuses an entire batch if one runtime is invalid', async () => {
+    const before = await serverDB.query.agents.findMany();
+    await expect(
+      agentModel.batchCreate([
+        { name: 'Builtin' },
+        { agencyConfig: { heterogeneousProvider: {} } as OrviloAgentAgencyConfig },
+      ]),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    expect(await serverDB.query.agents.findMany()).toHaveLength(before.length);
+  });
+
+  it('keeps the runtime on rename and partial provider updates, and rejects invalid replacements', async () => {
+    const agent = await agentModel.create(
+      await withRuntime({
+        agencyConfig: { heterogeneousProvider: { type: 'codex' } },
+        name: 'Codex',
+      }),
+    );
+    await agentModel.updateConfig(agent.id, {
+      agencyConfig: { heterogeneousProvider: { command: 'my-codex' } },
+      name: 'My coding assistant',
+    });
+    const renamed = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
+    expect(renamed?.name).toBe('My coding assistant');
+    expect(renamed?.agencyConfig?.heterogeneousProvider).toMatchObject({
+      command: 'my-codex',
+      type: 'codex',
+    });
+    await expect(
+      agentModel.updateConfig(agent.id, {
+        agencyConfig: {
+          heterogeneousProvider: { type: null },
+        } as unknown as OrviloAgentAgencyConfig,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    await expect(
+      agentModel.update(agent.id, {
+        agencyConfig: { heterogeneousProvider: {} } as OrviloAgentAgencyConfig,
+      }),
+    ).rejects.toMatchObject({ code: 'BAD_REQUEST' });
+    const unchanged = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
+    expect(unchanged?.agencyConfig?.heterogeneousProvider?.type).toBe('codex');
+  });
+});
+
 beforeEach(async () => {
   await serverDB.delete(users);
   // Jobs deliberately carry no FK onto users, so `delete(users)` leaves them
@@ -72,6 +169,36 @@ beforeEach(async () => {
   // outlive this file and trip the delete guard in the next one.
   await serverDB.delete(agentHistoryJobs);
   await serverDB.insert(users).values([{ id: userId }, { id: userId2 }]);
+  await serverDB.insert(credentials).values(
+    [userId, userId2].map((ownerUserId) => ({
+      id: `cred_${ownerUserId}`,
+      key: `test-${ownerUserId}`,
+      name: 'Fixture credential',
+      ownerUserId,
+      payload: 'encrypted-test-fixture',
+      type: 'kv-env' as const,
+    })),
+  );
+  await serverDB.insert(providerBindings).values(
+    [userId, userId2].flatMap((userId) =>
+      ['gpt-4', 'gpt-3.5-turbo', 'claude-3', 'claude-sonnet-4-5'].map((model) => ({
+        userId,
+        config: {
+          enabled: true,
+          endpoint: 'https://provider.example/v1',
+          model,
+          provider: model.startsWith('claude') ? 'anthropic' : 'openai',
+          secretReference: `credential:cred_${userId}`,
+          selection: {
+            runtime: 'orvilo' as const,
+            target: 'sandbox' as const,
+            mode: 'default' as const,
+            speed: 'default' as const,
+          },
+        },
+      })),
+    ),
+  );
   await serverDB.insert(knowledgeBases).values([knowledgeBase, knowledgeBase2]);
   await serverDB.insert(files).values([...fileList, ...fileList2]);
 });
@@ -1357,7 +1484,12 @@ describe('AgentModel', () => {
     it('should update agent config and set updatedAt', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original Title', model: 'gpt-3.5-turbo' })
+        .values({
+          ...(await withRuntime()),
+          userId,
+          title: 'Original Title',
+          model: 'gpt-3.5-turbo',
+        })
         .returning()
         .then((res) => res[0]);
 
@@ -1525,7 +1657,13 @@ describe('AgentModel', () => {
     it('should keep heterogeneousProvider for non-inbox agents', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: 'my-claude-code', userId })
+        .values({
+          ...(await withRuntime({
+            agencyConfig: { heterogeneousProvider: { type: 'claude-code', command: 'claude' } },
+          })),
+          slug: 'my-claude-code',
+          userId,
+        })
         .returning()
         .then((res) => res[0]);
 
@@ -1567,7 +1705,13 @@ describe('AgentModel', () => {
     it('should keep a legacy heterogeneous model id for non-inbox agents', async () => {
       const agent = await serverDB
         .insert(agents)
-        .values({ slug: 'my-claude-code', userId })
+        .values({
+          ...(await withRuntime({
+            agencyConfig: { heterogeneousProvider: { type: 'claude-code', command: 'claude' } },
+          })),
+          slug: 'my-claude-code',
+          userId,
+        })
         .returning()
         .then((res) => res[0]);
 
@@ -1584,8 +1728,9 @@ describe('AgentModel', () => {
       // Contract §migration: switching models never batch-clears the rest of
       // the config surface. Pin the whole row so a future wipe regression
       // can't hide behind a passing {model, provider} write.
+      await withRuntime();
       const seededAgencyConfig: OrviloAgentAgencyConfig = {
-        boundDeviceId: 'device-a',
+        boundDeviceId: `creation-host-${userId}`,
         executionTarget: 'device',
         heterogeneousProvider: { command: 'claude', type: 'claude-code' },
       };
@@ -1629,7 +1774,8 @@ describe('AgentModel', () => {
       'migration — strips retired heterogeneousProvider fields on %s',
       async (writePath) => {
         const legacyAgencyConfig = {
-          boundDeviceId: 'device-a',
+          boundDeviceId: `creation-host-${userId}`,
+          executionTarget: 'device',
           heterogeneousProvider: {
             adapterType: 'cli',
             command: 'claude',
@@ -1640,13 +1786,15 @@ describe('AgentModel', () => {
 
         const agent =
           writePath === 'create'
-            ? await agentModel.create({
-                agencyConfig: legacyAgencyConfig as any,
-                title: 'legacy row',
-              })
+            ? await agentModel.create(
+                await withRuntime({
+                  agencyConfig: legacyAgencyConfig as any,
+                  title: 'legacy row',
+                }),
+              )
             : await serverDB
                 .insert(agents)
-                .values({ title: 'legacy row', userId })
+                .values({ ...(await withRuntime()), title: 'legacy row', userId })
                 .returning()
                 .then(async (res) => {
                   await agentModel.updateConfig(res[0].id, {
@@ -1676,15 +1824,23 @@ describe('AgentModel', () => {
         .returning();
       const workspaceAgentModel = new AgentModel(serverDB, userId, workspace.id);
 
-      const workspaceAgent = await workspaceAgentModel.create({ title: 'Workspace Agent' });
-      const personalAgent = await agentModel.create({ title: 'Personal Agent' });
+      const workspaceAgent = await workspaceAgentModel.create(
+        await withRuntime({ title: 'Workspace Agent' }, userId, workspace.id),
+      );
+      const personalAgent = await agentModel.create(await withRuntime({ title: 'Personal Agent' }));
 
       expect(workspaceAgent.agencyConfig).toEqual({
+        boundDeviceId: `creation-host-${workspace.id}`,
+        executionTarget: 'device',
         executionTargetSelectionPolicy: 'member',
         modelSelectionPolicy: 'member',
         topicSharePolicy: 'member',
       });
-      expect(personalAgent.agencyConfig).toBeNull();
+      expect(personalAgent.agencyConfig).toEqual({
+        boundDeviceId: `creation-host-${userId}`,
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'orvilo' },
+      });
     });
 
     // builtin slugs decide both `getBuiltinAgent` resolution and, for
@@ -1692,20 +1848,26 @@ describe('AgentModel', () => {
     // must never be able to claim one (group member batch-create, imports, market
     // installs all pass `slug` through).
     it('should drop a reserved builtin slug supplied by a caller', async () => {
-      const agent = await agentModel.create({ slug: 'agent-builder', title: 'Squatter' });
+      const agent = await agentModel.create(
+        await withRuntime({ slug: 'agent-builder', title: 'Squatter' }),
+      );
 
       expect(agent.slug).not.toBe('agent-builder');
       expect(agent.slug).toBeTruthy();
     });
 
     it('should keep an ordinary caller-supplied slug', async () => {
-      const agent = await agentModel.create({ slug: 'my-own-slug', title: 'Mine' });
+      const agent = await agentModel.create(
+        await withRuntime({ slug: 'my-own-slug', title: 'Mine' }),
+      );
 
       expect(agent.slug).toBe('my-own-slug');
     });
 
     it('should drop immutable identity fields on update and updateConfig', async () => {
-      const agent = await agentModel.create({ slug: 'ordinary-slug', title: 'Renamer' });
+      const agent = await agentModel.create(
+        await withRuntime({ slug: 'ordinary-slug', title: 'Renamer' }),
+      );
 
       await agentModel.update(agent.id, {
         slug: 'agent-builder',
@@ -1747,7 +1909,7 @@ describe('AgentModel', () => {
         virtual: true,
       };
 
-      const result = await agentModel.create(config);
+      const result = await agentModel.create(await withRuntime(config));
 
       expect(result).toBeDefined();
       expect(result.title).toBe('Virtual Agent');
@@ -1769,7 +1931,7 @@ describe('AgentModel', () => {
         title: 'Normal Agent',
       };
 
-      const result = await agentModel.create(config);
+      const result = await agentModel.create(await withRuntime(config));
 
       expect(result).toBeDefined();
       expect(result.title).toBe('Normal Agent');
@@ -1792,7 +1954,7 @@ describe('AgentModel', () => {
         virtual: true,
       };
 
-      const result = await agentModel.create(config);
+      const result = await agentModel.create(await withRuntime(config));
 
       expect(result.title).toBe('Full Agent');
       expect(result.description).toBe('Full description');
@@ -1815,14 +1977,18 @@ describe('AgentModel', () => {
         title: 'Custom ID Agent',
       };
 
-      const result = await agentModel.create(config);
+      const result = await agentModel.create(await withRuntime(config));
 
       expect(result.id).toBe(customId);
     });
 
     it('should create multiple agents for the same user', async () => {
-      const agent1 = await agentModel.create({ title: 'Agent 1', virtual: true });
-      const agent2 = await agentModel.create({ title: 'Agent 2', virtual: true });
+      const agent1 = await agentModel.create(
+        await withRuntime({ title: 'Agent 1', virtual: true }),
+      );
+      const agent2 = await agentModel.create(
+        await withRuntime({ title: 'Agent 2', virtual: true }),
+      );
 
       expect(agent1.id).not.toBe(agent2.id);
 
@@ -1836,8 +2002,8 @@ describe('AgentModel', () => {
   describe('batchCreate', () => {
     it('should drop reserved builtin slugs in a batch', async () => {
       const created = await agentModel.batchCreate([
-        { slug: 'inbox', title: 'Squatter A' },
-        { slug: 'fine-slug', title: 'Legit B' },
+        await withRuntime({ slug: 'inbox', title: 'Squatter A' }),
+        await withRuntime({ slug: 'fine-slug', title: 'Legit B' }),
       ]);
 
       expect(created.find((a) => a.title === 'Squatter A')?.slug).not.toBe('inbox');
@@ -1855,10 +2021,13 @@ describe('AgentModel', () => {
         .returning();
       const workspaceAgentModel = new AgentModel(serverDB, userId, workspace.id);
 
+      await withRuntime({}, userId, workspace.id);
       const [result] = await workspaceAgentModel.batchCreate([
         {
           agencyConfig: {
-            executionTarget: 'none',
+            boundDeviceId: `creation-host-${workspace.id}`,
+            executionTarget: 'device',
+            heterogeneousProvider: { type: 'codex' },
             executionTargetSelectionPolicy: 'fixed',
             modelSelectionPolicy: 'member',
           },
@@ -1867,8 +2036,10 @@ describe('AgentModel', () => {
       ]);
 
       expect(result.agencyConfig).toEqual({
-        executionTarget: 'none',
+        boundDeviceId: `creation-host-${workspace.id}`,
+        executionTarget: 'device',
         executionTargetSelectionPolicy: 'fixed',
+        heterogeneousProvider: { type: 'codex' },
         modelSelectionPolicy: 'member',
         topicSharePolicy: 'member',
       });
@@ -1881,7 +2052,9 @@ describe('AgentModel', () => {
         { title: 'Agent 3', model: 'claude-3', virtual: true },
       ];
 
-      const results = await agentModel.batchCreate(configs);
+      const results = await agentModel.batchCreate(
+        await Promise.all(configs.map((config) => withRuntime(config))),
+      );
 
       expect(results).toHaveLength(3);
       expect(results[0].title).toBe('Agent 1');
@@ -1915,7 +2088,9 @@ describe('AgentModel', () => {
         },
       ];
 
-      const results = await agentModel.batchCreate(configs);
+      const results = await agentModel.batchCreate(
+        await Promise.all(configs.map((config) => withRuntime(config))),
+      );
 
       expect(results).toHaveLength(2);
       expect(results[0].description).toBe('Full description');
@@ -1927,11 +2102,21 @@ describe('AgentModel', () => {
     it('should handle model type conversion in batch', async () => {
       const configs = [
         { title: 'Agent 1', model: 'gpt-4' },
-        { title: 'Agent 2', model: undefined },
-        { title: 'Agent 3' },
+        {
+          title: 'Agent 2',
+          model: undefined,
+          agencyConfig: { heterogeneousProvider: { type: 'codex' as const } },
+        },
+        {
+          title: 'Agent 3',
+          model: undefined,
+          agencyConfig: { heterogeneousProvider: { type: 'codex' as const } },
+        },
       ];
 
-      const results = await agentModel.batchCreate(configs);
+      const results = await agentModel.batchCreate(
+        await Promise.all(configs.map((config) => withRuntime(config))),
+      );
 
       expect(results[0].model).toBe('gpt-4');
       expect(results[1].model).toBeNull();
@@ -2333,6 +2518,7 @@ describe('AgentModel', () => {
       const [sourceAgent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           userId,
           title: 'Original Agent',
           description: 'Original description',
@@ -2399,15 +2585,22 @@ describe('AgentModel', () => {
 
     it('should preserve agencyConfig when duplicating', async () => {
       const agencyConfig = {
+        boundDeviceId: `creation-host-${userId}`,
         heterogeneousProvider: {
           type: 'claude-code',
           command: 'claude',
+          model: 'gpt-4',
         } as const,
         executionTarget: 'local',
       };
       const [sourceAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Hetero Agent', agencyConfig } as NewAgent)
+        .values({
+          ...(await withRuntime()),
+          userId,
+          title: 'Hetero Agent',
+          agencyConfig,
+        } as NewAgent)
         .returning();
 
       const result = await agentModel.duplicate(sourceAgent.id);
@@ -2422,7 +2615,7 @@ describe('AgentModel', () => {
     it('should use provided title when duplicating', async () => {
       const [sourceAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Original' })
+        .values({ ...(await withRuntime()), userId, title: 'Original' })
         .returning();
 
       const result = await agentModel.duplicate(sourceAgent.id, 'Custom Title');
@@ -2443,7 +2636,7 @@ describe('AgentModel', () => {
     it('should not duplicate another user agent', async () => {
       const [sourceAgent] = await serverDB
         .insert(agents)
-        .values({ userId: userId2, title: 'User2 Agent' })
+        .values({ ...(await withRuntime()), userId: userId2, title: 'User2 Agent' })
         .returning();
 
       const result = await agentModel.duplicate(sourceAgent.id);
@@ -2455,6 +2648,7 @@ describe('AgentModel', () => {
       const [sourceAgent] = await serverDB
         .insert(agents)
         .values({
+          ...(await withRuntime()),
           userId,
           title: 'Original',
           slug: 'original-slug',
@@ -2477,12 +2671,17 @@ describe('AgentModel', () => {
       // Create a session group
       const [sessionGroup] = await serverDB
         .insert(sessionGroups)
-        .values({ userId, name: 'Test Group' })
+        .values({ ...(await withRuntime()), userId, name: 'Test Group' })
         .returning();
 
       const [sourceAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: 'Agent in Group', sessionGroupId: sessionGroup.id })
+        .values({
+          ...(await withRuntime()),
+          userId,
+          title: 'Agent in Group',
+          sessionGroupId: sessionGroup.id,
+        })
         .returning();
 
       const result = await agentModel.duplicate(sourceAgent.id);
@@ -2497,7 +2696,7 @@ describe('AgentModel', () => {
     it('should handle agent with null title', async () => {
       const [sourceAgent] = await serverDB
         .insert(agents)
-        .values({ userId, title: null })
+        .values({ ...(await withRuntime()), userId, title: null })
         .returning();
 
       const result = await agentModel.duplicate(sourceAgent.id);
@@ -2513,20 +2712,24 @@ describe('AgentModel', () => {
   describe('queryAgents', () => {
     it('should return non-virtual agents for the user', async () => {
       // Create non-virtual agents
-      await agentModel.create({
-        title: 'Agent 1',
-        description: 'First agent',
-        avatar: 'avatar1',
-        backgroundColor: '#ff0000',
-        virtual: false,
-      });
-      await agentModel.create({
-        title: 'Agent 2',
-        description: 'Second agent',
-        avatar: 'avatar2',
-        backgroundColor: '#00ff00',
-        virtual: false,
-      });
+      await agentModel.create(
+        await withRuntime({
+          title: 'Agent 1',
+          description: 'First agent',
+          avatar: 'avatar1',
+          backgroundColor: '#ff0000',
+          virtual: false,
+        }),
+      );
+      await agentModel.create(
+        await withRuntime({
+          title: 'Agent 2',
+          description: 'Second agent',
+          avatar: 'avatar2',
+          backgroundColor: '#00ff00',
+          virtual: false,
+        }),
+      );
 
       const result = await agentModel.queryAgents();
 
@@ -2549,7 +2752,7 @@ describe('AgentModel', () => {
         userId,
         virtual: false,
       });
-      await agentModel.create({ title: 'Normal Agent', virtual: false });
+      await agentModel.create(await withRuntime({ title: 'Normal Agent', virtual: false }));
 
       const result = await agentModel.queryAgents();
 
@@ -2563,15 +2766,19 @@ describe('AgentModel', () => {
 
     it('should exclude virtual agents', async () => {
       // Create a virtual agent
-      await agentModel.create({
-        title: 'Virtual Agent',
-        virtual: true,
-      });
+      await agentModel.create(
+        await withRuntime({
+          title: 'Virtual Agent',
+          virtual: true,
+        }),
+      );
       // Create a non-virtual agent
-      await agentModel.create({
-        title: 'Regular Agent',
-        virtual: false,
-      });
+      await agentModel.create(
+        await withRuntime({
+          title: 'Regular Agent',
+          virtual: false,
+        }),
+      );
 
       const result = await agentModel.queryAgents();
 
@@ -2581,15 +2788,22 @@ describe('AgentModel', () => {
 
     it('should only return agents for the current user', async () => {
       // Create agent for user 1
-      await agentModel.create({
-        title: 'User1 Agent',
-        virtual: false,
-      });
+      await agentModel.create(
+        await withRuntime({
+          title: 'User1 Agent',
+          virtual: false,
+        }),
+      );
       // Create agent for user 2
-      await agentModel2.create({
-        title: 'User2 Agent',
-        virtual: false,
-      });
+      await agentModel2.create(
+        await withRuntime(
+          {
+            title: 'User2 Agent',
+            virtual: false,
+          },
+          userId2,
+        ),
+      );
 
       const result1 = await agentModel.queryAgents();
       const result2 = await agentModel2.queryAgents();
@@ -2647,21 +2861,27 @@ describe('AgentModel', () => {
     });
 
     it('should filter by keyword in title and description', async () => {
-      await agentModel.create({
-        title: 'Code Assistant',
-        description: 'Helps with coding',
-        virtual: false,
-      });
-      await agentModel.create({
-        title: 'Writer',
-        description: 'Helps with writing tasks',
-        virtual: false,
-      });
-      await agentModel.create({
-        title: 'Designer',
-        description: 'Helps with design code review',
-        virtual: false,
-      });
+      await agentModel.create(
+        await withRuntime({
+          title: 'Code Assistant',
+          description: 'Helps with coding',
+          virtual: false,
+        }),
+      );
+      await agentModel.create(
+        await withRuntime({
+          title: 'Writer',
+          description: 'Helps with writing tasks',
+          virtual: false,
+        }),
+      );
+      await agentModel.create(
+        await withRuntime({
+          title: 'Designer',
+          description: 'Helps with design code review',
+          virtual: false,
+        }),
+      );
 
       // Search by title
       const codeResults = await agentModel.queryAgents({ keyword: 'Code' });
@@ -2679,10 +2899,12 @@ describe('AgentModel', () => {
     it('should respect limit and offset parameters', async () => {
       // Create multiple agents
       for (let i = 1; i <= 5; i++) {
-        await agentModel.create({
-          title: `Agent ${i}`,
-          virtual: false,
-        });
+        await agentModel.create(
+          await withRuntime({
+            title: `Agent ${i}`,
+            virtual: false,
+          }),
+        );
       }
 
       const limitedResults = await agentModel.queryAgents({ limit: 2 });
@@ -2696,15 +2918,19 @@ describe('AgentModel', () => {
   describe('countAgents', () => {
     it('should count all non-virtual agents regardless of pagination', async () => {
       for (let i = 1; i <= 5; i++) {
-        await agentModel.create({
-          title: `Agent ${i}`,
-          virtual: false,
-        });
+        await agentModel.create(
+          await withRuntime({
+            title: `Agent ${i}`,
+            virtual: false,
+          }),
+        );
       }
-      await agentModel.create({
-        title: 'Virtual Agent',
-        virtual: true,
-      });
+      await agentModel.create(
+        await withRuntime({
+          title: 'Virtual Agent',
+          virtual: true,
+        }),
+      );
 
       const total = await agentModel.countAgents();
 
@@ -2715,21 +2941,27 @@ describe('AgentModel', () => {
     });
 
     it('should apply the same keyword filter as queryAgents', async () => {
-      await agentModel.create({
-        title: 'Code Assistant',
-        description: 'Helps with coding',
-        virtual: false,
-      });
-      await agentModel.create({
-        title: 'Writer',
-        description: 'Helps with writing tasks',
-        virtual: false,
-      });
-      await agentModel.create({
-        title: 'Designer',
-        description: 'Helps with design code review',
-        virtual: false,
-      });
+      await agentModel.create(
+        await withRuntime({
+          title: 'Code Assistant',
+          description: 'Helps with coding',
+          virtual: false,
+        }),
+      );
+      await agentModel.create(
+        await withRuntime({
+          title: 'Writer',
+          description: 'Helps with writing tasks',
+          virtual: false,
+        }),
+      );
+      await agentModel.create(
+        await withRuntime({
+          title: 'Designer',
+          description: 'Helps with design code review',
+          virtual: false,
+        }),
+      );
 
       // matches 'Code Assistant' (title) and 'Designer' (description)
       expect(await agentModel.countAgents({ keyword: 'code' })).toBe(2);
@@ -2738,8 +2970,10 @@ describe('AgentModel', () => {
     });
 
     it('should only count agents for the current user', async () => {
-      await agentModel.create({ title: 'User1 Agent', virtual: false });
-      await agentModel2.create({ title: 'User2 Agent', virtual: false });
+      await agentModel.create(await withRuntime({ title: 'User1 Agent', virtual: false }));
+      await agentModel2.create(
+        await withRuntime({ title: 'User2 Agent', virtual: false }, userId2),
+      );
 
       expect(await agentModel.countAgents()).toBe(1);
       expect(await agentModel2.countAgents()).toBe(1);
@@ -2905,7 +3139,13 @@ describe('AgentModel', () => {
         .returning();
       const [agent] = await serverDB
         .insert(agents)
-        .values({ sessionGroupId: group.id, title: 'Secret', userId, visibility: 'private' })
+        .values({
+          ...(await withRuntime()),
+          sessionGroupId: group.id,
+          title: 'Secret',
+          userId,
+          visibility: 'private',
+        })
         .returning();
 
       const result = await agentModel.duplicate(agent.id);
@@ -2989,6 +3229,7 @@ describe('AgentModel', () => {
       });
       await serverDB.insert(devices).values({
         deviceId: 'ws-device-1',
+        visibility: 'public',
         identitySource: 'machine-id',
         userId,
         workspaceId: wsId,
@@ -3019,7 +3260,11 @@ describe('AgentModel', () => {
 
       const wsModel = new AgentModel(serverDB, userId, wsId);
       await wsModel.updateConfig(agent.id, {
-        agencyConfig: { boundDeviceId: 'ws-device-1', executionTarget: 'device' },
+        agencyConfig: {
+          boundDeviceId: 'ws-device-1',
+          executionTarget: 'device',
+          heterogeneousProvider: { type: 'codex' },
+        },
       } as any);
 
       const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
@@ -3054,6 +3299,7 @@ describe('AgentModel', () => {
         agencyConfig: {
           boundDeviceId: 'ws-device-1',
           executionTarget: 'device',
+          heterogeneousProvider: { type: 'codex' },
           workingDirByDevice: { 'stale-personal-device': '/Users/old/dir' },
         },
       } as any);
@@ -3189,7 +3435,10 @@ describe('AgentModel', () => {
 
       const result = await serverDB.query.agents.findFirst({ where: eq(agents.id, agent.id) });
 
-      expect(result?.agencyConfig).toEqual({ enableGraphMode: true, graph });
+      expect(result?.agencyConfig).toEqual({
+        enableGraphMode: true,
+        graph,
+      });
     });
 
     it('should migrate a legacy chatConfig graph to agencyConfig on write', async () => {

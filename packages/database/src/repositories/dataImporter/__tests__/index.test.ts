@@ -15,6 +15,21 @@ const clientDB = await getTestDB();
 const userId = 'test-user-id';
 let importer: DataImporterRepos;
 
+const withRuntime = (archive: ImportPgDataStructure): ImportPgDataStructure => ({
+  ...archive,
+  data: {
+    ...archive.data,
+    agents: archive.data.agents?.map((agent) => ({
+      ...agent,
+      agencyConfig: {
+        boundDeviceId: 'import-host',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'codex' },
+      },
+    })),
+  },
+});
+
 beforeEach(async () => {
   await clientDB.delete(Schema.users);
 
@@ -23,6 +38,9 @@ beforeEach(async () => {
     await tx.insert(Schema.users).values({ id: userId });
   });
 
+  await clientDB
+    .insert(Schema.devices)
+    .values({ deviceId: 'import-host', identitySource: 'installation', userId });
   importer = new DataImporterRepos(clientDB, userId);
 });
 afterEach(async () => {
@@ -33,7 +51,7 @@ describe('DataImporter', () => {
   describe('import userSettings', () => {
     const data = userSettingsData as ImportPgDataStructure;
     it('should import userSettings correctly', async () => {
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       expect(result.results.userSettings).toMatchObject({ added: 1, errors: 0, skips: 0 });
@@ -54,7 +72,7 @@ describe('DataImporter', () => {
           .where(eq(Schema.userSettings.id, userId));
       });
 
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       expect(result.results.userSettings).toMatchObject({
@@ -72,10 +90,21 @@ describe('DataImporter', () => {
     });
   });
 
+  it('refuses a metadata-only selectable archive Agent before inserting it', async () => {
+    const result = await importer.importPgData({
+      data: { agents: [{ id: 'fake-agent', title: 'Fake Agent' }] },
+      mode: 'pglite',
+      schemaHash: 'test',
+    } as ImportPgDataStructure);
+
+    expect(result.results.agents).toMatchObject({ added: 0, errors: 1 });
+    expect(await clientDB.select().from(Schema.agents)).toHaveLength(0);
+  });
+
   describe('import agents and sessions', () => {
     it('should import return correct result', async () => {
       const data = agentsData as ImportPgDataStructure;
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       expect(result.results.agents).toMatchObject({ added: 1, errors: 0, skips: 0 });
@@ -104,13 +133,13 @@ describe('DataImporter', () => {
 
     it('should skip duplicated data by default', async () => {
       const data = agentsData as ImportPgDataStructure;
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       expect(result.results.agents).toMatchObject({ added: 1, errors: 0, skips: 0 });
 
       // import again to make sure it skip duplicated by default
-      const result2 = await importer.importPgData(data);
+      const result2 = await importer.importPgData(withRuntime(data));
       expect(result2.success).toBe(true);
       expect(result2.results).toEqual({
         agents: { added: 0, errors: 0, skips: 1, updated: 0 },
@@ -121,13 +150,13 @@ describe('DataImporter', () => {
 
     it('should import without agentToSessions error', async () => {
       const data = agentsToSessionsData as ImportPgDataStructure;
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       expect(result.results.agentsToSessions).toMatchObject({ added: 9, errors: 0, skips: 0 });
 
       // import again to make sure it skip duplicated by default
-      const result2 = await importer.importPgData(data);
+      const result2 = await importer.importPgData(withRuntime(data));
       expect(result2.success).toBe(true);
       expect(result2.results).toEqual({
         agents: { added: 0, errors: 0, skips: 9, updated: 0 },
@@ -149,7 +178,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       // No results should be returned for empty tables
@@ -197,7 +226,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       expect(result.results.sessionGroups).toMatchObject({ added: 1, errors: 0 });
@@ -254,7 +283,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       expect(result.results.sessions).toMatchObject({ added: 1, errors: 0 });
@@ -310,7 +339,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       expect(result.success).toBe(true);
       expect(result.results.messages).toMatchObject({ added: 1, errors: 0 });
@@ -348,7 +377,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      await importer.importPgData(firstData);
+      await importer.importPgData(withRuntime(firstData));
 
       // Now create a new importer and import a DIFFERENT agent with the same slug
       const importer2 = new DataImporterRepos(clientDB, userId);
@@ -373,7 +402,7 @@ describe('DataImporter', () => {
       } as any;
 
       // Default conflictStrategy for agents is 'override' (no conflictStrategy in config = default 'override')
-      const result = await importer2.importPgData(secondData);
+      const result = await importer2.importPgData(withRuntime(secondData));
 
       expect(result.success).toBe(true);
       // The override strategy should apply the field processor (appends UUID suffix to slug)
@@ -426,7 +455,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const result = await importer.importPgData(exportData);
+      const result = await importer.importPgData(withRuntime(exportData));
 
       expect(result.success).toBe(true);
       expect(result.results.topics).toMatchObject({ added: 1, errors: 0, skips: 0 });
@@ -449,7 +478,7 @@ describe('DataImporter', () => {
 
     it('should import return correct result', async () => {
       const exportData = topicsData as ImportPgDataStructure;
-      const result = await importer.importPgData(exportData);
+      const result = await importer.importPgData(withRuntime(exportData));
 
       expect(result.success).toBe(true);
       expect(result.results.messages).toMatchObject({ added: 6, errors: 0, skips: 0 });
@@ -472,7 +501,7 @@ describe('DataImporter', () => {
 
     it('should only return non-zero result', async () => {
       const exportData = topicsData as ImportPgDataStructure;
-      const result = await importer.importPgData(exportData);
+      const result = await importer.importPgData(withRuntime(exportData));
 
       expect(result.success).toBe(true);
       expect(result.results).toEqual({
@@ -515,7 +544,7 @@ describe('DataImporter', () => {
 
       vi.spyOn(clientDB, 'transaction').mockRejectedValueOnce(uniqueError);
 
-      const result = await importer.importPgData(agentsData as ImportPgDataStructure);
+      const result = await importer.importPgData(withRuntime(agentsData as ImportPgDataStructure));
 
       expect(result.success).toBe(false);
       expect((result as ImportErrorResult).error).toMatchObject({
@@ -534,7 +563,7 @@ describe('DataImporter', () => {
 
       vi.spyOn(clientDB, 'transaction').mockRejectedValueOnce(genericError);
 
-      const result = await importer.importPgData(agentsData as ImportPgDataStructure);
+      const result = await importer.importPgData(withRuntime(agentsData as ImportPgDataStructure));
 
       expect(result.success).toBe(false);
       expect((result as ImportErrorResult).error).toMatchObject({
@@ -550,7 +579,7 @@ describe('DataImporter', () => {
 
       vi.spyOn(clientDB, 'transaction').mockRejectedValueOnce(weirdUniqueError);
 
-      const result = await importer.importPgData(agentsData as ImportPgDataStructure);
+      const result = await importer.importPgData(withRuntime(agentsData as ImportPgDataStructure));
 
       expect(result.success).toBe(false);
       expect((result as ImportErrorResult).error?.details).toBe('no parseable key here');
@@ -583,7 +612,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
 
       // The transaction itself still succeeds; the batch error is swallowed and counted.
       expect(result.success).toBe(true);
@@ -609,7 +638,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const firstResult = await importer.importPgData(firstData);
+      const firstResult = await importer.importPgData(withRuntime(firstData));
       expect(firstResult.success).toBe(true);
       expect(firstResult.results.userInstalledPlugins).toMatchObject({ added: 1, errors: 0 });
 
@@ -640,7 +669,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const secondResult = await importer2.importPgData(secondData);
+      const secondResult = await importer2.importPgData(withRuntime(secondData));
       expect(secondResult.success).toBe(true);
       expect(secondResult.results.userInstalledPlugins?.updated).toBe(2);
       expect(secondResult.results.userInstalledPlugins?.added).toBe(0);
@@ -685,7 +714,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
       expect(result.success).toBe(true);
       expect(result.results.aiProviders).toBeUndefined();
       expect(result.results.aiModels).toBeUndefined();
@@ -717,7 +746,7 @@ describe('DataImporter', () => {
         schemaHash: 'test',
       } as any;
 
-      const result = await importer.importPgData(data);
+      const result = await importer.importPgData(withRuntime(data));
       expect(result.success).toBe(true);
       expect(result.results.agents).toMatchObject({ added: 1, errors: 0 });
 
@@ -740,7 +769,7 @@ describe('DataImporter', () => {
 
       vi.spyOn(clientDB, 'transaction').mockRejectedValueOnce(bareError);
 
-      const result = await importer.importPgData(agentsData as ImportPgDataStructure);
+      const result = await importer.importPgData(withRuntime(agentsData as ImportPgDataStructure));
 
       expect(result.success).toBe(false);
       expect((result as ImportErrorResult).error?.details).toBe('Unknown error details');

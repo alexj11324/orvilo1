@@ -9,6 +9,7 @@ import { buildAgentMarketplaceToolResult } from '@orvilo/builtin-tool-web-onboar
 import type { OnboardingAgentMarketplacePickSnapshot } from '@orvilo/types';
 import { pickString } from '@orvilo/utils';
 
+import { type AgentRuntimeConfig, requestAgentRuntime } from '@/features/CreateAgent';
 import { installMarketplaceAgents } from '@/services/installMarketplaceAgents';
 import { topicService } from '@/services/topic';
 
@@ -31,6 +32,7 @@ interface CustomInteractionSubmitResult {
 interface CustomInteractionContext {
   apiName?: string;
   requestArgs?: Record<string, unknown>;
+  runtimeConfig?: AgentRuntimeConfig;
   topicId?: string | null;
   updateTopicMetadata?: typeof topicService.updateTopicMetadata;
 }
@@ -92,7 +94,9 @@ const handleAgentMarketplaceSubmit: CustomInteractionSubmitHandler = async (payl
   const selectedAgentIds = payload.selectedTemplateIds;
   if (!isStringArray(selectedAgentIds)) return;
 
-  const result = await installMarketplaceAgents(selectedAgentIds);
+  const runtimeConfig = context?.runtimeConfig ?? (await requestAgentRuntime());
+  if (!runtimeConfig) throw new Error('AGENT_RUNTIME_SELECTION_CANCELLED');
+  const result = await installMarketplaceAgents(selectedAgentIds, { runtimeConfig });
   const pickBase = resolveMarketplacePickBase(payload, context?.requestArgs);
 
   if (pickBase) {
@@ -110,6 +114,7 @@ const handleAgentMarketplaceSubmit: CustomInteractionSubmitHandler = async (payl
     options: {
       createUserMessage: false,
       pluginState: {
+        runtimeConfig,
         installedAgentIds: result.installedAgentIds,
         requestId: pickBase?.requestId,
         selectedAgentIds,

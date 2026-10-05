@@ -113,8 +113,18 @@ export const agentManagementRuntime: ServerRuntimeRegistration = {
         };
       },
 
-      createAgent: async (params: CreateAgentParams): Promise<ToolExecutionResult> => {
+      createAgent: async (
+        params: CreateAgentParams,
+        ctx: ToolExecutionContext,
+      ): Promise<ToolExecutionResult> => {
         try {
+          if (!ctx.agentId) throw new Error('Agent setup required: invoking agent is missing');
+          const runtimeConfig = await agentModel.inheritRuntimeForCreation(ctx.agentId, {
+            deviceId: ctx.activeDeviceId,
+            model: params.model,
+            provider: params.provider,
+            visibility: 'private',
+          });
           // Guard against LLM double-encoding: if array fields are JSON strings, parse them.
           const parseArrayParam = (v: any): string[] | undefined => {
             if (typeof v === 'string') {
@@ -139,6 +149,8 @@ export const agentManagementRuntime: ServerRuntimeRegistration = {
             systemRole: params.systemRole,
             tags: parseArrayParam(params.tags),
             title: params.title,
+            visibility: 'private',
+            ...runtimeConfig,
           });
 
           return {

@@ -1,3 +1,5 @@
+import type { OrviloAgentConfig } from './agentConfig';
+
 /** Durable producer families which can pause an agent run for a person. */
 export const AGENT_INTERVENTION_SOURCES = ['runtime', 'heterogeneous'] as const;
 
@@ -215,7 +217,18 @@ export type AgentInterventionFormValue = boolean | number | string | string[] | 
 export type AgentInterventionFormAnswers = Record<string, AgentInterventionFormValue>;
 
 /** Schema-validated, deliberately shallow result accepted from bespoke forms. */
-export type AgentInterventionCustomResult = Record<string, AgentInterventionFormValue>;
+export type AgentMarketplaceRuntimeConfig = Pick<
+  OrviloAgentConfig,
+  'agencyConfig' | 'model' | 'provider' | 'title'
+>;
+
+export type AgentInterventionCustomResult =
+  | Record<string, AgentInterventionFormValue>
+  | {
+      kind: 'agent_marketplace';
+      selectedTemplateIds: string[];
+      runtimeConfig: AgentMarketplaceRuntimeConfig;
+    };
 
 /**
  * Discriminated private outbox payload. Only user-edited arguments may be

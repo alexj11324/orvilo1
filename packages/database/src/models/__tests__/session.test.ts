@@ -8,6 +8,7 @@ import type { NewSession, SessionItem } from '../../schemas';
 import {
   agents,
   agentsToSessions,
+  devices,
   messages,
   sessionGroups,
   sessions,
@@ -21,12 +22,20 @@ import { SessionModel } from '../session';
 const serverDB: OrviloDatabase = await getTestDB();
 
 const userId = 'session-user';
+const runtimeAgencyConfig = {
+  boundDeviceId: 'session-host',
+  executionTarget: 'device' as const,
+  heterogeneousProvider: { type: 'codex' as const },
+};
 const sessionModel = new SessionModel(serverDB, userId);
 
 beforeEach(async () => {
   await serverDB.delete(users);
   // and create the initial user
   await serverDB.insert(users).values({ id: userId });
+  await serverDB
+    .insert(devices)
+    .values({ deviceId: 'session-host', identitySource: 'installation', userId });
 });
 
 afterEach(async () => {
@@ -447,7 +456,7 @@ describe('SessionModel', () => {
         session: {
           title: 'New Session',
         },
-        config: { model: 'gpt-3.5-turbo' },
+        config: { agencyConfig: runtimeAgencyConfig, model: 'gpt-3.5-turbo' },
       });
 
       // Assert results
@@ -469,7 +478,7 @@ describe('SessionModel', () => {
       const customId = 'custom-id';
       const result = await sessionModel.create({
         type: 'agent',
-        config: { model: 'gpt-3.5-turbo' },
+        config: { agencyConfig: runtimeAgencyConfig, model: 'gpt-3.5-turbo' },
         session: { title: 'New Session' },
         id: customId,
       });
@@ -487,7 +496,7 @@ describe('SessionModel', () => {
 
       const result = await sessionModel.create({
         type: 'agent',
-        config: { model: 'gpt-3.5-turbo' },
+        config: { agencyConfig: runtimeAgencyConfig, model: 'gpt-3.5-turbo' },
         session: { title: 'Grouped Session', groupId: 'session-group-1' },
       });
 
@@ -525,7 +534,7 @@ describe('SessionModel', () => {
       // Create a session with a slug
       const first = await sessionModel.create({
         type: 'agent',
-        config: { model: 'gpt-4' },
+        config: { agencyConfig: runtimeAgencyConfig, model: 'gpt-4' },
         session: { title: 'First Session' },
         slug: 'test-slug',
       });
@@ -533,7 +542,7 @@ describe('SessionModel', () => {
       // Try to create another session with the same slug
       const second = await sessionModel.create({
         type: 'agent',
-        config: { model: 'gpt-3.5-turbo' },
+        config: { agencyConfig: runtimeAgencyConfig, model: 'gpt-3.5-turbo' },
         session: { title: 'Second Session' },
         slug: 'test-slug',
       });
@@ -552,14 +561,14 @@ describe('SessionModel', () => {
           id: '1',
           userId,
           type: 'agent',
-          // config: { model: 'gpt-3.5-turbo' },
+          // config: { agencyConfig: runtimeAgencyConfig, model: 'gpt-3.5-turbo' },
           title: 'Session 1',
         },
         {
           id: '2',
           userId,
           type: 'agent',
-          // config: { model: 'gpt-4' },
+          // config: { agencyConfig: runtimeAgencyConfig, model: 'gpt-4' },
           title: 'Session 2',
         },
       ];
@@ -577,7 +586,7 @@ describe('SessionModel', () => {
           id: '1',
           userId,
           type: 'agent',
-          // config: { model: 'gpt-3.5-turbo' },
+          // config: { agencyConfig: runtimeAgencyConfig, model: 'gpt-3.5-turbo' },
           title: 'Session 1',
           groupId: 'non-existent-group',
         },
@@ -596,7 +605,12 @@ describe('SessionModel', () => {
         await trx
           .insert(sessions)
           .values({ id: '1', userId, type: 'agent', title: 'Original Session', pinned: true });
-        await trx.insert(agents).values({ id: 'agent-1', userId, model: 'gpt-3.5-turbo' });
+        await trx.insert(agents).values({
+          id: 'agent-1',
+          userId,
+          model: 'gpt-3.5-turbo',
+          agencyConfig: runtimeAgencyConfig,
+        });
         await trx.insert(agentsToSessions).values({ agentId: 'agent-1', sessionId: '1', userId });
       });
 

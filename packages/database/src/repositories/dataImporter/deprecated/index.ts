@@ -4,8 +4,8 @@ import { and, inArray, sql } from 'drizzle-orm';
 import { clampToolIdentifier } from '@/utils/clampToolIdentifier';
 import { sanitizeUTF8 } from '@/utils/sanitizeUTF8';
 
+import { AgentModel } from '../../../models/agent';
 import {
-  agents,
   agentsToSessions,
   messagePlugins,
   messages,
@@ -140,25 +140,29 @@ export class DeprecatedDataImporterRepos {
 
         // Only insert agent when new sessions are needed
         if (shouldInsertSessionAgents.length > 0) {
-          const agentMapArray = await trx
-            .insert(agents)
-            .values(
-              shouldInsertSessionAgents.map(({ config, meta }) => ({
-                ...config,
-                // `config` is the `@orvilo/types` OrviloAgentConfig shape
-                // (plugins: AgentPluginEntry[]); the `agents` table's
-                // `plugins` column is intentionally left typed `string[]`
-                // (only the domain types are widened for the tri-state
-                // rollout, not the JSONB column's compile-time annotation).
-                // Legacy import payloads only ever contain bare strings
-                // anyway.
-                plugins: config.plugins as unknown as string[] | undefined,
-                ...meta,
-                userId: this.userId,
-                workspaceId: this.workspaceId ?? null,
-              })),
-            )
-            .returning({ id: agents.id });
+          const configs = shouldInsertSessionAgents.map(({ config, meta }) => ({
+            ...config,
+            ...meta,
+          }));
+          const agentMapArray = await new AgentModel(
+            trx,
+            this.userId,
+            this.workspaceId,
+          ).batchCreate(
+            configs.map((config) => ({
+              ...config,
+              // `config` is the `@orvilo/types` OrviloAgentConfig shape
+              // (plugins: AgentPluginEntry[]); the `agents` table's
+              // `plugins` column is intentionally left typed `string[]`
+              // (only the domain types are widened for the tri-state
+              // rollout, not the JSONB column's compile-time annotation).
+              // Legacy import payloads only ever contain bare strings
+              // anyway.
+              plugins: config.plugins as unknown as string[] | undefined,
+              userId: this.userId,
+              workspaceId: this.workspaceId ?? null,
+            })),
+          );
 
           await trx.insert(agentsToSessions).values(
             shouldInsertSessionAgents.map(({ id }, index) => ({

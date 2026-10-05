@@ -5,6 +5,7 @@ import { LOADING_FLAT } from '@orvilo/const';
 import { isFullAccessApiKey } from '@orvilo/const/apiKeyScope';
 import { parse } from '@orvilo/conversation-flow';
 import type {
+  AgentMarketplaceRuntimeConfig,
   ExecAgentResult,
   HeterogeneousReasoningEffort,
   TaskCurrentActivity,
@@ -60,6 +61,7 @@ import { TopicModel } from '@/database/models/topic';
 import { UserModel } from '@/database/models/user';
 import { agentInterventions, agentOperations, topics, workspaceMembers } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
+import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreation';
 import { notShareVisitorTopicRef } from '@/database/utils/shareVisitor';
 import { heteroAuthedProcedure, router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -535,6 +537,16 @@ const dispatchClaimedAgentIntervention = async (
       switch (runtimeAction.type) {
         case 'execute_custom_interaction': {
           const customAction = runtimeAction.input.action;
+          if (customAction.type === 'submitted') {
+            await assertAgentRuntimeCreation(
+              ctx.serverDB,
+              {
+                userId: resolution.ownerUserId,
+                workspaceId: resolution.workspaceId ?? ctx.workspaceId ?? undefined,
+              },
+              customAction.runtimeConfig,
+            );
+          }
           const customResult = await executeAgentMarketplaceIntervention({
             action: customAction,
             actorUserId: ctx.userId,
@@ -2205,6 +2217,7 @@ export const aiAgentRouter = router({
                 | {
                     askUserAnswers?: Record<string, unknown>;
                     selectedAgentIds?: unknown;
+                    runtimeConfig?: AgentMarketplaceRuntimeConfig;
                   }
                 | undefined;
               const answers = pluginState?.askUserAnswers;
@@ -2227,10 +2240,21 @@ export const aiAgentRouter = router({
                 Array.isArray(pluginState?.selectedAgentIds) &&
                 pluginState.selectedAgentIds.every((id) => typeof id === 'string')
               ) {
+                if (!pluginState.runtimeConfig)
+                  throw new TRPCError({
+                    code: 'PRECONDITION_FAILED',
+                    message: 'AGENT_RUNTIME_REQUIRED',
+                  });
+                await assertAgentRuntimeCreation(
+                  ctx.serverDB,
+                  { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+                  pluginState.runtimeConfig,
+                );
                 sourceAction = {
                   result: {
                     kind: 'agent_marketplace',
                     selectedTemplateIds: pluginState.selectedAgentIds as string[],
+                    runtimeConfig: pluginState.runtimeConfig,
                   },
                   type: 'submit_custom',
                 };
@@ -3513,6 +3537,14 @@ export const aiAgentRouter = router({
         workspaceId: ctx.workspaceId,
       });
 
+      if (input.action.type === 'submit_custom') {
+        await assertAgentRuntimeCreation(
+          ctx.serverDB,
+          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          input.action.result.runtimeConfig,
+        );
+      }
+
       // A rejected resolution describes the submitted response, not a server
       // fault, so map the contract failure instead of letting it become a 500.
       const resolution = await resolveAgentInterventionBySource({
@@ -3564,6 +3596,13 @@ export const aiAgentRouter = router({
   resolveAgentIntervention: aiAgentWriteProcedure
     .input(ResolveAgentInterventionSchema)
     .mutation(async ({ input, ctx }) => {
+      if (input.action.type === 'submit_custom') {
+        await assertAgentRuntimeCreation(
+          ctx.serverDB,
+          { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+          input.action.result.runtimeConfig,
+        );
+      }
       const resolution = await resolveAgentIntervention({
         action: input.action,
         expectedBatchVersion: input.expectedBatchVersion,

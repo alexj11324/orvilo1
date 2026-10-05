@@ -8,6 +8,7 @@ import { type ItemType } from '@/components/Menu';
 import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { DEFAULT_CHAT_GROUP_CHAT_CONFIG } from '@/const/settings';
+import { requestAgentRuntime } from '@/features/CreateAgent';
 import { openEditingPopover } from '@/features/EditingPopover/store';
 import { usePermission } from '@/hooks/usePermission';
 import { useAgentStore } from '@/store/agent';
@@ -28,7 +29,11 @@ export const useSessionGroupMenuItems = () => {
   const { allowed: canEdit } = usePermission('edit_own_content');
 
   const [storeCreateAgent] = useAgentStore((s) => [s.createAgent]);
-  const [removeGroup, refreshAgentList] = useHomeStore((s) => [s.removeGroup, s.refreshAgentList]);
+  const [removeGroup, refreshAgentList, privateGroups] = useHomeStore((s) => [
+    s.removeGroup,
+    s.refreshAgentList,
+    s.privateAgentGroups,
+  ]);
   const [createGroup] = useAgentGroupStore((s) => [s.createGroup]);
 
   const [isCreatingAgent, setIsCreatingAgent] = useState(false);
@@ -134,11 +139,22 @@ export const useSessionGroupMenuItems = () => {
           info.domEvent?.stopPropagation();
           if (!canCreate) return;
 
+          const visibility = privateGroups?.some((group) => group.id === groupId)
+            ? 'private'
+            : undefined;
+          const config = await requestAgentRuntime({ visibility });
+          if (!config) return;
+
           const creatingToast = toast.loading(t('sessionGroup.creatingAgent'));
           setIsCreatingAgent(true);
 
           try {
-            await storeCreateAgent({ groupId });
+            await storeCreateAgent({
+              clientRequestId: crypto.randomUUID(),
+              config,
+              groupId,
+              visibility,
+            });
             await refreshAgentList();
 
             creatingToast.close();
@@ -153,7 +169,7 @@ export const useSessionGroupMenuItems = () => {
         },
       };
     },
-    [canCreate, t, storeCreateAgent, refreshAgentList],
+    [canCreate, t, storeCreateAgent, refreshAgentList, privateGroups],
   );
 
   /**
@@ -210,7 +226,11 @@ export const useSessionGroupMenuItems = () => {
    * Internal helper function used by create menu items
    */
   const createGroupFromTemplate = useCallback(
-    async (templateId: string, selectedMemberTitles?: string[]) => {
+    async (
+      templateId: string,
+      selectedMemberTitles?: string[],
+      options?: { groupId?: string; visibility?: 'private' | 'public' },
+    ) => {
       if (!canCreate) return false;
 
       setIsCreatingGroup(true);
@@ -225,10 +245,19 @@ export const useSessionGroupMenuItems = () => {
             ? template.members
             : template.members.filter((m) => selectedMemberTitles.includes(m.title));
 
+        const visibility = options?.groupId
+          ? privateGroups.some((group) => group.id === options.groupId)
+            ? 'private'
+            : 'public'
+          : options?.visibility;
+        const runtimeConfig = await requestAgentRuntime({ visibility });
+        if (!runtimeConfig) return false;
+
         const memberAgentIds: string[] = [];
         for (const member of membersToCreate) {
           const result = await storeCreateAgent({
             config: {
+              ...runtimeConfig,
               // MetaData fields
               avatar: member.avatar,
 
@@ -241,6 +270,7 @@ export const useSessionGroupMenuItems = () => {
               title: member.title,
               virtual: true,
             },
+            visibility,
           });
 
           await refreshAgentList();
@@ -259,6 +289,8 @@ export const useSessionGroupMenuItems = () => {
           {
             config: DEFAULT_CHAT_GROUP_CHAT_CONFIG,
             title: template.title,
+            groupId: options?.groupId,
+            visibility,
           },
           memberAgentIds,
         );
@@ -272,7 +304,7 @@ export const useSessionGroupMenuItems = () => {
         setIsCreatingGroup(false);
       }
     },
-    [canCreate, groupTemplates, storeCreateAgent, refreshAgentList, createGroup, t],
+    [canCreate, groupTemplates, storeCreateAgent, refreshAgentList, createGroup, privateGroups, t],
   );
 
   /**

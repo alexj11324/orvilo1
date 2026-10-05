@@ -11,6 +11,7 @@ import { useAgentGroupStore } from '../store';
 vi.mock('@/services/chatGroup', () => ({
   chatGroupService: {
     addAgentsToGroup: vi.fn(),
+    batchCreateAgentsInGroup: vi.fn(),
     removeAgentsFromGroup: vi.fn(),
     updateAgentInGroup: vi.fn(),
   },
@@ -36,6 +37,29 @@ describe('ChatGroupMemberSlice', () => {
 
   afterEach(() => {
     vi.restoreAllMocks();
+  });
+
+  it('creates group members with the selected execution runtime and preserved identity', async () => {
+    const runtime = {
+      agencyConfig: {
+        executionTarget: 'device' as const,
+        boundDeviceId: 'host-1',
+        heterogeneousProvider: { type: 'codex' as const },
+      },
+      model: 'gpt-model',
+      provider: 'codex',
+      title: 'Codex',
+    };
+    vi.mocked(chatGroupService.batchCreateAgentsInGroup).mockResolvedValue({
+      agentIds: ['new-member'],
+    });
+    const id = await useAgentGroupStore
+      .getState()
+      .createAgentInGroup('group-1', { title: 'Writer', systemRole: 'Write prose' }, runtime);
+    expect(id).toBe('new-member');
+    expect(chatGroupService.batchCreateAgentsInGroup).toHaveBeenCalledWith('group-1', [
+      { ...runtime, title: 'Writer', systemRole: 'Write prose' },
+    ]);
   });
 
   describe('addAgentsToGroup', () => {

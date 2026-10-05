@@ -5,10 +5,12 @@ import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { getTestDB } from '@/database/core/getTestDB';
+import { AgentModel } from '@/database/models/agent';
 import { AgentOperationModel } from '@/database/models/agentOperation';
 import { DocumentModel } from '@/database/models/document';
 import { GoalModel } from '@/database/models/goal';
 import { GoalGraphModel } from '@/database/models/goalGraph';
+import { ProviderBindingModel } from '@/database/models/providerBinding';
 import { TaskModel } from '@/database/models/task';
 import { legacyStatusExpr } from '@/database/models/taskExecutionSql';
 import { WorkModel } from '@/database/models/work';
@@ -16,22 +18,25 @@ import {
   acceptances,
   agentOperations,
   agents,
+  credentials,
+  devices,
   goalEdges,
   goalEvents,
   goalNodeDecisions,
   goalNodes,
   goals,
+  providerBindings,
   tasks,
   taskTopics,
   topics,
   users,
+  userSettings,
 } from '@/database/schemas';
 import { AiAgentService } from '@/server/services/aiAgent';
 import { TaskService } from '@/server/services/task';
 import { TaskRunnerService } from '@/server/services/taskRunner';
 
 import { GoalService } from '../index';
-import * as modelConfig from '../modelConfig';
 import * as scheduler from '../scheduler';
 import { GoalSupervisorService } from './index';
 import { GoalSupervisorTools } from './tools';
@@ -76,11 +81,42 @@ const runResult = (operationId: string, topicId: string, agentId = 'agent'): Exe
 
 beforeEach(async () => {
   await db.insert(users).values({ id: userId }).onConflictDoNothing();
-  vi.spyOn(modelConfig, 'resolveGoalModelConfig').mockResolvedValue({
-    // A heterogeneous goal-model retypes the supervisor's own binding onto a
-    // mount-capable CLI runtime — the gate under test needs that capability.
-    model: 'claude-code',
+  await db
+    .insert(devices)
+    .values({ userId, deviceId: 'supervisor-host', identitySource: 'fallback' });
+  await db.insert(credentials).values({
+    id: 'cred_supervisor',
+    ownerUserId: userId,
+    key: 'supervisor',
+    name: 'Fixture',
+    type: 'kv-env',
+    payload: 'fixture-only',
+  });
+  await new ProviderBindingModel(db, userId).create({
+    enabled: true,
+    endpoint: 'https://provider.example/v1',
+    model: 'saved-supervisor-model',
+    name: 'Fixture',
     provider: 'openai',
+    secretReference: 'credential:cred_supervisor',
+    selection: {
+      runtime: 'orvilo',
+      engine: 'claude-sdk',
+      effort: 'default',
+      mode: 'default',
+      speed: 'default',
+      target: 'sandbox',
+    },
+  });
+  await new AgentModel(db, userId).create({
+    agencyConfig: {
+      boundDeviceId: 'supervisor-host',
+      executionTarget: 'device',
+      heterogeneousProvider: { type: 'orvilo', model: 'saved-supervisor-model' },
+    },
+    model: 'saved-supervisor-model',
+    provider: 'openai',
+    title: 'Prime',
   });
   vi.spyOn(scheduler, 'scheduleGoalAdvance').mockResolvedValue();
   vi.spyOn(AiAgentService.prototype, 'execAgent').mockImplementation(async (params) => {
@@ -198,6 +234,60 @@ const diagnose = async (goalId: string, action = 'retry') => {
 };
 
 describe('Goal Supervisor integration', () => {
+  it('dispatches diagnosis using the inherited saved runtime without static model defaults', async () => {
+    const { goalId } = await failedGoal();
+    await service().tick(goalId);
+    const state = (await goalModel.findById(goalId))!.config!.supervisorState!;
+    const [agent] = await db.select().from(agents).where(eq(agents.id, state.agentId));
+    expect(agent).toMatchObject({
+      agencyConfig: {
+        boundDeviceId: 'supervisor-host',
+        executionTarget: 'device',
+        heterogeneousProvider: { type: 'orvilo', model: 'saved-supervisor-model' },
+      },
+      model: 'saved-supervisor-model',
+      provider: 'openai',
+      visibility: 'private',
+    });
+    expect(AiAgentService.prototype.execAgent).toHaveBeenCalledWith(
+      expect.objectContaining({
+        agentId: state.agentId,
+        model: 'saved-supervisor-model',
+        provider: 'openai',
+      }),
+    );
+  });
+
+  it('rejects an unbound explicit goal model before creating a supervisor', async () => {
+    const { goalId, taskId, nodeId } = await failedGoal();
+    await db.insert(userSettings).values({
+      id: userId,
+      systemAgent: { goal: { model: 'unauthorized-model', provider: 'openai' } },
+    });
+    const graph = await new GoalGraphModel(db, userId).getGraph(goalId);
+    const task = await taskModel.findById(taskId);
+    const before = await db.select().from(agents);
+    await expect(
+      new GoalSupervisorService(db, userId).reviewFailure(graph!, nodeId, task!),
+    ).rejects.toThrow('AGENT_RUNTIME_SETUP_REQUIRED');
+    expect(await db.select().from(agents)).toHaveLength(before.length);
+    expect((await goalModel.findById(goalId))?.config?.supervisorState).toBeUndefined();
+    expect(AiAgentService.prototype.execAgent).not.toHaveBeenCalled();
+  });
+
+  it('preserves the interrupted Goal when no runtime is admitted', async () => {
+    const { goalId, taskId, nodeId } = await failedGoal();
+    await db.delete(providerBindings);
+    const graph = await new GoalGraphModel(db, userId).getGraph(goalId);
+    const task = await taskModel.findById(taskId);
+    const before = await db.select().from(agents);
+    await expect(
+      new GoalSupervisorService(db, userId).reviewFailure(graph!, nodeId, task!),
+    ).rejects.toThrow('AGENT_RUNTIME_SETUP_REQUIRED');
+    expect(await db.select().from(agents)).toHaveLength(before.length);
+    expect(await goalModel.findById(goalId)).toBeDefined();
+    expect(AiAgentService.prototype.execAgent).not.toHaveBeenCalled();
+  });
   it.each([true, false])(
     'requires confirmed supervisor cancellation before deletion: %s',
     async (confirmed) => {

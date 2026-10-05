@@ -1,3 +1,4 @@
+import { CreateAgentSchema } from '@orvilo/types';
 import { z } from 'zod';
 
 export const AgentInterventionReviewTokenSchema = z
@@ -118,6 +119,12 @@ const SubmitCustomSchema = z
       .object({
         kind: z.literal('agent_marketplace'),
         selectedTemplateIds: z.array(z.string().min(1)).min(1).max(50),
+        runtimeConfig: CreateAgentSchema.pick({
+          agencyConfig: true,
+          model: true,
+          provider: true,
+          title: true,
+        }).strict(),
       })
       .strict(),
     type: z.literal('submit_custom'),

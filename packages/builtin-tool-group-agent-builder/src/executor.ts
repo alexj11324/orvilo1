@@ -87,8 +87,11 @@ class GroupAgentBuilderExecutor extends BaseExecutor<typeof GroupAgentBuilderApi
     return groupAgentBuilderRuntime.searchAgent(params);
   };
 
-  createGroup = async (params: CreateGroupParams): Promise<BuiltinToolResult> => {
-    return groupAgentBuilderRuntime.createGroup(params);
+  createGroup = async (
+    params: CreateGroupParams,
+    ctx: BuiltinToolContext,
+  ): Promise<BuiltinToolResult> => {
+    return groupAgentBuilderRuntime.createGroup(params, { agentId: ctx.agentId });
   };
 
   createAgent = async (
@@ -99,7 +102,7 @@ class GroupAgentBuilderExecutor extends BaseExecutor<typeof GroupAgentBuilderApi
 
     if (!groupId) return NO_GROUP_CONTEXT;
 
-    return groupAgentBuilderRuntime.createAgent(groupId, params);
+    return groupAgentBuilderRuntime.createAgent(groupId, params, { agentId: ctx.agentId });
   };
 
   batchCreateAgents = async (
@@ -110,7 +113,7 @@ class GroupAgentBuilderExecutor extends BaseExecutor<typeof GroupAgentBuilderApi
 
     if (!groupId) return NO_GROUP_CONTEXT;
 
-    return groupAgentBuilderRuntime.batchCreateAgents(groupId, params);
+    return groupAgentBuilderRuntime.batchCreateAgents(groupId, params, { agentId: ctx.agentId });
   };
 
   inviteAgent = async (

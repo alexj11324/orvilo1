@@ -6,6 +6,7 @@ import { uuid } from '@/utils/uuid';
 
 import * as EXPORT_TABLES from '../../schemas';
 import type { OrviloDatabase } from '../../type';
+import { assertAgentRuntimeCreation } from '../../utils/agentRuntimeCreation';
 import { buildWorkspaceWhere } from '../../utils/workspace';
 import { DeprecatedDataImporterRepos } from './deprecated';
 
@@ -520,6 +521,17 @@ export class DataImporterRepos {
 
         return { newRecord, originalId };
       });
+
+      // Imported Agent rows are selectable, so they need the same saved runtime as ordinary creation.
+      if (tableName === 'agents') {
+        for (const record of preparedData) {
+          record.newRecord.agencyConfig = await assertAgentRuntimeCreation(
+            trx,
+            { userId: this.userId, workspaceId: this.workspaceId },
+            record.newRecord,
+          );
+        }
+      }
 
       // 5. Check unique constraints and apply conflict strategy
       for (const record of preparedData) {

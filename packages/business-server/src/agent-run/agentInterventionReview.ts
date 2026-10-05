@@ -1,4 +1,4 @@
-import type { MessageMapScope } from '@orvilo/types';
+import type { AgentMarketplaceRuntimeConfig, MessageMapScope } from '@orvilo/types';
 
 export type AgentInterventionReviewStatus =
   | 'approved'
@@ -198,7 +198,11 @@ export type AgentInterventionResolutionAction =
   | {
       itemId: string;
       /** Validated fail-closed by the agent-marketplace server handler before claim. */
-      result: { kind: 'agent_marketplace'; selectedTemplateIds: string[] };
+      result: {
+        kind: 'agent_marketplace';
+        selectedTemplateIds: string[];
+        runtimeConfig: AgentMarketplaceRuntimeConfig;
+      };
       type: 'submit_custom';
     }
   | {
@@ -242,7 +246,11 @@ export type AgentInterventionSourceAction =
   | { scope: 'operation'; type: 'stop' }
   | { result: Record<string, string | string[]>; type: 'submit_answers' }
   | {
-      result: { kind: 'agent_marketplace'; selectedTemplateIds: string[] };
+      result: {
+        kind: 'agent_marketplace';
+        selectedTemplateIds: string[];
+        runtimeConfig: AgentMarketplaceRuntimeConfig;
+      };
       type: 'submit_custom';
     }
   | { type: 'skip_interaction' }
@@ -314,7 +322,11 @@ export type AgentInterventionRuntimeAction =
       handler: 'agent_marketplace';
       input: {
         action:
-          | { selectedTemplateIds: string[]; type: 'submitted' }
+          | {
+              selectedTemplateIds: string[];
+              runtimeConfig: AgentMarketplaceRuntimeConfig;
+              type: 'submitted';
+            }
           | { type: 'skipped' }
           | { type: 'cancelled' };
         categoryHints: string[];

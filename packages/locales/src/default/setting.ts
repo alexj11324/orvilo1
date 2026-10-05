@@ -1,4 +1,7 @@
 export default {
+  'devices.connectWizard.cli.unavailable':
+    'This release does not include a CLI installer yet. Check Releases for an available installer.',
+  'devices.connectWizard.cli.viewReleases': 'View Releases',
   'providerBindings.runtime': 'Runtime',
   'providerBindings.engine': 'Adapter',
   'providerBindings.effort': 'Reasoning effort',

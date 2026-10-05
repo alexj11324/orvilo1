@@ -72,7 +72,8 @@ vi.mock('@/store/serverConfig', () => ({
   serverConfigSelectors: {
     enableBusinessFeatures: () => false,
   },
-  useServerConfigStore: (selector: (s: unknown) => unknown) => selector({}),
+  useServerConfigStore: (selector: (s: unknown) => unknown) =>
+    selector({ featureFlags: { enableCloudSandbox: false } }),
 }));
 
 vi.mock('@/components/ErrorBoundary', () => ({

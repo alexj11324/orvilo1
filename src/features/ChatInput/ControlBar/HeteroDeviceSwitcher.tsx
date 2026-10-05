@@ -403,6 +403,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
     agencyConfig,
     canDisplayExecutionTarget,
     canSelectExecutionTarget,
+    canSelectPersonalDevice,
     isPreferenceLoading: isWorkspacePreferenceLoading,
     memberSelectedDeviceId,
     workspaceScoped,
@@ -428,8 +429,8 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   const { data: devices, isLoading, mutate: refreshDevices } = useDeviceList();
 
   // The current machine's own gateway deviceId (desktop only), used to badge the
-  // matching device row with a "This device" tag and show the local-process
-  // description instead of the generic online/offline status.
+  // matching gateway row with a "This computer" tag. The route description
+  // distinguishes gateway execution from a direct local process.
   useElectronStore((s) => s.useFetchGatewayDeviceInfo)();
   const gatewayDeviceInfo = useElectronStore((s) => s.gatewayDeviceInfo);
   const currentDeviceId = isDesktop ? gatewayDeviceInfo?.deviceId : undefined;
@@ -650,11 +651,10 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
   //   Never show `scope: 'workspace'` rows here (they belong to a workspace
   //   the personal-mode agent has nothing to do with).
   //
-  // - **Workspace agent** — workspace-scope devices plus the caller's exact
-  //   personal device explicitly selected in their member override. The
-  //   inventory already authorizes personal rows to this caller; including
-  //   that selected row preserves its user gateway principal without sharing
-  //   it or treating shared Agent defaults as a personal selection.
+  // - **Workspace agent** — workspace devices plus caller-personal candidates
+  //   only for a private owner or member-selectable caller. Other contexts
+  //   retain only their exact personal member override. The API authorizes
+  //   personal inventory to the caller; shared defaults grant no personal pool.
   //
   // Naming — Personal is reserved for the account-tier concept; workspace
   // groupings say Private/Workspace (私人/工作区) instead.
@@ -775,7 +775,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
         }
         tag={
           isCurrentMachine
-            ? `${t('heteroAgent.executionTarget.gateway')}${d.online ? '' : ` · ${t('heteroAgent.executionTarget.offline')}`}`
+            ? `${t('connectAgent.create.localDevice')}${d.online ? '' : ` · ${t('heteroAgent.executionTarget.offline')}`}`
             : undefined
         }
         onClick={() => void handleSelect('device', d.deviceId)}
@@ -801,7 +801,8 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
           type="button"
           onClick={() => {
             setOpen(false);
-            navigate('/settings/devices');
+            if (canSelectPersonalDevice) navigate('/settings/devices', { escape: true });
+            else navigate('/settings/devices');
           }}
         >
           <span className="anticon" role="img">
@@ -843,7 +844,6 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
           active={isActive('local')}
           desc={t('heteroAgent.executionTarget.localDesc')}
           icon={<ExecutionTargetIcon target={'local'} />}
-          // 本机统一显示「本地设备」，不再带具体设备名称
           label={t('heteroAgent.executionTarget.local')}
           onClick={() => void handleSelect('local', undefined, false)}
         />
@@ -920,7 +920,7 @@ const HeteroDeviceSwitcher = memo<HeteroDeviceSwitcherProps>(({ agentId }) => {
             {privateDevices.length > 0 ? (
               <>
                 <div className={styles.groupLabel}>
-                  {t('heteroAgent.executionTarget.externalGroup')}
+                  {t('heteroAgent.executionTarget.personalGroup')}
                 </div>
                 <div className={styles.deviceList}>
                   {privateDevices.map((d) => renderDeviceRow(d))}

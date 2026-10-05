@@ -16,6 +16,7 @@ import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwar
 import { useCurrentProjectList, useProjectStore } from '@/store/project';
 import { useTaskStore } from '@/store/task';
 import type { TaskListItem } from '@/store/task/slices/list/initialState';
+import { markdownToTxt } from '@/utils/markdownToTxt';
 
 import type { TaskItemRouteScope } from '../features/AgentTaskItem';
 import AssigneeAgentSelector from '../features/AssigneeAgentSelector';
@@ -421,7 +422,7 @@ const TaskBoardCard = memo<TaskBoardCardProps>(
         {/* Optional description preview (Cordy shows one muted line). */}
         {task.description?.trim() ? (
           <p className={styles.description} style={{ margin: 0 }}>
-            {task.description.trim()}
+            {markdownToTxt(task.description).trim()}
           </p>
         ) : null}
 

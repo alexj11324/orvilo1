@@ -279,6 +279,14 @@ describe('Agent sidebar header nav', () => {
     expect(pushMock).toHaveBeenCalledWith('/agent/agt_eH4zL98zBx5u/goals');
   });
 
+  it('opens workspace tasks from a new conversation without an agent route parameter', () => {
+    useParamsMock.mockReturnValue({});
+    usePathnameMock.mockReturnValue('/chat/new');
+    render(<Nav />);
+    fireEvent.click(screen.getByRole('button', { name: 'tab.tasks' }));
+    expect(pushMock).toHaveBeenCalledWith('/tasks');
+  });
+
   it('navigates to the agent tasks page', () => {
     usePathnameMock.mockReturnValue('/agent/agt_eH4zL98zBx5u');
 

@@ -218,6 +218,16 @@ describe('TaskBoardCard', () => {
     cleanup();
   });
 
+  it('renders a plain description summary without Markdown syntax', () => {
+    render(
+      <TaskBoardCard
+        task={createTask({ description: '**Review** [the change](https://example.com)' })}
+      />,
+    );
+    expect(screen.getByText('Review the change')).toBeInTheDocument();
+    expect(screen.queryByText(/\*\*Review/)).toBeNull();
+  });
+
   it('renders the Cordy card skeleton: identifier, status glyph, title, chips, meta', () => {
     render(<TaskBoardCard task={createTask()} />);
 

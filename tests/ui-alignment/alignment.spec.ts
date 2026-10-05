@@ -51,6 +51,22 @@ for (const theme of ['light', 'dark']) {
         await expect(page.getByTestId('action-small')).toBeVisible();
         await page.evaluate(() => document.fonts.ready);
         try {
+          const buttonColors = await page.getByTestId('primary-button').evaluate((element) => {
+            const reference = document.querySelector('[data-testid="primary-foreground"]')!;
+            const style = getComputedStyle(element);
+            return {
+              background: style.backgroundColor,
+              expectedForeground: getComputedStyle(reference).color,
+              foreground: style.color,
+            };
+          });
+          diagnostics.primaryButton = buttonColors;
+          expect
+            .soft(buttonColors.foreground, 'primary button honors its foreground token')
+            .toBe(buttonColors.expectedForeground);
+          expect
+            .soft(buttonColors.foreground, 'primary button label differs from its fill')
+            .not.toBe(buttonColors.background);
           for (const { block, glyph, id } of sizes) {
             for (const prefix of id === 'icon-style' || id === 'outlined' || id === 'filled'
               ? ['']
@@ -158,6 +174,8 @@ for (const theme of ['light', 'dark']) {
 
           await page.reload();
           await expect(page.getByTestId('action-small')).toBeVisible();
+          await page.keyboard.press('Tab');
+          await expect(page.getByTestId('primary-button')).toBeFocused();
           await page.keyboard.press('Tab');
           await expect(page.getByTestId('action-small')).toBeFocused();
           await expect(page.getByTestId('action-small')).toHaveAccessibleName(

@@ -47,7 +47,6 @@ const ErrorContent = memo<ErrorContentProps>(({ customErrorRender, error, id, on
   return (
     <ErrorAlert
       closable
-      extraDefaultExpand
       showIcon
       type={'secondary'}
       action={

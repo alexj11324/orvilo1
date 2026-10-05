@@ -1,4 +1,5 @@
 export default {
+  'workingPanel.overview.configure': 'Review execution setup',
   'goalExperiment.continuedFrom': 'Continued exploration',
   'goalExperiment.drill': 'Explore inside',
   'goalExperiment.drillNamed': 'Explore inside: {{title}}',
@@ -633,10 +634,10 @@ export default {
   'heteroAgent.executionTarget.readOnlyTip': 'This run executes on this device.',
   'heteroAgent.executionTarget.gateway': 'Gateway',
   'heteroAgent.executionTarget.gatewayDesc':
-    'Run through the device gateway so other clients can follow progress',
+    'Run on this computer via the gateway; other clients can follow progress',
   'heteroAgent.executionTarget.loading': 'Loading devices…',
-  'heteroAgent.executionTarget.local': 'Local device',
-  'heteroAgent.executionTarget.localDesc': 'Run as a local process on this desktop app',
+  'heteroAgent.executionTarget.local': 'Local process',
+  'heteroAgent.executionTarget.localDesc': 'Run directly on this computer through the desktop app',
   'heteroAgent.executionTarget.localSandbox': 'Shell isolation',
   'heteroAgent.executionTarget.localSandboxDesc':
     'Optional shell isolation: writes stay in the working directory and temporary directory; network is blocked',
@@ -648,7 +649,7 @@ export default {
   'heteroAgent.executionTarget.localSandboxUnavailable': 'Not available on this device: {{reason}}',
   'heteroAgent.executionTarget.manage': 'Manage',
   'heteroAgent.executionTarget.noDevices':
-    'No remote devices yet. Run `orvilo connect` on another machine to add one.',
+    'No connected devices yet. Run `orvilo connect` on this computer or another computer to add one.',
   'heteroAgent.executionTarget.noWorkspaceDevices':
     'No workspace devices yet. Run `{{cmd}}` on a machine to enroll it for every member.',
   'heteroAgent.executionTarget.none': 'No device',
@@ -2931,8 +2932,8 @@ export default {
   'workingPanel.overview.ci.failure': 'Failed',
   'workingPanel.overview.ci.pending': 'Running',
   'workingPanel.overview.empty':
-    'Workspace activity and outputs will appear here as the agent works.',
-  'workingPanel.overview.emptyTitle': 'Ready to work',
+    'Activity and outputs appear here after a run starts. Review the agent’s execution setup before sending.',
+  'workingPanel.overview.emptyTitle': 'Workspace activity',
   'workingPanel.overview.environmentError': 'Could not load the repository status',
   'workingPanel.overview.execution.device': 'Connected device',
   'workingPanel.overview.execution.local': 'This device',

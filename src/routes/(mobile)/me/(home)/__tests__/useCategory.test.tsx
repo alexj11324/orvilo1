@@ -1,3 +1,4 @@
+import { DOWNLOAD_URL } from '@orvilo/const';
 import { act, renderHook } from '@testing-library/react';
 import { describe, expect, it, vi } from 'vitest';
 
@@ -10,6 +11,8 @@ import { useCategory } from '../features/useCategory';
 const wrapper: React.JSXElementConstructor<{ children: React.ReactNode }> = ({ children }) => (
   <ServerConfigStoreProvider>{children}</ServerConfigStoreProvider>
 );
+
+vi.mock('@/hooks/usePlatform', () => ({ usePlatform: () => ({ isIOS: true, isAndroid: false }) }));
 
 // Mock dependencies
 const mockNavigate = vi.fn();
@@ -37,6 +40,17 @@ afterEach(() => {
 });
 
 describe('useCategory', () => {
+  it('opens the desktop download destination even on a phone', () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
+    try {
+      const { result } = renderHook(() => useCategory(), { wrapper });
+      act(() => result.current.find((item) => item.key === 'get-desktop-app')?.onClick?.());
+      expect(open).toHaveBeenCalledWith(DOWNLOAD_URL.default, '__blank');
+    } finally {
+      open.mockRestore();
+    }
+  });
+
   it('should return correct items when the user is logged in with authentication', () => {
     act(() => {
       useUserStore.setState({ isSignedIn: true });

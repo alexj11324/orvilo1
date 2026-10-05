@@ -2777,7 +2777,7 @@ describe('AgentModel', () => {
       const hetero = result.find((a) => a.id === 'hetero-agent');
       const normal = result.find((a) => a.title === 'Normal Agent');
       expect(hetero?.heteroType).toBe('claude-code');
-      expect(normal?.heteroType).toBeUndefined();
+      expect(normal?.heteroType).toBe('orvilo');
       // raw agencyConfig must not leak into the result payload
       expect(hetero).not.toHaveProperty('agencyConfig');
     });

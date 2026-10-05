@@ -14,6 +14,7 @@ import { confirmModal } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { DESKTOP_HEADER_ICON_SMALL_SIZE } from '@/const/layoutTokens';
 import { createAgentIdentityModal } from '@/features/AgentIdentityModal';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import SidebarDropdownMenu from '@/features/NavPanel/components/SidebarDropdownMenu';
 import { useResourceAccess } from '@/features/ResourcePermission/useResourceAccess';
 import { useWorkspaceAwareNavigate } from '@/features/Workspace/useWorkspaceAwareNavigate';

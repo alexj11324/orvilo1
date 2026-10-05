@@ -10,6 +10,7 @@ import { createModal, ModalFooter, useModalContext } from '@/components/Modal';
 import { toast } from '@/components/toast';
 import { Button } from '@/components/ui/button';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { openConnectAgentModal } from '@/features/ConnectAgent';
 import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
 import AgentList from '@/features/Home/AgentSelect/AgentList';

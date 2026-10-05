@@ -5,6 +5,7 @@ import { memo } from 'react';
 
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import AgentGroupAvatar from '@/features/AgentGroupAvatar';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 
 interface AgentAvatarProps {
   item: SidebarAgentItem;

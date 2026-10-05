@@ -8,6 +8,7 @@ import { useTranslation } from 'react-i18next';
 import AgentRuntimeIcon from '@/components/AgentRuntimeIcon';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { type SidebarAgentItem } from '@/database/repositories/home';
+import { AgentRuntimeIcon } from '@/features/AgentRuntimeIcon';
 import { conversationSelectors, useConversationStore } from '@/features/Conversation';
 import { AgentModalProvider } from '@/features/HomeSidebar/Body/Agent/ModalProvider';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';

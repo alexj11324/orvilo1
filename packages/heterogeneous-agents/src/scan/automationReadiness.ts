@@ -4,7 +4,7 @@ import { access } from 'node:fs/promises';
 import path from 'node:path';
 
 import { probePrimeArtifactInstallation } from '@orvilo/prime-harness/readiness';
-import { resolveOrviloCliAgentType } from '@orvilo/types';
+import { resolveHeteroCliAgentType } from '@orvilo/types';
 import { z } from 'zod';
 
 import { getHeterogeneousAgentConfig } from '../config';
@@ -107,7 +107,7 @@ export async function checkAutomationReadinessOnHost(
     !params.engine || params.engine === 'claude-sdk' || params.engine === 'codex-app-server';
   const executor =
     params.agentType === 'orvilo' && engineSupported
-      ? resolveOrviloCliAgentType(params.engine)
+      ? resolveHeteroCliAgentType({ type: params.agentType })
       : params.agentType === 'native' || params.engine === 'prime'
         ? 'prime'
         : params.agentType;

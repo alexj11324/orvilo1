@@ -2088,23 +2088,21 @@ export const taskRouter = router({
         let workflowPatch:
           | {
               workflowCategory: TaskWorkflowCategory;
-              workflowStateId: string;
+              workflowStateId?: string | null;
               workflowStateRefId?: string | null;
             }
           | undefined;
         if (data.workflowCategory !== undefined) {
-          if (!ctx.workspaceId || !resolved.workflowStateId) {
-            throw new TRPCError({
-              code: 'PRECONDITION_FAILED',
-              message: 'Business workflow moves require a linked Linear issue',
-            });
-          }
-
-          const linearSyncModel = new LinearSyncModel(ctx.serverDB, ctx.workspaceId);
-          const issueLink = await linearSyncModel.findIssueLinkByTaskId(resolved.id);
-          const binding = issueLink?.bindingId
-            ? await linearSyncModel.findBindingById(issueLink.bindingId)
+          const linearSyncModel = ctx.workspaceId
+            ? new LinearSyncModel(ctx.serverDB, ctx.workspaceId)
             : null;
+          const issueLink = linearSyncModel
+            ? await linearSyncModel.findIssueLinkByTaskId(resolved.id)
+            : null;
+          const binding =
+            issueLink?.bindingId && linearSyncModel
+              ? await linearSyncModel.findBindingById(issueLink.bindingId)
+              : null;
           if (issueLink && binding) {
             if (!linearBindingWriteEnabled(binding)) {
               throw new TRPCError({
@@ -2160,11 +2158,16 @@ export const taskRouter = router({
               workflowStateId: targetState.remoteStateId!,
               workflowStateRefId: targetState.id,
             };
-          } else {
+          } else if (issueLink) {
             throw new TRPCError({
               code: 'PRECONDITION_FAILED',
               message: 'Linear workflow writes are unavailable for this task',
             });
+          } else {
+            // No Linear linkage — a plain workflow-category move. Local tasks
+            // carry no remote state ids; the category alone is the source of
+            // truth (same shape as workAttention.moveBoard's non-team path).
+            workflowPatch = { workflowCategory: data.workflowCategory };
           }
         }
 

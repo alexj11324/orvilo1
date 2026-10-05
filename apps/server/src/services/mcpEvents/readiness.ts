@@ -22,7 +22,7 @@ import { resolveRunToolSurface } from '@/server/services/aiAgent/pipeline/runToo
 import { resolveDeviceWorkingDirectory } from '@/server/services/aiAgent/resolveDeviceWorkingDirectory';
 import { deviceGateway } from '@/server/services/deviceGateway';
 import { createProviderBindingComposition } from '@/server/services/providerBinding/controlPlane';
-import { selectOrviloProviderBinding } from '@/server/services/providerBinding/execution';
+import { resolveOrviloProviderBinding } from '@/server/services/providerBinding/execution';
 
 import { getMcpEventWorkerHealth } from './workerHealth';
 import type { McpEventTrigger } from './workerRepository';
@@ -223,12 +223,16 @@ export async function checkMcpAutomationReadiness(input: {
     if (cwd && observed.repositoryAccessible !== true) reasons.push('REPOSITORY_UNAVAILABLE');
     let authenticated = observed.authenticated === true;
     // Prime's provider is authorized by the server binding, not a host CLI login.
-    if (type === 'orvilo' && (provider.engine as string | undefined) === 'prime') {
-      const row = await selectOrviloProviderBinding(db, trigger.userId, 'prime', {
-        kind: 'device',
-        deviceId,
-      });
+    // The engine model is retired: the builtin 'orvilo' agent IS the embedded
+    // Prime runtime, so a persisted `provider.engine` key is dead data — the
+    // server-binding check applies to every orvilo automation on the device.
+    if (type === 'orvilo') {
+      const row = await resolveOrviloProviderBinding(db, trigger.userId, 'device');
+      // The resolver does not narrow on the bound device — the stale selector
+      // pinned the target device, so keep that check here.
+      const boundHere = row?.config?.selection?.deviceId === deviceId;
       if (
+        boundHere &&
         row?.config.enabled &&
         (await new ProviderBindingModel(db, trigger.userId).ownsCredentialReference(
           row.config.secretReference,

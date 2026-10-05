@@ -32,6 +32,7 @@ import { useLocalSandboxCapability } from '@/features/ChatInput/hooks/useLocalSa
 import { useSelectExecutionTarget } from '@/features/ChatInput/hooks/useSelectExecutionTarget';
 import { useDeviceList } from '@/features/DeviceManager/useDeviceList';
 import { useDeviceSelectorState } from '@/features/DeviceManager/useDeviceSelectorState';
+import { TabIdContext } from '@/features/Electron/TabHost/TabIdContext';
 import {
   ExecutionTargetDeviceStatus,
   ExecutionTargetIcon,

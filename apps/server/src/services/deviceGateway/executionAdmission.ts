@@ -309,12 +309,14 @@ export const resolveHeteroExecutionPlan = async (
     }
     // Stored 'none' is an explicit opt-out — the run stays pending until the
     // user picks a device or sandbox; it never auto-binds. An UNSET target
-    // (no history: never selected, no session pin) still consults the
-    // candidate set below so a single legitimate device may conditionally
-    // resolve — but a shared/pinned scope never auto-binds off the shared row.
-    const hasNoSelectionHistory =
-      agencyConfig?.executionTarget === undefined && !params.sessionBoundDeviceId;
-    if (!hasNoSelectionHistory || params.workspaceScoped || isFixedPolicy) {
+    // still consults the candidate set below: a session pin IS selection
+    // history (the second message needn't re-send a deviceId), and with no
+    // pin the 0/1/N rules answer honestly — blocking here would strand a
+    // bound conversation on EXECUTION_TARGET_NONE forever. Only a STORED
+    // intent short-circuits; a shared/pinned scope never auto-binds off the
+    // shared row either way.
+    const hasStoredIntent = agencyConfig?.executionTarget !== undefined;
+    if (hasStoredIntent || params.workspaceScoped || isFixedPolicy) {
       return {
         code: 'EXECUTION_TARGET_NONE',
         detail: 'No execution target is selected for this agent — pick a device or cloud sandbox.',
@@ -378,9 +380,11 @@ export const resolveHeteroExecutionPlan = async (
             (params.isPlatformTask ? undefined : agencyConfig?.boundDeviceId)
         : undefined;
 
-  // `auto` explicitly re-picks every run — a leftover binding must not pin it.
-  const sessionBoundDeviceId =
-    target === 'auto' ? undefined : (params.sessionBoundDeviceId ?? undefined);
+  // A session pin is the conversation's device — `auto` only decides for a
+  // session that has NO binding yet. It never re-picks mid-conversation and
+  // never silently moves a bound run; an invalid pin still blocks below as
+  // DEVICE_BINDING_INVALID rather than erasing the evidence.
+  const sessionBoundDeviceId = params.sessionBoundDeviceId ?? undefined;
 
   const resolution = resolveExecutionDevice(
     {
@@ -433,17 +437,35 @@ export const resolveHeteroExecutionPlan = async (
 // ─── Conditional first-bind ──────────────────────────────────────────────────
 
 /**
- * Conditional first-bind (plan §5.1/§5.2): when unified admission resolves to
- * the ONLY legitimate candidate (`single_candidate`), the server writes that
- * device into the conversation's executionConfig — but ONLY if no binding
- * exists yet. The `WHERE` clause makes the write a real CAS: two concurrent
+ * The persisted device binding after the atomic first-bind attempt.
+ */
+export interface TopicDeviceBindResult {
+  /** The binding now persisted — the winner's, which may differ from the request. */
+  boundDeviceId: string;
+  /** `bound`: this call installed the pin. `occupied`: the CAS lost — the
+   * returned id is the pre-existing winner's (adopt it or refuse, never overwrite). */
+  outcome: 'bound' | 'occupied';
+}
+
+/**
+ * Atomic conditional first-bind (plan §5.1/§5.2): when unified admission
+ * resolves to the ONLY legitimate candidate (`single_candidate`), the server
+ * writes that device into the conversation — but ONLY if no binding exists
+ * yet, and the binding it writes is the CANONICAL one:
+ * `executionConfig.boundDeviceId` + `executionConfig.executionTarget='device'`
+ * plus the legacy top-level `metadata.boundDeviceId` mirror (scheduled
+ * dispatch still reads it). One UPDATE installs all three so they can never
+ * diverge; the `WHERE` clause makes it a real CAS — two concurrent
  * first-binds cannot overwrite each other, and a binding already set by the
  * picker (or an earlier run) is never clobbered.
  *
- * Returns `true` when THIS call installed the binding; `false` when one
- * already existed (the caller may re-read to see the winner's value).
+ * Returns the binding actually persisted — on a CAS loss the winner's pin is
+ * re-read and returned, so the caller compares instead of assuming. A
+ * write or re-read failure THROWS: persisting the run's device identity is
+ * part of admission, not an optional audit — a caller that cannot persist
+ * must not spawn.
  */
-export const bindTopicDeviceIfUnset = async (
+export const bindTopicDeviceAtomically = async (
   serverDB: OrviloDatabase,
   params: {
     deviceId: string;
@@ -451,42 +473,61 @@ export const bindTopicDeviceIfUnset = async (
     userId: string;
     workspaceId?: string;
   },
-): Promise<boolean> => {
-  try {
-    const updated = await serverDB
-      .update(topics)
-      .set({
-        metadata: sql`jsonb_set(
-          coalesce(${topics.metadata}, '{}'::jsonb),
-          '{executionConfig,boundDeviceId}',
-          to_jsonb(${params.deviceId}::text),
-          true
+): Promise<TopicDeviceBindResult> => {
+  const updated = await serverDB
+    .update(topics)
+    .set({
+      metadata: sql`
+        coalesce(${topics.metadata}, '{}'::jsonb)
+        || jsonb_build_object(
+          'boundDeviceId', to_jsonb(${params.deviceId}::text),
+          'executionConfig',
+            coalesce(${topics.metadata} -> 'executionConfig', '{}'::jsonb)
+            || jsonb_build_object(
+              'boundDeviceId', to_jsonb(${params.deviceId}::text),
+              'executionTarget', to_jsonb('device'::text)
+            )
         )`,
-      })
-      .where(
-        and(
-          eq(topics.id, params.topicId),
-          eq(topics.userId, params.userId),
-          params.workspaceId
-            ? eq(topics.workspaceId, params.workspaceId)
-            : isNull(topics.workspaceId),
-          // CAS guard: both the top-level legacy pin and the executionConfig
-          // pin must currently be empty, or the write is dropped.
-          sql`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', '') = ''`,
-          sql`coalesce(${topics.metadata} ->> 'boundDeviceId', '') = ''`,
-        ),
-      )
-      .returning({ id: topics.id });
-    return updated.length > 0;
-  } catch (err) {
-    // The bind is an audit/convenience write — losing it is a missing
-    // optimization, not a lost execution decision (the run already resolved).
-    log(
-      'bindTopicDeviceIfUnset failed topic=%s device=%s: %O',
-      params.topicId,
-      params.deviceId,
-      err,
-    );
-    return false;
+    })
+    .where(
+      and(
+        eq(topics.id, params.topicId),
+        eq(topics.userId, params.userId),
+        params.workspaceId
+          ? eq(topics.workspaceId, params.workspaceId)
+          : isNull(topics.workspaceId),
+        // CAS guard: both the top-level legacy pin and the executionConfig
+        // pin must currently be empty, or the write is dropped.
+        sql`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', '') = ''`,
+        sql`coalesce(${topics.metadata} ->> 'boundDeviceId', '') = ''`,
+      ),
+    )
+    .returning({
+      boundDeviceId: sql<string>`${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId'`,
+    });
+  if (updated.length > 0) {
+    return { boundDeviceId: updated[0].boundDeviceId, outcome: 'bound' };
   }
+
+  // CAS lost — re-read the winner. Another writer (the picker, a concurrent
+  // run) persisted a pin first; its value is the truth this run must adopt
+  // or refuse — never overwrite. A row that still shows no binding means the
+  // guards rejected a malformed topic (wrong owner/workspace or missing
+  // row): surface that honestly instead of guessing.
+  const rows = await serverDB
+    .select({
+      boundDeviceId: sql<
+        string | undefined
+      >`coalesce(${topics.metadata} -> 'executionConfig' ->> 'boundDeviceId', ${topics.metadata} ->> 'boundDeviceId')`,
+    })
+    .from(topics)
+    .where(and(eq(topics.id, params.topicId), eq(topics.userId, params.userId)))
+    .limit(1);
+  const winner = rows[0]?.boundDeviceId;
+  if (!winner) {
+    throw new Error(
+      `Topic device bind rejected for ${params.topicId}: no binding persisted (topic missing or malformed)`,
+    );
+  }
+  return { boundDeviceId: winner, outcome: 'occupied' };
 };

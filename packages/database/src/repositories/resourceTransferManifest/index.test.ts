@@ -39,6 +39,25 @@ beforeEach(async () => {
   await serverDB
     .insert(workspaces)
     .values([{ id: wsId, name: 'Manifest WS', primaryOwnerId: ownerId, slug: 'manifest-ws' }]);
+  // Creation admission requires a resolvable bound host; a codex-typed runtime
+  // needs no provider bindings.
+  await serverDB.insert(devices).values({
+    deviceId: `creation-host-${wsId}`,
+    identitySource: 'installation',
+    userId: ownerId,
+    visibility: 'public',
+    workspaceId: wsId,
+  });
+});
+
+const withRuntime = (config: Parameters<typeof ownerModel.create>[0] = {}) => ({
+  ...config,
+  agencyConfig: {
+    boundDeviceId: `creation-host-${wsId}`,
+    executionTarget: 'device' as const,
+    heterogeneousProvider: { type: 'codex' as const },
+    ...config.agencyConfig,
+  },
 });
 
 afterEach(async () => {
@@ -47,7 +66,7 @@ afterEach(async () => {
 
 describe('buildMemberTransferManifest', () => {
   it('reports the owner’s cron, device binding, and detachable tasks for a private agent', async () => {
-    const agent = await ownerModel.create({ title: 'Agent', visibility: 'private' });
+    const agent = await ownerModel.create(withRuntime({ title: 'Agent', visibility: 'private' }));
     await serverDB
       .update(agents)
       .set({ agencyConfig: { boundDeviceId: 'dev-1' } })
@@ -104,7 +123,7 @@ describe('buildMemberTransferManifest', () => {
   });
 
   it('does not warn about device bindings the recipient can actually reach', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await ownerModel.create(withRuntime({ title: 'Agent' }));
     await serverDB.insert(devices).values([
       {
         deviceId: 'public-dev',
@@ -131,7 +150,7 @@ describe('buildMemberTransferManifest', () => {
   });
 
   it('counts only knowledge mounts the recipient cannot access', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await ownerModel.create(withRuntime({ title: 'Agent' }));
     await serverDB.insert(knowledgeBases).values([
       {
         id: 'kb-owner-private',
@@ -188,7 +207,7 @@ describe('buildMemberTransferManifest', () => {
   });
 
   it('counts agent-owned and mounted connectors the handover will affect', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await ownerModel.create(withRuntime({ title: 'Agent' }));
     await serverDB.insert(userConnectors).values([
       {
         agentId: agent.id,
@@ -234,7 +253,7 @@ describe('buildMemberTransferManifest', () => {
   });
 
   it('counts private expertise domains the recipient cannot see', async () => {
-    const agent = await ownerModel.create({ title: 'Agent' });
+    const agent = await ownerModel.create(withRuntime({ title: 'Agent' }));
     await serverDB.insert(expertiseDomains).values([
       {
         domainFilter: 'f',

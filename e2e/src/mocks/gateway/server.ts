@@ -216,6 +216,13 @@ export const startFakeGateway = (
           if (!body.operationId || !body.jwt) {
             return json({ error: 'operationId and jwt required' }, 400);
           }
+          // TEST PATCH (acceptance): refuse the registered-but-never-connected
+          // device the way a real gateway does — 503 → DEVICE_CHANNEL_UNAVAILABLE
+          // → admission ledger 'offline'. Without this the fake would accept and
+          // "run" an offline device, which is not honest emulation.
+          if (body.deviceId === 'dev-macos-offline-host') {
+            return json({ error: 'DEVICE_CHANNEL_UNAVAILABLE', state: 'offline' }, 503);
+          }
           if (body.deviceId) lastDispatchedDeviceId = body.deviceId;
           void runSyntheticHeteroTurn({
             llmBaseUrl,

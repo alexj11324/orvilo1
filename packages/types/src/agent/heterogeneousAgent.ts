@@ -468,6 +468,12 @@ export const BUILTIN_HETEROGENEOUS_AGENT_CONFIGS = [
   },
 ] as const satisfies readonly BuiltinHeterogeneousAgentDescriptor[];
 
+export const HeterogeneousAgentTypeSchema = z.enum([
+  ...LOCAL_HETEROGENEOUS_AGENT_TYPES,
+  ...REMOTE_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
+  ...BUILTIN_HETEROGENEOUS_AGENT_CONFIGS.map(({ type }) => type),
+]);
+
 export type HeterogeneousAgentMenuLabelKey =
   (typeof HETEROGENEOUS_AGENT_CONFIGS)[number]['menuLabelKey'];
 export type LocalHeterogeneousAgentType = (typeof HETEROGENEOUS_AGENT_CONFIGS)[number]['type'];

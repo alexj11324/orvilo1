@@ -4,6 +4,7 @@ import { getTestDB } from '@orvilo/database/test-utils';
 import { eq } from 'drizzle-orm';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
+import { seedPrimeRuntime } from '@/database/fixtures/seedPrimeRuntime';
 import { AcceptanceModel } from '@/database/models/acceptance';
 import { LinearSyncModel } from '@/database/models/linearSync';
 import { ProjectModel } from '@/database/models/project';
@@ -323,6 +324,9 @@ describe('Task Router Integration', () => {
       });
       await serverDB.insert(workspaceMembers).values({ role: 'owner', userId, workspaceId });
       const wsCaller = taskRouter.createCaller({ ...createTestContext(userId), workspaceId });
+      // Project creation provisions a coordinator via Prime inheritance;
+      // strict admission requires an executable workspace-scoped runtime.
+      await seedPrimeRuntime(serverDB, { userId, workspaceId });
       const project = await new ProjectModel(serverDB, userId, workspaceId).create({
         identifier: 'WFLOW',
         name: 'Workflow board project',

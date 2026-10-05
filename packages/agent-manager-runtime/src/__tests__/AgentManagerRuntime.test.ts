@@ -40,6 +40,7 @@ const getAgentStoreActionCalls = (
 const mockAgentService: IAgentService = {
   countAgents: vi.fn(),
   createAgent: vi.fn(),
+  getRuntimeForCreation: vi.fn(),
   duplicateAgent: vi.fn(),
   getAgentConfigById: vi.fn(),
   queryAgents: vi.fn(),
@@ -145,6 +146,9 @@ describe('AgentManagerRuntime', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    vi.mocked(mockAgentService.getRuntimeForCreation).mockResolvedValue({
+      agencyConfig: { activeProvider: 'codex' },
+    } as never);
     vi.mocked(composioStoreSelectors.getServers).mockReturnValue([]);
     vi.mocked(orviloSkillStoreSelectors.getServers).mockReturnValue([]);
     Reflect.deleteProperty(window, 'global_serverConfigStore');
@@ -155,16 +159,49 @@ describe('AgentManagerRuntime', () => {
   });
 
   describe('createAgent', () => {
+    it('requires invoking source before insertion', async () => {
+      const result = await runtime.createAgent({ title: 'Child' });
+      expect(result.success).toBe(false);
+      expect(result.content).toContain('setup');
+      expect(mockAgentService.createAgent).not.toHaveBeenCalled();
+    });
+
+    it('inserts admitted execution config and blocks denied admission', async () => {
+      const admitted = {
+        agencyConfig: { activeProvider: 'codex' },
+        model: 'saved',
+        provider: 'saved-provider',
+      };
+      vi.mocked(mockAgentService.getRuntimeForCreation).mockResolvedValueOnce(admitted as never);
+      vi.mocked(mockAgentService.createAgent).mockImplementationOnce(async ({ config }) => {
+        expect(config).toMatchObject({ ...admitted, title: 'Child', visibility: 'private' });
+        return { agentId: 'child' };
+      });
+      expect((await runtime.createAgent({ title: 'Child' }, { agentId: 'source' })).success).toBe(
+        true,
+      );
+      vi.mocked(mockAgentService.createAgent).mockClear();
+      vi.mocked(mockAgentService.getRuntimeForCreation).mockRejectedValueOnce(
+        new Error('setup required'),
+      );
+      expect((await runtime.createAgent({ title: 'Denied' }, { agentId: 'source' })).success).toBe(
+        false,
+      );
+      expect(mockAgentService.createAgent).not.toHaveBeenCalled();
+    });
     it('should create an agent successfully', async () => {
       vi.mocked(mockAgentService.createAgent).mockResolvedValue({
         agentId: 'new-agent-id',
       });
 
-      const result = await runtime.createAgent({
-        title: 'My New Agent',
-        description: 'A test agent',
-        systemRole: 'You are a helpful assistant',
-      });
+      const result = await runtime.createAgent(
+        {
+          title: 'My New Agent',
+          description: 'A test agent',
+          systemRole: 'You are a helpful assistant',
+        },
+        { agentId: 'source' },
+      );
 
       expect(result.success).toBe(true);
       expect(result.content).toContain('Successfully created agent');
@@ -178,9 +215,12 @@ describe('AgentManagerRuntime', () => {
     it('should handle creation failure', async () => {
       vi.mocked(mockAgentService.createAgent).mockRejectedValue(new Error('Creation failed'));
 
-      const result = await runtime.createAgent({
-        title: 'My Agent',
-      });
+      const result = await runtime.createAgent(
+        {
+          title: 'My Agent',
+        },
+        { agentId: 'source' },
+      );
 
       expect(result.success).toBe(false);
       expect(result.content).toContain('Failed to create agent');

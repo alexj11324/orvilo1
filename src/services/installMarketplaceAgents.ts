@@ -2,6 +2,7 @@ import type { InstallMarketplaceAgentSummary } from '@orvilo/builtin-tool-web-on
 import { customAlphabet } from 'nanoid/non-secure';
 
 import { getActiveWorkspaceId } from '@/business/client/hooks/useActiveWorkspaceId';
+import type { AgentRuntimeConfig } from '@/features/CreateAgent';
 import { lambdaClient } from '@/libs/trpc/client';
 import { agentService } from '@/services/agent';
 import { discoverService } from '@/services/discover';
@@ -30,6 +31,7 @@ export interface InstallMarketplaceAgentsResult {
 }
 
 export interface InstallMarketplaceAgentsOptions {
+  runtimeConfig: AgentRuntimeConfig;
   /**
    * Override the visibility used when inserting into a workspace. Defaults to
    * `'public'` (shared with the workspace) — callers can opt into `'private'`
@@ -42,11 +44,14 @@ export interface InstallMarketplaceAgentsOptions {
 
 export const installMarketplaceAgents = async (
   sourceAgentIds: string[],
-  options?: InstallMarketplaceAgentsOptions,
+  options: InstallMarketplaceAgentsOptions,
 ): Promise<InstallMarketplaceAgentsResult> => {
   if (sourceAgentIds.length === 0) {
     return { installedAgentIds: [], skippedAgentIds: [], summaries: [] };
   }
+
+  if (!options?.runtimeConfig?.agencyConfig?.heterogeneousProvider)
+    throw new Error('AGENT_RUNTIME_REQUIRED');
 
   const createAgent = useAgentStore.getState().createAgent;
   const refreshAgentList = useHomeStore.getState().refreshAgentList;
@@ -144,6 +149,7 @@ export const installMarketplaceAgents = async (
       const result = await createAgent({
         config: {
           ...detail.config,
+          ...options.runtimeConfig,
           avatar: detail.avatar,
           backgroundColor: detail.backgroundColor,
           description: detail.description,

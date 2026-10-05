@@ -1,3 +1,4 @@
+import { CreateAgentSchema } from '@orvilo/types';
 import { z } from 'zod';
 
 export const AgentInterventionReviewTokenSchema = z
@@ -118,6 +119,20 @@ const SubmitCustomSchema = z
       .object({
         kind: z.literal('agent_marketplace'),
         selectedTemplateIds: z.array(z.string().min(1)).min(1).max(50),
+        runtimeConfig: CreateAgentSchema.pick({
+          agencyConfig: true,
+          model: true,
+          provider: true,
+          title: true,
+        })
+          .extend({
+            // Only `agencyConfig` is truly required downstream
+            // (`installMarketplaceAgents` asserts heterogeneousProvider);
+            // imported CLI runtimes may carry no selected model, so the field
+            // stays nullable like the stored row — just length-capped.
+            model: z.string().max(200).nullish(),
+          })
+          .strict(),
       })
       .strict(),
     type: z.literal('submit_custom'),

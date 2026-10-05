@@ -3,6 +3,7 @@ import type { AcceptanceStatus } from '@orvilo/types';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { getTestDB } from '../../core/getTestDB';
+import { seedPrimeRuntime } from '../../fixtures/seedPrimeRuntime';
 import { acceptances, topics, users, verifyRuns, workspaces } from '../../schemas';
 import type { OrviloDatabase } from '../../type';
 import { AcceptanceModel } from '../acceptance';
@@ -19,6 +20,8 @@ beforeEach(async () => {
   await serverDB.delete(users);
   await serverDB.insert(users).values([{ id: userId }, { id: otherUserId }]);
   await serverDB.insert(topics).values([{ id: topicId, userId }]);
+  // Project creation provisions a coordinator through Prime inheritance.
+  await seedPrimeRuntime(serverDB, { userId });
 });
 
 afterEach(async () => {

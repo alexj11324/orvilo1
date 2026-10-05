@@ -274,6 +274,7 @@
   "delete": "Delete",
   "deleteHistoryMigrating": "Chat history is still migrating. It can be deleted once the migration finishes — please try again in a few minutes.",
   "deleteSharedOwnerOnly": "Only a workspace owner can delete this — it carries other members' conversations",
+  "desktop": "Desktop",
   "document": "User Manual",
   "download": "Download",
   "downloadingUpdate": "Downloading {{percent}}%",

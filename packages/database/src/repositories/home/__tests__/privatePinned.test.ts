@@ -24,6 +24,32 @@ beforeEach(async () => {
     primaryOwnerId: creator,
     slug: 'ws-1',
   });
+  // Creation admission requires a resolvable bound host.
+  await clientDB.insert(Schema.devices).values([
+    {
+      deviceId: `creation-host-${creator}`,
+      identitySource: 'installation',
+      userId: creator,
+      visibility: 'private',
+    },
+    {
+      deviceId: `creation-host-${ws}`,
+      identitySource: 'installation',
+      userId: creator,
+      visibility: 'public',
+      workspaceId: ws,
+    },
+  ]);
+});
+
+const withRuntime = (config: any = {}, workspaceId?: string) => ({
+  ...config,
+  agencyConfig: {
+    boundDeviceId: `creation-host-${workspaceId ?? creator}`,
+    executionTarget: 'device' as const,
+    heterogeneousProvider: { type: 'codex' as const },
+    ...config.agencyConfig,
+  },
 });
 
 afterEach(async () => {
@@ -35,11 +61,16 @@ describe('workspace private pinned bucket', () => {
   it('pinned private agent goes to privatePinned, not the public pinned bucket', async () => {
     const agentModel = new AgentModel(clientDB, creator, ws);
 
-    const agent = await agentModel.create({
-      systemRole: '',
-      title: 'Private Agent',
-      visibility: 'private',
-    } as any);
+    const agent = await agentModel.create(
+      withRuntime(
+        {
+          systemRole: '',
+          title: 'Private Agent',
+          visibility: 'private',
+        } as any,
+        ws,
+      ),
+    );
     await agentModel.update(agent.id, { pinned: true });
 
     const result = await new HomeRepository(clientDB, creator, ws).getSidebarAgentList();
@@ -52,11 +83,16 @@ describe('workspace private pinned bucket', () => {
   it('pinned public agent stays in the public pinned bucket', async () => {
     const agentModel = new AgentModel(clientDB, creator, ws);
 
-    const agent = await agentModel.create({
-      systemRole: '',
-      title: 'Public Agent',
-      visibility: 'public',
-    } as any);
+    const agent = await agentModel.create(
+      withRuntime(
+        {
+          systemRole: '',
+          title: 'Public Agent',
+          visibility: 'public',
+        } as any,
+        ws,
+      ),
+    );
     await agentModel.update(agent.id, { pinned: true });
 
     const result = await new HomeRepository(clientDB, creator, ws).getSidebarAgentList();
@@ -70,11 +106,13 @@ describe('workspace private pinned bucket', () => {
     // so privatePinned must stay empty and the item lands in `pinned`.
     const agentModel = new AgentModel(clientDB, creator);
 
-    const agent = await agentModel.create({
-      systemRole: '',
-      title: 'Personal Agent',
-      visibility: 'private',
-    } as any);
+    const agent = await agentModel.create(
+      withRuntime({
+        systemRole: '',
+        title: 'Personal Agent',
+        visibility: 'private',
+      } as any),
+    );
     await agentModel.update(agent.id, { pinned: true });
 
     const result = await new HomeRepository(clientDB, creator).getSidebarAgentList();

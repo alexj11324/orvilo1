@@ -1,4 +1,4 @@
-import { AgentPluginEntrySchema, InsertChatGroupSchema } from '@orvilo/types';
+import { AgentPluginEntrySchema, CreateAgentSchema, InsertChatGroupSchema } from '@orvilo/types';
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 
@@ -32,6 +32,7 @@ import {
 } from '@/database/schemas';
 import type { OrviloDatabase } from '@/database/type';
 import { type ChatGroupConfig } from '@/database/types/chatGroup';
+import { assertAgentRuntimeCreation } from '@/database/utils/agentRuntimeCreation';
 import { GROUP_MEMBER_ROLES } from '@/database/utils/groupMembership';
 import { router } from '@/libs/trpc/lambda';
 import { serverDatabase } from '@/libs/trpc/lambda/middleware';
@@ -260,6 +261,8 @@ export const agentGroupRouter = router({
           workspaceId: ctx.workspaceId,
         });
       }
+      const group = await ctx.chatGroupModel.findById(input.groupId);
+      if (!group) throw new TRPCError({ code: 'NOT_FOUND', message: 'Group not found' });
       // Batch create virtual agents
       const agentConfigs = input.agents.map((agent) => ({
         ...agent,
@@ -269,6 +272,7 @@ export const agentGroupRouter = router({
         plugins: agent.plugins as unknown as string[] | undefined,
         tags: agent.tags as string[] | undefined,
         virtual: true,
+        visibility: group.visibility,
       }));
 
       const createdAgents = await ctx.agentModel.batchCreate(agentConfigs);
@@ -374,12 +378,23 @@ export const agentGroupRouter = router({
    * Returns the groupId and supervisorAgentId.
    */
   createGroup: agentGroupProcedureWrite
-    .input(InsertChatGroupSchema)
+    .input(
+      InsertChatGroupSchema.extend({
+        supervisorConfig: CreateAgentSchema.optional().superRefine(refuseRetiredAgencyConfigFields),
+      }),
+    )
     .mutation(async ({ input, ctx }) => {
-      const { group, supervisorAgentId } = await ctx.agentGroupRepo.createGroupWithSupervisor({
-        ...input,
-        config: ctx.agentGroupService.normalizeGroupConfig(input.config as ChatGroupConfig | null),
-      });
+      const { supervisorConfig, ...groupInput } = input;
+      const { group, supervisorAgentId } = await ctx.agentGroupRepo.createGroupWithSupervisor(
+        {
+          ...groupInput,
+          config: ctx.agentGroupService.normalizeGroupConfig(
+            input.config as ChatGroupConfig | null,
+          ),
+        },
+        [],
+        supervisorConfig,
+      );
 
       if (ctx.workspaceId && group.visibility !== 'private') {
         const permissionModel = new ResourcePermissionModel(ctx.serverDB, ctx.workspaceId);
@@ -418,6 +433,7 @@ export const agentGroupRouter = router({
         members: z.array(agentMemberInputSchema),
         supervisorConfig: z
           .object({
+            agencyConfig: z.any().nullish(),
             avatar: z.string().nullish(),
             backgroundColor: z.string().nullish(),
             chatConfig: z.any().nullish(),
@@ -470,15 +486,33 @@ export const agentGroupRouter = router({
         ...(groupVisibility ? { visibility: groupVisibility } : {}),
       }));
 
+      const selectedPrime = memberConfigs.find(
+        (member) => member.agencyConfig?.heterogeneousProvider?.type === 'orvilo',
+      );
+      const runtime = input.supervisorConfig?.agencyConfig
+        ? input.supervisorConfig
+        : selectedPrime
+          ? {
+              agencyConfig: selectedPrime.agencyConfig,
+              model: selectedPrime.model,
+              provider: selectedPrime.provider,
+            }
+          : await ctx.agentModel.getPrimeRuntimeForCreation({ visibility: groupVisibility });
+      const supervisorConfig = { ...input.supervisorConfig, ...runtime };
+      if (supervisorConfig.agencyConfig?.heterogeneousProvider?.type !== 'orvilo') {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'GROUP_SUPERVISOR_RUNTIME_REQUIRED' });
+      }
+      await assertAgentRuntimeCreation(
+        ctx.serverDB,
+        { userId: ctx.userId, workspaceId: ctx.workspaceId ?? undefined },
+        { ...supervisorConfig, visibility: groupVisibility },
+      );
+
       const createdAgents = await ctx.agentModel.batchCreate(memberConfigs);
       const memberAgentIds = createdAgents.map((agent) => agent.id);
 
       // 2. Create group with supervisor and member agents
       // Filter out null/undefined values from supervisorConfig
-      const supervisorConfig = input.supervisorConfig
-        ? Object.fromEntries(Object.entries(input.supervisorConfig).filter(([_, v]) => v != null))
-        : undefined;
-
       const normalizedConfig = ctx.agentGroupService.normalizeGroupConfig(
         input.groupConfig.config as ChatGroupConfig | null,
       );

@@ -7,6 +7,17 @@ import { useHomeStore } from '@/store/home';
 
 import { installMarketplaceAgents } from './installMarketplaceAgents';
 
+const runtimeConfig = {
+  agencyConfig: {
+    executionTarget: 'device' as const,
+    boundDeviceId: 'host-1',
+    heterogeneousProvider: { type: 'orvilo' as const, model: 'prime-model' },
+  },
+  model: 'prime-model',
+  provider: 'openai',
+  title: 'Orvilo AI',
+};
+
 const mocks = vi.hoisted(() => ({
   forkAgent: vi.fn(),
 }));
@@ -42,6 +53,19 @@ describe('installMarketplaceAgents', () => {
     } as unknown as ReturnType<typeof useHomeStore.getState>);
   });
 
+  it('rejects missing runtime configuration before creating a remote fork', async () => {
+    vi.spyOn(agentService, 'getAgentByForkedFromIdentifier').mockResolvedValue(null);
+    vi.spyOn(discoverService, 'getAssistantDetail').mockResolvedValue({
+      config: {},
+      title: 'Writer',
+    } as never);
+    await expect(installMarketplaceAgents(['template-1'], {} as never)).rejects.toThrow(
+      'AGENT_RUNTIME_REQUIRED',
+    );
+    expect(mocks.forkAgent).not.toHaveBeenCalled();
+    expect(createAgent).not.toHaveBeenCalled();
+  });
+
   it('sends a single batched fork call carrying every selected agent', async () => {
     const sourceIds = ['src-a', 'src-b', 'src-c'];
 
@@ -52,7 +76,12 @@ describe('installMarketplaceAgents', () => {
           avatar: 'avatar',
           backgroundColor: '#fff',
           category: 'engineering',
-          config: { params: {} } as any,
+          config: {
+            params: {},
+            model: 'untrusted-model',
+            provider: 'untrusted-provider',
+            agencyConfig: { boundDeviceId: 'untrusted-host' },
+          } as any,
           description: `desc-${identifier}`,
           editorData: {},
           identifier,
@@ -91,7 +120,7 @@ describe('installMarketplaceAgents', () => {
       agentId: `agent-${config.params.forkedFromIdentifier}`,
     }));
 
-    const result = await installMarketplaceAgents(sourceIds);
+    const result = await installMarketplaceAgents(sourceIds, { runtimeConfig });
 
     expect(forkSpy).toHaveBeenCalledTimes(1);
     const [{ items }] = forkSpy.mock.calls[0];
@@ -99,6 +128,12 @@ describe('installMarketplaceAgents', () => {
     expect(items.map((i: { sourceIdentifier: string }) => i.sourceIdentifier)).toEqual(sourceIds);
 
     expect(createAgent).toHaveBeenCalledTimes(3);
+    for (const [{ config }] of createAgent.mock.calls) {
+      expect(config.agencyConfig).toEqual(runtimeConfig.agencyConfig);
+      expect(config.model).toBe(runtimeConfig.model);
+      expect(config.provider).toBe(runtimeConfig.provider);
+      expect(config.title).toMatch(/^Title-src-/);
+    }
     expect(result.installedAgentIds).toHaveLength(3);
     expect(result.skippedAgentIds).toEqual([]);
     expect(refreshAgentList).toHaveBeenCalledTimes(1);
@@ -116,7 +151,12 @@ describe('installMarketplaceAgents', () => {
           avatar: 'a',
           backgroundColor: '#fff',
           category: 'engineering',
-          config: { params: {} } as any,
+          config: {
+            params: {},
+            model: 'untrusted-model',
+            provider: 'untrusted-provider',
+            agencyConfig: { boundDeviceId: 'untrusted-host' },
+          } as any,
           description: 'd',
           editorData: {},
           identifier,
@@ -153,7 +193,7 @@ describe('installMarketplaceAgents', () => {
       agentId: `agent-${config.params.forkedFromIdentifier}`,
     }));
 
-    const result = await installMarketplaceAgents(sourceIds);
+    const result = await installMarketplaceAgents(sourceIds, { runtimeConfig });
 
     expect(forkSpy).toHaveBeenCalledTimes(1);
     const [{ items }] = forkSpy.mock.calls[0];

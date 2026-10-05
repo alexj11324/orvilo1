@@ -1,4 +1,17 @@
 export default {
+  'creation.runtime.title': 'Choose Agent runtime',
+  'creation.runtime.description':
+    'Choose Prime with a saved host and model, or reuse an existing connected runtime.',
+  'creation.runtime.label': 'Runtime',
+  'creation.runtime.prime': 'Prime',
+  'creation.runtime.host': 'Execution host',
+  'creation.runtime.hostEmpty': 'Choose a registered host',
+  'creation.runtime.hostHelp':
+    'Register a device in Devices. Shared Agents require a public Workspace device.',
+  'creation.runtime.provider': 'Provider and model',
+  'creation.runtime.devices': 'Open Devices',
+  'creation.runtime.use': 'Use runtime',
+
   'workingPanel.overview.configure': 'Review execution setup',
   'goalExperiment.continuedFrom': 'Continued exploration',
   'goalExperiment.drill': 'Explore inside',

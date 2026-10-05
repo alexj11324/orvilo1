@@ -40,3 +40,13 @@ User-facing error surfaces render localized copy, not raw exception text.
 `normalizeAsyncError` plus the `error:response.<status>` keys cover HTTP
 statuses; `connectErrorMessage` in `src/features/ConnectAgent` shows the
 pattern: localized headline + raw detail appended as secondary text.
+
+## Dead keys
+
+Remove keys whose call sites are gone — they mislead translators and bloat
+every locale file. Check `rg "'<key>'" src/` (and the `t('…')` spelling)
+before deleting; delete from `packages/locales/src/default/*.ts` and every
+`locales/*/<ns>.json`. Whole dead namespaces (like the retired `taskTemplate`
+one) are deleted as files. `defaultKeys.test.ts` keeps en-US/zh-CN key sets
+in lockstep with the default sources, including `_one`/`_other` plural
+siblings.

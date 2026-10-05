@@ -134,8 +134,10 @@ export default {
   'accountDeletion.title': 'Delete Account',
   'accountDeletion.workspaceAutoCancel.notice':
     'Deleting your account will automatically cancel the paid plans on these workspaces: {{names}}. Remaining time will not be refunded.',
-  'accountDeletion.workspaceBlocked.membersDesc':
-    'You are the owner of {{count}} workspace(s) that still have other members. To protect their data, transfer ownership or delete these workspaces before deleting your account.',
+  'accountDeletion.workspaceBlocked.membersDesc_other':
+    'You are the owner of {{count}} workspaces that still have other members. To protect their data, transfer ownership or delete these workspaces before deleting your account.',
+  'accountDeletion.workspaceBlocked.membersDesc_one':
+    'You are the owner of {{count}} workspace that still have other members. To protect their data, transfer ownership or delete these workspaces before deleting your account.',
   'accountDeletion.workspaceBlocked.reasonMembers': 'Other members',
   'accountDeletion.workspaceBlocked.reasonPaid': 'Paid plan active',
   'accountDeletion.workspaceBlocked.title': 'Transfer your workspaces first',
@@ -194,7 +196,7 @@ export default {
   'agentCronJobs.form.content.placeholder': 'Enter the prompt or instruction for the agent',
   'agentCronJobs.form.every': 'Every',
   'agentCronJobs.form.frequency': 'Frequency',
-  'agentCronJobs.form.hours': 'hour(s)',
+  'agentCronJobs.form.hours': 'Hours',
   'agentCronJobs.form.maxExecutions': 'Stop after',
   'agentCronJobs.form.maxExecutions.placeholder': 'Leave empty for unlimited',
   'agentCronJobs.form.name.placeholder': 'Enter task name',
@@ -1055,8 +1057,10 @@ export default {
   'settingAgent.agentTools.menuTitle': 'Add a tool for this Agent',
   'settingAgent.agentTools.mount.desc': 'Reference, syncs with user config',
   'settingAgent.agentTools.mount.title': 'Mount user tool',
-  'settingAgent.agentTools.overriddenNote':
-    '{{count}} user tool(s) overridden by same-named Agent Tools; they will not run.',
+  'settingAgent.agentTools.overriddenNote_other':
+    '{{count}} user tools overridden by same-named Agent Tools; they will not run.',
+  'settingAgent.agentTools.overriddenNote_one':
+    '{{count}} user tool overridden by same-named Agent Tools; they will not run.',
   'settingAgent.agentTools.pickerEmpty': 'No user connectors available to add',
   'settingAgent.agentTools.priorityHint': 'Run priority',
   'settingAgent.agentTools.priorityTooltip':
@@ -2693,15 +2697,19 @@ export default {
     'Waiting for {{target}} to accept. Nothing changes until they do — you can withdraw the request from Notifications.',
   'workspace.general.transferAgents.modal.selectAgents': 'Select Agents to move to {{target}}.',
   'workspace.general.transferAgents.modal.sendRequest': 'Send transfer request',
-  'workspace.general.transferAgents.modal.sendRequestCount': 'Send {{count}} transfer request(s)',
+  'workspace.general.transferAgents.modal.sendRequestCount_other':
+    'Send {{count}} transfer requests',
+  'workspace.general.transferAgents.modal.sendRequestCount_one': 'Send {{count}} transfer request',
   'workspace.general.transferAgents.modal.selectPlaceholder':
     'Select workspace or personal account...',
   'workspace.general.transferAgents.modal.selectTarget':
     'You can move to personal or workspaces that have permission to create an agent.',
   'workspace.general.transferAgents.modal.selected': 'selected',
-  'workspace.general.transferAgents.modal.success': '{{count}} agent(s) moved',
+  'workspace.general.transferAgents.modal.success_other': '{{count}} agents moved',
+  'workspace.general.transferAgents.modal.success_one': '{{count}} agent moved',
   'workspace.general.transferAgents.modal.title': 'Move Agents',
-  'workspace.general.transferAgents.modal.transfer': 'Move {{count}} agent(s)',
+  'workspace.general.transferAgents.modal.transfer_other': 'Move {{count}} agents',
+  'workspace.general.transferAgents.modal.transfer_one': 'Move {{count}} agent',
   'workspace.general.transferAgents.modal.warning':
     'Multi-agent group associations will be removed, and moved connectors may need to be reauthorized.',
   'workspace.general.transferAgents.personalAccount': 'Personal Account',
@@ -2737,10 +2745,13 @@ export default {
     'You can move to personal or workspaces that have permission to create an agent group.',
   'workspace.general.transferAgentGroups.modal.selected': 'selected',
   'workspace.general.transferAgentGroups.modal.selectedGroup': 'Agent group to transfer.',
-  'workspace.general.transferAgentGroups.modal.success':
-    '{{count}} agent group(s) transferred successfully',
+  'workspace.general.transferAgentGroups.modal.success_other':
+    '{{count}} agent groups transferred successfully',
+  'workspace.general.transferAgentGroups.modal.success_one':
+    '{{count}} agent group transferred successfully',
   'workspace.general.transferAgentGroups.modal.title': 'Move Agent Groups',
-  'workspace.general.transferAgentGroups.modal.transfer': 'Move {{count}} agent group(s)',
+  'workspace.general.transferAgentGroups.modal.transfer_other': 'Move {{count}} agent groups',
+  'workspace.general.transferAgentGroups.modal.transfer_one': 'Move {{count}} agent group',
   'workspace.general.transferAgentGroups.modal.untitledGroup': 'Untitled Agent Group',
   'workspace.general.copyOrviloAI.modal.back': 'Back',
   'workspace.general.copyOrviloAI.modal.continue': 'Continue',
@@ -2758,7 +2769,8 @@ export default {
   'workspace.general.copyOrviloAI.modal.copyOptions.required': 'Selected by default',
   'workspace.general.copyOrviloAI.modal.copyOptions.title': 'Copy options',
   'workspace.general.copyOrviloAI.modal.copyOptions.unsupported': 'Unavailable',
-  'workspace.general.copyOrviloAI.modal.create': 'Copy {{count}} agent(s)',
+  'workspace.general.copyOrviloAI.modal.create_other': 'Copy {{count}} agents',
+  'workspace.general.copyOrviloAI.modal.create_one': 'Copy {{count}} agent',
   'workspace.general.copyOrviloAI.modal.defaultInboxTitle': 'Orvilo AI',
   'workspace.general.copyOrviloAI.modal.done': 'Done',
   'workspace.general.copyOrviloAI.modal.failed': 'Failed to copy agents',
@@ -2777,7 +2789,8 @@ export default {
     'Select workspace or personal account...',
   'workspace.general.copyOrviloAI.modal.selectTarget':
     'You can copy to personal or workspaces that have permission to create an agent.',
-  'workspace.general.copyOrviloAI.modal.success': '{{count}} agent(s) copied',
+  'workspace.general.copyOrviloAI.modal.success_other': '{{count}} agents copied',
+  'workspace.general.copyOrviloAI.modal.success_one': '{{count}} agent copied',
   'workspace.general.copyOrviloAI.modal.backgroundCopy':
     'Chat history is large, so it keeps copying in the background. The agents are ready to use now; conversations light up one by one as they finish.',
   'workspace.general.copyOrviloAI.modal.title': 'Copy Agents',
@@ -2800,7 +2813,8 @@ export default {
   'workspace.general.copyAgentGroups.modal.copyOptions.required': 'Selected by default',
   'workspace.general.copyAgentGroups.modal.copyOptions.title': 'Copy options',
   'workspace.general.copyAgentGroups.modal.copyOptions.unsupported': 'Unavailable',
-  'workspace.general.copyAgentGroups.modal.create': 'Copy {{count}} agent group(s)',
+  'workspace.general.copyAgentGroups.modal.create_other': 'Copy {{count}} agent groups',
+  'workspace.general.copyAgentGroups.modal.create_one': 'Copy {{count}} agent group',
   'workspace.general.copyAgentGroups.modal.done': 'Done',
   'workspace.general.copyAgentGroups.modal.failed': 'Failed to copy agent groups',
   'workspace.general.copyAgentGroups.modal.goToTarget': 'Go to {{target}}',
@@ -2813,7 +2827,8 @@ export default {
     'You can copy to personal or workspaces that have permission to create an agent group.',
   'workspace.general.copyAgentGroups.modal.selected': 'selected',
   'workspace.general.copyAgentGroups.modal.selectedGroup': 'Agent group to copy.',
-  'workspace.general.copyAgentGroups.modal.success': '{{count}} agent group(s) copied',
+  'workspace.general.copyAgentGroups.modal.success_other': '{{count}} agent groups copied',
+  'workspace.general.copyAgentGroups.modal.success_one': '{{count}} agent group copied',
   'workspace.general.copyAgentGroups.modal.title': 'Copy Agent Groups',
   'workspace.general.copyAgentGroups.modal.untitledGroup': 'Untitled Agent Group',
   'workspace.general.transferPrimary.cta': 'Transfer Ownership',
@@ -3020,14 +3035,10 @@ export default {
   'workspace.members.invite.askOwnerToBuySeats':
     'Ask the workspace owner to purchase more seats before inviting new members.',
   'workspace.members.invite.buySeatsCta': 'Buy seats',
-  'workspace.members.invite.seatInsufficient':
-    'Only {{remaining}} seat(s) remaining. Buy more seats to invite {{required}} new member(s), or invite viewers instead (they don’t take a seat).',
-  'workspace.members.invite.seatInsufficientNoBuy':
-    'Only {{remaining}} seat(s) remaining. Ask the workspace owner to purchase more seats, or invite viewers instead (they don’t take a seat).',
   'workspace.members.invite.freePlanLimitReached':
     'Your Free workspace has reached its {{limit}}-member limit. Upgrade to Pro to invite more members, or invite viewers instead (they don’t take a seat).',
   'workspace.members.invite.freePlanSeatInsufficient':
-    'Only {{remaining}} seat(s) remaining on your Free workspace. Upgrade to Pro to invite {{required}} new member(s), or invite viewers instead (they don’t take a seat).',
+    'Only {{remaining}} seats remaining on your Free workspace. Upgrade to Pro to invite {{required}} new members, or invite viewers instead (they don’t take a seat).',
   'workspace.members.invite.freePlanAskOwnerToUpgrade':
     'This Free workspace can’t invite more members. Ask the workspace owner to upgrade to Pro, or invite viewers instead (they don’t take a seat).',
   'workspace.members.invite.upgradePlanCta': 'Upgrade plan',
@@ -3256,7 +3267,8 @@ export default {
   'workspace.wizard.step3.addMore': 'Add more',
   'workspace.wizard.step3.allFailed': 'Could not send invitations',
   'workspace.wizard.step3.emailPlaceholder': 'name@company.com',
-  'workspace.wizard.step3.invitedCount': 'Invited {{count}} member(s)',
+  'workspace.wizard.step3.invitedCount_other': 'Invited {{count}} members',
+  'workspace.wizard.step3.invitedCount_one': 'Invited {{count}} member',
   'workspace.wizard.step3.inviteAndContinue': 'Invite and continue',
   'workspace.wizard.step3.noEmails': 'No valid emails entered. Skipping invitations.',
   'workspace.wizard.step3.skip': 'Skip for now',
@@ -3350,7 +3362,8 @@ export default {
   'workspace.onboarding.step3.subtitle': 'Pick a few to start — discover more anytime.',
   'workspace.onboarding.step3.categoryAll': 'All',
   'workspace.onboarding.step3.skipInstall': "Don't install any",
-  'workspace.onboarding.step3.installed': 'Added {{count}} agent(s) to your workspace',
+  'workspace.onboarding.step3.installed_other': 'Added {{count}} agents to your workspace',
+  'workspace.onboarding.step3.installed_one': 'Added {{count}} agent to your workspace',
   'workspace.onboarding.step3.empty': 'No recommendations available right now.',
   'workspace.onboarding.step4Invite.addMore': 'Add another email',
   'workspace.onboarding.step4Invite.currentTeam.heading': 'Your team so far',
@@ -3361,16 +3374,19 @@ export default {
   'workspace.onboarding.step4Invite.emailPlaceholder': 'teammate@company.com',
   'workspace.onboarding.step4Invite.finish': 'Finish',
   'workspace.onboarding.step4Invite.heading': 'Invite your team',
-  'workspace.onboarding.step4Invite.invitedCount': 'Invited {{count}} member(s)',
+  'workspace.onboarding.step4Invite.invitedCount_other': 'Invited {{count}} members',
+  'workspace.onboarding.step4Invite.invitedCount_one': 'Invited {{count}} member',
   'workspace.onboarding.step4Invite.noRemainingSeats':
     'Current members and pending invites fill all seats — manage them in member settings.',
   'workspace.onboarding.step4Invite.pendingInvites.heading': 'Pending invites',
   'workspace.onboarding.step4Invite.remainingSeats':
     'Invite up to {{count}} more now, or add them later from member settings.',
-  'workspace.onboarding.step4Invite.someInviteFailed':
-    'Could not invite {{count}} teammate(s): {{emails}}. Try again from member settings.',
+  'workspace.onboarding.step4Invite.someInviteFailed_other':
+    'Could not invite {{count}} teammates: {{emails}}. Try again from member settings.',
+  'workspace.onboarding.step4Invite.someInviteFailed_one':
+    'Could not invite {{count}} teammate: {{emails}}. Try again from member settings.',
   'workspace.onboarding.step4Invite.seatLimitReached':
-    'You can invite up to {{max}} teammate(s) with your current seats.',
+    'You can invite up to {{max}} teammates with your current seats.',
   'workspace.onboarding.step4Invite.subtitle':
     'Bring teammates into this workspace now, or invite them later from member settings.',
   'workspace.onboarding.step4Invite.subtitleWithExtraSeats':
@@ -3380,8 +3396,10 @@ export default {
   'workspace.onboarding.step4.heading': '{{name}} is ready!',
   'workspace.onboarding.step4.subtitle':
     'Your workspace is set up. Jump in and start collaborating with your team.',
-  'workspace.onboarding.step4.subtitleWithAgents':
-    '{{count}} agent(s) ready to help. Jump in and start collaborating with your team.',
+  'workspace.onboarding.step4.subtitleWithAgents_other':
+    '{{count}} agents ready to help. Jump in and start collaborating with your team.',
+  'workspace.onboarding.step4.subtitleWithAgents_one':
+    '{{count}} agent ready to help. Jump in and start collaborating with your team.',
   'workspace.onboarding.step4.marketProfileNudge':
     "We've set up a Community profile for <strong>{{name}}</strong> so workspace agents can be installed. <cta>Customize it in Community</cta>.",
   'workspace.onboarding.step4.marketProfileAdjust':

@@ -42,8 +42,10 @@ export default {
     'You are about to delete every result in the current Workspace view, including items uploaded by other members. This action cannot be undone.',
   'FileManager.actions.confirmDeleteMultiFiles':
     'You are about to delete the selected {{count}} files. Once deleted, they cannot be recovered. Please confirm your action.',
-  'FileManager.actions.confirmRemoveFromLibrary':
-    "You're about to remove {{count}} selected file(s) from the Library. They'll still be available in All Files. Confirm to continue.",
+  'FileManager.actions.confirmRemoveFromLibrary_one':
+    "You're about to remove {{count}} selected file from the Library. It'll still be available in All Files. Confirm to continue.",
+  'FileManager.actions.confirmRemoveFromLibrary_other':
+    "You're about to remove {{count}} selected files from the Library. They'll still be available in All Files. Confirm to continue.",
   'FileManager.actions.copyUrl': 'Copy Link',
   'FileManager.actions.copyUrlSuccess': 'File url copied successfully.',
   'FileManager.actions.createChunkingTask': 'Preparing...',

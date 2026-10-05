@@ -19,11 +19,6 @@ import {
 } from './localHarnessRows';
 
 const styles = createStaticStyles(({ css, cssVar }) => ({
-  connect: css`
-    flex: none;
-    font-size: 12px;
-    color: ${cssVar.colorPrimary};
-  `,
   hint: css`
     padding-block: 6px;
     padding-inline: 8px;
@@ -177,7 +172,15 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
           <div className={styles.name}>{provider.title}</div>
           {subtitle && <div className={styles.subtitle}>{subtitle}</div>}
         </div>
-        <span className={styles.connect}>{t('localHarness.connect')}</span>
+        <Button
+          size={'xs'}
+          onClick={(event) => {
+            event.stopPropagation();
+            onConnect(provider.type);
+          }}
+        >
+          {t('localHarness.connect')}
+        </Button>
       </div>
     );
   };

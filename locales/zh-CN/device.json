@@ -4,7 +4,7 @@
   "workingDirectory.addFolderFailed": "无法添加此文件夹，请重试。",
   "workingDirectory.addFolderTitle": "添加工作目录",
   "workingDirectory.agentDescription": "该智能体下所有对话的默认工作目录",
-  "workingDirectory.agentLevel": "代理工作目录",
+  "workingDirectory.agentLevel": "智能体工作目录",
   "workingDirectory.bareWorktree": "裸仓库",
   "workingDirectory.branchInWorktree": "位于工作树 {{name}}",
   "workingDirectory.branchSearchPlaceholder": "搜索分支",

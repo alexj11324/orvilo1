@@ -24,7 +24,7 @@
   "form.skip": "跳过",
   "form.submit": "提交",
   "form.unsavedChanges": "未保存的更改",
-  "form.unsavedWarning": "您有未保存的更改。确定要离开吗？",
+  "form.unsavedWarning": "你有未保存的更改。确定要离开吗？",
   "hotkey.conflict": "此快捷键与现有快捷键冲突。",
   "hotkey.invalidCombination": "快捷键必须包含修饰键（Ctrl、Alt、Shift）且只能有一个普通键。",
   "hotkey.placeholder": "按键录制快捷键",

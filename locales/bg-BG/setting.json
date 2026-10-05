@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "Необходими са допълнителни разрешения за управление на членове на екипа",
   "workspace.members.invite.partialSuccess": "{{success}} поканени, {{failed}} неуспешни. Проверете адресите и опитайте отново.",
   "workspace.members.invite.roleLabel": "Роля",
-  "workspace.members.invite.seatInsufficient": "Остават само {{remaining}} място(а). Купете повече места, за да поканите {{required}} нов(и) член(ове).",
-  "workspace.members.invite.seatInsufficientNoBuy": "Остават само {{remaining}} място(а). Помолете собственика на работното пространство да закупи повече места.",
   "workspace.members.invite.seatLimitReached": "Всички места са заети. Купете повече места, за да продължите да каните, или поканете зрители (те не заемат място).",
   "workspace.members.invite.seatLimitReachedFreePlan": "Всички места във вашето безплатно работно пространство са заети. Надградете до Pro за повече места, или поканете зрители (те не заемат място).",
   "workspace.members.invite.seatLimitReachedNoBuy": "Всички места са заети. Помолете собственика на работното пространство да купи повече места, или поканете зрители (те не заемат място).",

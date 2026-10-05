@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "팀 멤버를 관리하려면 추가 권한이 필요합니다",
   "workspace.members.invite.partialSuccess": "{{success}}명이 초대되었고, {{failed}}명이 실패했습니다. 주소를 확인하고 다시 시도하세요.",
   "workspace.members.invite.roleLabel": "역할",
-  "workspace.members.invite.seatInsufficient": "남은 좌석이 {{remaining}}개뿐입니다. {{required}}명의 새 멤버를 초대하려면 더 많은 좌석을 구매하세요.",
-  "workspace.members.invite.seatInsufficientNoBuy": "남은 좌석이 {{remaining}}개뿐입니다. 워크스페이스 소유자에게 더 많은 좌석을 구매하도록 요청하세요.",
   "workspace.members.invite.seatLimitReached": "모든 좌석이 사용 중입니다. 더 많은 좌석을 구매하거나, 대신 뷰어를 초대하세요 (뷰어는 좌석을 차지하지 않습니다).",
   "workspace.members.invite.seatLimitReachedFreePlan": "무료 작업 공간의 모든 좌석이 사용 중입니다. 더 많은 좌석을 위해 Pro로 업그레이드하거나, 대신 뷰어를 초대하세요 (뷰어는 좌석을 차지하지 않습니다).",
   "workspace.members.invite.seatLimitReachedNoBuy": "모든 좌석이 사용 중입니다. 작업 공간 소유자에게 더 많은 좌석을 구매하도록 요청하거나, 대신 뷰어를 초대하세요 (뷰어는 좌석을 차지하지 않습니다).",

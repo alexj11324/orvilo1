@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "مجوزهای اضافی برای مدیریت اعضای تیم مورد نیاز است",
   "workspace.members.invite.partialSuccess": "{{success}} دعوت شدند، {{failed}} ناموفق بودند. آدرس‌ها را بررسی کرده و دوباره تلاش کنید.",
   "workspace.members.invite.roleLabel": "نقش",
-  "workspace.members.invite.seatInsufficient": "فقط {{remaining}} صندلی باقی مانده است. برای دعوت {{required}} عضو جدید، صندلی‌های بیشتری خریداری کنید.",
-  "workspace.members.invite.seatInsufficientNoBuy": "فقط {{remaining}} صندلی باقی مانده است. از مالک فضای کاری بخواهید صندلی‌های بیشتری خریداری کند.",
   "workspace.members.invite.seatLimitReached": "تمام صندلی‌ها استفاده شده‌اند. برای ادامه دعوت، صندلی‌های بیشتری بخرید یا بینندگان را دعوت کنید (آن‌ها صندلی اشغال نمی‌کنند).",
   "workspace.members.invite.seatLimitReachedFreePlan": "تمام صندلی‌های فضای کاری رایگان شما استفاده شده‌اند. برای صندلی‌های بیشتر به نسخه حرفه‌ای ارتقا دهید یا بینندگان را دعوت کنید (آن‌ها صندلی اشغال نمی‌کنند).",
   "workspace.members.invite.seatLimitReachedNoBuy": "تمام صندلی‌ها استفاده شده‌اند. از مالک فضای کاری بخواهید صندلی‌های بیشتری بخرد یا بینندگان را دعوت کنید (آن‌ها صندلی اشغال نمی‌کنند).",

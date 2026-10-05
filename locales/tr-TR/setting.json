@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "Ekip Üyelerini yönetmek için ek izinler gereklidir",
   "workspace.members.invite.partialSuccess": "{{success}} davet edildi, {{failed}} başarısız oldu. Adresleri kontrol edin ve tekrar deneyin.",
   "workspace.members.invite.roleLabel": "Rol",
-  "workspace.members.invite.seatInsufficient": "Sadece {{remaining}} koltuk kaldı. {{required}} yeni üyeyi davet etmek için daha fazla koltuk satın alın.",
-  "workspace.members.invite.seatInsufficientNoBuy": "Sadece {{remaining}} koltuk kaldı. Çalışma alanı sahibinden daha fazla koltuk satın almasını isteyin.",
   "workspace.members.invite.seatLimitReached": "Tüm koltuklar dolu. Daha fazla koltuk satın alarak davet etmeye devam edin veya bunun yerine izleyicileri davet edin (onlar koltuk kaplamaz).",
   "workspace.members.invite.seatLimitReachedFreePlan": "Ücretsiz çalışma alanınızdaki tüm koltuklar dolu. Daha fazla koltuk için Pro'ya yükseltin veya bunun yerine izleyicileri davet edin (onlar koltuk kaplamaz).",
   "workspace.members.invite.seatLimitReachedNoBuy": "Tüm koltuklar dolu. Çalışma alanı sahibinden daha fazla koltuk satın almasını isteyin veya bunun yerine izleyicileri davet edin (onlar koltuk kaplamaz).",

@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "Extra rechten zijn vereist om teamleden te beheren",
   "workspace.members.invite.partialSuccess": "{{success}} uitgenodigd, {{failed}} mislukt. Controleer de adressen en probeer opnieuw.",
   "workspace.members.invite.roleLabel": "Rol",
-  "workspace.members.invite.seatInsufficient": "Slechts {{remaining}} zitplaats(en) over. Koop meer zitplaatsen om {{required}} nieuw(e) lid(leden) uit te nodigen.",
-  "workspace.members.invite.seatInsufficientNoBuy": "Slechts {{remaining}} zitplaats(en) over. Vraag de werkruimte-eigenaar om meer zitplaatsen te kopen.",
   "workspace.members.invite.seatLimitReached": "Alle stoelen zijn in gebruik. Koop meer stoelen om te blijven uitnodigen, of nodig kijkers uit (zij nemen geen stoel in beslag).",
   "workspace.members.invite.seatLimitReachedFreePlan": "Alle stoelen in je Gratis werkruimte zijn in gebruik. Upgrade naar Pro voor meer stoelen, of nodig kijkers uit (zij nemen geen stoel in beslag).",
   "workspace.members.invite.seatLimitReachedNoBuy": "Alle stoelen zijn in gebruik. Vraag de eigenaar van de werkruimte om meer stoelen te kopen, of nodig kijkers uit (zij nemen geen stoel in beslag).",

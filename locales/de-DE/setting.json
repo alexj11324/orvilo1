@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "Zusätzliche Berechtigungen sind erforderlich, um Teammitglieder zu verwalten",
   "workspace.members.invite.partialSuccess": "{{success}} eingeladen, {{failed}} fehlgeschlagen. Überprüfen Sie die Adressen und versuchen Sie es erneut.",
   "workspace.members.invite.roleLabel": "Rolle",
-  "workspace.members.invite.seatInsufficient": "Nur noch {{remaining}} Platz/Plätze verfügbar. Kaufen Sie mehr Plätze, um {{required}} neues Mitglied/neue Mitglieder einzuladen.",
-  "workspace.members.invite.seatInsufficientNoBuy": "Nur noch {{remaining}} Platz/Plätze verfügbar. Bitten Sie den Arbeitsbereichseigentümer, weitere Plätze zu kaufen.",
   "workspace.members.invite.seatLimitReached": "Alle Plätze sind belegt. Kaufen Sie mehr Plätze, um weiterhin einzuladen, oder laden Sie stattdessen Betrachter ein (sie belegen keinen Platz).",
   "workspace.members.invite.seatLimitReachedFreePlan": "Alle Plätze in Ihrem kostenlosen Arbeitsbereich sind belegt. Upgraden Sie auf Pro für mehr Plätze, oder laden Sie stattdessen Betrachter ein (sie belegen keinen Platz).",
   "workspace.members.invite.seatLimitReachedNoBuy": "Alle Plätze sind belegt. Bitten Sie den Arbeitsbereichsinhaber, mehr Plätze zu kaufen, oder laden Sie stattdessen Betrachter ein (sie belegen keinen Platz).",

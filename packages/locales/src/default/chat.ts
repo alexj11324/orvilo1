@@ -1166,7 +1166,7 @@ export default {
   'onboarding.api.failed':
     'Setup could not finish. Check your API key, endpoint, and model, then retry — your entries are kept.',
   'onboarding.connect': 'Connect an agent',
-  'onboarding.prime.create': 'Create Orvilo AI',
+  'onboarding.prime.create': 'Create',
   'onboarding.prime.ready': 'A model provider is already set up — Orvilo AI is ready.',
   'onboarding.prime.unavailable': 'Orvilo AI needs an API key from a supported model provider.',
   'onboarding.builtin.action': 'Open settings',
@@ -1270,12 +1270,10 @@ export default {
   'connectAgent.providerDesc.hermes': 'Personal agent platform',
 
   // Composer agent picker · harnesses installed on this desktop
-  'localHarness.connect': 'Connect',
-  'localHarness.hideMissing': 'Hide not installed',
+  'localHarness.connect': 'Create',
   'localHarness.noneInstalled': 'No agents installed on this device yet',
   'localHarness.scanFailed': 'Could not check this device',
   'localHarness.scanning': 'Checking this device…',
-  'localHarness.showMissing': 'Show {{total}} not installed',
   'localHarness.title': 'Installed on this device',
 
   // Connect agent device guard banner
@@ -1844,8 +1842,10 @@ export default {
   'taskDetail.status.scheduled': 'Scheduled',
   'taskDetail.statusCascade.applyFailed': 'Could not update the task status. Try again.',
   'taskDetail.statusCascade.cancel': 'Cancel',
-  'taskDetail.statusCascade.description':
-    'This task still has {{count}} open subtask(s). Update them to {{status}} too?',
+  'taskDetail.statusCascade.description_other':
+    'This task still has {{count}} open subtasks. Update them to {{status}} too?',
+  'taskDetail.statusCascade.description_one':
+    'This task still has {{count}} open subtask. Update it to {{status}} too?',
   'taskDetail.statusCascade.loadFailed': 'Could not check the subtask statuses. Try again.',
   'taskDetail.statusCascade.parentOnly': 'Update parent only',
   'taskDetail.statusCascade.title': 'Update open subtasks too?',
@@ -1860,19 +1860,28 @@ export default {
   'taskDetail.runAll.layer': 'Layer {{index}}',
   'taskDetail.runAll.layerHint.first': 'Starts immediately',
   'taskDetail.runAll.layerHint.next': 'Waits for layer {{prev}} to finish',
-  'taskDetail.runAll.skipped.alreadyDone':
-    '{{count}} task(s) already completed or canceled — skipped',
-  'taskDetail.runAll.skipped.ineligible': '{{count}} task(s) running or scheduled — skipped',
-  'taskDetail.runAll.skipped.blockedExternally':
-    '{{count}} task(s) waiting on a blocker outside this batch — will run automatically when unblocked',
+  'taskDetail.runAll.skipped.alreadyDone_other':
+    '{{count}} tasks already completed or canceled — skipped',
+  'taskDetail.runAll.skipped.alreadyDone_one':
+    '{{count}} task already completed or canceled — skipped',
+  'taskDetail.runAll.skipped.ineligible_other': '{{count}} tasks running or scheduled — skipped',
+  'taskDetail.runAll.skipped.ineligible_one': '{{count}} task running or scheduled — skipped',
+  'taskDetail.runAll.skipped.blockedExternally_other':
+    '{{count}} tasks waiting on a blocker outside this batch — will run automatically when unblocked',
+  'taskDetail.runAll.skipped.blockedExternally_one':
+    '{{count}} task waiting on a blocker outside this batch — will run automatically when unblocked',
   'taskDetail.runAll.cycleWarning':
     'Circular dependency detected. Tasks involved in or blocked by the cycle will not run: {{members}}',
   'taskDetail.runAll.empty':
     'Nothing to run — every subtask is already completed, in flight, or stuck in a cycle.',
-  'taskDetail.runAll.confirm': 'Run {{count}} subtask(s)',
+  'taskDetail.runAll.confirm_other': 'Run {{count}} subtasks',
+  'taskDetail.runAll.confirm_one': 'Run {{count}} subtask',
   'taskDetail.runAll.cancel': 'Cancel',
-  'taskDetail.runAll.kickedOff': 'Started {{count}} subtask(s); downstream layers will follow.',
-  'taskDetail.runAll.partialFailure': 'Started {{ok}} of {{total}} subtask(s); {{failed}} failed.',
+  'taskDetail.runAll.kickedOff_other': 'Started {{count}} subtasks; downstream layers will follow.',
+  'taskDetail.runAll.kickedOff_one': 'Started {{count}} subtask; downstream layers will follow.',
+  'taskDetail.runAll.partialFailure_other':
+    'Started {{ok}} of {{total}} subtasks; {{failed}} failed.',
+  'taskDetail.runAll.partialFailure_one': 'Started {{ok}} of {{total}} subtask; {{failed}} failed.',
   'taskDetail.runAll.loading': 'Loading subtask plan...',
   'taskDetail.reassignDisabled': 'Cannot reassign agent while task is running',
   'taskDetail.handoff.title': 'Transfer execution?',

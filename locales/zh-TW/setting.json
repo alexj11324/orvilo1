@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "需要額外的權限來管理團隊成員",
   "workspace.members.invite.partialSuccess": "{{success}} 已邀請，{{failed}} 失敗。檢查地址並重試。",
   "workspace.members.invite.roleLabel": "角色",
-  "workspace.members.invite.seatInsufficient": "僅剩 {{remaining}} 個席位。購買更多席位以邀請 {{required}} 位新成員。",
-  "workspace.members.invite.seatInsufficientNoBuy": "僅剩 {{remaining}} 個席位。請工作區擁有者購買更多席位。",
   "workspace.members.invite.seatLimitReached": "所有席位已被使用。購買更多席位以繼續邀請，或者邀請觀察者（他們不佔用席位）。",
   "workspace.members.invite.seatLimitReachedFreePlan": "您的免費工作區的所有席位已被使用。升級到專業版以獲得更多席位，或者邀請觀察者（他們不佔用席位）。",
   "workspace.members.invite.seatLimitReachedNoBuy": "所有席位已被使用。請要求工作區擁有者購買更多席位，或者邀請觀察者（他們不佔用席位）。",

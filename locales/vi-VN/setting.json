@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "Cần thêm quyền để quản lý thành viên đội ngũ",
   "workspace.members.invite.partialSuccess": "{{success}} đã được mời, {{failed}} không thành công. Kiểm tra địa chỉ và thử lại.",
   "workspace.members.invite.roleLabel": "Vai trò",
-  "workspace.members.invite.seatInsufficient": "Chỉ còn {{remaining}} ghế. Mua thêm ghế để mời {{required}} thành viên mới.",
-  "workspace.members.invite.seatInsufficientNoBuy": "Chỉ còn {{remaining}} ghế. Yêu cầu chủ sở hữu không gian làm việc mua thêm ghế.",
   "workspace.members.invite.seatLimitReached": "Tất cả chỗ ngồi đã được sử dụng. Mua thêm chỗ ngồi để tiếp tục mời, hoặc mời người xem thay thế (họ không chiếm chỗ ngồi).",
   "workspace.members.invite.seatLimitReachedFreePlan": "Tất cả chỗ ngồi trong không gian làm việc Miễn phí của bạn đã được sử dụng. Nâng cấp lên Pro để có thêm chỗ ngồi, hoặc mời người xem thay thế (họ không chiếm chỗ ngồi).",
   "workspace.members.invite.seatLimitReachedNoBuy": "Tất cả chỗ ngồi đã được sử dụng. Yêu cầu chủ sở hữu không gian làm việc mua thêm chỗ ngồi, hoặc mời người xem thay thế (họ không chiếm chỗ ngồi).",

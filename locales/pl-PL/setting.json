@@ -2680,8 +2680,6 @@
   "workspace.members.invite.noPermissionHint": "Wymagane są dodatkowe uprawnienia do zarządzania członkami zespołu",
   "workspace.members.invite.partialSuccess": "{{success}} zaproszono, {{failed}} nie udało się. Sprawdź adresy i spróbuj ponownie.",
   "workspace.members.invite.roleLabel": "Rola",
-  "workspace.members.invite.seatInsufficient": "Pozostało tylko {{remaining}} miejsce(a). Kup więcej miejsc, aby zaprosić {{required}} nowego(ych) członka(ów).",
-  "workspace.members.invite.seatInsufficientNoBuy": "Pozostało tylko {{remaining}} miejsce(a). Poproś właściciela przestrzeni roboczej o zakup dodatkowych miejsc.",
   "workspace.members.invite.seatLimitReached": "Wszystkie miejsca są zajęte. Kup więcej miejsc, aby kontynuować zapraszanie, lub zaproś widzów (nie zajmują miejsca).",
   "workspace.members.invite.seatLimitReachedFreePlan": "Wszystkie miejsca w Twoim darmowym miejscu pracy są zajęte. Przejdź na plan Pro, aby uzyskać więcej miejsc, lub zaproś widzów (nie zajmują miejsca).",
   "workspace.members.invite.seatLimitReachedNoBuy": "Wszystkie miejsca są zajęte. Poproś właściciela miejsca pracy o zakup dodatkowych miejsc, lub zaproś widzów (nie zajmują miejsca).",

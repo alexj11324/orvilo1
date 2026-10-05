@@ -249,7 +249,12 @@ const GroupItem = memo<GroupItemComponentProps>(({ group, expanded }) => {
         {hasCollapsedStatus && <CollapsedStatusBadges counts={statusCounts} />}
         {hasCollapsedUnread && <CollapsedUnreadDot count={unreadCount} />}
         {canAddTopic && (
-          <span className={hasCollapsedIndicators ? styles.addTopicAction : undefined}>
+          <span
+            className={cx(
+              'inline-flex',
+              hasCollapsedIndicators ? styles.addTopicAction : undefined,
+            )}
+          >
             <ActionIcon
               icon={PlusIcon}
               size={'small'}

@@ -123,6 +123,7 @@
     "test": "npm run test-app && npm run test-server",
     "test:e2e": "pnpm --filter @orvilo/e2e-tests test",
     "test:e2e:smoke": "pnpm --filter @orvilo/e2e-tests test:smoke",
+    "test:ui-alignment": "playwright test --config tests/ui-alignment/playwright.config.ts",
     "test:update": "vitest -u",
     "test-app": "vitest run",
     "test-app:coverage": "vitest --coverage --silent='passed-only'",

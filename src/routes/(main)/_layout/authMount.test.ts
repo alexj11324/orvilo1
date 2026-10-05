@@ -9,7 +9,7 @@ const { nullComponent, passthrough } = vi.hoisted(() => ({
   passthrough: () => ({ default: ({ children }: { children?: unknown }) => children }),
 }));
 
-vi.mock('@/const/version', () => ({ isDesktop: true }));
+vi.mock('@/const/version', () => ({ CURRENT_VERSION: '0.0.0', isDesktop: true }));
 vi.mock('@/hooks/usePlatform', () => ({ usePlatform: () => ({ isPWA: false }) }));
 vi.mock('@/store/serverConfig', () => ({
   featureFlagsSelectors: () => ({ showCloudPromotion: false }),

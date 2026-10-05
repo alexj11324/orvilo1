@@ -8,7 +8,6 @@ import { useTranslation } from 'react-i18next';
 
 import { useBusinessConversationAnalytics } from '@/business/client/hooks/useBusinessConversationAnalytics';
 import AgentHome from '@/features/AgentHome';
-import AgentOnboarding from '@/features/AgentOnboarding';
 import {
   TopicMigrationPlaceholder,
   useTopicMigrationPending,
@@ -198,19 +197,17 @@ const Conversation = memo(() => {
               <Loader2 className="animate-spin" color={cssVar.colorTextDescription} size={20} />
             </div>
           ) : (
-            /* A fresh install used to land here with a composer and a builtin
-               agent that had no provider credential behind it, so the first
-               send could only fail. The gate swaps this whole group for the
-               setup screen while nothing can run, and hands it straight back
-               once something can. */
-            <AgentOnboarding>
+            /* The first-agent gate lives at the (main) layout now — while no
+               usable agent exists it covers the whole window, so by the time
+               this renders the composer is always backed by a real agent. */
+            <>
               {chatInput}
               {/* Reference state B: the examples row sits inside the same
                   centered group as the composer, so its appearance lifts the
                   composer (~91px in the reference) instead of needing a fixed
                   offset. */}
               <ExamplePrompts />
-            </AgentOnboarding>
+            </>
           )}
         </InboxAgentLanding>
       ) : (

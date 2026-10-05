@@ -1,10 +1,10 @@
 'use client';
 
 import type { HeterogeneousAgentType } from '@orvilo/heterogeneous-agents';
-import { createStaticStyles, cx } from 'antd-style';
+import { createStaticStyles } from 'antd-style';
 import isEqual from 'fast-deep-equal';
-import { ChevronDown, ChevronRight, CircleAlert } from 'lucide-react';
-import { memo, useCallback, useEffect, useMemo, useState } from 'react';
+import { CircleAlert } from 'lucide-react';
+import { memo, useCallback, useEffect, useMemo } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { Button } from '@/components/ui/button';
@@ -56,15 +56,6 @@ const styles = createStaticStyles(({ css, cssVar }) => ({
 
     &:hover {
       background: ${cssVar.colorFillSecondary};
-    }
-  `,
-  // Not installed: still listed (behind the expander) so the user can tell
-  // "not on this machine" from "the picker forgot about it".
-  rowDisabled: css`
-    cursor: default;
-
-    &:hover {
-      background: transparent;
     }
   `,
   status: css`
@@ -131,7 +122,6 @@ interface LocalHarnessSectionProps {
 const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
   const { t } = useTranslation('chat');
   const { scan, state } = useAgentScan();
-  const [showMissing, setShowMissing] = useState(false);
 
   // Probe when the picker opens. The section unmounts with the popover, so
   // reopening the picker is itself the implicit retry for a failed scan; the
@@ -154,8 +144,9 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
     [connectedTypes, state.agents],
   );
 
+  // Only installed harnesses are listed — a connect surface offers what can
+  // actually be imported, so uninstalled rows never render.
   const installed = rows.filter((row) => row.available);
-  const missing = rows.filter((row) => !row.available);
 
   const retry = useCallback(() => {
     void scan({ kind: 'local' });
@@ -166,23 +157,7 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
     // The subtitle is the whole reason a row exists here: the version proves
     // the probe really found the binary, and the failure text says why a
     // harness the user knows is installed did not answer.
-    const subtitle = row.available
-      ? row.version
-      : (row.reason ?? t('connectAgent.create.notInstalled'));
-
-    if (!row.available) {
-      return (
-        <div className={cx(styles.row, styles.rowDisabled)} key={provider.type}>
-          <provider.brand.Avatar size={20} />
-          <div className={styles.text}>
-            <div className={styles.name}>{provider.title}</div>
-            <div className={styles.subtitle} title={row.reason}>
-              {subtitle}
-            </div>
-          </div>
-        </div>
-      );
-    }
+    const subtitle = row.version ?? row.reason;
 
     return (
       <div
@@ -256,18 +231,6 @@ const LocalHarnessSection = memo<LocalHarnessSectionProps>(({ onConnect }) => {
               <Button size={'xs'} variant={'ghost'} onClick={retry}>
                 {t('connectAgent.create.rescan')}
               </Button>
-            </>
-          )}
-
-          {missing.length > 0 && (
-            <>
-              <Button size={'xs'} variant={'ghost'} onClick={() => setShowMissing((prev) => !prev)}>
-                {showMissing ? <ChevronDown /> : <ChevronRight />}
-                {showMissing
-                  ? t('localHarness.hideMissing')
-                  : t('localHarness.showMissing', { total: missing.length })}
-              </Button>
-              {showMissing && missing.map(renderRow)}
             </>
           )}
         </>

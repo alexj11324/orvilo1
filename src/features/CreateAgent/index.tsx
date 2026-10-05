@@ -201,7 +201,15 @@ const RuntimeChooser = ({
           onValueChange={(value) => setRuntime(value ?? 'prime')}
         >
           <SelectTrigger className="w-full">
-            <SelectValue />
+            <SelectValue>
+              {(value: string) =>
+                value === 'prime'
+                  ? t('creation.runtime.prime')
+                  : (imported[Number(value)]?.title ??
+                    imported[Number(value)]?.agencyConfig?.heterogeneousProvider?.type ??
+                    value)
+              }
+            </SelectValue>
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="prime">{t('creation.runtime.prime')}</SelectItem>
@@ -224,7 +232,14 @@ const RuntimeChooser = ({
               onValueChange={(value) => setHostId(value ?? '')}
             >
               <SelectTrigger className="w-full">
-                <SelectValue placeholder={t('creation.runtime.hostEmpty')} />
+                {/* Render the device label, never the raw id: a value not yet
+                    in the loaded list used to fall back to showing the UUID. */}
+                <SelectValue placeholder={t('creation.runtime.hostEmpty')}>
+                  {(value: string) => {
+                    const device = devices.find((item) => item.deviceId === value);
+                    return device ? getDeviceLabel(device, t('common:desktop')) : value;
+                  }}
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {devices.map((device) => (
@@ -258,7 +273,18 @@ const RuntimeChooser = ({
               onValueChange={(value) => setBindingId(value === 'configure' ? '' : (value ?? ''))}
             >
               <SelectTrigger className="w-full">
-                <SelectValue />
+                {/* Same fix as the host select: show "provider / model", never
+                    the binding's UUID, when the select is closed. */}
+                <SelectValue>
+                  {(value: string) =>
+                    value === 'configure'
+                      ? t('onboarding.api.configure')
+                      : (() => {
+                          const binding = bindings.find((item) => item.id === value);
+                          return binding ? `${binding.provider} / ${binding.model}` : value;
+                        })()
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 {bindings.map((binding) => (

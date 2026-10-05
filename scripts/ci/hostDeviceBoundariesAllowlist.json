@@ -1,1662 +1,6 @@
 {
-  "$comment": "Precise-edge exemptions for scripts/ci/checkHostDeviceBoundaries.mjs (v2, WD-06/FIX-E). Each entry owns exactly one edge: {rule, importer, target, scope, owner, reason, exit, expires?}. `importer` is a repo-relative path or precise glob; `target` is the resolved target string the gate emits (builtin:<name>, pkg:<name>, file:<repo-path>, unresolved:<spec>). `scope`: direct = edge judged on the importer's own source; closure = edge judged inside the web entry closure. `isdesktop-census` entries use importer+max (a shrinking usage cap — regressions fail). A NEW importer hitting an exempted target FAILS. An allowlisted edge that vanishes is STALE and FAILS — delete the entry with the debt.",
+  "$comment": "Precise-edge exemptions for scripts/ci/checkHostDeviceBoundaries.mjs (v2, WD-06/FIX-E). Each entry owns exactly one edge: {rule, importer, target, scope, owner, reason, exit, expires?}. `importer` is a repo-relative path or precise glob; `target` is the resolved target string the gate emits (builtin:<name>, pkg:<name>, file:<repo-path>, unresolved:<spec>). `scope`: direct = edge judged on the importer's own source; closure = edge judged inside the web entry closure. `isdesktop-census` entries use importer+max (a shrinking usage cap \u2014 regressions fail). A NEW importer hitting an exempted target FAILS. An allowlisted edge that vanishes is STALE and FAILS \u2014 delete the entry with the debt.",
   "edges": [
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/app/spa/[variants]/[[...path]]/route.ts",
-      "scope": "direct",
-      "owner": "wd-02",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/business/client/hooks/useHeteroAgentCloudConfig.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/components/Analytics/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/components/AsyncError/recoverAuthentication.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/components/HtmlPreview/PreviewDrawer.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/components/NProgress/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/components/Skeleton/NavPanel/SideBar.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentDocumentPage/Header/useMenu.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentDocumentPage/RightPanel/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentSettings/AgentDeviceSettings.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentSettings/AgentModelSettings.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentSettings/ExternalAgentConnectionSettings.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentSettings/HeterogeneousAgentStatusCard.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentSidebar/Topic/List/Item/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentSidebar/Topic/List/Item/useDropdownMenu.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentSidebar/Topic/TopicListContent/ByProjectMode/GroupItem.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/AgentSidebar/Topic/useDropdownMenu.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Billboard/actions.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/ControlBar/HeteroControlBar/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/ControlBar/HeteroDeviceSwitcher.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 11
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/ControlBar/WorkingDirectoryPicker.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/ControlBar/WorkingDirectorySection.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/ControlBar/useMigrateDeviceRecents.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/ControlBar/useRepoType.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/ControlBar/useWorkspaceSurface.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/InputEditor/ActionTag/useSlashActionItems.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/InputEditor/LocalFileTag/LocalFileTag.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/InputEditor/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/hooks/useLocalSandboxCapability.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatInput/hooks/useSelectExecutionTarget.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ChatTerminal/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/CommandMenu/analytics.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/CommandMenu/useCommandMenu.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ConnectAgent/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 6
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/Error/OllamaSetupGuide/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/Error/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/Markdown/plugins/Link/Render/InternalEntityLink.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/Markdown/plugins/Link/Render/LinkChip.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/Markdown/plugins/LocalFileLink/Render.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/Messages/EditedFilesCard/useOpenEditedFile.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/Messages/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/WorkingSidebar/Browser/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/WorkingSidebar/Browser/useBrowserSidebarState.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/WorkingSidebar/Files/useGitWorkingTreeFiles.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/WorkingSidebar/Files/useProjectFiles.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/WorkingSidebar/ResourcesSection/SkillsGroup.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/WorkingSidebar/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Conversation/useLocalPathReference.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DailyBrief/BriefActionLink.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DesktopLayoutContainer/cssVariables.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DesktopLayoutContainer/style.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DesktopOnboarding/steps/LoginStep.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 5
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DevDock/actions.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DevDock/registerBuiltinItems.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DevDock/widgets/MemoryPopover/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DevDock/widgets/RoutePathWidget.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DeviceManager/DeviceDetailPanel.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DeviceManager/DeviceManager.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/DeviceManager/useDeviceList.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/EditorCanvas/InternalEditor.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Electron/HeterogeneousAgent/StatusGuide/GuideActions.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Electron/HeterogeneousAgent/StatusGuide/states/AuthRequiredState.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Electron/TabHost/useTabPreviewCapture.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Electron/groupRouteScope.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Electron/system/useWatchThemeUpdate.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Electron/titlebar/TabBar/hooks/useTabPreview.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/GlobalApprovalNotification/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/LocalFile/useLocalFileActions.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/NavPanel/ToggleLeftPanelButton.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/NavPanel/components/NavPanelDraggable.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/OllamaSetupGuide/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Onboarding/DesktopAuthGate.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Onboarding/finishOnboarding.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Onboarding/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/OpenInAppButton/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/PageEditor/Copilot/TopicSelector/useDropdownMenu.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/PageEditor/Header/useMenu.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/PageEditor/store/action.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/PluginDevModal/MCPManifestForm/MCPTypeSelect.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/PluginDevModal/MCPManifestForm/QuickImportSection.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/PluginDevModal/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Portal/LocalFile/Body.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 5
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Portal/LocalFile/Header.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Portal/LocalFile/TabStrip.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Portal/TaskDetail/Header.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ProfileEditor/AgentTool.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ReUIShell/SidebarShell.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/ReUIShell/WorkspaceSwitcher.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Recommendations/actions/heteroAgent.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 1
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Recommendations/actions/types.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 1
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Recommendations/hooks/useEligibleActions.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Recommendations/hooks/useHeteroDetections.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Reviews/ConnectGitHubButton.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Reviews/useGitHubConnection.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/RouteMeta/RouteMetaBridge.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/about/features/Version.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/advanced/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/apikey/features/ApiKey.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/appearance/features/Desktop.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/appearance/features/Font/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 5
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/common/features/Common/Common.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/connector/features/McpPresetItem.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/connector/features/useGitHubMcpConnect.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/devices/OsPermissionsPanel.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/hooks/useCategory.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/hooks/useSettingsCapability.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/hotkey/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/labs/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/memory/features/ManageMemoryButton.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/profile/features/EmailRow.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/Settings/profile/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/SettingsSearch/items.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 14
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/SettingsSearch/useSettingsSearch.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/SkillsList/useProjectSkillResolver.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/User/UserAvatar.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/User/UserPanel/PanelContent.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/User/UserPanel/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/User/UserPanel/useMenu.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/WorkspaceSetting/LinearImport/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/features/WorkspaceSetting/hooks/useCategory.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/helpers/effectiveWorkingDirectory.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/helpers/localSandbox.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/helpers/parserPlaceholder/index.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/helpers/skillFilters.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/helpers/toolAvailability.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/helpers/toolFilters.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/helpers/workingDirectoryPath.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/hooks/useAppOrigin.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/hooks/useCreateHeteroAgent.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/hooks/useEffectiveWorkingDirectory.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/hooks/useHotkeys/chatScope.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/hooks/useSignOut.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/hooks/useUserAvatar.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/layout/AuthProvider/MarketAuth/MarketAuthProvider.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 9
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/layout/AuthProvider/MarketAuth/oidc.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/layout/AuthProvider/index.vite.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/layout/SPAGlobalProvider/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 5
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/libs/analytics/client.ts",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/libs/bootMetrics/finalize.ts",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/libs/next/workbenchNavigation.ts",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/libs/swr/useCacheScope.ts",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/_layout/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/agent/_layout/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/agent/features/Conversation/Header/HeaderActions/useMenu.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/agent/features/Conversation/Header/TerminalPanelToggle/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/agent/features/Conversation/HeterogeneousChatInput/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/agent/profile/features/Header/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/group/_layout/GroupIdSync.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/group/_layout/Sidebar/Topic/List/Item/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/group/_layout/Sidebar/Topic/List/Item/useDropdownMenu.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/routes/(main)/group/_layout/index.tsx",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/services/chat/mecha/contextEngineering.ts",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/services/global.ts",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/services/hashFile/index.ts",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/services/localExecutionIdentity.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/services/targetRequiredError.ts",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/agent/selectors/agentByIdSelectors.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/agent/selectors/chatConfigByIdSelectors.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/agent/selectors/selectors.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/agent/slices/agent/action.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/chat/slices/agentRun/actions/dispatch/agentDispatcher.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 6
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/chat/slices/agentRun/actions/entries/conversationLifecycle.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 5
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/chat/slices/agentRun/actions/lifecycle/buildRunLifecycle.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/chat/slices/agentRun/actions/transports/client/streamingExecutor.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/chat/slices/agentRun/actions/transports/gateway/gateway.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/chat/slices/topic/selectors.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/chat/utils/index.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/chat/utils/topicWorkingDirGit.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/device/gitHooks.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/electron/actions/gateway.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 3
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/electron/actions/settings.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 4
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/electron/actions/sync.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/global/actions/general.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 7
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/tool/slices/builtin/executors/orvilo-agent-documents.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/tool/slices/builtin/executors/worktreeDetection.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/tool/slices/connector/action.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/user/slices/common/action.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/store/user/slices/settings/selectors/general.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/styles/antdOverride.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "isdesktop-census",
-      "importer": "src/utils/navigation.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code — gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
-      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
-      "max": 2
-    },
-    {
-      "rule": "types-purity",
-      "importer": "packages/app-config/src/routes/settings.ts",
-      "target": "file:src/store/global/initialState.ts",
-      "scope": "direct",
-      "owner": "wd-05",
-      "reason": "SettingsTabs enum imported from src/store/global/initialState — contract package climbing into app store code.",
-      "exit": "SettingsTabs type moves to a contract location (packages/types or local)"
-    },
-    {
-      "rule": "shared-to-native",
-      "importer": "src/libs/debug-file-logger.ts",
-      "target": "builtin:fs",
-      "scope": "direct",
-      "owner": "wd-02",
-      "reason": "debug file logger writes via node:fs under desktop — host-only adapter should own it.",
-      "exit": "logger moves to the desktop adapter / host port"
-    },
-    {
-      "rule": "shared-to-native",
-      "importer": "src/libs/mcp/client.ts",
-      "target": "builtin:child_process",
-      "scope": "direct",
-      "owner": "wd-04",
-      "reason": "stdio MCP spawn in shared libs — gated at call sites on isDesktop today; wd-04 moves spawn behind the device-scoped transport so web never links the exec path.",
-      "exit": "spawn moved behind device adapter; builtin import disappears"
-    },
-    {
-      "rule": "shared-to-native",
-      "importer": "src/utils/electron/ipc.ts",
-      "target": "file:apps/desktop/src/main/exports.d.ts",
-      "scope": "direct",
-      "owner": "wd-03",
-      "reason": "@orvilo/desktop-ipc-typings IS apps/desktop/src/main — the type-export barrel of the Electron impl; shared util reaching it through the workspace name is the cross-package indirection F08 calls out. Split the typing surface out of apps/desktop.",
-      "exit": "typings package source moves under packages/ (or the importer moves behind the host-adapter layer)"
-    },
     {
       "rule": "web-closure",
       "importer": "apps/server/src/services/controlPlane/coreRuntimeHost.ts",
@@ -1865,6 +209,15 @@
       "exit": "seed leaves the web entry closure"
     },
     {
+      "rule": "types-purity",
+      "importer": "packages/app-config/src/routes/settings.ts",
+      "target": "file:src/store/global/initialState.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "SettingsTabs enum imported from src/store/global/initialState \u2014 contract package climbing into app store code.",
+      "exit": "SettingsTabs type moves to a contract location (packages/types or local)"
+    },
+    {
       "rule": "web-closure",
       "importer": "packages/device-gateway-client/src/client.ts",
       "target": "builtin:os",
@@ -1934,6 +287,51 @@
       "scope": "closure",
       "owner": "wd-04",
       "reason": "fs users (tempFileManager, file logger, locomoto/locomo converter, file-store) reachable transitively; dies when device services isolate",
+      "exit": "seed leaves the web entry closure"
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/heterogeneous-agents/src/scan/automationReadiness.ts",
+      "target": "builtin:child_process",
+      "scope": "closure",
+      "owner": "wd-04",
+      "reason": "child_process in scan/readiness host probe path; same exit as spawn/*",
+      "exit": "seed leaves the web entry closure"
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/heterogeneous-agents/src/scan/automationReadiness.ts",
+      "target": "builtin:fs",
+      "scope": "closure",
+      "owner": "wd-04",
+      "reason": "fs in scan/readiness host probe path; same exit as spawn/*",
+      "exit": "seed leaves the web entry closure"
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/heterogeneous-agents/src/scan/automationReadiness.ts",
+      "target": "builtin:fs/promises",
+      "scope": "closure",
+      "owner": "wd-04",
+      "reason": "fs/promises in scan/readiness host probe path; same exit as spawn/*",
+      "exit": "seed leaves the web entry closure"
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/heterogeneous-agents/src/scan/scanHost.ts",
+      "target": "builtin:child_process",
+      "scope": "closure",
+      "owner": "wd-04",
+      "reason": "child_process in host scan path; same exit as spawn/*",
+      "exit": "seed leaves the web entry closure"
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/heterogeneous-agents/src/scan/scanHost.ts",
+      "target": "builtin:os",
+      "scope": "closure",
+      "owner": "wd-04",
+      "reason": "os in host scan path; same exit as spawn/*",
       "exit": "seed leaves the web entry closure"
     },
     {
@@ -2109,12 +507,1299 @@
     },
     {
       "rule": "web-closure",
+      "importer": "packages/prime-harness/src/readiness.ts",
+      "target": "builtin:child_process",
+      "scope": "closure",
+      "owner": "wd-04",
+      "reason": "child_process in runner readiness probe; same exit as spawn/*",
+      "exit": "seed leaves the web entry closure"
+    },
+    {
+      "rule": "web-closure",
+      "importer": "packages/prime-harness/src/readiness.ts",
+      "target": "builtin:fs/promises",
+      "scope": "closure",
+      "owner": "wd-04",
+      "reason": "fs/promises in runner readiness probe; same exit as spawn/*",
+      "exit": "seed leaves the web entry closure"
+    },
+    {
+      "rule": "web-closure",
       "importer": "packages/trpc/src/middleware/openTelemetry.ts",
       "target": "builtin:process",
       "scope": "closure",
       "owner": "wd-04",
       "reason": "otel node adapter + process env reads reachable; exit = node-only subtree split",
       "exit": "seed leaves the web entry closure"
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/app/spa/[variants]/[[...path]]/route.ts",
+      "scope": "direct",
+      "owner": "wd-02",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/business/client/hooks/useHeteroAgentCloudConfig.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/components/Analytics/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/components/AsyncError/recoverAuthentication.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/components/HtmlPreview/PreviewDrawer.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/components/NProgress/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/components/Skeleton/NavPanel/SideBar.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentDocumentPage/Header/useMenu.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentDocumentPage/RightPanel/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentSettings/AgentDeviceSettings.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentSettings/AgentModelSettings.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentSettings/ExternalAgentConnectionSettings.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentSettings/HeterogeneousAgentStatusCard.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentSidebar/Topic/List/Item/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentSidebar/Topic/List/Item/useDropdownMenu.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentSidebar/Topic/TopicListContent/ByProjectMode/GroupItem.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/AgentSidebar/Topic/useDropdownMenu.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Billboard/actions.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/ControlBar/HeteroControlBar/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/ControlBar/HeteroDeviceSwitcher.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 11
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/ControlBar/WorkingDirectoryPicker.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/ControlBar/WorkingDirectorySection.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/ControlBar/useMigrateDeviceRecents.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/ControlBar/useRepoType.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/ControlBar/useWorkspaceSurface.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/InputEditor/ActionTag/useSlashActionItems.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/InputEditor/LocalFileTag/LocalFileTag.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/InputEditor/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/hooks/useLocalSandboxCapability.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatInput/hooks/useSelectExecutionTarget.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ChatTerminal/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/CommandMenu/analytics.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/CommandMenu/useCommandMenu.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ConnectAgent/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 6
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/Error/OllamaSetupGuide/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/Error/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/Markdown/plugins/Link/Render/InternalEntityLink.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/Markdown/plugins/Link/Render/LinkChip.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/Markdown/plugins/LocalFileLink/Render.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/Messages/EditedFilesCard/useOpenEditedFile.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/Messages/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/WorkingSidebar/Browser/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/WorkingSidebar/Browser/useBrowserSidebarState.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/WorkingSidebar/Files/useGitWorkingTreeFiles.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/WorkingSidebar/Files/useProjectFiles.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/WorkingSidebar/ResourcesSection/SkillsGroup.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/WorkingSidebar/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Conversation/useLocalPathReference.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DailyBrief/BriefActionLink.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DesktopLayoutContainer/cssVariables.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DesktopLayoutContainer/style.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DesktopOnboarding/steps/LoginStep.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 5
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DevDock/actions.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DevDock/registerBuiltinItems.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DevDock/widgets/MemoryPopover/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DevDock/widgets/RoutePathWidget.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DeviceManager/DeviceDetailPanel.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DeviceManager/DeviceManager.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/DeviceManager/useDeviceList.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/EditorCanvas/InternalEditor.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Electron/HeterogeneousAgent/StatusGuide/GuideActions.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Electron/HeterogeneousAgent/StatusGuide/states/AuthRequiredState.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Electron/TabHost/useTabPreviewCapture.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Electron/groupRouteScope.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Electron/system/useWatchThemeUpdate.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Electron/titlebar/TabBar/hooks/useTabPreview.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/GlobalApprovalNotification/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/LocalFile/useLocalFileActions.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/NavPanel/ToggleLeftPanelButton.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/NavPanel/components/NavPanelDraggable.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/OllamaSetupGuide/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Onboarding/DesktopAuthGate.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Onboarding/finishOnboarding.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Onboarding/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/OpenInAppButton/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/PageEditor/Copilot/TopicSelector/useDropdownMenu.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/PageEditor/Header/useMenu.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/PageEditor/store/action.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/PluginDevModal/MCPManifestForm/MCPTypeSelect.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/PluginDevModal/MCPManifestForm/QuickImportSection.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/PluginDevModal/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Portal/LocalFile/Body.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 5
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Portal/LocalFile/Header.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Portal/LocalFile/TabStrip.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Portal/TaskDetail/Header.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ProfileEditor/AgentTool.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ReUIShell/SidebarShell.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/ReUIShell/WorkspaceSwitcher.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Recommendations/actions/heteroAgent.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 1
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Recommendations/actions/types.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 1
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Recommendations/hooks/useEligibleActions.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Recommendations/hooks/useHeteroDetections.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Reviews/ConnectGitHubButton.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Reviews/useGitHubConnection.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/RouteMeta/RouteMetaBridge.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/about/features/Version.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/advanced/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/apikey/features/ApiKey.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/appearance/features/Desktop.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/appearance/features/Font/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 5
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/common/features/Common/Common.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/connector/features/McpPresetItem.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/connector/features/useGitHubMcpConnect.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/devices/OsPermissionsPanel.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/hooks/useCategory.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/hooks/useSettingsCapability.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/hotkey/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/labs/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/memory/features/ManageMemoryButton.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/profile/features/EmailRow.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/Settings/profile/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/SettingsSearch/items.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 14
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/SettingsSearch/useSettingsSearch.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/SkillsList/useProjectSkillResolver.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/User/UserAvatar.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/User/UserPanel/PanelContent.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/User/UserPanel/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/User/UserPanel/useMenu.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/WorkspaceSetting/LinearImport/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/features/WorkspaceSetting/hooks/useCategory.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/helpers/effectiveWorkingDirectory.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/helpers/localSandbox.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/helpers/parserPlaceholder/index.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/helpers/skillFilters.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/helpers/toolAvailability.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/helpers/toolFilters.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/helpers/workingDirectoryPath.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/hooks/useAppOrigin.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/hooks/useCreateHeteroAgent.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/hooks/useEffectiveWorkingDirectory.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/hooks/useHotkeys/chatScope.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/hooks/useSignOut.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/hooks/useUserAvatar.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/layout/AuthProvider/MarketAuth/MarketAuthProvider.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 9
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/layout/AuthProvider/MarketAuth/oidc.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/layout/AuthProvider/index.vite.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/layout/SPAGlobalProvider/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 5
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/libs/analytics/client.ts",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/libs/bootMetrics/finalize.ts",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "shared-to-native",
+      "importer": "src/libs/debug-file-logger.ts",
+      "target": "builtin:fs",
+      "scope": "direct",
+      "owner": "wd-02",
+      "reason": "debug file logger writes via node:fs under desktop \u2014 host-only adapter should own it.",
+      "exit": "logger moves to the desktop adapter / host port"
+    },
+    {
+      "rule": "shared-to-native",
+      "importer": "src/libs/mcp/client.ts",
+      "target": "builtin:child_process",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "stdio MCP spawn in shared libs \u2014 gated at call sites on isDesktop today; wd-04 moves spawn behind the device-scoped transport so web never links the exec path.",
+      "exit": "spawn moved behind device adapter; builtin import disappears"
     },
     {
       "rule": "web-closure",
@@ -2126,13 +1811,391 @@
       "exit": "seed leaves the web entry closure"
     },
     {
+      "rule": "isdesktop-census",
+      "importer": "src/libs/next/workbenchNavigation.ts",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/libs/swr/useCacheScope.ts",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/_layout/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/agent/_layout/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/agent/features/Conversation/Header/HeaderActions/useMenu.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/agent/features/Conversation/Header/TerminalPanelToggle/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/agent/features/Conversation/HeterogeneousChatInput/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/agent/profile/features/Header/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/group/_layout/GroupIdSync.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/group/_layout/Sidebar/Topic/List/Item/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/group/_layout/Sidebar/Topic/List/Item/useDropdownMenu.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/routes/(main)/group/_layout/index.tsx",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/services/chat/mecha/contextEngineering.ts",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/services/global.ts",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/services/hashFile/index.ts",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/services/localExecutionIdentity.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/services/targetRequiredError.ts",
+      "scope": "direct",
+      "owner": "wd-04",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/agent/selectors/agentByIdSelectors.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/agent/selectors/chatConfigByIdSelectors.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/agent/selectors/selectors.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/agent/slices/agent/action.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/chat/slices/agentRun/actions/dispatch/agentDispatcher.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 6
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/chat/slices/agentRun/actions/entries/conversationLifecycle.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 5
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/chat/slices/agentRun/actions/lifecycle/buildRunLifecycle.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/chat/slices/agentRun/actions/transports/client/streamingExecutor.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/chat/slices/agentRun/actions/transports/gateway/gateway.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/chat/slices/topic/selectors.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/chat/utils/index.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/chat/utils/topicWorkingDirGit.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/device/gitHooks.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/electron/actions/gateway.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 3
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/electron/actions/settings.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 4
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/electron/actions/sync.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/global/actions/general.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 7
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/tool/slices/builtin/executors/orvilo-agent-documents.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/tool/slices/builtin/executors/worktreeDetection.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/tool/slices/connector/action.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/user/slices/common/action.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/store/user/slices/settings/selectors/general.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/styles/antdOverride.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
+    },
+    {
+      "rule": "shared-to-native",
+      "importer": "src/utils/electron/ipc.ts",
+      "target": "file:apps/desktop/src/main/exports.d.ts",
+      "scope": "direct",
+      "owner": "wd-03",
+      "reason": "@orvilo/desktop-ipc-typings IS apps/desktop/src/main \u2014 the type-export barrel of the Electron impl; shared util reaching it through the workspace name is the cross-package indirection F08 calls out. Split the typing surface out of apps/desktop.",
+      "exit": "typings package source moves under packages/ (or the importer moves behind the host-adapter layer)"
+    },
+    {
       "rule": "web-closure",
       "importer": "src/utils/electron/ipc.ts",
       "target": "file:apps/desktop/src/main/exports.d.ts",
       "scope": "closure",
       "owner": "wd-03",
-      "reason": "electron IPC typings barrel (apps/desktop/src/main) reachable inside the web entry closure — type surface must move out of the Electron impl tree.",
+      "reason": "electron IPC typings barrel (apps/desktop/src/main) reachable inside the web entry closure \u2014 type surface must move out of the Electron impl tree.",
       "exit": "typings package source moves under packages/ and the closure edge disappears"
+    },
+    {
+      "rule": "isdesktop-census",
+      "importer": "src/utils/navigation.ts",
+      "scope": "direct",
+      "owner": "wd-05",
+      "reason": "Migration-period isDesktop/__ELECTRON__ usage in shared product code \u2014 gate keeps the debt from growing while the owning work package moves it behind the host-adapter layer or a capability check.",
+      "exit": "host semantics move to src/platform/* adapters or capability registries; file leaves this list",
+      "max": 2
     }
   ]
 }

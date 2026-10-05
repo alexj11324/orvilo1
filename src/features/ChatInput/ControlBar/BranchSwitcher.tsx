@@ -106,6 +106,12 @@ const styles = createStaticStyles(({ css }) => ({
     line-height: 20px;
     color: ${cssVar.colorText};
 
+    &[data-current='true'],
+    &[data-current='true']:hover,
+    &[data-current='true']:focus {
+      background: var(--muted);
+    }
+
     /* Swap the checkmark for the row actions while hovering the row. */
     &:hover .branch-row-actions {
       display: flex;
@@ -254,6 +260,7 @@ interface BranchSwitcherProps {
   placement?: 'topLeft' | 'bottomLeft' | 'bottomRight';
   /** The repo the conversation is anchored to (worktrees hang off it). */
   sourcePath: string;
+  topicId?: string | null;
   /** Used to route a checkout into the worktree that already holds the branch. */
   worktrees: DeviceGitWorktreeListItem[];
 }
@@ -261,6 +268,7 @@ interface BranchSwitcherProps {
 const BranchSwitcher = memo<BranchSwitcherProps>(
   ({
     agentId,
+    topicId,
     path,
     currentBranch,
     deviceId,
@@ -280,7 +288,7 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
     const [search, setSearch] = useState('');
     const [busyBranch, setBusyBranch] = useState<string | null>(null);
     const currentRowRef = useRef<HTMLDivElement>(null);
-    const switchWorktree = useSwitchWorktree({ agentId, isGithub, sourcePath });
+    const switchWorktree = useSwitchWorktree({ agentId, isGithub, sourcePath, topicId });
 
     const {
       data: branches = [],
@@ -555,6 +563,7 @@ const BranchSwitcher = memo<BranchSwitcherProps>(
                   <DropdownMenuItem
                     className={styles.item}
                     closeOnClick={false}
+                    data-current={isCurrent ? 'true' : undefined}
                     key={branch.name}
                     ref={isCurrent ? currentRowRef : undefined}
                     onClick={() => handleCheckout(branch.name)}

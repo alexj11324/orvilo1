@@ -1,4 +1,5 @@
 import { isDesktop } from '@/const/version';
+import { selectAgentForConversation } from '@/features/Conversation/selectAgent';
 import { resolvePostOnboardingTargetUrl } from '@/utils/onboardingRedirect';
 
 /**
@@ -9,6 +10,7 @@ import { resolvePostOnboardingTargetUrl } from '@/utils/onboardingRedirect';
  * launch simply takes the `/onboarding` detour once and skips out again.
  */
 export const repairDesktopOnboardingMarkers = async (): Promise<void> => {
+  if (!isDesktop) return;
   const [{ electronSystemService }, storage] = await Promise.all([
     import('@/services/electron/system'),
     import('@/features/DesktopOnboarding/storage'),
@@ -27,8 +29,12 @@ export const repairDesktopOnboardingMarkers = async (): Promise<void> => {
 export const finishOnboardingAndNavigate = async (
   finishOnboarding: () => Promise<void>,
   navigate: (target: string) => void,
+  prepareFirstAgent?: () => Promise<void>,
+  firstAgentId?: string,
 ) => {
+  await prepareFirstAgent?.();
   await finishOnboarding();
-  if (isDesktop) await repairDesktopOnboardingMarkers();
+  if (firstAgentId) selectAgentForConversation(firstAgentId);
+  await repairDesktopOnboardingMarkers();
   navigate(resolvePostOnboardingTargetUrl());
 };

@@ -328,6 +328,19 @@ const createCursorAcpProc = () => {
 const lastSpawnEnv = () => spawnCalls.at(-1)?.options?.env as NodeJS.ProcessEnv;
 
 describe('spawnAgent', () => {
+  it('rejects selected permissions for unsupported runtimes before spawning', async () => {
+    const { spawnAgent } = await import('./spawnAgent');
+    await expect(
+      spawnAgent({
+        agentType: 'trae',
+        operationId: 'unsupported',
+        prompt: 'hello',
+        initialPermission: { configId: 'mode', value: 'build' },
+      }),
+    ).rejects.toThrow('permission selection is unsupported');
+    expect(spawnCalls).toHaveLength(0);
+  });
+
   beforeEach(() => {
     spawnCalls.length = 0;
     nextFakeProc = null;
@@ -372,16 +385,7 @@ describe('spawnAgent', () => {
       expect(lastSpawnEnv().CLAUDE_CODE_EXECUTABLE).toBe('claude');
 
       const methods = fake.requests.map(({ method }) => method).filter(Boolean);
-      expect(methods).toEqual([
-        'initialize',
-        'session/new',
-        'session/set_config_option',
-        'session/prompt',
-      ]);
-      // Headless permission preset lands as a session config option.
-      expect(
-        fake.requests.find(({ method }) => method === 'session/set_config_option')?.params,
-      ).toMatchObject({ configId: 'mode', sessionId: 'cc-acp-session' });
+      expect(methods).toEqual(['initialize', 'session/new', 'session/prompt']);
       // Prompt is an ACP content-block array on session/prompt, never argv/stdin text.
       expect(fake.requests.at(-1)?.params).toMatchObject({
         prompt: [{ text: 'do a thing', type: 'text' }],
@@ -1324,10 +1328,10 @@ describe('spawnAgent', () => {
 
       expect(spawnCalls[0]).toMatchObject({ args: [], command: 'amp-acp' });
       expect(lastSpawnEnv().AMP_CLI_PATH).toBe('amp');
-      // The bypass posture lands as a session config option.
-      expect(
-        fake.requests.find(({ method }) => method === 'session/set_config_option')?.params,
-      ).toMatchObject({ configId: 'permission', value: 'bypass' });
+      // Keep the agent's advertised default permission posture.
+      expect(fake.requests.some(({ method }) => method === 'session/set_config_option')).toBe(
+        false,
+      );
     } finally {
       killSpy.mockRestore();
     }
@@ -1371,10 +1375,9 @@ describe('spawnAgent', () => {
       expect(fake.requests.find(({ method }) => method === 'session/load')?.params).toMatchObject({
         sessionId: threadId,
       });
-      // Agent-full-access posture lands as a session config option.
-      expect(
-        fake.requests.find(({ method }) => method === 'session/set_config_option')?.params,
-      ).toMatchObject({ configId: 'mode', value: 'agent-full-access' });
+      expect(fake.requests.some(({ method }) => method === 'session/set_config_option')).toBe(
+        false,
+      );
       expect(handle.sessionId).toBe(threadId);
     } finally {
       killSpy.mockRestore();
@@ -1479,12 +1482,7 @@ describe('spawnAgent', () => {
       const configValues = fake.requests
         .filter(({ method }) => method === 'session/set_config_option')
         .map(({ params }) => [params?.configId, params?.value]);
-      expect(configValues).toEqual(
-        expect.arrayContaining([
-          ['permission', 'bypass'],
-          ['amp-mode', 'high'],
-        ]),
-      );
+      expect(configValues).toEqual([['amp-mode', 'high']]);
     } finally {
       killSpy.mockRestore();
     }
@@ -1554,8 +1552,7 @@ describe('spawnAgent', () => {
         .filter(({ method }) => method === 'session/set_config_option')
         .map(({ params }) => params?.configId);
       expect(configIds).not.toContain('effort');
-      // The required permission preset still lands unconditionally.
-      expect(configIds).toContain('mode');
+      expect(configIds).not.toContain('mode');
       expect(stderrChunks.join('')).toContain('skipped session config option "effort=high"');
     } finally {
       killSpy.mockRestore();

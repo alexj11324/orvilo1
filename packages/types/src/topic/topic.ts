@@ -118,6 +118,13 @@ export interface OnboardingSessionSnapshot {
 export const topicExecutionConfigSchema = z.object({
   /** Automatic snapshots retain the workspace default's execution restrictions. */
   inheritWorkspaceScope: z.boolean().optional(),
+  permission: z
+    .object({
+      provider: z.string().min(1),
+      configId: z.string().min(1),
+      value: z.string().min(1),
+    })
+    .optional(),
   boundDeviceId: z.string().optional(),
   executionTarget: z.enum(['auto', 'device', 'local', 'none', 'sandbox']).optional(),
   localSandbox: z.boolean().optional(),
@@ -131,9 +138,25 @@ export const applyTopicExecutionConfig = (
   defaults: OrviloAgentAgencyConfig | undefined,
   execution: TopicExecutionConfig | null | undefined,
 ): OrviloAgentAgencyConfig | undefined => {
-  if (!execution || defaults?.executionTargetSelectionPolicy === 'fixed') return defaults;
+  if (!execution) return defaults;
+  const provider = defaults?.heterogeneousProvider;
+  const permission = execution.permission;
+  const withPermission =
+    permission && provider && permission.provider === provider.type
+      ? {
+          ...defaults,
+          heterogeneousProvider: {
+            ...provider,
+            permission: {
+              configId: permission.configId,
+              value: permission.value,
+            },
+          },
+        }
+      : defaults;
+  if (defaults?.executionTargetSelectionPolicy === 'fixed') return withPermission;
   return {
-    ...defaults,
+    ...withPermission,
     boundDeviceId: execution.boundDeviceId,
     executionTarget: execution.executionTarget,
     localSandbox: execution.localSandbox,
@@ -145,6 +168,14 @@ export const snapshotTopicExecutionConfig = (
   config: OrviloAgentAgencyConfig | undefined,
 ): TopicExecutionConfig => ({
   inheritWorkspaceScope: true,
+  ...(config?.heterogeneousProvider?.permission
+    ? {
+        permission: {
+          provider: config.heterogeneousProvider.type,
+          ...config.heterogeneousProvider.permission,
+        },
+      }
+    : {}),
   boundDeviceId: config?.boundDeviceId,
   executionTarget: config?.executionTarget,
   localSandbox: config?.localSandbox,

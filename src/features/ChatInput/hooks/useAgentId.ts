@@ -5,7 +5,7 @@ import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
 import { systemStatusSelectors } from '@/store/global/selectors';
 
-import { useChatInputStore } from '../store';
+import { useChatInputStore, useChatInputStoreApiOptional } from '../store';
 
 /**
  * Hook to get the effective agentId for ChatInput components.
@@ -35,4 +35,21 @@ export const useAgentId = () => {
   if (agentIdFromChatInput !== undefined) return agentIdFromChatInput;
   if (!activeTopicId) return composerAgentId || lastUsedAgentId || activeAgentId || '';
   return activeAgentId || '';
+};
+
+/** Read the composer's current identity again after an asynchronous selection yields. */
+export const useCurrentComposerAgentId = () => {
+  const inputStore = useChatInputStoreApiOptional();
+  return () => {
+    const explicitAgentId = inputStore?.getState().agentId;
+    if (explicitAgentId !== undefined) return explicitAgentId;
+    const chat = useChatStore.getState();
+    const routeAgentId = useAgentStore.getState().activeAgentId;
+    return chat.activeTopicId
+      ? routeAgentId || ''
+      : chat.composerAgentId ||
+          systemStatusSelectors.lastUsedAgentId(useGlobalStore.getState()) ||
+          routeAgentId ||
+          '';
+  };
 };

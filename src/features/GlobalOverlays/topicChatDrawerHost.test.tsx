@@ -62,7 +62,12 @@ const mocks = vi.hoisted(() => ({
     taskDetailMap: {} as Record<string, unknown>,
     useFetchTaskDetail: vi.fn(),
   },
-  userState: { isSignedIn: true },
+  userState: {
+    isLoaded: true,
+    isSignedIn: true,
+    isUserStateInit: true,
+    onboarding: { finishedAt: '2026-10-04T00:00:00.000Z' },
+  },
 }));
 
 /**

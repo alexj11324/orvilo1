@@ -583,6 +583,7 @@ export default {
   'heteroAgent.modelSelector.speed.fastDesc': '1.5x speed, increased usage',
   'heteroAgent.modelSelector.speed.standard': 'Standard',
   'heteroAgent.modelSelector.speed.standardDesc': 'Default speed',
+  'heteroAgent.modelSelector.unsupported': 'This agent cannot switch models in chat',
   'heteroAgent.cliModel.ariaLabel': '{{name}} model: {{model}}',
   'heteroAgent.cliModel.cliNotFound': 'The CLI is not installed on the target device.',
   'heteroAgent.cliModel.defaultDesc': 'Use the default model configured in {{name}}',
@@ -609,8 +610,8 @@ export default {
     'The saved Codex thread could not be resumed safely, so a new conversation has started for this topic.',
   'heteroAgent.switchCwd.cancel': 'Cancel',
   'heteroAgent.switchCwd.content':
-    'Agent sessions are pinned to a working directory. Switching will start a new session for this topic — chat messages stay, but the previous session context cannot be resumed.',
-  'heteroAgent.switchCwd.ok': 'Switch and start new session',
+    'Agent sessions belong to a working directory. Switching uses the saved session for the destination, or starts a new one if none exists. This topic’s messages are kept.',
+  'heteroAgent.switchCwd.ok': 'Switch working directory',
   'heteroAgent.switchCwd.title': 'Switch working directory?',
   'heteroAgent.cloudNotConfigured.action': 'Configure',
   'heteroAgent.cloudNotConfigured.desc':
@@ -636,11 +637,11 @@ export default {
   'heteroAgent.executionTarget.loading': 'Loading devices…',
   'heteroAgent.executionTarget.local': 'Local device',
   'heteroAgent.executionTarget.localDesc': 'Run as a local process on this desktop app',
-  'heteroAgent.executionTarget.localSandbox': 'Local sandbox',
+  'heteroAgent.executionTarget.localSandbox': 'Shell isolation',
   'heteroAgent.executionTarget.localSandboxDesc':
-    'Run on this computer, with commands limited to the working directory and no network',
+    'Optional shell isolation: writes stay in the working directory and temporary directory; network is blocked',
   'heteroAgent.executionTarget.localSandboxDescNetwork':
-    'Run on this computer, with commands limited to the working directory and to common developer domains',
+    'Optional shell isolation: writes stay in the working directory and temporary directory; developer domains are allowed',
   'heteroAgent.executionTarget.localSandboxSetUp': 'Set up',
   'heteroAgent.executionTarget.localSandboxNetworkTip':
     'Let sandboxed commands reach package registries and source forges — npm, PyPI, crates.io, RubyGems, Go, GitHub, GitLab. Every other domain stays blocked; the sandbox cannot open the network entirely.',
@@ -662,6 +663,13 @@ export default {
   'heteroAgent.executionTarget.bindingInvalid': 'Rebind device',
   'heteroAgent.executionTarget.bindingInvalidBanner':
     'The bound device ({{device}}) is no longer available — pick a device below to rebind.',
+  'heteroAgent.executionTarget.externalGroup': 'External devices',
+  'heteroAgent.permission.loading': 'Loading permissions…',
+  'heteroAgent.permission.unavailable': 'Permissions unavailable',
+  'heteroAgent.permission.unsupported': 'Permissions not advertised',
+  'heteroAgent.permission.saveError': 'Could not save permission setting',
+  'heteroAgent.permission.stale': 'Permission selection unavailable',
+  'heteroAgent.permission.label': 'Permissions',
   'heteroAgent.executionTarget.personalGroup': 'Private Devices',
   'heteroAgent.executionTarget.sandbox': 'Cloud Sandbox',
   'heteroAgent.executionTarget.sandboxDesc': 'Run in an ephemeral cloud sandbox',
@@ -1128,6 +1136,44 @@ export default {
   'resources.knowledgePicker.publicAgentHint':
     'Public agents can only reference workspace resources. Publish a private resource to the workspace first if you want to attach it.',
 
+  // First-run onboarding (the conversation landing when nothing can run yet)
+  'onboarding.api.description':
+    'Use an OpenAI-compatible provider. Your new API key is stored securely in your account.',
+  'onboarding.api.endpoint': 'Provider endpoint (HTTPS)',
+  'onboarding.api.model': 'Model ID',
+  'onboarding.api.key': 'API key',
+  'onboarding.account': 'Account settings',
+  'onboarding.api.configure': 'Use my API key',
+  'onboarding.api.create': 'Verify and create agent',
+  'onboarding.api.failed':
+    'Setup could not finish. Check your device, key, endpoint, and model, then retry. Your saved setup will be reused.',
+  'onboarding.connect': 'Connect an ACP agent',
+  'onboarding.prime.create': 'Create Prime Agent',
+  'onboarding.prime.ready': 'An existing provider route is available for Prime.',
+  'onboarding.prime.unavailable':
+    'Prime needs a verified provider route. Connect an ACP agent or configure your API key.',
+  'onboarding.builtin.action': 'Open settings',
+  'onboarding.builtin.desc': 'No model provider is configured yet, so it cannot run.',
+  'onboarding.builtin.group': 'Prime Agent',
+  'onboarding.builtin.unavailable': 'Unavailable',
+  'onboarding.device.title': 'Choose an execution device',
+  'onboarding.device.description':
+    'Prime is the built-in harness. It runs on your connected device, with your verified model provider.',
+  'onboarding.device.empty':
+    'No connected device is online. Connect this computer or enroll a device, then check again.',
+  'onboarding.device.use': 'Use {{name}}',
+  'onboarding.device.connect': 'Connect a device',
+  'onboarding.emptyDesc': 'Connect an ACP agent or create Prime with your API key.',
+  'onboarding.emptyTitle': 'Create your first agent',
+  'onboarding.footerHint': 'Create your first usable agent to continue setup.',
+  'onboarding.installCli.desc': 'Claude Code / Codex / OpenCode…',
+  'onboarding.installCli.hint': 'Come back here to check again once it is installed.',
+  'onboarding.installCli.title': 'Install a CLI',
+  'onboarding.provider.desc': 'Connect one with an API key to use Orvilo AI.',
+  'onboarding.provider.title': 'Configure a model provider',
+  'onboarding.rescan': 'Check again',
+  'onboarding.title': 'Create your first agent',
+
   // Op status tray (floating panel above the chat input during a run)
   'opStatusTray.status.compressing': 'Compressing context',
   'opStatusTray.status.generating': 'Generating',
@@ -1146,6 +1192,7 @@ export default {
   'connectAgent.create.stepAgents': 'Step 2 of 3 · {{device}}',
   'connectAgent.create.stepConfirm': 'Step 3 of 3 · Name it for your agent list',
   'connectAgent.create.thisDevice': 'This device',
+  'connectAgent.create.desktopChannel': 'Desktop',
   'connectAgent.create.connectedDevices': 'Connected devices',
   'connectAgent.create.localDevice': 'This computer',
   'connectAgent.create.localDeviceDesc': 'Runs agents directly on this machine',
@@ -1162,7 +1209,7 @@ export default {
   'connectAgent.create.noDevicesCliHint': 'Run this command on the computer you want to connect',
   'connectAgent.create.noDevicesCmd': 'orvilo connect',
   'connectAgent.create.refresh': 'Refresh',
-  'connectAgent.create.scanning': 'Scanning agents on this device…',
+  'connectAgent.create.scanning': 'Scanning agents on {{device}}…',
   'connectAgent.create.scanFailed': 'Scan failed',
   'connectAgent.create.rescan': 'Rescan',
   'connectAgent.create.rescanDevice': 'Rescan Device',
@@ -1203,6 +1250,15 @@ export default {
   'connectAgent.providerDesc.trae': 'TRAE Enterprise coding agent CLI',
   'connectAgent.providerDesc.openclaw': 'Personal agent platform',
   'connectAgent.providerDesc.hermes': 'Personal agent platform',
+
+  // Composer agent picker · harnesses installed on this desktop
+  'localHarness.connect': 'Connect',
+  'localHarness.hideMissing': 'Hide not installed',
+  'localHarness.noneInstalled': 'No coding agents found on this device',
+  'localHarness.scanFailed': 'Could not check this device',
+  'localHarness.scanning': 'Checking this device…',
+  'localHarness.showMissing': 'Show {{total}} not installed',
+  'localHarness.title': 'Installed on this device',
 
   // Connect agent device guard banner
   'platformAgent.deviceGuard.deviceOffline.title': 'Device not connected',
@@ -1456,6 +1512,7 @@ export default {
   'supervisor.todoList.allComplete': 'All tasks completed',
   'supervisor.todoList.title': 'Tasks Completed',
   'tab.groupProfile': 'Group Profile',
+  'tab.home': 'Home',
   'tab.integration': 'Channels',
   'tab.profile': 'Agent Profile',
   'tab.profileBasic': 'Profile',

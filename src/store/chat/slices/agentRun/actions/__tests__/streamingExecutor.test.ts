@@ -146,6 +146,7 @@ vi.mock('@/services/electron/completionSound', () => ({
 }));
 vi.mock('@/store/serverConfig', () => ({
   getServerConfigStoreState: () => ({
+    featureFlags: { enableCloudSandbox: false },
     serverConfig: { enableMultimodalUnderstanding: serverConfigMock.enableMultimodalUnderstanding },
   }),
   serverConfigSelectors: {

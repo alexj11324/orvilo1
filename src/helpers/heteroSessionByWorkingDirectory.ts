@@ -4,7 +4,7 @@ export const getHeteroWorkingDirectoryKey = (workingDirectory: string | undefine
   workingDirectory ?? '';
 
 export const getHeteroSessionIdForWorkingDirectory = (
-  metadata: ChatTopicMetadata | undefined,
+  metadata: ChatTopicMetadata | null | undefined,
   workingDirectory: string | undefined,
 ): string | undefined => {
   const key = getHeteroWorkingDirectoryKey(workingDirectory);
@@ -12,7 +12,7 @@ export const getHeteroSessionIdForWorkingDirectory = (
 };
 
 export const getHeteroSessionBindingKeyForWorkingDirectory = (
-  metadata: ChatTopicMetadata | undefined,
+  metadata: ChatTopicMetadata | null | undefined,
   workingDirectory: string | undefined,
 ): string | undefined => {
   const key = getHeteroWorkingDirectoryKey(workingDirectory);
@@ -20,7 +20,7 @@ export const getHeteroSessionBindingKeyForWorkingDirectory = (
 };
 
 export const setHeteroSessionIdForWorkingDirectory = (
-  metadata: ChatTopicMetadata | undefined,
+  metadata: ChatTopicMetadata | null | undefined,
   workingDirectory: string | undefined,
   sessionId: string,
 ): Record<string, string> => ({
@@ -29,7 +29,7 @@ export const setHeteroSessionIdForWorkingDirectory = (
 });
 
 export const setHeteroSessionBindingKeyForWorkingDirectory = (
-  metadata: ChatTopicMetadata | undefined,
+  metadata: ChatTopicMetadata | null | undefined,
   workingDirectory: string | undefined,
   bindingKey: string,
 ): Record<string, string> => ({
@@ -38,7 +38,7 @@ export const setHeteroSessionBindingKeyForWorkingDirectory = (
 });
 
 export const removeHeteroSessionIdForWorkingDirectory = (
-  metadata: ChatTopicMetadata | undefined,
+  metadata: ChatTopicMetadata | null | undefined,
   workingDirectory: string | undefined,
 ): Record<string, string> => {
   const next = { ...metadata?.heteroSessionIdByWorkingDirectory };
@@ -47,7 +47,7 @@ export const removeHeteroSessionIdForWorkingDirectory = (
 };
 
 export const removeHeteroSessionBindingKeyForWorkingDirectory = (
-  metadata: ChatTopicMetadata | undefined,
+  metadata: ChatTopicMetadata | null | undefined,
   workingDirectory: string | undefined,
 ): Record<string, string> => {
   const next = { ...metadata?.heteroSessionBindingKeyByWorkingDirectory };

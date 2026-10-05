@@ -33,6 +33,7 @@ import { useSelectAgentDevice } from '@/hooks/useSelectAgentDevice';
 import { useAgentStore } from '@/store/agent';
 import { agentByIdSelectors, agentSelectors } from '@/store/agent/selectors';
 import { useElectronStore } from '@/store/electron';
+import { featureFlagsSelectors, useServerConfigStore } from '@/store/serverConfig';
 
 import { resolveAgentDeviceSettingsState } from './agentDeviceSettingsState';
 import { SettingsGroup, SettingsRow, settingsStyles } from './SettingsGroup';
@@ -81,7 +82,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   const { allowed: canEdit } = usePermission('edit_own_content');
   const agent = useAgentStore(agentByIdSelectors.getAgentById(agentId));
   const config = useAgentStore(agentSelectors.getAgentConfigById(agentId));
-  const { agencyConfig, canSelectExecutionTarget, isPreferenceLoading } =
+  const { agencyConfig, canSelectExecutionTarget, isPreferenceLoading, memberSelectedDeviceId } =
     useEffectiveAgencyConfig(agentId);
   const selectAgentDevice = useSelectAgentDevice(agentId);
   const { mutate: retryDevices } = useDeviceList();
@@ -123,7 +124,11 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   );
   const heterogeneousType = config?.agencyConfig?.heterogeneousProvider?.type;
   const externalHarness = !!heterogeneousType && !isBuiltinEngineType(heterogeneousType);
-  const supportsSandbox = isHeterogeneousSandboxExecutionAvailable(heterogeneousType);
+  const enableCloudSandbox = useServerConfigStore(
+    (s) => featureFlagsSelectors(s).enableCloudSandbox === true,
+  );
+  const supportsSandbox =
+    enableCloudSandbox && isHeterogeneousSandboxExecutionAvailable(heterogeneousType);
 
   // A workspace member's device pick is their own preference write — the
   // shared `edit_own_content` gate applies to personal agents only.
@@ -132,6 +137,7 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
   const state = useDeviceSelectorState({
     boundDeviceId: agencyConfig?.boundDeviceId,
     canSelectDevice,
+    memberSelectedDeviceId,
     permissionsLoaded: !isPreferenceLoading,
     scope: isWorkspaceAgent ? 'workspace' : 'personal',
   });
@@ -169,19 +175,22 @@ const AgentDeviceSettings = memo<AgentDeviceSettingsProps>(({ agentId }) => {
             },
           ]
         : []),
-      {
-        disabled: !supportsSandbox,
-        label: (
-          <DeviceOptionLabel
-            label={t('chat:heteroAgent.executionTarget.sandbox')}
-            offlineLabel={offlineLabel}
-            onlineLabel={onlineLabel}
-            target={'sandbox'}
-          />
-        ),
-        title: t('chat:heteroAgent.executionTarget.sandbox'),
-        value: executionTargetValue('sandbox'),
-      },
+      ...(supportsSandbox
+        ? [
+            {
+              label: (
+                <DeviceOptionLabel
+                  label={t('chat:heteroAgent.executionTarget.sandbox')}
+                  offlineLabel={offlineLabel}
+                  onlineLabel={onlineLabel}
+                  target={'sandbox'}
+                />
+              ),
+              title: t('chat:heteroAgent.executionTarget.sandbox'),
+              value: executionTargetValue('sandbox'),
+            },
+          ]
+        : []),
     ];
   }, [externalHarness, supportsSandbox, t]);
 

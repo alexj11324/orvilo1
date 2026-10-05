@@ -91,6 +91,7 @@
   "workingDirectory.renameBranchAction": "重命名分支",
   "workingDirectory.renameBranchTitle": "重命名分支",
   "workingDirectory.renameFailed": "重命名失败",
+  "workingDirectory.runningLocked": "请等待当前运行停止后再切换工作目录",
   "workingDirectory.searchPlaceholder": "搜索工作目录",
   "workingDirectory.selectFolder": "选择文件夹",
   "workingDirectory.setDefault": "设为默认",

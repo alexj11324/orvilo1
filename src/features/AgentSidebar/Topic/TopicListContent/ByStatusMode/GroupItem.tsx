@@ -8,6 +8,7 @@ import {
 } from '@/components/ExecutionStatus';
 import { AccordionContent, AccordionItem, AccordionTrigger } from '@/components/ui/accordion';
 
+import { accordionStyles } from '../../accordionStyles';
 import TopicItem from '../../List/Item';
 import { type GroupItemComponentProps } from '../GroupedAccordion';
 
@@ -24,8 +25,11 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
   const statusIcon = STATUS_ICON[id];
 
   return (
-    <AccordionItem value={id}>
-      <AccordionTrigger style={{ paddingBlock: 4, paddingInline: '8px 4px' }}>
+    <AccordionItem className={accordionStyles.item} value={id}>
+      <AccordionTrigger
+        className={accordionStyles.trigger}
+        style={{ paddingBlock: 4, paddingInline: 8 }}
+      >
         <div className="flex items-center gap-1.5 h-[24px]" style={{ overflow: 'hidden' }}>
           {statusIcon && (
             <div className="flex flex-col items-center justify-center flex-none h-[16px] w-[16px]">
@@ -40,7 +44,7 @@ const GroupItem = memo<GroupItemComponentProps>(({ group }) => {
           </div>
         </div>
       </AccordionTrigger>
-      <AccordionContent className="[&>div]:p-0">
+      <AccordionContent className="p-0">
         <div className="flex flex-col gap-[1px]" style={{ paddingBlock: 1 }}>
           {children.map((topic) => (
             <TopicItem

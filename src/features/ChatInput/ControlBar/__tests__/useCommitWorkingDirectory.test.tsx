@@ -11,7 +11,13 @@ const testState = vi.hoisted(() => ({
     updateAgentConfigById: vi.fn(),
     updateAgentRuntimeEnvConfigById: vi.fn(),
   },
-  chat: { activeTopicId: undefined as string | undefined, updateTopicMetadata: vi.fn() },
+  chat: {
+    activeTopicId: undefined as string | undefined,
+    updateTopicMetadata: vi.fn(),
+    operations: {} as Record<string, any>,
+    topic: undefined as any,
+  },
+  confirmModal: vi.fn(),
   currentDeviceId: 'this-machine' as string | undefined,
   effective: {
     agencyConfig: undefined as Record<string, unknown> | undefined,
@@ -32,11 +38,14 @@ vi.mock('@/store/agent/selectors', () => ({
 }));
 
 vi.mock('@/store/chat', () => ({
-  useChatStore: (selector: (s: typeof testState.chat) => unknown) => selector(testState.chat),
+  useChatStore: Object.assign(
+    (selector: (s: typeof testState.chat) => unknown) => selector(testState.chat),
+    { getState: () => testState.chat },
+  ),
 }));
 
 vi.mock('@/store/chat/selectors', () => ({
-  topicSelectors: { getTopicById: () => () => undefined },
+  topicSelectors: { getTopicById: () => () => testState.chat.topic },
 }));
 
 vi.mock('@/store/device', () => ({
@@ -49,9 +58,7 @@ vi.mock('@/store/electron', () => ({
     selector({ gatewayDeviceInfo: { deviceId: testState.currentDeviceId } }),
 }));
 
-vi.mock('@/helpers/heteroSessionByWorkingDirectory', () => ({
-  getHeteroSessionIdForWorkingDirectory: () => undefined,
-}));
+vi.mock('@/components/Modal', () => ({ confirmModal: testState.confirmModal }));
 
 describe('useCommitWorkingDirectory — localTarget', () => {
   beforeEach(() => {
@@ -62,6 +69,8 @@ describe('useCommitWorkingDirectory — localTarget', () => {
     testState.agent.updateAgentConfigById = vi.fn();
     testState.agent.updateAgentRuntimeEnvConfigById = vi.fn();
     testState.chat.activeTopicId = undefined;
+    testState.chat.topic = undefined;
+    testState.chat.operations = {};
     testState.currentDeviceId = 'this-machine';
     testState.effective = { agencyConfig: undefined, workspaceScoped: false };
   });
@@ -122,4 +131,131 @@ describe('useCommitWorkingDirectory — localTarget', () => {
       },
     });
   });
+});
+
+describe('working-directory session safety', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    testState.chat.activeTopicId = 'topic-a';
+    testState.chat.operations = {};
+    testState.chat.topic = {
+      metadata: { workingDirectory: '/repo', heteroSessionId: 'session-source' },
+    };
+    testState.agent.agencyConfig = { heterogeneousProvider: { type: 'codex' } };
+  });
+
+  it.each([false, true])(
+    'blocks commit and clear while running (aborting=%s)',
+    async (isAborting) => {
+      testState.chat.operations = {
+        run: {
+          status: 'running',
+          context: { agentId: 'agent-id', topicId: 'topic-a' },
+          metadata: { isAborting },
+        },
+      };
+      const { result } = renderHook(() => useCommitWorkingDirectory('agent-id'));
+      await result.current.commit({ path: '/other' });
+      await result.current.clear();
+      expect(testState.confirmModal).not.toHaveBeenCalled();
+      expect(testState.chat.updateTopicMetadata).not.toHaveBeenCalled();
+    },
+  );
+
+  it('blocks a persisted remote run before its local operation attaches', async () => {
+    testState.chat.topic.metadata.runningOperation = { operationId: 'remote-run' };
+    const { result } = renderHook(() => useCommitWorkingDirectory('agent-id'));
+    await result.current.commit({ path: '/other' });
+    expect(testState.chat.updateTopicMetadata).not.toHaveBeenCalled();
+    expect(testState.confirmModal).not.toHaveBeenCalled();
+  });
+
+  it('confirms an effective worktree change and never carries the source session', async () => {
+    const { result } = renderHook(() => useCommitWorkingDirectory('agent-id'));
+    await result.current.commit({ path: '/repo', git: { activeWorktree: '/repo-feature' } });
+    expect(testState.confirmModal).toHaveBeenCalledTimes(1);
+    expect(testState.chat.updateTopicMetadata).not.toHaveBeenCalled();
+    await testState.confirmModal.mock.calls[0][0].onOk();
+    expect(testState.chat.updateTopicMetadata).toHaveBeenCalledWith(
+      'topic-a',
+      expect.objectContaining({ workingDirectory: '/repo-feature', heteroSessionId: undefined }),
+    );
+  });
+
+  it('rechecks run ownership when reset confirmation is accepted', async () => {
+    const { result } = renderHook(() => useCommitWorkingDirectory('agent-id'));
+    await result.current.commit({ path: '/other' });
+    testState.chat.operations = {
+      run: { status: 'running', context: { agentId: 'agent-id', topicId: 'topic-a' } },
+    };
+    await testState.confirmModal.mock.calls[0][0].onOk();
+    expect(testState.chat.updateTopicMetadata).not.toHaveBeenCalled();
+  });
+
+  it('restores only the destination directory’s scoped session after confirmation', async () => {
+    testState.chat.topic.metadata.heteroSessionIdByWorkingDirectory = {
+      '/repo-feature': 'session-feature',
+    };
+    const { result } = renderHook(() => useCommitWorkingDirectory('agent-id'));
+    await result.current.commit({ path: '/repo', git: { activeWorktree: '/repo-feature' } });
+    await testState.confirmModal.mock.calls[0][0].onOk();
+    expect(testState.chat.updateTopicMetadata).toHaveBeenCalledWith(
+      'topic-a',
+      expect.objectContaining({
+        workingDirectory: '/repo-feature',
+        heteroSessionId: 'session-feature',
+      }),
+    );
+  });
+});
+
+it('allows first-run selection and uses the explicitly supplied conversation', async () => {
+  vi.clearAllMocks();
+  testState.chat.activeTopicId = 'another-topic';
+  testState.chat.topic = undefined;
+  testState.chat.operations = {};
+  const { result } = renderHook(() => useCommitWorkingDirectory('agent-id', 'mounted-topic'));
+  await result.current.commit({ path: '/repo', git: { activeWorktree: '/repo-new' } });
+  expect(testState.confirmModal).not.toHaveBeenCalled();
+  expect(testState.chat.updateTopicMetadata).toHaveBeenCalledWith(
+    'mounted-topic',
+    expect.objectContaining({ workingDirectory: '/repo-new' }),
+  );
+});
+
+it('rechecks run ownership when clear confirmation is accepted', async () => {
+  vi.clearAllMocks();
+  testState.chat.activeTopicId = 'topic-a';
+  testState.chat.operations = {};
+  testState.chat.topic = {
+    metadata: { workingDirectory: '/repo', heteroSessionId: 'old-session' },
+  };
+  const { result } = renderHook(() => useCommitWorkingDirectory('agent-id'));
+  await result.current.clear();
+  testState.chat.topic.metadata.runningOperation = { operationId: 'remote-run' };
+  await testState.confirmModal.mock.calls[0][0].onOk();
+  expect(testState.chat.updateTopicMetadata).not.toHaveBeenCalled();
+});
+
+it('keeps directories locked while cancelled native termination is still pending', async () => {
+  vi.clearAllMocks();
+  testState.chat.activeTopicId = 'topic-a';
+  testState.chat.topic = { metadata: { workingDirectory: '/repo' } };
+  testState.chat.operations = {
+    run: {
+      status: 'cancelled',
+      context: { agentId: 'agent-id', topicId: 'topic-a' },
+      metadata: { isAborting: true },
+    },
+  };
+  const { result } = renderHook(() => useCommitWorkingDirectory('agent-id'));
+  await result.current.commit({ path: '/other' });
+  await result.current.clear();
+  expect(testState.chat.updateTopicMetadata).not.toHaveBeenCalled();
+  testState.chat.operations.run.metadata.isAborting = false;
+  await result.current.commit({ path: '/other' });
+  expect(testState.chat.updateTopicMetadata).toHaveBeenCalledWith(
+    'topic-a',
+    expect.objectContaining({ workingDirectory: '/other' }),
+  );
 });

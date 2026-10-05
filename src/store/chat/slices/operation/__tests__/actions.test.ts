@@ -1040,12 +1040,16 @@ describe('Operation Actions', () => {
       await Promise.resolve();
 
       expect(result.current.operations[operationId!].status).toBe('cancelled');
+      expect(result.current.operations[operationId!].metadata.isAborting).toBe(true);
       expect(settled).toBe(false);
 
-      releaseCancellation?.();
-      await cancellation;
+      await act(async () => {
+        releaseCancellation?.();
+        await cancellation;
+      });
 
       expect(settled).toBe(true);
+      expect(result.current.operations[operationId!].metadata.isAborting).toBe(false);
     });
 
     /**

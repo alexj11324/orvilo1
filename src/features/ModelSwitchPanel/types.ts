@@ -47,6 +47,33 @@ export type ListItem =
 
 export type DropdownPlacement = DropdownMenuPlacement;
 
+/**
+ * One row of a flat, non-model-bank model list (Prime's provider-binding routes
+ * or a CLI harness's alias/catalog list).
+ */
+export interface SimpleModelOption {
+  /** Row text; also drives the list search and the active-row check. */
+  title: string;
+  /** Value committed to the conversation. */
+  value: string;
+}
+
+/**
+ * A flat model list rendered by the panel in place of `enabledList`. The panel
+ * adapts it into a single-provider list, so search, the active row and the
+ * detail submenu behave exactly like a model-bank source.
+ */
+export interface SimpleModelSource {
+  /** Shown instead of the list when `options` is empty. */
+  emptyText?: React.ReactNode;
+  /** Provider id reported back through `onModelChange`. */
+  id: string;
+  /** Provider name shown in the group header. */
+  name: string;
+  /** Rendered in the given order — a CLI's own order, not model-bank newness. */
+  options: SimpleModelOption[];
+}
+
 export interface ModelSwitchPanelProps {
   children?: React.ReactNode;
   /**
@@ -83,4 +110,10 @@ export interface ModelSwitchPanelProps {
    * Current provider ID. If not provided, uses currentAgentModelProvider from store.
    */
   provider?: string;
+  /**
+   * Flat option list for sources that are not model-bank chat models. When set
+   * it replaces `enabledList`; `emptyText` replaces the model-bank empty state
+   * when the source has nothing to show.
+   */
+  simpleSource?: SimpleModelSource;
 }

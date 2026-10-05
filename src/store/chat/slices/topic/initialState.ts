@@ -1,3 +1,5 @@
+import { type HeterogeneousReasoningEffort } from '@orvilo/types';
+
 import { type ChatTopic } from '@/types/topic';
 
 /**
@@ -40,6 +42,23 @@ export interface ChatTopicState {
    * is empty, cleared once a send consumes it.
    */
   composerAgentId?: string;
+  /**
+   * Effort picked in the blank composer (no topic yet) — bound to the new topic
+   * on the first message, alongside `composerModelSelection`. Mirrors the
+   * `metadata.heteroEffort` column `updateTopicHeteroEffort` writes, so a blank
+   * composer pick and a topic pick land in the same place. Transient: cleared
+   * once a send consumes it, and dropped when the composer's agent changes.
+   */
+  composerHeteroEffort?: HeterogeneousReasoningEffort;
+  /**
+   * Model picked in the blank composer (no topic yet) — bound to the new topic
+   * on the first message, alongside `composerAgentId`. Chat never writes the
+   * agent row, so a conversation-scoped pick has to wait here until the topic
+   * exists (see `selectModelForConversation`). Transient: cleared once a send
+   * consumes it, and dropped when the composer's agent changes — a model
+   * belongs to the agent it was taken for.
+   */
+  composerModelSelection?: { model: string; provider: string };
   creatingTopic: boolean;
   /**
    * Ids of client-minted topics whose server row does not exist yet (the

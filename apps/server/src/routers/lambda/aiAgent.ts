@@ -4,7 +4,12 @@ import { type AgentStreamEvent } from '@orvilo/agent-gateway-client';
 import { LOADING_FLAT } from '@orvilo/const';
 import { isFullAccessApiKey } from '@orvilo/const/apiKeyScope';
 import { parse } from '@orvilo/conversation-flow';
-import type { ExecAgentResult, TaskCurrentActivity, TaskStatusResult } from '@orvilo/types';
+import type {
+  ExecAgentResult,
+  HeterogeneousReasoningEffort,
+  TaskCurrentActivity,
+  TaskStatusResult,
+} from '@orvilo/types';
 import {
   CreateThreadWithMessageSchema,
   entityIdPattern,
@@ -1019,6 +1024,24 @@ const ExecAgentSchema = z
     existingMessageIds: z.array(z.string()).optional().default([]),
     /** File IDs of already-uploaded attachments to attach to the new user message */
     fileIds: z.array(z.string()).optional(),
+    /**
+     * Model / provider / reasoning effort picked in a blank composer before the
+     * conversation existed (`composerModelSelection` / `composerHeteroEffort`
+     * client-side). Written onto the topic THIS run creates and never onto the
+     * agent row — a chat-side pick is conversation-scoped
+     * (docs/development/chat-agent-model-ia.md §5.2). Ignored when the run reuses
+     * an existing topic; absent for every non-composer caller, which leaves the
+     * agent-config topic snapshot exactly as before.
+     */
+    newTopicPins: z
+      .object({
+        effort: z
+          .custom<HeterogeneousReasoningEffort>((value) => typeof value === 'string')
+          .optional(),
+        model: z.string().optional(),
+        provider: z.string().optional(),
+      })
+      .optional(),
     /** Parent message ID for regeneration/continue (skip user message creation, branch from this message) */
     parentMessageId: z.string().optional(),
     /** Existing gateway operation this fresh turn atomically supersedes. */
@@ -2098,6 +2121,7 @@ export const aiAgentRouter = router({
       existingMessageIds = [],
       fileIds,
       mentionedAgents,
+      newTopicPins,
       parentMessageId,
       resumeApproval,
       resumeApprovals,
@@ -2289,6 +2313,7 @@ export const aiAgentRouter = router({
         existingMessageIds,
         fileIds,
         mentionedAgents,
+        newTopicPins,
         parentMessageId,
         prompt,
         // When parentMessageId is provided, this is a regeneration/continue or a

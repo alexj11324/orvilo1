@@ -101,6 +101,44 @@ describe('selectRuntimeType', () => {
     });
   });
 
+  it.each([
+    [false, false],
+    [false, true],
+    [true, false],
+    [true, true],
+  ])(
+    'keeps local Prime on Gateway with workspace=%s and socket connected=%s',
+    (isWorkspaceAgent, deviceGatewayConnected) => {
+      expect(
+        selectRuntimeType(
+          {
+            boundDeviceId: 'verified-device',
+            deviceGatewayConnected,
+            executionTarget: 'local',
+            heterogeneousProvider: { type: 'orvilo' },
+            isGatewayMode: false,
+            isWorkspaceAgent,
+          },
+          { isDesktop: true },
+        ),
+      ).toBe('gateway');
+    },
+  );
+
+  it('does not inherit an IPC parent runtime for a Prime child', () => {
+    expect(
+      selectRuntimeType(
+        {
+          executionTarget: 'local',
+          heterogeneousProvider: { type: 'orvilo' },
+          isGatewayMode: false,
+          parentRuntime: 'hetero',
+        },
+        { isDesktop: true },
+      ),
+    ).toBe('gateway');
+  });
+
   describe('executionTarget routing for local CLI hetero', () => {
     it('allows Claude Code API mode only for Desktop local execution', () => {
       expect(

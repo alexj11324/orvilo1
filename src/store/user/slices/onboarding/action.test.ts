@@ -31,6 +31,11 @@ describe('onboarding actions', () => {
   });
 
   describe('write serialization', () => {
+    it('does not mark onboarding finished when completion persistence fails', async () => {
+      vi.mocked(userService.updateOnboarding).mockRejectedValueOnce(new Error('write failed'));
+      await expect(useUserStore.getState().finishOnboarding()).rejects.toThrow('write failed');
+      expect(useUserStore.getState().onboarding?.finishedAt).toBeUndefined();
+    });
     const deferred = <T>() => {
       let resolve!: (value: T) => void;
       const promise = new Promise<T>((res) => {

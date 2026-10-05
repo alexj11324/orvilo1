@@ -7,7 +7,7 @@ import { useChatStore } from '@/store/chat';
 import { useGlobalStore } from '@/store/global';
 
 import { createStore, Provider } from '../store';
-import { useAgentId } from './useAgentId';
+import { useAgentId, useCurrentComposerAgentId } from './useAgentId';
 
 const seed = ({
   activeAgentId,
@@ -99,5 +99,25 @@ describe('useAgentId', () => {
     });
     const { result } = renderWithComposer();
     expect(result.current).toBe('agt_last');
+  });
+});
+
+describe('current composer identity for asynchronous controls', () => {
+  it('uses last-used B despite route A and sees a new composer C immediately', () => {
+    seed({ activeAgentId: 'route-a', lastUsedAgentId: 'composer-b' });
+    const { result } = renderHook(() => useCurrentComposerAgentId());
+    expect(result.current()).toBe('composer-b');
+    useChatStore.setState({ composerAgentId: 'composer-c' });
+    expect(result.current()).toBe('composer-c');
+  });
+  it('preserves and rereads an explicit ChatInput store override', () => {
+    seed({ activeAgentId: 'route-a', lastUsedAgentId: 'composer-b' });
+    const store = createStore({ agentId: 'override-b' });
+    const wrapper = ({ children }: { children: ReactNode }) =>
+      createElement(Provider, { children, createStore: () => store });
+    const { result } = renderHook(() => useCurrentComposerAgentId(), { wrapper });
+    expect(result.current()).toBe('override-b');
+    store.setState({ agentId: 'override-c' });
+    expect(result.current()).toBe('override-c');
   });
 });

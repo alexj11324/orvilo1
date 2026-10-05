@@ -35,17 +35,20 @@ const getEntryEffectivePath = (entry: WorkingDirEntry) => {
  * (read-only) via GitStatus's `deviceId`.
  */
 const WorkingDirectorySectionInner = memo<WorkingDirectorySectionProps>(({ agentId }) => {
+  const topicId = useChatStore((s) => s.activeTopicId);
   // Effective config (shared row + this member's device override)
   // so GitStatus probes the same device `useEffectiveWorkingDirectory` resolved
   // the cwd from — raw shared config could point them at different machines.
-  const { agencyConfig, workspaceScoped } = useTopicAgencyConfig(agentId);
+  const { agencyConfig, workspaceScoped } = useTopicAgencyConfig(agentId, topicId ?? null);
   const currentDeviceId = useElectronStore((s) => s.gatewayDeviceInfo?.deviceId);
   const targetDeviceId = resolveTargetDeviceId(agencyConfig, currentDeviceId, {
     workspaceScoped,
   });
   const isLocalDevice = isDesktop && !!targetDeviceId && targetDeviceId === currentDeviceId;
 
-  const rawEffectiveWorkingDirectory = useEffectiveWorkingDirectory(agentId);
+  const rawEffectiveWorkingDirectory = useEffectiveWorkingDirectory(agentId, {
+    topicId: topicId ?? null,
+  });
   const effectiveWorkingDirectory = getWorkingDirectoryPathString(rawEffectiveWorkingDirectory);
 
   // Live probes (fs / cached device dirs) can't resolve repoType for a worktree
@@ -56,8 +59,8 @@ const WorkingDirectorySectionInner = memo<WorkingDirectorySectionProps>(({ agent
   // also feeds GitStatus's `fallbackGit`, which covers the harder case: the
   // recorded worktree directory was DELETED, so the live branch probe reads
   // nothing and the chips would vanish even with repoType resolved.
-  const topicWorkingDirectoryConfig = useChatStore(
-    (s) => topicSelectors.currentTopicMetadata(s)?.workingDirectoryConfig,
+  const topicWorkingDirectoryConfig = useChatStore((s) =>
+    topicId ? topicSelectors.getTopicById(topicId)(s)?.metadata?.workingDirectoryConfig : undefined,
   );
   // Only trust the persisted config when it actually describes the directory we
   // resolved — the topic override wins in `useEffectiveWorkingDirectory`, so this
@@ -103,6 +106,7 @@ const WorkingDirectorySectionInner = memo<WorkingDirectorySectionProps>(({ agent
           isGithub={repoType === 'github'}
           path={effectiveWorkingDirectory}
           sourcePath={sourceWorkingDirectory}
+          topicId={topicId ?? null}
         />
       )}
     </>

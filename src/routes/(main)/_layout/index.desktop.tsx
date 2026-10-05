@@ -9,6 +9,7 @@ import { Suspense } from 'react';
 import { HotkeysProvider } from 'react-hotkeys-hook';
 
 import WorkspaceContextSlot from '@/business/client/WorkspaceContextSlot';
+import FirstLoginGate from '@/features/AgentOnboarding/FirstLoginGate';
 import DesktopFileMenuBridge from '@/features/DesktopFileMenuBridge';
 import DesktopLayoutContainer from '@/features/DesktopLayoutContainer';
 import DesktopNavigationBridge from '@/features/DesktopNavigationBridge';
@@ -30,7 +31,6 @@ import { GlobalOverlayHostContext } from '@/features/GlobalOverlays/globalHostCo
 import HotkeyHelperPanel from '@/features/HotkeyHelperPanel';
 import { DndContextWrapper } from '@/features/ResourceManager/DndContextWrapper';
 import { SidebarShell } from '@/features/ReUIShell/SidebarShell';
-import { useWorkspaceUrlSync } from '@/features/Workspace/useWorkspaceUrlSync';
 import { usePlatform } from '@/hooks/usePlatform';
 import CmdkLazy from '@/layout/GlobalProvider/CmdkLazy';
 import dynamic from '@/libs/next/dynamic';
@@ -53,7 +53,6 @@ const Layout: FC = () => {
   useWindowUrlMirror();
   useLastWorkspaceSlugSync();
   useDesktopDocumentTitle();
-  useWorkspaceUrlSync();
 
   // The provider wraps the whole tree — the `<TabHost/>` subtree that resolves
   // each tab's page *and* the `<GlobalOverlays/>` host below it. Panels declared
@@ -63,46 +62,48 @@ const Layout: FC = () => {
     <GlobalOverlayHostContext value={true}>
       <HotkeysProvider initiallyActiveScopes={[HotkeyScopeEnum.Global]}>
         <DesktopAutoOidcOnFirstOpen />
-        <WorkspaceContextSlot>
-          <ActiveConversationBridge />
-          <TabCacheBridges />
-          <Suspense fallback={null}>
-            <DesktopNavigationBridge />
-            <DesktopFileMenuBridge />
-            <OverlaySnapshotPublisher />
-            <OverlayCaptureUploader />
-            <OverlayMessageDispatcher />
-            {showCloudPromotion && <CloudBanner />}
-          </Suspense>
-          <ZoomHUD />
+        <FirstLoginGate>
+          <WorkspaceContextSlot>
+            <ActiveConversationBridge />
+            <TabCacheBridges />
+            <Suspense fallback={null}>
+              <DesktopNavigationBridge />
+              <DesktopFileMenuBridge />
+              <OverlaySnapshotPublisher />
+              <OverlayCaptureUploader />
+              <OverlayMessageDispatcher />
+              {showCloudPromotion && <CloudBanner />}
+            </Suspense>
+            <ZoomHUD />
 
-          <Suspense fallback={null}>
-            <TitleBar />
-          </Suspense>
-          <DndContextWrapper>
-            <div
-              className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
-              style={{ height: `calc(100% - ${TITLE_BAR_HEIGHT}px)`, width: '100%' }}
-            >
-              <SidebarShell />
-              <DesktopLayoutContainer>
-                <div
-                  className="flex flex-col"
-                  style={{ height: '100%', width: '100%', ...tabHostContainer }}
-                >
-                  <TabHost />
-                </div>
-              </DesktopLayoutContainer>
-            </div>
-          </DndContextWrapper>
-          <Suspense fallback={null}>
-            <HotkeyHelperPanel />
-            <RegisterHotkeys />
-            <CmdkLazy />
-            <GlobalApprovalNotification />
-            <GlobalOverlays />
-          </Suspense>
-        </WorkspaceContextSlot>
+            <Suspense fallback={null}>
+              <TitleBar />
+            </Suspense>
+            <DndContextWrapper>
+              <div
+                className={cn('flex', cx(isPWA ? styles.mainContainerPWA : styles.mainContainer))}
+                style={{ height: `calc(100% - ${TITLE_BAR_HEIGHT}px)`, width: '100%' }}
+              >
+                <SidebarShell />
+                <DesktopLayoutContainer>
+                  <div
+                    className="flex flex-col"
+                    style={{ height: '100%', width: '100%', ...tabHostContainer }}
+                  >
+                    <TabHost />
+                  </div>
+                </DesktopLayoutContainer>
+              </div>
+            </DndContextWrapper>
+            <Suspense fallback={null}>
+              <HotkeyHelperPanel />
+              <RegisterHotkeys />
+              <CmdkLazy />
+              <GlobalApprovalNotification />
+              <GlobalOverlays />
+            </Suspense>
+          </WorkspaceContextSlot>
+        </FirstLoginGate>
       </HotkeysProvider>
     </GlobalOverlayHostContext>
   );

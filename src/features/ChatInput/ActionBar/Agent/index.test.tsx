@@ -1,9 +1,12 @@
 /**
  * @vitest-environment happy-dom
  */
-import { fireEvent, render } from '@testing-library/react';
-import type { ReactNode } from 'react';
+import { fireEvent, render, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import type { ComponentProps, ReactNode } from 'react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import type RealAgentList from '@/features/Home/AgentSelect/AgentList';
 
 import Agent from './index';
 
@@ -23,11 +26,24 @@ const mocks = vi.hoisted(() => ({
   },
   createModal: vi.fn(),
   fetchAgentList: vi.fn(),
+  // Flipped per test: the local-harness probe is an Electron capability, so the
+  // picker has to stay out of it on the web build.
+  isDesktop: false,
   listSelect: vi.fn(),
   navigate: vi.fn(),
+  openConnectAgentModal: vi.fn(),
   setState: vi.fn(),
   taskAgentId: 'agt_task',
   updateSystemStatus: vi.fn(),
+}));
+
+// Discovery availability belongs to the local transport adapter, not the picker.
+vi.mock('@/services/electron/heterogeneousAgent', () => ({
+  heterogeneousAgentService: {
+    get supportsLocalExecution() {
+      return mocks.isDesktop;
+    },
+  },
 }));
 
 vi.mock('@/components/ui/popover', () => ({
@@ -58,28 +74,49 @@ vi.mock('@/components/Modal', () => ({
   useModalContext: () => ({ close: vi.fn() }),
 }));
 
-vi.mock('@/features/Home/AgentSelect/AgentList', () => ({
-  default: ({
-    activeAgentId,
-    includeTaskAgent,
-    onSelect,
-  }: {
-    activeAgentId: string;
-    includeTaskAgent?: boolean;
-    onSelect: (id: string) => void;
-  }) => {
-    mocks.listSelect({ activeAgentId, includeTaskAgent });
-    return (
-      <div>
-        <button data-agent-id="agt_other" onClick={() => onSelect('agt_other')}>
-          Other Agent
-        </button>
-        <button data-agent-id={activeAgentId} onClick={() => onSelect(activeAgentId)}>
-          Current Row
-        </button>
-      </div>
-    );
+vi.mock('@/features/Home/AgentSelect/AgentList', async (importOriginal) => {
+  const { default: AgentList } = await importOriginal<{ default: typeof RealAgentList }>();
+  return {
+    default: (props: ComponentProps<typeof AgentList>) => {
+      mocks.listSelect(props);
+      return <AgentList {...props} />;
+    },
+  };
+});
+
+vi.mock('@/features/Home/AgentSelect/useHomeAgentRows', () => ({
+  useHomeAgentRows: () => ({
+    privateRows: [],
+    showPrivateSection: false,
+    workspaceRows: [
+      { id: 'agt_other', title: 'Other Agent' },
+      { id: 'agt_current', title: 'Current Row', pinned: true },
+    ],
+  }),
+}));
+
+vi.mock('@/store/home', () => ({
+  useHomeStore: (selector: (state: { isAgentListInit: boolean }) => unknown) =>
+    selector({ isAgentListInit: true }),
+}));
+vi.mock('@/store/home/selectors', () => ({
+  homeAgentListSelectors: {
+    isAgentListInit: (s: { isAgentListInit: boolean }) => s.isAgentListInit,
   },
+}));
+
+vi.mock('@/features/ConnectAgent', () => ({
+  openConnectAgentModal: (options: unknown) => mocks.openConnectAgentModal(options),
+}));
+
+// The real section probes the desktop binary detector on mount; the picker's
+// contract with it is only the `onConnect` hand-off, so stub the probe away.
+vi.mock('./LocalHarnessSection', () => ({
+  default: ({ onConnect }: { onConnect: (type: string) => void }) => (
+    <button data-testid="harness-connect" onClick={() => onConnect('codex')}>
+      Codex
+    </button>
+  ),
 }));
 
 vi.mock('@/features/Workspace/useWorkspaceAwareNavigate', () => ({
@@ -141,12 +178,13 @@ describe('Agent action', () => {
     vi.clearAllMocks();
     mocks.agentId = 'agt_current';
     mocks.chatState.activeTopicId = undefined;
+    mocks.isDesktop = false;
   });
 
   it('shows the bound agent avatar and display name on the chip', () => {
     const { getByTestId } = render(<Agent />);
 
-    const avatar = getByTestId('avatar');
+    const avatar = within(getByTestId('popover-trigger')).getByTestId('avatar');
     expect(avatar.dataset.avatar).toBe('current-avatar');
     expect(getByTestId('popover-trigger').textContent).toContain('Current Agent');
     expect(mocks.fetchAgentList).toHaveBeenCalledOnce();
@@ -154,6 +192,23 @@ describe('Agent action', () => {
     expect(mocks.listSelect).toHaveBeenCalledWith(
       expect.objectContaining({ activeAgentId: 'agt_current', includeTaskAgent: true }),
     );
+  });
+
+  it('lets keyboard users focus and select an agent without moving the conversation', async () => {
+    const user = userEvent.setup();
+    const { getByRole } = render(<Agent />);
+
+    await user.tab();
+    expect(document.activeElement).toBe(getByRole('button', { name: 'Other Agent' }));
+    expect(getByRole('button', { name: 'Current Row' }).getAttribute('aria-pressed')).toBe('true');
+    await user.keyboard('{Enter}');
+
+    expect(mocks.setState).toHaveBeenCalledWith(
+      { composerAgentId: 'agt_other' },
+      false,
+      'selectAgent/explicit',
+    );
+    expect(mocks.navigate).not.toHaveBeenCalled();
   });
 
   it('retargets the blank composer pick without navigating or confirming', () => {
@@ -228,6 +283,29 @@ describe('Agent action', () => {
 
     fireEvent.click(getByText('Current Row'));
 
+    expect(mocks.setState).not.toHaveBeenCalled();
+    expect(mocks.createModal).not.toHaveBeenCalled();
+    expect(mocks.navigate).not.toHaveBeenCalled();
+  });
+
+  it('keeps the local-harness probe out of the web build', () => {
+    const { queryByTestId } = render(<Agent />);
+
+    expect(queryByTestId('harness-connect')).toBeNull();
+    expect(mocks.listSelect).toHaveBeenCalledWith(
+      expect.objectContaining({ bottomSection: undefined }),
+    );
+  });
+
+  it('hands a locally installed harness to the connect wizard, never to a selection', () => {
+    mocks.isDesktop = true;
+    const { getByTestId } = render(<Agent />);
+
+    fireEvent.click(getByTestId('harness-connect'));
+
+    // The wizard owns naming and the explicit confirmation, so the click must
+    // not walk any of the agent-switch paths.
+    expect(mocks.openConnectAgentModal).toHaveBeenCalledWith({ initialType: 'codex' });
     expect(mocks.setState).not.toHaveBeenCalled();
     expect(mocks.createModal).not.toHaveBeenCalled();
     expect(mocks.navigate).not.toHaveBeenCalled();

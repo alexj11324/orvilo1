@@ -1,13 +1,15 @@
 'use client';
 
-import { createStaticStyles, cssVar, cx } from 'antd-style';
+import { createStaticStyles, cssVar } from 'antd-style';
 import { cn } from 'cn';
 import isEqual from 'fast-deep-equal';
-import { memo, useState } from 'react';
+import { CheckIcon, SearchIcon } from 'lucide-react';
+import { type KeyboardEvent, memo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import useSWR from 'swr';
 import { shallow } from 'zustand/shallow';
 
+import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { useTopicNavigation } from '@/features/AgentSidebar/Topic/hooks/useTopicNavigation';
 import SkeletonList from '@/features/NavPanel/components/SkeletonList';
@@ -26,21 +28,24 @@ const styles = createStaticStyles(({ css }) => ({
     color: ${cssVar.colorTextDescription};
     text-align: center;
   `,
-  // Native <button> rows: menu items must be keyboard-focusable and announce
-  // as actions, not clickable divs.
   item: css`
     cursor: pointer;
 
     overflow: hidden;
+    flex: none;
+    justify-content: space-between;
 
     width: 100%;
-    padding-block: 6px;
-    padding-inline: 10px;
+    min-height: 32px;
+    padding-block: 4px;
+    padding-inline: 8px;
     border: none;
     border-radius: 6px;
 
     font-family: inherit;
-    font-size: 13px;
+    font-size: 14px;
+    font-weight: 400;
+    line-height: 20px;
     color: ${cssVar.colorText};
     text-align: start;
     text-overflow: ellipsis;
@@ -58,19 +63,19 @@ const styles = createStaticStyles(({ css }) => ({
       outline: 2px solid ${cssVar.colorPrimary};
       outline-offset: -1px;
     }
-  `,
-  itemActive: css`
-    font-weight: 600;
-    background: ${cssVar.colorFillSecondary};
 
-    &:hover {
-      background: ${cssVar.colorFillSecondary};
+    &[aria-current='true'],
+    &[aria-current='true']:hover {
+      font-weight: 600;
+      background: var(--muted);
     }
   `,
   // Mirrors Linear's 320px `Chat history` menu: a search field on top of the
   // existing-chat rows for the agent currently in view.
   root: css`
-    width: 320px;
+    width: 100%;
+    min-height: 0;
+    max-height: min(400px, var(--available-height, 400px));
   `,
 }));
 
@@ -87,6 +92,7 @@ interface ChatHistoryContentProps {
 const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
   const { t } = useTranslation(['chat', 'topic']);
   const [keyword, setKeyword] = useState('');
+  const listRef = useRef<HTMLDivElement>(null);
 
   const [activeAgentId, activeTopicId] = useChatStore(
     (s) => [s.activeAgentId, s.activeTopicId],
@@ -118,35 +124,66 @@ const ChatHistoryContent = memo<ChatHistoryContentProps>(({ onNavigate }) => {
   const rows = isSearching ? searchResults : topics;
   const showLoading = isSearching ? isSearchLoading && !searchResults : isTopicsLoading;
 
+  const focusRow = (event: KeyboardEvent<HTMLElement>, fromSearch = false) => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(event.key)) return;
+    if (fromSearch && event.key !== 'ArrowDown' && event.key !== 'ArrowUp') return;
+    const options = Array.from(
+      listRef.current?.querySelectorAll<HTMLButtonElement>('[data-topic-option]') ?? [],
+    );
+    if (!options.length) return;
+    const index = options.indexOf(event.target as HTMLButtonElement);
+    const next =
+      event.key === 'Home'
+        ? 0
+        : event.key === 'End'
+          ? options.length - 1
+          : event.key === 'ArrowDown'
+            ? (index + 1) % options.length
+            : (index - 1 + options.length) % options.length;
+    event.preventDefault();
+    options[fromSearch && event.key === 'ArrowUp' ? options.length - 1 : next]?.focus();
+  };
+
   return (
     <div className={cn('flex flex-col gap-1', styles.root)}>
-      <div className="flex flex-col px-2" style={{ paddingBlock: '8px 0' }}>
+      <div className="flex shrink-0 items-center gap-2 border-b border-border px-3 py-2">
+        <SearchIcon className="size-4 shrink-0 text-muted-foreground" />
         <Input
           autoFocus
+          aria-label={t('chatHistory.title', { ns: 'chat' })}
+          className="h-7 border-0 px-0 text-sm shadow-none focus-visible:ring-0 dark:bg-transparent"
           placeholder={t('chatHistory.title', { ns: 'chat' })}
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
+          onKeyDown={(event) => focusRow(event, true)}
         />
       </div>
       <div
         className="flex flex-col gap-0.5 p-1"
+        ref={listRef}
         style={{ maxHeight: 320, minHeight: 0, overflowY: 'auto' }}
+        onKeyDown={focusRow}
       >
         {showLoading ? (
           <SkeletonList rows={3} />
         ) : rows && rows.length > 0 ? (
           rows.map((topic) => (
-            <button
-              className={cx(styles.item, topic.id === activeTopicId && styles.itemActive)}
+            <Button
+              data-topic-option
+              aria-current={topic.id === activeTopicId ? 'true' : undefined}
+              className={styles.item}
               key={topic.id}
+              title={topic.title}
               type={'button'}
+              variant="ghost"
               onClick={() => {
                 void navigateToTopic(topic.id);
                 onNavigate?.();
               }}
             >
-              {topic.title}
-            </button>
+              <span className="min-w-0 truncate">{topic.title}</span>
+              {topic.id === activeTopicId && <CheckIcon className="size-4 shrink-0" />}
+            </Button>
           ))
         ) : (
           <div className={styles.empty}>

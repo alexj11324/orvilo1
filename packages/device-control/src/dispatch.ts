@@ -41,6 +41,7 @@ import type {
   ExternalAssetForPublishParams,
   InitWorkspaceParams,
   ListHeterogeneousAgentModelsParams,
+  ListHeterogeneousAgentPermissionsParams,
   ListProjectSkillsParams,
   LocalFilePreviewUrlParams,
   PrepareSkillDirectoryParams,
@@ -62,6 +63,7 @@ export const DEVICE_RPC_METHODS = [
   'unenrollWorkspace',
   'initWorkspace',
   'listHeterogeneousAgentModels',
+  'listHeterogeneousAgentPermissions',
   'getClaudeCodeQuota',
   'getStreamableMcpServerManifest',
   'getStdioMcpServerManifest',
@@ -146,6 +148,17 @@ export const executeDeviceRpc = async (
         throw new Error('This device client does not support heterogeneous agent model discovery');
       }
       return deps.listHeterogeneousAgentModels(params as ListHeterogeneousAgentModelsParams);
+    }
+
+    case 'listHeterogeneousAgentPermissions': {
+      if (!deps.listHeterogeneousAgentPermissions) {
+        throw new Error(
+          'This device client does not support heterogeneous agent permission discovery',
+        );
+      }
+      return deps.listHeterogeneousAgentPermissions(
+        params as ListHeterogeneousAgentPermissionsParams,
+      );
     }
 
     case 'getClaudeCodeQuota': {

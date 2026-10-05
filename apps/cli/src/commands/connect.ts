@@ -17,7 +17,10 @@ import type {
   ToolCallRequestMessage,
 } from '@orvilo/device-gateway-client';
 import { GatewayClient } from '@orvilo/device-gateway-client';
-import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
+import {
+  listHeterogeneousAgentModels,
+  listHeterogeneousAgentPermissions,
+} from '@orvilo/heterogeneous-agents/models';
 import { canonicalizePath, getShellInfo } from '@orvilo/local-file-shell';
 import type { Command } from 'commander';
 
@@ -349,8 +352,8 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   // user pin a VM to a fixed identity); otherwise derive from the machine id so
   // the same machine maps to one device across reconnects.
   const identity = workspaceId
-    ? resolveWorkspaceDeviceIdentity(workspaceId, options.deviceId, loadOrCreateConnectionId())
-    : resolveDeviceIdentity(auth.userId, options.deviceId);
+    ? await resolveWorkspaceDeviceIdentity(workspaceId, options.deviceId)
+    : await resolveDeviceIdentity(auth.userId, options.deviceId);
 
   // The token the gateway socket authenticates with. Re-minted on refresh for
   // workspace devices (see `refreshConnectToken`).
@@ -462,6 +465,11 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
         ...params,
         env: { ...process.env, ...params.env },
       }),
+    listHeterogeneousAgentPermissions: (params) =>
+      listHeterogeneousAgentPermissions({
+        ...params,
+        env: { ...process.env, ...params.env },
+      }),
     searchProjectFiles: defaultSearchProjectFiles,
   };
 
@@ -520,7 +528,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
 
     // Same derivation as `orvilo connect --workspace` so the enroll RPC and a manual
     // workspace enrollment on this machine resolve to one workspace device.
-    const wsIdentity = resolveWorkspaceDeviceIdentity(wsId, undefined, loadOrCreateConnectionId());
+    const wsIdentity = await resolveWorkspaceDeviceIdentity(wsId);
 
     const wsClient = new GatewayClient({
       channel,
@@ -620,9 +628,8 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
     }) => {
       // Dry-run probe: hand the server our derived identity so it can detect
       // an existing enrollment (and ask for overwrite confirmation) without
-      // this machine opening or persisting anything.
-      if (identityOnly)
-        return resolveWorkspaceDeviceIdentity(wsId, undefined, loadOrCreateConnectionId());
+      // this machine opening a connection or persisting an enrollment.
+      if (identityOnly) return await resolveWorkspaceDeviceIdentity(wsId);
       const wsIdentity = await openWorkspaceConnection(wsId, wsToken);
       // Persist so a restart re-opens the share connection without the server
       // having to re-share. The server registers the device row itself from
@@ -652,11 +659,7 @@ async function runConnect(options: ConnectOptions, isDaemonChild: boolean) {
   const restoreWorkspaceEnrollments = async () => {
     for (const wsId of loadWorkspaceEnrollments()) {
       try {
-        const wsIdentity = resolveWorkspaceDeviceIdentity(
-          wsId,
-          undefined,
-          loadOrCreateConnectionId(),
-        );
+        const wsIdentity = await resolveWorkspaceDeviceIdentity(wsId);
         const trpc = createLambdaClient(auth, wsId);
         const devices = await trpc.device.listDevices.query();
         const stillEnrolled = devices.some(

@@ -280,6 +280,8 @@ export interface HeterogeneousProviderConfig {
    * so the CLI can keep its own settings, env vars, and account defaults.
    */
   model?: string;
+  /** Exact ACP permission selection advertised by the executing harness. */
+  permission?: { configId: string; value: string };
   /**
    * Platform-side agent identifier used by remote device runtimes.
    * - openclaw: selects the named agent (defaults to `'main'`)
@@ -837,6 +839,14 @@ export const buildHeteroExecArgs = (
   const baseArgs = provider.args ?? [];
   const wrapperArgs = baseArgs.map((arg) => `${HETERO_EXEC_AGENT_ARG_FLAG}=${arg}`);
   const selectorArgs: string[] = [];
+  if (provider.permission) {
+    selectorArgs.push(
+      '--acp-permission-id',
+      provider.permission.configId,
+      '--acp-permission-value',
+      provider.permission.value,
+    );
+  }
 
   if (provider.type === 'amp') {
     const mode = getExplicitAmpAgentMode(provider);

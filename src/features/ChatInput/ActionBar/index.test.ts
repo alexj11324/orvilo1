@@ -52,7 +52,6 @@ describe('filterChatOnlyActions', () => {
     expect(
       filterChatOnlyActions([
         'agentMode',
-        'model',
         'search',
         'memory',
         'fileUpload',
@@ -61,11 +60,7 @@ describe('filterChatOnlyActions', () => {
         '---',
         ['typo', 'params', 'clear'],
       ]),
-    ).toEqual(['agentMode', 'model', 'fileUpload', 'voiceDictation', '---', ['typo', 'clear']]);
-  });
-
-  it('keeps the model chip for chat-only members', () => {
-    expect(filterChatOnlyActions(['model', 'plus'])).toEqual(['model', 'plus']);
+    ).toEqual(['agentMode', 'fileUpload', 'voiceDictation', '---', ['typo', 'clear']]);
   });
 
   it('keeps the agent chip for chat-only members — it navigates, it does not configure', () => {

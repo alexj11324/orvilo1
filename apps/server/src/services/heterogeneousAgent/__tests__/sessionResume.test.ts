@@ -414,6 +414,10 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
       expect(patch).toEqual({
         heteroSessionBindingKey: 'native:v1:claude-code',
         heteroSessionId: 'cc-session-resume-target',
+        heteroSessionIdByWorkingDirectory: { '/Users/dev/project': 'cc-session-resume-target' },
+        heteroSessionBindingKeyByWorkingDirectory: {
+          '/Users/dev/project': 'native:v1:claude-code',
+        },
       });
       expect(patch).not.toHaveProperty('runningOperation');
       expect(patch).not.toHaveProperty('workingDirectory');
@@ -575,6 +579,150 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
     });
   });
 
+  describe('Gateway cwd-scoped session writers', () => {
+    const setupScopedRun = () => {
+      const topic = {
+        id: 'topic-scoped',
+        metadata: {
+          workingDirectory: '/repo/worktree',
+          workingDirectoryConfig: {
+            path: '/repo/source',
+            git: { activeWorktree: '/repo/worktree' },
+          },
+          heteroSessionId: 'claude-old',
+          heteroSessionBindingKey: 'native:v1:claude-code',
+          heteroSessionIdByWorkingDirectory: {
+            '/repo/worktree': 'claude-old',
+            '/repo/other': 'other-session',
+          },
+          heteroSessionBindingKeyByWorkingDirectory: {
+            '/repo/worktree': 'native:v1:claude-code',
+            '/repo/other': 'native:v1:codex',
+          },
+          runningOperation: { assistantMessageId: 'asst-scoped', operationId: 'op-scoped' },
+        } as any,
+      };
+      const updateMetadata = vi.fn(async (_id: string, patch: Record<string, unknown>) => {
+        topic.metadata = { ...topic.metadata, ...patch };
+      });
+      const topicModel = {
+        findById: vi.fn(async () => topic),
+        updateMetadata,
+        settleRunningOperation: vi.fn(async () => ({
+          status: 'settled',
+          assistantMessageId: 'asst-scoped',
+        })),
+      } as any;
+      const agentOperationModel = {
+        findById: vi.fn(async () => ({
+          metadata: { executionPlan: { workingDirectoryBinding: '/repo/worktree' } },
+        })),
+      } as any;
+      const service = new HeterogeneousAgentService({} as any, 'user-1', {
+        agentOperationModel,
+        topicModel,
+        persistenceHandler: {
+          finish: vi.fn(),
+          ingest: vi.fn(),
+        } as unknown as HeterogeneousPersistenceHandler,
+        streamEventManager: createSilentStreamManager(),
+      });
+      return { agentOperationModel, service, topic, topicModel, updateMetadata };
+    };
+
+    it('resumes a new Codex session after Gateway finish replaces a prior Claude cwd entry', async () => {
+      const { service, topic } = setupScopedRun();
+      expect(
+        await service.getHeterogeneousResumeSessionId('topic-scoped', 'native:v1:codex'),
+      ).toBeUndefined();
+      await service.heteroFinish({
+        agentType: 'codex',
+        operationId: 'op-scoped',
+        topicId: 'topic-scoped',
+        result: 'success',
+        sessionId: 'codex-new',
+      });
+      expect(await service.getHeterogeneousResumeSessionId('topic-scoped', 'native:v1:codex')).toBe(
+        'codex-new',
+      );
+      expect(topic.metadata.heteroSessionIdByWorkingDirectory['/repo/other']).toBe('other-session');
+    });
+
+    it('keeps finish scoped to the admitted cwd when topic directory metadata changes', async () => {
+      const { service, topic } = setupScopedRun();
+      topic.metadata.workingDirectory = '/repo/other';
+      topic.metadata.workingDirectoryConfig = { path: '/repo/other' };
+      await service.heteroFinish({
+        agentType: 'codex',
+        operationId: 'op-scoped',
+        topicId: 'topic-scoped',
+        result: 'success',
+        sessionId: 'codex-new',
+      });
+      expect(topic.metadata.heteroSessionIdByWorkingDirectory['/repo/worktree']).toBe('codex-new');
+      expect(topic.metadata.heteroSessionIdByWorkingDirectory['/repo/other']).toBe('other-session');
+    });
+
+    it('clears the admitted cwd entry on invalidation so the next turn cannot resurrect it', async () => {
+      const { service, topic } = setupScopedRun();
+      await service.heteroFinish({
+        agentType: 'claude-code',
+        operationId: 'op-scoped',
+        topicId: 'topic-scoped',
+        result: 'error',
+        resumeSessionInvalidated: true,
+      });
+      expect(
+        await service.getHeterogeneousResumeSessionId('topic-scoped', 'native:v1:claude-code'),
+      ).toBeUndefined();
+      expect(topic.metadata.heteroSessionIdByWorkingDirectory).toEqual({
+        '/repo/other': 'other-session',
+      });
+      expect(topic.metadata.heteroSessionBindingKeyByWorkingDirectory).toEqual({
+        '/repo/other': 'native:v1:codex',
+      });
+    });
+
+    it('writes a stream-start session under its admitted execution cwd', async () => {
+      const { agentOperationModel, service, topic, topicModel } = setupScopedRun();
+      // The stream must keep the admitted cwd even if topic metadata changes.
+      topic.metadata.workingDirectory = '/repo/other';
+      topic.metadata.workingDirectoryConfig = { path: '/repo/other' };
+      const handler = new HeterogeneousPersistenceHandler({
+        agentOperationModel,
+        messageModel: {
+          findById: vi.fn(async () => null),
+          getLatestSpineMessageId: vi.fn(async () => null),
+          listMessagePluginsByTopic: vi.fn(async () => []),
+          update: vi.fn(async () => ({ success: true })),
+        } as any,
+        threadModel: {} as any,
+        topicModel,
+      });
+      await handler.ingest({
+        agentType: 'codex',
+        operationId: 'op-scoped',
+        topicId: 'topic-scoped',
+        events: [
+          {
+            type: 'stream_start',
+            operationId: 'op-scoped',
+            stepIndex: 0,
+            timestamp: 1,
+            data: { sessionId: 'codex-live' },
+          },
+        ],
+      });
+      expect(topic.metadata.heteroSessionIdByWorkingDirectory['/repo/worktree']).toBe('codex-live');
+      expect(topic.metadata.heteroSessionIdByWorkingDirectory['/repo/other']).toBe('other-session');
+      topic.metadata.workingDirectory = '/repo/worktree';
+      topic.metadata.workingDirectoryConfig = { path: '/repo/worktree' };
+      expect(await service.getHeterogeneousResumeSessionId('topic-scoped', 'native:v1:codex')).toBe(
+        'codex-live',
+      );
+    });
+  });
+
   describe('getHeterogeneousResumeSessionId', () => {
     const buildService = (findByIdImpl: (id: string) => Promise<any>) => {
       const findById = vi.fn(findByIdImpl);
@@ -602,6 +750,40 @@ describe('HeterogeneousAgentService — phase 2c session id persistence + resume
       const sessionId = await service.getHeterogeneousResumeSessionId('topic-resume');
       expect(sessionId).toBe('cc-session-aaaa');
       expect(findById).toHaveBeenCalledWith('topic-resume');
+    });
+
+    it('resumes the effective worktree session instead of the source repo session', async () => {
+      const { service } = buildService(async () => ({
+        metadata: {
+          workingDirectory: '/repo/source',
+          workingDirectoryConfig: {
+            path: '/repo/source',
+            git: { activeWorktree: '/repo/worktree' },
+          },
+          heteroSessionId: 'source-session',
+          heteroSessionIdByWorkingDirectory: {
+            '/repo/source': 'source-session',
+            '/repo/worktree': 'worktree-session',
+          },
+        },
+      }));
+      expect(await service.getHeterogeneousResumeSessionId('topic-worktree')).toBe(
+        'worktree-session',
+      );
+    });
+
+    it('refuses a source-cwd legacy session when execution now targets a worktree', async () => {
+      const { service } = buildService(async () => ({
+        metadata: {
+          workingDirectory: '/repo/source',
+          workingDirectoryConfig: {
+            path: '/repo/source',
+            git: { activeWorktree: '/repo/worktree' },
+          },
+          heteroSessionId: 'source-session',
+        },
+      }));
+      expect(await service.getHeterogeneousResumeSessionId('topic-worktree')).toBeUndefined();
     });
 
     it('returns undefined when no prior run persisted a session id', async () => {

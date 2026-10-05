@@ -44,6 +44,7 @@ import type { TopicModel } from '@/database/models/topic';
 import { agentOperations } from '@/database/schemas';
 import { resolveWorkspaceScoped } from '@/helpers/executionTarget';
 import { signHeteroOperationJWT, signUserJWT } from '@/libs/trpc/utils/internalJwt';
+import { getServerFeatureFlagsStateFromRuntimeConfig } from '@/server/featureFlags';
 import {
   createAgentStateManager,
   createStreamEventManager,
@@ -995,6 +996,7 @@ export const dispatchHeteroAgent = async (
   // plan: a device, the sandbox, or a blocked answer with its contract code.
   // Everything downstream (platform notify dispatch, CLI device dispatch,
   // embedded/sandbox) consumes THIS plan — there is no second device pick.
+  const { enableCloudSandbox } = await getServerFeatureFlagsStateFromRuntimeConfig(deps.userId);
   const executionPlan = await resolveHeteroExecutionPlan(deps.db, {
     agencyConfig: agentConfig.agencyConfig,
     agentOwnerId: agentConfig.userId,

@@ -3,6 +3,7 @@ import type { MockInstance } from 'vitest';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { AgentOperationModel } from '@/database/models/agentOperation';
+import type * as FeatureFlagsModule from '@/server/featureFlags';
 import { CompletionLifecycle } from '@/server/services/agentExecution/CompletionLifecycle';
 
 import { AiAgentService } from '../index';
@@ -10,6 +11,15 @@ import type { dispatchHeteroAgent } from '../pipeline/heteroDispatch';
 import { createDispatchTestDb } from './dispatchAdmission.test-utils';
 
 // Use vi.hoisted to ensure mock functions are available before vi.mock runs
+const { mockSandboxFeatureFlags } = vi.hoisted(() => ({
+  mockSandboxFeatureFlags: vi.fn(),
+}));
+
+vi.mock('@/server/featureFlags', async (importOriginal) => ({
+  ...(await importOriginal<typeof FeatureFlagsModule>()),
+  getServerFeatureFlagsStateFromRuntimeConfig: mockSandboxFeatureFlags,
+}));
+
 const {
   mockDispatchAgentRun,
   mockDispatchHeteroAgent,
@@ -265,6 +275,7 @@ describe('AiAgentService.execAgent - topic history loading', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockSandboxFeatureFlags.mockResolvedValue({ enableCloudSandbox: true });
     // Restore the delegate-to-real implementation cleared by clearAllMocks.
     mockDispatchHeteroAgent.mockImplementation((deps, ctx, input) =>
       realDispatchRef.current!(deps, ctx, input),

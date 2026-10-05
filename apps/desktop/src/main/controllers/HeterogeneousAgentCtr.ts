@@ -65,6 +65,11 @@ export default class HeterogeneousAgentCtr extends ControllerModule {
   }
 
   @IpcMethod()
+  async listPermissions(...args: Parameters<Implementation['listPermissions']>) {
+    return (await this.getImplementation()).listPermissions(...args);
+  }
+
+  @IpcMethod()
   async listModels(...args: Parameters<Implementation['listModels']>) {
     return (await this.getImplementation()).listModels(...args);
   }

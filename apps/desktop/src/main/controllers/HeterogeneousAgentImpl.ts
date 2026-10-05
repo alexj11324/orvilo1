@@ -25,7 +25,10 @@ import {
 import type { AskUserBridgeOptions } from '@orvilo/heterogeneous-agents/askUser';
 import { ASK_USER_MCP_SERVER_NAME, AskUserBridge } from '@orvilo/heterogeneous-agents/askUser';
 import type { OrviloBuiltinMcpServer } from '@orvilo/heterogeneous-agents/builtinMcp';
-import { listHeterogeneousAgentModels } from '@orvilo/heterogeneous-agents/models';
+import {
+  listHeterogeneousAgentModels,
+  listHeterogeneousAgentPermissions,
+} from '@orvilo/heterogeneous-agents/models';
 import type {
   HeteroExecImageRef,
   HeterogeneousAgentCancellationResult,
@@ -90,8 +93,10 @@ import type {
   AcpBuiltinToolSpec,
   BuiltinHeterogeneousAgentType,
   HeterogeneousAgentModelCatalog,
+  HeterogeneousAgentPermissionCatalog,
   HeteroSessionImportMessage,
   ListHeterogeneousAgentModelsParams,
+  ListHeterogeneousAgentPermissionsParams,
 } from '@orvilo/types';
 import { sleep } from '@orvilo/utils/sleep';
 import { app as electronApp, BrowserWindow } from 'electron';
@@ -205,6 +210,7 @@ interface StartSessionParams {
   env?: Record<string, string>;
   /** Protocol-native model selected after session setup (ACP sessions). */
   initialModel?: string;
+  initialPermission?: { configId: string; value: string };
   /**
    * BYOK provider binding for api-mode heterogeneous runs. The current driver
    * pipeline does not consume it; it rides along so the renderer can pass the
@@ -330,6 +336,7 @@ interface AgentSession {
   grokAcpSession?: GrokAcpSession;
   model?: string;
   modelSource?: string;
+  permission?: { configId: string; value: string };
   /**
    * Absolute CLI path resolved by spawn preflight detection. Used for spawn()
    * when the configured command is bare: detection can find the CLI through
@@ -1161,6 +1168,7 @@ export default class HeterogeneousAgentCtr {
       cwd: params.cwd,
       env: params.env,
       model: params.initialModel,
+      permission: params.initialPermission,
       sessionId,
       resumeSessionId: params.resumeSessionId,
     });
@@ -1923,6 +1931,7 @@ export default class HeterogeneousAgentCtr {
       env: target.env,
       initialCumulativeUsage,
       initialModel: session.model ?? selectors.initialModel,
+      initialPermission: session.permission,
       mcpServers: intervention.mcpServers,
       onEvents: async (events) => {
         for (const event of events) {
@@ -1966,6 +1975,20 @@ export default class HeterogeneousAgentCtr {
   async getSessionInfo(params: GetSessionInfoParams): Promise<SessionInfo> {
     const session = this.sessions.get(params.sessionId);
     return { agentSessionId: session?.agentSessionId };
+  }
+
+  async listPermissions(
+    params: ListHeterogeneousAgentPermissionsParams,
+  ): Promise<HeterogeneousAgentPermissionCatalog[]> {
+    return listHeterogeneousAgentPermissions({
+      ...params,
+      cwd: params.cwd || electronApp.getPath('desktop'),
+      env: {
+        ...buildInheritedSpawnEnv(),
+        ...buildProxyEnv(this.app.storeManager.get('networkProxy')),
+        ...params.env,
+      },
+    });
   }
 
   /** Query a heterogeneous CLI's model catalog using the same rules as a real local session. */

@@ -1,4 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+
+import { requireProvenLocalDeviceId } from '@/services/localExecutionIdentity';
+
+const host = vi.hoisted(() => ({ isDesktop: false }));
+vi.mock('@orvilo/const', async (importOriginal) => ({
+  ...(await importOriginal<object>()),
+  get isDesktop() {
+    return host.isDesktop;
+  },
+}));
 
 const mockHeterogeneousAgent = vi.hoisted(() => ({
   cancelSession: vi.fn(),
@@ -7,6 +17,7 @@ const mockHeterogeneousAgent = vi.hoisted(() => ({
   getCodexQuota: vi.fn(),
   getSessionInfo: vi.fn(),
   listModels: vi.fn(),
+  listPermissions: vi.fn(),
   sendPrompt: vi.fn(),
   startSession: vi.fn(),
   stopSession: vi.fn(),
@@ -26,6 +37,36 @@ vi.mock('@/services/localExecutionIdentity', () => ({
 }));
 
 describe('heterogeneousAgentService', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    host.isDesktop = false;
+  });
+
+  it.each([false, true])('exposes local discovery availability for desktop=%s', async (desktop) => {
+    host.isDesktop = desktop;
+    const { heterogeneousAgentService } = await import('./heterogeneousAgent');
+    expect(heterogeneousAgentService.supportsLocalExecution).toBe(desktop);
+    expect(requireProvenLocalDeviceId).not.toHaveBeenCalled();
+  });
+
+  it('still requires device proof when local discovery is supported', async () => {
+    host.isDesktop = true;
+    const { heterogeneousAgentService } = await import('./heterogeneousAgent');
+    vi.mocked(requireProvenLocalDeviceId).mockRejectedValueOnce(
+      new Error('LOCAL_DEVICE_ID_UNPROVEN'),
+    );
+    expect(heterogeneousAgentService.supportsLocalExecution).toBe(true);
+    await expect(heterogeneousAgentService.startSession({ command: 'claude' })).rejects.toThrow(
+      'LOCAL_DEVICE_ID_UNPROVEN',
+    );
+    expect(mockHeterogeneousAgent.startSession).not.toHaveBeenCalled();
+  });
+  it('returns an empty permission catalog when the harness advertises none', async () => {
+    const { heterogeneousAgentService } = await import('./heterogeneousAgent');
+    mockHeterogeneousAgent.listPermissions.mockResolvedValue([]);
+    await expect(heterogeneousAgentService.listPermissions({ type: 'codex' })).resolves.toEqual([]);
+  });
+
   it('forwards model catalog params over IPC', async () => {
     const { heterogeneousAgentService } = await import('./heterogeneousAgent');
     const catalog = {

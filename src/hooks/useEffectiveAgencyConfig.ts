@@ -21,6 +21,8 @@ export interface UseEffectiveAgencyConfigResult {
    * should wait instead of acting on a value that may flip.
    */
   isPreferenceLoading: boolean;
+  /** Explicit member device selection; never inferred from shared defaults. */
+  memberSelectedDeviceId?: string;
   /**
    * The effective config still comes from the workspace-shared fallback because
    * this member has not explicitly selected an execution target. Callers must
@@ -91,6 +93,9 @@ export const useEffectiveAgencyConfig = (agentId?: string): UseEffectiveAgencyCo
     canSelectExecutionTarget:
       !!agentId && !isPreferenceLoading && agencyConfig?.executionTargetSelectionPolicy !== 'fixed',
     isPreferenceLoading,
+    ...(override?.executionTarget === 'device' && override.boundDeviceId
+      ? { memberSelectedDeviceId: override.boundDeviceId }
+      : {}),
     workspaceScoped: resolveWorkspaceScoped(usesWorkspaceMemberSelection, override),
   };
 };

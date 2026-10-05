@@ -82,12 +82,50 @@ const baseParams = {
 };
 
 beforeEach(() => {
+  findByDeviceId.mockReset().mockResolvedValue(undefined);
+  findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
   queryPersonal.mockReset().mockResolvedValue(deviceRows('dev-a', 'dev-b'));
   queryWorkspaceDevices.mockReset().mockResolvedValue(deviceRows('dev-ws'));
   queryDeviceList.mockReset().mockResolvedValue([]);
   findByDeviceId.mockReset().mockResolvedValue(undefined);
   findWorkspaceDeviceById.mockReset().mockResolvedValue(undefined);
   updateCapabilityEvidence.mockReset().mockResolvedValue(undefined);
+});
+
+describe('listAuthorizedDeviceCandidates', () => {
+  it('uses personal gateway presence for an authorized personal binding in a workspace run', async () => {
+    queryWorkspaceDevices.mockResolvedValue([]);
+    findByDeviceId.mockResolvedValue({
+      deviceId: 'dev-personal',
+      userId: 'user-1',
+      workspaceId: null,
+    });
+    queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
+      workspaceId ? [] : [{ deviceId: 'dev-personal', authenticated: true }],
+    );
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', {
+      referencedDevices: [{ deviceId: 'dev-personal' }],
+    });
+
+    expect(inventory).toMatchObject({
+      candidates: [{ deviceId: 'dev-personal', online: true, scopeOk: true }],
+      inventoryComplete: true,
+    });
+  });
+
+  it('keeps workspace devices offline when only the personal pool has the same device id', async () => {
+    queryWorkspaceDevices.mockResolvedValue(deviceRows('dev-ws'));
+    queryDeviceList.mockImplementation(async (_userId, workspaceId) =>
+      workspaceId ? [] : [{ deviceId: 'dev-ws', authenticated: true }],
+    );
+
+    const inventory = await listAuthorizedDeviceCandidates(db, 'user-1', 'ws-1', {
+      referencedDevices: [{ deviceId: 'dev-ws' }],
+    });
+
+    expect(inventory.candidates).toMatchObject([{ deviceId: 'dev-ws', online: false }]);
+  });
 });
 
 describe('resolveHeteroExecutionPlan', () => {

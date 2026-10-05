@@ -11,6 +11,7 @@ import type {
   ChatTopicStatus,
   ConversationContext,
   ExecAgentResult,
+  HeterogeneousTopicPin,
   MessageMetadata,
   RuntimeMentionedAgent,
 } from '@orvilo/types';
@@ -621,6 +622,15 @@ export class GatewayActionImpl {
      */
     mentionedAgents?: RuntimeMentionedAgent[];
     /**
+     * Blank-composer picks for the topic this send creates. The gateway path is
+     * the one route where the SERVER creates the topic, so the picks have to
+     * travel with the request — there is no client-side `internal_createTopic`
+     * to stamp them onto. The server writes them to the topic's own pin fields
+     * and never to the agent row (docs/development/chat-agent-model-ia.md §5.2).
+     * Ignored when the send reuses an existing topic.
+     */
+    newTopicPins?: HeterogeneousTopicPin;
+    /**
      * Temporary message IDs created during the initial sendMessage phase.
      * These are associated with the new gateway operation so the UI doesn't
      * show a blank loading state while waiting for the first `step_start`
@@ -647,6 +657,7 @@ export class GatewayActionImpl {
       resumeToolResult,
       selectedToolIds,
       mentionedAgents,
+      newTopicPins,
       tempMessageIds,
     } = params;
 
@@ -793,6 +804,7 @@ export class GatewayActionImpl {
               fileIds,
               replacesOperationId,
               mentionedAgents,
+              newTopicPins,
               parentMessageId,
               prompt: message,
               resumeApproval,

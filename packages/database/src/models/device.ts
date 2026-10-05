@@ -4,7 +4,7 @@ import { and, desc, eq, isNotNull, isNull, ne, or, sql } from 'drizzle-orm';
 import type { DeviceItem } from '../schemas';
 import { agents, devices, workspaces } from '../schemas';
 import type { OrviloDatabase } from '../type';
-import { buildWorkspaceWhere } from '../utils/workspace';
+import { buildStrictWorkspaceWhere } from '../utils/workspace';
 
 export type DeviceVisibility = 'private' | 'public';
 
@@ -273,16 +273,19 @@ export class DeviceModel {
   /**
    * Devices of the current workspace VISIBLE to the caller: every public device
    * plus the caller's own private enrollments. Other members' private devices
-   * are excluded at the SQL level (`buildWorkspaceWhere`) so no read path — the
+   * are excluded at the SQL level (`buildStrictWorkspaceWhere`) so no read path — the
    * settings list, the run-device picker, the CLI, the device tool — can leak
    * them.
    */
   queryWorkspaceDevices = async (): Promise<DeviceItem[]> => {
     if (!this.workspaceId) return [];
-    return this.db.query.devices.findMany({
-      orderBy: [desc(devices.lastSeenAt)],
-      where: buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, devices),
-    });
+    return this.db
+      .select()
+      .from(devices)
+      .where(
+        buildStrictWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, devices),
+      )
+      .orderBy(desc(devices.lastSeenAt));
   };
 
   /**
@@ -316,12 +319,20 @@ export class DeviceModel {
    */
   findWorkspaceDeviceById = async (deviceId: string) => {
     if (!this.workspaceId) return undefined;
-    return this.db.query.devices.findFirst({
-      where: and(
-        eq(devices.deviceId, deviceId),
-        buildWorkspaceWhere({ userId: this.userId, workspaceId: this.workspaceId }, devices),
-      ),
-    });
+    const [device] = await this.db
+      .select()
+      .from(devices)
+      .where(
+        and(
+          eq(devices.deviceId, deviceId),
+          buildStrictWorkspaceWhere(
+            { userId: this.userId, workspaceId: this.workspaceId },
+            devices,
+          ),
+        ),
+      )
+      .limit(1);
+    return device;
   };
 
   findByDeviceId = async (deviceId: string) => {

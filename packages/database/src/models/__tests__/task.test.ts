@@ -701,6 +701,49 @@ describe('TaskModel', () => {
   });
 
   describe('groupList', () => {
+    it('groups a normal no-team issue by its persisted category without a workflow-state link', async () => {
+      const workspaceId = 'category-board-workspace';
+      const otherWorkspaceId = 'other-category-board-workspace';
+      await serverDB.insert(workspaces).values([
+        { id: workspaceId, name: 'Category board', slug: workspaceId, primaryOwnerId: userId },
+        {
+          id: otherWorkspaceId,
+          name: 'Other board',
+          slug: otherWorkspaceId,
+          primaryOwnerId: userId2,
+        },
+      ]);
+      const model = new TaskModel(serverDB, userId, workspaceId);
+      const created = await model.create({
+        instruction: 'SUMMARY_MARKDOWN_NATIVE_TEST',
+        visibility: 'public',
+        workflowCategory: 'triage',
+      });
+      expect(created).toMatchObject({
+        assigneeAgentId: null,
+        assigneeUserId: null,
+        teamId: null,
+        workflowStateId: null,
+        workflowCategory: 'triage',
+      });
+      await new TaskModel(serverDB, userId2, workspaceId).create({
+        instruction: 'Other member private issue',
+        visibility: 'private',
+        workflowCategory: 'triage',
+      });
+      await new TaskModel(serverDB, userId2, otherWorkspaceId).create({
+        instruction: 'Other workspace issue',
+        visibility: 'public',
+        workflowCategory: 'triage',
+      });
+
+      const [group] = await model.groupList({
+        automated: false,
+        groups: [{ key: 'triage', workflowCategories: ['triage'], limit: 50 }],
+      });
+      expect(group.total).toBe(1);
+      expect(group.tasks.map(({ id }) => id)).toEqual([created.id]);
+    });
     it('should keep legacy assignee grouping while supporting agent and member boards', async () => {
       const firstAgentId = await createAgent('group-assignee-first');
       const secondAgentId = await createAgent('group-assignee-second');

@@ -15,7 +15,18 @@ import { useGlobalStore } from '@/store/global';
  * semantics can never fork again.
  */
 export const selectAgentForConversation = (agentId: string) => {
-  useChatStore.setState({ composerAgentId: agentId }, false, 'selectAgent/explicit');
+  // The pending picks belong to the agent they were taken for: switching agents
+  // invalidates them, or the new conversation would bind a model/effort its
+  // harness does not serve (docs/development/chat-agent-model-ia.md §10).
+  useChatStore.setState(
+    {
+      composerAgentId: agentId,
+      composerHeteroEffort: undefined,
+      composerModelSelection: undefined,
+    },
+    false,
+    'selectAgent/explicit',
+  );
   useGlobalStore.getState().updateSystemStatus({ lastUsedAgentId: agentId });
 };
 

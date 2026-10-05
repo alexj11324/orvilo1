@@ -1,4 +1,4 @@
-import type { OrviloAgentConfig } from './agentConfig';
+import type { OrviloAgentConfig } from './item';
 
 /** Durable producer families which can pause an agent run for a person. */
 export const AGENT_INTERVENTION_SOURCES = ['runtime', 'heterogeneous'] as const;

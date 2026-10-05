@@ -14,13 +14,13 @@ export interface GroupMemberConfig {
   avatar?: string;
   backgroundColor?: string;
   description?: string;
-  // Server accepts `z.string().nullish()` — imported runtimes may lack a model.
+  // Server accepts `z.string().nullish()` — imported runtimes may lack these.
   model?: string | null;
   plugins?: string[];
-  provider?: string;
+  provider?: string | null;
   systemRole?: string;
   tags?: string[];
-  title?: string;
+  title?: string | null;
 }
 
 export interface SupervisorConfig {

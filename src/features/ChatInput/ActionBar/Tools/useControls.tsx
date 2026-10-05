@@ -456,12 +456,20 @@ export const useControls = ({ closeDropdown }: { closeDropdown?: () => void } = 
       s.uninstallBuiltinTool,
       s.deleteConnector,
     ]);
-  const [checked, togglePlugin, setPluginMode] = useAgentStore((s) => [
+  const [checked, toggleAgentPlugin, setAgentPluginMode] = useAgentStore((s) => [
     // Pinned identifiers only (getAgentPluginsById already excludes disabled).
     agentByIdSelectors.getAgentPluginsById(agentId)(s),
     s.togglePlugin,
     s.setPluginMode,
   ]);
+  const togglePlugin = useCallback(
+    (id: string, open?: boolean) => toggleAgentPlugin(id, open, agentId),
+    [agentId, toggleAgentPlugin],
+  );
+  const setPluginMode = useCallback(
+    (id: string, mode: SkillPolicyMode) => setAgentPluginMode(id, mode, agentId),
+    [agentId, setAgentPluginMode],
+  );
   const checkedSet = useMemo(() => new Set(checked), [checked]);
   // Disabled identifiers, read from the raw (unfiltered) plugins config —
   // needed to render the dedicated Disabled group and policy-menu state.

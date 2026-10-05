@@ -1,8 +1,10 @@
+import { canMountBuiltinToolSurface } from '@orvilo/heterogeneous-agents';
 import { Blocks } from 'lucide-react';
 import { memo, Suspense } from 'react';
 import { useTranslation } from 'react-i18next';
 
 import { useModelSupportToolUse } from '@/hooks/useModelSupportToolUse';
+import { useTopicAgencyConfig } from '@/hooks/useTopicAgencyConfig';
 
 import { useAgentId } from '../../hooks/useAgentId';
 import { useEffectiveModel } from '../../hooks/useEffectiveModel';
@@ -17,7 +19,11 @@ const Tools = memo(() => {
   const agentId = useAgentId();
   const { model, provider } = useEffectiveModel(agentId);
 
-  const enableFC = useModelSupportToolUse(model, provider);
+  const supportsModelTools = useModelSupportToolUse(model, provider);
+  const { agencyConfig } = useTopicAgencyConfig(agentId);
+  const enableFC = agencyConfig?.heterogeneousProvider
+    ? canMountBuiltinToolSurface(agencyConfig.heterogeneousProvider)
+    : supportsModelTools;
 
   if (!enableFC)
     return (
@@ -27,6 +33,7 @@ const Tools = memo(() => {
   return (
     <Suspense fallback={<ChatInputAction disabled icon={Blocks} title={t('tools.title')} />}>
       <ChatInputAction
+        aria-label={t('tools.title')}
         icon={Blocks}
         showTooltip={false}
         title={t('tools.title')}

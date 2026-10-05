@@ -3,7 +3,7 @@ import { produce } from 'immer';
 
 import { type StoreSetter } from '@/store/types';
 
-import { agentSelectors } from '../../selectors';
+import { agentByIdSelectors, agentSelectors } from '../../selectors';
 import { type AgentStore } from '../../store';
 
 /**
@@ -35,14 +35,16 @@ export class PluginSliceActionImpl {
    * `setPluginMode`; callers that need the third (disabled) state should use
    * `setPluginMode` directly instead.
    */
-  togglePlugin = async (id: string, open?: boolean): Promise<void> => {
-    const originConfig = agentSelectors.currentAgentConfig(this.#get());
+  togglePlugin = async (id: string, open?: boolean, agentId?: string): Promise<void> => {
+    const originConfig = agentId
+      ? agentByIdSelectors.getAgentConfigById(agentId)(this.#get())
+      : agentSelectors.currentAgentConfig(this.#get());
     if (!originConfig) return;
 
     const shouldOpen =
       open !== undefined ? open : getPluginMode(originConfig.plugins, id) !== 'pinned';
 
-    await this.setPluginMode(id, shouldOpen ? 'pinned' : 'auto');
+    await this.setPluginMode(id, shouldOpen ? 'pinned' : 'auto', agentId);
   };
 
   /**
@@ -50,8 +52,10 @@ export class PluginSliceActionImpl {
    * touched entry is upgraded to object shape — every other entry, including
    * untouched legacy strings, is left exactly as-is (lazy per-item upgrade).
    */
-  setPluginMode = async (id: string, mode: AgentPluginMode): Promise<void> => {
-    const originConfig = agentSelectors.currentAgentConfig(this.#get());
+  setPluginMode = async (id: string, mode: AgentPluginMode, agentId?: string): Promise<void> => {
+    const originConfig = agentId
+      ? agentByIdSelectors.getAgentConfigById(agentId)(this.#get())
+      : agentSelectors.currentAgentConfig(this.#get());
     if (!originConfig) return;
 
     const config = produce(originConfig, (draft) => {
@@ -64,7 +68,8 @@ export class PluginSliceActionImpl {
       draft.plugins = upsertPluginMode(draft.plugins, id, mode) as unknown as string[];
     });
 
-    await this.#get().updateAgentConfig(config);
+    if (agentId) await this.#get().updateAgentConfigById(agentId, config);
+    else await this.#get().updateAgentConfig(config);
   };
 }
 
